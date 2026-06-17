@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugin for cryptographic signing of publications, artifacts or files."
@@ -48,6 +49,7 @@ dependencies {
     testFixturesImplementation(libs.slf4jApi)
     testFixturesImplementation(testLibs.jetty)
     testFixturesImplementation(testLibs.jettyWebApp)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -74,4 +76,10 @@ tasks.withType<Test>().configureEach {
     // increase the amount of memory available as the sample key from https://www.rfc-editor.org/rfc/rfc9580.html#name-sample-locked-version-6-sec
     // used Argon2 in a configuration that uses a lot of memory (probably 2GiB) for a very short time.
     maxHeapSize = "3g"
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

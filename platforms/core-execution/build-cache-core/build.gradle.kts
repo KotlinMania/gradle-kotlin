@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal build cache configuration and controller implementations"
@@ -44,6 +45,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("Integration tests require HttpBuildCache registration from build-cache-http, which is in distributions-jvm.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -57,4 +59,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = false
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

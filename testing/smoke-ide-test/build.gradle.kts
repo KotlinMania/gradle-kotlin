@@ -10,6 +10,7 @@ import gradlebuild.performance.generator.tasks.RemoteProject
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.ide-provisioning")
+    kotlin("jvm")
 }
 
 description = "Tests are checking Gradle behavior during IDE synchronization process"
@@ -91,10 +92,17 @@ dependencies {
     smokeIdeTestImplementation(projects.internalIntegTesting)
     smokeIdeTestImplementation(testLibs.gradleProfiler)
     smokeIdeTestImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 integTest.testJvmXmx = "5g"
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

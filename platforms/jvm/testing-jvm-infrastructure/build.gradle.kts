@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """JVM-specific test infrastructure, including support for bootstrapping and configuring test workers
@@ -77,6 +78,7 @@ dependencies {
     testFixturesImplementation(projects.testingBase)
     testFixturesImplementation(testLibs.junit)
     testFixturesImplementation(providedLibs.testng)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -88,4 +90,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

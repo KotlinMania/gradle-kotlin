@@ -2,6 +2,7 @@ import gradlebuild.integrationtests.configureTestSourceSetInIde
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Classpath manipulation, instrumentation, and bytecode transformation infrastructure"
@@ -102,6 +103,7 @@ dependencies {
     testInterceptorsImplementation(testFixtures(projects.core))
     "testInterceptorsAnnotationProcessor"(projects.internalInstrumentationProcessor)
     "testInterceptorsAnnotationProcessor"(platform(projects.distributionsDependencies))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -121,4 +123,10 @@ packageCycles {
 strictCompile {
     ignoreRawTypes() // raw types used in Groovy MetaClass APIs
     ignoreAnnotationProcessing() // Without this, javac will complain about unclaimed annotations
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

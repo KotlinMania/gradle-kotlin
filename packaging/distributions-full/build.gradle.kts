@@ -42,3 +42,6 @@ tasks.register<Copy>("copyDistributionsToRootBuild") {
     from(layout.buildDirectory.dir("distributions"))
     into(buildEnvironmentExtension.rootProjectBuildDir.dir("distributions"))
 }
+repositories {
+    mavenCentral()
+}

@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Operations on files, such as archiving, copying, deleting"
@@ -53,6 +54,7 @@ dependencies {
     implementation(libs.commonsIo)
     implementation(libs.groovyTemplates)
     implementation(libs.slf4jApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -62,4 +64,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,11 +1,13 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Kotlin DSL Tooling Models for IDEs (Legacy)"
 
 dependencies {
     api(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -22,4 +24,10 @@ configurations.remove(configurations.apiStubElements.get())
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = """This project contains most of the dependency management logic of Gradle:
@@ -155,6 +156,7 @@ dependencies {
     crossVersionTestImplementation(projects.internalIntegTesting)
 
     crossVersionTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -179,4 +181,10 @@ tasks.clean {
             include("**/read-only-cache/**")
         }.visit { this.file.setWritable(true) }
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal API to declare services provided by Gradle modules"
@@ -10,6 +11,7 @@ dependencies {
 
     api(libs.jspecify)
     api(libs.errorProneAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -23,4 +25,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

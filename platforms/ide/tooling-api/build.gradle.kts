@@ -3,6 +3,7 @@ plugins {
     id("gradlebuild.publish-public-libraries")
     id("gradlebuild.shaded-jar")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Gradle Tooling API - the programmatic API to invoke Gradle"
@@ -92,6 +93,7 @@ dependencies {
     crossVersionTestLocalRepository(project(path)) {
         because("ToolingApiVersionSpecification uses the Tooling API Jar")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -139,3 +141,9 @@ apply(from = "buildship.gradle")
 
 // AutoTestedSamplesToolingApiTest includes customized test logic, so automatic auto testing samples generation is not needed (and would fail) in this project
 integTest.generateDefaultAutoTestedSamplesTest = false
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

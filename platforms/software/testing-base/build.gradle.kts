@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """Basic testing related plugins, which establish conventions for testing output directories,
@@ -71,6 +72,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -89,3 +91,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

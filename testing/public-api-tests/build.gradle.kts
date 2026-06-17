@@ -19,6 +19,7 @@ import gradlebuild.integrationtests.tasks.IntegrationTest
 plugins {
     // TODO Can we apply less here?
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 val testRepo = configurations.dependencyScope("testRepo")
@@ -32,6 +33,7 @@ val resolveTestRepo = configurations.resolvable("resolveTestRepo") {
 dependencies {
     testRepo(projects.publicApi)
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 abstract class IntegTestCommandLineArgumentProvider(
@@ -61,4 +63,10 @@ tasks.withType<IntegrationTest>() {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

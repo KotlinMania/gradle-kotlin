@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "The Gradle build option parser."
@@ -11,6 +12,7 @@ dependencies {
     api(libs.jspecify)
 
     implementation(projects.baseServices)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -20,4 +22,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

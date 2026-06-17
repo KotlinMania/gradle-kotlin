@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "A set of general-purpose resource abstractions"
@@ -27,6 +28,7 @@ dependencies {
     testImplementation(testFixtures(projects.core))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -39,3 +41,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

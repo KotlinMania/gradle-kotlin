@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("java-test-fixtures")
+    kotlin("jvm")
 }
 
 description = "Domain object collection infrastructure: DefaultDomainObjectCollection hierarchy, element sources, and collection event system."
@@ -37,6 +38,7 @@ dependencies {
     testImplementation(testFixtures(projects.core))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -58,4 +60,10 @@ strictCompile {
 
 errorprone {
     nullawayEnabled = false
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

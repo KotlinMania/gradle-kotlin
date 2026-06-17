@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Adds support for assembling JVM web application WAR files"
@@ -54,6 +55,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -67,3 +69,9 @@ packageCycles {
     excludePatterns.add("org/gradle/api/plugins/internal/*")
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

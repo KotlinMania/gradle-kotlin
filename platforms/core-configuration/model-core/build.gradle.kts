@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Implementation of configuration model types and annotation metadata handling (Providers, software model, conventions)"
@@ -70,6 +71,7 @@ dependencies {
     }
 
     jmhImplementation(platform(projects.distributionsDependencies))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -105,3 +107,9 @@ packageCycles {
     excludePatterns.add("org/gradle/util/internal/*")
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

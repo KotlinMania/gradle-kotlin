@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Issue reporting components of the build discovery subsystem"
@@ -29,6 +30,7 @@ dependencies {
     implementation(projects.baseServices)
 
     testImplementation(testFixtures(projects.problemsApi))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -43,4 +45,10 @@ gradleModule {
 errorprone {
     // Cannot be enabled because the "problems-api" > "serialization" chain is not yet nullaway checked
     nullawayEnabled = false
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "Collection of test fixtures for integration tests, internal use only"
@@ -154,8 +155,15 @@ dependencies {
     }
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 packageCycles {
     excludePatterns.add("org/gradle/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

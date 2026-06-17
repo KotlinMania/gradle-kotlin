@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Logic to extract API classes from JVM classes that is shared between build-logic and runtime."
@@ -8,6 +9,7 @@ description = "Logic to extract API classes from JVM classes that is shared betw
 dependencies {
     api(libs.asm)
     api(libs.guava)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -26,3 +28,9 @@ packageCycles {
 // Should not be part of the public API
 // TODO Find a proper way to configure this
 configurations.remove(configurations.apiStubElements.get())
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

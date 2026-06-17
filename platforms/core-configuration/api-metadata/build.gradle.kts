@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.api-metadata")
+    kotlin("jvm")
 }
 
 description = "Generated metadata about Gradle API needed by Kotlin DSL"
@@ -21,4 +22,13 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

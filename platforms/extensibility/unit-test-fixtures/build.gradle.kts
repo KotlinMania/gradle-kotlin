@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Public types for unit testing plugins"
@@ -64,6 +65,7 @@ dependencies {
     integTestCompileOnly(libs.jetbrainsAnnotations)
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -77,3 +79,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

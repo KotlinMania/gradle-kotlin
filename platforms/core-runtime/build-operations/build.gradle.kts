@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Build operations are our way to inspect the process of executing a build"
@@ -18,6 +19,7 @@ dependencies {
     testFixturesImplementation(libs.guava)
 
     testImplementation(testFixtures(projects.time))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -31,4 +33,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

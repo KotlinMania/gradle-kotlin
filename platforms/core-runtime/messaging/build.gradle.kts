@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation of messaging between Gradle processes"
@@ -32,6 +33,7 @@ dependencies {
     integTestImplementation(projects.serviceRegistryBuilder)
     integTestImplementation(projects.toolingApi)
     integTestImplementation(testFixtures(projects.testingBase))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -44,3 +46,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

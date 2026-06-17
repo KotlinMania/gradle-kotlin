@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "This project contains various native operating system integration utilities"
@@ -30,6 +31,7 @@ dependencies {
 
     jmhImplementation(projects.files)
     jmhImplementation(projects.baseServices)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -51,4 +53,10 @@ jmh {
 packageCycles {
     // Cycle between public interface, Factory and implementation class in internal package
     excludePatterns.add("org/gradle//platform/internal/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

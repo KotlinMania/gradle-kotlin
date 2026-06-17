@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Implements a worker which can execute ant tasks in a separate worker process"
@@ -12,6 +13,7 @@ dependencies {
 
     implementation(projects.baseServices)
     implementation(libs.slf4jApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -23,4 +25,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.support.expectedKotlinDslPluginsVersion
-
 plugins {
     `kotlin-dsl`
 }
@@ -7,6 +5,11 @@ plugins {
 group = "gradlebuild"
 
 description = "Provides plugins used to create a Gradle plugin with Groovy or Kotlin DSL within build-logic builds"
+
+val kotlinDslPluginsVersion = providers
+    .gradleProperty("kotlinDslPluginVersion")
+    .orElse("6.7.3")
+    .get()
 
 dependencies {
     compileOnly(buildLibs.develocityPlugin)
@@ -19,7 +22,7 @@ dependencies {
 
     implementation(buildLibs.errorPronePlugin)
     implementation(buildLibs.nullawayPlugin)
-    implementation("org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:$expectedKotlinDslPluginsVersion")
+    implementation("org.gradle.kotlin.kotlin-dsl:org.gradle.kotlin.kotlin-dsl.gradle.plugin:$kotlinDslPluginsVersion")
     implementation(buildLibs.kgp)
     implementation(buildLibs.testRetryPlugin)
     implementation(buildLibs.detektPlugin) {

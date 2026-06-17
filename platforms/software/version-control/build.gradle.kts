@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Version control integration (with git) for source dependencies"
@@ -50,6 +51,7 @@ dependencies {
     integTestImplementation(projects.enterpriseOperations)
     integTestImplementation(projects.launcher)
     integTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -60,3 +62,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

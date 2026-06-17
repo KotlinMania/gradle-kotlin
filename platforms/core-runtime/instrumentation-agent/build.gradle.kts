@@ -1,11 +1,13 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "A Java agent implementation that instruments loaded classes"
 
 dependencies {
     compileOnly(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -32,4 +34,10 @@ tasks.named<Jar>("jar") {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

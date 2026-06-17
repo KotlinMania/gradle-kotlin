@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugins, tasks and domain objects for the legacy software-model based native (C/C++/Objective-C/Assembler/Windows-resources/CUnit/Google Test) plugins"
@@ -62,6 +63,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsFull) {
         because("ModelReportIntegrationTest verifies the full set of tasks contributed by a Gradle distribution.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -79,3 +81,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

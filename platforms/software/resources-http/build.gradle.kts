@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation for interacting with repositories over HTTP"
@@ -41,6 +42,7 @@ dependencies {
     testFixturesImplementation(libs.slf4jApi)
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -52,3 +54,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

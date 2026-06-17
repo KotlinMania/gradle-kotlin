@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugin and integration with JaCoCo code coverage"
@@ -51,6 +52,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -73,3 +75,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 dependencies {
@@ -41,6 +42,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsBasics) {
         because("Requires test-kit: 'java-gradle-plugin' is used in integration tests which always adds the test-kit dependency.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -54,3 +56,9 @@ testFilesCleanup.reportOnly = true
 
 description = """Provides functionality for resolving and managing plugins during their application to projects."""
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

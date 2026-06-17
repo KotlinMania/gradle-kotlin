@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Implementation of the Maven Publish Plugin that provides the ability to publish build artifacts to Maven repositories."
@@ -70,6 +71,7 @@ dependencies {
     crossVersionTestImplementation(projects.internalIntegTesting)
 
     crossVersionTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -90,3 +92,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

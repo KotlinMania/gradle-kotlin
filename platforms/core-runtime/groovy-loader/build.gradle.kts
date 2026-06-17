@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Manages loading Groovy System in isolated contexts"
@@ -29,6 +30,7 @@ dependencies {
     implementation(libs.slf4jApi)
 
     compileOnly(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -42,4 +44,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Process execution abstractions."
@@ -40,6 +41,7 @@ dependencies {
     integTestImplementation(projects.internalDistributionTesting)
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -53,4 +55,10 @@ gradleModule {
 
 packageCycles {
     excludePatterns.add("org/gradle/process/internal/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

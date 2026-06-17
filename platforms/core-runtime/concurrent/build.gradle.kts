@@ -17,6 +17,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Tools to work with managed executors"
@@ -29,6 +30,7 @@ dependencies {
 
     implementation(libs.jctools)
     implementation(libs.slf4jApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -42,4 +44,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

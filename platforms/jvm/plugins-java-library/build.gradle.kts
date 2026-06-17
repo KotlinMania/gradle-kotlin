@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains the java-library plugin, and its supporting classes.  This plugin is used to build java libraries."
@@ -47,6 +48,7 @@ dependencies {
     integTestImplementation(testFixtures(projects.resourcesHttp))
 
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -64,4 +66,10 @@ dependencyAnalysis {
             exclude(":language-jvm")
         }
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

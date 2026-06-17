@@ -19,6 +19,7 @@ import gradlebuild.integrationtests.crossVersionTestModels
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Plugins that add support for generating IDE project files used for importing Gradle projects into IDEs"
@@ -85,6 +86,7 @@ dependencies {
     crossVersionTestImplementation(crossVersionTestModels(projects.toolingApi))
 
     crossVersionTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -115,3 +117,9 @@ packageCycles {
 testFilesCleanup.reportOnly = true
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

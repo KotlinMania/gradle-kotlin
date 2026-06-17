@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Worker process management infrastructure for starting, configuring, and communicating with worker processes."
@@ -50,6 +51,7 @@ dependencies {
         because("AbstractWorkerProcessIntegrationSpec uses core infrastructure: ClassPathRegistry, ModuleRegistry, GlobalScopeServices, TestFiles, NativeServicesTestFixture")
     }
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 packageCycles {
@@ -63,4 +65,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

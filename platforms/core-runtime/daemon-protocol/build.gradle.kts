@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "The messages and types sent between client and daemon"
@@ -46,6 +47,7 @@ dependencies {
 
     testImplementation(testFixtures(projects.serialization))
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -54,4 +56,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

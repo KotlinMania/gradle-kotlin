@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.performance-testing")
+    kotlin("jvm")
 }
 
 description = """Performance tests for the Develocity plugin
@@ -30,6 +31,7 @@ dependencies {
     performanceTestDistributionRuntimeOnly(projects.distributionsFull) {
         because("so that all Gradle features are available")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 performanceTest.registerTestProject<gradlebuild.performance.generator.tasks.JvmProjectGeneratorTask>("javaProject") {
@@ -92,4 +94,10 @@ class DevelocityPluginInfoDirPropertyProvider(@InputFiles @PathSensitive(PathSen
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

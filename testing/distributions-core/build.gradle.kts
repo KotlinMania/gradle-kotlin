@@ -50,3 +50,6 @@ dependencies {
         because("This is required for IsolatedProjectEvaluationListenerProvider service implementation.")
     }
 }
+repositories {
+    mavenCentral()
+}

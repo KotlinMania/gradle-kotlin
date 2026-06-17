@@ -18,6 +18,7 @@ plugins {
     id("gradlebuild.distribution.implementation-java")
     // TODO Make :serialization not depend on this and then we can unpublish this library
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Tools to handle classloaders"
@@ -36,6 +37,7 @@ dependencies {
     implementation(libs.guava)
 
     compileOnly(libs.errorProneAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -63,4 +65,10 @@ jvmCompile {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

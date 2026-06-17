@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "A Java compiler plugin used by Gradle's incremental compiler"
@@ -35,4 +36,13 @@ configurations.remove(configurations.apiStubElements.get())
 
 errorprone {
     nullawayEnabled = true
+}
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

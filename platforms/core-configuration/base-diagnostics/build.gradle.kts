@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.instrumented-java-project")
+    kotlin("jvm")
 }
 
 description = """Base diagnostic reporting infrastructure and reports that are applicable to all Gradle builds.
@@ -55,6 +56,7 @@ dependencies {
     integTestImplementation(testFixtures(projects.declarativeDslProvider))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -66,4 +68,10 @@ gradleModule {
 
 packageCycles {
     excludePatterns.add("org/gradle/api/reporting/model/internal/*")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -2,6 +2,7 @@ import gradlebuild.basics.googleApisJs
 
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "Collection of test fixtures for performance tests, internal use only"
@@ -19,6 +20,7 @@ configurations.compileOnly { extendsFrom(flamegraph) }
 
 repositories {
     googleApisJs()
+    mavenCentral()
 }
 
 dependencies {
@@ -73,6 +75,7 @@ dependencies {
     runtimeOnly(testLibs.mySqlConnector)
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 val reportResources = tasks.register<Copy>("reportResources") {
@@ -92,3 +95,6 @@ tasks.jar {
     from(files(provider{ flamegraph.map { zipTree(it) } }))
 }
 
+kotlin {
+    jvmToolchain(17)
+}

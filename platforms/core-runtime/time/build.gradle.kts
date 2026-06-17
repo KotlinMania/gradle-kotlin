@@ -17,6 +17,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Monotonic clock implementation"
@@ -25,6 +26,7 @@ dependencies {
     api(projects.stdlibJavaExtensions)
 
     compileOnly(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -38,4 +40,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

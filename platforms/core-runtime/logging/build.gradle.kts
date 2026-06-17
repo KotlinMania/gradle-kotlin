@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Logging infrastructure"
@@ -61,6 +62,7 @@ dependencies {
     testFixturesImplementation(libs.slf4jApi)
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -77,3 +79,9 @@ packageCycles {
     excludePatterns.add("org/gradle/util/**")
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

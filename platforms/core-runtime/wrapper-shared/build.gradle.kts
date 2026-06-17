@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Utility code shared between the wrapper and the Gradle distribution"
@@ -20,6 +21,7 @@ dependencies {
     integTestImplementation(projects.logging)
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -32,3 +34,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

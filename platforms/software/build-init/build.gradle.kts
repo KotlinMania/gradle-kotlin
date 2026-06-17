@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.update-init-template-versions")
+    kotlin("jvm")
 }
 
 description = """This project contains the Build Init plugin, which is automatically applied to the root project of every build, and provides the init and wrapper tasks.
@@ -106,6 +107,7 @@ dependencies {
     integTestRuntimeOnly(providedLibs.maven3Compat)
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -123,3 +125,9 @@ packageCycles {
 }
 
 integTest.testJvmXmx = "1g"
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Types for build process and session state management"
@@ -48,6 +49,7 @@ dependencies {
     compileOnly(libs.jspecify)
 
     testImplementation(projects.serviceRegistryImpl)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -56,4 +58,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

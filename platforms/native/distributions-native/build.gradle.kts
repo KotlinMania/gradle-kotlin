@@ -23,3 +23,6 @@ dependencies {
     pluginsRuntimeOnly(projects.testingNative)
     pluginsRuntimeOnly(projects.pluginsModelNative)
 }
+repositories {
+    mavenCentral()
+}

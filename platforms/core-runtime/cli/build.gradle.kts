@@ -1,11 +1,13 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Utilities for parsing command line arguments"
 
 dependencies {
     compileOnly(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -19,4 +21,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

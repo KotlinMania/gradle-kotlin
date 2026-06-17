@@ -20,6 +20,7 @@ plugins {
     id("gradlebuild.documentation")
     id("org.gradle.samples")
     id("gradlebuild.android-home-warmup")
+    kotlin("jvm")
 }
 
 configureTestSourceSetInIde(sourceSets.docsTest.get())
@@ -94,6 +95,7 @@ dependencies {
     constraints {
         testImplementation(testLibs.jettyWebsocket)
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 jvmCompile {
@@ -406,4 +408,7 @@ tasks.register("checkLinks") {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
 }

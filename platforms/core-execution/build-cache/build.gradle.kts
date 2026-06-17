@@ -2,6 +2,7 @@ plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Implementation of build cache controller and factories"
@@ -41,6 +42,7 @@ dependencies {
     testFixturesImplementation(testFixtures(projects.hashing))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -53,3 +55,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

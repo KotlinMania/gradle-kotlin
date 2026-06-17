@@ -18,6 +18,7 @@ plugins {
     id("gradlebuild.version-catalogs")
     id("gradlebuild.default-settings-plugins")
     id("gradlebuild.architecture-docs")
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 includeBuild("build-logic-commons")

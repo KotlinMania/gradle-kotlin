@@ -14,3 +14,6 @@ dependencies {
 
     pluginsRuntimeOnly(projects.signing)
 }
+repositories {
+    mavenCentral()
+}

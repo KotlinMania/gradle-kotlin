@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Gradle plugin development plugins"
@@ -94,6 +95,7 @@ dependencies {
     testFixturesImplementation(projects.logging)
     testFixturesImplementation(libs.gson)
     testFixturesImplementation(projects.baseServices)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -109,3 +111,9 @@ strictCompile {
 
 
 testFilesCleanup.reportOnly = true
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

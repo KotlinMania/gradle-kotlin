@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Implementation for discovery of build settings and build-relevant locations"
@@ -28,6 +29,7 @@ dependencies {
 
     api(libs.inject)
     api(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -41,4 +43,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

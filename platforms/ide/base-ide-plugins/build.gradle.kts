@@ -17,6 +17,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Basic components required by the IDE plugins project"
@@ -44,6 +45,7 @@ dependencies {
     testRuntimeOnly(projects.distributionsCore) {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -56,4 +58,10 @@ gradleModule {
 packageCycles {
     excludePatterns.add("org/gradle/plugins/ide/idea/internal/**")
     excludePatterns.add("org/gradle/plugins/ide/idea/model/internal/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

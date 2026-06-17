@@ -3,6 +3,7 @@ import org.gradle.api.publish.internal.component.ConfigurationVariantDetailsInte
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "API extraction for Java"
@@ -24,6 +25,7 @@ dependencies {
     testImplementation(projects.baseServices)
     testImplementation(projects.internalTesting)
     testImplementation(testFixtures(projects.snapshots))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -45,3 +47,9 @@ listOf(configurations["apiElements"], configurations["runtimeElements"]).forEach
     }
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Source for JavaCompile and JavaExec tasks, it also contains logic for incremental Java compilation"
@@ -101,6 +102,7 @@ dependencies {
 
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
     crossVersionTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -120,3 +122,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

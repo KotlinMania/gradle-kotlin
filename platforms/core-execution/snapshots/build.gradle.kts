@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Tools to take immutable, comparable snapshots of files and other things"
@@ -37,6 +38,7 @@ dependencies {
     testFixturesImplementation(libs.commonsIo)
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -49,3 +51,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

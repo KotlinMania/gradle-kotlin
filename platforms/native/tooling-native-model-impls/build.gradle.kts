@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementations for TAPI native models"
@@ -7,6 +8,7 @@ description = "Implementations for TAPI native models"
 dependencies {
     api(projects.ideModelImpls)
     api(projects.toolingApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -20,3 +22,9 @@ gradleModule {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

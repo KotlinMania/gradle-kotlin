@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugins and domain objects for building different native languages"
@@ -74,6 +75,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsNative)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -88,3 +90,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

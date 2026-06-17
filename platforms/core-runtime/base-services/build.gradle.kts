@@ -5,6 +5,7 @@ import gradlebuild.identity.tasks.BuildReceipt
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "A set of generic services and utilities."
@@ -45,6 +46,7 @@ dependencies {
     jmh(platform(projects.distributionsDependencies))
     jmh(libs.bouncycastleProvider)
     jmh(libs.guava)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -84,4 +86,10 @@ tasks.named<Jar>("jar").configure {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

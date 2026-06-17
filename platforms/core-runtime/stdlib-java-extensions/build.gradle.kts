@@ -3,6 +3,7 @@ plugins {
     // but instrumentation annotation processor depends on it.
     id("gradlebuild.distribution.uninstrumented.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Extensions to the Java language that are used across the Gradle codebase"
@@ -12,6 +13,7 @@ dependencies {
 
     api(libs.jsr305)
     api(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -25,4 +27,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

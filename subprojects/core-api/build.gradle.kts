@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Public and internal 'core' Gradle APIs that are required by other subprojects"
@@ -51,6 +52,7 @@ dependencies {
     testFixturesImplementation(projects.baseServices)
 
     integTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -74,3 +76,9 @@ strictCompile {
 integTest.generateDefaultAutoTestedSamplesTest = false
 testFilesCleanup.reportOnly = true
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

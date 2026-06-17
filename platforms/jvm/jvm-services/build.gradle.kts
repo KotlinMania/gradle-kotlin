@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "JVM invocation and inspection abstractions"
@@ -55,6 +56,7 @@ dependencies {
     testImplementation(testFixtures(projects.core))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -75,4 +77,10 @@ packageCycles {
     excludePatterns.add("org/gradle/jvm/toolchain/JvmVendorSpec**")
     // Needed as this type uses org.gradle.internal.jvm.inspection.JvmVendor which is in a package using this package
     excludePatterns.add("org/gradle/jvm/toolchain/internal/DefaultJvmVendorSpec**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

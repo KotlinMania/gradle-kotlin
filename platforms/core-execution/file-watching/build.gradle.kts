@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "File system watchers for keeping the VFS up-to-date"
@@ -36,6 +37,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("Uses application plugin.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -48,3 +50,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

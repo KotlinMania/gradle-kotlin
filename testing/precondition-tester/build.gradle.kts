@@ -20,6 +20,7 @@ import gradlebuild.integrationtests.tasks.DistributionTest
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Internal project testing and collecting information about all the test preconditions."
@@ -61,6 +62,7 @@ dependencies {
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
     crossVersionTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 configurations.integTestImplementation {
@@ -99,4 +101,10 @@ fun Test.setupPreconditionTesting() {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

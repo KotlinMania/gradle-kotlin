@@ -18,6 +18,7 @@ plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.launchable-jar")
     id("gradlebuild.start-scripts")
+    kotlin("jvm")
 }
 
 description = "Entry point of the `gradle` command. Bootstraps the implementation in :gradle-cli."
@@ -39,6 +40,7 @@ dependencies {
     compileOnly(libs.jspecify)
 
     agentsClasspath(projects.instrumentationAgent)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -54,4 +56,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

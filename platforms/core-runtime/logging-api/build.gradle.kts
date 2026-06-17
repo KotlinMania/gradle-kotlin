@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Logging API"
@@ -27,6 +28,7 @@ dependencies {
     compileOnly(libs.jspecify)
 
     implementation(projects.internalInstrumentationApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -40,4 +42,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

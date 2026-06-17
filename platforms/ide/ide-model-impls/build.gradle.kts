@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementations for TAPI IDE models"
@@ -13,6 +14,7 @@ dependencies {
 
     implementation(projects.classloaders)
     implementation(libs.guava)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -24,4 +26,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

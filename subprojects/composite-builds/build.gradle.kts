@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Included build controller and composite build infrastructure"
@@ -49,6 +50,7 @@ dependencies {
           2. Has tests with the enterprise plugin
         """)
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -60,3 +62,9 @@ gradleModule {
 
 testFilesCleanup.reportOnly = true
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

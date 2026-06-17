@@ -2,6 +2,7 @@ import gradlebuild.basics.tasks.PackageListGenerator
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "A library that aids in testing Gradle plugins and build logic in general"
@@ -48,6 +49,7 @@ dependencies {
         because("Tests instantiate DefaultClassLoaderRegistry which requires a 'gradle-plugins.properties' through DefaultPluginModuleRegistry")
     }
     integTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -82,3 +84,9 @@ tasks.integMultiVersionTest {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

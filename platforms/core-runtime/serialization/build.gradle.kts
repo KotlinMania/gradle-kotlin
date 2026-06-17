@@ -18,6 +18,7 @@ plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Tools to serialize data"
@@ -39,6 +40,7 @@ dependencies {
     implementation(libs.slf4jApi)
 
     compileOnly(libs.errorProneAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -62,4 +64,10 @@ jvmCompile {
             usesFutureStdlib = true
         }
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

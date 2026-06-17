@@ -18,6 +18,7 @@ plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Gradle optimized persistent collection implementations suitable for use in all environments, including workers."
@@ -39,6 +40,7 @@ dependencies {
 
     jmhImplementation(libs.guava)
     jmhImplementation(libs.fastutil)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -86,4 +88,10 @@ jmh {
 //        "PersistentMapBenchmark.removePresent",
 //        "PersistentSetPolymorphismBenchmark.groupByRandom",
     )
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

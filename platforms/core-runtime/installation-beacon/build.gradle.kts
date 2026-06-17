@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Marker class file used to locate the Gradle distribution base directory"
@@ -26,4 +27,13 @@ configurations.remove(configurations.apiStubElements.get())
 
 errorprone {
     nullawayEnabled = true
+}
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

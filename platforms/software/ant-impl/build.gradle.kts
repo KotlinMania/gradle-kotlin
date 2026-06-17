@@ -3,6 +3,7 @@ plugins {
     // That class is here because it depends on core for ConventionTask.  If ConventionTask is pulled up out of core,
     // presumably AntTarget could then move up to ant-api and this project could apply implementation-java instead.
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation of Gradle's Ant integration"
@@ -50,6 +51,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("AntBuilder relies on groovy-loader which ships with the JVM distribution")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -58,4 +60,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

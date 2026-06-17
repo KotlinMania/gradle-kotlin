@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Implementation of hashing services with caching support"
@@ -31,4 +32,11 @@ dependencies {
     testImplementation(testFixtures(projects.core))
     testImplementation(testFixtures(projects.hashing))
     testImplementation(projects.internalTesting)
+    implementation(kotlin("stdlib-jdk8"))
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

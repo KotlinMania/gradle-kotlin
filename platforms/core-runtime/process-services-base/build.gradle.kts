@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = """
@@ -32,6 +33,7 @@ dependencies {
     testImplementation(projects.io)
     testImplementation(testFixtures(projects.core))
     testImplementation(testFixtures(projects.logging))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -41,4 +43,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

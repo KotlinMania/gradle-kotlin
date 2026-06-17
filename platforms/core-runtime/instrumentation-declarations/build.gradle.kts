@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains declarations for instrumentation of plugins. Adds interceptors, bytecode upgrades etc."
@@ -24,6 +25,7 @@ dependencies {
     compileOnly(libs.asmTree)
     annotationProcessor(projects.internalInstrumentationProcessor)
     annotationProcessor(platform(projects.distributionsDependencies))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -39,4 +41,10 @@ gradleModule {
 tasks.named<JavaCompile>("compileJava") {
     // Without this, javac will complain about unclaimed org.jspecify.annotations.NullMarked annotation
     options.compilerArgs.add("-Xlint:-processing")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

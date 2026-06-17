@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugins, tasks and compiler infrastructure for compiling/linking code"
@@ -73,6 +74,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsNative) {
         because("Required 'ideNative' to test visual studio project file generation for generated sources")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -90,3 +92,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

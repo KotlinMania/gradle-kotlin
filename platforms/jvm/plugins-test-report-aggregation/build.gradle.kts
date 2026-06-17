@@ -17,6 +17,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains the Test Report Aggregation plugin"
@@ -38,6 +39,7 @@ dependencies {
     integTestImplementation(testFixtures(projects.testingBase))
 
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -51,3 +53,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Report type classes and plugins for reporting (build dashboard, report container)"
@@ -35,6 +36,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("BuildDashboard has specific support for JVM plugins (CodeNarc, JaCoCo)")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -53,3 +55,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

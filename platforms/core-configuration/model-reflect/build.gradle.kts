@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation of model reflection"
@@ -24,6 +25,7 @@ dependencies {
 
     testFixturesApi(projects.internalIntegTesting)
     testFixturesImplementation(libs.guava)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -33,4 +35,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

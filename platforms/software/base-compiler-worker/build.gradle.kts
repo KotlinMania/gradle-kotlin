@@ -1,11 +1,13 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Contains classes which all compiler workers leverage, regardless of ecosystem"
 
 dependencies {
     api(projects.coreApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -17,4 +19,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

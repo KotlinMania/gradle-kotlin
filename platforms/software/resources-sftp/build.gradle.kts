@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation for interacting with repositories over sftp"
@@ -35,6 +36,7 @@ dependencies {
     integTestImplementation(libs.sshdSftp)
 
     integTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -48,3 +50,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

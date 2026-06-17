@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Process execution public API types."
@@ -10,6 +11,7 @@ dependencies {
     api(libs.jspecify)
 
     compileOnly(projects.internalInstrumentationApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -19,4 +21,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

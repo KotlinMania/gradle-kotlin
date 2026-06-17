@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 dependencies {
@@ -40,6 +41,7 @@ dependencies {
         because("RuntimeShadedJarCreatorTest requires a distribution to access the ...-relocated.txt metadata")
     }
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -55,3 +57,9 @@ packageCycles {
 
 description = """Provides general purpose base types and interfaces for modeling projects, and provides runtime and language support."""
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

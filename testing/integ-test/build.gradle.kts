@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Integration tests which don't fit anywhere else - should probably be split up"
@@ -56,6 +57,7 @@ dependencies {
     crossVersionTestImplementation(projects.war)
 
     crossVersionTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 testFilesCleanup.reportOnly = true
@@ -63,4 +65,10 @@ testFilesCleanup.reportOnly = true
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

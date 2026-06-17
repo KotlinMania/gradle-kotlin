@@ -2,6 +2,7 @@ plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
     id("gradlebuild.jmh")
+    kotlin("jvm")
 }
 
 description = "Local build cache implementation"
@@ -28,6 +29,7 @@ dependencies {
     testImplementation(testFixtures(projects.snapshots))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -40,3 +42,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Build operations consumed by the Develocity plugin"
@@ -11,6 +12,7 @@ dependencies {
     api(libs.jspecify)
 
     implementation(projects.stdlibJavaExtensions)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -24,4 +26,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

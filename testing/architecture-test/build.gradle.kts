@@ -8,6 +8,7 @@ import gradlebuild.basics.flakyTestStrategy
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.binary-compatibility")
+    kotlin("jvm")
 }
 
 description = """Verifies that Gradle code complies with architectural rules.
@@ -49,6 +50,7 @@ dependencies {
     testRuntimeOnly(projects.distributionsFull)
 
     testRuntimeOnly(testLibs.junitPlatform)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 val acceptedApiChangesDirectory = layout.projectDirectory.dir("src/changes/accepted-changes")
@@ -186,4 +188,10 @@ abstract class ReorderArchUnitRulesTask : DefaultTask() {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

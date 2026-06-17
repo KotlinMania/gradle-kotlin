@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains a basic JVM plugin used to compile, test, and assemble Java source; often applied by other JVM plugins (though named java-base, jvm-base would be a more proper name)."
@@ -60,6 +61,7 @@ dependencies {
 
     testFixturesImplementation(projects.internalIntegTesting)
     testFixturesImplementation(projects.logging)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -71,4 +73,10 @@ gradleModule {
 
 packageCycles {
     excludePatterns.add("org/gradle/api/plugins/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

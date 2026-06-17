@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implements execution of code quality tools within a separate worker process"
@@ -22,6 +23,7 @@ dependencies {
     implementation(libs.groovy)
     implementation(libs.groovyXml)
     implementation(libs.slf4jApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -33,4 +35,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

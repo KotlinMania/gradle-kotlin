@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Services and types used to setup a build process from a Gradle distribution."
@@ -25,6 +26,7 @@ dependencies {
     testImplementation(libs.asmTree)
 
     testRuntimeOnly(projects.resources)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -38,4 +40,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

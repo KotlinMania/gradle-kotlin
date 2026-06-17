@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugins and integration with code quality (Checkstyle, PMD, CodeNarc)"
@@ -68,6 +69,7 @@ dependencies {
     integTestImplementation(libs.jsoup) {
         because("We need to validate generated HTML reports")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -81,3 +83,9 @@ packageCycles {
     excludePatterns.add("org/gradle/api/plugins/quality/internal/*")
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

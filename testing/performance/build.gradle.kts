@@ -2,6 +2,7 @@ plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.performance-testing")
     id("gradlebuild.performance-templates")
+    kotlin("jvm")
 }
 
 description = "Performance tests for the Gradle build tool"
@@ -33,6 +34,7 @@ dependencies {
     performanceTestLocalRepository(projects.toolingApi) {
         because("IDE tests use the Tooling API.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 dependencyAnalysis {
@@ -47,4 +49,10 @@ dependencyAnalysis {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

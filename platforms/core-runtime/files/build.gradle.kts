@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Base tools to work with files"
@@ -20,6 +21,7 @@ dependencies {
         because("TextUtil is needed")
     }
     testImplementation(testFixtures(projects.native))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -33,4 +35,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

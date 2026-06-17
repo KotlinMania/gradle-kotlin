@@ -75,10 +75,11 @@ pluginManager.withPlugin("gradlebuild.kotlin-library") {
     }
 
     val libs = project.versionCatalogs.named("buildLibs")
+    val kotlinVersion = project.versionCatalogs.named("libs").findVersion("kotlin").get().getStrictVersion()
     dependencies {
         apiGenDependencies(libs.findLibrary("kotlinJvmAbiGenEmbeddable").get().get().copy().apply {
             version {
-                strictly(embeddedKotlinVersion)
+                strictly(kotlinVersion)
             }
         })
     }

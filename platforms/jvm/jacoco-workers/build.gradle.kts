@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implements logic for generating jacoco reports"
@@ -16,6 +17,7 @@ dependencies {
     implementation(projects.daemonServerWorker)
     implementation(projects.stdlibJavaExtensions)
     implementation(libs.guava)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -27,4 +29,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

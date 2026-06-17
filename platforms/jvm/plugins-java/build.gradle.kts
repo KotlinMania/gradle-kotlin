@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Contains the Java plugin, and its supporting classes.  This plugin is used as the basis for building a Java library or application by more specific plugins, and is sometimes applied by other JVM language projects."
@@ -52,6 +53,7 @@ dependencies {
     crossVersionTestImplementation(projects.internalIntegTesting)
 
     crossVersionTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -63,4 +65,10 @@ gradleModule {
 
 packageCycles {
     excludePatterns.add("org/gradle/api/plugins/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

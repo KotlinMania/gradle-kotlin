@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Versioned Gradle caches"
@@ -31,6 +32,7 @@ dependencies {
     implementation(libs.commonsIo)
     implementation(libs.guava)
     implementation(libs.slf4jApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -40,4 +42,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

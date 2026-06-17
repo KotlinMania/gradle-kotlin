@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Base asm classes and utilities for Gradle's internal use"
@@ -23,6 +24,7 @@ description = "Base asm classes and utilities for Gradle's internal use"
 dependencies {
     api(libs.asm)
     api(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -36,4 +38,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Contains logic for compiling java source files. May execute within a separate worker process."
@@ -25,6 +26,7 @@ dependencies {
     implementation(projects.problemsRendering)
 
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -56,4 +58,10 @@ tasks.javadoc {
             "jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED"
         )
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

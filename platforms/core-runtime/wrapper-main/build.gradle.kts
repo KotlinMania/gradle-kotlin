@@ -25,6 +25,7 @@ plugins {
     id("gradlebuild.distribution.api-java")
     alias(buildLibs.plugins.gr8)
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Entry point of the Gradle wrapper command"
@@ -56,6 +57,7 @@ dependencies {
 
     crossVersionTestNormalizedDistribution(projects.distributionsFull)
     crossVersionTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -145,3 +147,9 @@ tasks.jar {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

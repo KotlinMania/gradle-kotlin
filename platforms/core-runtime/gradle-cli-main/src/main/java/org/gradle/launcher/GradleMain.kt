@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.launcher
 
-package org.gradle.launcher;
-
-import org.gradle.launcher.bootstrap.ProcessBootstrap;
+import org.gradle.launcher.bootstrap.ProcessBootstrap
 
 /**
  * The main entrypoint to the Gradle CLI Client.
  */
-public class GradleMain {
-    public static void main(String[] args) throws Exception {
-        ProcessBootstrap.run(GradleMain.class.getName(), "gradle-gradle-cli", "org.gradle.launcher.Main", args);
+object GradleMain {
+    @Throws(Exception::class)
+    @JvmStatic
+    fun main(args: Array<String>) {
+        ProcessBootstrap.run(GradleMain::class.java.getName(), "gradle-gradle-cli", "org.gradle.launcher.Main", args)
     }
 }

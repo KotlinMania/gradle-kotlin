@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """A problems description API
@@ -50,6 +51,7 @@ dependencies {
     testFixturesImplementation(projects.enterpriseOperations)
     testFixturesImplementation(projects.baseServices)
     testFixturesImplementation(projects.internalDistributionTesting)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -74,4 +76,10 @@ jvmCompile {
 
 packageCycles {
     excludePatterns.add("org/gradle/api/problems/**") // ProblemId.create() and ProblemGroup.create() return internal types
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal API for Gradle's Ant integration"
@@ -22,6 +23,7 @@ dependencies {
     implementation(libs.groovyAnt)        // AntBuilderDelegate wraps groovy.ant.AntBuilder
 
     compileOnly(libs.jetbrainsAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -31,4 +33,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Worker action that implements RequestHandler worker protocol. " +
@@ -32,6 +33,7 @@ dependencies {
     implementation(libs.guava)
 
     runtimeOnly(projects.coreApi)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -44,4 +46,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

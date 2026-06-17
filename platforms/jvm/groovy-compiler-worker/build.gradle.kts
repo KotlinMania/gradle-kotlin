@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains logic for compiling groovy source files. May execute within a separate worker process."
@@ -24,6 +25,7 @@ dependencies {
     implementation(libs.guava)
 
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -35,4 +37,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

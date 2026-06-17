@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Common shared build cache classes"
@@ -12,6 +13,7 @@ dependencies {
     api(projects.hashing)
 
     testImplementation(testFixtures(projects.hashing))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -25,4 +27,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

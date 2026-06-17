@@ -19,6 +19,7 @@ plugins {
     id("gradlebuild.public-api-publish")
     id("gradlebuild.publish-defaults")
     id("signing")
+    kotlin("jvm")
 }
 
 group = "org.gradle.experimental"
@@ -56,6 +57,7 @@ dependencies {
     legacyExternalApi(libs.nativePlatform)
     legacyExternalApi(libs.log4jToSlf4j)
     legacyExternalApi(libs.jetbrainsAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 val testRepoLocation = layout.buildDirectory.dir("repos/test")
@@ -122,4 +124,10 @@ tasks.register("promotionBuild") {
     description = "Build and publish the public API jar"
     group = "publishing"
     dependsOn("publish")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

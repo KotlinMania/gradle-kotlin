@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Public and internal 'core' Gradle APIs with implementation"
@@ -268,6 +269,7 @@ dependencies {
 
     annotationProcessor(projects.internalInstrumentationProcessor)
     annotationProcessor(platform(projects.distributionsDependencies))
+    implementation(kotlin("stdlib-jdk8"))
 
 }
 
@@ -304,3 +306,9 @@ tasks.compileTestGroovy {
 }
 
 testFilesCleanup.reportOnly = true
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

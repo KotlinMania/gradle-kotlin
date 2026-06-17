@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Public API interfaces for Gradle credentials"
@@ -11,6 +12,7 @@ dependencies {
     compileOnly(projects.internalInstrumentationApi) {
         because("Provides @ToBeReplacedByLazyProperty annotation, following the same pattern as core-api")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -20,4 +22,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

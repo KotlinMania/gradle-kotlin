@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Tools to work with functional code, including data structures"
@@ -12,6 +13,7 @@ dependencies {
     implementation(libs.fastutil)
     implementation(libs.guava)
     implementation(libs.jsr305)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -25,4 +27,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

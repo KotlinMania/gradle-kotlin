@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "Collection of test fixtures for both unit tests and integration tests, internal use only"
@@ -40,6 +41,7 @@ dependencies {
 
     runtimeOnly(libs.groovyJson)
     runtimeOnly(testLibs.bytebuddy)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 jvmCompile {
@@ -56,4 +58,10 @@ sourceSets {
         // Incremental Groovy joint-compilation doesn't work with the Error Prone annotation processor
         errorprone.enabled = false
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

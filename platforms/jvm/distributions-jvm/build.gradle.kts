@@ -37,3 +37,6 @@ dependencies {
         because("Aspirationally, we likely need a platform-base plugin that would ship in the same distribution as dependency-management, and isn't java specific - unfortunately this plugin applies the JvmEcosystemPlugin.")
     }
 }
+repositories {
+    mavenCentral()
+}

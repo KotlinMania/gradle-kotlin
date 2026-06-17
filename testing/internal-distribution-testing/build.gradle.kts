@@ -3,6 +3,7 @@ import java.util.Properties
 
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "Collection of test fixtures for distribution tests, internal use only"
@@ -87,6 +88,7 @@ dependencies {
     constraints {
         implementation(testLibs.jettyWebsocket)
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 val prepareVersionsInfo = tasks.register<PrepareVersionsInfo>("prepareVersionsInfo") {
@@ -147,3 +149,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

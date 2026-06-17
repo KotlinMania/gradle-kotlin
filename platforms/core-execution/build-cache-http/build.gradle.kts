@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation for interacting with HTTP build caches"
@@ -36,6 +37,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("Uses application plugin.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -49,3 +51,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

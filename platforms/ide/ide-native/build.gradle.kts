@@ -2,6 +2,7 @@ plugins {
     // Uninstrumented since it is a mix of Groovy and Java code,
     // and additionally we don't plan to have upgrades for IDE plugins.
     id("gradlebuild.distribution.uninstrumented.api-java")
+    kotlin("jvm")
 }
 
 description = "Plugins for integration with native projects in XCode and Visual Studio IDEs"
@@ -66,6 +67,7 @@ dependencies {
         because("Tests instantiate DefaultClassLoaderRegistry which requires a 'gradle-plugins.properties' through DefaultPluginModuleRegistry")
     }
     integTestDistributionRuntimeOnly(projects.distributionsNative)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -79,3 +81,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

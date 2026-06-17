@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "Integration tests for our documentation snippets (aka samples)"
@@ -21,10 +22,17 @@ dependencies {
     integTestImplementation(testFixtures(projects.testingBase))
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 testFilesCleanup.reportOnly = true
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

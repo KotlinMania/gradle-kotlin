@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains the Application plugin, and its supporting classes.  This plugin is used for creating runnable Java application projects."
@@ -62,6 +63,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -76,3 +78,9 @@ packageCycles {
 }
 
 testFilesCleanup.reportOnly = true
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

@@ -26,3 +26,6 @@ dependencies {
     pluginsRuntimeOnly(projects.testKit)
     pluginsRuntimeOnly(projects.unitTestFixtures)
 }
+repositories {
+    mavenCentral()
+}

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal API for composing service registries"
@@ -10,6 +11,7 @@ dependencies {
     api(projects.stdlibJavaExtensions)
 
     implementation(projects.serviceRegistryImpl)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -19,4 +21,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Services used by the Gradle daemon to interact with the client"
@@ -41,6 +42,7 @@ dependencies {
     implementation(projects.modelCore)
 
     testImplementation(testFixtures(projects.time))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -49,4 +51,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

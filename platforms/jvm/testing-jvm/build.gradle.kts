@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """JVM-specific testing functionality, including the Test type and support for configuring options for and detecting
@@ -74,6 +75,7 @@ dependencies {
     }
 
     testFixturesImplementation(projects.internalIntegTesting)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -93,3 +95,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

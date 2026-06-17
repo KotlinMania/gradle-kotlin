@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Contains specification registry classes used by the Build Init plugin to load additional init project specifications contributed by plugins."
@@ -32,6 +33,7 @@ dependencies {
     testImplementation(testFixtures(projects.logging))
 
     testFixturesImplementation(libs.commonsLang)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -52,4 +54,10 @@ testing {
             }
         }
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

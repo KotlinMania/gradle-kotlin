@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.cross-version-tests")
+    kotlin("jvm")
 }
 
 description = "Publishing plugin for Ivy repositories"
@@ -73,6 +74,7 @@ dependencies {
     crossVersionTestDistributionRuntimeOnly(projects.distributionsJvm) {
         because("IvyPublishCrossVersionIntegrationTest test applies the war plugin.")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -83,3 +85,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

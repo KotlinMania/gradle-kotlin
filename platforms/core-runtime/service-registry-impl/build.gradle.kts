@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Implementation of the service registry framework"
@@ -15,6 +16,7 @@ dependencies {
     implementation(projects.stdlibJavaExtensions)
 
     implementation(libs.inject)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -28,4 +30,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

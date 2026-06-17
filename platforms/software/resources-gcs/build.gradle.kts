@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Implementation for interacting with Google Cloud Storage (GCS) repositories"
@@ -39,6 +40,7 @@ dependencies {
     integTestImplementation(testLibs.jetty)
 
     integTestDistributionRuntimeOnly(projects.distributionsBasics)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -55,3 +57,9 @@ strictCompile {
     ignoreDeprecations()
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

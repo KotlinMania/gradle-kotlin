@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """Contains the tooling for Javadoc documentation generation."""
@@ -34,6 +35,7 @@ dependencies {
     }
 
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -47,4 +49,10 @@ packageCycles {
     // These public packages have classes that are tangled with the corresponding internal package.
     excludePatterns.add("org/gradle/external/javadoc/**")
     excludePatterns.add("org/gradle/api/tasks/javadoc/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

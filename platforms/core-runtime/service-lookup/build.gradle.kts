@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal API to dynamically lookup services provided by Gradle modules"
@@ -8,6 +9,7 @@ dependencies {
     api(libs.jspecify)
 
     implementation(projects.stdlibJavaExtensions)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -21,4 +23,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

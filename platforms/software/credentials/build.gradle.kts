@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Internal API for Gradle authentication schemes"
@@ -8,6 +9,7 @@ dependencies {
     api(projects.baseServices)
     api(projects.credentialsApi)
     api(projects.stdlibJavaExtensions)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -16,4 +18,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

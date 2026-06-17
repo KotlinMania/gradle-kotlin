@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """Generalized test infrastructure to support executing tests in test workers."""
@@ -32,6 +33,7 @@ dependencies {
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
     integTestImplementation(testFixtures(projects.testingBase))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -50,3 +52,9 @@ packageCycles {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

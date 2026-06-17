@@ -17,6 +17,7 @@
 plugins {
     id("gradlebuild.internal.java")
     id("application")
+    kotlin("jvm")
 }
 
 description = "Example client application using the build cache library"
@@ -44,8 +45,15 @@ dependencies {
     implementation(libs.slf4jApi)
 
     compileOnly(libs.jspecify)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 application {
     mainClass = "org.gradle.caching.example.ExampleBuildCacheClient"
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "A set of generic services and utilities specific for Groovy."
@@ -13,6 +14,7 @@ dependencies {
     api(libs.guava)
 
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -26,4 +28,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

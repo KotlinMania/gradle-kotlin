@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Declarations to define JVM toolchains shared between launcher and daemon"
@@ -54,6 +55,7 @@ dependencies {
 
     testFixturesImplementation(projects.internalIntegTesting)
     testFixturesImplementation(libs.commonsCompress)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -68,4 +70,10 @@ packageCycles {
     // Needed for the factory methods in the interface since the implementation is in an internal package
     // which in turn references the interface.
     excludePatterns.add("org/gradle/jvm/toolchain/JavaToolchainDownload**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

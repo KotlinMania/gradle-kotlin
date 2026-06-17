@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Services used by the Gradle client to interact with the daemon"
@@ -87,6 +88,7 @@ dependencies {
         because("Unit tests verify serialization works with TAPI types")
     }
     testImplementation(testFixtures(projects.daemonProtocol))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -95,4 +97,10 @@ gradleModule {
         client = true
         daemon = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

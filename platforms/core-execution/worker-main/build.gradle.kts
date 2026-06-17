@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Contains the main class that is loaded in a worker process, which is able to execute arbitrary actions. " +
@@ -29,6 +30,7 @@ dependencies {
     implementation(libs.slf4jApi)
 
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -41,4 +43,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

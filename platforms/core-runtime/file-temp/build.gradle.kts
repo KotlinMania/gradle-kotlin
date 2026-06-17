@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Utilities for working with temporary files & directories"
@@ -26,6 +27,7 @@ dependencies {
     api(libs.jspecify)
 
     implementation(libs.jsr305)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -39,4 +41,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

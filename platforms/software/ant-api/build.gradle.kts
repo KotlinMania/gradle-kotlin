@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "Public API for Gradle's Ant integration"
@@ -13,6 +14,7 @@ dependencies {
     compileOnly(projects.internalInstrumentationApi)  // @NotToBeMigratedToLazy annotation — compile-time only
     compileOnly(libs.jspecify)
     compileOnly(libs.jetbrainsAnnotations)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -22,4 +24,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

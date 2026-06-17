@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = "The Build configuration properties modifiers and helpers."
@@ -32,6 +33,7 @@ dependencies {
         because("ProjectBuilder tests load services from a Gradle distribution.  Toolchain usage requires JVM distribution.")
     }
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -43,3 +45,9 @@ gradleModule {
 }
 
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

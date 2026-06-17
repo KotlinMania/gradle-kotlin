@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 dependencies {
@@ -29,6 +30,7 @@ dependencies {
     implementation(projects.stdlibJavaExtensions)
 
     implementation(libs.groovy)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -42,4 +44,10 @@ gradleModule {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

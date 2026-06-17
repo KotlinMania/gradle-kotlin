@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Implements the work to generate scaladoc"
@@ -10,6 +11,7 @@ dependencies {
     api(libs.inject)
 
     implementation(projects.baseServices)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -21,4 +23,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

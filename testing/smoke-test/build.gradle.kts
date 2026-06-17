@@ -11,6 +11,7 @@ import gradlebuild.performance.generator.tasks.RemoteProject
 plugins {
     id("gradlebuild.internal.java")
     id("gradlebuild.android-home-warmup")
+    kotlin("jvm")
 }
 
 val smokeTestSourceSet = sourceSets.create("smokeTest") {
@@ -71,6 +72,7 @@ dependencies {
     // These will make the bin and src distribution available through `IntegrationTestBuildContext`
     smokeTestBinDistribution(projects.distributionsFull)
     smokeTestSrcDistribution(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 androidHomeWarmup {
@@ -212,4 +214,10 @@ tasks {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """
@@ -27,6 +28,7 @@ dependencies {
     implementation(libs.commonsLang)
 
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -40,4 +42,10 @@ gradleModule {
 
 packageCycles {
     excludePatterns.add("org/gradle/**")
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

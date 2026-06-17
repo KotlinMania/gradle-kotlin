@@ -24,13 +24,19 @@ import javax.inject.Inject
 @CacheableTask
 abstract class IncubatingApiReportTask : DefaultTask() {
 
+    private val kotlinVersion = project.the<VersionCatalogsExtension>()
+        .named("libs")
+        .findVersion("kotlin")
+        .get()
+        .getStrictVersion()
+
     private val additionalClasspath = project.objects.fileCollection().apply {
         val libs = project.the<VersionCatalogsExtension>().named("buildLibs")
         from(
             project.configurations.detachedConfiguration(
                 project.dependencies.create(libs.findLibrary("kotlinCompilerEmbeddable").get().get().copy().apply {
                     version {
-                        strictly(embeddedKotlinVersion)
+                        strictly(kotlinVersion)
                     }
                 }),
             )

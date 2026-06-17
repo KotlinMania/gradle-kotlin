@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.publish-public-libraries")
+    kotlin("jvm")
 }
 
 description = "Package build cache results"
@@ -27,6 +28,7 @@ dependencies {
     testImplementation(testFixtures(projects.core))
     testImplementation(testFixtures(projects.coreApi))
     testImplementation(testFixtures(projects.snapshots))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -36,4 +38,10 @@ gradleModule {
         daemon = true
         worker = true
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

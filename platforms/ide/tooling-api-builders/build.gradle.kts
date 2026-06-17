@@ -1,5 +1,6 @@
 plugins {
     id("gradlebuild.distribution.implementation-java")
+    kotlin("jvm")
 }
 
 description = "Provider-side implementation for running tooling model builders"
@@ -41,6 +42,7 @@ dependencies {
     testImplementation(projects.fileCollections)
     testImplementation(projects.platformJvm)
     testImplementation(testFixtures(projects.core))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -55,4 +57,10 @@ gradleModule {
 
 strictCompile {
     ignoreDeprecations()
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

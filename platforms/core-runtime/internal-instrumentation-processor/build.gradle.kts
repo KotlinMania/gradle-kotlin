@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 dependencies {
@@ -43,6 +44,7 @@ dependencies {
     testRuntimeOnly(projects.distributionsCore) {
         because("Because we use TestUtil")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.named<Test>("test").configure {
@@ -57,4 +59,10 @@ tasks.named<Test>("test").configure {
             "--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED"
         )
     }
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }

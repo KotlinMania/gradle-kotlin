@@ -1,6 +1,7 @@
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.launchable-jar")
+    kotlin("jvm")
 }
 
 description = "Implementation for launching, controlling and communicating with Gradle Daemon from CLI and TAPI"
@@ -103,6 +104,7 @@ dependencies {
     integTestDistributionRuntimeOnly(projects.distributionsFull) {
         because("built-in options are required to be present at runtime for 'TaskOptionsSpec'")
     }
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -119,3 +121,9 @@ strictCompile {
 
 testFilesCleanup.reportOnly = true
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

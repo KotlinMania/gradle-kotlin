@@ -3,6 +3,7 @@ import gradlebuild.basics.googleApisJs
 plugins {
     id("gradlebuild.distribution.api-java")
     id("gradlebuild.instrumented-java-project")
+    kotlin("jvm")
 }
 
 description = """Reports related to the dependency management functionality used
@@ -13,6 +14,7 @@ val implementationResources = configurations.create("implementationResources")
 
 repositories {
     googleApisJs()
+    mavenCentral()
 }
 
 dependencies {
@@ -70,6 +72,7 @@ dependencies {
     integTestImplementation(testLibs.jetty)
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -101,3 +104,6 @@ sourceSets.main {
 }
 
 
+kotlin {
+    jvmToolchain(17)
+}

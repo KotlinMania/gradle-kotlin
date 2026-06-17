@@ -7,6 +7,10 @@ description = "Defines which JARs go into the core part (libs/*.jar) of a Gradle
 javaPlatform.allowDependencies()
 
 dependencies {
+    constraints {
+        api(libs.kotlinStdlib)
+    }
+
     runtime(projects.installationBeacon)
     runtime(projects.apiMetadata)
     runtime(projects.baseDiagnostics)
@@ -28,4 +32,7 @@ dependencies {
     runtime(projects.declarativeDslProvider) {
         because("Adds support for interpreting files with the declarative DSL")
     }
+}
+repositories {
+    mavenCentral()
 }

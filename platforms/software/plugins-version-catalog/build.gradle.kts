@@ -16,6 +16,7 @@
 
 plugins {
     id("gradlebuild.distribution.api-java")
+    kotlin("jvm")
 }
 
 description = """Provides the version catalog plugin."""
@@ -44,6 +45,7 @@ dependencies {
     integTestImplementation(testFixtures(projects.resourcesHttp))
 
     integTestDistributionRuntimeOnly(projects.distributionsJvm)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 gradleModule {
@@ -60,3 +62,9 @@ packageCycles {
     excludePatterns.add("org/gradle/**")
 }
 
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
+}

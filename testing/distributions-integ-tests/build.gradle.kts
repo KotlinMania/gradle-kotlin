@@ -3,6 +3,7 @@ import gradlebuild.basics.buildCommitId
 
 plugins {
     id("gradlebuild.internal.java")
+    kotlin("jvm")
 }
 
 description = "The collector project for the 'integ-tests' portion of the Gradle distribution"
@@ -22,6 +23,7 @@ dependencies {
     integTestSrcDistribution(projects.distributionsFull)
 
     integTestDistributionRuntimeOnly(projects.distributionsFull)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 // Using lazy makes sure we do not invalidate CC entries when head commit changes
@@ -35,4 +37,10 @@ tasks.forkingIntegTest {
 
 errorprone {
     nullawayEnabled = true
+}
+repositories {
+    mavenCentral()
+}
+kotlin {
+    jvmToolchain(17)
 }
