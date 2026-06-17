@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.http
+package org.gradle.language.base.internal.compile
 
-interface HttpTimeoutSettings {
-    @JvmField
-    val connectionTimeoutMs: Int
+import org.gradle.api.tasks.WorkResult
+import org.gradle.language.base.compile.CompilerVersion
 
-    @JvmField
-    val socketTimeoutMs: Int
-
-    @JvmField
-    val idleConnectionTimeoutMs: Int
+class VersionAwareCompiler<T : CompileSpec?>(private val compiler: Compiler<T?>, val version: CompilerVersion?) : Compiler<T?> {
+    override fun execute(spec: T?): WorkResult? {
+        return compiler.execute(spec)
+    }
 }

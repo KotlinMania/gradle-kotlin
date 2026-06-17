@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publisher
 
-/**
- * Types that deal with publishing in the Maven format.
- *
- * @since 1.4
- */
-package org.gradle.api.publish.maven;
+interface MavenPublicationCoordinates {
+    val groupId: Property<String?>?
+
+    val artifactId: Property<String?>?
+
+    val version: Property<String?>?
+}
