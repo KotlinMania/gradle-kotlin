@@ -13,34 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test.cunit.internal;
+package org.gradle.nativeplatform.test.cunit.internal
 
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.internal.AbstractNativeComponentSpec;
-import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec;
-import org.gradle.platform.base.ComponentSpec;
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.internal.AbstractNativeComponentSpec
+import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec
+import org.gradle.platform.base.ComponentSpec
 
-public class DefaultCUnitTestSuiteSpec extends AbstractNativeComponentSpec implements CUnitTestSuiteSpec {
-    private NativeComponentSpec testedComponent;
+class DefaultCUnitTestSuiteSpec : AbstractNativeComponentSpec(), CUnitTestSuiteSpec {
+    private var testedComponent: NativeComponentSpec? = null
 
-    @Override
-    protected String getTypeName() {
-        return "Cunit test suite";
+    override fun getTypeName(): String {
+        return "Cunit test suite"
     }
 
-    @Override
-    public NativeComponentSpec getTestedComponent() {
-        return testedComponent;
+    override fun getTestedComponent(): NativeComponentSpec {
+        return testedComponent!!
     }
 
-    @Override
-    public void setTestedComponent(ComponentSpec testedComponent) {
-        this.testedComponent = (NativeComponentSpec) testedComponent;
+    override fun setTestedComponent(testedComponent: ComponentSpec) {
+        this.testedComponent = testedComponent as NativeComponentSpec
     }
 
-    @Override
-    public void testing(ComponentSpec testedComponent) {
-        this.testedComponent = (NativeComponentSpec) testedComponent;
+    override fun testing(testedComponent: ComponentSpec) {
+        this.testedComponent = testedComponent as NativeComponentSpec
     }
-
 }

@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.resolve;
+package org.gradle.api.internal.resolve
 
-import org.gradle.api.UnknownProjectException;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.model.internal.registry.ModelRegistry;
+import org.gradle.api.UnknownProjectException
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.model.internal.registry.ModelRegistry
 
 /**
  * Locates another project within the multi-project build, and provides access to its model registry in a usable state.
  */
-@ServiceScope(Scope.Build.class)
-public interface ProjectModelResolver {
-    ModelRegistry resolveProjectModel(String path) throws UnknownProjectException;
+@ServiceScope(Scope.Build::class)
+interface ProjectModelResolver {
+    @Throws(UnknownProjectException::class)
+    fun resolveProjectModel(path: String?): ModelRegistry?
 }

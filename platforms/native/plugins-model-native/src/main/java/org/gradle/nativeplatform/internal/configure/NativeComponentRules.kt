@@ -13,80 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.configure
 
-package org.gradle.nativeplatform.internal.configure;
-
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.internal.TargetedNativeComponentInternal;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.platform.internal.NativePlatformInternal;
-import org.gradle.nativeplatform.platform.internal.NativePlatforms;
-import org.gradle.platform.base.internal.BinaryNamingScheme;
-import org.gradle.platform.base.internal.DefaultBinaryNamingScheme;
-import org.gradle.platform.base.internal.DefaultPlatformRequirement;
-import org.gradle.platform.base.internal.PlatformRequirement;
-import org.gradle.platform.base.internal.PlatformResolvers;
-import org.gradle.util.internal.CollectionUtils;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.internal.TargetedNativeComponentInternal
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver
+import org.gradle.nativeplatform.platform.NativePlatform
+import org.gradle.nativeplatform.platform.internal.NativePlatformInternal
+import org.gradle.nativeplatform.platform.internal.NativePlatforms
+import org.gradle.platform.base.internal.BinaryNamingScheme
+import org.gradle.platform.base.internal.DefaultBinaryNamingScheme
+import org.gradle.platform.base.internal.DefaultPlatformRequirement.Companion.create
+import org.gradle.platform.base.internal.PlatformRequirement
+import org.gradle.platform.base.internal.PlatformResolvers
+import org.gradle.util.internal.CollectionUtils.collect
+import java.util.function.Function
 
 /**
- * Cross cutting rules for all instances of {@link org.gradle.nativeplatform.NativeComponentSpec}
+ * Cross cutting rules for all instances of [org.gradle.nativeplatform.NativeComponentSpec]
  */
-public class NativeComponentRules {
-    public static void createBinariesImpl(
-        TargetedNativeComponentInternal nativeComponent,
-        PlatformResolvers platforms,
-        Set<? extends BuildType> buildTypes,
-        Set<? extends Flavor> flavors,
-        NativePlatforms nativePlatforms,
-        NativeDependencyResolver nativeDependencyResolver,
-        FileCollectionFactory fileCollectionFactory
+object NativeComponentRules {
+    fun createBinariesImpl(
+        nativeComponent: TargetedNativeComponentInternal,
+        platforms: PlatformResolvers,
+        buildTypes: MutableSet<out BuildType?>?,
+        flavors: MutableSet<out Flavor?>?,
+        nativePlatforms: NativePlatforms,
+        nativeDependencyResolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?
     ) {
-        List<NativePlatform> resolvedPlatforms = resolvePlatforms(nativeComponent, nativePlatforms, platforms);
+        val resolvedPlatforms = resolvePlatforms(nativeComponent, nativePlatforms, platforms)
 
-        for (NativePlatform platform : resolvedPlatforms) {
-            BinaryNamingScheme namingScheme = DefaultBinaryNamingScheme.component(nativeComponent.getName());
-            namingScheme = namingScheme.withVariantDimension(platform, resolvedPlatforms);
+        for (platform in resolvedPlatforms) {
+            var namingScheme = DefaultBinaryNamingScheme.component(nativeComponent.getName())
+            namingScheme = namingScheme.withVariantDimension<NativePlatform?>(platform, resolvedPlatforms)
             executeForEachBuildType(
                 nativeComponent,
-                (NativePlatformInternal) platform,
+                platform as NativePlatformInternal?,
                 namingScheme,
                 buildTypes,
                 flavors,
                 nativeDependencyResolver,
                 fileCollectionFactory
-            );
+            )
         }
     }
 
-    private static List<NativePlatform> resolvePlatforms(TargetedNativeComponentInternal targetedComponent, NativePlatforms nativePlatforms, final PlatformResolvers platforms) {
-        List<PlatformRequirement> targetPlatforms = targetedComponent.getTargetPlatforms();
+    private fun resolvePlatforms(targetedComponent: TargetedNativeComponentInternal, nativePlatforms: NativePlatforms, platforms: PlatformResolvers): MutableList<NativePlatform?> {
+        var targetPlatforms = targetedComponent.getTargetPlatforms()
         if (targetPlatforms.isEmpty()) {
-            PlatformRequirement requirement = DefaultPlatformRequirement.create(nativePlatforms.getDefaultPlatformName());
-            targetPlatforms = Collections.singletonList(requirement);
+            val requirement = create(nativePlatforms.defaultPlatformName)
+            targetPlatforms = mutableListOf<PlatformRequirement?>(requirement)
         }
-        return CollectionUtils.collect(targetPlatforms, platformRequirement -> platforms.resolve(NativePlatform.class, platformRequirement));
+        return collect<NativePlatform?, PlatformRequirement?>(
+            targetPlatforms,
+            Function { platformRequirement: PlatformRequirement? -> platforms.resolve<NativePlatform?>(NativePlatform::class.java, platformRequirement) })
     }
 
-    private static void executeForEachBuildType(
-        TargetedNativeComponentInternal projectNativeComponent,
-        NativePlatformInternal platform,
-        BinaryNamingScheme namingScheme,
-        Set<? extends BuildType> allBuildTypes,
-        Set<? extends Flavor> allFlavors,
-        NativeDependencyResolver nativeDependencyResolver,
-        FileCollectionFactory fileCollectionFactory
+    private fun executeForEachBuildType(
+        projectNativeComponent: TargetedNativeComponentInternal,
+        platform: NativePlatformInternal?,
+        namingScheme: BinaryNamingScheme,
+        allBuildTypes: MutableSet<out BuildType?>?,
+        allFlavors: MutableSet<out Flavor?>?,
+        nativeDependencyResolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?
     ) {
-        Set<BuildType> targetBuildTypes = projectNativeComponent.chooseBuildTypes(allBuildTypes);
-        for (BuildType buildType : targetBuildTypes) {
-            BinaryNamingScheme namingSchemeWithBuildType = namingScheme.withVariantDimension(buildType, targetBuildTypes);
+        val targetBuildTypes = projectNativeComponent.chooseBuildTypes(allBuildTypes)
+        for (buildType in targetBuildTypes) {
+            val namingSchemeWithBuildType = namingScheme.withVariantDimension<BuildType?>(buildType, targetBuildTypes)
             executeForEachFlavor(
                 projectNativeComponent,
                 platform,
@@ -95,32 +93,32 @@ public class NativeComponentRules {
                 allFlavors,
                 nativeDependencyResolver,
                 fileCollectionFactory
-            );
+            )
         }
     }
 
-    private static void executeForEachFlavor(
-        TargetedNativeComponentInternal projectNativeComponent,
-        NativePlatform platform,
-        BuildType buildType,
-        BinaryNamingScheme namingScheme,
-        Set<? extends Flavor> allFlavors,
-        NativeDependencyResolver nativeDependencyResolver,
-        FileCollectionFactory fileCollectionFactory
+    private fun executeForEachFlavor(
+        projectNativeComponent: TargetedNativeComponentInternal,
+        platform: NativePlatform?,
+        buildType: BuildType?,
+        namingScheme: BinaryNamingScheme,
+        allFlavors: MutableSet<out Flavor?>?,
+        nativeDependencyResolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?
     ) {
-        Set<Flavor> targetFlavors = projectNativeComponent.chooseFlavors(allFlavors);
-        for (Flavor flavor : targetFlavors) {
-            BinaryNamingScheme namingSchemeWithFlavor = namingScheme.withVariantDimension(flavor, targetFlavors);
+        val targetFlavors = projectNativeComponent.chooseFlavors(allFlavors)
+        for (flavor in targetFlavors) {
+            val namingSchemeWithFlavor = namingScheme.withVariantDimension<Flavor?>(flavor, targetFlavors)
             NativeBinaries.createNativeBinaries(
                 projectNativeComponent,
-                projectNativeComponent.getBinaries().withType(NativeBinarySpec.class),
+                projectNativeComponent.getBinaries().withType<NativeBinarySpec?>(NativeBinarySpec::class.java),
                 nativeDependencyResolver,
                 fileCollectionFactory,
                 namingSchemeWithFlavor,
                 platform,
                 buildType,
                 flavor
-            );
+            )
         }
     }
 }

@@ -13,29 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.buildinit.plugins.internal;
+package org.gradle.buildinit.plugins.internal
 
-import org.gradle.internal.UncheckedException;
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.IOException
+import java.util.Properties
 
-import java.io.IOException;
-import java.util.Properties;
+class DefaultTemplateLibraryVersionProvider : TemplateLibraryVersionProvider {
+    private val libraryVersions = Properties()
 
-public class DefaultTemplateLibraryVersionProvider implements TemplateLibraryVersionProvider {
-
-    private final Properties libraryVersions = new Properties();
-
-    public DefaultTemplateLibraryVersionProvider() {
+    init {
         try {
-            this.libraryVersions.load(getClass().getResourceAsStream("/org/gradle/buildinit/tasks/templates/library-versions.properties"));
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            this.libraryVersions.load(javaClass.getResourceAsStream("/org/gradle/buildinit/tasks/templates/library-versions.properties"))
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    @Override
-    public String getVersion(String module) {
-        String property = libraryVersions.getProperty(module);
-        assert property != null : module + " version is not defined";
-        return property;
+    override fun getVersion(module: String): String {
+        val property = checkNotNull(libraryVersions.getProperty(module)) { module + " version is not defined" }
+        return property
     }
 }

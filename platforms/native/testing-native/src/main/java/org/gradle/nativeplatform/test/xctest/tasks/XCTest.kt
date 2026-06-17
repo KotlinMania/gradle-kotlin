@@ -13,30 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.tasks
 
-package org.gradle.nativeplatform.test.xctest.tasks;
-
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.tasks.testing.TestExecuter;
-import org.gradle.api.internal.tasks.testing.filter.DefaultTestFilter;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.SkipWhenEmpty;
-import org.gradle.api.tasks.testing.AbstractTestTask;
-import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestExecuter;
-import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestSelection;
-import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestTestExecutionSpec;
-import org.gradle.work.DisableCachingByDefault;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.util.List;
+import org.gradle.api.internal.tasks.testing.TestExecuter
+import org.gradle.api.internal.tasks.testing.filter.DefaultTestFilter
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SkipWhenEmpty
+import org.gradle.api.tasks.testing.AbstractTestTask
+import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestExecuter
+import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestSelection
+import org.gradle.nativeplatform.test.xctest.internal.execution.XCTestTestExecutionSpec
+import org.gradle.work.DisableCachingByDefault
+import java.io.File
 
 /**
  * Executes XCTest tests. Test are always run in a single execution.
@@ -44,62 +37,52 @@ import java.util.List;
  * @since 4.5
  */
 @DisableCachingByDefault(because = "Not made cacheable, yet")
-public abstract class XCTest extends AbstractTestTask {
-    @Override
-    protected XCTestTestExecutionSpec createTestExecutionSpec() {
-        DefaultTestFilter testFilter = (DefaultTestFilter) getFilter();
+abstract class XCTest : AbstractTestTask() {
+    override fun createTestExecutionSpec(): XCTestTestExecutionSpec {
+        val testFilter = getFilter() as DefaultTestFilter
 
-        return new XCTestTestExecutionSpec(getWorkingDirectory().getAsFile().get(), getRunScriptFile().getAsFile().get(), getPath(),
-            new XCTestSelection(testFilter.getIncludePatterns(), testFilter.getCommandLineIncludePatterns()));
+        return XCTestTestExecutionSpec(
+            this.workingDirectory.getAsFile().get(), this.runScriptFile.getAsFile().get(), getPath(),
+            XCTestSelection(testFilter.getIncludePatterns(), testFilter.getCommandLineIncludePatterns())
+        )
     }
 
-    /**
-     * Sets the test suite bundle or executable location
-     */
-    @PathSensitive(PathSensitivity.RELATIVE)
-    @InputDirectory
-    public abstract DirectoryProperty getTestInstallDirectory();
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val testInstallDirectory: DirectoryProperty?
 
-    /**
-     * Returns test suite bundle or executable location
-     */
-    @Internal("Covered by getRunScript")
-    public abstract RegularFileProperty getRunScriptFile();
+    @get:Internal("Covered by getRunScript")
+    abstract val runScriptFile: RegularFileProperty?
 
-    /**
-     * Returns the working directory property for this test.
-     */
-    @Internal
-    public abstract DirectoryProperty getWorkingDirectory();
+    @get:Internal
+    abstract val workingDirectory: DirectoryProperty?
 
-    @Override
-    protected TestExecuter<XCTestTestExecutionSpec> createTestExecuter() {
-        return getObjectFactory().newInstance(XCTestExecuter.class);
+    override fun createTestExecuter(): TestExecuter<XCTestTestExecutionSpec?> {
+        return getObjectFactory().newInstance<XCTestExecuter>(XCTestExecuter::class.java)
     }
 
-    /**
-     * Workaround for when the task is given an input file that doesn't exist
-     */
-    @SkipWhenEmpty
-    @Nullable
-    @Optional
-    @PathSensitive(PathSensitivity.ABSOLUTE)
-    @InputFile
-    protected File getRunScript() {
-        RegularFile runScript = getRunScriptFile().get();
-        File runScriptFile = runScript.getAsFile();
-        if (!runScriptFile.exists()) {
-            return null;
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    @get:Optional
+    @get:SkipWhenEmpty
+    protected val runScript: File?
+        /**
+         * Workaround for when the task is given an input file that doesn't exist
+         */
+        get() {
+            val runScript = this.runScriptFile.get()
+            val runScriptFile = runScript.getAsFile()
+            if (!runScriptFile.exists()) {
+                return null
+            }
+            return runScriptFile
         }
-        return runScriptFile;
-    }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public XCTest setTestNameIncludePatterns(List<String> testNamePattern) {
-        super.setTestNameIncludePatterns(testNamePattern);
-        return this;
+    override fun setTestNameIncludePatterns(testNamePattern: MutableList<String?>?): XCTest {
+        super.setTestNameIncludePatterns(testNamePattern)
+        return this
     }
 }

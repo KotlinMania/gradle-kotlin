@@ -13,51 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components.internal
 
-package org.gradle.api.reporting.components.internal;
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.platform.base.BinarySpec
+import org.gradle.reporting.ReportRenderer
+import java.io.IOException
+import java.util.function.Function
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.model.ModelElement;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.reporting.ReportRenderer;
+@ServiceScope(Scope.Global::class)
+class TypeAwareBinaryRenderer : ReportRenderer<BinarySpec?, TextReportBuilder?>() {
+    private val renderers: MutableMap<Class<*>?, ReportRenderer<BinarySpec?, TextReportBuilder?>?> = HashMap<Class<*>?, ReportRenderer<BinarySpec?, TextReportBuilder?>?>()
 
-import java.io.IOException;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-
-@ServiceScope(Scope.Global.class)
-public class TypeAwareBinaryRenderer extends ReportRenderer<BinarySpec, TextReportBuilder> {
-    static final Comparator<BinarySpec> SORT_ORDER = Comparator.comparing(ModelElement::getName);
-    private final Map<Class<?>, ReportRenderer<BinarySpec, TextReportBuilder>> renderers = new HashMap<>();
-
-    public void register(AbstractBinaryRenderer<?> renderer) {
-        renderers.put(renderer.getTargetType(), renderer);
+    fun register(renderer: AbstractBinaryRenderer<*>) {
+        renderers.put(renderer.getTargetType(), renderer)
     }
 
-    @Override
-    public void render(BinarySpec model, TextReportBuilder output) throws IOException {
-        ReportRenderer<BinarySpec, TextReportBuilder> renderer = getRendererForType(model.getClass());
-        renderer.render(model, output);
+    @Throws(IOException::class)
+    public override fun render(model: BinarySpec, output: TextReportBuilder?) {
+        val renderer = getRendererForType(model.javaClass)
+        renderer.render(model, output)
     }
 
-    private ReportRenderer<BinarySpec, TextReportBuilder> getRendererForType(Class<? extends BinarySpec> type) {
-        ReportRenderer<BinarySpec, TextReportBuilder> renderer = renderers.get(type);
+    private fun getRendererForType(type: Class<out BinarySpec?>): ReportRenderer<BinarySpec?, TextReportBuilder?> {
+        var renderer = renderers.get(type)
         if (renderer == null) {
-            Class<?> bestType = null;
-            for (Map.Entry<Class<?>, ReportRenderer<BinarySpec, TextReportBuilder>> entry : renderers.entrySet()) {
-                if (!entry.getKey().isAssignableFrom(type)) {
-                    continue;
+            var bestType: Class<*>? = null
+            for (entry in renderers.entries) {
+                if (!entry.key!!.isAssignableFrom(type)) {
+                    continue
                 }
-                if (bestType == null || bestType.isAssignableFrom(entry.getKey())) {
-                    bestType = entry.getKey();
-                    renderer = entry.getValue();
+                if (bestType == null || bestType.isAssignableFrom(entry.key)) {
+                    bestType = entry.key
+                    renderer = entry.value
                 }
             }
-            renderers.put(type, renderer);
+            renderers.put(type, renderer)
         }
-        return renderer;
+        return renderer!!
+    }
+
+    companion object {
+        val SORT_ORDER: Comparator<BinarySpec?> = Comparator.comparing<BinarySpec?, String?>(Function { obj: BinarySpec? -> obj!!.getName() })
     }
 }

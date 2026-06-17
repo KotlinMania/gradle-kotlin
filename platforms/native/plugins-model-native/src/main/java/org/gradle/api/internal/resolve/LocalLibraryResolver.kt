@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.resolve
 
-package org.gradle.api.internal.resolve;
+import org.gradle.model.internal.registry.ModelRegistry
+import org.gradle.platform.base.VariantComponent
 
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.platform.base.VariantComponent;
-
-import java.util.Collection;
-
-public interface LocalLibraryResolver {
-    Collection<VariantComponent> resolveCandidates(ModelRegistry projectModel, String libraryName);
+interface LocalLibraryResolver {
+    fun resolveCandidates(projectModel: ModelRegistry?, libraryName: String?): MutableCollection<VariantComponent?>?
 }

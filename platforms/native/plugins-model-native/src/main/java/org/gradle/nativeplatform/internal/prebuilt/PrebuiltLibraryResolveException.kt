@@ -13,15 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class PrebuiltLibraryResolveException extends GradleException {
-    public PrebuiltLibraryResolveException(String message) {
-        super(message);
-    }
-}
+class PrebuiltLibraryResolveException(message: String?) : GradleException(message)

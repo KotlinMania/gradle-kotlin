@@ -50,8 +50,8 @@ public class AntTargetTest {
         TestTask testTask = new TestTask();
         testTask.setProject(antTarget.getProject());
         antTarget.addTask(testTask);
-        task.setTarget(antTarget);
-        task.setBaseDir(baseDir);
+        task.target = antTarget;
+        task.baseDir = baseDir;
         task.executeAntTarget();
         assertTrue(testTask.executed);
     }
@@ -60,7 +60,7 @@ public class AntTargetTest {
     public void delegatesDescriptionToTarget() {
         antTarget.setDescription("description");
 
-        task.setTarget(antTarget);
+        task.target = antTarget;
         assertThat(task.getDescription(), equalTo("description"));
 
         antTarget.setDescription("new description");

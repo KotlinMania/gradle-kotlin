@@ -13,90 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal
 
-package org.gradle.language.base.internal;
+import org.gradle.api.BuildableComponentSpec
+import org.gradle.api.Task
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.api.internal.AbstractBuildableComponentSpec
+import org.gradle.platform.base.internal.ComponentSpecIdentifier
 
-import org.gradle.api.BuildableComponentSpec;
-import org.gradle.api.Task;
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.internal.AbstractBuildableComponentSpec;
-import org.gradle.platform.base.internal.ComponentSpecIdentifier;
+abstract class AbstractLanguageSourceSet(identifier: ComponentSpecIdentifier?, publicType: Class<out BuildableComponentSpec?>?, private val source: SourceDirectorySet) :
+    AbstractBuildableComponentSpec(identifier!!, publicType!!), LanguageSourceSetInternal {
+    private var generated = false
+    private var generatorTask: Task? = null
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-
-public abstract class AbstractLanguageSourceSet extends AbstractBuildableComponentSpec implements LanguageSourceSetInternal {
-    private final static Map<String, String> LANGUAGES = new HashMap<>();
-
-    private final SourceDirectorySet source;
-    private boolean generated;
-    private Task generatorTask;
-
-    public AbstractLanguageSourceSet(ComponentSpecIdentifier identifier, Class<? extends BuildableComponentSpec> publicType, SourceDirectorySet source) {
-        super(identifier, publicType);
-        this.source = source;
-        super.builtBy(source.getBuildDependencies());
+    init {
+        super.builtBy(source.getBuildDependencies())
     }
 
-    protected String getLanguageName() {
-        return guessLanguageName(getTypeName());
+    protected open val languageName: String
+        get() = guessLanguageName(getTypeName())
+
+    override fun getProjectScopedName(): String? {
+        return getIdentifier().getProjectScopedName()
     }
 
-    private static synchronized String guessLanguageName(String typeName) {
-        String language = LANGUAGES.get(typeName);
-        if (language != null) {
-            return language;
-        }
-        language = typeName.replaceAll("LanguageSourceSet$", "").replaceAll("SourceSet$", "").replaceAll("Source$", "").replaceAll("Set$", "");
-        LANGUAGES.put(typeName, language);
-        return language;
+    override fun builtBy(vararg tasks: Any?) {
+        generated = true
+        super.builtBy(*tasks)
     }
 
-    @Override
-    public String getProjectScopedName() {
-        return getIdentifier().getProjectScopedName();
+    override fun generatedBy(generatorTask: Task?) {
+        this.generatorTask = generatorTask
     }
 
-    @Override
-    public void builtBy(Object... tasks) {
-        generated = true;
-        super.builtBy(tasks);
+    override fun getGeneratorTask(): Task? {
+        return generatorTask
     }
 
-    @Override
-    public void generatedBy(Task generatorTask) {
-        this.generatorTask = generatorTask;
-    }
-
-    @Override
-    public Task getGeneratorTask() {
-        return generatorTask;
-    }
-
-    @Override
-    public boolean getMayHaveSources() {
+    override fun getMayHaveSources(): Boolean {
         // This doesn't take into account build dependencies of the SourceDirectorySet.
         // Should just ditch SourceDirectorySet from here since it's not really a great model, and drags in too much baggage.
-        return generated || !source.isEmpty();
+        return generated || !source.isEmpty()
     }
 
-    @Override
-    public String getDisplayName() {
-        String languageName = getLanguageName();
-        if (languageName.toLowerCase(Locale.ROOT).endsWith("resources")) {
-            return languageName + " '" + getIdentifier().getPath() + "'";
+    override fun getDisplayName(): String {
+        val languageName = this.languageName
+        if (languageName.lowercase().endsWith("resources")) {
+            return languageName + " '" + getIdentifier().getPath() + "'"
         }
-        return languageName + " source '" + getIdentifier().getPath() + "'";
+        return languageName + " source '" + getIdentifier().getPath() + "'"
     }
 
-    @Override
-    public SourceDirectorySet getSource() {
-        return source;
+    override fun getSource(): SourceDirectorySet {
+        return source
     }
 
-    @Override
-    public String getParentName() {
-        return getIdentifier().getParent() == null ? null : getIdentifier().getParent().getName();
+    override fun getParentName(): String? {
+        return if (getIdentifier().getParent() == null) null else getIdentifier().getParent()!!.getName()
+    }
+
+    companion object {
+        private val LANGUAGES: MutableMap<String?, String?> = HashMap<String?, String?>()
+
+        @Synchronized
+        private fun guessLanguageName(typeName: String): String {
+            var language: String? = LANGUAGES.get(typeName)
+            if (language != null) {
+                return language
+            }
+            language = typeName.replace("LanguageSourceSet$".toRegex(), "").replace("SourceSet$".toRegex(), "").replace("Source$".toRegex(), "").replace("Set$".toRegex(), "")
+            LANGUAGES.put(typeName, language)
+            return language
+        }
     }
 }

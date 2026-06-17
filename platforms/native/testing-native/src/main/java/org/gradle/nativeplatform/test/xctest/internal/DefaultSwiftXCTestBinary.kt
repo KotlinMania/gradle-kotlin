@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal
 
-package org.gradle.nativeplatform.test.xctest.internal;
-
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
-import org.gradle.language.cpp.internal.NativeDependencyCache;
-import org.gradle.language.cpp.internal.NativeVariantIdentity;
-import org.gradle.language.nativeplatform.internal.Names;
-import org.gradle.language.swift.SwiftPlatform;
-import org.gradle.language.swift.internal.DefaultSwiftBinary;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestBinary;
-import org.gradle.nativeplatform.test.xctest.tasks.XCTest;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.language.cpp.internal.NativeDependencyCache
+import org.gradle.language.cpp.internal.NativeVariantIdentity
+import org.gradle.language.nativeplatform.internal.Names
+import org.gradle.language.swift.SwiftPlatform
+import org.gradle.language.swift.internal.DefaultSwiftBinary
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestBinary
+import org.gradle.nativeplatform.test.xctest.tasks.XCTest
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
 
 /**
  * Binary of a XCTest suite component.
@@ -41,37 +40,60 @@ import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
  *
  * Either way, the installation provides a single entry point for executing this binary.
  */
-public abstract class DefaultSwiftXCTestBinary extends DefaultSwiftBinary implements SwiftXCTestBinary {
-    private final RegularFileProperty executableFile;
-    private final DirectoryProperty installDirectory;
-    private final RegularFileProperty runScriptFile;
-    private final Property<XCTest> runTaskProperty;
+abstract class DefaultSwiftXCTestBinary(
+    names: Names,
+    objectFactory: ObjectFactory,
+    nativeDependencyCache: NativeDependencyCache,
+    taskDependencyFactory: TaskDependencyFactory,
+    module: Provider<String?>?,
+    testable: Boolean,
+    source: FileCollection?,
+    configurations: ConfigurationContainer?,
+    implementation: Configuration?,
+    targetPlatform: SwiftPlatform,
+    toolChain: NativeToolChainInternal?,
+    platformToolProvider: PlatformToolProvider?,
+    identity: NativeVariantIdentity
+) : DefaultSwiftBinary(
+    names,
+    objectFactory,
+    nativeDependencyCache,
+    taskDependencyFactory,
+    module,
+    testable,
+    source,
+    configurations,
+    implementation,
+    targetPlatform,
+    toolChain,
+    platformToolProvider,
+    identity
+), SwiftXCTestBinary {
+    private val executableFile: RegularFileProperty
+    private val installDirectory: DirectoryProperty
+    private val runScriptFile: RegularFileProperty
+    private val runTaskProperty: Property<XCTest?>
 
-    public DefaultSwiftXCTestBinary(Names names, ObjectFactory objectFactory, NativeDependencyCache nativeDependencyCache, TaskDependencyFactory taskDependencyFactory, Provider<String> module, boolean testable, FileCollection source, ConfigurationContainer configurations, Configuration implementation, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider, NativeVariantIdentity identity) {
-        super(names, objectFactory, nativeDependencyCache, taskDependencyFactory, module, testable, source, configurations, implementation, targetPlatform, toolChain, platformToolProvider, identity);
-        this.executableFile = objectFactory.fileProperty();
-        this.installDirectory = objectFactory.directoryProperty();
-        this.runScriptFile = objectFactory.fileProperty();
-        this.runTaskProperty = objectFactory.property(XCTest.class);
+    init {
+        this.executableFile = objectFactory.fileProperty()
+        this.installDirectory = objectFactory.directoryProperty()
+        this.runScriptFile = objectFactory.fileProperty()
+        this.runTaskProperty = objectFactory.property<XCTest?>(XCTest::class.java)
     }
 
-    @Override
-    public RegularFileProperty getExecutableFile() {
-        return executableFile;
+    override fun getExecutableFile(): RegularFileProperty {
+        return executableFile
     }
 
-    @Override
-    public DirectoryProperty getInstallDirectory() {
-        return installDirectory;
+    override fun getInstallDirectory(): DirectoryProperty {
+        return installDirectory
     }
 
-    @Override
-    public RegularFileProperty getRunScriptFile() {
-        return runScriptFile;
+    override fun getRunScriptFile(): RegularFileProperty {
+        return runScriptFile
     }
 
-    @Override
-    public Property<XCTest> getRunTask() {
-        return runTaskProperty;
+    override fun getRunTask(): Property<XCTest?> {
+        return runTaskProperty
     }
 }

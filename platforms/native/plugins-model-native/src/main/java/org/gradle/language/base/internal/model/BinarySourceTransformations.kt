@@ -13,33 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.model
 
-package org.gradle.language.base.internal.model;
-
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Booleans;
-import org.gradle.api.Task;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.internal.JointCompileTaskConfig;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.base.internal.registry.LanguageTransform;
-import org.gradle.language.base.internal.registry.LanguageTransformContainer;
-import org.gradle.platform.base.internal.BinarySpecInternal;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import static org.apache.commons.lang3.StringUtils.capitalize;
+import com.google.common.collect.Lists
+import com.google.common.primitives.Booleans
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.Task
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.internal.JointCompileTaskConfig
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.base.internal.registry.LanguageTransform
+import org.gradle.language.base.internal.registry.LanguageTransformContainer
+import org.gradle.platform.base.internal.BinarySpecInternal
+import java.util.Collections
 
 /**
- * Creates source 'transformation' tasks based on the available {@link LanguageTransform}s.
+ * Creates source 'transformation' tasks based on the available [LanguageTransform]s.
  *
  * This class is a basic and somewhat hacky placeholder for true dependency-aware source handling:
  * - Source sets should be able to depend on other source sets, resulting in the correct task dependencies and inputs
@@ -47,49 +38,45 @@ import static org.apache.commons.lang3.StringUtils.capitalize;
  *
  * Currently we use joint-compilation when:
  * - We have a language transform that supports joint-compilation
- * - Binary is flagged with {@link BinarySpecInternal#hasCodependentSources()}.
+ * - Binary is flagged with [BinarySpecInternal.hasCodependentSources].
  */
-public class BinarySourceTransformations {
-    private final TaskContainer tasks;
-    private final Iterable<LanguageTransform<?, ?>> prioritizedTransforms;
-    private final ServiceRegistry serviceRegistry;
+class BinarySourceTransformations(private val tasks: TaskContainer, transforms: LanguageTransformContainer, serviceRegistry: ServiceRegistry?) {
+    private val prioritizedTransforms: Iterable<LanguageTransform<*, *>>
+    private val serviceRegistry: ServiceRegistry?
 
-    public BinarySourceTransformations(TaskContainer tasks, LanguageTransformContainer transforms, ServiceRegistry serviceRegistry) {
-        this.tasks = tasks;
-        this.prioritizedTransforms = prioritize(transforms);
-        this.serviceRegistry = serviceRegistry;
+    init {
+        this.prioritizedTransforms = prioritize(transforms)
+        this.serviceRegistry = serviceRegistry
     }
 
-    public void createTasksFor(BinarySpecInternal binary) {
-        Set<LanguageSourceSetInternal> sourceSetsToCompile = getSourcesToCompile(binary);
-        for (LanguageTransform<?, ?> languageTransform : prioritizedTransforms) {
-
+    fun createTasksFor(binary: BinarySpecInternal) {
+        val sourceSetsToCompile: MutableSet<LanguageSourceSetInternal?> = getSourcesToCompile(binary)
+        for (languageTransform in prioritizedTransforms) {
             if (!languageTransform.applyToBinary(binary)) {
-                continue;
+                continue
             }
 
-            LanguageSourceSetInternal sourceSetToCompile;
-            while ((sourceSetToCompile = findSourceFor(languageTransform, sourceSetsToCompile)) != null) {
-                sourceSetsToCompile.remove(sourceSetToCompile);
+            var sourceSetToCompile: LanguageSourceSetInternal?
+            while ((findSourceFor(languageTransform, sourceSetsToCompile).also { sourceSetToCompile = it }) != null) {
+                sourceSetsToCompile.remove(sourceSetToCompile)
 
-                final SourceTransformTaskConfig taskConfig = languageTransform.getTransformTask();
-                String taskName = getTransformTaskName(languageTransform, taskConfig, binary, sourceSetToCompile);
-                @SuppressWarnings("deprecation")
-                Task task = tasks.create(taskName, taskConfig.getTaskType());
-                taskConfig.configureTask(task, binary, sourceSetToCompile, serviceRegistry);
+                val taskConfig = languageTransform.getTransformTask()
+                val taskName = getTransformTaskName(languageTransform, taskConfig, binary, sourceSetToCompile!!)
+                @Suppress("deprecation") val task: Task = tasks.create(taskName, taskConfig.getTaskType())
+                taskConfig.configureTask(task, binary, sourceSetToCompile, serviceRegistry)
 
-                task.dependsOn(sourceSetToCompile);
-                binary.getTasks().add(task);
+                task.dependsOn(sourceSetToCompile)
+                binary.getTasks().add(task)
 
-                if (binary.hasCodependentSources() && taskConfig instanceof JointCompileTaskConfig) {
-                    JointCompileTaskConfig jointCompileTaskConfig = (JointCompileTaskConfig) taskConfig;
+                if (binary.hasCodependentSources() && taskConfig is JointCompileTaskConfig) {
+                    val jointCompileTaskConfig = taskConfig
 
-                    Iterator<LanguageSourceSetInternal> candidateSourceSets = sourceSetsToCompile.iterator();
+                    val candidateSourceSets = sourceSetsToCompile.iterator()
                     while (candidateSourceSets.hasNext()) {
-                        LanguageSourceSetInternal candidate = candidateSourceSets.next();
+                        val candidate = candidateSourceSets.next()
                         if (jointCompileTaskConfig.canTransform(candidate)) {
-                            jointCompileTaskConfig.configureAdditionalTransform(task, candidate);
-                            candidateSourceSets.remove();
+                            jointCompileTaskConfig.configureAdditionalTransform(task, candidate)
+                            candidateSourceSets.remove()
                         }
                     }
                 }
@@ -98,43 +85,42 @@ public class BinarySourceTransformations {
         // Should really fail here if sourcesToCompile is not empty: no transform for this source set in this binary
     }
 
-    private Iterable<LanguageTransform<?, ?>> prioritize(LanguageTransformContainer languageTransforms) {
-        List<LanguageTransform<?, ?>> prioritized = Lists.newArrayList(languageTransforms);
-        Collections.sort(prioritized, new Comparator<LanguageTransform<?, ?>>() {
-            @Override
-            public int compare(LanguageTransform<?, ?> o1, LanguageTransform<?, ?> o2) {
-                boolean joint1 = o1.getTransformTask() instanceof JointCompileTaskConfig;
-                boolean joint2 = o2.getTransformTask() instanceof JointCompileTaskConfig;
-                return Booleans.trueFirst().compare(joint1, joint2);
+    private fun prioritize(languageTransforms: LanguageTransformContainer): Iterable<LanguageTransform<*, *>> {
+        val prioritized: MutableList<LanguageTransform<*, *>> = Lists.newArrayList<LanguageTransform<*, *>?>(languageTransforms)
+        Collections.sort<LanguageTransform<*, *>?>(prioritized, object : Comparator<LanguageTransform<*, *>?> {
+            override fun compare(o1: LanguageTransform<*, *>, o2: LanguageTransform<*, *>): Int {
+                val joint1 = o1.getTransformTask() is JointCompileTaskConfig
+                val joint2 = o2.getTransformTask() is JointCompileTaskConfig
+                return Booleans.trueFirst().compare(joint1, joint2)
             }
-        });
-        return prioritized;
+        })
+        return prioritized
     }
 
-    private Set<LanguageSourceSetInternal> getSourcesToCompile(BinarySpecInternal binary) {
-        LinkedHashSet<LanguageSourceSetInternal> sourceSets = new LinkedHashSet<>();
-        for (LanguageSourceSet languageSourceSet : binary.getInputs()) {
-            LanguageSourceSetInternal languageSourceSetInternal = (LanguageSourceSetInternal) languageSourceSet;
+    private fun getSourcesToCompile(binary: BinarySpecInternal): MutableSet<LanguageSourceSetInternal?> {
+        val sourceSets = LinkedHashSet<LanguageSourceSetInternal?>()
+        for (languageSourceSet in binary.getInputs()) {
+            val languageSourceSetInternal = languageSourceSet as LanguageSourceSetInternal
             if (languageSourceSetInternal.getMayHaveSources()) {
-                sourceSets.add(languageSourceSetInternal);
+                sourceSets.add(languageSourceSetInternal)
             }
         }
-        return sourceSets;
+        return sourceSets
     }
 
-    private String getTransformTaskName(LanguageTransform<?, ?> transform, SourceTransformTaskConfig taskConfig, BinarySpecInternal binary, LanguageSourceSetInternal sourceSetToCompile) {
-        if (binary.hasCodependentSources() && taskConfig instanceof JointCompileTaskConfig) {
-            return taskConfig.getTaskPrefix() + capitalize(binary.getProjectScopedName()) + capitalize(transform.getClass().getSimpleName());
+    private fun getTransformTaskName(transform: LanguageTransform<*, *>, taskConfig: SourceTransformTaskConfig, binary: BinarySpecInternal, sourceSetToCompile: LanguageSourceSetInternal): String {
+        if (binary.hasCodependentSources() && taskConfig is JointCompileTaskConfig) {
+            return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.getProjectScopedName()) + StringUtils.capitalize(transform.javaClass.getSimpleName())
         }
-        return taskConfig.getTaskPrefix() + capitalize(binary.getProjectScopedName()) + capitalize(sourceSetToCompile.getProjectScopedName());
+        return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.getProjectScopedName()) + StringUtils.capitalize(sourceSetToCompile.getProjectScopedName())
     }
 
-    private LanguageSourceSetInternal findSourceFor(LanguageTransform<?, ?> languageTransform, Set<LanguageSourceSetInternal> sourceSetsToCompile) {
-        for (LanguageSourceSetInternal candidate : sourceSetsToCompile) {
+    private fun findSourceFor(languageTransform: LanguageTransform<*, *>, sourceSetsToCompile: MutableSet<LanguageSourceSetInternal?>): LanguageSourceSetInternal? {
+        for (candidate in sourceSetsToCompile) {
             if (languageTransform.getSourceSetType().isInstance(candidate)) {
-                return candidate;
+                return candidate
             }
         }
-        return null;
+        return null
     }
 }

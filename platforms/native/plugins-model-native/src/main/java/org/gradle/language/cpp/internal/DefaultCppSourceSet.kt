@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal
 
-package org.gradle.language.cpp.internal;
+import org.gradle.language.cpp.CppSourceSet
+import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet
 
-import org.gradle.language.cpp.CppSourceSet;
-import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet;
-
-public class DefaultCppSourceSet extends AbstractHeaderExportingDependentSourceSet implements CppSourceSet {
-    @Override
-    protected String getLanguageName() {
-        return "C++";
+class DefaultCppSourceSet : AbstractHeaderExportingDependentSourceSet(), CppSourceSet {
+    override fun getLanguageName(): String {
+        return "C++"
     }
 }

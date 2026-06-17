@@ -13,82 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import com.google.common.collect.ImmutableList;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-import java.util.Collections;
+import com.google.common.collect.ImmutableList
+import org.jspecify.annotations.NullMarked
 
 /**
  * Data object for use with version catalog generation to encode module, version and if generated aliases should be shortened or qualified.
  */
 @NullMarked
-public final class BuildInitDependency {
-    private final String module;
-    @Nullable
-    private final String version;
-    private final ImmutableList<DependencyExclusion> exclusions;
+class BuildInitDependency private constructor(val module: String, val version: String?, exclusions: MutableList<DependencyExclusion>) {
+    val exclusions: ImmutableList<DependencyExclusion>
 
-    private BuildInitDependency(String module, @Nullable String version, List<DependencyExclusion> exclusions) {
-        this.module = module;
-        this.version = version;
-        this.exclusions = ImmutableList.copyOf(exclusions);
+    init {
+        this.exclusions = ImmutableList.copyOf<DependencyExclusion>(exclusions)
     }
 
-    public static BuildInitDependency of(String module, String version) {
-        return new BuildInitDependency(module, version, Collections.emptyList());
-    }
-
-    public static BuildInitDependency of(String group, String name, String version) {
-        return new BuildInitDependency(group + ":" + name, version, Collections.emptyList());
-    }
-
-    public static BuildInitDependency of(String group, String name, String version, List<DependencyExclusion> excludes) {
-        return new BuildInitDependency(group + ":" + name, version, excludes);
-    }
-
-    public static BuildInitDependency of(String module) {
-        return new BuildInitDependency(module, null, Collections.emptyList());
-    }
-
-    public String getModule() {
-        return module;
-    }
-
-    public @Nullable String getVersion() {
-        return version;
-    }
-
-    public ImmutableList<DependencyExclusion> getExclusions() {
-        return exclusions;
-    }
-    public String toNotation() {
-        return module + (version != null ? ":" + version : "");
+    fun toNotation(): String {
+        return module + (if (version != null) ":" + version else "")
     }
 
     /**
      * Value type representing the coordinates of a dependency exclusion.
      */
     @NullMarked
-    public static final class DependencyExclusion {
-        private final String group;
-        private final String module;
-
-        public DependencyExclusion(String group, String module) {
-            this.group = group;
-            this.module = module;
+    class DependencyExclusion(val group: String, val module: String)
+    companion object {
+        fun of(module: String, version: String): BuildInitDependency {
+            return BuildInitDependency(module, version, mutableListOf<DependencyExclusion>())
         }
 
-        public String getGroup() {
-            return group;
+        fun of(group: String, name: String, version: String): BuildInitDependency {
+            return BuildInitDependency(group + ":" + name, version, mutableListOf<DependencyExclusion>())
         }
 
-        public String getModule() {
-            return module;
+        fun of(group: String, name: String, version: String, excludes: MutableList<DependencyExclusion>): BuildInitDependency {
+            return BuildInitDependency(group + ":" + name, version, excludes)
+        }
+
+        fun of(module: String): BuildInitDependency {
+            return BuildInitDependency(module, null, mutableListOf<DependencyExclusion>())
         }
     }
 }

@@ -76,7 +76,7 @@ abstract class JacocoCoverageVerification : JacocoReportBase() {
     fun check() {
         val queue = this.workerExecutor.classLoaderIsolation()
         queue.submit<JacocoCoverageParameters?>(AntJacocoCheck::class.java, Action { parameters: JacocoCoverageParameters? ->
-            parameters!!.getAntLibraryClasspath().convention(getJacocoClasspath())
+            parameters!!.antLibraryClasspath.convention(getJacocoClasspath())
             parameters.projectName.convention(projectName)
             parameters.encoding.convention(getSourceEncoding())
             parameters.allSourcesDirs.convention(getAllSourceDirs())

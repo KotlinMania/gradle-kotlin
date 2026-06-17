@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.buildinit.plugins.internal.BuildScriptBuilder.SuiteSpec;
-
-public interface TestingBuilder {
-    SuiteSpec junitSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider);
-    SuiteSpec junitJupiterSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider);
-    SuiteSpec spockSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider);
-    SuiteSpec kotlinTestSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider);
-    SuiteSpec testNG(String name, TemplateLibraryVersionProvider libraryVersionProvider);
+interface TestingBuilder {
+    fun junitSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): BuildScriptBuilder.SuiteSpec?
+    fun junitJupiterSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): BuildScriptBuilder.SuiteSpec?
+    fun spockSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): BuildScriptBuilder.SuiteSpec?
+    fun kotlinTestSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): BuildScriptBuilder.SuiteSpec?
+    fun testNG(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): BuildScriptBuilder.SuiteSpec?
 }

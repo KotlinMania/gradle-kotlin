@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.googletest
 
-package org.gradle.nativeplatform.test.googletest;
-
-import org.gradle.api.Incubating;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
+import org.gradle.api.Incubating
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
 
 /**
  * An executable which run a Google Test test suite.
  */
 @Incubating
-public interface GoogleTestTestSuiteBinarySpec extends NativeTestSuiteBinarySpec {
+interface GoogleTestTestSuiteBinarySpec : NativeTestSuiteBinarySpec {
     /**
      * {@inheritDoc}
      */
-    @Override
-    GoogleTestTestSuiteSpec getComponent();
+    override fun getComponent(): GoogleTestTestSuiteSpec?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    GoogleTestTestSuiteSpec getTestSuite();
+    override fun getTestSuite(): GoogleTestTestSuiteSpec
 }

@@ -13,43 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import java.io.Serializable
 
-import java.io.Serializable;
-
-public class DefaultCppBinaryModel implements Serializable {
-    private final String name;
-    private final String variantName;
-    private final String baseName;
-    private final DefaultCompilationDetails compilationDetails;
-    private final DefaultLinkageDetails linkageDetails;
-
-    public DefaultCppBinaryModel(String name, String variantName, String baseName, DefaultCompilationDetails compilationDetails, DefaultLinkageDetails linkageDetails) {
-        this.name = name;
-        this.variantName = variantName;
-        this.baseName = baseName;
-        this.compilationDetails = compilationDetails;
-        this.linkageDetails = linkageDetails;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getVariantName() {
-        return variantName;
-    }
-
-    public String getBaseName() {
-        return baseName;
-    }
-
-    public DefaultCompilationDetails getCompilationDetails() {
-        return compilationDetails;
-    }
-
-    public DefaultLinkageDetails getLinkageDetails() {
-        return linkageDetails;
-    }
-}
+open class DefaultCppBinaryModel(val name: String?, val variantName: String?, val baseName: String?, val compilationDetails: DefaultCompilationDetails?, val linkageDetails: DefaultLinkageDetails?) :
+    Serializable

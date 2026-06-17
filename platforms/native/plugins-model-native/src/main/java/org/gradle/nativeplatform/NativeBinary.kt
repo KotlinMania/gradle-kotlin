@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.platform.base.Binary;
-import org.gradle.nativeplatform.platform.NativePlatform;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.Binary
 
 /**
  * Represents a particular binary artifact.
  */
 @Incubating
-public interface NativeBinary extends Binary {
+interface NativeBinary : Binary {
     /**
-     * The {@link org.gradle.nativeplatform.Flavor} that this binary was built with.
+     * The [Flavor] that this binary was built with.
      */
-    Flavor getFlavor();
+    val flavor: Flavor?
 
     /**
-     * Returns the {@link org.gradle.nativeplatform.platform.NativePlatform} that this binary is targeted to run on.
+     * Returns the [org.gradle.nativeplatform.platform.NativePlatform] that this binary is targeted to run on.
      */
-    NativePlatform getTargetPlatform();
+    val targetPlatform: NativePlatform?
 
     /**
-     * Returns the {@link org.gradle.nativeplatform.BuildType} used to construct this binary.
+     * Returns the [BuildType] used to construct this binary.
      */
-    BuildType getBuildType();
+    val buildType: BuildType?
 }

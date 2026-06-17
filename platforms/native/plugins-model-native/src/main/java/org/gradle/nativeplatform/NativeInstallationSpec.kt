@@ -13,26 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.model.internal.core.UnmanagedStruct;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.model.internal.core.UnmanagedStruct
+import java.io.File
 
 /**
  * Specifies the installation location for a native executable.
  */
-@Incubating @UnmanagedStruct
-public class NativeInstallationSpec {
-    private File directory;
-
-    public File getDirectory() {
-        return directory;
-    }
-
-    public void setDirectory(File directory) {
-        this.directory = directory;
-    }
+@Incubating
+@UnmanagedStruct
+class NativeInstallationSpec {
+    var directory: File? = null
 }

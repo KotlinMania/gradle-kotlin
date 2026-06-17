@@ -13,17 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.action
 
-package org.gradle.buildinit.plugins.internal.action;
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.configuration.project.ProjectConfigureAction
 
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.configuration.project.ProjectConfigureAction;
-
-public class BuildInitAutoApplyAction implements ProjectConfigureAction {
-
-    @Override
-    public void execute(final ProjectInternal project) {
-        project.getPluginManager().apply("org.gradle.build-init");
+class BuildInitAutoApplyAction : ProjectConfigureAction {
+    override fun execute(project: ProjectInternal) {
+        project.getPluginManager().apply("org.gradle.build-init")
     }
-
 }

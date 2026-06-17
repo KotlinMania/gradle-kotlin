@@ -13,31 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.nativeplatform.NativeLibraryRequirement
+import org.gradle.nativeplatform.NativeLibrarySpec
 
-import org.gradle.nativeplatform.NativeLibraryRequirement;
-import org.gradle.nativeplatform.NativeLibrarySpec;
-
-public class DefaultNativeLibrarySpec extends AbstractTargetedNativeComponentSpec implements NativeLibrarySpec {
-    @Override
-    protected String getTypeName() {
-        return "native library";
+open class DefaultNativeLibrarySpec : AbstractTargetedNativeComponentSpec(), NativeLibrarySpec {
+    override fun getTypeName(): String {
+        return "native library"
     }
 
-    @Override
-    public NativeLibraryRequirement getShared() {
-        return new ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "shared");
+    override fun getShared(): NativeLibraryRequirement {
+        return ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "shared")
     }
 
-    @Override
-    public NativeLibraryRequirement getStatic() {
-        return new ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "static");
+    override fun getStatic(): NativeLibraryRequirement {
+        return ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "static")
     }
 
-    @Override
-    public NativeLibraryRequirement getApi() {
-        return new ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "api");
+    override fun getApi(): NativeLibraryRequirement {
+        return ProjectNativeLibraryRequirement(getProjectPath(), this.getName(), "api")
     }
-
 }

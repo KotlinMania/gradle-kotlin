@@ -13,214 +13,216 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cpp.plugins
 
-package org.gradle.nativeplatform.test.cpp.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.api.tasks.TaskProvider;
-import org.gradle.language.base.plugins.LifecycleBasePlugin;
-import org.gradle.language.cpp.CppApplication;
-import org.gradle.language.cpp.CppBinary;
-import org.gradle.language.cpp.CppComponent;
-import org.gradle.language.cpp.CppPlatform;
-import org.gradle.language.cpp.ProductionCppComponent;
-import org.gradle.language.cpp.internal.DefaultCppBinary;
-import org.gradle.language.cpp.internal.DefaultCppPlatform;
-import org.gradle.language.cpp.plugins.CppBasePlugin;
-import org.gradle.language.internal.NativeComponentFactory;
-import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithLinkUsage;
-import org.gradle.language.nativeplatform.internal.Dimensions;
-import org.gradle.language.nativeplatform.internal.toolchains.ToolChainSelector;
-import org.gradle.language.nativeplatform.tasks.UnexportMainSymbol;
-import org.gradle.nativeplatform.TargetMachine;
-import org.gradle.nativeplatform.TargetMachineFactory;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform;
-import org.gradle.nativeplatform.tasks.InstallExecutable;
-import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
-import org.gradle.nativeplatform.test.cpp.CppTestSuite;
-import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestExecutable;
-import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestSuite;
-import org.gradle.nativeplatform.test.plugins.NativeTestingBasePlugin;
-import org.gradle.nativeplatform.test.tasks.RunTestExecutable;
-
-import javax.inject.Inject;
-import java.util.concurrent.Callable;
-import java.util.stream.Stream;
-
-import static org.gradle.language.nativeplatform.internal.Dimensions.tryToBuildOnHost;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.provider.SetProperty
+import org.gradle.language.base.plugins.LifecycleBasePlugin
+import org.gradle.language.cpp.CppApplication
+import org.gradle.language.cpp.CppBinary
+import org.gradle.language.cpp.CppComponent.getBinaries
+import org.gradle.language.cpp.CppPlatform
+import org.gradle.language.cpp.ProductionCppComponent
+import org.gradle.language.cpp.internal.DefaultCppBinary
+import org.gradle.language.cpp.internal.DefaultCppComponent.getBinaries
+import org.gradle.language.cpp.internal.DefaultCppComponent.getName
+import org.gradle.language.cpp.internal.DefaultCppComponent.getNames
+import org.gradle.language.cpp.internal.DefaultCppPlatform
+import org.gradle.language.cpp.internal.NativeVariantIdentity
+import org.gradle.language.cpp.internal.NativeVariantIdentity.getName
+import org.gradle.language.cpp.plugins.CppBasePlugin
+import org.gradle.language.internal.DefaultBinaryCollection.realizeNow
+import org.gradle.language.internal.DefaultBinaryCollection.whenElementKnown
+import org.gradle.language.internal.DefaultNativeBinary.getNames
+import org.gradle.language.internal.NativeComponentFactory
+import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithLinkUsage
+import org.gradle.language.nativeplatform.internal.Dimensions
+import org.gradle.language.nativeplatform.internal.Dimensions.tryToBuildOnHost
+import org.gradle.language.nativeplatform.internal.Dimensions.useHostAsDefaultTargetMachine
+import org.gradle.language.nativeplatform.internal.Names.getTaskName
+import org.gradle.language.nativeplatform.internal.toolchains.ToolChainSelector
+import org.gradle.language.nativeplatform.tasks.UnexportMainSymbol
+import org.gradle.nativeplatform.TargetMachine
+import org.gradle.nativeplatform.TargetMachineFactory
+import org.gradle.nativeplatform.platform.NativePlatform
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.Companion.currentArchitecture
+import org.gradle.nativeplatform.test.cpp.CppTestExecutable
+import org.gradle.nativeplatform.test.cpp.CppTestSuite
+import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestExecutable
+import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestSuite
+import org.gradle.nativeplatform.test.plugins.NativeTestingBasePlugin
+import org.gradle.nativeplatform.test.tasks.RunTestExecutable
+import java.util.concurrent.Callable
+import java.util.function.Supplier
+import javax.inject.Inject
 
 /**
  * A plugin that sets up the infrastructure for testing C++ binaries using a simple test executable.
  *
- * Gradle will create a {@link RunTestExecutable} task that relies on the exit code of the binary.
+ * Gradle will create a [RunTestExecutable] task that relies on the exit code of the binary.
  *
  * @since 4.4
  */
-public abstract class CppUnitTestPlugin implements Plugin<Project> {
-    private final NativeComponentFactory componentFactory;
-    private final ToolChainSelector toolChainSelector;
-    private final AttributesFactory attributesFactory;
-    private final TargetMachineFactory targetMachineFactory;
+abstract class CppUnitTestPlugin @Inject constructor(
+    private val componentFactory: NativeComponentFactory,
+    private val toolChainSelector: ToolChainSelector,
+    private val attributesFactory: AttributesFactory,
+    private val targetMachineFactory: TargetMachineFactory
+) : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(CppBasePlugin::class.java)
+        project.getPluginManager().apply(NativeTestingBasePlugin::class.java)
 
-    @Inject
-    public CppUnitTestPlugin(NativeComponentFactory componentFactory, ToolChainSelector toolChainSelector, AttributesFactory attributesFactory, TargetMachineFactory targetMachineFactory) {
-        this.componentFactory = componentFactory;
-        this.toolChainSelector = toolChainSelector;
-        this.attributesFactory = attributesFactory;
-        this.targetMachineFactory = targetMachineFactory;
-    }
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(CppBasePlugin.class);
-        project.getPluginManager().apply(NativeTestingBasePlugin.class);
-
-        final ProviderFactory providers = project.getProviders();
-        final TaskContainer tasks = project.getTasks();
+        val providers = project.getProviders()
+        val tasks = project.getTasks()
 
         // Add the unit test and extension
-        final DefaultCppTestSuite testComponent = componentFactory.newInstance(CppTestSuite.class, DefaultCppTestSuite.class, "test");
-        project.getExtensions().add(CppTestSuite.class, "unitTest", testComponent);
-        project.getComponents().add(testComponent);
+        val testComponent = componentFactory.newInstance<CppTestSuite?, DefaultCppTestSuite?>(CppTestSuite::class.java, DefaultCppTestSuite::class.java, "test")
+        project.getExtensions().add<CppTestSuite?>(CppTestSuite::class.java, "unitTest", testComponent)
+        project.getComponents().add(testComponent!!)
 
-        testComponent.baseName.convention(project.getName() + "Test");
-        testComponent.targetMachines.convention(Dimensions.useHostAsDefaultTargetMachine(targetMachineFactory));
+        testComponent.baseName.convention(project.getName() + "Test")
+        testComponent.targetMachines.convention(useHostAsDefaultTargetMachine(targetMachineFactory))
 
-        final String mainComponentName = "main";
-        project.getComponents().withType(ProductionCppComponent.class, component -> {
-            if (mainComponentName.equals(component.getName())) {
-                testComponent.targetMachines.convention(component.targetMachines);
-                testComponent.getTestedComponent().convention(component);
+        val mainComponentName = "main"
+        project.getComponents().withType<ProductionCppComponent?>(ProductionCppComponent::class.java, Action { component: ProductionCppComponent? ->
+            if (mainComponentName == component!!.getName()) {
+                testComponent.targetMachines.convention(component.targetMachines)
+                testComponent.getTestedComponent().convention(component)
             }
-        });
+        })
 
-        testComponent.getTestBinary().convention(project.provider(new Callable<CppTestExecutable>() {
-            @Override
-            public CppTestExecutable call() throws Exception {
-                return getAllBuildableTestExecutable()
-                        .filter(it -> isCurrentArchitecture(it.getNativePlatform()))
-                        .findFirst()
-                        .orElseGet(
-                                () -> getAllBuildableTestExecutable().findFirst().orElseGet(
-                                        () -> getAllTestExecutable().findFirst().orElse(null)));
-            }
-
-            private boolean isCurrentArchitecture(NativePlatform targetPlatform) {
-                return targetPlatform.architecture.equals(DefaultNativePlatform.getCurrentArchitecture());
+        testComponent.getTestBinary().convention(project.provider<CppTestExecutable?>(object : Callable<CppTestExecutable?> {
+            @Throws(Exception::class)
+            override fun call(): CppTestExecutable? {
+                return this.allBuildableTestExecutable
+                    .filter { it: DefaultCppTestExecutable? -> isCurrentArchitecture(it!!.nativePlatform) }
+                    .findFirst()
+                    .orElseGet(
+                        Supplier {
+                            this.allBuildableTestExecutable.findFirst().orElseGet(
+                                Supplier { this.allTestExecutable.findFirst().orElse(null) })
+                        })
             }
 
-            private Stream<DefaultCppTestExecutable> getAllBuildableTestExecutable() {
-                return getAllTestExecutable().filter(it -> it.platformToolProvider.isAvailable);
+            fun isCurrentArchitecture(targetPlatform: NativePlatform): Boolean {
+                return targetPlatform.architecture!!.equals(currentArchitecture)
             }
 
-            private Stream<DefaultCppTestExecutable> getAllTestExecutable() {
-                return testComponent.getBinaries().get().stream()
-                        .filter(CppTestExecutable.class::isInstance)
-                        .map(DefaultCppTestExecutable.class::cast);
-            }
-        }));
+            val allBuildableTestExecutable: Stream<DefaultCppTestExecutable?>?
+                get() = this.allTestExecutable.filter { it: DefaultCppTestExecutable? -> it!!.platformToolProvider!!.isAvailable }
 
-        testComponent.getBinaries().whenElementKnown(DefaultCppTestExecutable.class, binary -> {
+            val allTestExecutable: Stream<DefaultCppTestExecutable?>?
+                get() = testComponent.getBinaries().get().stream()
+                    .filter { obj: CppBinary? -> CppTestExecutable::class.java.isInstance(obj) }
+                    .map<DefaultCppTestExecutable?> { obj: CppBinary? ->
+                        DefaultCppTestExecutable::class.java.cast(
+                            obj
+                        )
+                    }
+        }))
+
+        testComponent.getBinaries().whenElementKnown<DefaultCppTestExecutable?>(DefaultCppTestExecutable::class.java, Action { binary: DefaultCppTestExecutable? ->
             // TODO: Replace with native test task
-            final TaskProvider<RunTestExecutable> testTask = tasks.register(binary.getNames().getTaskName("run"), RunTestExecutable.class, task -> {
-                task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
-                task.setDescription("Executes C++ unit tests.");
+            val testTask = tasks.register<RunTestExecutable?>(binary.getNames().getTaskName("run"), RunTestExecutable::class.java, Action { task: RunTestExecutable? ->
+                task!!.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP)
+                task.setDescription("Executes C++ unit tests.")
 
-                final InstallExecutable installTask = binary.getInstallTask().get();
-                DirectoryProperty installDirectory = binary.getInstallDirectory();
-                task.onlyIf("Test executable installation directory exists", SerializableLambdas.spec(t -> installDirectory.get().getAsFile().exists()));
+                val installTask = binary!!.installTask!!.get()
+                val installDirectory: DirectoryProperty = binary.installDirectory
+                task.onlyIf(
+                    "Test executable installation directory exists",
+                    SerializableLambdas.spec<Task?>(SerializableLambdas.SerializableSpec { t: Task? -> installDirectory.get().getAsFile().exists() })
+                )
                 task.getInputs()
                     .dir(installDirectory)
-                    .withPropertyName("installDirectory");
-                task.setExecutable(installTask.getRunScriptFile().get().getAsFile());
-                task.dependsOn(installDirectory);
+                    .withPropertyName("installDirectory")
+                task.setExecutable(installTask.runScriptFile.get().getAsFile())
+                task.dependsOn(installDirectory)
                 // TODO: Honor changes to build directory
-                task.setOutputDir(project.getLayout().getBuildDirectory().dir("test-results/" + binary.getNames().dirName).get().getAsFile());
-            });
-            binary.getRunTask().set(testTask);
+                task.outputDir = project.getLayout().getBuildDirectory().dir("test-results/" + binary.getNames().dirName).get().getAsFile()
+            })
+            binary.getRunTask().set(testTask)
+            configureTestSuiteWithTestedComponentWhenAvailable(project, testComponent, binary!!)
+        })
 
-            configureTestSuiteWithTestedComponentWhenAvailable(project, testComponent, binary);
-        });
-
-        project.afterEvaluate(p -> {
-            final CppComponent mainComponent = testComponent.getTestedComponent().getOrNull();
-            final SetProperty<TargetMachine> mainTargetMachines = mainComponent != null ? mainComponent.targetMachines : null;
-            Dimensions.unitTestVariants(testComponent.baseName, testComponent.targetMachines, mainTargetMachines,
+        project.afterEvaluate(Action { p: Project? ->
+            val mainComponent = testComponent.getTestedComponent().getOrNull()
+            val mainTargetMachines: SetProperty<TargetMachine?>? = if (mainComponent != null) mainComponent.targetMachines else null
+            Dimensions.unitTestVariants(
+                testComponent.baseName, testComponent.targetMachines, mainTargetMachines,
                 attributesFactory,
-                    providers.provider(() -> project.getGroup().toString()), providers.provider(() -> project.getVersion().toString()),
-                    variantIdentity -> {
-                        if (tryToBuildOnHost(variantIdentity)) {
-                            ToolChainSelector.Result<CppPlatform> result = toolChainSelector.select(CppPlatform.class, new DefaultCppPlatform(variantIdentity.targetMachine));
-                            // TODO: Removing `debug` from variant name to keep parity with previous Gradle version in tooling models
-                            testComponent.addExecutable(variantIdentity.getName().replace("debug", ""), variantIdentity, result.targetPlatform, result.toolChain, result.platformToolProvider);
-                        }
-                    });
+                providers.provider<String?>(Callable { project.getGroup().toString() }), providers.provider<String?>(Callable { project.getVersion().toString() }),
+                Action { variantIdentity: NativeVariantIdentity? ->
+                    if (tryToBuildOnHost(variantIdentity!!)) {
+                        val result = toolChainSelector.select<CppPlatform?>(CppPlatform::class.java, DefaultCppPlatform(variantIdentity.targetMachine))
+                        // TODO: Removing `debug` from variant name to keep parity with previous Gradle version in tooling models
+                        testComponent.addExecutable(variantIdentity.getName()!!.replace("debug", ""), variantIdentity, result!!.targetPlatform, result.toolChain, result.platformToolProvider)
+                    }
+                })
             // TODO: Publishing for test executable?
-            testComponent.getBinaries().realizeNow();
-        });
+            testComponent.getBinaries().realizeNow()
+        })
     }
 
-    private void configureTestSuiteWithTestedComponentWhenAvailable(Project project, DefaultCppTestSuite testSuite, DefaultCppTestExecutable testExecutable) {
-        CppComponent target = testSuite.getTestedComponent().getOrNull();
-        if (!(target instanceof ProductionCppComponent)) {
-            return;
+    private fun configureTestSuiteWithTestedComponentWhenAvailable(project: Project, testSuite: DefaultCppTestSuite, testExecutable: DefaultCppTestExecutable) {
+        val target = testSuite.getTestedComponent().getOrNull()
+        if (target !is ProductionCppComponent) {
+            return
         }
-        final ProductionCppComponent testedComponent = (ProductionCppComponent) target;
+        val testedComponent = target
 
-        final TaskContainer tasks = project.getTasks();
-        testedComponent.getBinaries().whenElementFinalized(testedBinary -> {
-            if (!isTestedBinary(testExecutable, testedComponent, testedBinary)) {
-                return;
+        val tasks = project.getTasks()
+        testedComponent.getBinaries()!!.whenElementFinalized({ testedBinary: CppBinary? ->
+            if (!isTestedBinary(testExecutable, testedComponent, testedBinary!!)) {
+                return@whenElementFinalized
             }
             // TODO - move this to a base plugin
             // Setup the dependency on the main binary
             // This should all be replaced by a single dependency that points at some "testable" variants of the main binary
 
             // Inherit implementation dependencies
-            testExecutable.getImplementationDependencies().extendsFrom(((DefaultCppBinary) testedBinary).getImplementationDependencies());
+            testExecutable.implementationDependencies!!.extendsFrom((testedBinary as DefaultCppBinary).implementationDependencies!!)
 
             // Configure test binary to link against tested component compiled objects
-            ConfigurableFileCollection testableObjects = project.files();
-            if (target instanceof CppApplication) {
+            val testableObjects = project.files()
+            if (target is CppApplication) {
                 // TODO - this should be an outgoing variant of the component under test
-                TaskProvider<UnexportMainSymbol> unexportMainSymbol = tasks.register(testExecutable.getNames().getTaskName("relocateMainFor"), UnexportMainSymbol.class, task -> {
-                    String dirName = ((DefaultCppBinary) testedBinary).getNames().dirName;
-                    task.outputDirectory.set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
-                    task.objects.from(testedBinary.objects);
-                });
-                testableObjects.from(unexportMainSymbol.map(task -> task.getRelocatedObjects()));
+                val unexportMainSymbol =
+                    tasks.register<UnexportMainSymbol?>(testExecutable.getNames().getTaskName("relocateMainFor"), UnexportMainSymbol::class.java, Action { task: UnexportMainSymbol? ->
+                        val dirName = testedBinary.getNames().dirName
+                        task!!.outputDirectory.set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName))
+                        task.objects.from(testedBinary.objects)
+                    })
+                testableObjects.from(unexportMainSymbol.map<Any?>(Transformer { task: UnexportMainSymbol? -> task!!.relocatedObjects }))
             } else {
-                testableObjects.from(testedBinary.objects);
+                testableObjects.from(testedBinary.objects)
             }
-            Dependency linkDependency = project.getDependencies().create(testableObjects);
-            testExecutable.getLinkConfiguration().getDependencies().add(linkDependency);
-        });
+            val linkDependency = project.getDependencies().create(testableObjects)
+            testExecutable.linkConfiguration!!.getDependencies().add(linkDependency)
+        })
     }
 
-    private boolean isTestedBinary(DefaultCppTestExecutable testExecutable, ProductionCppComponent mainComponent, CppBinary testedBinary) {
+    private fun isTestedBinary(testExecutable: DefaultCppTestExecutable, mainComponent: ProductionCppComponent, testedBinary: CppBinary): Boolean {
         // TODO: Make this more intelligent by matching the attributes of the runtime usage on the variant identities
-        return testedBinary.targetMachine.getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine().operatingSystemFamily.getName())
-                && testedBinary.targetMachine.getArchitecture().getName().equals(testExecutable.getTargetMachine().architecture.getName())
-                && !testedBinary.isOptimized
-                && hasDevelopmentBinaryLinkage(mainComponent, testedBinary);
+        return testedBinary.targetMachine.getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine()!!.operatingSystemFamily!!.getName())
+                && testedBinary.targetMachine.getArchitecture().getName().equals(testExecutable.getTargetMachine()!!.architecture!!.getName())
+                && !testedBinary.isOptimized && hasDevelopmentBinaryLinkage(mainComponent, testedBinary)
     }
 
-    private boolean hasDevelopmentBinaryLinkage(ProductionCppComponent mainComponent, CppBinary testedBinary) {
-        if (!(testedBinary instanceof ConfigurableComponentWithLinkUsage)) {
-            return true;
+    private fun hasDevelopmentBinaryLinkage(mainComponent: ProductionCppComponent, testedBinary: CppBinary?): Boolean {
+        if (testedBinary !is ConfigurableComponentWithLinkUsage) {
+            return true
         }
-        ConfigurableComponentWithLinkUsage developmentBinaryWithUsage = (ConfigurableComponentWithLinkUsage) mainComponent.getDevelopmentBinary().get();
-        ConfigurableComponentWithLinkUsage testedBinaryWithUsage = (ConfigurableComponentWithLinkUsage)testedBinary;
-        return testedBinaryWithUsage.linkage == developmentBinaryWithUsage.linkage;
+        val developmentBinaryWithUsage = mainComponent.getDevelopmentBinary()!!.get() as ConfigurableComponentWithLinkUsage
+        val testedBinaryWithUsage = testedBinary as ConfigurableComponentWithLinkUsage
+        return testedBinaryWithUsage.linkage === developmentBinaryWithUsage.linkage
     }
 }

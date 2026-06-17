@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.plugins
 
-package org.gradle.language.cpp.plugins;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin
 
 /**
  * A plugin for projects wishing to build native binary components from C++ sources.
  *
- * <p>Automatically includes the {@link CppLangPlugin} for core C++ support and the {@link NativeComponentModelPlugin} for native component support.</p>
  *
- * <ul>
- * <li>Creates a {@link org.gradle.language.cpp.tasks.CppCompile} task for each {@link org.gradle.language.cpp.CppSourceSet} to compile the C++ sources.</li>
- * </ul>
+ * Automatically includes the [CppLangPlugin] for core C++ support and the [NativeComponentModelPlugin] for native component support.
+ *
+ *
+ *  * Creates a [org.gradle.language.cpp.tasks.CppCompile] task for each [org.gradle.language.cpp.CppSourceSet] to compile the C++ sources.
+ *
  */
 @Incubating
-public abstract class CppPlugin implements Plugin<Project> {
-    @Override
-    public void apply(Project project) {
-        project.getPluginManager().apply(NativeComponentModelPlugin.class);
-        project.getPluginManager().apply(CppLangPlugin.class);
+abstract class CppPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(NativeComponentModelPlugin::class.java)
+        project.getPluginManager().apply(CppLangPlugin::class.java)
     }
 }

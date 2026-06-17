@@ -13,26 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.internal.classpath.ClassPath;
+import org.gradle.internal.classpath.ClassPath
 
-class CachedClassLoader {
-
-    private final ClassPath key;
-    private ClassLoader classLoader;
-
-    CachedClassLoader(ClassPath key, ClassLoader classLoader) {
-        this.key = key;
-        this.classLoader = classLoader;
-    }
-
-    public ClassLoader getClassLoader() {
-        return classLoader;
-    }
-
-    public ClassPath getKey() {
-        return key;
-    }
-
-}
+internal class CachedClassLoader(val key: ClassPath?, val classLoader: ClassLoader?)

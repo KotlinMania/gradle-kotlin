@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.project.ant
 
-package org.gradle.api.internal.project.ant;
-
-public class DefaultAntLoggingAdapterFactory implements AntLoggingAdapterFactory {
-    @Override
-    public AntLoggingAdapter create() {
-        return new AntLoggingAdapter();
+class DefaultAntLoggingAdapterFactory : AntLoggingAdapterFactory {
+    override fun create(): AntLoggingAdapter? {
+        return AntLoggingAdapter()
     }
 }

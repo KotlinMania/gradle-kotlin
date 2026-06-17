@@ -13,154 +13,111 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.tasks.wrapper.internal
 
-package org.gradle.api.tasks.wrapper.internal;
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import org.gradle.api.GradleException
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.api.resources.TextResourceFactory
+import org.gradle.internal.exceptions.ResolutionProvider
+import org.gradle.util.GradleVersion
+import org.gradle.util.internal.DistributionLocator
+import org.jspecify.annotations.NullMarked
+import java.util.Arrays
+import java.util.Objects
+import java.util.function.Supplier
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+import java.util.stream.Collectors
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import org.gradle.api.GradleException;
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.api.resources.TextResourceFactory;
-import org.gradle.internal.exceptions.ResolutionProvider;
-import org.gradle.util.GradleVersion;
-import org.gradle.util.internal.DistributionLocator;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
+class GradleVersionResolver(private val textResourceFactory: TextResourceFactory) {
+    private var gradleVersion: GradleVersion? = null
+    private var gradleVersionRequest = GradleVersionRequest(GradleVersion.current())
 
-import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-
-public class GradleVersionResolver {
-
-    private final TextResourceFactory textResourceFactory;
-    @Nullable
-    private GradleVersion gradleVersion;
-    private GradleVersionRequest gradleVersionRequest = new GradleVersionRequest(GradleVersion.current());
-
-    public GradleVersionResolver(TextResourceFactory textResourceFactory) {
-        this.textResourceFactory = textResourceFactory;
-    }
-
-    public GradleVersion getGradleVersion() {
+    fun getGradleVersion(): GradleVersion {
         if (gradleVersion == null) {
-            gradleVersion = resolve();
+            gradleVersion = resolve()
         }
-        return gradleVersion;
+        return gradleVersion!!
     }
 
-    public void setGradleVersionRequest(String request) {
-        GradleVersionRequest gradleVersionRequest = new GradleVersionRequest(request);
+    fun setGradleVersionRequest(request: String) {
+        val gradleVersionRequest = GradleVersionRequest(request)
         if (gradleVersionRequest.requestType == RequestType.VERSION) {
-            this.gradleVersion = parseVersionString(request);
-        } else if (!Objects.equals(this.gradleVersionRequest, gradleVersionRequest)) {
-            this.gradleVersion = null;
-            this.gradleVersionRequest = gradleVersionRequest;
+            this.gradleVersion = parseVersionString(request)
+        } else if (this.gradleVersionRequest != gradleVersionRequest) {
+            this.gradleVersion = null
+            this.gradleVersionRequest = gradleVersionRequest
         }
     }
 
-    private GradleVersion resolve() {
-        switch (gradleVersionRequest.requestType) {
-            case DYNAMIC_VERSION:
-                String version = getSingleVersion(gradleVersionRequest.dynamicVersion);
-                return GradleVersion.version(version);
-            case SEMANTIC_VERSION:
-                return resolveSemanticVersion(gradleVersionRequest.majorVersion, gradleVersionRequest.minorVersion);
-            case VERSION:
-                return GradleVersion.version(gradleVersionRequest.request);
-            default:
-                throw new IllegalArgumentException("Unknown request type: " + gradleVersionRequest.requestType);
+    private fun resolve(): GradleVersion {
+        when (gradleVersionRequest.requestType) {
+            RequestType.DYNAMIC_VERSION -> {
+                val version = getSingleVersion(gradleVersionRequest.dynamicVersion!!)
+                return GradleVersion.version(version)
+            }
+
+            RequestType.SEMANTIC_VERSION -> return resolveSemanticVersion(gradleVersionRequest.majorVersion!!, gradleVersionRequest.minorVersion)
+            RequestType.VERSION -> return GradleVersion.version(gradleVersionRequest.request)
+            else -> throw IllegalArgumentException("Unknown request type: " + gradleVersionRequest.requestType)
         }
     }
 
-    private GradleVersion resolveSemanticVersion(Integer majorVersion, @Nullable Integer minorVersion) {
-        Stream<GradleVersion> versions = getVersionsList(majorVersion.toString())
+    private fun resolveSemanticVersion(majorVersion: Int, minorVersion: Int?): GradleVersion {
+        val versions = getVersionsList(majorVersion.toString())
             .stream()
-            .map(v -> {
+            .map<GradleVersion> { v: String? ->
                 try {
-                    return GradleVersion.version(v);
-                } catch (Exception e) {
-                    return null;
+                    return@map GradleVersion.version(v)
+                } catch (e: Exception) {
+                    return@map null
                 }
-            })
-            .filter(Objects::nonNull)
-            .filter(v -> v.isFinal() && v.getMajorVersion() == majorVersion);
+            }
+            .filter { obj: GradleVersion? -> Objects.nonNull(obj) }
+            .filter { v: GradleVersion -> v.isFinal() && v.getMajorVersion() == majorVersion }
 
         if (minorVersion == null) {
-            return versions.max(GradleVersion::compareTo).orElseThrow(() ->
-                new WrapperVersionException("Invalid version specified for argument '--gradle-version': no final version found for major version " + majorVersion, null)
-            );
+            return versions!!.max(Comparator { obj: GradleVersion, o: GradleVersion -> obj.compareTo(o) }).orElseThrow<WrapperVersionException>(Supplier {
+                WrapperVersionException(
+                    "Invalid version specified for argument '--gradle-version': no final version found for major version " + majorVersion,
+                    null
+                )
+            }
+            )
         } else {
-            return versions
-                .filter(v -> getMinorVersion(v) == minorVersion)
-                .max(GradleVersion::compareTo).orElseThrow(() ->
-                    new WrapperVersionException("Invalid version specified for argument '--gradle-version': no final version found for version " + majorVersion + "." + minorVersion, null)
-                );
+            return versions!!
+                .filter { v: GradleVersion -> getMinorVersion(v) == minorVersion }
+                .max(Comparator { obj: GradleVersion, o: GradleVersion -> obj.compareTo(o) }).orElseThrow<WrapperVersionException>(Supplier {
+                    WrapperVersionException(
+                        "Invalid version specified for argument '--gradle-version': no final version found for version " + majorVersion + "." + minorVersion,
+                        null
+                    )
+                }
+                )
         }
     }
 
-    private static int getMinorVersion(GradleVersion version) {
-        String[] versionParts = version.getBaseVersion().getVersion().split("\\.");
-        if (versionParts.length > 1) {
-            return Integer.parseInt(versionParts[1]);
-        } else {
-            return 0;
-        }
+    private fun getApiEndpoint(request: String): String {
+        return DistributionLocator.getBaseUrl() + "/versions/" + request
     }
 
-    private String getApiEndpoint(String request) {
-        return DistributionLocator.getBaseUrl() + "/versions/" + request;
-    }
-
-    private String getSingleVersion(DynamicVersion dynamicVersion) {
+    private fun getSingleVersion(dynamicVersion: DynamicVersion): String {
         try {
-            return getVersion(textResourceFactory.fromUri(getApiEndpoint(dynamicVersion.urlSuffix)).asString(), dynamicVersion.name);
-        } catch (MissingResourceException e) {
+            return getVersion(textResourceFactory.fromUri(getApiEndpoint(dynamicVersion.urlSuffix)).asString(), dynamicVersion.name)
+        } catch (e: MissingResourceException) {
             // swallowing the original exception to provide a more user-friendly message
-            throw new WrapperVersionException("Unable to resolve Gradle version for '" + dynamicVersion.name + "'.", null);
+            throw WrapperVersionException("Unable to resolve Gradle version for '" + dynamicVersion.name + "'.", null)
         }
     }
 
-    private List<String> getVersionsList(String majorVersion) {
+    private fun getVersionsList(majorVersion: String): MutableList<String> {
         try {
-            return getVersions(textResourceFactory.fromUri(getApiEndpoint(majorVersion)).asString());
-        } catch (MissingResourceException e) {
+            return getVersions(textResourceFactory.fromUri(getApiEndpoint(majorVersion)).asString())
+        } catch (e: MissingResourceException) {
             // swallowing the original exception to provide a more user-friendly message
-            throw new WrapperVersionException("Unable to resolve list of Gradle versions for '" + majorVersion + "'.", null);
-        }
-    }
-
-    static String getVersion(String json, String request) {
-        Type type = new TypeToken<Map<String, String>>() {}.getType();
-        Map<String, String> map = new Gson().fromJson(json, type);
-        String version = map.get("version");
-        if (version == null) {
-            throw new GradleException("There is currently no version information available for '" + request + "'.");
-        }
-        return version;
-    }
-
-    static List<String> getVersions(String json) {
-        Type type = new TypeToken<List<Map<String, String>>>() {}.getType();
-        List<Map<String, String>> map = new Gson().fromJson(json, type);
-        return map.stream()
-            .map(m -> m.get("version"))
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    }
-
-    private static GradleVersion parseVersionString(String gradleVersionString) {
-        try {
-            return GradleVersion.version(gradleVersionString);
-        } catch (Exception e) {
-            throw new WrapperVersionException("Invalid version specified for argument '--gradle-version'", e);
+            throw WrapperVersionException("Unable to resolve list of Gradle versions for '" + majorVersion + "'.", null)
         }
     }
 
@@ -168,111 +125,138 @@ public class GradleVersionResolver {
      * This exception is thrown when the wrapper task is run in an attempt to update the wrapper version and
      * an invalid version is specified.
      */
-    public static final class WrapperVersionException extends GradleException implements ResolutionProvider {
-        public WrapperVersionException(String message, @Nullable Throwable cause) {
-            super(message, cause);
-        }
+    class WrapperVersionException(message: String, cause: Throwable?) : GradleException(message, cause), ResolutionProvider {
+        val resolutions: MutableList<String>
+            get() = Arrays.asList<String>(
+                suggestActualVersion(),
+                suggestDynamicVersions()
+            )
 
-        @Override
-        public List<String> getResolutions() {
-            return Arrays.asList(suggestActualVersion(), suggestDynamicVersions());
-        }
+        companion object {
+            private fun suggestActualVersion(): String {
+                return "Specify a valid Gradle release listed on https://gradle.org/releases/."
+            }
 
-        private static String suggestActualVersion() {
-            return "Specify a valid Gradle release listed on https://gradle.org/releases/.";
-        }
-
-        private static String suggestDynamicVersions() {
-            String validStrings = Arrays.stream(DynamicVersion.values())
-                .map(dv -> dv.name)
-                .map(s -> String.format("'%s'", s))
-                .collect(Collectors.joining(", "));
-            return String.format("Use one of the following dynamic version specifications: %s.", validStrings);
+            private fun suggestDynamicVersions(): String {
+                val validStrings = Arrays.stream<DynamicVersion>(DynamicVersion.entries.toTypedArray())
+                    .map<String> { dv: DynamicVersion? -> dv.name }
+                    .map<String> { s: String? -> String.format("'%s'", s) }
+                    .collect(Collectors.joining(", "))
+                return String.format("Use one of the following dynamic version specifications: %s.", validStrings)
+            }
         }
     }
 
-    private enum DynamicVersion {
+    private enum class DynamicVersion(private val name: String, private val urlSuffix: String) {
         LATEST("latest", "current"),
         RELEASE_CANDIDATE("release-candidate", "release-candidate"),
         RELEASE_MILESTONE("release-milestone", "milestone"),
         RELEASE_NIGHTLY("release-nightly", "release-nightly"),
         NIGHTLY("nightly", "nightly");
 
-        private final String name;
-
-        private final String urlSuffix;
-
-        DynamicVersion(String name, String urlSuffix) {
-            this.name = name;
-            this.urlSuffix = urlSuffix;
-        }
-
-        @Nullable
-        public static DynamicVersion findMatch(String version) {
-            return Arrays.stream(values()).filter(dv -> dv.name.equals(version)).findFirst().orElse(null);
+        companion object {
+            fun findMatch(version: String): DynamicVersion? {
+                return Arrays.stream<DynamicVersion>(entries.toTypedArray()).filter { dv: DynamicVersion? -> dv!!.name == version }.findFirst().orElse(null)
+            }
         }
     }
 
     @NullMarked
-    private enum RequestType {
+    private enum class RequestType {
         DYNAMIC_VERSION,
         SEMANTIC_VERSION,
         VERSION
     }
 
     @NullMarked
-    private static class GradleVersionRequest {
-        final String request;
-        final RequestType requestType;
-        @Nullable
-        DynamicVersion dynamicVersion = null;
-        @Nullable
-        Integer majorVersion;
-        @Nullable
-        Integer minorVersion;
-        private static final Pattern SEMVER_REQUEST = Pattern.compile("([0-9]+)(\\.([0-9]+))?");
+    private class GradleVersionRequest {
+        val request: String
+        val requestType: RequestType
+        var dynamicVersion: DynamicVersion? = null
+        var majorVersion: Int? = null
+        var minorVersion: Int? = null
 
-        GradleVersionRequest(String request) {
-            this.request = request;
-            DynamicVersion dynamicVersion = DynamicVersion.findMatch(request);
+        internal constructor(request: String) {
+            this.request = request
+            val dynamicVersion: DynamicVersion? = DynamicVersion.Companion.findMatch(request)
             if (dynamicVersion != null) {
-                this.requestType = RequestType.DYNAMIC_VERSION;
-                this.dynamicVersion = dynamicVersion;
+                this.requestType = RequestType.DYNAMIC_VERSION
+                this.dynamicVersion = dynamicVersion
             } else {
-                Matcher matcher = SEMVER_REQUEST.matcher(request);
+                val matcher: Matcher = SEMVER_REQUEST.matcher(request)
                 if (matcher.matches()) {
-                    majorVersion = Integer.parseInt(matcher.group(1));
-                    minorVersion = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : null;
-                    if (majorVersion >= 9) {
-                        this.requestType = RequestType.SEMANTIC_VERSION;
+                    majorVersion = matcher.group(1).toInt()
+                    minorVersion = if (matcher.group(3) != null) matcher.group(3).toInt() else null
+                    if (majorVersion!! >= 9) {
+                        this.requestType = RequestType.SEMANTIC_VERSION
                     } else {
-                        this.requestType = RequestType.VERSION;
+                        this.requestType = RequestType.VERSION
                     }
                 } else {
-                    this.requestType = RequestType.VERSION;
+                    this.requestType = RequestType.VERSION
                 }
             }
         }
 
-        GradleVersionRequest(GradleVersion gradleVersion) {
-            this.request = gradleVersion.getVersion();
-            this.requestType = RequestType.VERSION;
+        internal constructor(gradleVersion: GradleVersion) {
+            this.request = gradleVersion.getVersion()
+            this.requestType = RequestType.VERSION
         }
 
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
+        override fun equals(other: Any): Boolean {
+            if (this === other) {
+                return true
             }
-            if (!(other instanceof GradleVersionRequest)) {
-                return false;
+            if (other !is GradleVersionRequest) {
+                return false
             }
-            return Objects.equals(request, ((GradleVersionRequest) other).request);
+            return request == other.request
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(request);
+        override fun hashCode(): Int {
+            return Objects.hashCode(request)
+        }
+
+        companion object {
+            private val SEMVER_REQUEST: Pattern = Pattern.compile("([0-9]+)(\\.([0-9]+))?")
+        }
+    }
+
+    companion object {
+        private fun getMinorVersion(version: GradleVersion): Int {
+            val versionParts = version.getBaseVersion().getVersion().split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            if (versionParts.size > 1) {
+                return versionParts[1].toInt()
+            } else {
+                return 0
+            }
+        }
+
+        fun getVersion(json: String, request: String): String {
+            val type = object : TypeToken<MutableMap<String, String>>() {}.getType()
+            val map = Gson().fromJson<MutableMap<String, String>>(json, type)
+            val version: String = map.get("version")!!
+            if (version == null) {
+                throw GradleException("There is currently no version information available for '" + request + "'.")
+            }
+            return version
+        }
+
+        fun getVersions(json: String): MutableList<String> {
+            val type = object : TypeToken<MutableList<MutableMap<String, String>>>() {}.getType()
+            val map = Gson().fromJson<MutableList<MutableMap<String, String>>>(json, type)
+            return map.stream()
+                .map<String> { m: MutableMap<String?, String?>? -> m!!.get("version") }
+                .filter { obj: String? -> Objects.nonNull(obj) }
+                .collect(Collectors.toList())
+        }
+
+        private fun parseVersionString(gradleVersionString: String): GradleVersion {
+            try {
+                return GradleVersion.version(gradleVersionString)
+            } catch (e: Exception) {
+                throw WrapperVersionException("Invalid version specified for argument '--gradle-version'", e)
+            }
         }
     }
 }

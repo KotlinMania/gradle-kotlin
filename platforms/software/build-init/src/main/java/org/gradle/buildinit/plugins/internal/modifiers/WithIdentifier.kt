@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
-
-public interface WithIdentifier {
-    String getId();
+interface WithIdentifier {
+    val id: String?
 }

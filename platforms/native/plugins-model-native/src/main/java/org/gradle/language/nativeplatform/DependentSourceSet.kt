@@ -13,56 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.nativeplatform;
+package org.gradle.language.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.language.base.LanguageSourceSet;
-
-import java.util.Collection;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.language.base.LanguageSourceSet
 
 /**
- * A source set that depends on one or more {@link org.gradle.nativeplatform.NativeDependencySet}s to be built.
+ * A source set that depends on one or more [org.gradle.nativeplatform.NativeDependencySet]s to be built.
  */
 @Incubating
 @HasInternalProtocol
-public interface DependentSourceSet extends LanguageSourceSet {
+interface DependentSourceSet : LanguageSourceSet {
     /**
      * The libraries that this source set requires.
      */
-    Collection<?> getLibs();
+    @JvmField
+    val libs: MutableCollection<*>?
 
     /**
      * Adds a library that this source set requires. This method accepts the following types:
      *
-     * <ul>
-     *     <li>A {@link org.gradle.nativeplatform.NativeLibrarySpec}</li>
-     *     <li>A {@link org.gradle.nativeplatform.NativeDependencySet}</li>
-     *     <li>A {@link LanguageSourceSet}</li>
-     *     <li>A {@link java.util.Map} containing the library selector.</li>
-     * </ul>
+     *
+     *  * A [org.gradle.nativeplatform.NativeLibrarySpec]
+     *  * A [org.gradle.nativeplatform.NativeDependencySet]
+     *  * A [LanguageSourceSet]
+     *  * A [java.util.Map] containing the library selector.
+     *
      *
      * The Map notation supports the following String attributes:
      *
-     * <ul>
-     *     <li>project: the path to the project containing the library (optional, defaults to current project)</li>
-     *     <li>library: the name of the library (required)</li>
-     *     <li>linkage: the library linkage required ['shared'/'static'] (optional, defaults to 'shared')</li>
-     * </ul>
-     */
-    void lib(Object library);
-
-    /**
-     * Sets the pre-compiled header to be used when compiling sources in this source set.
      *
-     * @param header the header to precompile
+     *  * project: the path to the project containing the library (optional, defaults to current project)
+     *  * library: the name of the library (required)
+     *  * linkage: the library linkage required ['shared'/'static'] (optional, defaults to 'shared')
+     *
      */
-    void setPreCompiledHeader(String header);
+    fun lib(library: Any?)
 
     /**
      * Returns the pre-compiled header configured for this source set.
      *
      * @return the pre-compiled header
      */
-    String getPreCompiledHeader();
+    /**
+     * Sets the pre-compiled header to be used when compiling sources in this source set.
+     *
+     * @param header the header to precompile
+     */
+    @JvmField
+    var preCompiledHeader: String?
 }

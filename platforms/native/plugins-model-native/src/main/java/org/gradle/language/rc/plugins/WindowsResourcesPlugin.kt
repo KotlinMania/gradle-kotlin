@@ -13,29 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.rc.plugins
 
-package org.gradle.language.rc.plugins;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin
 
 /**
  * A plugin for projects wishing to build native binary components from Windows Resource sources.
  *
- * <p>Automatically includes the {@link WindowsResourceScriptPlugin} for core Windows Resource source support and the {@link NativeComponentModelPlugin} for native component support.</p>
  *
- * <ul>
- * <li>Creates a {@link org.gradle.language.rc.tasks.WindowsResourceCompile} task for each {@link org.gradle.language.rc.WindowsResourceSet} to compile the sources.</li>
- * </ul>
+ * Automatically includes the [WindowsResourceScriptPlugin] for core Windows Resource source support and the [NativeComponentModelPlugin] for native component support.
+ *
+ *
+ *  * Creates a [org.gradle.language.rc.tasks.WindowsResourceCompile] task for each [org.gradle.language.rc.WindowsResourceSet] to compile the sources.
+ *
  */
 @Incubating
-public abstract class WindowsResourcesPlugin implements Plugin<Project> {
-    @Override
-    public void apply(Project project) {
-        project.getPluginManager().apply(NativeComponentModelPlugin.class);
-        project.getPluginManager().apply(WindowsResourceScriptPlugin.class);
+abstract class WindowsResourcesPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(NativeComponentModelPlugin::class.java)
+        project.getPluginManager().apply(WindowsResourceScriptPlugin::class.java)
     }
-
 }

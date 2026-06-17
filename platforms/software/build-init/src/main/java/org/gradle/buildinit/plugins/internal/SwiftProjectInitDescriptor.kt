@@ -13,118 +13,104 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import org.gradle.internal.os.OperatingSystem.Companion.current
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.Companion.host
+import java.util.Optional
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-import org.gradle.internal.os.OperatingSystem;
-import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform;
-
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.gradle.buildinit.plugins.internal.ModuleNameBuilder.toModuleName;
-
-public abstract class SwiftProjectInitDescriptor extends LanguageLibraryProjectInitDescriptor {
-    private final TemplateOperationFactory templateOperationFactory;
-    private final DocumentationRegistry documentationRegistry;
-
-    public SwiftProjectInitDescriptor(TemplateOperationFactory templateOperationFactory, DocumentationRegistry documentationRegistry) {
-        this.templateOperationFactory = templateOperationFactory;
-        this.documentationRegistry = documentationRegistry;
+abstract class SwiftProjectInitDescriptor(private val templateOperationFactory: TemplateOperationFactory, private val documentationRegistry: DocumentationRegistry) :
+    LanguageLibraryProjectInitDescriptor() {
+    override fun getLanguage(): Language {
+        return Language.SWIFT
     }
 
-    @Override
-    public Language getLanguage() {
-        return Language.SWIFT;
-    }
-
-    @Override
-    public void generateProjectBuildScript(String projectName, InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun generateProjectBuildScript(projectName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
         buildScriptBuilder
             .fileComment("This generated file contains a sample Swift project to get you started.")
-            .fileComment(documentationRegistry.getDocumentationRecommendationFor("details on building Swift applications and libraries", "building_swift_projects"));
-        configureBuildScript(settings, buildScriptBuilder);
+            .fileComment(documentationRegistry.getDocumentationRecommendationFor("details on building Swift applications and libraries", "building_swift_projects"))
+        configureBuildScript(settings, buildScriptBuilder)
     }
 
-    @Override
-    public void generateConventionPluginBuildScript(String conventionPluginName, InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun generateConventionPluginBuildScript(conventionPluginName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
     }
 
-    @Override
-    public void generateSources(InitSettings settings, TemplateFactory templateFactory) {
-        TemplateOperation sourceTemplate = sourceTemplateOperation(settings);
-        TemplateOperation testSourceTemplate = testTemplateOperation(settings);
-        TemplateOperation testEntryPointTemplate = testEntryPointTemplateOperation(settings);
-        templateFactory.whenNoSourcesAvailable(sourceTemplate, testSourceTemplate, testEntryPointTemplate).generate();
+    override fun generateSources(settings: InitSettings, templateFactory: TemplateFactory) {
+        val sourceTemplate = sourceTemplateOperation(settings)
+        val testSourceTemplate = testTemplateOperation(settings)
+        val testEntryPointTemplate = testEntryPointTemplateOperation(settings)
+        templateFactory.whenNoSourcesAvailable(sourceTemplate, testSourceTemplate, testEntryPointTemplate).generate()
     }
 
-    @Override
-    public Set<BuildInitTestFramework> getTestFrameworks(ModularizationOption modularizationOption) {
-        return Collections.singleton(BuildInitTestFramework.XCTEST);
+    override fun getTestFrameworks(modularizationOption: ModularizationOption): MutableSet<BuildInitTestFramework> {
+        return mutableSetOf<BuildInitTestFramework>(BuildInitTestFramework.XCTEST)
     }
 
-    @Override
-    public BuildInitTestFramework getDefaultTestFramework(ModularizationOption modularizationOption) {
-        return BuildInitTestFramework.XCTEST;
+    override fun getDefaultTestFramework(modularizationOption: ModularizationOption): BuildInitTestFramework {
+        return BuildInitTestFramework.XCTEST
     }
 
-    @Override
-    public Optional<String> getFurtherReading(InitSettings settings) {
-        return Optional.of(documentationRegistry.getSampleForMessage("building_swift_" + getComponentType().pluralName()));
+    override fun getFurtherReading(settings: InitSettings): Optional<String> {
+        return Optional.of<String>(documentationRegistry.getSampleForMessage("building_swift_" + getComponentType().pluralName()))
     }
 
-    protected abstract TemplateOperation sourceTemplateOperation(InitSettings settings);
+    protected abstract fun sourceTemplateOperation(settings: InitSettings): TemplateOperation
 
-    protected abstract TemplateOperation testTemplateOperation(InitSettings settings);
+    protected abstract fun testTemplateOperation(settings: InitSettings): TemplateOperation
 
-    protected abstract TemplateOperation testEntryPointTemplateOperation(InitSettings settings);
+    protected abstract fun testEntryPointTemplateOperation(settings: InitSettings): TemplateOperation
 
-    protected void configureBuildScript(InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    protected open fun configureBuildScript(settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
     }
 
-    @Override
-    public boolean supportsPackage() {
-        return false;
+    override fun supportsPackage(): Boolean {
+        return false
     }
 
-    protected String getHostTargetMachineDefinition() {
-        DefaultNativePlatform host = DefaultNativePlatform.host();
-        assert !host.operatingSystem.isWindows;
-        return CppProjectInitDescriptor.buildNativeHostTargetDefinition(host);
-    }
+    protected val hostTargetMachineDefinition: String
+        get() {
+            val host = host()
+            assert(!host.operatingSystem!!.isWindows)
+            return CppProjectInitDescriptor.Companion.buildNativeHostTargetDefinition(host)
+        }
 
-    protected void configureTargetMachineDefinition(ScriptBlockBuilder buildScriptBuilder) {
-        if (OperatingSystem.current().isWindows()) {
-            buildScriptBuilder.methodInvocation("Swift tool chain does not support Windows. The following targets macOS and Linux:", "targetMachines.add", buildScriptBuilder.propertyExpression("machines.macOS.x86_64"));
-            buildScriptBuilder.methodInvocation(null, "targetMachines.add", buildScriptBuilder.propertyExpression("machines.linux.x86_64"));
+    protected fun configureTargetMachineDefinition(buildScriptBuilder: ScriptBlockBuilder) {
+        if (current()!!.isWindows) {
+            buildScriptBuilder.methodInvocation(
+                "Swift tool chain does not support Windows. The following targets macOS and Linux:",
+                "targetMachines.add",
+                buildScriptBuilder.propertyExpression("machines.macOS.x86_64")
+            )
+            buildScriptBuilder.methodInvocation(null, "targetMachines.add", buildScriptBuilder.propertyExpression("machines.linux.x86_64"))
         } else {
-            buildScriptBuilder.methodInvocation("Set the target operating system and architecture for this library", "targetMachines.add", buildScriptBuilder.propertyExpression(getHostTargetMachineDefinition()));
+            buildScriptBuilder.methodInvocation(
+                "Set the target operating system and architecture for this library",
+                "targetMachines.add",
+                buildScriptBuilder.propertyExpression(this.hostTargetMachineDefinition)
+            )
         }
     }
 
-    TemplateOperation fromSwiftTemplate(String template, InitSettings settings, String sourceSetName, @SuppressWarnings("SameParameterValue") String sourceDir) {
-        String targetFileName = template.substring(template.lastIndexOf("/") + 1).replace(".template", "");
-        return fromSwiftTemplate(template, targetFileName, settings, sourceSetName, sourceDir);
+    fun fromSwiftTemplate(template: String, settings: InitSettings, sourceSetName: String, sourceDir: String): TemplateOperation {
+        val targetFileName = template.substring(template.lastIndexOf("/") + 1).replace(".template", "")
+        return fromSwiftTemplate(template, targetFileName, settings, sourceSetName, sourceDir)
     }
 
-    TemplateOperation fromSwiftTemplate(String template, String targetFileName, InitSettings settings, String sourceSetName, String sourceDir) {
-        if (settings == null || settings.getProjectName().isEmpty()) {
-            throw new IllegalArgumentException("Project name cannot be empty for a Swift project");
-        }
+    fun fromSwiftTemplate(template: String, targetFileName: String, settings: InitSettings, sourceSetName: String, sourceDir: String): TemplateOperation {
+        require(!(settings == null || settings.getProjectName().isEmpty())) { "Project name cannot be empty for a Swift project" }
 
-        String moduleName = toModuleName(settings.getSubprojects().get(0));
+        val moduleName = ModuleNameBuilder.toModuleName(settings.getSubprojects().get(0))
 
         return templateOperationFactory.newTemplateOperation()
             .withTemplate(template)
             .withTarget(settings.getTarget().file(settings.getSubprojects().get(0) + "/src/" + sourceSetName + "/" + sourceDir + "/" + targetFileName).getAsFile())
             .withBinding("projectName", settings.getProjectName())
             .withBinding("moduleName", moduleName)
-            .withBinding("fileComment", settings.isWithComments() ? "This source file was generated by the Gradle 'init' task" : "")
-            .create();
+            .withBinding("fileComment", if (settings.isWithComments()) "This source file was generated by the Gradle 'init' task" else "")
+            .create()
     }
 }

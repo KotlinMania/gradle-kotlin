@@ -13,127 +13,112 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.ant;
+package org.gradle.api.internal.project.ant
 
-import org.apache.tools.ant.ComponentHelper;
-import org.apache.tools.ant.Project;
-import org.apache.tools.ant.Target;
-import org.gradle.api.Transformer;
-import org.gradle.api.internal.file.ant.AntFileResource;
-import org.gradle.api.internal.file.ant.BaseDirSelector;
+import groovy.ant.AntBuilder
+import org.apache.tools.ant.ComponentHelper
+import org.apache.tools.ant.Project
+import org.apache.tools.ant.Target
+import org.gradle.api.Transformer
+import org.gradle.api.internal.file.ant.AntFileResource
+import org.gradle.api.internal.file.ant.BaseDirSelector
+import java.io.Closeable
+import java.lang.reflect.Field
 
-import java.io.Closeable;
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
+@Suppress("deprecation")
+open class BasicAntBuilder : org.gradle.api.AntBuilder(), Closeable {
+    private val nodeField: Field
+    private val children: MutableList<*>
 
-@SuppressWarnings("deprecation")
-public class BasicAntBuilder extends org.gradle.api.AntBuilder implements Closeable {
-    private final Field nodeField;
-    private final List children;
-
-    public BasicAntBuilder() {
+    init {
         // These are used to discard references to tasks so they can be garbage collected
-        Field collectorField;
+        val collectorField: Field?
         try {
-            nodeField = groovy.ant.AntBuilder.class.getDeclaredField("lastCompletedNode");
-            nodeField.setAccessible(true);
-            collectorField = groovy.ant.AntBuilder.class.getDeclaredField("collectorTarget");
-            collectorField.setAccessible(true);
-            Target target = (Target) collectorField.get(this);
-            Field childrenField = Target.class.getDeclaredField("children");
-            childrenField.setAccessible(true);
-            children = (List) childrenField.get(target);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            nodeField = AntBuilder::class.java.getDeclaredField("lastCompletedNode")
+            nodeField.setAccessible(true)
+            collectorField = AntBuilder::class.java.getDeclaredField("collectorTarget")
+            collectorField.setAccessible(true)
+            val target = collectorField.get(this) as Target?
+            val childrenField = Target::class.java.getDeclaredField("children")
+            childrenField.setAccessible(true)
+            children = childrenField.get(target) as MutableList<*>
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
 
-        getAntProject().addDataTypeDefinition("gradleFileResource", AntFileResource.class);
-        getAntProject().addDataTypeDefinition("gradleBaseDirSelector", BaseDirSelector.class);
+        getAntProject().addDataTypeDefinition("gradleFileResource", AntFileResource::class.java)
+        getAntProject().addDataTypeDefinition("gradleBaseDirSelector", BaseDirSelector::class.java)
     }
 
-    @Override
-    public Map<String, Object> getProperties() {
-        throw new UnsupportedOperationException();
+    override fun getProperties(): MutableMap<String?, Any?> {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public Map<String, Object> getReferences() {
-        throw new UnsupportedOperationException();
+    override fun getReferences(): MutableMap<String?, Any?> {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void importBuild(Object antBuildFile) {
-        throw new UnsupportedOperationException();
+    override fun importBuild(antBuildFile: Any) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void importBuild(Object antBuildFile, String baseDirectory) {
-        throw new UnsupportedOperationException();
+    override fun importBuild(antBuildFile: Any, baseDirectory: String) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void importBuild(Object antBuildFile, Transformer<? extends String, ? super String> taskNamer) {
-        throw new UnsupportedOperationException();
+    override fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String?, in String?>) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void importBuild(Object antBuildFile, String baseDirectory, Transformer<? extends String, ? super String> taskNamer) {
-        throw new UnsupportedOperationException();
+    override fun importBuild(antBuildFile: Any, baseDirectory: String, taskNamer: Transformer<out String?, in String?>) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    protected void nodeCompleted(Object parent, Object node) {
-        ClassLoader original = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(Project.class.getClassLoader());
+    override fun nodeCompleted(parent: Any?, node: Any?) {
+        val original = Thread.currentThread().getContextClassLoader()
+        Thread.currentThread().setContextClassLoader(Project::class.java.getClassLoader())
         try {
-            super.nodeCompleted(parent, node);
+            super.nodeCompleted(parent, node)
         } finally {
-            Thread.currentThread().setContextClassLoader(original);
+            Thread.currentThread().setContextClassLoader(original)
         }
     }
 
-    @Override
-    public void setLifecycleLogLevel(AntMessagePriority logLevel) {
-        throw new UnsupportedOperationException();
+    override fun setLifecycleLogLevel(logLevel: AntMessagePriority) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public AntMessagePriority getLifecycleLogLevel() {
-        throw new UnsupportedOperationException();
+    override fun getLifecycleLogLevel(): AntMessagePriority {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    protected Object postNodeCompletion(Object parent, Object node) {
+    override fun postNodeCompletion(parent: Any?, node: Any?): Any? {
         try {
-            return nodeField.get(this);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            return nodeField.get(this)
+        } catch (e: IllegalAccessException) {
+            throw RuntimeException(e)
         }
     }
 
-    @Override
-    protected Object doInvokeMethod(String methodName, Object name, Object args) {
-        Object value = super.doInvokeMethod(methodName, name, args);
+    override fun doInvokeMethod(methodName: String?, name: Any?, args: Any?): Any? {
+        val value = super.doInvokeMethod(methodName, name, args)
         // Discard the node so it can be garbage collected. Some Ant tasks cache a potentially large amount of state
         // in fields.
         try {
-            nodeField.set(this, null);
-            children.clear();
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            nodeField.set(this, null)
+            children.clear()
+        } catch (e: IllegalAccessException) {
+            throw RuntimeException(e)
         }
-        return value;
+        return value
     }
 
-    @Override
-    public void close() {
-        Project project = getProject();
-        project.fireBuildFinished(null);
-        ComponentHelper helper = ComponentHelper.getComponentHelper(project);
-        helper.getAntTypeTable().clear();
-        helper.getDataTypeDefinitions().clear();
-        project.getReferences().clear();
+    override fun close() {
+        val project = getProject()
+        project.fireBuildFinished(null)
+        val helper = ComponentHelper.getComponentHelper(project)
+        helper.getAntTypeTable().clear()
+        helper.getDataTypeDefinitions().clear()
+        project.getReferences().clear()
     }
-
 }

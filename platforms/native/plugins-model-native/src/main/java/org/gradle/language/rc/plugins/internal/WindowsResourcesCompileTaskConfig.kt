@@ -13,88 +13,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.rc.plugins.internal;
+package org.gradle.language.rc.plugins.internal
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.file.FileTree;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.tasks.util.PatternSet;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.rc.WindowsResourceSet;
-import org.gradle.language.rc.tasks.WindowsResourceCompile;
-import org.gradle.nativeplatform.PreprocessingTool;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.internal.StaticLibraryBinarySpecInternal;
-import org.gradle.nativeplatform.platform.internal.NativePlatformInternal;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.BinarySpec;
+import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.tasks.util.PatternSet
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.rc.WindowsResourceSet
+import org.gradle.language.rc.tasks.WindowsResourceCompile
+import org.gradle.nativeplatform.PreprocessingTool
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.internal.StaticLibraryBinarySpecInternal
+import org.gradle.nativeplatform.platform.internal.NativePlatformInternal
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.ToolType
+import org.gradle.platform.base.BinarySpec
+import java.io.File
 
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+class WindowsResourcesCompileTaskConfig : SourceTransformTaskConfig {
+    val taskPrefix: String?
+        get() = "compile"
 
-public class WindowsResourcesCompileTaskConfig implements SourceTransformTaskConfig {
-    @Override
-    public String getTaskPrefix() {
-        return "compile";
+    val taskType: Class<out DefaultTask?>?
+        get() = WindowsResourceCompile::class.java
+
+    override fun configureTask(task: Task?, binary: BinarySpec?, sourceSet: LanguageSourceSet?, serviceRegistry: ServiceRegistry?) {
+        configureResourceCompileTask(
+            (task as org.gradle.language.rc.tasks.WindowsResourceCompile?)!!,
+            (binary as org.gradle.nativeplatform.internal.NativeBinarySpecInternal?)!!,
+            (sourceSet as org.gradle.language.rc.WindowsResourceSet?)!!
+        )
     }
 
-    @Override
-    public Class<? extends DefaultTask> getTaskType() {
-        return WindowsResourceCompile.class;
-    }
+    private fun configureResourceCompileTask(task: WindowsResourceCompile, binary: NativeBinarySpecInternal, sourceSet: WindowsResourceSet) {
+        task.setDescription("Compiles resources of the " + sourceSet + " of " + binary)
 
-    @Override
-    public void configureTask(Task task, BinarySpec binary, LanguageSourceSet sourceSet, ServiceRegistry serviceRegistry) {
-        configureResourceCompileTask((WindowsResourceCompile) task, (NativeBinarySpecInternal) binary, (WindowsResourceSet) sourceSet);
-    }
+        task.toolChain.set(binary.getToolChain())
+        task.targetPlatform.set(binary.getTargetPlatform())
 
-    private void configureResourceCompileTask(WindowsResourceCompile task, final NativeBinarySpecInternal binary, final WindowsResourceSet sourceSet) {
-        task.setDescription("Compiles resources of the " + sourceSet + " of " + binary);
+        task.includes(sourceSet.exportedHeaders.getSourceDirectories())
 
-        task.toolChain.set(binary.getToolChain());
-        task.targetPlatform.set(binary.getTargetPlatform());
-
-        task.includes(sourceSet.getExportedHeaders().getSourceDirectories());
-
-        FileCollectionFactory fileCollectionFactory = ((ProjectInternal) task.getProject()).getServices().get(FileCollectionFactory.class);
-        task.includes(fileCollectionFactory.create(new MinimalFileSet() {
-            @Override
-            public Set<File> getFiles() {
-                PlatformToolProvider platformToolProvider = ((NativeToolChainInternal) binary.getToolChain()).select((NativePlatformInternal) binary.getTargetPlatform());
-                return new LinkedHashSet<File>(platformToolProvider.getSystemLibraries(ToolType.WINDOW_RESOURCES_COMPILER).includeDirs);
+        val fileCollectionFactory = (task.getProject() as ProjectInternal).getServices().get<FileCollectionFactory?>(FileCollectionFactory::class.java)
+        task.includes(fileCollectionFactory!!.create(object : MinimalFileSet {
+            override fun getFiles(): MutableSet<File?> {
+                val platformToolProvider = (binary.getToolChain() as NativeToolChainInternal).select(binary.getTargetPlatform() as NativePlatformInternal?)
+                return LinkedHashSet<File?>(platformToolProvider!!.getSystemLibraries(ToolType.WINDOW_RESOURCES_COMPILER)!!.includeDirs)
             }
 
-            @Override
-            public String getDisplayName() {
-                return "System includes for " + binary.getToolChain().displayName;
+            override fun getDisplayName(): String {
+                return "System includes for " + binary.getToolChain().displayName
             }
-        }));
+        }))
 
-        task.source(sourceSet.getSource());
+        task.source(sourceSet.getSource())
 
-        final Project project = task.getProject();
+        val project = task.getProject()
 
-        task.outputDir = project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), ((LanguageSourceSetInternal) sourceSet).getProjectScopedName())).get();
+        task.outputDir = project.getLayout().getBuildDirectory().getAsFile()
+            .map<File?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), (sourceSet as LanguageSourceSetInternal).projectScopedName) }).get()
 
-        PreprocessingTool rcCompiler = (PreprocessingTool) binary.getToolByName("rcCompiler");
-        task.setMacros(rcCompiler.getMacros());
-        task.compilerArgs.set(rcCompiler.getArgs());
+        val rcCompiler = binary.getToolByName("rcCompiler") as PreprocessingTool
+        task.macros = rcCompiler.getMacros()
+        task.compilerArgs.set(rcCompiler.getArgs())
 
-        FileTree resourceOutputs = task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.res"));
-        binary.binaryInputs(resourceOutputs);
-        if (binary instanceof StaticLibraryBinarySpecInternal) {
-            ((StaticLibraryBinarySpecInternal) binary).additionalLinkFiles(resourceOutputs);
+        val resourceOutputs = task.getOutputs().getFiles().getAsFileTree().matching(PatternSet().include("**/*.res"))
+        binary.binaryInputs(resourceOutputs)
+        if (binary is StaticLibraryBinarySpecInternal) {
+            binary.additionalLinkFiles(resourceOutputs)
         }
     }
-
 }

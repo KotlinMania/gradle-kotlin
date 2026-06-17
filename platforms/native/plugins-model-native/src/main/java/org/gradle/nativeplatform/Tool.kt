@@ -13,24 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-
-import java.util.List;
+import org.gradle.api.Incubating
 
 /**
  * Configuration of the arguments of a ToolChain executable.
  */
 @Incubating
-public interface Tool {
+interface Tool {
     /**
      * The arguments passed when executing this tool.
      */
-    List<String> getArgs();
+    val args: MutableList<String?>?
 
     /**
      * Adds a number of arguments to be passed to the tool.
      */
-    void args(String... args);
+    fun args(vararg args: String?)
 }

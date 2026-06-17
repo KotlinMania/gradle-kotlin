@@ -13,36 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
-
-import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier;
-
-import java.io.Serializable;
+import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier
+import java.io.Serializable
 
 /**
- * Structurally implements {@link org.gradle.tooling.model.cpp.CppProject} model.
+ * Structurally implements [org.gradle.tooling.model.cpp.CppProject] model.
  */
-public class DefaultCppProjectModel implements Serializable {
-    private final DefaultProjectIdentifier projectIdentifier;
-    private final DefaultCppComponentModel mainComponent;
-    private final DefaultCppComponentModel testComponent;
-
-    public DefaultCppProjectModel(DefaultProjectIdentifier projectIdentifier, DefaultCppComponentModel mainComponent, DefaultCppComponentModel testComponent) {
-        this.projectIdentifier = projectIdentifier;
-        this.mainComponent = mainComponent;
-        this.testComponent = testComponent;
-    }
-
-    public DefaultProjectIdentifier getProjectIdentifier() {
-        return projectIdentifier;
-    }
-
-    public DefaultCppComponentModel getMainComponent() {
-        return mainComponent;
-    }
-
-    public DefaultCppComponentModel getTestComponent() {
-        return testComponent;
-    }
-}
+class DefaultCppProjectModel(val projectIdentifier: DefaultProjectIdentifier?, val mainComponent: DefaultCppComponentModel?, val testComponent: DefaultCppComponentModel?) : Serializable

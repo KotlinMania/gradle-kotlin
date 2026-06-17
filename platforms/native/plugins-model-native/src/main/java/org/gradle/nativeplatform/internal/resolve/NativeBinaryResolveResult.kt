@@ -13,52 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.util.internal.CollectionUtils
+import org.gradle.util.internal.CollectionUtils.collect
+import java.util.function.Function
 
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.util.internal.CollectionUtils;
+class NativeBinaryResolveResult(val target: NativeBinarySpec?, libs: MutableCollection<*>) {
+    val allResolutions: MutableList<NativeBinaryRequirementResolveResult> = ArrayList<NativeBinaryRequirementResolveResult>()
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-public class NativeBinaryResolveResult {
-    private final NativeBinarySpec target;
-    private final List<NativeBinaryRequirementResolveResult> resolutions = new ArrayList<NativeBinaryRequirementResolveResult>();
-
-    public NativeBinaryResolveResult(NativeBinarySpec target, Collection<?> libs) {
-        this.target = target;
-        for (Object lib : libs) {
-            resolutions.add(new NativeBinaryRequirementResolveResult(lib));
+    init {
+        for (lib in libs) {
+            allResolutions.add(NativeBinaryRequirementResolveResult(lib))
         }
     }
 
-    public NativeBinarySpec getTarget() {
-        return target;
-    }
+    val allResults: MutableList<NativeDependencySet?>
+        get() = collect<NativeDependencySet?, NativeBinaryRequirementResolveResult?>(
+            this.allResolutions,
+            Function { obj: NativeBinaryRequirementResolveResult? -> obj!!.getNativeDependencySet() })
 
-    public List<NativeBinaryRequirementResolveResult> getAllResolutions() {
-        return resolutions;
-    }
-
-    public List<NativeDependencySet> getAllResults() {
-        return CollectionUtils.collect(getAllResolutions(), NativeBinaryRequirementResolveResult::getNativeDependencySet);
-    }
-
-    public List<NativeLibraryBinary> getAllLibraryBinaries() {
-        List<NativeLibraryBinary> result = new ArrayList<NativeLibraryBinary>();
-        for (NativeBinaryRequirementResolveResult resolution : getAllResolutions()) {
-            if (resolution.getLibraryBinary() != null) {
-                result.add(resolution.getLibraryBinary());
+    val allLibraryBinaries: MutableList<NativeLibraryBinary?>
+        get() {
+            val result: MutableList<NativeLibraryBinary?> = ArrayList<NativeLibraryBinary?>()
+            for (resolution in this.allResolutions) {
+                if (resolution.getLibraryBinary() != null) {
+                    result.add(resolution.getLibraryBinary())
+                }
             }
+            return result
         }
-        return result;
-    }
 
-    public List<NativeBinaryRequirementResolveResult> getPendingResolutions() {
-        return CollectionUtils.filter(resolutions, element -> !element.isComplete());
-    }
+    val pendingResolutions: MutableList<NativeBinaryRequirementResolveResult?>
+        get() = CollectionUtils.filter<NativeBinaryRequirementResolveResult?>(
+            this.allResolutions,
+            org.gradle.api.specs.Spec { element: NativeBinaryRequirementResolveResult? -> !element!!.isComplete() })
 }

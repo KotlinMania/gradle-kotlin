@@ -13,47 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal.resolve;
+package org.gradle.nativeplatform.internal.resolve
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.api.internal.resolve.ProjectModelResolver;
-import org.gradle.model.ModelMap;
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.nativeplatform.NativeLibrarySpec;
-import org.gradle.platform.base.ComponentSpecContainer;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory
+import org.gradle.api.internal.resolve.ProjectModelResolver
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.nativeplatform.NativeLibrarySpec
+import org.gradle.platform.base.ComponentSpecContainer
 
-public class ProjectLibraryBinaryLocator implements LibraryBinaryLocator {
-    private final ProjectModelResolver projectModelResolver;
-    private final DomainObjectCollectionFactory domainObjectCollectionFactory;
-
-    public ProjectLibraryBinaryLocator(ProjectModelResolver projectModelResolver, DomainObjectCollectionFactory domainObjectCollectionFactory) {
-        this.projectModelResolver = projectModelResolver;
-        this.domainObjectCollectionFactory = domainObjectCollectionFactory;
-    }
-
+class ProjectLibraryBinaryLocator(private val projectModelResolver: ProjectModelResolver, private val domainObjectCollectionFactory: DomainObjectCollectionFactory) : LibraryBinaryLocator {
     // Converts the binaries of a project library into regular binary instances
-    @Nullable
-    @Override
-    public DomainObjectSet<NativeLibraryBinary> getBinaries(LibraryIdentifier libraryIdentifier) {
-        ModelRegistry projectModel = projectModelResolver.resolveProjectModel(libraryIdentifier.getProjectPath());
-        ComponentSpecContainer components = projectModel.find("components", ComponentSpecContainer.class);
+    override fun getBinaries(libraryIdentifier: LibraryIdentifier): DomainObjectSet<NativeLibraryBinary?>? {
+        val projectModel = projectModelResolver.resolveProjectModel(libraryIdentifier.getProjectPath())
+        val components = projectModel!!.find<ComponentSpecContainer?>("components", ComponentSpecContainer::class.java)
         if (components == null) {
-            return null;
+            return null
         }
-        String libraryName = libraryIdentifier.getLibraryName();
-        NativeLibrarySpec library = components.withType(NativeLibrarySpec.class).get(libraryName);
+        val libraryName = libraryIdentifier.getLibraryName()
+        val library = components.withType<NativeLibrarySpec?>(NativeLibrarySpec::class.java).get(libraryName)
         if (library == null) {
-            return null;
+            return null
         }
-        ModelMap<NativeBinarySpec> projectBinaries = library.getBinaries().withType(NativeBinarySpec.class);
-        DomainObjectSet<NativeLibraryBinary> binaries = domainObjectCollectionFactory.newDomainObjectSet(NativeLibraryBinary.class);
-        for (NativeBinarySpec nativeBinarySpec : projectBinaries.values()) {
-            binaries.add((NativeLibraryBinary) nativeBinarySpec);
+        val projectBinaries = library.getBinaries().withType<NativeBinarySpec?>(NativeBinarySpec::class.java)
+        val binaries = domainObjectCollectionFactory.newDomainObjectSet<NativeLibraryBinary?>(NativeLibraryBinary::class.java)
+        for (nativeBinarySpec in projectBinaries.values()) {
+            binaries.add(nativeBinarySpec as NativeLibraryBinary?)
         }
-        return binaries;
+        return binaries
     }
 }

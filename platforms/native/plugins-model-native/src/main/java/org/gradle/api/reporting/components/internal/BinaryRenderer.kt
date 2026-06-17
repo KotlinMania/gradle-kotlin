@@ -13,22 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components.internal
 
-package org.gradle.api.reporting.components.internal;
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.platform.base.BinarySpec
+import javax.inject.Inject
 
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.platform.base.BinarySpec;
-
-import javax.inject.Inject;
-
-public class BinaryRenderer extends AbstractBinaryRenderer<BinarySpec> {
-    @Inject
-    public BinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
-    }
-
-    @Override
-    public Class<BinarySpec> getTargetType() {
-        return BinarySpec.class;
+class BinaryRenderer @Inject constructor(schemaStore: ModelSchemaStore?) : AbstractBinaryRenderer<BinarySpec?>(schemaStore) {
+    override fun getTargetType(): Class<BinarySpec?> {
+        return BinarySpec::class.java
     }
 }

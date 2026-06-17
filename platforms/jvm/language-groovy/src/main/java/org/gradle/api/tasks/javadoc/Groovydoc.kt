@@ -211,8 +211,8 @@ abstract class Groovydoc : SourceTask() {
         fsOperations.copy(Action { spec: CopySpec? -> spec!!.from(getSource()).into(tmpDir) })
 
         this.workerExecutor.classLoaderIsolation().submit<GroovydocParameters>(GroovydocAntAction::class.java, Action { parameters: GroovydocParameters ->
-            parameters.getAntLibraryClasspath().from(this.classpath)
-            parameters.getAntLibraryClasspath().from(this.groovyClasspath)
+            parameters.antLibraryClasspath.from(this.classpath)
+            parameters.antLibraryClasspath.from(this.groovyClasspath)
             parameters.source.convention(getSource())
             parameters.destinationDirectory.fileValue(destinationDir)
             parameters.use.convention(this.isUse)

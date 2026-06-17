@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.platform.base.PlatformAwareComponentSpec;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.platform.base.PlatformAwareComponentSpec
 
 /**
  * A native component that can be configured to target certain variant dimensions.
  * This functionality is a temporary workaround to eliminate configuration of unnecessary domain objects and tasks.
  */
-@Incubating @HasInternalProtocol
-public interface TargetedNativeComponent extends PlatformAwareComponentSpec, NativeComponentSpec {
+@Incubating
+@HasInternalProtocol
+interface TargetedNativeComponent : PlatformAwareComponentSpec, NativeComponentSpec {
+    /**
+     * Specifies the names of one or more [Flavor]s that this component should be built for.
+     */
+    fun targetFlavors(vararg flavorSelectors: String?)
 
     /**
-     * Specifies the names of one or more {@link Flavor}s that this component should be built for.
+     * Specifies the names of one or more [BuildType]s that this component should be built for.
      */
-    void targetFlavors(String... flavorSelectors);
-
-    /**
-     * Specifies the names of one or more {@link BuildType}s that this component should be built for.
-     */
-    void targetBuildTypes(String... buildTypeSelectors);
-
+    fun targetBuildTypes(vararg buildTypeSelectors: String?)
 }

@@ -13,75 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Named;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.platform.base.internal.DefaultPlatformRequirement;
-import org.gradle.platform.base.internal.PlatformRequirement;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Named
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.platform.base.internal.DefaultPlatformRequirement.Companion.create
+import org.gradle.platform.base.internal.PlatformRequirement
+import java.util.Collections
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+abstract class AbstractTargetedNativeComponentSpec : AbstractNativeComponentSpec(), TargetedNativeComponentInternal {
+    private val targetPlatforms: MutableList<PlatformRequirement?> = ArrayList<PlatformRequirement?>()
+    private val buildTypes: MutableSet<String?> = HashSet<String?>()
+    private val flavors: MutableSet<String?> = HashSet<String?>()
 
-public abstract class AbstractTargetedNativeComponentSpec extends AbstractNativeComponentSpec implements TargetedNativeComponentInternal {
-
-    private final List<PlatformRequirement> targetPlatforms = new ArrayList<>();
-    private final Set<String> buildTypes = new HashSet<String>();
-    private final Set<String> flavors = new HashSet<String>();
-
-    @Override
-    public List<PlatformRequirement> getTargetPlatforms() {
-        return Collections.unmodifiableList(targetPlatforms);
+    override fun getTargetPlatforms(): MutableList<PlatformRequirement?> {
+        return Collections.unmodifiableList<PlatformRequirement?>(targetPlatforms)
     }
 
-    @Override
-    public void targetPlatform(String targetPlatform) {
-        this.targetPlatforms.add(DefaultPlatformRequirement.create(targetPlatform));
+    override fun targetPlatform(targetPlatform: String) {
+        this.targetPlatforms.add(create(targetPlatform))
     }
 
-    @Override
-    public void targetFlavors(String... flavorSelectors) {
-        Collections.addAll(flavors, flavorSelectors);
+    override fun targetFlavors(vararg flavorSelectors: String?) {
+        Collections.addAll<String?>(flavors, *flavorSelectors)
     }
 
-    @Override
-    public void targetBuildTypes(String... buildTypeSelectors) {
-        Collections.addAll(buildTypes, buildTypeSelectors);
+    override fun targetBuildTypes(vararg buildTypeSelectors: String?) {
+        Collections.addAll<String?>(buildTypes, *buildTypeSelectors)
     }
 
-    @Override
-    public Set<Flavor> chooseFlavors(Set<? extends Flavor> candidates) {
-        return chooseElements(Flavor.class, candidates, flavors);
+    override fun chooseFlavors(candidates: MutableSet<out Flavor?>): MutableSet<Flavor?> {
+        return chooseElements<Flavor?>(Flavor::class.java, candidates, flavors)
     }
 
-    @Override
-    public Set<BuildType> chooseBuildTypes(Set<? extends BuildType> candidates) {
-        return chooseElements(BuildType.class, candidates, buildTypes);
+    override fun chooseBuildTypes(candidates: MutableSet<out BuildType?>): MutableSet<BuildType?> {
+        return chooseElements<BuildType?>(BuildType::class.java, candidates, buildTypes)
     }
 
-    protected <T extends Named> Set<T> chooseElements(Class<T> type, Set<? extends T> candidates, Set<String> names) {
+    protected fun <T : Named?> chooseElements(type: Class<T?>, candidates: MutableSet<out T?>, names: MutableSet<String?>): MutableSet<T?> {
         if (names.isEmpty()) {
-            return new LinkedHashSet<T>(candidates);
+            return LinkedHashSet<T?>(candidates)
         }
 
-        Set<String> unusedNames = new HashSet<String>(names);
-        Set<T> chosen = new LinkedHashSet<T>();
-        for (T candidate : candidates) {
-            if (unusedNames.remove(candidate.getName())) {
-                chosen.add(candidate);
+        val unusedNames: MutableSet<String?> = HashSet<String?>(names)
+        val chosen: MutableSet<T?> = LinkedHashSet<T?>()
+        for (candidate in candidates) {
+            if (unusedNames.remove(candidate!!.getName())) {
+                chosen.add(candidate)
             }
         }
 
         if (!unusedNames.isEmpty()) {
-            throw new InvalidUserDataException(String.format("Invalid %s: '%s'", type.getSimpleName(), unusedNames.iterator().next()));
+            throw InvalidUserDataException(String.format("Invalid %s: '%s'", type.getSimpleName(), unusedNames.iterator().next()))
         }
 
-        return chosen;
+        return chosen
     }
 }

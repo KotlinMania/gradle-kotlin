@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest
 
-package org.gradle.nativeplatform.test.xctest;
-
-import org.gradle.language.nativeplatform.ComponentWithExecutable;
-import org.gradle.language.nativeplatform.ComponentWithInstallation;
+import org.gradle.language.nativeplatform.ComponentWithExecutable
+import org.gradle.language.nativeplatform.ComponentWithInstallation
 
 /**
  * An XCTest executable for tests implemented in Swift.
  *
  * @since 4.5
  */
-public interface SwiftXCTestExecutable extends SwiftXCTestBinary, ComponentWithExecutable, ComponentWithInstallation {
-}
+interface SwiftXCTestExecutable : SwiftXCTestBinary, ComponentWithExecutable, ComponentWithInstallation

@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.api.file.FileCollection;
+import org.gradle.api.Incubating
 
 /**
  * Models a collection of native type dependencies.
  */
 @Incubating
-public interface NativeDependencySet {
+interface NativeDependencySet {
     /**
      * Returns the header file directories to use at compile time.
      */
-    FileCollection getIncludeRoots();
+    val includeRoots: FileCollection?
 
     /**
      * Returns the files to use at link time.
      */
-    FileCollection getLinkFiles();
+    val linkFiles: FileCollection?
 
     /**
      * Returns the files to use at runtime.
      */
-    FileCollection getRuntimeFiles();
+    val runtimeFiles: FileCollection?
 }

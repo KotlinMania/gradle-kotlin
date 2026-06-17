@@ -72,7 +72,7 @@ abstract class JacocoReport : JacocoReportBase(), Reporting<JacocoReportsContain
         val queue = this.workerExecutor.classLoaderIsolation()
 
         queue.submit<JacocoReportParameters?>(AntJacocoReport::class.java, Action { parameters: JacocoReportParameters? ->
-            parameters!!.getAntLibraryClasspath().convention(getJacocoClasspath())
+            parameters!!.antLibraryClasspath.convention(getJacocoClasspath())
             parameters.projectName.convention(this.reportProjectName)
             parameters.encoding.convention(getSourceEncoding())
             parameters.allSourcesDirs.convention(getAllSourceDirs())

@@ -13,52 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.internal
 
-package org.gradle.nativeplatform.test.internal;
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.internal.AbstractNativeBinaryRenderer
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
+import javax.inject.Inject
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.internal.AbstractNativeBinaryRenderer;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.NativeTestSuiteSpec;
+class NativeTestSuiteBinaryRenderer @Inject constructor(schemaStore: ModelSchemaStore?) : AbstractNativeBinaryRenderer<NativeTestSuiteBinarySpec?>(schemaStore) {
+    val targetType: Class<NativeTestSuiteBinarySpec?>?
+        get() = NativeTestSuiteBinarySpec::class.java
 
-import javax.inject.Inject;
-
-public class NativeTestSuiteBinaryRenderer extends AbstractNativeBinaryRenderer<NativeTestSuiteBinarySpec> {
-    @Inject
-    public NativeTestSuiteBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
+    override fun renderTasks(binary: NativeTestSuiteBinarySpec, builder: TextReportBuilder) {
+        builder.item("install using task", binary.getTasks().getInstall().getPath())
+        builder.item("run using task", binary.getTasks().getRun().getPath())
     }
 
-    @Override
-    public Class<NativeTestSuiteBinarySpec> getTargetType() {
-        return NativeTestSuiteBinarySpec.class;
+    override fun renderOutputs(binary: NativeTestSuiteBinarySpec, builder: TextReportBuilder) {
+        builder.item("executable file", binary.getExecutableFile())
     }
 
-    @Override
-    protected void renderTasks(NativeTestSuiteBinarySpec binary, TextReportBuilder builder) {
-        builder.item("install using task", binary.getTasks().getInstall().getPath());
-        builder.item("run using task", binary.getTasks().getRun().getPath());
-    }
-
-    @Override
-    protected void renderOutputs(NativeTestSuiteBinarySpec binary, TextReportBuilder builder) {
-        builder.item("executable file", binary.getExecutableFile());
-    }
-
-    @Override
-    protected void renderDetails(NativeTestSuiteBinarySpec binary, TextReportBuilder builder) {
-        NativeTestSuiteSpec testSuite = binary.getTestSuite();
-        NativeComponentSpec testedComponent = testSuite.getTestedComponent();
-        if (testedComponent!=null) {
-            builder.item("component under test", testedComponent.getDisplayName());
+    override fun renderDetails(binary: NativeTestSuiteBinarySpec, builder: TextReportBuilder) {
+        val testSuite = binary.getTestSuite()
+        val testedComponent = testSuite.getTestedComponent()
+        if (testedComponent != null) {
+            builder.item("component under test", testedComponent.getDisplayName())
         }
-        NativeBinarySpec testedBinary = binary.getTestedBinary();
+        val testedBinary = binary.getTestedBinary()
         if (testedBinary != null) {
-            builder.item("binary under test", testedBinary.getDisplayName());
+            builder.item("binary under test", testedBinary.getDisplayName())
         }
-        super.renderDetails(binary, builder);
+        super.renderDetails(binary, builder)
     }
 }

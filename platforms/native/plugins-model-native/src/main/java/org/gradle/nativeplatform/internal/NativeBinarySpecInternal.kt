@@ -13,59 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.Tool
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver
+import org.gradle.nativeplatform.platform.NativePlatform
+import org.gradle.nativeplatform.toolchain.NativeToolChain
+import org.gradle.platform.base.internal.BinarySpecInternal
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.nativeplatform.*;
-import org.gradle.nativeplatform.internal.resolve.NativeBinaryRequirementResolveResult;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.toolchain.NativeToolChain;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader;
-import org.gradle.platform.base.internal.BinarySpecInternal;
+interface NativeBinarySpecInternal : NativeBinarySpec, BinarySpecInternal {
+    fun setFlavor(flavor: Flavor?)
 
-import java.io.File;
-import java.util.Collection;
-import java.util.Map;
+    fun setToolChain(toolChain: NativeToolChain?)
 
-public interface NativeBinarySpecInternal extends NativeBinarySpec, BinarySpecInternal {
+    fun setTargetPlatform(targetPlatform: NativePlatform?)
 
-    void setFlavor(Flavor flavor);
+    fun setBuildType(buildType: BuildType?)
 
-    void setToolChain(NativeToolChain toolChain);
+    fun getToolByName(name: String?): Tool?
 
-    void setTargetPlatform(NativePlatform targetPlatform);
+    var platformToolProvider: PlatformToolProvider?
 
-    void setBuildType(BuildType buildType);
+    fun setResolver(resolver: NativeDependencyResolver?)
 
-    Tool getToolByName(String name);
+    fun setFileCollectionFactory(fileCollectionFactory: FileCollectionFactory?)
 
-    PlatformToolProvider getPlatformToolProvider();
+    val primaryOutput: File?
 
-    void setPlatformToolProvider(PlatformToolProvider toolProvider);
+    fun getLibs(sourceSet: DependentSourceSet?): MutableCollection<NativeDependencySet?>?
 
-    void setResolver(NativeDependencyResolver resolver);
-
-    void setFileCollectionFactory(FileCollectionFactory fileCollectionFactory);
-
-    File getPrimaryOutput();
-
-    Collection<NativeDependencySet> getLibs(DependentSourceSet sourceSet);
-
-    Collection<NativeLibraryBinary> getDependentBinaries();
+    val dependentBinaries: MutableCollection<NativeLibraryBinary?>?
 
     /**
      * Adds some files to include as input to the link/assemble step of this binary.
      */
-    void binaryInputs(FileCollection files);
+    fun binaryInputs(files: FileCollection?)
 
-    Collection<NativeBinaryRequirementResolveResult> getAllResolutions();
+    val allResolutions: MutableCollection<NativeBinaryRequirementResolveResult?>?
 
-    Map<File, PreCompiledHeader> getPrefixFileToPCH();
+    val prefixFileToPCH: MutableMap<File?, PreCompiledHeader?>?
 
-    void addPreCompiledHeaderFor(DependentSourceSet sourceSet);
+    fun addPreCompiledHeaderFor(sourceSet: DependentSourceSet?)
 }

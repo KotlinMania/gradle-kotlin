@@ -13,24 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.api.file.Directory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices;
+import org.gradle.api.file.Directory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.jvm.internal.JvmPluginServices
 
 /**
  * Converts some existing build to a Gradle build.
  */
-public interface BuildConverter extends BuildInitializer {
+interface BuildConverter : BuildInitializer {
     /**
      * Can this converter be applied to the contents of the current directory?
      */
-    boolean canApplyToCurrentDirectory(Directory current);
+    fun canApplyToCurrentDirectory(current: Directory): Boolean
 
-    String getSourceBuildDescription();
+    val sourceBuildDescription: String?
 
-    void configureClasspath(ProjectInternal.DetachedResolver detachedResolver, ObjectFactory objects, JvmPluginServices jvmPluginServices);
+    fun configureClasspath(detachedResolver: ProjectInternal.DetachedResolver, objects: ObjectFactory, jvmPluginServices: JvmPluginServices)
 }

@@ -13,103 +13,80 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.nativeplatform.internal;
+package org.gradle.language.nativeplatform.internal
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Task;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask;
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.PreprocessingTool;
-import org.gradle.nativeplatform.SharedLibraryBinarySpec;
-import org.gradle.nativeplatform.Tool;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.platform.internal.NativePlatformInternal;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.util.internal.CollectionUtils;
+import org.gradle.api.DefaultTask
+import org.gradle.api.Task
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
+import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.PreprocessingTool
+import org.gradle.nativeplatform.SharedLibraryBinarySpec
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.platform.internal.NativePlatformInternal
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.platform.base.BinarySpec
+import org.gradle.util.internal.CollectionUtils.collect
+import java.io.File
+import java.util.concurrent.Callable
+import java.util.function.Function
 
-import java.io.File;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
+abstract class CompileTaskConfig(private val languageTransform: NativeLanguageTransform<*>, val taskType: Class<out DefaultTask?>?) : SourceTransformTaskConfig {
+    val taskPrefix: String?
+        get() = "compile"
 
-public abstract class CompileTaskConfig implements SourceTransformTaskConfig {
-
-    private final NativeLanguageTransform<?> languageTransform;
-    private final Class<? extends DefaultTask> taskType;
-
-    public CompileTaskConfig(NativeLanguageTransform<?> languageTransform, Class<? extends DefaultTask> taskType) {
-        this.languageTransform = languageTransform;
-        this.taskType = taskType;
+    override fun configureTask(task: Task?, binary: BinarySpec?, sourceSet: LanguageSourceSet?, serviceRegistry: ServiceRegistry?) {
+        configureCompileTaskCommon(
+            (task as org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask?)!!,
+            (binary as org.gradle.nativeplatform.internal.NativeBinarySpecInternal?)!!,
+            (sourceSet as org.gradle.language.base.internal.LanguageSourceSetInternal?)!!
+        )
+        configureCompileTask(task as AbstractNativeCompileTask, binary as NativeBinarySpecInternal, sourceSet)
     }
 
-    @Override
-    public String getTaskPrefix() {
-        return "compile";
-    }
+    private fun configureCompileTaskCommon(task: AbstractNativeCompileTask, binary: NativeBinarySpecInternal, sourceSet: LanguageSourceSetInternal) {
+        task.toolChain.set(binary.getToolChain())
+        task.targetPlatform.set(binary.getTargetPlatform())
+        task.isPositionIndependentCode = binary is SharedLibraryBinarySpec
 
-    @Override
-    public Class<? extends DefaultTask> getTaskType() {
-        return taskType;
-    }
-
-    @Override
-    public void configureTask(Task task, BinarySpec binary, LanguageSourceSet sourceSet, ServiceRegistry serviceRegistry) {
-        configureCompileTaskCommon((AbstractNativeCompileTask) task, (NativeBinarySpecInternal) binary, (LanguageSourceSetInternal) sourceSet);
-        configureCompileTask((AbstractNativeCompileTask) task, (NativeBinarySpecInternal) binary, (LanguageSourceSetInternal) sourceSet);
-    }
-
-    private void configureCompileTaskCommon(final AbstractNativeCompileTask task, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal sourceSet) {
-        task.toolChain.set(binary.getToolChain());
-        task.targetPlatform.set(binary.getTargetPlatform());
-        task.setPositionIndependentCode(binary instanceof SharedLibraryBinarySpec);
-
-        task.includes(((HeaderExportingSourceSet) sourceSet).getExportedHeaders().getSourceDirectories());
-        task.includes(new Callable<List<FileCollection>>() {
-            @Override
-            public List<FileCollection> call() {
-                Collection<NativeDependencySet> libs = binary.getLibs((DependentSourceSet) sourceSet);
-                return CollectionUtils.collect(libs, NativeDependencySet::getIncludeRoots);
+        task.includes((sourceSet as HeaderExportingSourceSet).getExportedHeaders().getSourceDirectories())
+        task.includes(object : Callable<MutableList<FileCollection?>?> {
+            override fun call(): MutableList<FileCollection?> {
+                val libs = binary.getLibs(sourceSet as DependentSourceSet)
+                return collect<FileCollection?, NativeDependencySet?>(libs, Function { obj: NativeDependencySet? -> obj!!.getIncludeRoots() })
             }
-        });
-        FileCollectionFactory fileCollectionFactory = ((ProjectInternal) task.getProject()).getServices().get(FileCollectionFactory.class);
-        task.systemIncludes.from(fileCollectionFactory.create(new MinimalFileSet() {
-            @Override
-            public Set<File> getFiles() {
-                PlatformToolProvider platformToolProvider = ((NativeToolChainInternal) binary.getToolChain()).select((NativePlatformInternal) binary.getTargetPlatform());
-                ToolType toolType = languageTransform.getToolType();
-                return new LinkedHashSet<File>(platformToolProvider.getSystemLibraries(toolType).includeDirs);
+        })
+        val fileCollectionFactory = (task.getProject() as ProjectInternal).getServices().get<FileCollectionFactory?>(FileCollectionFactory::class.java)
+        task.systemIncludes!!.from(fileCollectionFactory!!.create(object : MinimalFileSet {
+            override fun getFiles(): MutableSet<File?> {
+                val platformToolProvider = (binary.getToolChain() as NativeToolChainInternal).select(binary.getTargetPlatform() as NativePlatformInternal?)
+                val toolType = languageTransform.getToolType()
+                return LinkedHashSet<File?>(platformToolProvider!!.getSystemLibraries(toolType)!!.includeDirs)
             }
 
-            @Override
-            public String getDisplayName() {
-                return "System includes for " + binary.getToolChain().displayName;
+            override fun getDisplayName(): String {
+                return "System includes for " + binary.getToolChain().displayName
             }
-        }));
+        }))
 
-        for (String toolName : languageTransform.getBinaryTools().keySet()) {
-            Tool tool = binary.getToolByName(toolName);
-            if (tool instanceof PreprocessingTool) {
-                task.setMacros(((PreprocessingTool) tool).getMacros());
+        for (toolName in languageTransform.binaryTools!!.keys) {
+            val tool = binary.getToolByName(toolName)
+            if (tool is PreprocessingTool) {
+                task.setMacros(tool.getMacros())
             }
 
-            task.compilerArgs.set(tool.getArgs());
+            task.compilerArgs.set(tool.getArgs())
         }
     }
 
-    abstract void configureCompileTask(AbstractNativeCompileTask task, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal sourceSet);
+    abstract fun configureCompileTask(task: AbstractNativeCompileTask?, binary: NativeBinarySpecInternal?, sourceSet: LanguageSourceSetInternal?)
 }

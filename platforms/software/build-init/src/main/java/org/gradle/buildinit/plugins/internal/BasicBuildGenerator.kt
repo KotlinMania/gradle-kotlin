@@ -13,88 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import static java.util.Collections.singleton;
-import static org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl.KOTLIN;
-import static org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework.NONE;
-import static org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption.SINGLE_PROJECT;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import java.util.Optional
 
 /**
  * Generator for a "basic" Gradle build.
  */
-public class BasicBuildGenerator extends AbstractBuildGenerator {
-    private final DocumentationRegistry documentationRegistry;
-
-    public BasicBuildGenerator(BuildScriptBuilderFactory scriptBuilderFactory, DocumentationRegistry documentationRegistry, List<? extends BuildContentGenerator> generators) {
-        super(new BasicProjectGenerator(scriptBuilderFactory, documentationRegistry), generators);
-        this.documentationRegistry = documentationRegistry;
+class BasicBuildGenerator(scriptBuilderFactory: BuildScriptBuilderFactory, private val documentationRegistry: DocumentationRegistry, generators: MutableList<out BuildContentGenerator>) :
+    AbstractBuildGenerator(
+        BasicProjectGenerator(
+            scriptBuilderFactory,
+            documentationRegistry
+        ), generators
+    ) {
+    override fun getId(): String {
+        return "basic"
     }
 
-    @Override
-    public String getId() {
-        return "basic";
+    override fun getComponentType(): ComponentType {
+        return ComponentType.BASIC
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.BASIC;
+    override fun productionCodeUses(language: Language): Boolean {
+        return false
     }
 
-    @Override
-    public boolean productionCodeUses(Language language) {
-        return false;
+    override fun getDefaultProjectNames(): MutableList<String> {
+        return getComponentType().getDefaultProjectNames()
     }
 
-    @Override
-    public List<String> getDefaultProjectNames() {
-        return getComponentType().getDefaultProjectNames();
+    override fun supportsJavaTargets(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean supportsJavaTargets() {
-        return false;
+    override fun getModularizationOptions(): MutableSet<ModularizationOption> {
+        return mutableSetOf<ModularizationOption>(ModularizationOption.SINGLE_PROJECT)
     }
 
-    @Override
-    public Set<ModularizationOption> getModularizationOptions() {
-        return singleton(SINGLE_PROJECT);
+    override fun supportsPackage(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean supportsPackage() {
-        return false;
+    override fun getDefaultDsl(): BuildInitDsl {
+        return BuildInitDsl.KOTLIN
     }
 
-    @Override
-    public BuildInitDsl getDefaultDsl() {
-        return KOTLIN;
+    override fun getDefaultTestFramework(modularizationOption: ModularizationOption): BuildInitTestFramework {
+        return BuildInitTestFramework.NONE
     }
 
-    @Override
-    public BuildInitTestFramework getDefaultTestFramework(ModularizationOption modularizationOption) {
-        return NONE;
+    override fun getTestFrameworks(modularizationOption: ModularizationOption): MutableSet<BuildInitTestFramework> {
+        return mutableSetOf<BuildInitTestFramework>(BuildInitTestFramework.NONE)
     }
 
-    @Override
-    public Set<BuildInitTestFramework> getTestFrameworks(ModularizationOption modularizationOption) {
-        return singleton(NONE);
-    }
-
-    @Override
-    public Optional<String> getFurtherReading(InitSettings settings) {
-        return Optional.of(documentationRegistry.getSampleForMessage());
+    override fun getFurtherReading(settings: InitSettings): Optional<String> {
+        return Optional.of<String>(documentationRegistry.sampleForMessage)
     }
 }

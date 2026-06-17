@@ -13,33 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test.googletest.internal;
+package org.gradle.nativeplatform.test.googletest.internal
 
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.internal.AbstractNativeComponentSpec;
-import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec;
-import org.gradle.platform.base.ComponentSpec;
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.internal.AbstractNativeComponentSpec
+import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec
+import org.gradle.platform.base.ComponentSpec
 
-public class DefaultGoogleTestTestSuiteSpec extends AbstractNativeComponentSpec implements GoogleTestTestSuiteSpec {
-    private NativeComponentSpec testedComponent;
+class DefaultGoogleTestTestSuiteSpec : AbstractNativeComponentSpec(), GoogleTestTestSuiteSpec {
+    private var testedComponent: NativeComponentSpec? = null
 
-    @Override
-    protected String getTypeName() {
-        return "Google test suite";
+    override fun getTypeName(): String {
+        return "Google test suite"
     }
 
-    @Override
-    public NativeComponentSpec getTestedComponent() {
-        return testedComponent;
+    override fun getTestedComponent(): NativeComponentSpec {
+        return testedComponent!!
     }
 
-    @Override
-    public void setTestedComponent(ComponentSpec testedComponent) {
-        this.testedComponent = (NativeComponentSpec) testedComponent;
+    override fun setTestedComponent(testedComponent: ComponentSpec) {
+        this.testedComponent = testedComponent as NativeComponentSpec
     }
 
-    @Override
-    public void testing(ComponentSpec testedComponent) {
-        this.testedComponent = (NativeComponentSpec) testedComponent;
+    override fun testing(testedComponent: ComponentSpec) {
+        this.testedComponent = testedComponent as NativeComponentSpec
     }
 }

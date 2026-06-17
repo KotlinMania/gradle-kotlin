@@ -13,118 +13,97 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.model.Description
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import org.gradle.jvm.toolchain.JavaLanguageVersion.Companion.of
+import java.util.Arrays
+import java.util.TreeSet
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.model.Description;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-public class JvmApplicationProjectInitDescriptor extends JvmProjectInitDescriptor {
-
-    public JvmApplicationProjectInitDescriptor(Description description, TemplateLibraryVersionProvider libraryVersionProvider, DocumentationRegistry documentationRegistry) {
-        super(description, libraryVersionProvider, documentationRegistry);
+class JvmApplicationProjectInitDescriptor(description: Description, libraryVersionProvider: TemplateLibraryVersionProvider, documentationRegistry: DocumentationRegistry) :
+    JvmProjectInitDescriptor(description, libraryVersionProvider, documentationRegistry) {
+    override fun getComponentType(): ComponentType {
+        return ComponentType.APPLICATION
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.APPLICATION;
+    override fun getModularizationOptions(): MutableSet<ModularizationOption> {
+        return TreeSet<ModularizationOption>(Arrays.asList<ModularizationOption>(ModularizationOption.SINGLE_PROJECT, ModularizationOption.WITH_LIBRARY_PROJECTS))
     }
 
-    @Override
-    public Set<ModularizationOption> getModularizationOptions() {
-        return new TreeSet<>(Arrays.asList(ModularizationOption.SINGLE_PROJECT, ModularizationOption.WITH_LIBRARY_PROJECTS));
-    }
+    override fun generateProjectBuildScript(projectName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
+        super.generateProjectBuildScript(projectName, settings, buildScriptBuilder)
 
-    @Override
-    public void generateProjectBuildScript(String projectName, InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
-        super.generateProjectBuildScript(projectName, settings, buildScriptBuilder);
-
-        if ("app".equals(projectName)) {
-            buildScriptBuilder.block(null, "application", b -> {
-                String mainClass = getLanguage() == Language.KOTLIN ? "AppKt" : "App";
+        if ("app" == projectName) {
+            buildScriptBuilder.block(null, "application", Action { b: ScriptBlockBuilder? ->
+                var mainClass = if (getLanguage() == Language.KOTLIN) "AppKt" else "App"
                 if (!isSingleProject(settings)) {
-                    mainClass = "app." + mainClass;
+                    mainClass = "app." + mainClass
                 }
-                b.propertyAssignment("Define the main class for the application.", "mainClass", withPackage(settings, mainClass), true);
-            });
+                b!!.propertyAssignment("Define the main class for the application.", "mainClass", withPackage(settings, mainClass), true)
+            })
         }
 
         if (isSingleProject(settings)) {
-            applyApplicationPlugin(buildScriptBuilder);
-            buildScriptBuilder.implementationDependency("This dependency is used by the application.",
-                BuildInitDependency.of("com.google.guava:guava", libraryVersionProvider.getVersion("guava")));
+            applyApplicationPlugin(buildScriptBuilder)
+            buildScriptBuilder.implementationDependency(
+                "This dependency is used by the application.",
+                BuildInitDependency.Companion.of("com.google.guava:guava", libraryVersionProvider.getVersion("guava"))
+            )
         } else {
-            if ("app".equals(projectName)) {
-                buildScriptBuilder.plugin(null, applicationConventionPlugin());
-                buildScriptBuilder.dependencies().dependency("implementation", null, BuildInitDependency.of("org.apache.commons:commons-text"));
-                buildScriptBuilder.dependencies().projectDependency("implementation", null, ":utilities");
+            if ("app" == projectName) {
+                buildScriptBuilder.plugin(null, applicationConventionPlugin())
+                buildScriptBuilder.dependencies().dependency("implementation", null, BuildInitDependency.Companion.of("org.apache.commons:commons-text"))
+                buildScriptBuilder.dependencies().projectDependency("implementation", null, ":utilities")
             } else {
-                buildScriptBuilder.plugin(null, libraryConventionPlugin());
-                if ("utilities".equals(projectName)) {
-                    buildScriptBuilder.dependencies().projectDependency("api", null, ":list");
+                buildScriptBuilder.plugin(null, libraryConventionPlugin())
+                if ("utilities" == projectName) {
+                    buildScriptBuilder.dependencies().projectDependency("api", null, ":list")
                 }
             }
         }
     }
 
-    @Override
-    protected List<String> getSourceTemplates(String subproject, InitSettings settings, TemplateFactory templateFactory) {
+    override fun getSourceTemplates(subproject: String, settings: InitSettings, templateFactory: TemplateFactory): MutableList<String> {
         if (isSingleProject(settings)) {
-            return Collections.singletonList("App");
+            return mutableListOf<String>("App")
         }
-        switch (subproject) {
-            case "app":
-                return ImmutableList.of("multi/app/App", "multi/app/MessageUtils");
-            case "list":
-                return ImmutableList.of("multi/list/LinkedList");
-            case "utilities":
-                return ImmutableList.of("multi/utilities/JoinUtils", "multi/utilities/SplitUtils", "multi/utilities/StringUtils");
-            default:
-                return ImmutableList.of();
+        when (subproject) {
+            "app" -> return ImmutableList.of<String>("multi/app/App", "multi/app/MessageUtils")
+            "list" -> return ImmutableList.of<String>("multi/list/LinkedList")
+            "utilities" -> return ImmutableList.of<String>("multi/utilities/JoinUtils", "multi/utilities/SplitUtils", "multi/utilities/StringUtils")
+            else -> return ImmutableList.of<String>()
         }
     }
 
-    @Override
-    protected List<String> getTestSourceTemplates(String subproject, InitSettings settings, TemplateFactory templateFactory) {
+    override fun getTestSourceTemplates(subproject: String, settings: InitSettings, templateFactory: TemplateFactory): MutableList<String> {
         if (isSingleProject(settings)) {
-            return Collections.singletonList(getTestFrameWorkName(settings));
+            return mutableListOf<String>(getTestFrameWorkName(settings))
         }
 
-        switch (subproject) {
-            case "app":
-                return ImmutableList.of("multi/app/junit5/MessageUtilsTest");
-            case "list":
-                return ImmutableList.of("multi/list/junit5/LinkedListTest");
-            default:
-                return ImmutableList.of();
+        when (subproject) {
+            "app" -> return ImmutableList.of<String>("multi/app/junit5/MessageUtilsTest")
+            "list" -> return ImmutableList.of<String>("multi/list/junit5/LinkedListTest")
+            else -> return ImmutableList.of<String>()
         }
     }
 
-    private static String getTestFrameWorkName(InitSettings settings) {
-        switch (settings.getTestFramework()) {
-            case SPOCK:
-                return "groovy/AppTest";
-            case TESTNG:
-                return "testng/AppTest";
-            case JUNIT:
-            case KOTLINTEST:
-                return "AppTest";
-            case JUNIT_JUPITER:
-                return "junitjupiter/AppTest";
-            case SCALATEST:
-                return "AppSuite";
-            default:
-                throw new IllegalArgumentException();
+    companion object {
+        private fun getTestFrameWorkName(settings: InitSettings): String {
+            when (settings.getTestFramework()) {
+                BuildInitTestFramework.SPOCK -> return "groovy/AppTest"
+                BuildInitTestFramework.TESTNG -> return "testng/AppTest"
+                BuildInitTestFramework.JUNIT, BuildInitTestFramework.KOTLINTEST -> return "AppTest"
+                BuildInitTestFramework.JUNIT_JUPITER -> return "junitjupiter/AppTest"
+                BuildInitTestFramework.SCALATEST -> return "AppSuite"
+                else -> throw IllegalArgumentException()
+            }
         }
     }
 }

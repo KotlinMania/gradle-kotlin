@@ -13,242 +13,223 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import com.google.common.base.Preconditions
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import com.google.common.collect.Ordering
+import org.gradle.api.CircularReferenceException
+import org.gradle.api.internal.resolve.ProjectModelResolver
+import org.gradle.api.reporting.dependents.internal.DependentComponentsUtils.getBuildScopedTerseName
+import org.gradle.internal.build.AllProjectsAccess
+import org.gradle.internal.build.BuildProjectRegistry
+import org.gradle.internal.graph.DirectedGraph
+import org.gradle.internal.graph.DirectedGraphRenderer
+import org.gradle.internal.graph.GraphNodeRenderer
+import org.gradle.internal.logging.text.StyledTextOutput
+import org.gradle.language.base.plugins.ComponentModelBasePlugin
+import org.gradle.model.ModelMap
+import org.gradle.model.internal.type.ModelTypes
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.platform.base.VariantComponentSpec
+import org.gradle.platform.base.internal.BinarySpecInternal
+import org.gradle.platform.base.internal.dependents.AbstractDependentBinariesResolutionStrategy
+import org.gradle.platform.base.internal.dependents.DefaultDependentBinariesResolvedResult
+import org.gradle.platform.base.internal.dependents.DependentBinariesResolvedResult
+import java.io.StringWriter
+import java.util.ArrayDeque
+import java.util.Deque
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Ordering;
-import org.gradle.api.CircularReferenceException;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.api.internal.resolve.ProjectModelResolver;
-import org.gradle.api.reporting.dependents.internal.DependentComponentsUtils;
-import org.gradle.internal.build.BuildProjectRegistry;
-import org.gradle.internal.graph.DirectedGraph;
-import org.gradle.internal.graph.DirectedGraphRenderer;
-import org.gradle.internal.graph.GraphNodeRenderer;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.language.base.plugins.ComponentModelBasePlugin;
-import org.gradle.model.ModelMap;
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.model.internal.type.ModelTypes;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.platform.base.VariantComponentSpec;
-import org.gradle.platform.base.internal.BinarySpecInternal;
-import org.gradle.platform.base.internal.dependents.AbstractDependentBinariesResolutionStrategy;
-import org.gradle.platform.base.internal.dependents.DefaultDependentBinariesResolvedResult;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolvedResult;
-import org.jspecify.annotations.Nullable;
+class NativeDependentBinariesResolutionStrategy(projectRegistry: BuildProjectRegistry, projectModelResolver: ProjectModelResolver) : AbstractDependentBinariesResolutionStrategy() {
+    interface TestSupport {
+        fun isTestSuite(target: BinarySpecInternal?): Boolean
 
-import java.io.StringWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-
-public class NativeDependentBinariesResolutionStrategy extends AbstractDependentBinariesResolutionStrategy {
-
-    public interface TestSupport {
-        boolean isTestSuite(BinarySpecInternal target);
-
-        List<NativeBinarySpecInternal> getTestDependencies(NativeBinarySpecInternal nativeBinary);
+        fun getTestDependencies(nativeBinary: NativeBinarySpecInternal?): MutableList<NativeBinarySpecInternal?>?
     }
 
-    private static class State {
-        private final Map<NativeBinarySpecInternal, Set<NativeBinarySpecInternal>> dependencies = new LinkedHashMap<>();
-        private final Map<NativeBinarySpecInternal, List<NativeBinarySpecInternal>> dependents = new HashMap<>();
+    private class State {
+        private val dependencies: MutableMap<NativeBinarySpecInternal, MutableSet<NativeBinarySpecInternal?>?> = LinkedHashMap<NativeBinarySpecInternal, MutableSet<NativeBinarySpecInternal?>?>()
+        private val dependents: MutableMap<NativeBinarySpecInternal?, MutableList<NativeBinarySpecInternal>?> = HashMap<NativeBinarySpecInternal?, MutableList<NativeBinarySpecInternal>?>()
 
-        void registerBinary(NativeBinarySpecInternal binary) {
+        fun registerBinary(binary: NativeBinarySpecInternal?) {
             if (dependencies.get(binary) == null) {
-                dependencies.put(binary, new LinkedHashSet<>());
+                dependencies.put(binary!!, LinkedHashSet<NativeBinarySpecInternal?>())
             }
         }
 
-        List<NativeBinarySpecInternal> getDependents(NativeBinarySpecInternal target) {
-            List<NativeBinarySpecInternal> result = dependents.get(target);
+        fun getDependents(target: NativeBinarySpecInternal?): MutableList<NativeBinarySpecInternal> {
+            var result = dependents.get(target)
             if (result == null) {
-                result = new ArrayList<>();
-                for (NativeBinarySpecInternal dependentBinary : dependencies.keySet()) {
-                    if (dependencies.get(dependentBinary).contains(target)) {
-                        result.add(dependentBinary);
+                result = ArrayList<NativeBinarySpecInternal>()
+                for (dependentBinary in dependencies.keys) {
+                    if (dependencies.get(dependentBinary)!!.contains(target)) {
+                        result.add(dependentBinary)
                     }
                 }
-                dependents.put(target, result);
+                dependents.put(target, result)
             }
-            return result;
+            return result
         }
     }
 
-    public static final String NAME = "native";
-
-    private final BuildProjectRegistry projectRegistry;
-    private final ProjectModelResolver projectModelResolver;
-    private final Cache<String, State> stateCache = CacheBuilder.newBuilder()
+    private val projectRegistry: BuildProjectRegistry
+    private val projectModelResolver: ProjectModelResolver
+    private val stateCache: Cache<String?, State> = CacheBuilder.newBuilder()
         .maximumSize(1)
         .expireAfterAccess(10, TimeUnit.SECONDS)
-        .build();
-    private final Cache<NativeBinarySpecInternal, List<DependentBinariesResolvedResult>> resultsCache = CacheBuilder.newBuilder()
+        .build<String?, State?>()
+    private val resultsCache = CacheBuilder.newBuilder()
         .maximumSize(3000)
         .expireAfterAccess(10, TimeUnit.SECONDS)
-        .build();
+        .build<NativeBinarySpecInternal?, MutableList<DependentBinariesResolvedResult?>?>()
 
-    private TestSupport testSupport;
+    private var testSupport: TestSupport? = null
 
-    public NativeDependentBinariesResolutionStrategy(BuildProjectRegistry projectRegistry, ProjectModelResolver projectModelResolver) {
-        super();
-        checkNotNull(projectRegistry, "ProjectRegistry must not be null");
-        checkNotNull(projectModelResolver, "ProjectModelResolver must not be null");
-        this.projectRegistry = projectRegistry;
-        this.projectModelResolver = projectModelResolver;
+    init {
+        Preconditions.checkNotNull<BuildProjectRegistry?>(projectRegistry, "ProjectRegistry must not be null")
+        Preconditions.checkNotNull<ProjectModelResolver?>(projectModelResolver, "ProjectModelResolver must not be null")
+        this.projectRegistry = projectRegistry
+        this.projectModelResolver = projectModelResolver
     }
 
-    @Override
-    public String getName() {
-        return NAME;
+    override fun getName(): String {
+        return NAME
     }
 
-    public void setTestSupport(TestSupport testSupport) {
-        this.testSupport = testSupport;
+    fun setTestSupport(testSupport: TestSupport?) {
+        this.testSupport = testSupport
     }
 
-    @Nullable
-    @Override
-    protected List<DependentBinariesResolvedResult> resolveDependents(BinarySpecInternal target) {
-        if (!(target instanceof NativeBinarySpecInternal)) {
-            return null;
+    override fun resolveDependents(target: BinarySpecInternal?): MutableList<DependentBinariesResolvedResult?>? {
+        if (target !is NativeBinarySpecInternal) {
+            return null
         }
-        return resolveDependentBinaries((NativeBinarySpecInternal) target);
+        return resolveDependentBinaries(target)
     }
 
-    private List<DependentBinariesResolvedResult> resolveDependentBinaries(NativeBinarySpecInternal target) {
-        State state = getState();
-        return buildResolvedResult(target, state);
+    private fun resolveDependentBinaries(target: NativeBinarySpecInternal): MutableList<DependentBinariesResolvedResult?> {
+        val state = this.state
+        return buildResolvedResult(target, state)
     }
 
-    private State getState() {
-        try {
-            return stateCache.get("state", new Callable<State>() {
-                @Override
-                public State call() {
-                    return buildState();
-                }
-            });
-        } catch (ExecutionException ex) {
-            throw new RuntimeException("Unable to build native dependent binaries resolution cache", ex);
-        }
-    }
-
-    private State buildState() {
-        State state = new State();
-
-        projectRegistry.applyToMutableStateOfAllProjects(access -> {
-            List<? extends ProjectState> orderedProjects = Ordering.usingToString().sortedCopy(projectRegistry.getAllProjects());
-            for (ProjectState projectState : orderedProjects) {
-                if (access.getMutableModel(projectState).getPlugins().hasPlugin(ComponentModelBasePlugin.class)) {
-                    ModelRegistry modelRegistry = projectModelResolver.resolveProjectModel(projectState.getProjectPath().toString());
-                    ModelMap<NativeComponentSpec> components = modelRegistry.realize("components", ModelTypes.modelMap(NativeComponentSpec.class));
-                    for (NativeBinarySpecInternal binary : allBinariesOf(components.withType(VariantComponentSpec.class))) {
-                        state.registerBinary(binary);
+    private val state: State
+        get() {
+            try {
+                return stateCache.get("state", object : Callable<State?> {
+                    override fun call(): State {
+                        return buildState()
                     }
-                    ModelMap<Object> testSuites = modelRegistry.find("testSuites", ModelTypes.modelMap(Object.class));
+                })
+            } catch (ex: ExecutionException) {
+                throw RuntimeException("Unable to build native dependent binaries resolution cache", ex)
+            }
+        }
+
+    private fun buildState(): State {
+        val state = State()
+
+        projectRegistry.applyToMutableStateOfAllProjects(Consumer { access: AllProjectsAccess? ->
+            val orderedProjects = Ordering.usingToString().sortedCopy(projectRegistry.getAllProjects())
+            for (projectState in orderedProjects) {
+                if (access!!.getMutableModel(projectState).getPlugins().hasPlugin(ComponentModelBasePlugin::class.java)) {
+                    val modelRegistry = projectModelResolver.resolveProjectModel(projectState.getProjectPath().toString())
+                    val components = modelRegistry!!.realize<ModelMap<NativeComponentSpec?>>("components", ModelTypes.modelMap<NativeComponentSpec?>(NativeComponentSpec::class.java))
+                    for (binary in allBinariesOf(components.withType<VariantComponentSpec?>(VariantComponentSpec::class.java))) {
+                        state.registerBinary(binary)
+                    }
+                    val testSuites = modelRegistry.find<ModelMap<Any?>?>("testSuites", ModelTypes.modelMap<Any?>(Any::class.java))
                     if (testSuites != null) {
-                        for (NativeBinarySpecInternal binary : allBinariesOf(testSuites.withType(NativeComponentSpec.class).withType(VariantComponentSpec.class))) {
-                            state.registerBinary(binary);
+                        for (binary in allBinariesOf(testSuites.withType<NativeComponentSpec?>(NativeComponentSpec::class.java).withType<VariantComponentSpec?>(VariantComponentSpec::class.java))) {
+                            state.registerBinary(binary)
                         }
                     }
                 }
             }
-        });
+        })
 
-        for (NativeBinarySpecInternal nativeBinary : state.dependencies.keySet()) {
-            for (NativeLibraryBinary libraryBinary : nativeBinary.getDependentBinaries()) {
+        for (nativeBinary in state.dependencies.keys) {
+            for (libraryBinary in nativeBinary.getDependentBinaries()) {
                 // Skip prebuilt libraries
-                if (libraryBinary instanceof NativeBinarySpecInternal) {
+                if (libraryBinary is NativeBinarySpecInternal) {
                     // Unfortunate cast! see LibraryBinaryLocator
-                    state.dependencies.get(nativeBinary).add((NativeBinarySpecInternal) libraryBinary);
+                    state.dependencies.get(nativeBinary)!!.add(libraryBinary as NativeBinarySpecInternal)
                 }
             }
             if (testSupport != null) {
-                state.dependencies.get(nativeBinary).addAll(testSupport.getTestDependencies(nativeBinary));
+                state.dependencies.get(nativeBinary)!!.addAll(testSupport!!.getTestDependencies(nativeBinary)!!)
             }
         }
 
-        return state;
+        return state
     }
 
-    @Override
-    protected boolean isTestSuite(BinarySpecInternal target) {
-        return testSupport != null && testSupport.isTestSuite(target);
+    override fun isTestSuite(target: BinarySpecInternal?): Boolean {
+        return testSupport != null && testSupport!!.isTestSuite(target)
     }
 
-    private List<NativeBinarySpecInternal> allBinariesOf(ModelMap<VariantComponentSpec> components) {
-        List<NativeBinarySpecInternal> binaries = new ArrayList<>();
-        for (VariantComponentSpec nativeComponent : components) {
-            for (NativeBinarySpecInternal nativeBinary : nativeComponent.getBinaries().withType(NativeBinarySpecInternal.class)) {
-                binaries.add(nativeBinary);
+    private fun allBinariesOf(components: ModelMap<VariantComponentSpec>): MutableList<NativeBinarySpecInternal?> {
+        val binaries: MutableList<NativeBinarySpecInternal?> = ArrayList<NativeBinarySpecInternal?>()
+        for (nativeComponent in components) {
+            for (nativeBinary in nativeComponent.getBinaries().withType<NativeBinarySpecInternal?>(NativeBinarySpecInternal::class.java)) {
+                binaries.add(nativeBinary)
             }
         }
-        return binaries;
+        return binaries
     }
 
-    private List<DependentBinariesResolvedResult> buildResolvedResult(final NativeBinarySpecInternal target, State state) {
-        Deque<NativeBinarySpecInternal> stack = new ArrayDeque<NativeBinarySpecInternal>();
-        return doBuildResolvedResult(target, state, stack);
+    private fun buildResolvedResult(target: NativeBinarySpecInternal, state: State): MutableList<DependentBinariesResolvedResult?> {
+        val stack: Deque<NativeBinarySpecInternal?> = ArrayDeque<NativeBinarySpecInternal?>()
+        return doBuildResolvedResult(target, state, stack)
     }
 
-    private List<DependentBinariesResolvedResult> doBuildResolvedResult(final NativeBinarySpecInternal target, State state, Deque<NativeBinarySpecInternal> stack) {
+    private fun doBuildResolvedResult(target: NativeBinarySpecInternal, state: State, stack: Deque<NativeBinarySpecInternal?>): MutableList<DependentBinariesResolvedResult?> {
         if (stack.contains(target)) {
-            onCircularDependencies(state, stack, target);
+            onCircularDependencies(state, stack, target)
         }
-        List<DependentBinariesResolvedResult> result = resultsCache.getIfPresent(target);
+        var result = resultsCache.getIfPresent(target)
         if (result != null) {
-            return result;
+            return result
         }
-        stack.push(target);
-        result = new ArrayList<>();
-        List<NativeBinarySpecInternal> dependents = state.getDependents(target);
-        for (NativeBinarySpecInternal dependent : dependents) {
-            List<DependentBinariesResolvedResult> children = doBuildResolvedResult(dependent, state, stack);
-            result.add(new DefaultDependentBinariesResolvedResult(dependent.getId(), dependent.getProjectScopedName(), dependent.isBuildable(), isTestSuite(dependent), children));
+        stack.push(target)
+        result = ArrayList<DependentBinariesResolvedResult?>()
+        val dependents = state.getDependents(target)
+        for (dependent in dependents) {
+            val children = doBuildResolvedResult(dependent, state, stack)
+            result.add(DefaultDependentBinariesResolvedResult(dependent.getId(), dependent.getProjectScopedName(), dependent.isBuildable(), isTestSuite(dependent), children))
         }
-        stack.pop();
-        resultsCache.put(target, result);
-        return result;
+        stack.pop()
+        resultsCache.put(target, result)
+        return result
     }
 
-    private void onCircularDependencies(final State state, final Deque<NativeBinarySpecInternal> stack, NativeBinarySpecInternal target) {
-        GraphNodeRenderer<NativeBinarySpecInternal> nodeRenderer = new GraphNodeRenderer<NativeBinarySpecInternal>() {
-            @Override
-            public void renderTo(NativeBinarySpecInternal node, StyledTextOutput output, boolean alreadySeen) {
-                String name = DependentComponentsUtils.getBuildScopedTerseName(node.getId());
-                output.withStyle(StyledTextOutput.Style.Identifier).text(name);
+    private fun onCircularDependencies(state: State, stack: Deque<NativeBinarySpecInternal?>, target: NativeBinarySpecInternal?) {
+        val nodeRenderer: GraphNodeRenderer<NativeBinarySpecInternal?> = object : GraphNodeRenderer<NativeBinarySpecInternal?> {
+            override fun renderTo(node: NativeBinarySpecInternal, output: StyledTextOutput, alreadySeen: Boolean) {
+                val name = getBuildScopedTerseName(node.getId())
+                output.withStyle(StyledTextOutput.Style.Identifier)!!.text(name)
             }
-        };
-        DirectedGraph<NativeBinarySpecInternal, Object> directedGraph = new DirectedGraph<NativeBinarySpecInternal, Object>() {
-            @Override
-            public void getNodeValues(NativeBinarySpecInternal node, Collection<? super Object> values, Collection<? super NativeBinarySpecInternal> connectedNodes) {
-                for (NativeBinarySpecInternal binary : stack) {
+        }
+        val directedGraph: DirectedGraph<NativeBinarySpecInternal?, Any?> = object : DirectedGraph<NativeBinarySpecInternal?, Any?> {
+            override fun getNodeValues(node: NativeBinarySpecInternal?, values: MutableCollection<in Any?>?, connectedNodes: MutableCollection<in NativeBinarySpecInternal?>) {
+                for (binary in stack) {
                     if (state.getDependents(node).contains(binary)) {
-                        connectedNodes.add(binary);
+                        connectedNodes.add(binary)
                     }
                 }
             }
-        };
-        DirectedGraphRenderer<NativeBinarySpecInternal> graphRenderer = new DirectedGraphRenderer<NativeBinarySpecInternal>(nodeRenderer, directedGraph);
-        StringWriter writer = new StringWriter();
-        graphRenderer.renderTo(target, writer);
-        throw new CircularReferenceException(String.format("Circular dependency between the following binaries:%n%s", writer.toString()));
+        }
+        val graphRenderer = DirectedGraphRenderer<NativeBinarySpecInternal?>(nodeRenderer, directedGraph)
+        val writer = StringWriter()
+        graphRenderer.renderTo(target, writer)
+        throw CircularReferenceException(String.format("Circular dependency between the following binaries:%n%s", writer.toString()))
+    }
+
+    companion object {
+        const val NAME: String = "native"
     }
 }

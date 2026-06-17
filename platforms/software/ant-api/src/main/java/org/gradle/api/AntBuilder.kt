@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api;
+package org.gradle.api
 
-import org.gradle.internal.instrumentation.api.annotations.NotToBeMigratedToLazy;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
+import org.apache.tools.ant.Project
+import org.gradle.internal.instrumentation.api.annotations.NotToBeMigratedToLazy
 
 /**
- * <p>An {@code AntBuilder} allows you to use Ant from your build script.</p>
+ *
+ * An `AntBuilder` allows you to use Ant from your build script.
  */
 @NotToBeMigratedToLazy
-public abstract class AntBuilder extends groovy.ant.AntBuilder {
+abstract class AntBuilder : groovy.ant.AntBuilder() {
     /**
      * Returns the properties of the Ant project. This is a live map, you that you can make changes to the map and these
      * changes are reflected in the Ant project.
      *
      * @return The properties. Never returns null.
      */
-    public abstract Map<String, @Nullable Object> getProperties();
+    abstract val properties: MutableMap<String, Any?>?
 
     /**
      * Returns the references of the Ant project. This is a live map, you that you can make changes to the map and these
@@ -39,78 +38,72 @@ public abstract class AntBuilder extends groovy.ant.AntBuilder {
      *
      * @return The references. Never returns null.
      */
-    public abstract Map<String, @Nullable Object> getReferences();
+    abstract val references: MutableMap<String, Any?>?
 
     /**
      * Imports an Ant build into the associated Gradle project.
      *
-     * @param antBuildFile The build file. This is resolved as per {@link Project#file(Object)}.
+     * @param antBuildFile The build file. This is resolved as per [Project.file].
      */
-    public abstract void importBuild(Object antBuildFile);
+    abstract fun importBuild(antBuildFile: Any)
 
     /**
      * Imports an Ant build into the associated Gradle project, specifying the base directory for Gradle tasks that correspond to Ant targets.
-     * <p>
-     * By default the base directory is the Ant build file parent directory. The relative paths are relative to {@link Project#getProjectDir()}.
      *
-     * @param antBuildFile The build file. This is resolved as per {@link Project#file(Object)}.
-     * @param baseDirectory The base directory. This is resolved as per {@link Project#file(Object)}.
+     *
+     * By default the base directory is the Ant build file parent directory. The relative paths are relative to [Project.getProjectDir].
+     *
+     * @param antBuildFile The build file. This is resolved as per [Project.file].
+     * @param baseDirectory The base directory. This is resolved as per [Project.file].
      *
      * @since 7.1
      */
-    public abstract void importBuild(Object antBuildFile, String baseDirectory);
+    abstract fun importBuild(antBuildFile: Any, baseDirectory: String)
 
     /**
      * Imports an Ant build into the associated Gradle project, potentially providing alternative names for Gradle tasks that correspond to Ant targets.
-     * <p>
-     * For each Ant target that is to be converted to a Gradle task, the given {@code taskNamer} receives the Ant target name as input
+     *
+     *
+     * For each Ant target that is to be converted to a Gradle task, the given `taskNamer` receives the Ant target name as input
      * and is expected to return the desired name for the corresponding Gradle task.
      * The transformer may be called multiple times with the same input.
      * Implementations should ensure uniqueness of the return value for a distinct input.
      * That is, no two inputs should yield the same return value.
      *
-     * @param antBuildFile The build file. This is resolved as per {@link org.gradle.api.Project#file(Object)}.
+     * @param antBuildFile The build file. This is resolved as per [org.gradle.api.Project.file].
      * @param taskNamer A transformer that calculates the name of the Gradle task for a corresponding Ant target.
      */
-    public abstract void importBuild(Object antBuildFile, Transformer<? extends @org.jetbrains.annotations.NotNull String, ? super String> taskNamer);
+    abstract fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String, in String>)
 
     /**
      * Imports an Ant build into the associated Gradle project, specifying the base directory and potentially providing alternative names
      * for Gradle tasks that correspond to Ant targets.
-     * <p>
-     * By default the base directory is the Ant build file parent directory. The relative paths are relative to {@link Project#getProjectDir()}.
-     * <p>
-     * For each Ant target that is to be converted to a Gradle task, the given {@code taskNamer} receives the Ant target name as input
+     *
+     *
+     * By default the base directory is the Ant build file parent directory. The relative paths are relative to [Project.getProjectDir].
+     *
+     *
+     * For each Ant target that is to be converted to a Gradle task, the given `taskNamer` receives the Ant target name as input
      * and is expected to return the desired name for the corresponding Gradle task.
      * The transformer may be called multiple times with the same input.
      * Implementations should ensure uniqueness of the return value for a distinct input.
      * That is, no two inputs should yield the same return value.
      *
-     * @param antBuildFile The build file. This is resolved as per {@link Project#file(Object)}.
-     * @param baseDirectory The base directory. This is resolved as per {@link Project#file(Object)}.
+     * @param antBuildFile The build file. This is resolved as per [Project.file].
+     * @param baseDirectory The base directory. This is resolved as per [Project.file].
      * @param taskNamer A transformer that calculates the name of the Gradle task for a corresponding Ant target.
      *
      * @since 7.1
      */
-    public abstract void importBuild(Object antBuildFile, String baseDirectory, Transformer<? extends @org.jetbrains.annotations.NotNull String, ? super String> taskNamer);
+    abstract fun importBuild(antBuildFile: Any, baseDirectory: String, taskNamer: Transformer<out String, in String>)
 
-    /**
-     * Returns this AntBuilder. Useful when you need to pass this builder to methods from within closures.
-     *
-     * @return this
-     */
-    public AntBuilder getAnt() {
-        return this;
-    }
-
-    /**
-     * Sets the Ant message priority that should correspond to the Gradle "lifecycle" log level.  Any messages logged at this
-     * priority (or more critical priority) will be logged at least at lifecycle in Gradle's logger.  If the Ant priority already maps to a
-     * higher Gradle log level, it will continue to be logged at that level.
-     *
-     * @param logLevel The Ant log level to map to the Gradle lifecycle log level
-     */
-    public abstract void setLifecycleLogLevel(AntMessagePriority logLevel);
+    val ant: AntBuilder
+        /**
+         * Returns this AntBuilder. Useful when you need to pass this builder to methods from within closures.
+         *
+         * @return this
+         */
+        get() = this
 
     /**
      * Sets the Ant message priority that should correspond to the Gradle "lifecycle" log level.  Any messages logged at this
@@ -120,8 +113,8 @@ public abstract class AntBuilder extends groovy.ant.AntBuilder {
      *
      * @param logLevel The Ant log level to map to the Gradle lifecycle log level
      */
-    public void setLifecycleLogLevel(String logLevel) {
-        setLifecycleLogLevel(AntMessagePriority.valueOf(logLevel));
+    fun setLifecycleLogLevel(logLevel: String) {
+        this.lifecycleLogLevel = AntMessagePriority.valueOf(logLevel)
     }
 
     /**
@@ -129,28 +122,31 @@ public abstract class AntBuilder extends groovy.ant.AntBuilder {
      *
      * @return logLevel The Ant log level that maps to the Gradle lifecycle log level
      */
-    public abstract AntMessagePriority getLifecycleLogLevel();
+    /**
+     * Sets the Ant message priority that should correspond to the Gradle "lifecycle" log level.  Any messages logged at this
+     * priority (or more critical priority) will be logged at least at lifecycle in Gradle's logger.  If the Ant priority already maps to a
+     * higher Gradle log level, it will continue to be logged at that level.
+     *
+     * @param logLevel The Ant log level to map to the Gradle lifecycle log level
+     */
+    abstract var lifecycleLogLevel: AntMessagePriority?
 
     /**
      * Represents the normal Ant message priorities.
      */
-    public enum AntMessagePriority {
+    enum class AntMessagePriority {
         DEBUG, VERBOSE, INFO, WARN, ERROR;
 
-        public static AntMessagePriority from(int messagePriority) {
-            switch (messagePriority) {
-                case org.apache.tools.ant.Project.MSG_ERR:
-                    return ERROR;
-                case org.apache.tools.ant.Project.MSG_WARN:
-                    return WARN;
-                case org.apache.tools.ant.Project.MSG_INFO:
-                    return INFO;
-                case org.apache.tools.ant.Project.MSG_VERBOSE:
-                    return VERBOSE;
-                case org.apache.tools.ant.Project.MSG_DEBUG:
-                    return DEBUG;
-                default:
-                    throw new IllegalArgumentException();
+        companion object {
+            fun from(messagePriority: Int): AntMessagePriority {
+                when (messagePriority) {
+                    Project.MSG_ERR -> return AntMessagePriority.ERROR
+                    Project.MSG_WARN -> return AntMessagePriority.WARN
+                    Project.MSG_INFO -> return AntMessagePriority.INFO
+                    Project.MSG_VERBOSE -> return AntMessagePriority.VERBOSE
+                    Project.MSG_DEBUG -> return AntMessagePriority.DEBUG
+                    else -> throw IllegalArgumentException()
+                }
             }
         }
     }

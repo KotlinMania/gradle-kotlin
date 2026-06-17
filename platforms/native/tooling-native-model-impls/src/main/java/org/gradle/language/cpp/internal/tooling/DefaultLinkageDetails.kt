@@ -13,35 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import org.gradle.plugins.ide.internal.tooling.model.LaunchableGradleTask
+import java.io.File
+import java.io.Serializable
 
-import org.gradle.plugins.ide.internal.tooling.model.LaunchableGradleTask;
-
-import java.io.File;
-import java.io.Serializable;
-import java.util.List;
-
-public class DefaultLinkageDetails implements Serializable {
-    private final LaunchableGradleTask linkTask;
-    private final File outputLocation;
-    private final List<String> additionalArgs;
-
-    public DefaultLinkageDetails(LaunchableGradleTask linkTask, File outputLocation, List<String> additionalArgs) {
-        this.linkTask = linkTask;
-        this.outputLocation = outputLocation;
-        this.additionalArgs = additionalArgs;
-    }
-
-    public LaunchableGradleTask getLinkTask() {
-        return linkTask;
-    }
-
-    public File getOutputLocation() {
-        return outputLocation;
-    }
-
-    public List<String> getAdditionalArgs() {
-        return additionalArgs;
-    }
-}
+class DefaultLinkageDetails(val linkTask: LaunchableGradleTask?, val outputLocation: File?, val additionalArgs: MutableList<String?>?) : Serializable

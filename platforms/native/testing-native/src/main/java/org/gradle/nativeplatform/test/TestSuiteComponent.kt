@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test
 
-package org.gradle.nativeplatform.test;
-
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.provider.Provider;
+import org.gradle.api.component.SoftwareComponent
 
 /**
  * Represents a component that defines a test suite.
  *
  * @since 4.5
  */
-public interface TestSuiteComponent extends SoftwareComponent {
+interface TestSuiteComponent : SoftwareComponent {
     /**
      * Returns the binary to use as the default to run this test suite.
      */
-    Provider<? extends TestComponent> getTestBinary();
+    val testBinary: Provider<out TestComponent?>?
 }

@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cpp
 
-package org.gradle.nativeplatform.test.cpp;
-
-import org.gradle.api.provider.Provider;
-import org.gradle.language.cpp.CppComponent;
-import org.gradle.nativeplatform.test.TestSuiteComponent;
+import org.gradle.language.cpp.CppComponent
+import org.gradle.nativeplatform.test.TestSuiteComponent
 
 /**
  * A C++ test suite.
  *
  * @since 4.4
  */
-public interface CppTestSuite extends CppComponent, TestSuiteComponent {
+interface CppTestSuite : CppComponent, TestSuiteComponent {
     /**
      * {@inheritDoc}
      */
-    @Override
-    Provider<? extends CppTestExecutable> getTestBinary();
+    val testBinary: Provider<out CppTestExecutable?>
 }

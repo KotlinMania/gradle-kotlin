@@ -13,23 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullMarked
 
 /**
  * Context passed through all stages of the build generation to track state.
  */
 @NullMarked
-public class BuildContentGenerationContext {
-    private final VersionCatalogDependencyRegistry versionCatalogDependencyRegistry;
-
-    public BuildContentGenerationContext(VersionCatalogDependencyRegistry versionCatalogDependencyRegistry) {
-        this.versionCatalogDependencyRegistry = versionCatalogDependencyRegistry;
-    }
-
-    public VersionCatalogDependencyRegistry getVersionCatalogDependencyRegistry() {
-        return versionCatalogDependencyRegistry;
-    }
-}
+class BuildContentGenerationContext(val versionCatalogDependencyRegistry: VersionCatalogDependencyRegistry)

@@ -13,29 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.c.plugins
 
-package org.gradle.language.c.plugins;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.nativeplatform.plugins.NativeComponentModelPlugin
 
 /**
  * A plugin for projects wishing to build native binary components from C sources.
  *
- * <p>Automatically includes the {@link CLangPlugin} for core C++ support and the {@link org.gradle.nativeplatform.plugins.NativeComponentModelPlugin} for native component support.</p>
  *
- * <ul>
- * <li>Creates a {@link org.gradle.language.c.tasks.CCompile} task for each {@link org.gradle.language.c.CSourceSet} to compile the C sources.</li>
- * </ul>
+ * Automatically includes the [CLangPlugin] for core C++ support and the [NativeComponentModelPlugin] for native component support.
+ *
+ *
+ *  * Creates a [org.gradle.language.c.tasks.CCompile] task for each [org.gradle.language.c.CSourceSet] to compile the C sources.
+ *
  */
 @Incubating
-public abstract class CPlugin implements Plugin<Project> {
-    @Override
-    public void apply(Project project) {
-        project.getPluginManager().apply(NativeComponentModelPlugin.class);
-        project.getPluginManager().apply(CLangPlugin.class);
+abstract class CPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(NativeComponentModelPlugin::class.java)
+        project.getPluginManager().apply(CLangPlugin::class.java)
     }
-
 }

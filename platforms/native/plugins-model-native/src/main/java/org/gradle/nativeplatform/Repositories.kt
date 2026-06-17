@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.PolymorphicDomainObjectContainer;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
+import org.gradle.api.Incubating
+import org.gradle.api.PolymorphicDomainObjectContainer
+import org.gradle.api.artifacts.repositories.ArtifactRepository
 
 /**
  * The repositories that Gradle will search for prebuilt libraries.
  */
 @Incubating
-public interface Repositories extends PolymorphicDomainObjectContainer<ArtifactRepository> {
-}
+interface Repositories : PolymorphicDomainObjectContainer<ArtifactRepository?>

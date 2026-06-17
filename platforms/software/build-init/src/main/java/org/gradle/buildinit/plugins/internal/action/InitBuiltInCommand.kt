@@ -13,45 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.action
 
-package org.gradle.buildinit.plugins.internal.action;
-
-import org.gradle.configuration.project.BuiltInCommand;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.NonNull;
-
-import java.util.Collections;
-import java.util.List;
+import org.gradle.configuration.project.BuiltInCommand
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 // TODO: Consider moving the InitBuiltInCommand (and help) to core, as they are not Software Platform-specific
-@ServiceScope(Scope.Global.class)
-public class InitBuiltInCommand implements BuiltInCommand {
-    public static final String NAME = "init";
-
-    @Override
-    @NonNull
-    public String getDisplayName() {
-        return NAME;
+@ServiceScope(Scope.Global::class)
+class InitBuiltInCommand : BuiltInCommand {
+    override fun getDisplayName(): String {
+        return NAME
     }
 
-    @Override
-    public List<String> asDefaultTask() {
-        return Collections.emptyList();
+    override fun asDefaultTask(): MutableList<String?> {
+        return mutableListOf<String?>()
     }
 
-    @Override
-    public boolean commandLineMatches(List<String> taskNames) {
-        return !taskNames.isEmpty() && taskNames.stream().anyMatch(taskName -> taskName.equals(NAME));
+    override fun commandLineMatches(taskNames: MutableList<String?>): Boolean {
+        return !taskNames.isEmpty() && taskNames.stream().anyMatch { taskName: String? -> taskName == NAME }
     }
 
-    @Override
-    public boolean requireEmptyBuildDefinition() {
-        return true;
+    override fun requireEmptyBuildDefinition(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isExclusive() {
-        return true;
+    override fun isExclusive(): Boolean {
+        return true
+    }
+
+    companion object {
+        const val NAME: String = "init"
     }
 }

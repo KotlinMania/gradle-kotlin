@@ -13,93 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.cpp.plugins;
+package org.gradle.language.cpp.plugins
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.plugins.PluginManager;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.base.internal.registry.LanguageTransformContainer;
-import org.gradle.language.base.plugins.ComponentModelBasePlugin;
-import org.gradle.language.cpp.CppSourceSet;
-import org.gradle.language.cpp.internal.DefaultCppSourceSet;
-import org.gradle.language.cpp.tasks.CppCompile;
-import org.gradle.language.cpp.tasks.CppPreCompiledHeaderCompile;
-import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal;
-import org.gradle.language.nativeplatform.internal.NativeLanguageTransform;
-import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig;
-import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig;
-import org.gradle.model.Mutate;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.internal.DefaultPreprocessingTool;
-import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.ComponentType;
-import org.gradle.platform.base.TypeBuilder;
-import org.jspecify.annotations.NullMarked;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.base.internal.registry.LanguageTransformContainer
+import org.gradle.language.base.plugins.ComponentModelBasePlugin
+import org.gradle.language.cpp.CppSourceSet
+import org.gradle.language.cpp.internal.DefaultCppSourceSet
+import org.gradle.language.cpp.tasks.CppCompile
+import org.gradle.language.cpp.tasks.CppPreCompiledHeaderCompile
+import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal
+import org.gradle.language.nativeplatform.internal.NativeLanguageTransform
+import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig
+import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig
+import org.gradle.model.Mutate
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.internal.DefaultPreprocessingTool
+import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform
+import org.gradle.nativeplatform.toolchain.internal.ToolType
+import org.gradle.platform.base.ComponentType
+import org.gradle.platform.base.TypeBuilder
+import org.jspecify.annotations.NullMarked
 
 /**
  * Adds core C++ language support.
  */
 @Incubating
 @NullMarked
-public abstract class CppLangPlugin implements Plugin<Project> {
-    @Override
-    public void apply(final Project project) {
-        PluginManager pluginManager = project.getPluginManager();
-        pluginManager.apply(ComponentModelBasePlugin.class);
+abstract class CppLangPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        val pluginManager = project.getPluginManager()
+        pluginManager.apply(ComponentModelBasePlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
+    internal class Rules : RuleSource() {
         @ComponentType
-        void registerLanguage(TypeBuilder<CppSourceSet> builder) {
-            builder.defaultImplementation(DefaultCppSourceSet.class);
-            builder.internalView(DependentSourceSetInternal.class);
+        fun registerLanguage(builder: TypeBuilder<CppSourceSet>) {
+            builder.defaultImplementation(DefaultCppSourceSet::class.java)
+            builder.internalView(DependentSourceSetInternal::class.java)
         }
 
         @Mutate
-        void registerLanguageTransform(LanguageTransformContainer languages, ServiceRegistry serviceRegistry) {
-            languages.add(new Cpp());
+        fun registerLanguageTransform(languages: LanguageTransformContainer, serviceRegistry: ServiceRegistry) {
+            languages.add(Cpp())
         }
     }
 
-    private static class Cpp extends NativeLanguageTransform<CppSourceSet> implements PchEnabledLanguageTransform<CppSourceSet> {
-        @Override
-        public Class<CppSourceSet> getSourceSetType() {
-            return CppSourceSet.class;
+    private class Cpp : NativeLanguageTransform<CppSourceSet?>(), PchEnabledLanguageTransform<CppSourceSet?> {
+        override fun getSourceSetType(): Class<CppSourceSet> {
+            return CppSourceSet::class.java
         }
 
-        @Override
-        public Map<String, Class<?>> getBinaryTools() {
-            Map<String, Class<?>> tools = new LinkedHashMap<>();
-            tools.put("cppCompiler", DefaultPreprocessingTool.class);
-            return tools;
+        override fun getBinaryTools(): MutableMap<String, Class<*>> {
+            val tools: MutableMap<String, Class<*>> = LinkedHashMap<String, Class<*>>()
+            tools.put("cppCompiler", DefaultPreprocessingTool::class.java)
+            return tools
         }
 
-        @Override
-        public String getLanguageName() {
-            return "cpp";
+        override fun getLanguageName(): String {
+            return "cpp"
         }
 
-        @Override
-        public ToolType getToolType() {
-            return ToolType.CPP_COMPILER;
+        override fun getToolType(): ToolType {
+            return ToolType.CPP_COMPILER
         }
 
-        @Override
-        public SourceTransformTaskConfig getTransformTask() {
-            return new SourceCompileTaskConfig(this, CppCompile.class);
+        override fun getTransformTask(): SourceTransformTaskConfig {
+            return SourceCompileTaskConfig(this, CppCompile::class.java)
         }
 
-        @Override
-        public SourceTransformTaskConfig getPchTransformTask() {
-            return new PCHCompileTaskConfig(this, CppPreCompiledHeaderCompile.class);
+        override fun getPchTransformTask(): SourceTransformTaskConfig {
+            return PCHCompileTaskConfig(this, CppPreCompiledHeaderCompile::class.java)
         }
     }
 }

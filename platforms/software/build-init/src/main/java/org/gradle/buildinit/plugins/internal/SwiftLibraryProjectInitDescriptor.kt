@@ -13,50 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-
-public class SwiftLibraryProjectInitDescriptor extends SwiftProjectInitDescriptor {
-    public SwiftLibraryProjectInitDescriptor(TemplateOperationFactory templateOperationFactory, DocumentationRegistry documentationRegistry) {
-        super(templateOperationFactory, documentationRegistry);
+class SwiftLibraryProjectInitDescriptor(templateOperationFactory: TemplateOperationFactory, documentationRegistry: DocumentationRegistry) :
+    SwiftProjectInitDescriptor(templateOperationFactory, documentationRegistry) {
+    override fun getId(): String {
+        return "swift-library"
     }
 
-    @Override
-    public String getId() {
-        return "swift-library";
+    override fun getComponentType(): ComponentType {
+        return ComponentType.LIBRARY
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.LIBRARY;
+    override fun sourceTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftlibrary/Hello.swift.template", settings, "main", "swift")
     }
 
-    @Override
-    protected TemplateOperation sourceTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftlibrary/Hello.swift.template", settings, "main", "swift");
+    override fun testTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftlibrary/HelloTests.swift.template", settings, "test", "swift")
     }
 
-    @Override
-    protected TemplateOperation testTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftlibrary/HelloTests.swift.template", settings, "test", "swift");
+    override fun testEntryPointTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftlibrary/LinuxMain.swift.template", settings, "test", "swift")
     }
 
-    @Override
-    protected TemplateOperation testEntryPointTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftlibrary/LinuxMain.swift.template", settings, "test", "swift");
-    }
-
-    @Override
-    protected void configureBuildScript(InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun configureBuildScript(settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
         buildScriptBuilder
             .plugin(
                 "Apply the swift-library plugin to add support for building Swift libraries",
-                "swift-library")
-            .plugin("Apply the xctest plugin to add support for building and running Swift test executables (Linux) or bundles (macOS)",
-                "xctest")
-            .block(null, "library", this::configureTargetMachineDefinition);
+                "swift-library"
+            )
+            .plugin(
+                "Apply the xctest plugin to add support for building and running Swift test executables (Linux) or bundles (macOS)",
+                "xctest"
+            )
+            .block(null, "library", Action { buildScriptBuilder: ScriptBlockBuilder? -> this.configureTargetMachineDefinition(buildScriptBuilder!!) })
     }
 }

@@ -13,101 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.nativeplatform.PrebuiltLibrary
+import org.gradle.nativeplatform.platform.NativePlatform
+import java.io.File
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.nativeplatform.PrebuiltLibrary;
-import org.gradle.nativeplatform.platform.NativePlatform;
-
-import java.io.File;
-import java.util.Collections;
-import java.util.Set;
-
-public abstract class AbstractPrebuiltLibraryBinary implements NativeLibraryBinary {
-    private final String name;
-    private final PrebuiltLibrary library;
-    private final BuildType buildType;
-    private final NativePlatform targetPlatform;
-    private final Flavor flavor;
-    protected final FileCollectionFactory fileCollectionFactory;
-
-    public AbstractPrebuiltLibraryBinary(String name, PrebuiltLibrary library, BuildType buildType, NativePlatform targetPlatform, Flavor flavor, FileCollectionFactory fileCollectionFactory) {
-        this.name = name;
-        this.library = library;
-        this.buildType = buildType;
-        this.targetPlatform = targetPlatform;
-        this.flavor = flavor;
-        this.fileCollectionFactory = fileCollectionFactory;
+abstract class AbstractPrebuiltLibraryBinary(
+    val name: String?,
+    val component: PrebuiltLibrary,
+    private val buildType: BuildType?,
+    private val targetPlatform: NativePlatform?,
+    private val flavor: Flavor?,
+    protected val fileCollectionFactory: FileCollectionFactory
+) : NativeLibraryBinary {
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun getBuildType(): BuildType? {
+        return buildType
     }
 
-    public String getName() {
-        return name;
+    override fun getFlavor(): Flavor? {
+        return flavor
     }
 
-    public PrebuiltLibrary getComponent() {
-        return library;
+    override fun getTargetPlatform(): NativePlatform? {
+        return targetPlatform
     }
 
-    @Override
-    public BuildType getBuildType() {
-        return buildType;
+    override fun getHeaderDirs(): FileCollection {
+        return component.getHeaders().getSourceDirectories()
     }
 
-    @Override
-    public Flavor getFlavor() {
-        return flavor;
+    protected fun createFileCollection(file: File, fileCollectionDisplayName: String?, fileDescription: String?): FileCollection {
+        return fileCollectionFactory.create(AbstractPrebuiltLibraryBinary.ValidatingFileSet(file, fileCollectionDisplayName, fileDescription))
     }
 
-    @Override
-    public NativePlatform getTargetPlatform() {
-        return targetPlatform;
-    }
-
-    @Override
-    public FileCollection getHeaderDirs() {
-        return library.getHeaders().getSourceDirectories();
-    }
-
-    protected FileCollection createFileCollection(File file, String fileCollectionDisplayName, String fileDescription) {
-        return fileCollectionFactory.create(new ValidatingFileSet(file, fileCollectionDisplayName, fileDescription));
-    }
-
-    private class ValidatingFileSet implements MinimalFileSet {
-        private final File file;
-        private final String fileCollectionDisplayName;
-        private final String fileDescription;
-
-        private ValidatingFileSet(File file, String fileCollectionDisplayName, String fileDescription) {
-            this.file = file;
-            this.fileCollectionDisplayName = fileCollectionDisplayName;
-            this.fileDescription = fileDescription;
+    private inner class ValidatingFileSet(private val file: File, private val fileCollectionDisplayName: String?, private val fileDescription: String?) : MinimalFileSet {
+        override fun getDisplayName(): String {
+            return fileCollectionDisplayName + " for " + this@AbstractPrebuiltLibraryBinary.getDisplayName()
         }
 
-        @Override
-        public String getDisplayName() {
-            return fileCollectionDisplayName + " for " + AbstractPrebuiltLibraryBinary.this.getDisplayName();
-        }
-
-        @Override
-        public Set<File> getFiles() {
+        override fun getFiles(): MutableSet<File?> {
             if (file == null) {
-                throw new PrebuiltLibraryResolveException(String.format("%s not set for %s.", fileDescription, AbstractPrebuiltLibraryBinary.this.getDisplayName()));
+                throw PrebuiltLibraryResolveException(String.format("%s not set for %s.", fileDescription, this@AbstractPrebuiltLibraryBinary.getDisplayName()))
             }
             if (!file.exists() || !file.isFile()) {
-                throw new PrebuiltLibraryResolveException(String.format("%s %s does not exist for %s.", fileDescription, file.getAbsolutePath(), AbstractPrebuiltLibraryBinary.this.getDisplayName()));
+                throw PrebuiltLibraryResolveException(String.format("%s %s does not exist for %s.", fileDescription, file.getAbsolutePath(), this@AbstractPrebuiltLibraryBinary.getDisplayName()))
             }
-            return Collections.singleton(file);
+            return mutableSetOf<File?>(file)
         }
     }
 }

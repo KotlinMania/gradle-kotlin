@@ -13,55 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import com.google.common.io.FileWriteMode
+import com.google.common.io.Files
+import com.google.common.io.Resources
+import groovy.text.SimpleTemplateEngine
+import groovy.util.CharsetToolkit
+import org.gradle.api.GradleException
+import org.gradle.util.internal.GFileUtils
+import java.io.File
+import java.net.URL
+import java.nio.charset.StandardCharsets
 
-import com.google.common.io.FileWriteMode;
-import com.google.common.io.Files;
-import com.google.common.io.Resources;
-import groovy.text.SimpleTemplateEngine;
-import groovy.text.Template;
-import groovy.util.CharsetToolkit;
-import org.gradle.api.GradleException;
-import org.gradle.util.internal.GFileUtils;
+class SimpleTemplateOperation(templateURL: URL, target: File, bindings: MutableMap<String, TemplateValue>) : TemplateOperation {
+    private val templateURL: URL
+    private val target: File
+    private val bindings: MutableMap<String, TemplateValue>
 
-import java.io.File;
-import java.io.Writer;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
-public class SimpleTemplateOperation implements TemplateOperation {
-    private final URL templateURL;
-    private final File target;
-    private final Map<String, TemplateValue> bindings;
-
-    public SimpleTemplateOperation(URL templateURL, File target, Map<String, TemplateValue> bindings) {
+    init {
         if (templateURL == null) {
-            throw new BuildInitException("Template URL must not be null");
+            throw BuildInitException("Template URL must not be null")
         }
 
         if (target == null) {
-            throw new BuildInitException("Target file must not be null");
+            throw BuildInitException("Target file must not be null")
         }
 
-        this.templateURL = templateURL;
-        this.bindings = bindings;
-        this.target = target;
+        this.templateURL = templateURL
+        this.bindings = bindings
+        this.target = target
     }
 
-    @Override
-    public void generate() {
+    override fun generate() {
         try {
-            GFileUtils.parentMkdirs(target);
-            SimpleTemplateEngine templateEngine = new SimpleTemplateEngine();
-            String templateText = Resources.asCharSource(templateURL, CharsetToolkit.getDefaultSystemCharset()).read();
-            Template template = templateEngine.createTemplate(templateText);
-            try (Writer writer = Files.asCharSink(target, StandardCharsets.UTF_8, FileWriteMode.APPEND).openStream()) {
-                template.make(bindings).writeTo(writer);
+            GFileUtils.parentMkdirs(target)
+            val templateEngine = SimpleTemplateEngine()
+            val templateText = Resources.asCharSource(templateURL, CharsetToolkit.getDefaultSystemCharset()).read()
+            val template = templateEngine.createTemplate(templateText)
+            Files.asCharSink(target, StandardCharsets.UTF_8, FileWriteMode.APPEND).openStream().use { writer ->
+                template.make(bindings).writeTo(writer)
             }
-        } catch (Exception ex) {
-            throw new GradleException("Could not generate file " + target + ".", ex);
+        } catch (ex: Exception) {
+            throw GradleException("Could not generate file " + target + ".", ex)
         }
     }
 }

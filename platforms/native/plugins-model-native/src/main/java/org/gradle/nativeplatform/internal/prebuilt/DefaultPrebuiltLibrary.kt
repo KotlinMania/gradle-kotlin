@@ -13,45 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.nativeplatform.PrebuiltLibrary
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.nativeplatform.PrebuiltLibrary;
+class DefaultPrebuiltLibrary(private val name: String, objectFactory: ObjectFactory, domainObjectCollectionFactory: DomainObjectCollectionFactory) : PrebuiltLibrary {
+    private val headers: SourceDirectorySet
+    private val binaries: DomainObjectSet<NativeLibraryBinary?>
 
-public class DefaultPrebuiltLibrary implements PrebuiltLibrary {
-
-    private final String name;
-    private final SourceDirectorySet headers;
-    private final DomainObjectSet<NativeLibraryBinary> binaries;
-
-    public DefaultPrebuiltLibrary(String name, ObjectFactory objectFactory, DomainObjectCollectionFactory domainObjectCollectionFactory) {
-        this.name = name;
-        headers = objectFactory.sourceDirectorySet("headers", "headers for prebuilt library '" + name + "'");
-        binaries = domainObjectCollectionFactory.newDomainObjectSet(NativeLibraryBinary.class);
+    init {
+        headers = objectFactory.sourceDirectorySet("headers", "headers for prebuilt library '" + name + "'")
+        binaries = domainObjectCollectionFactory.newDomainObjectSet<NativeLibraryBinary?>(NativeLibraryBinary::class.java)
     }
 
-    @Override
-    public String toString() {
-        return "prebuilt library '" + name + "'";
+    override fun toString(): String {
+        return "prebuilt library '" + name + "'"
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public SourceDirectorySet getHeaders() {
-        return headers;
+    override fun getHeaders(): SourceDirectorySet {
+        return headers
     }
 
-    @Override
-    public DomainObjectSet<NativeLibraryBinary> getBinaries() {
-        return binaries;
+    override fun getBinaries(): DomainObjectSet<NativeLibraryBinary?> {
+        return binaries
     }
 }

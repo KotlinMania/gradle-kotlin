@@ -13,92 +13,80 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.c.plugins;
+package org.gradle.language.c.plugins
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.base.internal.registry.LanguageTransformContainer;
-import org.gradle.language.base.plugins.ComponentModelBasePlugin;
-import org.gradle.language.c.CSourceSet;
-import org.gradle.language.c.internal.DefaultCSourceSet;
-import org.gradle.language.c.tasks.CCompile;
-import org.gradle.language.c.tasks.CPreCompiledHeaderCompile;
-import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal;
-import org.gradle.language.nativeplatform.internal.NativeLanguageTransform;
-import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig;
-import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig;
-import org.gradle.model.Mutate;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.internal.DefaultPreprocessingTool;
-import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.ComponentType;
-import org.gradle.platform.base.TypeBuilder;
-import org.jspecify.annotations.NullMarked;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.base.internal.registry.LanguageTransformContainer
+import org.gradle.language.base.plugins.ComponentModelBasePlugin
+import org.gradle.language.c.CSourceSet
+import org.gradle.language.c.internal.DefaultCSourceSet
+import org.gradle.language.c.tasks.CCompile
+import org.gradle.language.c.tasks.CPreCompiledHeaderCompile
+import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal
+import org.gradle.language.nativeplatform.internal.NativeLanguageTransform
+import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig
+import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig
+import org.gradle.model.Mutate
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.internal.DefaultPreprocessingTool
+import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform
+import org.gradle.nativeplatform.toolchain.internal.ToolType
+import org.gradle.platform.base.ComponentType
+import org.gradle.platform.base.TypeBuilder
+import org.jspecify.annotations.NullMarked
 
 /**
  * Adds core C language support.
  */
 @Incubating
 @NullMarked
-public abstract class CLangPlugin implements Plugin<Project> {
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(ComponentModelBasePlugin.class);
+abstract class CLangPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(ComponentModelBasePlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
+    internal class Rules : RuleSource() {
         @ComponentType
-        void registerLanguage(TypeBuilder<CSourceSet> builder) {
-            builder.defaultImplementation(DefaultCSourceSet.class);
-            builder.internalView(DependentSourceSetInternal.class);
+        fun registerLanguage(builder: TypeBuilder<CSourceSet>) {
+            builder.defaultImplementation(DefaultCSourceSet::class.java)
+            builder.internalView(DependentSourceSetInternal::class.java)
         }
 
         @Mutate
-        void registerLanguageTransform(LanguageTransformContainer languages, ServiceRegistry serviceRegistry) {
-            languages.add(new C());
+        fun registerLanguageTransform(languages: LanguageTransformContainer, serviceRegistry: ServiceRegistry) {
+            languages.add(C())
         }
     }
 
-    private static class C extends NativeLanguageTransform<CSourceSet> implements PchEnabledLanguageTransform<CSourceSet> {
-        @Override
-        public Class<CSourceSet> getSourceSetType() {
-            return CSourceSet.class;
+    private class C : NativeLanguageTransform<CSourceSet?>(), PchEnabledLanguageTransform<CSourceSet?> {
+        override fun getSourceSetType(): Class<CSourceSet> {
+            return CSourceSet::class.java
         }
 
-        @Override
-        public Map<String, Class<?>> getBinaryTools() {
-            Map<String, Class<?>> tools = new LinkedHashMap<>();
-            tools.put("cCompiler", DefaultPreprocessingTool.class);
-            return tools;
+        override fun getBinaryTools(): MutableMap<String, Class<*>> {
+            val tools: MutableMap<String, Class<*>> = LinkedHashMap<String, Class<*>>()
+            tools.put("cCompiler", DefaultPreprocessingTool::class.java)
+            return tools
         }
 
-        @Override
-        public String getLanguageName() {
-            return "c";
+        override fun getLanguageName(): String {
+            return "c"
         }
 
-        @Override
-        public ToolType getToolType() {
-            return ToolType.C_COMPILER;
+        override fun getToolType(): ToolType {
+            return ToolType.C_COMPILER
         }
 
-        @Override
-        public SourceTransformTaskConfig getTransformTask() {
-            return new SourceCompileTaskConfig(this, CCompile.class);
+        override fun getTransformTask(): SourceTransformTaskConfig {
+            return SourceCompileTaskConfig(this, CCompile::class.java)
         }
 
-        @Override
-        public SourceTransformTaskConfig getPchTransformTask() {
-            return new PCHCompileTaskConfig(this, CPreCompiledHeaderCompile.class);
+        override fun getPchTransformTask(): SourceTransformTaskConfig {
+            return PCHCompileTaskConfig(this, CPreCompiledHeaderCompile::class.java)
         }
     }
 }

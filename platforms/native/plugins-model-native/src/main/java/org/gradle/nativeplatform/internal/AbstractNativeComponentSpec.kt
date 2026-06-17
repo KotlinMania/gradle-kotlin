@@ -13,33 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.ObjectFile;
-import org.gradle.platform.base.TransformationFileType;
-import org.gradle.platform.base.component.BaseComponentSpec;
-import org.gradle.platform.base.internal.HasIntermediateOutputsComponentSpec;
-import org.gradle.util.internal.GUtil;
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.ObjectFile
+import org.gradle.platform.base.TransformationFileType
+import org.gradle.platform.base.component.BaseComponentSpec
+import org.gradle.platform.base.internal.HasIntermediateOutputsComponentSpec
+import org.gradle.util.internal.GUtil
 
-import java.util.Collections;
-import java.util.Set;
+abstract class AbstractNativeComponentSpec : BaseComponentSpec(), NativeComponentSpec, HasIntermediateOutputsComponentSpec {
+    private var baseName: String? = null
 
-public abstract class AbstractNativeComponentSpec extends BaseComponentSpec implements NativeComponentSpec, HasIntermediateOutputsComponentSpec {
-    private String baseName;
-
-    @Override
-    public String getBaseName() {
-        return GUtil.getOrDefault(baseName, this::getName);
+    override fun getBaseName(): String? {
+        return GUtil.getOrDefault<String?>(baseName, org.gradle.internal.Factory { this.getName() })
     }
 
-    @Override
-    public void setBaseName(String baseName) {
-        this.baseName = baseName;
+    override fun setBaseName(baseName: String?) {
+        this.baseName = baseName
     }
 
-    @Override
-    public Set<? extends Class<? extends TransformationFileType>> getIntermediateTypes() {
-        return Collections.singleton(ObjectFile.class);
+    override fun getIntermediateTypes(): MutableSet<out Class<out TransformationFileType?>?> {
+        return mutableSetOf<Class<ObjectFile?>?>(ObjectFile::class.java)
     }
 }

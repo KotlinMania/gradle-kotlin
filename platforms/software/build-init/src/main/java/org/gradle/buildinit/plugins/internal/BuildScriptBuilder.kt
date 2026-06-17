@@ -13,146 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import com.google.common.base.Objects;
-import com.google.common.base.Splitter;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.MultimapBuilder;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.Action;
-import org.gradle.api.GradleException;
-import org.gradle.api.Task;
-import org.gradle.api.file.Directory;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.plugins.JvmTestSuitePlugin;
-import org.gradle.api.plugins.jvm.JvmTestSuite;
-import org.gradle.buildinit.InsecureProtocolOption;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-import org.gradle.groovy.scripts.internal.InitialPassStatementTransformer;
-import org.gradle.internal.Cast;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.deprecation.Documentation;
-import org.gradle.jvm.toolchain.JavaLanguageVersion;
-import org.gradle.util.internal.GFileUtils;
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
-import static org.gradle.buildinit.plugins.internal.SimpleGlobalFilesBuildSettingsDescriptor.PLUGINS_BUILD_LOCATION;
+import com.google.common.base.Objects
+import com.google.common.base.Splitter
+import com.google.common.collect.ListMultimap
+import com.google.common.collect.MultimapBuilder
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.Action
+import org.gradle.api.GradleException
+import org.gradle.api.Task
+import org.gradle.api.file.Directory
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.plugins.JvmTestSuitePlugin
+import org.gradle.api.plugins.jvm.JvmTestSuite
+import org.gradle.buildinit.InsecureProtocolOption
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
+import org.gradle.groovy.scripts.internal.InitialPassStatementTransformer
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.deprecation.Documentation.Companion.userManual
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.util.internal.GFileUtils
+import org.gradle.util.internal.GUtil
+import org.jspecify.annotations.NullMarked
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.net.URI
+import java.net.URISyntaxException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.util.Arrays
+import java.util.stream.Collectors
 
 /**
  * Assembles the parts of a build script.
  */
-@SuppressWarnings("UnusedReturnValue")
-public class BuildScriptBuilder {
-    private static final String INCUBATING_APIS_WARNING = "This project uses @Incubating APIs which are subject to change.";
+class BuildScriptBuilder internal constructor(
+    private val dsl: BuildInitDsl,
+    documentationRegistry: DocumentationRegistry,
+    buildContentGenerationContext: BuildContentGenerationContext,
+    val fileNameWithoutExtension: String,
+    private val useIncubatingAPIs: Boolean,
+    insecureProtocolOption: InsecureProtocolOption,
+    useVersionCatalog: Boolean
+) {
+    private val mavenRepoURLHandler: MavenRepositoryURLHandler
+    private val buildContentGenerationContext: BuildContentGenerationContext
+    private var comments = BuildInitComments.ON
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BuildScriptBuilder.class);
+    private val headerCommentLines: MutableList<String> = ArrayList<String>()
+    private val block: TopLevelBlock
 
-    private final BuildInitDsl dsl;
-    private final String fileNameWithoutExtension;
-    private final MavenRepositoryURLHandler mavenRepoURLHandler;
-    private final BuildContentGenerationContext buildContentGenerationContext;
-    private BuildInitComments comments = BuildInitComments.ON;
+    val isUsingTestSuites: Boolean
+    private val useVersionCatalog: Boolean
 
-    private final List<String> headerCommentLines = new ArrayList<>();
-    private final TopLevelBlock block;
-
-    private final boolean useIncubatingAPIs;
-    private final boolean useTestSuites;
-    private final boolean useVersionCatalog;
-
-    BuildScriptBuilder(BuildInitDsl dsl, DocumentationRegistry documentationRegistry, BuildContentGenerationContext buildContentGenerationContext, String fileNameWithoutExtension, boolean useIncubatingAPIs, InsecureProtocolOption insecureProtocolOption, boolean useVersionCatalog) {
-        this.dsl = dsl;
-        this.fileNameWithoutExtension = fileNameWithoutExtension;
-        this.useIncubatingAPIs = useIncubatingAPIs;
-        this.useTestSuites = useIncubatingAPIs;
-        this.mavenRepoURLHandler = MavenRepositoryURLHandler.forInsecureProtocolOption(insecureProtocolOption, dsl, documentationRegistry);
-        this.block = new TopLevelBlock(this);
-        this.buildContentGenerationContext = buildContentGenerationContext;
-        this.useVersionCatalog = useVersionCatalog;
+    init {
+        this.isUsingTestSuites = useIncubatingAPIs
+        this.mavenRepoURLHandler = MavenRepositoryURLHandler.Companion.forInsecureProtocolOption(
+            insecureProtocolOption,
+            dsl, documentationRegistry
+        )
+        this.block = TopLevelBlock(this)
+        this.buildContentGenerationContext = buildContentGenerationContext
+        this.useVersionCatalog = useVersionCatalog
     }
 
-    public BuildScriptBuilder withComments(BuildInitComments comments) {
-        this.comments = comments;
-        return this;
-    }
-
-    public boolean isUsingTestSuites() {
-        return useTestSuites;
-    }
-
-    public String getFileNameWithoutExtension() {
-        return fileNameWithoutExtension;
-    }
-
-    public static String getIncubatingApisWarning() {
-        return INCUBATING_APIS_WARNING;
+    fun withComments(comments: BuildInitComments): BuildScriptBuilder {
+        this.comments = comments
+        return this
     }
 
     /**
      * Adds a comment to the header of the file.
      */
-    public BuildScriptBuilder fileComment(String comment) {
-        headerCommentLines.addAll(splitComment(comment));
-        return this;
+    fun fileComment(comment: String): BuildScriptBuilder {
+        headerCommentLines.addAll(splitComment(comment))
+        return this
     }
 
-    public List<SuiteSpec> getSuites() {
-        return new ArrayList<>(block.testing.suites);
-    }
-
-    private static List<String> splitComment(String comment) {
-        return Splitter.on("\n").splitToList(comment.trim());
-    }
-
-    private static URI uriFromString(String uriAsString) {
-        try {
-            return new URI(uriAsString);
-        } catch (URISyntaxException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
-    }
-
-    /**
-     * Adds a plugin to be applied
-     *
-     * @param comment A description of why the plugin is required
-     */
-    public BuildScriptBuilder plugin(@Nullable String comment, String pluginId) {
-        return plugin(comment, pluginId, null, null);
-    }
+    val suites: MutableList<SuiteSpec>
+        get() = ArrayList<SuiteSpec>(block.testing.suites)
 
     /**
      * Adds the plugin and config needed to support writing pre-compiled script plugins in the selected DSL in this project.
      */
-    public BuildScriptBuilder conventionPluginSupport(@Nullable String comment) {
-        Syntax syntax = syntaxFor(dsl);
-        block.repositories.gradlePluginPortal("Use the plugin portal to apply community plugins in convention plugins.");
-        syntax.configureConventionPlugin(comment, block.plugins, block.repositories);
-        return this;
+    fun conventionPluginSupport(comment: String?): BuildScriptBuilder {
+        val syntax: Syntax = syntaxFor(dsl)
+        block.repositories.gradlePluginPortal("Use the plugin portal to apply community plugins in convention plugins.")
+        syntax.configureConventionPlugin(comment, block.plugins, block.repositories)
+        return this
     }
 
     /**
@@ -160,16 +113,22 @@ public class BuildScriptBuilder {
      *
      * @param comment A description of why the plugin is required
      */
-    public BuildScriptBuilder plugin(@Nullable String comment, String pluginId, @Nullable String version, @Nullable String pluginAlias) {
-        AbstractStatement plugin;
+    /**
+     * Adds a plugin to be applied
+     *
+     * @param comment A description of why the plugin is required
+     */
+    @JvmOverloads
+    fun plugin(comment: String?, pluginId: String, version: String? = null, pluginAlias: String? = null): BuildScriptBuilder {
+        val plugin: AbstractStatement?
         if (useVersionCatalog && version != null) {
-            String versionCatalogRef = buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerPlugin(pluginId, version, pluginAlias);
-            plugin = new PluginSpec(versionCatalogRef, comment);
+            val versionCatalogRef = buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerPlugin(pluginId, version, pluginAlias)
+            plugin = PluginSpec(versionCatalogRef, comment)
         } else {
-            plugin = new PluginSpec(pluginId, version, comment);
+            plugin = PluginSpec(pluginId, version, comment)
         }
-        block.plugins.add(plugin);
-        return this;
+        block.plugins.add(plugin)
+        return this
     }
 
     /**
@@ -179,9 +138,9 @@ public class BuildScriptBuilder {
      * @param comment A description of why the dependencies are required
      * @param dependencies the dependencies
      */
-    public BuildScriptBuilder dependency(String configuration, @Nullable String comment, BuildInitDependency... dependencies) {
-        dependencies().dependency(configuration, comment, dependencies);
-        return this;
+    fun dependency(configuration: String, comment: String?, vararg dependencies: BuildInitDependency): BuildScriptBuilder {
+        dependencies().dependency(configuration, comment, *dependencies)
+        return this
     }
 
     /**
@@ -190,8 +149,8 @@ public class BuildScriptBuilder {
      * @param comment A description of why the dependencies are required
      * @param dependencies The dependencies
      */
-    public BuildScriptBuilder implementationDependency(@Nullable String comment, BuildInitDependency... dependencies) {
-        return dependency("implementation", comment, dependencies);
+    fun implementationDependency(comment: String?, vararg dependencies: BuildInitDependency): BuildScriptBuilder {
+        return dependency("implementation", comment, *dependencies)
     }
 
     /**
@@ -200,9 +159,9 @@ public class BuildScriptBuilder {
      * @param comment A description of why the constraints are required
      * @param dependencies The dependency constraints
      */
-    public BuildScriptBuilder implementationDependencyConstraint(@Nullable String comment, BuildInitDependency... dependencies) {
-        dependencies().dependencyConstraint("implementation", comment, dependencies);
-        return this;
+    fun implementationDependencyConstraint(comment: String?, vararg dependencies: BuildInitDependency): BuildScriptBuilder {
+        dependencies().dependencyConstraint("implementation", comment, *dependencies)
+        return this
     }
 
     /**
@@ -211,9 +170,9 @@ public class BuildScriptBuilder {
      * @param comment A description of why the dependencies are required
      * @param dependencies The dependencies
      */
-    public BuildScriptBuilder testImplementationDependency(@Nullable String comment, BuildInitDependency... dependencies) {
-        assert !isUsingTestSuites() : "do not add dependencies directly to testImplementation configuration";
-        return dependency("testImplementation", comment, dependencies);
+    fun testImplementationDependency(comment: String?, vararg dependencies: BuildInitDependency): BuildScriptBuilder {
+        assert(!this.isUsingTestSuites) { "do not add dependencies directly to testImplementation configuration" }
+        return dependency("testImplementation", comment, *dependencies)
     }
 
     /**
@@ -222,93 +181,58 @@ public class BuildScriptBuilder {
      * @param comment A description of why the dependencies are required
      * @param dependencies The dependencies
      */
-    public BuildScriptBuilder testRuntimeOnlyDependency(@Nullable String comment, BuildInitDependency... dependencies) {
-        assert !isUsingTestSuites() : "do not add dependencies directly to testRuntimeOnly configuration";
-        return dependency("testRuntimeOnly", comment, dependencies);
+    fun testRuntimeOnlyDependency(comment: String?, vararg dependencies: BuildInitDependency): BuildScriptBuilder {
+        assert(!this.isUsingTestSuites) { "do not add dependencies directly to testRuntimeOnly configuration" }
+        return dependency("testRuntimeOnly", comment, *dependencies)
     }
 
     /**
      * Creates a method invocation expression, to use as a method argument or the RHS of a property assignment.
      */
-    public Expression methodInvocationExpression(String methodName, Object... methodArgs) {
-        return new MethodInvocationExpression(null, methodName, expressionValues(methodArgs));
+    fun methodInvocationExpression(methodName: String, vararg methodArgs: Any): Expression {
+        return MethodInvocationExpression(null, methodName, expressionValues(*methodArgs))
     }
 
     /**
      * Creates a property expression, to use as a method argument or the RHS of a property assignment.
      */
-    public Expression propertyExpression(String value) {
-        return new LiteralValue(value);
+    fun propertyExpression(value: String): Expression {
+        return LiteralValue(value)
     }
 
     /**
      * Creates a property expression, to use as a method argument or the RHS of a property assignment.
      */
-    public Expression propertyExpression(Expression expression, String value) {
-        return new ChainedPropertyExpression(expressionValue(expression), new LiteralValue(value));
+    fun propertyExpression(expression: Expression, value: String): Expression {
+        return ChainedPropertyExpression(expressionValue(expression), LiteralValue(value))
     }
 
     /**
      * Creates an expression that references an element in a container.
      */
-    public Expression containerElementExpression(String container, String element) {
-        return new ContainerElementExpression(container, element);
-    }
-
-    private static List<ExpressionValue> expressionValues(Object... expressions) {
-        List<ExpressionValue> result = new ArrayList<>(expressions.length);
-        for (Object expression : expressions) {
-            result.add(expressionValue(expression));
-        }
-        return result;
-    }
-
-    private static Map<String, ExpressionValue> expressionMap(Map<String, ?> expressions) {
-        LinkedHashMap<String, ExpressionValue> result = new LinkedHashMap<>();
-        for (Map.Entry<String, ?> entry : expressions.entrySet()) {
-            result.put(entry.getKey(), expressionValue(entry.getValue()));
-        }
-        return result;
-    }
-
-    private static ExpressionValue expressionValue(Object expression) {
-        if (expression instanceof CharSequence) {
-            return new StringValue((CharSequence) expression);
-        }
-        if (expression instanceof ExpressionValue) {
-            return (ExpressionValue) expression;
-        }
-        if (expression instanceof Number || expression instanceof Boolean) {
-            return new LiteralValue(expression);
-        }
-        if (expression instanceof Map) {
-            return new MapLiteralValue(expressionMap(Cast.uncheckedNonnullCast(expression)));
-        }
-        if (expression instanceof Enum) {
-            return new EnumValue(expression);
-        }
-        throw new IllegalArgumentException("Don't know how to treat " + expression + " as an expression.");
+    fun containerElementExpression(container: String, element: String): Expression {
+        return ContainerElementExpression(container, element)
     }
 
     /**
      * Allows repositories to be added to this script.
      */
-    public RepositoriesBuilder repositories() {
-        return block.repositories;
+    fun repositories(): RepositoriesBuilder {
+        return block.repositories
     }
 
     /**
      * Allows dependencies to be added to this script.
      */
-    public DependenciesBuilder dependencies() {
-        return block.dependencies;
+    fun dependencies(): DependenciesBuilder {
+        return block.dependencies
     }
 
     /**
      * Allows test suites to be added to this script.
      */
-    public TestingBuilder testing() {
-        return block.testing;
+    fun testing(): TestingBuilder {
+        return block.testing
     }
 
     /**
@@ -316,9 +240,9 @@ public class BuildScriptBuilder {
      *
      * @return this
      */
-    public BuildScriptBuilder methodInvocation(@Nullable String comment, String methodName, Object... methodArgs) {
-        block.methodInvocation(comment, methodName, methodArgs);
-        return this;
+    fun methodInvocation(comment: String?, methodName: String, vararg methodArgs: Any): BuildScriptBuilder {
+        block.methodInvocation(comment, methodName, *methodArgs)
+        return this
     }
 
     /**
@@ -326,9 +250,9 @@ public class BuildScriptBuilder {
      *
      * @return this
      */
-    public BuildScriptBuilder methodInvocation(@Nullable String comment, Expression target, String methodName, Object... methodArgs) {
-        block.methodInvocation(comment, target, methodName, methodArgs);
-        return this;
+    fun methodInvocation(comment: String?, target: Expression, methodName: String, vararg methodArgs: Any): BuildScriptBuilder {
+        block.methodInvocation(comment, target, methodName, *methodArgs)
+        return this
     }
 
     /**
@@ -336,9 +260,9 @@ public class BuildScriptBuilder {
      *
      * @return this
      */
-    public BuildScriptBuilder propertyAssignment(@Nullable String comment, String propertyName, Object propertyValue) {
-        block.propertyAssignment(comment, propertyName, propertyValue, true);
-        return this;
+    fun propertyAssignment(comment: String?, propertyName: String, propertyValue: Any): BuildScriptBuilder {
+        block.propertyAssignment(comment, propertyName, propertyValue, true)
+        return this
     }
 
     /**
@@ -346,56 +270,61 @@ public class BuildScriptBuilder {
      *
      * @return The body of the block, to which further statements can be added.
      */
-    public ScriptBlockBuilder block(@Nullable String comment, String methodName) {
-        return block.block(comment, methodName);
+    fun block(comment: String?, methodName: String): ScriptBlockBuilder {
+        return block.block(comment, methodName)
     }
 
     /**
      * Adds a top level block statement.
      */
-    public BuildScriptBuilder block(@Nullable String comment, String methodName, Action<? super ScriptBlockBuilder> blockContentBuilder) {
-        blockContentBuilder.execute(block.block(comment, methodName));
-        return this;
+    fun block(comment: String?, methodName: String, blockContentBuilder: Action<in ScriptBlockBuilder>): BuildScriptBuilder {
+        blockContentBuilder.execute(block.block(comment, methodName))
+        return this
     }
 
-    public BuildScriptBuilder javaToolchainFor(JavaLanguageVersion languageVersion) {
-        return block("Apply a specific Java toolchain to ease working on different environments.", "java", t -> {
-            t.block(null, "toolchain", t1 -> {
-                t1.propertyAssignment(null, "languageVersion",
-                    new MethodInvocationExpression(null, "JavaLanguageVersion.of", singletonList(new LiteralValue(languageVersion.asInt()))),
-                    true);
-            });
-        });
+    fun javaToolchainFor(languageVersion: JavaLanguageVersion): BuildScriptBuilder {
+        return block("Apply a specific Java toolchain to ease working on different environments.", "java", Action { t: ScriptBlockBuilder ->
+            t.block(null, "toolchain", Action { t1: ScriptBlockBuilder? ->
+                t1!!.propertyAssignment(
+                    null, "languageVersion",
+                    MethodInvocationExpression(null, "JavaLanguageVersion.of", mutableListOf<ExpressionValue>(LiteralValue(languageVersion.asInt()))),
+                    true
+                )
+            })
+        })
     }
 
     /**
      * Adds a method invocation statement to the configuration of a particular task.
      */
-    public BuildScriptBuilder taskMethodInvocation(@Nullable String comment, String taskName, String taskType, String methodName, Object... methodArgs) {
+    fun taskMethodInvocation(comment: String?, taskName: String, taskType: String, methodName: String, vararg methodArgs: Any): BuildScriptBuilder {
         block.tasks.add(
-            new TaskSelector(taskName, taskType),
-            new MethodInvocation(comment, new MethodInvocationExpression(null, methodName, expressionValues(methodArgs))));
-        return this;
+            TaskSelector(taskName, taskType),
+            BuildScriptBuilder.MethodInvocation(comment!!, MethodInvocationExpression(null, methodName, expressionValues(*methodArgs)))
+        )
+        return this
     }
 
     /**
      * Adds a property assignment statement to the configuration of a particular task.
      */
-    public BuildScriptBuilder taskPropertyAssignment(@Nullable String comment, String taskName, String taskType, String propertyName, Object propertyValue) {
+    fun taskPropertyAssignment(comment: String?, taskName: String, taskType: String, propertyName: String, propertyValue: Any): BuildScriptBuilder {
         block.tasks.add(
-            new TaskSelector(taskName, taskType),
-            new PropertyAssignment(comment, propertyName, expressionValue(propertyValue), true));
-        return this;
+            TaskSelector(taskName, taskType),
+            BuildScriptBuilder.PropertyAssignment(comment!!, propertyName, expressionValue(propertyValue), true)
+        )
+        return this
     }
 
     /**
      * Adds a property assignment statement to the configuration of all tasks of a particular type.
      */
-    public BuildScriptBuilder taskPropertyAssignment(@Nullable String comment, String taskType, String propertyName, Object propertyValue) {
+    fun taskPropertyAssignment(comment: String?, taskType: String, propertyName: String, propertyValue: Any): BuildScriptBuilder {
         block.taskTypes.add(
-            new TaskTypeSelector(taskType),
-            new PropertyAssignment(comment, propertyName, expressionValue(propertyValue), true));
-        return this;
+            TaskTypeSelector(taskType),
+            BuildScriptBuilder.PropertyAssignment(comment!!, propertyName, expressionValue(propertyValue), true)
+        )
+        return this
     }
 
     /**
@@ -403,11 +332,11 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public TaskConfiguration taskConfiguration(@Nullable String comment, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        TaskConfiguration conf = new TaskConfiguration(comment, taskName, taskType);
-        block.add(conf);
-        blockContentsBuilder.execute(conf.body);
-        return conf;
+    fun taskConfiguration(comment: String?, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): TaskConfiguration {
+        val conf = TaskConfiguration(comment, taskName, taskType)
+        block.add(conf)
+        blockContentsBuilder.execute(conf.body)
+        return conf
     }
 
     /**
@@ -415,11 +344,11 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public TaskConfiguration taskConfiguration(@Nullable String comment, BlockStatement containingBlock, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        TaskConfiguration conf = new TaskConfiguration(comment, taskName, taskType);
-        containingBlock.add(conf);
-        blockContentsBuilder.execute(conf.body);
-        return conf;
+    fun taskConfiguration(comment: String?, containingBlock: BlockStatement, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): TaskConfiguration {
+        val conf = TaskConfiguration(comment, taskName, taskType)
+        containingBlock.add(conf)
+        blockContentsBuilder.execute(conf.body)
+        return conf
     }
 
     /**
@@ -427,11 +356,11 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public TaskRegistration taskRegistration(@Nullable String comment, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        TaskRegistration registration = new TaskRegistration(comment, taskName, taskType);
-        block.add(registration);
-        blockContentsBuilder.execute(registration.body);
-        return registration;
+    fun taskRegistration(comment: String?, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): TaskRegistration {
+        val registration = TaskRegistration(comment, taskName, taskType)
+        block.add(registration)
+        blockContentsBuilder.execute(registration.body)
+        return registration
     }
 
     /**
@@ -439,11 +368,11 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public TaskRegistration taskRegistration(@Nullable String comment, BlockStatement containingBlock, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        TaskRegistration registration = new TaskRegistration(comment, taskName, taskType);
-        containingBlock.add(registration);
-        blockContentsBuilder.execute(registration.body);
-        return registration;
+    fun taskRegistration(comment: String?, containingBlock: BlockStatement, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): TaskRegistration {
+        val registration = TaskRegistration(comment, taskName, taskType)
+        containingBlock.add(registration)
+        blockContentsBuilder.execute(registration.body)
+        return registration
     }
 
     /**
@@ -451,11 +380,11 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public SuiteConfiguration suiteConfiguration(@Nullable String comment, BlockStatement containingBlock, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        SuiteConfiguration conf = new SuiteConfiguration(comment, taskName, taskType);
-        containingBlock.add(conf);
-        blockContentsBuilder.execute(conf.body);
-        return conf;
+    fun suiteConfiguration(comment: String?, containingBlock: BlockStatement, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): SuiteConfiguration {
+        val conf = SuiteConfiguration(comment, taskName, taskType)
+        containingBlock.add(conf)
+        blockContentsBuilder.execute(conf.body)
+        return conf
     }
 
     /**
@@ -463,153 +392,109 @@ public class BuildScriptBuilder {
      *
      * @return An expression that can be used to refer to the task later.
      */
-    public SuiteRegistration suiteRegistration(@Nullable String comment, BlockStatement containingBlock, String taskName, String taskType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-        SuiteRegistration registration = new SuiteRegistration(comment, taskName, taskType);
-        containingBlock.add(registration);
-        blockContentsBuilder.execute(registration.body);
-        return registration;
+    fun suiteRegistration(comment: String?, containingBlock: BlockStatement, taskName: String, taskType: String, blockContentsBuilder: Action<in ScriptBlockBuilder>): SuiteRegistration {
+        val registration = SuiteRegistration(comment, taskName, taskType)
+        containingBlock.add(registration)
+        blockContentsBuilder.execute(registration.body)
+        return registration
     }
 
     /**
      * Creates an element in the given container.
      *
-     * @param varName A variable to use to reference the element, if required by the DSL. If {@code null}, then use the element name.
+     * @param varName A variable to use to reference the element, if required by the DSL. If `null`, then use the element name.
      * @return An expression that can be used to refer to the element later in the script.
      */
-    public Expression createContainerElement(@Nullable String comment, String container, String elementName, @Nullable String varName) {
-        ContainerElement containerElement = new ContainerElement(comment, container, elementName, null, varName);
-        block.add(containerElement);
-        return containerElement;
+    fun createContainerElement(comment: String?, container: String, elementName: String, varName: String?): Expression {
+        val containerElement = BuildScriptBuilder.ContainerElement(comment!!, container, elementName, null, varName)
+        block.add(containerElement)
+        return containerElement
     }
 
-    public TemplateOperation create(Directory targetDirectory) {
-        return () -> {
+    fun create(targetDirectory: Directory): TemplateOperation {
+        return TemplateOperation {
             if (useIncubatingAPIs) {
-                headerCommentLines.add(INCUBATING_APIS_WARNING);
+                headerCommentLines.add(incubatingApisWarning)
             }
-
-            File target = getTargetFile(targetDirectory);
-            GFileUtils.mkdirs(target.getParentFile());
-            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(target.toPath(), UTF_8))) {
-                PrettyPrinter printer = new PrettyPrinter(syntaxFor(dsl), writer, comments);
-                if (!comments.equals(BuildInitComments.OFF)) {
-                    printer.printFileHeader(headerCommentLines);
+            val target = getTargetFile(targetDirectory)
+            GFileUtils.mkdirs(target.getParentFile())
+            try {
+                PrintWriter(Files.newBufferedWriter(target.toPath(), StandardCharsets.UTF_8)).use { writer ->
+                    val printer = PrettyPrinter(syntaxFor(dsl), writer, comments)
+                    if (comments != BuildInitComments.OFF) {
+                        printer.printFileHeader(headerCommentLines)
+                    }
+                    block.writeBodyTo(printer)
                 }
-                block.writeBodyTo(printer);
-            } catch (Exception e) {
-                throw new GradleException("Could not generate file " + target + ".", e);
+            } catch (e: Exception) {
+                throw GradleException("Could not generate file " + target + ".", e)
             }
-        };
-    }
-
-    public List<String> extractComments() {
-        return block.extractComments();
-    }
-
-    private File getTargetFile(Directory targetDirectory) {
-        return targetDirectory.file(dsl.fileNameFor(fileNameWithoutExtension)).getAsFile();
-    }
-
-    private static Syntax syntaxFor(BuildInitDsl dsl) {
-        switch (dsl) {
-            case KOTLIN:
-                return new KotlinSyntax();
-            case GROOVY:
-                return new GroovySyntax();
-            default:
-                throw new IllegalStateException();
         }
     }
 
-    public void includePluginsBuild() {
-        block.includePluginsBuild();
+    fun extractComments(): MutableList<String> {
+        return block.extractComments()
     }
 
-    public void useVersionCatalogFromOuterBuild(String comment) {
-        block.useVersionCatalogFromOuterBuild(comment);
+    private fun getTargetFile(targetDirectory: Directory): File {
+        return targetDirectory.file(dsl.fileNameFor(fileNameWithoutExtension)).getAsFile()
     }
 
-    public interface Expression {
+    fun includePluginsBuild() {
+        block.includePluginsBuild()
     }
 
-    private interface ExpressionValue extends Expression {
-        default boolean isBooleanType() {
-            return false;
-        }
-
-        String with(Syntax syntax);
+    fun useVersionCatalogFromOuterBuild(comment: String) {
+        block.useVersionCatalogFromOuterBuild(comment)
     }
 
-    private static class ChainedPropertyExpression implements ExpressionValue {
-        private final ExpressionValue left;
-        private final ExpressionValue right;
+    interface Expression
 
-        public ChainedPropertyExpression(ExpressionValue left, ExpressionValue right) {
-            this.left = left;
-            this.right = right;
-        }
+    private interface ExpressionValue : Expression {
+        val isBooleanType: Boolean
+            get() = false
 
-        @Override
-        public String with(Syntax syntax) {
-            return left.with(syntax) + "." + right.with(syntax);
+        fun with(syntax: Syntax): String
+    }
+
+    private class ChainedPropertyExpression(private val left: ExpressionValue, private val right: ExpressionValue) : ExpressionValue {
+        override fun with(syntax: Syntax): String {
+            return left.with(syntax) + "." + right.with(syntax)
         }
     }
 
-    private static class StringValue implements ExpressionValue {
-        final CharSequence value;
-
-        StringValue(CharSequence value) {
-            this.value = value;
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.string(value.toString());
+    private class StringValue(val value: CharSequence) : ExpressionValue {
+        override fun with(syntax: Syntax): String {
+            return syntax.string(value.toString())
         }
     }
 
-    private static class LiteralValue implements ExpressionValue {
-        final Object literal;
-
-        LiteralValue(Object literal) {
-            this.literal = literal;
+    private class LiteralValue(val literal: Any) : ExpressionValue {
+        override fun isBooleanType(): Boolean {
+            return literal is Boolean
         }
 
-        @Override
-        public boolean isBooleanType() {
-            return literal instanceof Boolean;
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return literal.toString();
+        override fun with(syntax: Syntax): String {
+            return literal.toString()
         }
     }
 
-    private static class EnumValue implements ExpressionValue {
-        final Enum<?> literal;
+    private class EnumValue(literal: Any) : ExpressionValue {
+        val literal: Enum<*>
 
-        EnumValue(Object literal) {
-            this.literal = Cast.uncheckedNonnullCast(literal);
+        init {
+            this.literal = uncheckedNonnullCast<Enum<*>?>(literal)!!
         }
 
-        @Override
-        @SuppressWarnings("GetClassOnEnum") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-        public String with(Syntax syntax) {
-            return literal.getClass().getSimpleName() + "." + literal.name();
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        override fun with(syntax: Syntax): String {
+            return literal.javaClass.getSimpleName() + "." + literal.name
         }
     }
 
-    private static class MapLiteralValue implements ExpressionValue {
-        final Map<String, ExpressionValue> literal;
-
-        public MapLiteralValue(Map<String, ExpressionValue> literal) {
-            this.literal = literal;
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.mapLiteral(literal);
+    private class MapLiteralValue(val literal: MutableMap<String, ExpressionValue>) : ExpressionValue {
+        override fun with(syntax: Syntax): String {
+            return syntax.mapLiteral(literal)
         }
     }
 
@@ -620,434 +505,300 @@ public class BuildScriptBuilder {
      * TODO: Improve this to be more general, handle more statements than just method calls,
      * indent multi-statement closures properly, possibly handle args
      */
-    private static class NoArgClosureExpression implements ExpressionValue {
-        final List<MethodInvocation> calls = new ArrayList<>();
+    private class NoArgClosureExpression(vararg calls: MethodInvocation) : ExpressionValue {
+        val calls: MutableList<MethodInvocation> = ArrayList<MethodInvocation>()
 
-        NoArgClosureExpression(MethodInvocation... calls) {
-            this.calls.addAll(Arrays.asList(calls));
+        init {
+            this.calls.addAll(Arrays.asList<MethodInvocation>(*calls))
         }
 
-        @Override
-        public String with(Syntax syntax) {
+        override fun with(syntax: Syntax): String {
             return "{" + calls.stream()
-                .map(call -> call.invocationExpression.with(syntax))
+                .map<String> { call: MethodInvocation? -> call!!.invocationExpression.with(syntax) }
                 .collect(Collectors.joining("\n", " ", " ")) +
-                "}";
+                    "}"
         }
     }
 
-    private static class MethodInvocationExpression implements ExpressionValue {
-        @Nullable
-        private final ExpressionValue target;
-        final String methodName;
-        final List<ExpressionValue> arguments;
+    private class MethodInvocationExpression : ExpressionValue {
+        private val target: ExpressionValue?
+        val methodName: String
+        val arguments: MutableList<ExpressionValue>
 
-        MethodInvocationExpression(@Nullable ExpressionValue target, String methodName, List<ExpressionValue> arguments) {
-            this.target = target;
-            this.methodName = methodName;
-            this.arguments = arguments;
+        internal constructor(target: ExpressionValue?, methodName: String, arguments: MutableList<ExpressionValue>) {
+            this.target = target
+            this.methodName = methodName
+            this.arguments = arguments
         }
 
-        MethodInvocationExpression(@Nullable ExpressionValue target, String methodName, NoArgClosureExpression closureArg) {
-            this.target = target;
-            this.methodName = methodName;
-            this.arguments = singletonList(closureArg);
+        internal constructor(target: ExpressionValue?, methodName: String, closureArg: NoArgClosureExpression) {
+            this.target = target
+            this.methodName = methodName
+            this.arguments = mutableListOf<ExpressionValue>(closureArg)
         }
 
-        MethodInvocationExpression(String methodName) {
-            this(null, methodName, Collections.emptyList());
-        }
+        internal constructor(methodName: String) : this(null, methodName, mutableListOf<ExpressionValue>())
 
-        @Override
-        public String with(Syntax syntax) {
-            StringBuilder result = new StringBuilder();
+        override fun with(syntax: Syntax): String {
+            val result = StringBuilder()
             if (target != null) {
-                result.append(target.with(syntax));
-                result.append('.');
+                result.append(target.with(syntax))
+                result.append('.')
             }
-            result.append(methodName);
+            result.append(methodName)
 
-            boolean onlyArgIsClosure = arguments.size() == 1 && arguments.get(0) instanceof NoArgClosureExpression;
+            val onlyArgIsClosure = arguments.size == 1 && arguments.get(0) is NoArgClosureExpression
 
             if (onlyArgIsClosure) {
-                result.append(' ');
+                result.append(' ')
             } else {
-                result.append("(");
+                result.append("(")
             }
 
-            for (int i = 0; i < arguments.size(); i++) {
-                ExpressionValue argument = arguments.get(i);
+            for (i in arguments.indices) {
+                val argument = arguments.get(i)
                 if (i == 0) {
-                    result.append(syntax.firstArg(argument));
+                    result.append(syntax.firstArg(argument))
                 } else {
-                    result.append(", ");
-                    result.append(argument.with(syntax));
+                    result.append(", ")
+                    result.append(argument.with(syntax))
                 }
             }
 
             if (onlyArgIsClosure) {
-                result.append(' ');
+                result.append(' ')
             } else {
-                result.append(")");
+                result.append(")")
             }
 
-            return result.toString();
+            return result.toString()
         }
     }
 
-    private static class ContainerElementExpression implements ExpressionValue {
-        private final String container;
-        private final String element;
-
-        public ContainerElementExpression(String container, String element) {
-            this.container = container;
-            this.element = element;
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.containerElement(container, element);
+    private class ContainerElementExpression(private val container: String, private val element: String) : ExpressionValue {
+        override fun with(syntax: Syntax): String {
+            return syntax.containerElement(container, element)
         }
     }
 
-    private static class PluginSpec extends AbstractStatement {
-        @Nullable
-        final String id;
-        @Nullable
-        final String version;
-        @Nullable
-        final String versionCatalogRef;
+    private class PluginSpec : AbstractStatement {
+        val id: String?
+        val version: String?
+        val versionCatalogRef: String?
 
-        PluginSpec(String id, @Nullable String version, @Nullable String comment) {
-            super(comment);
-            this.id = id;
-            this.version = version;
-            this.versionCatalogRef = null;
+        internal constructor(id: String, version: String?, comment: String?) : super(comment) {
+            this.id = id
+            this.version = version
+            this.versionCatalogRef = null
         }
 
-        PluginSpec(String versionCatalogRef, @Nullable String comment) {
-            super(comment);
-            this.id = null;
-            this.version = null;
-            this.versionCatalogRef = versionCatalogRef;
+        internal constructor(versionCatalogRef: String, comment: String?) : super(comment) {
+            this.id = null
+            this.version = null
+            this.versionCatalogRef = versionCatalogRef
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
             if (versionCatalogRef != null) {
-                printer.println(printer.syntax.pluginAliasSpec(versionCatalogRef));
+                printer.println(printer.syntax.pluginAliasSpec(versionCatalogRef)!!)
             } else {
-                printer.println(printer.syntax.pluginDependencySpec(id, version));
+                printer.println(printer.syntax.pluginDependencySpec(id!!, version)!!)
             }
         }
     }
 
-    private static class DepSpec extends AbstractStatement {
-        final String configuration;
-        final String dependencyOrCatalogReference;
-        final boolean catalogReference;
-        final Collection<BuildInitDependency.DependencyExclusion> exclusions;
-
-        DepSpec(String configuration, @Nullable String comment, String dependencyOrCatalogReference, boolean catalogReference, Collection<BuildInitDependency.DependencyExclusion> exclusions) {
-            super(comment);
-            this.configuration = configuration;
-            this.dependencyOrCatalogReference = dependencyOrCatalogReference;
-            this.catalogReference = catalogReference;
-            this.exclusions = exclusions;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            String notation;
+    private class DepSpec(
+        val configuration: String,
+        comment: String?,
+        val dependencyOrCatalogReference: String,
+        val catalogReference: Boolean,
+        val exclusions: MutableCollection<BuildInitDependency.DependencyExclusion>
+    ) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            val notation: String?
             if (catalogReference) {
-                notation = dependencyOrCatalogReference;
+                notation = dependencyOrCatalogReference
             } else {
-                notation = printer.syntax.string(dependencyOrCatalogReference);
+                notation = printer.syntax.string(dependencyOrCatalogReference)
             }
             if (exclusions.isEmpty()) {
-                printer.println(printer.syntax.dependencySpec(configuration, notation));
+                printer.println(printer.syntax.dependencySpec(configuration, notation)!!)
             } else {
-                ScriptBlockImpl dependencyBlock = new ScriptBlockImpl();
-                for (BuildInitDependency.DependencyExclusion exclusion : exclusions) {
-                    Map<String, String> exclusionConfig = new LinkedHashMap<>();
-                    exclusionConfig.put("group", exclusion.getGroup());
-                    exclusionConfig.put("module", exclusion.getModule());
+                val dependencyBlock = ScriptBlockImpl()
+                for (exclusion in exclusions) {
+                    val exclusionConfig: MutableMap<String, String> = LinkedHashMap<String, String>()
+                    exclusionConfig.put("group", exclusion.getGroup())
+                    exclusionConfig.put("module", exclusion.getModule())
 
-                    String comment = "TODO: This exclude was sourced from a POM exclusion and is NOT exactly equivalent, see: " + Documentation.userManual("build_init_plugin", "sec:pom_maven_conversion").url;
-                    dependencyBlock.add(new MethodInvocation(comment, new MethodInvocationExpression(null, "exclude", expressionValues(exclusionConfig))));
+                    val comment = "TODO: This exclude was sourced from a POM exclusion and is NOT exactly equivalent, see: " + userManual("build_init_plugin", "sec:pom_maven_conversion").url
+                    dependencyBlock.add(MethodInvocation(comment, MethodInvocationExpression(null, "exclude", expressionValues(exclusionConfig))))
                 }
-                printer.printBlock(printer.syntax.complexDependencySpec(configuration, notation), dependencyBlock);
-                printer.needSeparatorLine = false;
+                printer.printBlock(printer.syntax.complexDependencySpec(configuration, notation)!!, dependencyBlock)
+                printer.needSeparatorLine = false
             }
         }
     }
 
-    private static class PlatformDepSpec extends AbstractStatement {
-        private final String configuration;
-        private final String dependencyOrCatalogReference;
-        final boolean catalogReference;
-
-        PlatformDepSpec(String configuration, @Nullable String comment, String dependencyOrCatalogReference, boolean catalogReference) {
-            super(comment);
-            this.configuration = configuration;
-            this.dependencyOrCatalogReference = dependencyOrCatalogReference;
-            this.catalogReference = catalogReference;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
+    private class PlatformDepSpec(private val configuration: String, comment: String?, private val dependencyOrCatalogReference: String, val catalogReference: Boolean) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
             if (catalogReference) {
-                printer.println(printer.syntax.dependencySpec(
-                    configuration, "platform(" + dependencyOrCatalogReference + ")"
-                ));
+                printer.println(
+                    printer.syntax.dependencySpec(
+                        configuration, "platform(" + dependencyOrCatalogReference + ")"
+                    )!!
+                )
             } else {
-                printer.println(printer.syntax.dependencySpec(
-                    configuration, "platform(" + printer.syntax.string(dependencyOrCatalogReference) + ")"
-                ));
+                printer.println(
+                    printer.syntax.dependencySpec(
+                        configuration, "platform(" + printer.syntax.string(dependencyOrCatalogReference) + ")"
+                    )!!
+                )
             }
         }
     }
 
-    private static class SelfDepSpec extends AbstractStatement {
-        private final String configuration;
-
-        SelfDepSpec(String configuration, @Nullable String comment) {
-            super(comment);
-            this.configuration = configuration;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.println(printer.syntax.dependencySpec(configuration, "project()"));
+    private class SelfDepSpec(private val configuration: String, comment: String?) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.println(printer.syntax.dependencySpec(configuration, "project()")!!)
         }
     }
 
-    private static class ProjectDepSpec extends AbstractStatement {
-        private final String configuration;
-        private final String projectPath;
-
-        ProjectDepSpec(String configuration, String comment, String projectPath) {
-            super(comment);
-            this.configuration = configuration;
-            this.projectPath = projectPath;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.println(printer.syntax.dependencySpec(configuration, "project(" + printer.syntax.string(projectPath) + ")"));
+    private class ProjectDepSpec(private val configuration: String, comment: String, private val projectPath: String) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.println(printer.syntax.dependencySpec(configuration, "project(" + printer.syntax.string(projectPath) + ")")!!)
         }
     }
 
     private interface ConfigSelector {
-        @Nullable
-        String codeBlockSelectorFor(Syntax syntax);
+        fun codeBlockSelectorFor(syntax: Syntax): String?
     }
 
-    private static class TaskSelector implements ConfigSelector {
-
-        final String taskName;
-        final String taskType;
-
-        private TaskSelector(String taskName, String taskType) {
-            this.taskName = taskName;
-            this.taskType = taskType;
+    private class TaskSelector(val taskName: String, val taskType: String) : ConfigSelector {
+        override fun codeBlockSelectorFor(syntax: Syntax): String? {
+            return syntax.taskSelector(this)
         }
 
-        @Nullable
-        @Override
-        public String codeBlockSelectorFor(Syntax syntax) {
-            return syntax.taskSelector(this);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            TaskSelector that = (TaskSelector) o;
-            return Objects.equal(taskName, that.taskName) && Objects.equal(taskType, that.taskType);
+            val that = o as TaskSelector
+            return Objects.equal(taskName, that.taskName) && Objects.equal(taskType, that.taskType)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(taskName, taskType);
+        override fun hashCode(): Int {
+            return Objects.hashCode(taskName, taskType)
         }
     }
 
-    private static class TaskTypeSelector implements ConfigSelector {
-
-        final String taskType;
-
-        TaskTypeSelector(String taskType) {
-            this.taskType = taskType;
+    private class TaskTypeSelector(val taskType: String) : ConfigSelector {
+        override fun codeBlockSelectorFor(syntax: Syntax): String? {
+            return syntax.taskByTypeSelector(taskType)
         }
 
-        @Nullable
-        @Override
-        public String codeBlockSelectorFor(Syntax syntax) {
-            return syntax.taskByTypeSelector(taskType);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            TaskTypeSelector that = (TaskTypeSelector) o;
-            return Objects.equal(taskType, that.taskType);
+            val that = o as TaskTypeSelector
+            return Objects.equal(taskType, that.taskType)
         }
 
-        @Override
-        public int hashCode() {
-            return taskType.hashCode();
+        override fun hashCode(): Int {
+            return taskType.hashCode()
         }
     }
 
     /**
      * Represents a statement in a script. Each statement has an optional comment that explains its purpose.
      */
-    public interface Statement {
-        enum Type {Empty, Single, Group}
+    interface Statement {
+        enum class Type {
+            Empty, Single, Group
+        }
 
-        @Nullable
-        String getComment();
-
-        /**
-         * Returns details of the size of this statement. Returns {@link Type#Empty} when this statement is empty and should not be included in the script.
-         */
-        Type type();
+        val comment: String?
 
         /**
-         * Writes this statement to the given printer. Should not write the comment. Called only when {@link #type()} returns a value != {@link Type#Empty}
+         * Returns details of the size of this statement. Returns [Type.Empty] when this statement is empty and should not be included in the script.
          */
-        void writeCodeTo(PrettyPrinter printer);
+        fun type(): Type
+
+        /**
+         * Writes this statement to the given printer. Should not write the comment. Called only when [.type] returns a value != [Type.Empty]
+         */
+        fun writeCodeTo(printer: PrettyPrinter)
     }
 
-    private static abstract class AbstractStatement implements Statement {
-
-        private final String comment;
-
-        AbstractStatement(@Nullable String comment) {
-            this.comment = comment;
+    private abstract class AbstractStatement(private val comment: String?) : Statement {
+        override fun getComment(): String? {
+            return comment
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
-        }
-
-        @Override
-        public Type type() {
-            return Type.Single;
+        override fun type(): Statement.Type {
+            return Statement.Type.Single
         }
     }
 
     @NullMarked
-    private static class StatementGroup extends AbstractStatement {
-        private final List<Statement> statements = new ArrayList<>();
+    private class StatementGroup(comment: String?) : AbstractStatement(comment) {
+        private val statements: MutableList<Statement> = ArrayList<Statement>()
 
-        StatementGroup(@Nullable String comment) {
-            super(comment);
+        override fun type(): Statement.Type {
+            return if (getComment() == null) Statement.Type.Single else Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return getComment() == null ? Type.Single : Type.Group;
+        fun add(statement: Statement): StatementGroup {
+            statements.add(statement)
+            return this
         }
 
-        public StatementGroup add(Statement statement) {
-            statements.add(statement);
-            return this;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            for (Statement statement : statements) {
-                statement.writeCodeTo(printer);
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            for (statement in statements) {
+                statement.writeCodeTo(printer)
             }
         }
     }
 
-    private static class MethodInvocation extends AbstractStatement {
-
-        final MethodInvocationExpression invocationExpression;
-
-        private MethodInvocation(String comment, MethodInvocationExpression invocationExpression) {
-            super(comment);
-            this.invocationExpression = invocationExpression;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.println(invocationExpression.with(printer.syntax));
+    private class MethodInvocation(comment: String, val invocationExpression: MethodInvocationExpression) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.println(invocationExpression.with(printer.syntax))
         }
     }
 
-    private static class ContainerElement extends AbstractStatement implements ExpressionValue {
+    private class ContainerElement(
+        private val containerComment: String,
+        private val container: String,
+        private val elementName: String,
+        private val elementType: String?,
+        private val varName: String?
+    ) : AbstractStatement(null), ExpressionValue {
+        private val body = ScriptBlockImpl()
 
-        private final String containerComment;
-        private final String container;
-        private final String elementName;
-        @Nullable
-        private final String varName;
-        @Nullable
-        private final String elementType;
-        private final ScriptBlockImpl body = new ScriptBlockImpl();
-
-        public ContainerElement(String containerComment, String container, String elementName, @Nullable String elementType, @Nullable String varName) {
-            super(null);
-            this.containerComment = containerComment;
-            this.container = container;
-            this.elementName = elementName;
-            this.elementType = elementType;
-            this.varName = varName;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            val statement = printer.syntax.createContainerElement(containerComment, container, elementName, elementType, varName, body.statements)
+            printer.printStatement(statement)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            Statement statement = printer.syntax.createContainerElement(containerComment, container, elementName, elementType, varName, body.statements);
-            printer.printStatement(statement);
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.referenceCreatedContainerElement(container, elementName, varName);
+        override fun with(syntax: Syntax): String {
+            return syntax.referenceCreatedContainerElement(container, elementName, varName)
         }
     }
 
-    private static class PropertyAssignment extends AbstractStatement {
-
-        final String propertyName;
-        final ExpressionValue propertyValue;
-        final boolean assignOperator;
-
-        private PropertyAssignment(String comment, String propertyName, ExpressionValue propertyValue, boolean assignOperator) {
-            super(comment);
-            this.propertyName = propertyName;
-            this.propertyValue = propertyValue;
-            this.assignOperator = assignOperator;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.println(printer.syntax.propertyAssignment(this));
+    private class PropertyAssignment(comment: String, val propertyName: String, val propertyValue: ExpressionValue, val assignOperator: Boolean) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.println(printer.syntax.propertyAssignment(this)!!)
         }
     }
 
-    private static class SingleLineComment extends AbstractStatement {
-        private SingleLineComment(String comment) {
-            super(comment);
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
+    private class SingleLineComment(comment: String) : AbstractStatement(comment) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
             // NO OP
         }
     }
@@ -1056,1058 +807,873 @@ public class BuildScriptBuilder {
      * Represents the contents of a block.
      */
     private interface BlockBody {
-        void writeBodyTo(PrettyPrinter printer);
+        fun writeBodyTo(printer: PrettyPrinter)
 
-        List<Statement> getStatements();
+        val statements: MutableList<Statement>?
     }
 
-    private static class BlockStatement implements Statement {
-        private final String comment;
-        final String blockSelector;
-        final ScriptBlockImpl body = new ScriptBlockImpl();
+    private open class BlockStatement(private val comment: String?, val blockSelector: String) : Statement {
+        val body: ScriptBlockImpl = ScriptBlockImpl()
 
-        BlockStatement(String blockSelector) {
-            this(null, blockSelector);
+        internal constructor(blockSelector: String) : this(null, blockSelector)
+
+        override fun getComment(): String? {
+            return comment
         }
 
-        BlockStatement(@Nullable String comment, String blockSelector) {
-            this.comment = comment;
-            this.blockSelector = blockSelector;
+        override fun type(): Statement.Type {
+            return body.type()
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
+        fun add(statement: Statement) {
+            body.add(statement)
         }
 
-        @Override
-        public Type type() {
-            return body.type();
-        }
-
-        void add(Statement statement) {
-            body.add(statement);
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(blockSelector, body);
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(blockSelector, body)
         }
     }
 
-    private static class ScriptBlock extends BlockStatement {
-        ScriptBlock(String comment, String blockSelector) {
-            super(comment, blockSelector);
-        }
-
-        @Override
-        public Type type() {
+    private class ScriptBlock(comment: String, blockSelector: String) : BlockStatement(comment, blockSelector) {
+        override fun type(): Statement.Type {
             // Always treat as non-empty
-            return Type.Group;
+            return Statement.Type.Group
         }
     }
 
-    private static class RepositoriesBlock extends BlockStatement implements RepositoriesBuilder {
-        private final BuildScriptBuilder builder;
-
-        RepositoriesBlock(final BuildScriptBuilder builder) {
-            super("repositories");
-            this.builder = builder;
+    private class RepositoriesBlock(private val builder: BuildScriptBuilder) : BlockStatement("repositories"), RepositoriesBuilder {
+        override fun mavenLocal(comment: String) {
+            add(MethodInvocation(comment, MethodInvocationExpression("mavenLocal")))
         }
 
-        @Override
-        public void mavenLocal(String comment) {
-            add(new MethodInvocation(comment, new MethodInvocationExpression("mavenLocal")));
+        override fun mavenCentral(comment: String?) {
+            add(BuildScriptBuilder.MethodInvocation(comment!!, MethodInvocationExpression("mavenCentral")))
         }
 
-        @Override
-        public void mavenCentral(@Nullable String comment) {
-            add(new MethodInvocation(comment, new MethodInvocationExpression("mavenCentral")));
+        override fun gradlePluginPortal(comment: String?) {
+            add(BuildScriptBuilder.MethodInvocation(comment!!, MethodInvocationExpression("gradlePluginPortal")))
         }
 
-        @Override
-        public void gradlePluginPortal(@Nullable String comment) {
-            add(new MethodInvocation(comment, new MethodInvocationExpression("gradlePluginPortal")));
-        }
-
-        @Override
-        public void maven(String comment, String url) {
-            add(new MavenRepoExpression(comment, url, builder));
+        override fun maven(comment: String, url: String) {
+            add(MavenRepoExpression(comment, url, builder))
         }
     }
 
-    private static class DependenciesBlock implements DependenciesBuilder, Statement, BlockBody {
-        final BuildScriptBuilder buildScriptBuilder;
-        final ListMultimap<String, Statement> dependencies = MultimapBuilder.linkedHashKeys().arrayListValues().build();
-        final ListMultimap<String, Statement> constraints = MultimapBuilder.linkedHashKeys().arrayListValues().build();
+    private class DependenciesBlock(val buildScriptBuilder: BuildScriptBuilder) : DependenciesBuilder, Statement, BlockBody {
+        val dependencies: ListMultimap<String, Statement> = MultimapBuilder.linkedHashKeys().arrayListValues().build<String, Statement>()
+        val constraints: ListMultimap<String, Statement> = MultimapBuilder.linkedHashKeys().arrayListValues().build<String, Statement>()
 
-        public DependenciesBlock(BuildScriptBuilder buildScriptBuilder) {
-            this.buildScriptBuilder = buildScriptBuilder;
+        override fun dependency(configuration: String, comment: String?, vararg dependencies: BuildInitDependency) {
+            this.dependencies.put(configuration, makeDepSpec(configuration, comment, *dependencies))
         }
 
-        @Override
-        public void dependency(String configuration, @Nullable String comment, BuildInitDependency... dependencies) {
-            this.dependencies.put(configuration, makeDepSpec(configuration, comment, dependencies));
+        override fun dependencyConstraint(configuration: String, comment: String?, vararg dependencies: BuildInitDependency) {
+            this.constraints.put(configuration, makeDepSpec(configuration, comment, *dependencies))
         }
 
-        @Override
-        public void dependencyConstraint(String configuration, @Nullable String comment, BuildInitDependency... dependencies) {
-            this.constraints.put(configuration, makeDepSpec(configuration, comment, dependencies));
-        }
-
-        private Statement makeDepSpec(String configuration, @Nullable String comment, BuildInitDependency... dependencies) {
-            StatementGroup statementGroup = new StatementGroup(comment);
-            for (BuildInitDependency d : dependencies) {
+        fun makeDepSpec(configuration: String, comment: String?, vararg dependencies: BuildInitDependency): Statement {
+            val statementGroup = StatementGroup(comment)
+            for (d in dependencies) {
                 if (d.getVersion() != null && buildScriptBuilder.useVersionCatalog) {
-                    String versionCatalogRef = buildScriptBuilder.buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerLibrary(d.getModule(), d.getVersion());
-                    statementGroup.add(new DepSpec(configuration, null, versionCatalogRef, true, d.getExclusions()));
+                    val versionCatalogRef = buildScriptBuilder.buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerLibrary(d.getModule(), d.getVersion()!!)
+                    statementGroup.add(DepSpec(configuration, null, versionCatalogRef, true, d.getExclusions()))
                 } else {
-                    statementGroup.add(new DepSpec(configuration, null, d.toNotation(), false, d.getExclusions()));
+                    statementGroup.add(DepSpec(configuration, null, d.toNotation(), false, d.getExclusions()))
                 }
             }
-            return statementGroup;
+            return statementGroup
         }
 
-        @Override
-        public void platformDependency(String configuration, @Nullable String comment, BuildInitDependency... dependencies) {
-            StatementGroup statementGroup = new StatementGroup(comment);
-            for (BuildInitDependency d : dependencies) {
+        override fun platformDependency(configuration: String, comment: String?, vararg dependencies: BuildInitDependency) {
+            val statementGroup = StatementGroup(comment)
+            for (d in dependencies) {
                 if (d.getVersion() != null && buildScriptBuilder.useVersionCatalog) {
-                    String versionCatalogRef = buildScriptBuilder.buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerLibrary(d.getModule(), d.getVersion());
-                    statementGroup.add(new PlatformDepSpec(configuration, comment, versionCatalogRef, true));
+                    val versionCatalogRef = buildScriptBuilder.buildContentGenerationContext.getVersionCatalogDependencyRegistry().registerLibrary(d.getModule(), d.getVersion()!!)
+                    statementGroup.add(PlatformDepSpec(configuration, comment, versionCatalogRef, true))
                 } else {
-                    statementGroup.add(new PlatformDepSpec(configuration, comment, d.toNotation(), false));
+                    statementGroup.add(PlatformDepSpec(configuration, comment, d.toNotation(), false))
                 }
             }
-            this.dependencies.put(configuration, statementGroup);
+            this.dependencies.put(configuration, statementGroup)
         }
 
-        @Override
-        public void projectDependency(String configuration, @Nullable String comment, String projectPath) {
-            this.dependencies.put(configuration, new ProjectDepSpec(configuration, comment, projectPath));
+        override fun projectDependency(configuration: String, comment: String?, projectPath: String) {
+            this.dependencies.put(configuration, BuildScriptBuilder.ProjectDepSpec(configuration, comment!!, projectPath))
         }
 
-        @Override
-        public void selfDependency(String configuration, @Nullable String comment) {
-            this.dependencies.put(configuration, new SelfDepSpec(configuration, comment));
+        override fun selfDependency(configuration: String, comment: String?) {
+            this.dependencies.put(configuration, SelfDepSpec(configuration, comment))
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return null;
+        override fun getComment(): String? {
+            return null
         }
 
-        @Override
-        public Type type() {
-            return dependencies.isEmpty() && constraints.isEmpty() ? Type.Empty : Type.Group;
+        override fun type(): Statement.Type {
+            return if (dependencies.isEmpty() && constraints.isEmpty()) Statement.Type.Empty else Statement.Type.Group
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock("dependencies", this);
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock("dependencies", this)
         }
 
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
+        override fun writeBodyTo(printer: PrettyPrinter) {
             if (!this.constraints.isEmpty()) {
-                ScriptBlockImpl constraintsBlock = new ScriptBlockImpl();
-                for (String config : this.constraints.keySet()) {
-                    for (Statement constraintSpec : this.constraints.get(config)) {
-                        constraintsBlock.add(constraintSpec);
+                val constraintsBlock = ScriptBlockImpl()
+                for (config in this.constraints.keySet()) {
+                    for (constraintSpec in this.constraints.get(config)) {
+                        constraintsBlock.add(constraintSpec)
                     }
                 }
-                printer.printBlock("constraints", constraintsBlock);
+                printer.printBlock("constraints", constraintsBlock)
             }
 
-            for (String config : dependencies.keySet()) {
-                for (Statement depSpec : dependencies.get(config)) {
-                    printer.printStatement(depSpec);
+            for (config in dependencies.keySet()) {
+                for (depSpec in dependencies.get(config)) {
+                    printer.printStatement(depSpec)
                 }
             }
         }
 
-        @Override
-        public List<Statement> getStatements() {
-            List<Statement> statements = new ArrayList<>();
+        override fun getStatements(): MutableList<Statement> {
+            val statements: MutableList<Statement> = ArrayList<Statement>()
             if (!constraints.isEmpty()) {
-                ScriptBlock constraintsBlock = new ScriptBlock(null, "constraints");
-                for (String config : constraints.keySet()) {
-                    for (Statement statement : constraints.get(config)) {
-                        constraintsBlock.add(statement);
+                val constraintsBlock = BuildScriptBuilder.ScriptBlock(null, "constraints")
+                for (config in constraints.keySet()) {
+                    for (statement in constraints.get(config)) {
+                        constraintsBlock.add(statement)
                     }
                 }
-                statements.add(constraintsBlock);
+                statements.add(constraintsBlock)
             }
 
-            for (String config : dependencies.keySet()) {
-                statements.addAll(dependencies.get(config));
+            for (config in dependencies.keySet()) {
+                statements.addAll(dependencies.get(config))
             }
-            return statements;
+            return statements
         }
     }
 
-    private static class TestingBlock extends BlockStatement implements TestingBuilder, BlockBody {
-        private final BuildScriptBuilder builder;
-        private final List<SuiteSpec> suites = new ArrayList<>();
+    private class TestingBlock(private val builder: BuildScriptBuilder) : BlockStatement("testing"), TestingBuilder, BlockBody {
+        private val suites: MutableList<SuiteSpec> = ArrayList<SuiteSpec>()
 
-        TestingBlock(BuildScriptBuilder builder) {
-            super("testing");
-            this.builder = builder;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(blockSelector, this)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(blockSelector, this);
-        }
-
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
+        override fun writeBodyTo(printer: PrettyPrinter) {
             if (!suites.isEmpty()) {
-                ScriptBlockImpl suitesBlock = new ScriptBlockImpl();
-                for (Statement suite : suites) {
-                    suitesBlock.add(suite);
+                val suitesBlock = ScriptBlockImpl()
+                for (suite in suites) {
+                    suitesBlock.add(suite)
                 }
-                printer.printBlock("suites", suitesBlock);
+                printer.printBlock("suites", suitesBlock)
             }
         }
 
-        @Override
-        public List<Statement> getStatements() {
-            return new ArrayList<>(suites);
+        override fun getStatements(): MutableList<Statement> {
+            return ArrayList<Statement>(suites)
         }
 
-        @Override
-        public SuiteSpec junitSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider) {
-            final SuiteSpec spec = new SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.JUNIT, libraryVersionProvider.getVersion("junit"), builder);
-            suites.add(spec);
-            return spec;
+        override fun junitSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): SuiteSpec {
+            val spec = SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.JUNIT, libraryVersionProvider.getVersion("junit"), builder)
+            suites.add(spec)
+            return spec
         }
 
-        @Override
-        public SuiteSpec junitJupiterSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider) {
-            final SuiteSpec spec = new SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.JUNIT_PLATFORM, libraryVersionProvider.getVersion("junit-jupiter"), builder);
-            suites.add(spec);
-            return spec;
+        override fun junitJupiterSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): SuiteSpec {
+            val spec = SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.JUNIT_PLATFORM, libraryVersionProvider.getVersion("junit-jupiter"), builder)
+            suites.add(spec)
+            return spec
         }
 
-        @Override
-        public SuiteSpec spockSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider) {
-            final SuiteSpec spec = new SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.SPOCK, libraryVersionProvider.getVersion("spock"), builder);
-            suites.add(spec);
-            return spec;
+        override fun spockSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): SuiteSpec {
+            val spec = SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.SPOCK, libraryVersionProvider.getVersion("spock"), builder)
+            suites.add(spec)
+            return spec
         }
 
-        @Override
-        public SuiteSpec kotlinTestSuite(String name, TemplateLibraryVersionProvider libraryVersionProvider) {
-            final SuiteSpec spec = new SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.KOTLIN_TEST, libraryVersionProvider.getVersion("kotlin"), builder);
-            suites.add(spec);
-            return spec;
+        override fun kotlinTestSuite(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): SuiteSpec {
+            val spec = SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.KOTLIN_TEST, libraryVersionProvider.getVersion("kotlin"), builder)
+            suites.add(spec)
+            return spec
         }
 
-        @Override
-        public SuiteSpec testNG(String name, TemplateLibraryVersionProvider libraryVersionProvider) {
-            final SuiteSpec spec = new SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.TEST_NG, libraryVersionProvider.getVersion("testng"), builder);
-            suites.add(spec);
-            return spec;
+        override fun testNG(name: String, libraryVersionProvider: TemplateLibraryVersionProvider): SuiteSpec {
+            val spec = SuiteSpec(null, name, SuiteSpec.TestSuiteFramework.TEST_NG, libraryVersionProvider.getVersion("testng"), builder)
+            suites.add(spec)
+            return spec
         }
     }
 
-    public static class SuiteSpec extends AbstractStatement {
-        private final BuildScriptBuilder builder;
+    class SuiteSpec internal constructor(comment: String?, val name: String, private val framework: TestSuiteFramework, private val frameworkVersion: String, private val builder: BuildScriptBuilder) :
+        AbstractStatement(comment) {
+        private val dependencies: DependenciesBlock
+        private val targets: TargetsBlock
 
-        private final String name;
-        private final TestSuiteFramework framework;
-        private final String frameworkVersion;
+        val isDefaultTestSuite: Boolean
+        private val isDefaultFramework: Boolean
 
-        private final DependenciesBlock dependencies;
-        private final TargetsBlock targets;
+        init {
+            targets = TargetsBlock(builder)
+            this.dependencies = DependenciesBlock(builder)
 
-        private final boolean isDefaultTestSuite;
-        private final boolean isDefaultFramework;
-
-        SuiteSpec(@Nullable String comment, String name, TestSuiteFramework framework, String frameworkVersion, BuildScriptBuilder builder) {
-            super(comment);
-            this.builder = builder;
-            this.framework = framework;
-            this.frameworkVersion = frameworkVersion;
-            this.name = name;
-            targets = new TargetsBlock(builder);
-            this.dependencies = new DependenciesBlock(builder);
-
-            isDefaultTestSuite = JvmTestSuitePlugin.DEFAULT_TEST_SUITE_NAME.equals(name);
-            isDefaultFramework = framework == TestSuiteFramework.getDefault();
+            isDefaultTestSuite = JvmTestSuitePlugin.DEFAULT_TEST_SUITE_NAME == name
+            isDefaultFramework = framework == TestSuiteFramework.Companion.default
 
             if (!isDefaultTestSuite) {
-                dependencies.selfDependency("implementation", name + " test suite depends on the production code in tests");
-                targets.all(true);
+                dependencies.selfDependency("implementation", name + " test suite depends on the production code in tests")
+                targets.all(true)
             }
         }
 
-        private Action<? super ScriptBlockBuilder> buildSuiteConfigurationContents() {
-            return b -> {
+        private fun buildSuiteConfigurationContents(): Action<in ScriptBlockBuilder> {
+            return Action { b: ScriptBlockBuilder ->
                 if (isDefaultTestSuite || !isDefaultFramework) {
                     if (frameworkVersion == null) {
-                        b.methodInvocation("Use " + framework.displayName + " test framework", framework.method.methodName);
+                        b.methodInvocation("Use " + framework.displayName + " test framework", framework.method.methodName)
                     } else {
-                        b.methodInvocation("Use " + framework.displayName + " test framework", framework.method.methodName, frameworkVersion);
+                        b.methodInvocation("Use " + framework.displayName + " test framework", framework.method.methodName, frameworkVersion)
                     }
                 }
-
                 if (!dependencies.dependencies.isEmpty()) {
-                    b.statement(null, dependencies);
+                    b.statement(null, dependencies)
                 }
-
                 if (!targets.targets.isEmpty()) {
-                    b.statement(null, targets);
+                    b.statement(null, targets)
                 }
-            };
+            }
         }
 
-        public String getName() {
-            return name;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        public boolean isDefaultTestSuite() {
-            return isDefaultTestSuite;
+        fun implementation(comment: String, vararg dependencies: BuildInitDependency) {
+            this.dependencies.dependency("implementation", comment, *dependencies)
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        fun runtimeOnly(comment: String, vararg dependencies: BuildInitDependency) {
+            this.dependencies.dependency("runtimeOnly", comment, *dependencies)
         }
 
-        void implementation(String comment, BuildInitDependency... dependencies) {
-            this.dependencies.dependency("implementation", comment, dependencies);
-        }
-
-        void runtimeOnly(String comment, BuildInitDependency... dependencies) {
-            this.dependencies.dependency("runtimeOnly", comment, dependencies);
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
+        override fun writeCodeTo(printer: PrettyPrinter) {
             if (isDefaultTestSuite) {
-                printer.printStatement(builder.suiteConfiguration("Configure the built-in test suite", builder.block.testing, name, JvmTestSuite.class.getSimpleName(), buildSuiteConfigurationContents()));
+                printer.printStatement(
+                    builder.suiteConfiguration(
+                        "Configure the built-in test suite",
+                        builder.block.testing,
+                        name,
+                        JvmTestSuite::class.java.getSimpleName(),
+                        buildSuiteConfigurationContents()
+                    )
+                )
             } else {
-                printer.printStatement(builder.suiteRegistration("Create a new test suite", builder.block.testing, name, JvmTestSuite.class.getSimpleName(), buildSuiteConfigurationContents()));
+                printer.printStatement(builder.suiteRegistration("Create a new test suite", builder.block.testing, name, JvmTestSuite::class.java.getSimpleName(), buildSuiteConfigurationContents()))
             }
         }
 
-        public enum TestSuiteFramework {
-            JUNIT(new MethodInvocationExpression("useJUnit"), "JUnit4"),
-            JUNIT_PLATFORM(new MethodInvocationExpression("useJUnitJupiter"), "JUnit Jupiter"),
-            SPOCK(new MethodInvocationExpression("useSpock"), "Spock"),
-            KOTLIN_TEST(new MethodInvocationExpression("useKotlinTest"), "Kotlin Test"),
-            TEST_NG(new MethodInvocationExpression("useTestNG"), "TestNG");
+        enum class TestSuiteFramework(//TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+            val method: MethodInvocationExpression, val displayName: String
+        ) {
+            JUNIT(MethodInvocationExpression("useJUnit"), "JUnit4"),
+            JUNIT_PLATFORM(MethodInvocationExpression("useJUnitJupiter"), "JUnit Jupiter"),
+            SPOCK(MethodInvocationExpression("useSpock"), "Spock"),
+            KOTLIN_TEST(MethodInvocationExpression("useKotlinTest"), "Kotlin Test"),
+            TEST_NG(MethodInvocationExpression("useTestNG"), "TestNG");
 
-            final String displayName;
-            @SuppressWarnings("ImmutableEnumChecker") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-            final MethodInvocationExpression method;
-
-            TestSuiteFramework(MethodInvocationExpression method, String displayName) {
-                this.method = method;
-                this.displayName = displayName;
+            companion object {
+                val default: TestSuiteFramework
+                    get() = TestSuiteFramework.JUNIT_PLATFORM
             }
-
-            public static TestSuiteFramework getDefault() {
-                return JUNIT_PLATFORM;
-            }
-
         }
     }
 
-    private static class TargetsBlock extends BlockStatement implements TargetsBuilder, BlockBody {
-        private final BuildScriptBuilder builder;
-        private final List<TargetSpec> targets = new ArrayList<>();
+    private class TargetsBlock(private val builder: BuildScriptBuilder) : BlockStatement("targets"), TargetsBuilder, BlockBody {
+        private val targets: MutableList<TargetSpec> = ArrayList<TargetSpec>()
 
-        TargetsBlock(BuildScriptBuilder builder) {
-            super("targets");
-            this.builder = builder;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(blockSelector, this)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(blockSelector, this);
-        }
-
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
+        override fun writeBodyTo(printer: PrettyPrinter) {
             if (!targets.isEmpty()) {
-                for (Statement target : targets) {
-                    printer.printStatement(target);
+                for (target in targets) {
+                    printer.printStatement(target)
                 }
             }
         }
 
-        @Override
-        public List<Statement> getStatements() {
-            return new ArrayList<>(targets);
+        override fun getStatements(): MutableList<Statement> {
+            return ArrayList<Statement>(targets)
         }
 
-        @Override
-        public void all(boolean testTaskShouldRunAfter) {
-            targets.add(new TargetSpec(null, "all", builder, testTaskShouldRunAfter));
+        override fun all(testTaskShouldRunAfter: Boolean) {
+            targets.add(TargetSpec(null, "all", builder, testTaskShouldRunAfter))
         }
     }
 
-    private static class TargetSpec extends BlockStatement implements BlockBody {
-        private final BuildScriptBuilder builder;
-        private final String name;
-
-        TargetSpec(@Nullable String comment, String name, BuildScriptBuilder builder, boolean testTaskShouldRunAfter) {
-            super(comment);
-            this.builder = builder;
-            this.name = name;
-
+    private class TargetSpec(comment: String?, private val name: String, private val builder: BuildScriptBuilder, testTaskShouldRunAfter: Boolean) : BlockStatement(comment!!), BlockBody {
+        init {
             if (testTaskShouldRunAfter) {
-                configureShouldRunAfterTest();
+                configureShouldRunAfterTest()
             }
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(name, this);
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(name, this)
         }
 
-        private void configureShouldRunAfterTest() {
-            final MethodInvocation shouldRunAfterCall = new MethodInvocation(null, new MethodInvocationExpression(null, "shouldRunAfter", singletonList(new LiteralValue("test"))));
-            final NoArgClosureExpression configBlock = new NoArgClosureExpression(shouldRunAfterCall);
-            final MethodInvocation functionalTestConfiguration = new MethodInvocation("This test suite should run after the built-in test suite has run its tests", new MethodInvocationExpression(expressionValue(builder.propertyExpression("testTask")), "configure", configBlock));
-            add(functionalTestConfiguration);
+        fun configureShouldRunAfterTest() {
+            val shouldRunAfterCall = BuildScriptBuilder.MethodInvocation(null, MethodInvocationExpression(null, "shouldRunAfter", mutableListOf<ExpressionValue>(LiteralValue("test"))))
+            val configBlock = NoArgClosureExpression(shouldRunAfterCall)
+            val functionalTestConfiguration = MethodInvocation(
+                "This test suite should run after the built-in test suite has run its tests",
+                MethodInvocationExpression(expressionValue(builder.propertyExpression("testTask")), "configure", configBlock)
+            )
+            add(functionalTestConfiguration)
         }
 
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
-            for (Statement statement : body.statements) {
-                printer.printStatement(statement);
+        override fun writeBodyTo(printer: PrettyPrinter) {
+            for (statement in body.statements) {
+                printer.printStatement(statement)
             }
         }
 
-        @Override
-        public List<Statement> getStatements() {
-            return body.statements;
+        override fun getStatements(): MutableList<Statement> {
+            return body.statements
         }
     }
 
-    private static class MavenRepoExpression extends AbstractStatement {
-        private final URI uri;
-        private final BuildScriptBuilder builder;
+    private class MavenRepoExpression(comment: String?, url: String, private val builder: BuildScriptBuilder) : AbstractStatement(comment) {
+        private val uri: URI
 
-        MavenRepoExpression(@Nullable String comment, String url, BuildScriptBuilder builder) {
-            super(comment);
-            this.uri = uriFromString(url);
-            this.builder = builder;
+        init {
+            this.uri = uriFromString(url)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            builder.mavenRepoURLHandler.handleURL(uri, printer);
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            builder.mavenRepoURLHandler.handleURL(uri, printer)
         }
     }
 
-    public static class ScriptBlockImpl implements ScriptBlockBuilder, BlockBody {
-        final List<Statement> statements = new ArrayList<>();
+    open class ScriptBlockImpl : ScriptBlockBuilder, BlockBody {
+        val statements: MutableList<Statement> = ArrayList<Statement>()
 
-        public void add(Statement statement) {
-            statements.add(statement);
+        fun add(statement: Statement) {
+            statements.add(statement)
         }
 
-        @Override
-        public List<Statement> getStatements() {
-            return statements;
+        override fun getStatements(): MutableList<Statement> {
+            return statements
         }
 
-        public Statement.Type type() {
-            for (Statement statement : statements) {
+        fun type(): Statement.Type {
+            for (statement in statements) {
                 if (statement.type() != Statement.Type.Empty) {
-                    return Statement.Type.Group;
+                    return Statement.Type.Group
                 }
             }
-            return Statement.Type.Empty;
+            return Statement.Type.Empty
         }
 
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
-            printer.printStatements(statements);
+        override fun writeBodyTo(printer: PrettyPrinter) {
+            printer.printStatements(statements)
         }
 
-        @Override
-        public void propertyAssignment(String comment, String propertyName, Object propertyValue, boolean assignOperator) {
-            statements.add(new PropertyAssignment(comment, propertyName, expressionValue(propertyValue), assignOperator));
+        override fun propertyAssignment(comment: String, propertyName: String, propertyValue: Any, assignOperator: Boolean) {
+            statements.add(PropertyAssignment(comment, propertyName, expressionValue(propertyValue), assignOperator))
         }
 
-        @Override
-        public void methodInvocation(String comment, String methodName, Object... methodArgs) {
-            statements.add(new MethodInvocation(comment, new MethodInvocationExpression(null, methodName, expressionValues(methodArgs))));
+        override fun methodInvocation(comment: String, methodName: String, vararg methodArgs: Any) {
+            statements.add(MethodInvocation(comment, MethodInvocationExpression(null, methodName, expressionValues(*methodArgs))))
         }
 
-        @Override
-        public void methodInvocation(@Nullable String comment, Expression target, String methodName, Object... methodArgs) {
-            statements.add(new MethodInvocation(comment, new MethodInvocationExpression(expressionValue(target), methodName, expressionValues(methodArgs))));
+        override fun methodInvocation(comment: String?, target: Expression, methodName: String, vararg methodArgs: Any) {
+            statements.add(BuildScriptBuilder.MethodInvocation(comment!!, MethodInvocationExpression(expressionValue(target), methodName, expressionValues(*methodArgs))))
         }
 
-        @Override
-        public ScriptBlockBuilder block(String comment, String methodName) {
-            ScriptBlock scriptBlock = new ScriptBlock(comment, methodName);
-            statements.add(scriptBlock);
-            return scriptBlock.body;
+        override fun block(comment: String, methodName: String): ScriptBlockBuilder {
+            val scriptBlock = ScriptBlock(comment, methodName)
+            statements.add(scriptBlock)
+            return scriptBlock.body
         }
 
-        @Override
-        public void statement(@Nullable String comment, Statement statement) {
-            statements.add(statement);
+        override fun statement(comment: String?, statement: Statement) {
+            statements.add(statement)
         }
 
-        @Override
-        public void block(@Nullable String comment, String methodName, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-            blockContentsBuilder.execute(block(comment, methodName));
+        override fun block(comment: String?, methodName: String, blockContentsBuilder: Action<in ScriptBlockBuilder>) {
+            blockContentsBuilder.execute(block(comment, methodName))
         }
 
-        @Override
-        public Expression containerElement(@Nullable String comment, String container, String elementName, @Nullable String elementType, Action<? super ScriptBlockBuilder> blockContentsBuilder) {
-            ContainerElement containerElement = new ContainerElement(comment, container, elementName, elementType, null);
-            statements.add(containerElement);
-            blockContentsBuilder.execute(containerElement.body);
-            return containerElement;
+        override fun containerElement(comment: String?, container: String, elementName: String, elementType: String?, blockContentsBuilder: Action<in ScriptBlockBuilder>): Expression {
+            val containerElement = BuildScriptBuilder.ContainerElement(comment!!, container, elementName, elementType, null)
+            statements.add(containerElement)
+            blockContentsBuilder.execute(containerElement.body)
+            return containerElement
         }
 
-        @Override
-        public Expression propertyExpression(String value) {
-            return new LiteralValue(value);
+        override fun propertyExpression(value: String): Expression {
+            return LiteralValue(value)
         }
 
-        @Override
-        public void comment(String comment) {
-            statements.add(new SingleLineComment(comment));
+        override fun comment(comment: String) {
+            statements.add(SingleLineComment(comment))
         }
     }
 
-    private static class TopLevelBlock extends ScriptBlockImpl {
-        final BlockStatement pluginsManagement = new BlockStatement(InitialPassStatementTransformer.PLUGIN_MANAGEMENT);
-        final BlockStatement plugins = new BlockStatement(InitialPassStatementTransformer.PLUGINS);
-        final BlockStatement dependencyResolutionManagement = new BlockStatement("dependencyResolutionManagement");
-        final RepositoriesBlock repositories;
-        final DependenciesBlock dependencies;
-        final TestingBlock testing;
-        final ConfigurationStatements<TaskTypeSelector> taskTypes = new ConfigurationStatements<>();
-        final ConfigurationStatements<TaskSelector> tasks = new ConfigurationStatements<>();
-        final BuildScriptBuilder builder;
+    private class TopLevelBlock(val builder: BuildScriptBuilder) : ScriptBlockImpl() {
+        val pluginsManagement: BlockStatement = BlockStatement(InitialPassStatementTransformer.PLUGIN_MANAGEMENT)
+        val plugins: BlockStatement = BlockStatement(InitialPassStatementTransformer.PLUGINS)
+        val dependencyResolutionManagement: BlockStatement = BlockStatement("dependencyResolutionManagement")
+        val repositories: RepositoriesBlock
+        val dependencies: DependenciesBlock
+        val testing: TestingBlock
+        val taskTypes: ConfigurationStatements<TaskTypeSelector> = ConfigurationStatements<TaskTypeSelector>()
+        val tasks: ConfigurationStatements<TaskSelector> = ConfigurationStatements<TaskSelector>()
 
-        private TopLevelBlock(BuildScriptBuilder builder) {
-            repositories = new RepositoriesBlock(builder);
-            testing = new TestingBlock(builder);
-            this.builder = builder;
-            this.dependencies = new DependenciesBlock(builder);
+        init {
+            repositories = RepositoriesBlock(builder)
+            testing = TestingBlock(builder)
+            this.dependencies = DependenciesBlock(builder)
         }
 
-        @Override
-        public void writeBodyTo(PrettyPrinter printer) {
-            printer.printStatement(pluginsManagement);
-            printer.printStatement(plugins);
-            printer.printStatement(dependencyResolutionManagement);
-            printer.printStatement(repositories);
-            printer.printStatement(dependencies);
-            if (builder.useTestSuites && !builder.getSuites().isEmpty()) {
-                printer.printStatement(testing);
+        override fun writeBodyTo(printer: PrettyPrinter) {
+            printer.printStatement(pluginsManagement)
+            printer.printStatement(plugins)
+            printer.printStatement(dependencyResolutionManagement)
+            printer.printStatement(repositories)
+            printer.printStatement(dependencies)
+            if (builder.isUsingTestSuites && !builder.suites.isEmpty()) {
+                printer.printStatement(testing)
             }
-            super.writeBodyTo(printer);
-            printer.printStatement(taskTypes);
-            for (SuiteSpec suite : testing.suites) {
-                if (!suite.isDefaultTestSuite()) {
-                    addCheckDependsOn(suite);
+            super.writeBodyTo(printer)
+            printer.printStatement(taskTypes)
+            for (suite in testing.suites) {
+                if (!suite.isDefaultTestSuite) {
+                    addCheckDependsOn(suite)
                 }
             }
-            printer.printStatement(tasks);
+            printer.printStatement(tasks)
         }
 
-        private void addCheckDependsOn(SuiteSpec suite) {
-            final ExpressionValue testSuites = expressionValue(builder.propertyExpression(builder.propertyExpression("testing"), "suites"));
+        fun addCheckDependsOn(suite: SuiteSpec) {
+            val testSuites: ExpressionValue = expressionValue(builder.propertyExpression(builder.propertyExpression("testing"), "suites"))
             if (builder.dsl == BuildInitDsl.GROOVY) {
-                final Expression suiteDependedUpon = builder.propertyExpression(testSuites, suite.getName());
-                builder.taskMethodInvocation("Include " + suite.getName() + " as part of the check lifecycle", "check", Task.class.getSimpleName(), "dependsOn", suiteDependedUpon);
+                val suiteDependedUpon = builder.propertyExpression(testSuites, suite.name)
+                builder.taskMethodInvocation("Include " + suite.name + " as part of the check lifecycle", "check", Task::class.java.getSimpleName(), "dependsOn", suiteDependedUpon)
             } else {
-                final ExpressionValue namedMethod = new MethodInvocationExpression(testSuites, "named", singletonList(new StringValue(suite.getName())));
-                builder.taskMethodInvocation("Include " + suite.getName() + " as part of the check lifecycle", "check", Task.class.getSimpleName(), "dependsOn", namedMethod);
+                val namedMethod: ExpressionValue = MethodInvocationExpression(
+                    testSuites, "named", mutableListOf<ExpressionValue>(
+                        StringValue(
+                            suite.name
+                        )
+                    )
+                )
+                builder.taskMethodInvocation("Include " + suite.name + " as part of the check lifecycle", "check", Task::class.java.getSimpleName(), "dependsOn", namedMethod)
             }
         }
 
-        public List<String> extractComments() {
-            final List<String> comments = new ArrayList<>();
-            collectComments(plugins.body.getStatements(), comments);
-            collectComments(repositories.body.getStatements(), comments);
-            collectComments(dependencies.getStatements(), comments);
-            for (Statement otherBlock : getStatements()) {
-                if (otherBlock instanceof BlockStatement) {
-                    collectComments(((BlockStatement) otherBlock).body.getStatements(), comments);
+        fun extractComments(): MutableList<String> {
+            val comments: MutableList<String> = ArrayList<String>()
+            collectComments(plugins.body.getStatements(), comments)
+            collectComments(repositories.body.getStatements(), comments)
+            collectComments(dependencies.getStatements(), comments)
+            for (otherBlock in getStatements()) {
+                if (otherBlock is BlockStatement) {
+                    collectComments(otherBlock.body.getStatements(), comments)
                 }
             }
-            collectComments(tasks.blocks.values(), comments);
-            return comments;
+            collectComments(tasks.blocks.values(), comments)
+            return comments
         }
 
-        private void collectComments(Collection<Statement> statements, List<String> comments) {
-            for (Statement statement : statements) {
-                if (statement.getComment() != null) {
-                    comments.add(statement.getComment());
+        fun collectComments(statements: MutableCollection<Statement>, comments: MutableList<String>) {
+            for (statement in statements) {
+                if (statement.comment != null) {
+                    comments.add(statement.comment!!)
                 }
             }
         }
 
-        public void includePluginsBuild() {
-            pluginsManagement.add(new MethodInvocation("Include 'plugins build' to define convention plugins.",
-                new MethodInvocationExpression(null, "includeBuild", expressionValues(PLUGINS_BUILD_LOCATION))));
+        fun includePluginsBuild() {
+            pluginsManagement.add(
+                MethodInvocation(
+                    "Include 'plugins build' to define convention plugins.",
+                    MethodInvocationExpression(null, "includeBuild", expressionValues(SimpleGlobalFilesBuildSettingsDescriptor.Companion.PLUGINS_BUILD_LOCATION))
+                )
+            )
         }
 
-        public void useVersionCatalogFromOuterBuild(String comment) {
-            BlockStatement vc = new BlockStatement(comment, "versionCatalogs");
-            vc.body.add(new MethodInvocation(null, new MethodInvocationExpression(null, "create", expressionValues("libs", new LiteralValue("{ from(files(\"../gradle/libs.versions.toml\")) }")))));
-            dependencyResolutionManagement.add(vc);
-        }
-    }
-
-    private static class TaskConfiguration implements Statement, ExpressionValue {
-        final String taskName;
-        final String taskType;
-        final String comment;
-        final ScriptBlockImpl body = new ScriptBlockImpl();
-
-        TaskConfiguration(@Nullable String comment, String taskName, String taskType) {
-            this.comment = comment;
-            this.taskName = taskName;
-            this.taskType = taskType;
-        }
-
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
-        }
-
-        @Override
-        public Type type() {
-            return Type.Group;
-        }
-
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(printer.syntax.taskConfiguration(taskName, taskType), body);
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.referenceTask(taskName);
+        fun useVersionCatalogFromOuterBuild(comment: String) {
+            val vc = BlockStatement(comment, "versionCatalogs")
+            vc.body.add(
+                BuildScriptBuilder.MethodInvocation(
+                    null,
+                    MethodInvocationExpression(null, "create", expressionValues("libs", LiteralValue("{ from(files(\"../gradle/libs.versions.toml\")) }")))
+                )
+            )
+            dependencyResolutionManagement.add(vc)
         }
     }
 
-    private static class TaskRegistration implements Statement, ExpressionValue {
-        final String taskName;
-        final String taskType;
-        final String comment;
-        final ScriptBlockImpl body = new ScriptBlockImpl();
+    private class TaskConfiguration(val comment: String?, val taskName: String, val taskType: String) : Statement, ExpressionValue {
+        val body: ScriptBlockImpl = ScriptBlockImpl()
 
-        TaskRegistration(@Nullable String comment, String taskName, String taskType) {
-            this.comment = comment;
-            this.taskName = taskName;
-            this.taskType = taskType;
+        override fun getComment(): String? {
+            return comment
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(printer.syntax.taskConfiguration(taskName, taskType)!!, body)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(printer.syntax.taskRegistration(taskName, taskType), body);
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.referenceTask(taskName);
+        override fun with(syntax: Syntax): String {
+            return syntax.referenceTask(taskName)
         }
     }
 
-    private static class SuiteConfiguration implements Statement, ExpressionValue {
-        final String suiteName;
-        final String suiteType;
-        final String comment;
-        final ScriptBlockImpl body = new ScriptBlockImpl();
+    private class TaskRegistration(val comment: String?, val taskName: String, val taskType: String) : Statement, ExpressionValue {
+        val body: ScriptBlockImpl = ScriptBlockImpl()
 
-        SuiteConfiguration(@Nullable String comment, String suiteName, String suiteType) {
-            this.comment = comment;
-            this.suiteName = suiteName;
-            this.suiteType = suiteType;
+        override fun getComment(): String? {
+            return comment
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(printer.syntax.taskRegistration(taskName, taskType)!!, body)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(printer.syntax.suiteConfiguration(suiteName, suiteType), body);
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.referenceSuite(suiteName);
+        override fun with(syntax: Syntax): String {
+            return syntax.referenceTask(taskName)
         }
     }
 
-    private static class SuiteRegistration implements Statement, ExpressionValue {
-        final String suiteName;
-        final String suiteType;
-        final String comment;
-        final ScriptBlockImpl body = new ScriptBlockImpl();
+    private class SuiteConfiguration(val comment: String?, val suiteName: String, val suiteType: String) : Statement, ExpressionValue {
+        val body: ScriptBlockImpl = ScriptBlockImpl()
 
-        SuiteRegistration(@Nullable String comment, String suiteName, String suiteType) {
-            this.comment = comment;
-            this.suiteName = suiteName;
-            this.suiteType = suiteType;
+        override fun getComment(): String? {
+            return comment
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return comment;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return Type.Group;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(printer.syntax.suiteConfiguration(suiteName, suiteType)!!, body)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            printer.printBlock(printer.syntax.suiteRegistration(suiteName, suiteType), body);
-        }
-
-        @Override
-        public String with(Syntax syntax) {
-            return syntax.referenceSuite(suiteName);
+        override fun with(syntax: Syntax): String {
+            return syntax.referenceSuite(suiteName)
         }
     }
 
-    private static class ConfigurationStatements<T extends ConfigSelector> implements Statement {
-        final ListMultimap<T, Statement> blocks = MultimapBuilder.linkedHashKeys().arrayListValues().build();
+    private class SuiteRegistration(val comment: String?, val suiteName: String, val suiteType: String) : Statement, ExpressionValue {
+        val body: ScriptBlockImpl = ScriptBlockImpl()
 
-        void add(T selector, Statement statement) {
-            blocks.put(selector, statement);
+        override fun getComment(): String? {
+            return comment
         }
 
-        @Nullable
-        @Override
-        public String getComment() {
-            return null;
+        override fun type(): Statement.Type {
+            return Statement.Type.Group
         }
 
-        @Override
-        public Type type() {
-            return blocks.isEmpty() ? Type.Empty : Type.Single;
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            printer.printBlock(printer.syntax.suiteRegistration(suiteName, suiteType)!!, body)
         }
 
-        @Override
-        public void writeCodeTo(PrettyPrinter printer) {
-            for (T configSelector : blocks.keySet()) {
-                String selector = configSelector.codeBlockSelectorFor(printer.syntax);
+        override fun with(syntax: Syntax): String {
+            return syntax.referenceSuite(suiteName)
+        }
+    }
+
+    private class ConfigurationStatements<T : ConfigSelector?> : Statement {
+        val blocks: ListMultimap<T?, Statement> = MultimapBuilder.linkedHashKeys().arrayListValues().build<T?, Statement>()
+
+        fun add(selector: T?, statement: Statement) {
+            blocks.put(selector, statement)
+        }
+
+        override fun getComment(): String? {
+            return null
+        }
+
+        override fun type(): Statement.Type {
+            return if (blocks.isEmpty()) Statement.Type.Empty else Statement.Type.Single
+        }
+
+        override fun writeCodeTo(printer: PrettyPrinter) {
+            for (configSelector in blocks.keySet()) {
+                val selector = configSelector!!.codeBlockSelectorFor(printer.syntax)
                 if (selector != null) {
-                    BlockStatement statement = new BlockStatement(selector);
-                    statement.body.statements.addAll(blocks.get(configSelector));
-                    printer.printStatement(statement);
+                    val statement = BlockStatement(selector)
+                    statement.body.statements.addAll(blocks.get(configSelector))
+                    printer.printStatement(statement)
                 } else {
-                    printer.printStatements(blocks.get(configSelector));
+                    printer.printStatements(blocks.get(configSelector))
                 }
             }
         }
     }
 
-    private static final class PrettyPrinter {
+    private class PrettyPrinter(private val syntax: Syntax, private val writer: PrintWriter, private val comments: BuildInitComments) {
+        private var indent = ""
+        private var eolComment: String? = null
+        private var commentCount = 0
+        private var needSeparatorLine = false
+        private var firstStatementOfBlock = true
+        private var hasSeparatorLine = false
 
-        private final Syntax syntax;
-        private final PrintWriter writer;
-        private final BuildInitComments comments;
-        private String indent = "";
-        private String eolComment = null;
-        private int commentCount = 0;
-        private boolean needSeparatorLine = false;
-        private boolean firstStatementOfBlock = true;
-        private boolean hasSeparatorLine = false;
-
-        PrettyPrinter(Syntax syntax, PrintWriter writer, BuildInitComments comments) {
-            this.syntax = syntax;
-            this.writer = writer;
-            this.comments = comments;
-        }
-
-        public void printFileHeader(Collection<String> lines) {
-            if (!comments.equals(BuildInitComments.ON)) {
-                return;
+        fun printFileHeader(lines: MutableCollection<String>) {
+            if (comments != BuildInitComments.ON) {
+                return
             }
 
-            println("/*");
-            println(" * This file was generated by the Gradle 'init' task.");
+            println("/*")
+            println(" * This file was generated by the Gradle 'init' task.")
             if (!lines.isEmpty()) {
-                println(" *");
-                for (String headerLine : lines) {
+                println(" *")
+                for (headerLine in lines) {
                     if (headerLine.isEmpty()) {
-                        println(" *");
+                        println(" *")
                     } else {
-                        println(" * " + headerLine);
+                        println(" * " + headerLine)
                     }
                 }
             }
-            println(" */");
+            println(" */")
 
-            firstStatementOfBlock = false;
-            needSeparatorLine = true;
+            firstStatementOfBlock = false
+            needSeparatorLine = true
         }
 
-        public void printBlock(String blockSelector, BlockBody blockBody) {
-            String indentBefore = indent;
+        fun printBlock(blockSelector: String, blockBody: BlockBody) {
+            val indentBefore = indent
 
-            println(blockSelector + " {");
-            indent = indent + "    ";
-            needSeparatorLine = false;
-            firstStatementOfBlock = true;
+            println(blockSelector + " {")
+            indent = indent + "    "
+            needSeparatorLine = false
+            firstStatementOfBlock = true
 
-            blockBody.writeBodyTo(this);
+            blockBody.writeBodyTo(this)
 
-            indent = indentBefore;
-            println("}");
+            indent = indentBefore
+            println("}")
 
             // Write a line separator after any block
-            needSeparatorLine = true;
+            needSeparatorLine = true
         }
 
-        public void printStatements(List<? extends Statement> statements) {
-            for (Statement statement : statements) {
-                printStatement(statement);
+        fun printStatements(statements: MutableList<out Statement>) {
+            for (statement in statements) {
+                printStatement(statement)
             }
         }
 
-        private void printStatementSeparator() {
+        fun printStatementSeparator() {
             if (needSeparatorLine && !hasSeparatorLine) {
-                println();
-                needSeparatorLine = false;
+                println()
+                needSeparatorLine = false
             }
         }
 
-        private void printStatement(Statement statement) {
-            Statement.Type type = statement.type();
+        fun printStatement(statement: Statement) {
+            val type = statement.type()
             if (type == Statement.Type.Empty) {
-                return;
+                return
             }
 
-            boolean hasComment = statement.getComment() != null;
+            val hasComment = statement.comment != null
 
             // Add separators before and after anything with a comment or that is a block or group of statements
-            boolean needsSeparator = type == Statement.Type.Group || (hasComment && comments.equals(BuildInitComments.ON));
+            val needsSeparator = type == Statement.Type.Group || (hasComment && comments == BuildInitComments.ON)
             if (needsSeparator && !firstStatementOfBlock) {
-                needSeparatorLine = true;
+                needSeparatorLine = true
             }
 
-            printStatementSeparator();
+            printStatementSeparator()
 
             if (hasComment) {
-                switch (comments) {
-                    case ON:
-                        for (String line : splitComment(statement.getComment())) {
-                            println("// " + line);
-                        }
-                        break;
-                    case OFF:
-                        break;
-                    case EXTERNAL:
-                        commentCount++;
-                        eolComment = " // <" + commentCount + ">";
-                        break;
+                when (comments) {
+                    BuildInitComments.ON -> for (line in Companion.splitComment(statement.comment!!)) {
+                        println("// " + line)
+                    }
+
+                    BuildInitComments.OFF -> {}
+                    BuildInitComments.EXTERNAL -> {
+                        commentCount++
+                        eolComment = " // <" + commentCount + ">"
+                    }
                 }
             }
 
-            statement.writeCodeTo(this);
+            statement.writeCodeTo(this)
 
-            firstStatementOfBlock = false;
+            firstStatementOfBlock = false
             if (needsSeparator) {
-                needSeparatorLine = true;
+                needSeparatorLine = true
             }
         }
 
-        private void println(String s) {
+        fun println(s: String) {
             if (!indent.isEmpty()) {
-                writer.print(indent);
+                writer.print(indent)
             }
             if (eolComment != null) {
-                writer.println(s + eolComment);
-                eolComment = null;
+                writer.println(s + eolComment)
+                eolComment = null
             } else {
-                writer.println(s);
+                writer.println(s)
             }
-            hasSeparatorLine = false;
+            hasSeparatorLine = false
         }
 
-        private void println() {
-            writer.println();
-            hasSeparatorLine = true;
+        fun println() {
+            writer.println()
+            hasSeparatorLine = true
         }
     }
 
     private interface Syntax {
+        fun pluginDependencySpec(pluginId: String, version: String?): String?
 
-        String pluginDependencySpec(String pluginId, @Nullable String version);
+        @Suppress("unused")
+        fun nestedPluginDependencySpec(pluginId: String, version: String?): String?
 
-        @SuppressWarnings("unused")
-        String nestedPluginDependencySpec(String pluginId, @Nullable String version);
+        fun pluginAliasSpec(alias: String): String?
 
-        String pluginAliasSpec(String alias);
+        fun dependencySpec(config: String, notation: String): String?
 
-        String dependencySpec(String config, String notation);
+        fun complexDependencySpec(config: String, notation: String): String?
 
-        String complexDependencySpec(String config, String notation);
+        fun propertyAssignment(expression: PropertyAssignment): String?
 
-        String propertyAssignment(PropertyAssignment expression);
+        fun taskSelector(selector: TaskSelector): String?
 
-        String taskSelector(TaskSelector selector);
+        fun taskByTypeSelector(taskType: String): String?
 
-        String taskByTypeSelector(String taskType);
+        fun string(string: String): String
 
-        String string(String string);
+        fun taskRegistration(taskName: String, taskType: String): String?
 
-        String taskRegistration(String taskName, String taskType);
+        fun taskConfiguration(taskName: String, taskType: String): String?
 
-        String taskConfiguration(String taskName, String taskType);
+        fun suiteRegistration(taskName: String, taskType: String): String?
 
-        String suiteRegistration(String taskName, String taskType);
+        fun suiteConfiguration(taskName: String, taskType: String): String?
 
-        String suiteConfiguration(String taskName, String taskType);
+        fun referenceTask(taskName: String): String
 
-        String referenceTask(String taskName);
+        fun referenceSuite(taskName: String): String
 
-        String referenceSuite(String taskName);
+        fun mapLiteral(map: MutableMap<String, ExpressionValue>): String
 
-        String mapLiteral(Map<String, ExpressionValue> map);
+        fun firstArg(argument: ExpressionValue): String?
 
-        String firstArg(ExpressionValue argument);
+        fun createContainerElement(comment: String?, container: String, elementName: String, elementType: String?, varName: String?, body: MutableList<Statement>): Statement
 
-        Statement createContainerElement(@Nullable String comment, String container, String elementName, @Nullable String elementType, @Nullable String varName, List<Statement> body);
+        fun referenceCreatedContainerElement(container: String, elementName: String, varName: String?): String
 
-        String referenceCreatedContainerElement(String container, String elementName, @Nullable String varName);
+        fun containerElement(container: String, element: String): String
 
-        String containerElement(String container, String element);
-
-        void configureConventionPlugin(@Nullable String comment, BlockStatement plugins, RepositoriesBlock repositories);
+        fun configureConventionPlugin(comment: String?, plugins: BlockStatement, repositories: RepositoriesBlock)
     }
 
-    private static final class KotlinSyntax implements Syntax {
-        @Override
-        public String string(String string) {
-            return '"' + escapeKotlinStringLiteral(string) + '"';
+    private class KotlinSyntax : Syntax {
+        override fun string(string: String): String {
+            return '"'.toString() + escapeKotlinStringLiteral(string) + '"'
         }
 
-        private String escapeKotlinStringLiteral(String string) {
+        fun escapeKotlinStringLiteral(string: String): String {
             return string
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
-                .replace("$", "\\$");
+                .replace("$", "\\$")
         }
 
-        @Override
-        public String mapLiteral(Map<String, ExpressionValue> map) {
-            StringBuilder builder = new StringBuilder();
-            builder.append("mapOf(");
-            boolean first = true;
-            for (Map.Entry<String, ExpressionValue> entry : map.entrySet()) {
+        override fun mapLiteral(map: MutableMap<String, ExpressionValue>): String {
+            val builder = StringBuilder()
+            builder.append("mapOf(")
+            var first = true
+            for (entry in map.entries) {
                 if (first) {
-                    first = false;
+                    first = false
                 } else {
-                    builder.append(", ");
+                    builder.append(", ")
                 }
-                builder.append(string(entry.getKey()));
-                builder.append(" to ");
-                builder.append(entry.getValue().with(this));
+                builder.append(string(entry.key))
+                builder.append(" to ")
+                builder.append(entry.value.with(this))
             }
-            builder.append(")");
-            return builder.toString();
+            builder.append(")")
+            return builder.toString()
         }
 
-        @Override
-        public String firstArg(ExpressionValue argument) {
-            return argument.with(this);
+        override fun firstArg(argument: ExpressionValue): String {
+            return argument.with(this)
         }
 
-        @Override
-        public String pluginDependencySpec(String pluginId, @Nullable String version) {
+        override fun pluginDependencySpec(pluginId: String, version: String?): String {
             if (version != null) {
-                return "id(\"" + pluginId + "\") version \"" + version + "\"";
+                return "id(\"" + pluginId + "\") version \"" + version + "\""
             } else if (pluginId.contains(".")) {
-                return "id(\"" + pluginId + "\")";
+                return "id(\"" + pluginId + "\")"
             }
-            return pluginId.matches("[a-z]+") ? pluginId : "`" + pluginId + "`";
+            return if (pluginId.matches("[a-z]+".toRegex())) pluginId else "`" + pluginId + "`"
         }
 
-        @Override
-        public String nestedPluginDependencySpec(String pluginId, @Nullable String version) {
+        override fun nestedPluginDependencySpec(pluginId: String, version: String?): String {
             if (version != null) {
-                throw new UnsupportedOperationException();
+                throw UnsupportedOperationException()
             }
-            return "plugins.apply(\"" + pluginId + "\")";
+            return "plugins.apply(\"" + pluginId + "\")"
         }
 
-        @Override
-        public String pluginAliasSpec(String alias) {
-            return "alias(" + alias + ")";
+        override fun pluginAliasSpec(alias: String): String {
+            return "alias(" + alias + ")"
         }
 
-        @Override
-        public String dependencySpec(String config, String notation) {
-            return config + "(" + notation + ")";
+        override fun dependencySpec(config: String, notation: String): String {
+            return config + "(" + notation + ")"
         }
 
-        @Override
-        public String complexDependencySpec(String config, String notation) {
-            return dependencySpec(config, notation);
+        override fun complexDependencySpec(config: String, notation: String): String {
+            return dependencySpec(config, notation)
         }
 
-        @Override
-        public String propertyAssignment(PropertyAssignment expression) {
-            String propertyName = expression.propertyName;
-            ExpressionValue propertyValue = expression.propertyValue;
+        override fun propertyAssignment(expression: PropertyAssignment): String {
+            val propertyName = expression.propertyName
+            val propertyValue = expression.propertyValue
             if (expression.assignOperator) {
-                if (propertyValue.isBooleanType()) {
-                    return booleanPropertyNameFor(propertyName) + " = " + propertyValue.with(this);
+                if (propertyValue.isBooleanType) {
+                    return booleanPropertyNameFor(propertyName) + " = " + propertyValue.with(this)
                 }
-                return propertyName + " = " + propertyValue.with(this);
+                return propertyName + " = " + propertyValue.with(this)
             } else {
-                return propertyName + ".set(" + propertyValue.with(this) + ")";
+                return propertyName + ".set(" + propertyValue.with(this) + ")"
             }
         }
 
@@ -2121,347 +1687,358 @@ public class BuildScriptBuilder {
         //
         // This code assumes all configurable Boolean property getters follow the `is` prefix convention.
         //
-        private String booleanPropertyNameFor(String propertyName) {
-            return "is" + StringUtils.capitalize(propertyName);
+        fun booleanPropertyNameFor(propertyName: String): String {
+            return "is" + StringUtils.capitalize(propertyName)
         }
 
-        @Override
-        public String taskSelector(TaskSelector selector) {
-            return "tasks.named<" + selector.taskType + ">(\"" + selector.taskName + "\")";
+        override fun taskSelector(selector: TaskSelector): String {
+            return "tasks.named<" + selector.taskType + ">(\"" + selector.taskName + "\")"
         }
 
-        @Override
-        public String taskByTypeSelector(String taskType) {
-            return "tasks.withType<" + taskType + ">()";
+        override fun taskByTypeSelector(taskType: String): String {
+            return "tasks.withType<" + taskType + ">()"
         }
 
-        @Override
-        public String taskRegistration(String taskName, String taskType) {
-            return "val " + taskName + " = tasks.register<" + taskType + ">(" + string(taskName) + ")";
+        override fun taskRegistration(taskName: String, taskType: String): String {
+            return "val " + taskName + " = tasks.register<" + taskType + ">(" + string(taskName) + ")"
         }
 
-        @Override
-        public String taskConfiguration(String taskName, String taskType) {
-            return "val " + taskName + " = tasks.named<" + taskType + ">(" + string(taskName) + ")";
+        override fun taskConfiguration(taskName: String, taskType: String): String {
+            return "val " + taskName + " = tasks.named<" + taskType + ">(" + string(taskName) + ")"
         }
 
-        @Override
-        public String suiteRegistration(String suiteName, String suiteType) {
-            return "val " + suiteName + " = register<" + suiteType + ">(" + string(suiteName) + ")";
+        override fun suiteRegistration(suiteName: String, suiteType: String): String {
+            return "val " + suiteName + " = register<" + suiteType + ">(" + string(suiteName) + ")"
         }
 
-        @Override
-        public String suiteConfiguration(String suiteName, String suiteType) {
-            return "val " + suiteName + " = named<" + suiteType + ">(" + string(suiteName) + ")";
+        override fun suiteConfiguration(suiteName: String, suiteType: String): String {
+            return "val " + suiteName + " = named<" + suiteType + ">(" + string(suiteName) + ")"
         }
 
-        @Override
-        public String referenceTask(String taskName) {
-            return taskName;
+        override fun referenceTask(taskName: String): String {
+            return taskName
         }
 
-        @Override
-        public String referenceSuite(String suiteName) {
-            return suiteName;
+        override fun referenceSuite(suiteName: String): String {
+            return suiteName
         }
 
-        @Override
-        public Statement createContainerElement(String comment, String container, String elementName, @Nullable String elementType, String varName, List<Statement> body) {
-            String literal = getLiteral(container, elementName, elementType, varName);
-            BlockStatement blockStatement = new ScriptBlock(comment, literal);
-            for (Statement statement : body) {
-                blockStatement.add(statement);
+        override fun createContainerElement(comment: String, container: String, elementName: String, elementType: String?, varName: String, body: MutableList<Statement>): Statement {
+            val literal = getLiteral(container, elementName, elementType, varName)
+            val blockStatement: BlockStatement = ScriptBlock(comment, literal)
+            for (statement in body) {
+                blockStatement.add(statement)
             }
-            return blockStatement;
+            return blockStatement
         }
 
-        @NonNull
-        private String getLiteral(String container, String elementName, @Nullable String elementType, String varName) {
+        fun getLiteral(container: String, elementName: String, elementType: String?, varName: String): String {
             if (varName == null) {
                 if (elementType == null) {
-                    return "val " + elementName + " = " + container + ".create(" + string(elementName) + ")";
+                    return "val " + elementName + " = " + container + ".create(" + string(elementName) + ")"
                 }
-                return container + ".create<" + elementType + ">(" + string(elementName) + ")";
+                return container + ".create<" + elementType + ">(" + string(elementName) + ")"
             }
             if (elementType == null) {
-                return "val " + varName + " = " + container + ".create(" + string(elementName) + ")";
+                return "val " + varName + " = " + container + ".create(" + string(elementName) + ")"
             }
-            return "val " + varName + " = " + container + ".create<" + elementType + ">(" + string(elementName) + ")";
+            return "val " + varName + " = " + container + ".create<" + elementType + ">(" + string(elementName) + ")"
         }
 
-        @Override
-        public String referenceCreatedContainerElement(String container, String elementName, String varName) {
+        override fun referenceCreatedContainerElement(container: String, elementName: String, varName: String): String {
             if (varName == null) {
-                return elementName;
+                return elementName
             } else {
-                return varName;
+                return varName
             }
         }
 
-        @Override
-        public String containerElement(String container, String element) {
-            return container + "[" + string(element) + "]";
+        override fun containerElement(container: String, element: String): String {
+            return container + "[" + string(element) + "]"
         }
 
-        @Override
-        public void configureConventionPlugin(@Nullable String comment, BlockStatement plugins, RepositoriesBlock repositories) {
-            plugins.add(new PluginSpec("kotlin-dsl", null, comment));
+        override fun configureConventionPlugin(comment: String?, plugins: BlockStatement, repositories: RepositoriesBlock) {
+            plugins.add(PluginSpec("kotlin-dsl", null, comment))
         }
     }
 
-    private static final class GroovySyntax implements Syntax {
-        @Override
-        public String string(String string) {
-            return "'" + escapeGroovyStringLiteral(string) + "'";
+    private class GroovySyntax : Syntax {
+        override fun string(string: String): String {
+            return "'" + escapeGroovyStringLiteral(string) + "'"
         }
 
-        private String escapeGroovyStringLiteral(String string) {
-            return string.replace("\\", "\\\\").replace("'", "\\'");
+        fun escapeGroovyStringLiteral(string: String): String {
+            return string.replace("\\", "\\\\").replace("'", "\\'")
         }
 
-        @Override
-        public String mapLiteral(Map<String, ExpressionValue> map) {
-            StringBuilder builder = new StringBuilder();
-            builder.append("[");
-            addEntries(map, builder);
-            builder.append("]");
-            return builder.toString();
+        override fun mapLiteral(map: MutableMap<String, ExpressionValue>): String {
+            val builder = StringBuilder()
+            builder.append("[")
+            addEntries(map, builder)
+            builder.append("]")
+            return builder.toString()
         }
 
-        private void addEntries(Map<String, ExpressionValue> map, StringBuilder builder) {
-            boolean first = true;
-            for (Map.Entry<String, ExpressionValue> entry : map.entrySet()) {
+        fun addEntries(map: MutableMap<String, ExpressionValue>, builder: StringBuilder) {
+            var first = true
+            for (entry in map.entries) {
                 if (first) {
-                    first = false;
+                    first = false
                 } else {
-                    builder.append(", ");
+                    builder.append(", ")
                 }
-                builder.append(entry.getKey());
-                builder.append(": ");
-                builder.append(entry.getValue().with(this));
+                builder.append(entry.key)
+                builder.append(": ")
+                builder.append(entry.value.with(this))
             }
         }
 
-        @Override
-        public String firstArg(ExpressionValue argument) {
-            if (argument instanceof MapLiteralValue) {
-                MapLiteralValue literalValue = (MapLiteralValue) argument;
-                StringBuilder builder = new StringBuilder();
-                addEntries(literalValue.literal, builder);
-                return builder.toString();
+        override fun firstArg(argument: ExpressionValue): String {
+            if (argument is MapLiteralValue) {
+                val literalValue = argument
+                val builder = StringBuilder()
+                addEntries(literalValue.literal, builder)
+                return builder.toString()
             } else {
-                return argument.with(this);
+                return argument.with(this)
             }
         }
 
-        @Override
-        public String pluginDependencySpec(String pluginId, @Nullable String version) {
+        override fun pluginDependencySpec(pluginId: String, version: String?): String {
             if (version != null) {
-                return "id '" + pluginId + "' version '" + version + "'";
+                return "id '" + pluginId + "' version '" + version + "'"
             }
-            return "id '" + pluginId + "'";
+            return "id '" + pluginId + "'"
         }
 
-        @Override
-        public String nestedPluginDependencySpec(String pluginId, @Nullable String version) {
+        override fun nestedPluginDependencySpec(pluginId: String, version: String?): String {
             if (version != null) {
-                throw new UnsupportedOperationException();
+                throw UnsupportedOperationException()
             }
-            return "apply plugin: '" + pluginId + "'";
+            return "apply plugin: '" + pluginId + "'"
         }
 
-        @Override
-        public String pluginAliasSpec(String alias) {
-            return "alias(" + alias + ")";
+        override fun pluginAliasSpec(alias: String): String {
+            return "alias(" + alias + ")"
         }
 
-        @Override
-        public String dependencySpec(String config, String notation) {
-            return config + " " + notation;
+        override fun dependencySpec(config: String, notation: String): String {
+            return config + " " + notation
         }
 
-        @Override
-        public String complexDependencySpec(String config, String notation) {
-            return config + "(" + notation + ")";
+        override fun complexDependencySpec(config: String, notation: String): String {
+            return config + "(" + notation + ")"
         }
 
-        @Override
-        public String propertyAssignment(PropertyAssignment expression) {
-            String propertyName = expression.propertyName;
-            ExpressionValue propertyValue = expression.propertyValue;
-            return propertyName + " = " + propertyValue.with(this);
+        override fun propertyAssignment(expression: PropertyAssignment): String {
+            val propertyName = expression.propertyName
+            val propertyValue = expression.propertyValue
+            return propertyName + " = " + propertyValue.with(this)
         }
 
-        @Override
-        public String taskSelector(TaskSelector selector) {
-            return "tasks.named('" + selector.taskName + "')";
+        override fun taskSelector(selector: TaskSelector): String {
+            return "tasks.named('" + selector.taskName + "')"
         }
 
-        @Override
-        public String taskByTypeSelector(String taskType) {
-            return "tasks.withType(" + taskType + ")";
+        override fun taskByTypeSelector(taskType: String): String {
+            return "tasks.withType(" + taskType + ")"
         }
 
-        @Override
-        public String taskRegistration(String taskName, String taskType) {
-            return "tasks.register('" + taskName + "', " + taskType + ")";
+        override fun taskRegistration(taskName: String, taskType: String): String {
+            return "tasks.register('" + taskName + "', " + taskType + ")"
         }
 
-        @Override
-        public String taskConfiguration(String taskName, String taskType) {
-            return taskName;
+        override fun taskConfiguration(taskName: String, taskType: String): String {
+            return taskName
         }
 
-        @Override
-        public String suiteRegistration(String suiteName, String suiteType) {
-            return suiteName + "(" + suiteType + ")";
+        override fun suiteRegistration(suiteName: String, suiteType: String): String {
+            return suiteName + "(" + suiteType + ")"
         }
 
-        @Override
-        public String suiteConfiguration(String suiteName, String suiteType) {
-            return suiteName;
+        override fun suiteConfiguration(suiteName: String, suiteType: String): String {
+            return suiteName
         }
 
-        @Override
-        public String referenceTask(String taskName) {
-            return "tasks." + taskName;
+        override fun referenceTask(taskName: String): String {
+            return "tasks." + taskName
         }
 
-        @Override
-        public String referenceSuite(String suiteName) {
-            return suiteName;
+        override fun referenceSuite(suiteName: String): String {
+            return suiteName
         }
 
-        @Override
-        public Statement createContainerElement(String comment, String container, String elementName, @Nullable String elementType, String varName, List<Statement> body) {
-            ScriptBlock outerBlock = new ScriptBlock(comment, container);
-            ScriptBlock innerBlock = new ScriptBlock(null, elementType == null ? elementName : elementName + "(" + elementType + ")");
-            outerBlock.add(innerBlock);
-            for (Statement statement : body) {
-                innerBlock.add(statement);
+        override fun createContainerElement(comment: String, container: String, elementName: String, elementType: String?, varName: String, body: MutableList<Statement>): Statement {
+            val outerBlock = ScriptBlock(comment, container)
+            val innerBlock = BuildScriptBuilder.ScriptBlock(null, if (elementType == null) elementName else elementName + "(" + elementType + ")")
+            outerBlock.add(innerBlock)
+            for (statement in body) {
+                innerBlock.add(statement)
             }
-            return outerBlock;
+            return outerBlock
         }
 
-        @Override
-        public String referenceCreatedContainerElement(String container, String elementName, String varName) {
-            return container + "." + elementName;
+        override fun referenceCreatedContainerElement(container: String, elementName: String, varName: String): String {
+            return container + "." + elementName
         }
 
-        @Override
-        public String containerElement(String container, String element) {
-            return container + "." + element;
+        override fun containerElement(container: String, element: String): String {
+            return container + "." + element
         }
 
-        @Override
-        public void configureConventionPlugin(@Nullable String comment, BlockStatement plugins, RepositoriesBlock repositories) {
-            plugins.add(new PluginSpec("groovy-gradle-plugin", null, comment));
+        override fun configureConventionPlugin(comment: String?, plugins: BlockStatement, repositories: RepositoriesBlock) {
+            plugins.add(PluginSpec("groovy-gradle-plugin", null, comment))
         }
     }
 
     private interface MavenRepositoryURLHandler {
-        void handleURL(URI repoLocation, PrettyPrinter printer);
+        fun handleURL(repoLocation: URI, printer: PrettyPrinter)
 
-        static MavenRepositoryURLHandler forInsecureProtocolOption(InsecureProtocolOption insecureProtocolOption, BuildInitDsl dsl, DocumentationRegistry documentationRegistry) {
-            switch (insecureProtocolOption) {
-                case FAIL:
-                    return new FailingHandler(documentationRegistry);
-                case WARN:
-                    return new WarningHandler(dsl, documentationRegistry);
-                case ALLOW:
-                    return new AllowingHandler();
-                case UPGRADE:
-                    return new UpgradingHandler();
-                default:
-                    throw new IllegalStateException(String.format("Unknown handler: '%s'.", insecureProtocolOption));
-            }
-        }
-
-        abstract class AbstractMavenRepositoryURLHandler implements MavenRepositoryURLHandler {
-            @Override
-            public void handleURL(URI repoLocation, PrettyPrinter printer) {
-                ScriptBlockImpl statements = new ScriptBlockImpl();
+        class AbstractMavenRepositoryURLHandler : MavenRepositoryURLHandler {
+            override fun handleURL(repoLocation: URI, printer: PrettyPrinter) {
+                val statements = ScriptBlockImpl()
 
                 if (GUtil.isSecureUrl(repoLocation)) {
-                    handleSecureURL(repoLocation, statements);
+                    handleSecureURL(repoLocation, statements)
                 } else {
-                    handleInsecureURL(repoLocation, statements);
+                    handleInsecureURL(repoLocation, statements)
                 }
 
-                printer.printBlock("maven", statements);
+                printer.printBlock("maven", statements)
             }
 
-            protected void handleSecureURL(URI repoLocation, BuildScriptBuilder.ScriptBlockImpl statements) {
-                statements.propertyAssignment(null, "url", new MethodInvocationExpression(null, "uri", singletonList(new StringValue(repoLocation.toString()))), true);
+            protected fun handleSecureURL(repoLocation: URI, statements: ScriptBlockImpl) {
+                statements.propertyAssignment(null, "url", MethodInvocationExpression(null, "uri", mutableListOf<ExpressionValue>(StringValue(repoLocation.toString()))), true)
             }
 
-            protected abstract void handleInsecureURL(URI repoLocation, BuildScriptBuilder.ScriptBlockImpl statements);
+            protected abstract fun handleInsecureURL(repoLocation: URI, statements: ScriptBlockImpl)
         }
 
-        class FailingHandler extends AbstractMavenRepositoryURLHandler {
-            private final DocumentationRegistry documentationRegistry;
-
-            public FailingHandler(DocumentationRegistry documentationRegistry) {
-                this.documentationRegistry = documentationRegistry;
-            }
-
-            @Override
-            protected void handleInsecureURL(URI repoLocation, ScriptBlockImpl statements) {
-                LOGGER.error("Gradle found an insecure protocol in a repository definition. The current strategy for handling insecure URLs is to fail. {}",
-                    documentationRegistry.getDocumentationRecommendationFor("options", "build_init_plugin", "sec:allow_insecure"));
-                throw new GradleException(String.format("Build generation aborted due to insecure protocol in repository: %s", repoLocation));
+        class FailingHandler(private val documentationRegistry: DocumentationRegistry) : AbstractMavenRepositoryURLHandler() {
+            override fun handleInsecureURL(repoLocation: URI, statements: ScriptBlockImpl) {
+                LOGGER.error(
+                    "Gradle found an insecure protocol in a repository definition. The current strategy for handling insecure URLs is to fail. {}",
+                    documentationRegistry.getDocumentationRecommendationFor("options", "build_init_plugin", "sec:allow_insecure")
+                )
+                throw GradleException(String.format("Build generation aborted due to insecure protocol in repository: %s", repoLocation))
             }
         }
 
-        class WarningHandler extends AbstractMavenRepositoryURLHandler {
-            private final BuildInitDsl dsl;
-            private final DocumentationRegistry documentationRegistry;
-
-            public WarningHandler(BuildInitDsl dsl, DocumentationRegistry documentationRegistry) {
-                this.dsl = dsl;
-                this.documentationRegistry = documentationRegistry;
-            }
-
-            @Override
-            protected void handleInsecureURL(URI repoLocation, BuildScriptBuilder.ScriptBlockImpl statements) {
-                LOGGER.warn("Gradle found an insecure protocol in a repository definition. You will have to opt into allowing insecure protocols in the generated build file. {}",
-                    documentationRegistry.getDocumentationRecommendationFor("information on how to do this", "build_init_plugin", "sec:allow_insecure"));
+        class WarningHandler(private val dsl: BuildInitDsl, private val documentationRegistry: DocumentationRegistry) : AbstractMavenRepositoryURLHandler() {
+            override fun handleInsecureURL(repoLocation: URI, statements: ScriptBlockImpl) {
+                LOGGER.warn(
+                    "Gradle found an insecure protocol in a repository definition. You will have to opt into allowing insecure protocols in the generated build file. {}",
+                    documentationRegistry.getDocumentationRecommendationFor("information on how to do this", "build_init_plugin", "sec:allow_insecure")
+                )
                 // use the insecure URL as-is
-                statements.propertyAssignment(null, "url", new BuildScriptBuilder.MethodInvocationExpression(null, "uri", singletonList(new BuildScriptBuilder.StringValue(repoLocation.toString()))), true);
+                statements.propertyAssignment(null, "url", MethodInvocationExpression(null, "uri", mutableListOf<ExpressionValue>(StringValue(repoLocation.toString()))), true)
                 // Leave a commented out block for opting into using the insecure repository
-                statements.comment(buildAllowInsecureProtocolComment(dsl));
+                statements.comment(buildAllowInsecureProtocolComment(dsl))
             }
 
-            private String buildAllowInsecureProtocolComment(BuildInitDsl dsl) {
-                final PropertyAssignment assignment = new PropertyAssignment(null, "allowInsecureProtocol", new BuildScriptBuilder.LiteralValue(true), true);
+            private fun buildAllowInsecureProtocolComment(dsl: BuildInitDsl): String {
+                val assignment = BuildScriptBuilder.PropertyAssignment(null, "allowInsecureProtocol", LiteralValue(true), true)
 
-                final StringWriter result = new StringWriter();
-                try (PrintWriter writer = new PrintWriter(result)) {
-                    PrettyPrinter printer = new PrettyPrinter(syntaxFor(dsl), writer, BuildInitComments.OFF);
-                    assignment.writeCodeTo(printer);
-                    return result.toString();
-                } catch (Exception e) {
-                    throw new GradleException("Could not write comment.", e);
+                val result = StringWriter()
+                try {
+                    PrintWriter(result).use { writer ->
+                        val printer = PrettyPrinter(syntaxFor(dsl), writer, BuildInitComments.OFF)
+                        assignment.writeCodeTo(printer)
+                        return result.toString()
+                    }
+                } catch (e: Exception) {
+                    throw GradleException("Could not write comment.", e)
                 }
             }
         }
 
-        class UpgradingHandler extends AbstractMavenRepositoryURLHandler {
-            @Override
-            protected void handleInsecureURL(URI repoLocation, BuildScriptBuilder.ScriptBlockImpl statements) {
+        class UpgradingHandler : AbstractMavenRepositoryURLHandler() {
+            override fun handleInsecureURL(repoLocation: URI, statements: ScriptBlockImpl) {
                 // convert the insecure url for this repository from http to https
-                final URI secureUri = GUtil.toSecureUrl(repoLocation);
-                statements.propertyAssignment(null, "url", new BuildScriptBuilder.MethodInvocationExpression(null, "uri", singletonList(new BuildScriptBuilder.StringValue(secureUri.toString()))), true);
+                val secureUri = GUtil.toSecureUrl(repoLocation)
+                statements.propertyAssignment(null, "url", MethodInvocationExpression(null, "uri", mutableListOf<ExpressionValue>(StringValue(secureUri.toString()))), true)
             }
         }
 
-        class AllowingHandler extends AbstractMavenRepositoryURLHandler {
-            @Override
-            protected void handleInsecureURL(URI repoLocation, BuildScriptBuilder.ScriptBlockImpl statements) {
+        class AllowingHandler : AbstractMavenRepositoryURLHandler() {
+            override fun handleInsecureURL(repoLocation: URI, statements: ScriptBlockImpl) {
                 // use the insecure URL as-is
-                statements.propertyAssignment(null, "url", new BuildScriptBuilder.MethodInvocationExpression(null, "uri", singletonList(new BuildScriptBuilder.StringValue(repoLocation.toString()))), true);
+                statements.propertyAssignment(null, "url", MethodInvocationExpression(null, "uri", mutableListOf<ExpressionValue>(StringValue(repoLocation.toString()))), true)
                 // Opt into using an insecure protocol with this repository
-                statements.propertyAssignment(null, "allowInsecureProtocol", new BuildScriptBuilder.LiteralValue(true), true);
+                statements.propertyAssignment(null, "allowInsecureProtocol", LiteralValue(true), true)
+            }
+        }
+
+        companion object {
+            fun forInsecureProtocolOption(insecureProtocolOption: InsecureProtocolOption, dsl: BuildInitDsl, documentationRegistry: DocumentationRegistry): MavenRepositoryURLHandler {
+                when (insecureProtocolOption) {
+                    InsecureProtocolOption.FAIL -> return FailingHandler(documentationRegistry)
+                    InsecureProtocolOption.WARN -> return WarningHandler(dsl, documentationRegistry)
+                    InsecureProtocolOption.ALLOW -> return AllowingHandler()
+                    InsecureProtocolOption.UPGRADE -> return UpgradingHandler()
+                    else -> throw IllegalStateException(String.format("Unknown handler: '%s'.", insecureProtocolOption))
+                }
+            }
+        }
+    }
+
+    companion object {
+        const val incubatingApisWarning: String = "This project uses @Incubating APIs which are subject to change."
+
+        private val LOGGER: Logger = LoggerFactory.getLogger(BuildScriptBuilder::class.java)
+
+        private fun splitComment(comment: String): MutableList<String> {
+            return Splitter.on("\n").splitToList(comment.trim { it <= ' ' })
+        }
+
+        private fun uriFromString(uriAsString: String): URI {
+            try {
+                return URI(uriAsString)
+            } catch (e: URISyntaxException) {
+                throw throwAsUncheckedException(e)
+            }
+        }
+
+        private fun expressionValues(vararg expressions: Any): MutableList<ExpressionValue> {
+            val result: MutableList<ExpressionValue> = ArrayList<ExpressionValue>(expressions.size)
+            for (expression in expressions) {
+                result.add(expressionValue(expression))
+            }
+            return result
+        }
+
+        private fun expressionMap(expressions: MutableMap<String, *>): MutableMap<String, ExpressionValue> {
+            val result = LinkedHashMap<String, ExpressionValue>()
+            for (entry in expressions.entries) {
+                result.put(entry.key, Companion.expressionValue(entry.value!!))
+            }
+            return result
+        }
+
+        private fun expressionValue(expression: Any): ExpressionValue {
+            if (expression is CharSequence) {
+                return StringValue(expression)
+            }
+            if (expression is ExpressionValue) {
+                return expression
+            }
+            if (expression is Number || expression is Boolean) {
+                return LiteralValue(expression)
+            }
+            if (expression is MutableMap<*, *>) {
+                return MapLiteralValue(Companion.expressionMap(uncheckedNonnullCast<MutableMap<String, *>?>(expression)!!))
+            }
+            if (expression is Enum<*>) {
+                return EnumValue(expression)
+            }
+            throw IllegalArgumentException("Don't know how to treat " + expression + " as an expression.")
+        }
+
+        private fun syntaxFor(dsl: BuildInitDsl): Syntax {
+            when (dsl) {
+                BuildInitDsl.KOTLIN -> return KotlinSyntax()
+                BuildInitDsl.GROOVY -> return GroovySyntax()
+                else -> throw IllegalStateException()
             }
         }
     }

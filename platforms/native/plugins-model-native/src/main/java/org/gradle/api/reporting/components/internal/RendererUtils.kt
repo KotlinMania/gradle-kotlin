@@ -13,48 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components.internal
 
-package org.gradle.api.reporting.components.internal;
+import org.gradle.api.Named
 
-import org.gradle.api.Named;
-
-import java.lang.reflect.Method;
-
-public class RendererUtils {
+object RendererUtils {
     /**
-     * Converts a value into a string. Never returns {@code null}.
+     * Converts a value into a string. Never returns `null`.
      *
-     * <p>Rules used to determine the string value:</p>
      *
-     * <ul>
-     *     <li>the {@code null} value is converted to the string {@code "null"},</li>
-     *     <li>if the value has a type that overrides {@link Object#toString()} then it is converted to {@code value.toString()},</li>
-     *     <li>if the value's type implements {@link Named} then it is converted to {@code value.getName()},</li>
-     *     <li>otherwise the return value of {@link Object#toString()} is used.</li>
-     * </ul>
+     * Rules used to determine the string value:
      *
-     * <p>The method returns the converted value, unless it is {@code null}, in which case the string {@code "null"} is returned instead.</p>
+     *
+     *  * the `null` value is converted to the string `"null"`,
+     *  * if the value has a type that overrides [Object.toString] then it is converted to `value.toString()`,
+     *  * if the value's type implements [Named] then it is converted to `value.getName()`,
+     *  * otherwise the return value of [Object.toString] is used.
+     *
+     *
+     *
+     * The method returns the converted value, unless it is `null`, in which case the string `"null"` is returned instead.
      */
-    public static String displayValueOf(Object value) {
-        String result = null;
+    fun displayValueOf(value: Any?): String {
+        var result: String? = null
         if (value != null) {
-            boolean hasCustomToString;
+            var hasCustomToString: Boolean
             try {
-                Method toString = value.getClass().getMethod("toString");
-                hasCustomToString = !toString.getDeclaringClass().equals(Object.class);
-            } catch (NoSuchMethodException ignore) {
-                hasCustomToString = false;
+                val toString = value.javaClass.getMethod("toString")
+                hasCustomToString = toString.getDeclaringClass() != Any::class.java
+            } catch (ignore: NoSuchMethodException) {
+                hasCustomToString = false
             }
 
-            if (!hasCustomToString && Named.class.isAssignableFrom(value.getClass())) {
-                result = ((Named) value).getName();
+            if (!hasCustomToString && Named::class.java.isAssignableFrom(value.javaClass)) {
+                result = (value as Named).getName()
             } else {
-                result = value.toString();
+                result = value.toString()
             }
         }
         if (result == null) {
-            result = "null";
+            result = "null"
         }
-        return result;
+        return result
     }
 }

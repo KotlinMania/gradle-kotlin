@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.file.ant;
+package org.gradle.api.internal.file.ant
 
-import org.apache.tools.ant.types.resources.FileResource;
+import org.apache.tools.ant.types.resources.FileResource
 
 /**
  * Unjiggers the FileResource.getName() method.
  */
-public class AntFileResource extends FileResource {
-    private String name;
+class AntFileResource : FileResource() {
+    private var name: String? = null
 
-    @Override
-    public void setName(String name) {
-        this.name = name;
+    override fun setName(name: String?) {
+        this.name = name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String? {
+        return name
     }
 }

@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.project.ant
 
-package org.gradle.api.internal.project.ant;
-
-public interface AntLoggingAdapterFactory {
-    AntLoggingAdapter create();
+interface AntLoggingAdapterFactory {
+    fun create(): AntLoggingAdapter?
 }

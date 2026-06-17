@@ -13,138 +13,148 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.language.cpp.CppApplication
+import org.gradle.language.cpp.CppComponent
+import org.gradle.language.cpp.CppExecutable
+import org.gradle.language.cpp.CppLibrary
+import org.gradle.language.cpp.CppSharedLibrary
+import org.gradle.language.cpp.CppStaticLibrary
+import org.gradle.language.cpp.internal.DefaultCppBinary
+import org.gradle.language.cpp.internal.DefaultCppLibrary
+import org.gradle.language.cpp.tasks.CppCompile
+import org.gradle.language.nativeplatform.ComponentWithExecutable
+import org.gradle.nativeplatform.internal.CompilerOutputFileNamingSchemeFactory
+import org.gradle.nativeplatform.tasks.LinkExecutable
+import org.gradle.nativeplatform.tasks.LinkSharedLibrary
+import org.gradle.nativeplatform.test.cpp.CppTestExecutable
+import org.gradle.nativeplatform.test.cpp.CppTestSuite
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
+import org.gradle.nativeplatform.toolchain.internal.ToolType
+import org.gradle.plugins.ide.internal.tooling.ToolingModelBuilderSupport.buildFromTask
+import org.gradle.plugins.ide.internal.tooling.model.LaunchableGradleTask
+import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier
+import org.gradle.tooling.model.cpp.CppProject
+import org.gradle.tooling.provider.model.ToolingModelBuilder
+import java.io.File
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.language.cpp.CppApplication;
-import org.gradle.language.cpp.CppBinary;
-import org.gradle.language.cpp.CppComponent;
-import org.gradle.language.cpp.CppExecutable;
-import org.gradle.language.cpp.CppLibrary;
-import org.gradle.language.cpp.CppSharedLibrary;
-import org.gradle.language.cpp.CppStaticLibrary;
-import org.gradle.language.cpp.internal.DefaultCppBinary;
-import org.gradle.language.cpp.internal.DefaultCppLibrary;
-import org.gradle.language.cpp.tasks.CppCompile;
-import org.gradle.language.nativeplatform.ComponentWithExecutable;
-import org.gradle.nativeplatform.internal.CompilerOutputFileNamingScheme;
-import org.gradle.nativeplatform.internal.CompilerOutputFileNamingSchemeFactory;
-import org.gradle.nativeplatform.tasks.LinkExecutable;
-import org.gradle.nativeplatform.tasks.LinkSharedLibrary;
-import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
-import org.gradle.nativeplatform.test.cpp.CppTestSuite;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.nativeplatform.toolchain.internal.tools.CommandLineToolSearchResult;
-import org.gradle.plugins.ide.internal.tooling.ToolingModelBuilderSupport;
-import org.gradle.plugins.ide.internal.tooling.model.LaunchableGradleTask;
-import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier;
-import org.gradle.tooling.model.cpp.CppProject;
-import org.gradle.tooling.provider.model.ToolingModelBuilder;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-public class CppModelBuilder implements ToolingModelBuilder {
-    @Override
-    public boolean canBuild(String modelName) {
-        return modelName.equals(CppProject.class.getName());
+class CppModelBuilder : ToolingModelBuilder {
+    override fun canBuild(modelName: String): Boolean {
+        return modelName == CppProject::class.java.getName()
     }
 
-    @Override
-    public Object buildAll(String modelName, Project project) {
-        DefaultProjectIdentifier projectIdentifier = new DefaultProjectIdentifier(project.getRootDir(), project.getPath());
-        CompilerOutputFileNamingSchemeFactory namingSchemeFactory = new CompilerOutputFileNamingSchemeFactory(((ProjectInternal) project).getFileResolver());
-        DefaultCppComponentModel mainComponent = null;
-        CppApplication application = project.getComponents().withType(CppApplication.class).findByName("main");
+    override fun buildAll(modelName: String, project: Project): Any? {
+        val projectIdentifier = DefaultProjectIdentifier(project.getRootDir(), project.getPath())
+        val namingSchemeFactory = CompilerOutputFileNamingSchemeFactory((project as ProjectInternal).getFileResolver())
+        var mainComponent: DefaultCppComponentModel? = null
+        val application = project.getComponents().withType<CppApplication?>(CppApplication::class.java).findByName("main")
         if (application != null) {
-            mainComponent = new DefaultCppApplicationModel(application.getName(), application.baseName.get(), binariesFor(application, application.privateHeaderDirs, projectIdentifier, namingSchemeFactory));
+            mainComponent =
+                DefaultCppApplicationModel(application.getName(), application.baseName.get(), binariesFor(application, application.privateHeaderDirs, projectIdentifier, namingSchemeFactory))
         } else {
-            DefaultCppLibrary library = (DefaultCppLibrary) project.getComponents().withType(CppLibrary.class).findByName("main");
+            val library = project.getComponents().withType<CppLibrary?>(CppLibrary::class.java).findByName("main") as DefaultCppLibrary?
             if (library != null) {
-                mainComponent = new DefaultCppLibraryModel(library.getName(), library.baseName.get(), binariesFor(library, library.getAllHeaderDirs(), projectIdentifier, namingSchemeFactory));
+                mainComponent = DefaultCppLibraryModel(library.getName(), library.baseName.get(), binariesFor(library, library.getAllHeaderDirs(), projectIdentifier, namingSchemeFactory))
             }
         }
-        DefaultCppComponentModel testComponent = null;
-        CppTestSuite testSuite = project.getComponents().withType(CppTestSuite.class).findByName("test");
+        var testComponent: DefaultCppComponentModel? = null
+        val testSuite = project.getComponents().withType<CppTestSuite?>(CppTestSuite::class.java).findByName("test")
         if (testSuite != null) {
-            testComponent = new DefaultCppTestSuiteModel(testSuite.getName(), testSuite.baseName.get(), binariesFor(testSuite, testSuite.privateHeaderDirs, projectIdentifier, namingSchemeFactory));
+            testComponent = DefaultCppTestSuiteModel(testSuite.getName(), testSuite.baseName.get(), binariesFor(testSuite, testSuite.privateHeaderDirs, projectIdentifier, namingSchemeFactory))
         }
-        return new DefaultCppProjectModel(projectIdentifier, mainComponent, testComponent);
+        return DefaultCppProjectModel(projectIdentifier, mainComponent, testComponent)
     }
 
-    private List<DefaultCppBinaryModel> binariesFor(CppComponent component, Iterable<File> headerDirs, DefaultProjectIdentifier projectIdentifier, CompilerOutputFileNamingSchemeFactory namingSchemeFactory) {
-        List<File> headerDirsCopy = ImmutableList.copyOf(headerDirs);
-        List<DefaultCppBinaryModel> binaries = new ArrayList<DefaultCppBinaryModel>();
-        for (CppBinary binary : component.getBinaries().get()) {
-            DefaultCppBinary cppBinary = (DefaultCppBinary) binary;
-            PlatformToolProvider platformToolProvider = cppBinary.platformToolProvider;
-            CppCompile compileTask = binary.compileTask.get();
-            List<DefaultSourceFile> sourceFiles = sourceFiles(namingSchemeFactory, platformToolProvider, compileTask.objectFileDir.get().getAsFile(), binary.cppSource.getFiles());
-            List<File> systemIncludes = ImmutableList.copyOf(compileTask.systemIncludes.getFiles());
-            List<File> userIncludes = ImmutableList.copyOf(compileTask.includes.getFiles());
-            List<DefaultMacroDirective> macroDefines = macroDefines(compileTask);
-            List<String> additionalArgs = args(compileTask.compilerArgs.get());
-            CommandLineToolSearchResult compilerLookup = platformToolProvider.locateTool(ToolType.CPP_COMPILER);
-            File compilerExe = compilerLookup.isAvailable ? compilerLookup.tool : null;
-            LaunchableGradleTask compileTaskModel = buildLaunchableTask(projectIdentifier, compileTask);
-            DefaultCompilationDetails compilationDetails = new DefaultCompilationDetails(compileTaskModel, compilerExe, compileTask.objectFileDir.get().getAsFile(), sourceFiles, headerDirsCopy,  systemIncludes, userIncludes, macroDefines, additionalArgs);
-            if (binary instanceof CppExecutable || binary instanceof CppTestExecutable) {
-                ComponentWithExecutable componentWithExecutable = (ComponentWithExecutable) binary;
-                LinkExecutable linkTask = componentWithExecutable.linkTask.get();
-                LaunchableGradleTask linkTaskModel = buildLaunchableTask(projectIdentifier, componentWithExecutable.executableFileProducer.get());
-                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, componentWithExecutable.executableFile.get().getAsFile(), args(linkTask.linkerArgs.get()));
-                binaries.add(new DefaultCppExecutableModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails));
-            } else if (binary instanceof CppSharedLibrary) {
-                CppSharedLibrary sharedLibrary = (CppSharedLibrary) binary;
-                LinkSharedLibrary linkTask = sharedLibrary.linkTask.get();
-                LaunchableGradleTask linkTaskModel = buildLaunchableTask(projectIdentifier, sharedLibrary.linkFileProducer.get());
-                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, sharedLibrary.linkFile.get().getAsFile(), args(linkTask.linkerArgs.get()));
-                binaries.add(new DefaultCppSharedLibraryModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails));
-            } else if (binary instanceof CppStaticLibrary) {
-                CppStaticLibrary staticLibrary = (CppStaticLibrary) binary;
-                LaunchableGradleTask createTaskModel = buildLaunchableTask(projectIdentifier, staticLibrary.linkFileProducer.get());
-                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(createTaskModel, staticLibrary.linkFile.get().getAsFile(), Collections.<String>emptyList());
-                binaries.add(new DefaultCppStaticLibraryModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails));
+    private fun binariesFor(
+        component: CppComponent,
+        headerDirs: Iterable<File?>,
+        projectIdentifier: DefaultProjectIdentifier?,
+        namingSchemeFactory: CompilerOutputFileNamingSchemeFactory
+    ): MutableList<DefaultCppBinaryModel?> {
+        val headerDirsCopy: MutableList<File?> = ImmutableList.copyOf<File?>(headerDirs)
+        val binaries: MutableList<DefaultCppBinaryModel?> = ArrayList<DefaultCppBinaryModel?>()
+        for (binary in component.getBinaries()!!.get()!!) {
+            val cppBinary = binary as DefaultCppBinary?
+            val platformToolProvider = cppBinary!!.platformToolProvider
+            val compileTask: CppCompile = binary.compileTask.get()
+            val sourceFiles = sourceFiles(namingSchemeFactory, platformToolProvider!!, compileTask.objectFileDir.get().getAsFile(), binary.cppSource.getFiles())
+            val systemIncludes: MutableList<File?> = ImmutableList.copyOf(compileTask.systemIncludes!!.getFiles())
+            val userIncludes: MutableList<File?> = ImmutableList.copyOf(compileTask.includes!!.getFiles())
+            val macroDefines = macroDefines(compileTask)
+            val additionalArgs = args(compileTask.compilerArgs.get())
+            val compilerLookup = platformToolProvider.locateTool(ToolType.CPP_COMPILER)
+            val compilerExe: File? = if (compilerLookup!!.isAvailable) compilerLookup.tool else null
+            val compileTaskModel: LaunchableGradleTask? = buildLaunchableTask(projectIdentifier, compileTask)
+            val compilationDetails = DefaultCompilationDetails(
+                compileTaskModel,
+                compilerExe,
+                compileTask.objectFileDir.get().getAsFile(),
+                sourceFiles,
+                headerDirsCopy,
+                systemIncludes,
+                userIncludes,
+                macroDefines,
+                additionalArgs
+            )
+            if (binary is CppExecutable || binary is CppTestExecutable) {
+                val componentWithExecutable = binary as ComponentWithExecutable
+                val linkTask: LinkExecutable = componentWithExecutable.linkTask.get()
+                val linkTaskModel: LaunchableGradleTask? = Companion.buildLaunchableTask(projectIdentifier, componentWithExecutable.executableFileProducer.get())
+                val linkageDetails = DefaultLinkageDetails(linkTaskModel, componentWithExecutable.executableFile.get().getAsFile(), args(linkTask.linkerArgs.get()))
+                binaries.add(DefaultCppExecutableModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails))
+            } else if (binary is CppSharedLibrary) {
+                val sharedLibrary = binary as CppSharedLibrary
+                val linkTask: LinkSharedLibrary = sharedLibrary.linkTask.get()
+                val linkTaskModel: LaunchableGradleTask? = Companion.buildLaunchableTask(projectIdentifier, sharedLibrary.linkFileProducer.get())
+                val linkageDetails = DefaultLinkageDetails(linkTaskModel, sharedLibrary.linkFile.get().getAsFile(), args(linkTask.linkerArgs.get()))
+                binaries.add(DefaultCppSharedLibraryModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails))
+            } else if (binary is CppStaticLibrary) {
+                val staticLibrary = binary as CppStaticLibrary
+                val createTaskModel: LaunchableGradleTask? = Companion.buildLaunchableTask(projectIdentifier, staticLibrary.linkFileProducer.get())
+                val linkageDetails = DefaultLinkageDetails(createTaskModel, staticLibrary.linkFile.get().getAsFile(), mutableListOf<String?>())
+                binaries.add(DefaultCppStaticLibraryModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails))
             }
         }
-        return binaries;
+        return binaries
     }
 
-    private static LaunchableGradleTask buildLaunchableTask(DefaultProjectIdentifier projectIdentifier, Task task) {
-        return ToolingModelBuilderSupport.buildFromTask(new LaunchableGradleTask(), projectIdentifier, task);
-    }
-
-    private List<DefaultSourceFile> sourceFiles(CompilerOutputFileNamingSchemeFactory namingSchemeFactory, PlatformToolProvider platformToolProvider, File objDir, Set<File> files) {
-        CompilerOutputFileNamingScheme namingScheme = namingSchemeFactory.create().withObjectFileNameSuffix(platformToolProvider.objectFileExtension).withOutputBaseFolder(objDir);
-        List<DefaultSourceFile> result = new ArrayList<DefaultSourceFile>(files.size());
-        for (File file : files) {
-            result.add(new DefaultSourceFile(file, namingScheme.map(file)));
+    private fun sourceFiles(
+        namingSchemeFactory: CompilerOutputFileNamingSchemeFactory,
+        platformToolProvider: PlatformToolProvider,
+        objDir: File?,
+        files: MutableSet<File>
+    ): MutableList<DefaultSourceFile?> {
+        val namingScheme = namingSchemeFactory.create().withObjectFileNameSuffix(platformToolProvider.objectFileExtension).withOutputBaseFolder(objDir)
+        val result: MutableList<DefaultSourceFile?> = ArrayList<DefaultSourceFile?>(files.size)
+        for (file in files) {
+            result.add(DefaultSourceFile(file, namingScheme.map(file)))
         }
-        return result;
+        return result
     }
 
-    private List<String> args(List<String> compilerArgs) {
-        return ImmutableList.copyOf(compilerArgs);
+    private fun args(compilerArgs: MutableList<String?>): MutableList<String?> {
+        return ImmutableList.copyOf<String?>(compilerArgs)
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<DefaultMacroDirective> macroDefines(CppCompile compileTask) {
+    private fun macroDefines(compileTask: CppCompile): MutableList<DefaultMacroDirective?> {
         if (compileTask.getMacros().isEmpty()) {
-            return Collections.emptyList();
+            return mutableListOf<DefaultMacroDirective?>()
         }
-        List<DefaultMacroDirective> macros = new ArrayList<DefaultMacroDirective>(compileTask.getMacros().size());
-        for (Map.Entry<String, String> entry : compileTask.getMacros().entrySet()) {
-            macros.add(new DefaultMacroDirective(entry.getKey(), entry.getValue()));
+        val macros: MutableList<DefaultMacroDirective?> = ArrayList<DefaultMacroDirective?>(compileTask.getMacros().size)
+        for (entry in compileTask.getMacros().entries) {
+            macros.add(DefaultMacroDirective(entry.key, entry.value))
         }
-        return macros;
+        return macros
+    }
+
+    companion object {
+        private fun buildLaunchableTask(projectIdentifier: DefaultProjectIdentifier?, task: Task): LaunchableGradleTask? {
+            return buildFromTask<LaunchableGradleTask?>(LaunchableGradleTask(), projectIdentifier, task)
+        }
     }
 }

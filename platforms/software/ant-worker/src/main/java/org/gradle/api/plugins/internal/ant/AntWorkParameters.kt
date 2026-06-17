@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.plugins.internal.ant
 
-package org.gradle.api.plugins.internal.ant;
+import org.gradle.workers.WorkParameters
 
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.workers.WorkParameters;
-
-public interface AntWorkParameters extends WorkParameters {
-    ConfigurableFileCollection getAntLibraryClasspath();
+interface AntWorkParameters : WorkParameters {
+    val antLibraryClasspath: ConfigurableFileCollection?
 }

@@ -13,68 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.api.Action;
-import org.gradle.internal.Factory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.classpath.ClassPath;
-import org.gradle.internal.concurrent.Stoppable;
-import org.gradle.internal.groovyloader.GroovySystemLoader;
-import org.gradle.internal.groovyloader.GroovySystemLoaderFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import org.gradle.api.Action
+import org.gradle.internal.Factory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.classpath.ClassPath
+import org.gradle.internal.concurrent.Stoppable
+import org.gradle.internal.groovyloader.GroovySystemLoader
+import org.gradle.internal.groovyloader.GroovySystemLoaderFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * A cache which caches classloaders based on their classpath. This cache provides bridging with the classloader cleanup mechanism which makes it more complex than it should: - class loaders can be
  * reused, so they *must not* be cleared as long as a cached loader is in cache - once a classloader is discarded from the cache, it must be cleared using a cleanup strategy
  *
- * It is important that the cleanup only occurs when nobody uses the classloader anymore, which means when no consumer retains a strong reference onto a {@link CachedClassLoader}. If we directly put
+ * It is important that the cleanup only occurs when nobody uses the classloader anymore, which means when no consumer retains a strong reference onto a [CachedClassLoader]. If we directly put
  * the cached classloader as a value of the map, then it cannot be reclaimed, and will never be cleaned up. If we just use a SoftReference to the cached class loader, then the reference will be
  * cleared before we have a chance to clean it up. So we use a PhantomReference to the cached class loader, in addition to the soft reference, to finalize the class loader before it gets kicked off
  * the cache.
  */
-class ClassPathToClassLoaderCache implements Stoppable {
-    private final static Logger LOG = LoggerFactory.getLogger(ClassPathToClassLoaderCache.class);
-
-    private final FinalizerThread finalizerThread;
+internal class ClassPathToClassLoaderCache(private val groovySystemLoaderFactory: GroovySystemLoaderFactory) : Stoppable {
+    private val finalizerThread: FinalizerThread
 
     // Protects the following fields
-    private final Lock lock = new ReentrantLock();
-    private final Map<ClassPath, CacheEntry> cacheEntries = new ConcurrentHashMap<>();
-    private final Set<CachedClassLoader> inUseClassLoaders = new HashSet<>();
-    private final GroovySystemLoaderFactory groovySystemLoaderFactory;
+    private val lock: Lock = ReentrantLock()
+    private val cacheEntries: MutableMap<ClassPath?, CacheEntry?> = ConcurrentHashMap<ClassPath?, CacheEntry?>()
+    private val inUseClassLoaders: MutableSet<CachedClassLoader?> = HashSet<CachedClassLoader?>()
 
-    public ClassPathToClassLoaderCache(GroovySystemLoaderFactory groovySystemLoaderFactory) {
-        this.groovySystemLoaderFactory = groovySystemLoaderFactory;
-        this.finalizerThread = new FinalizerThread(cacheEntries, lock);
-        this.finalizerThread.start();
+    init {
+        this.finalizerThread = FinalizerThread(cacheEntries, lock)
+        this.finalizerThread.start()
     }
 
-    @Override
-    public void stop() {
-        finalizerThread.exit();
+    override fun stop() {
+        finalizerThread.exit()
         try {
-            finalizerThread.join();
-        } catch (InterruptedException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            finalizerThread.join()
+        } catch (e: InterruptedException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    public int size() {
-        return cacheEntries.size();
+    fun size(): Int {
+        return cacheEntries.size
     }
 
-    public boolean isEmpty() {
-        return cacheEntries.isEmpty();
-    }
+    val isEmpty: Boolean
+        get() = cacheEntries.isEmpty()
 
     /**
      * Provides execution of arbitrary code that consumes a cached class loader in a memory safe manner,
@@ -95,56 +85,61 @@ class ClassPathToClassLoaderCache implements Stoppable {
      * @param factory the factory to create a new class loader on cache miss
      * @param action the action to execute with the cached class loader
      */
-    public void withCachedClassLoader(ClassPath libClasspath,
-                                      GroovySystemLoader gradleApiGroovy,
-                                      GroovySystemLoader antBuilderAdapterGroovy,
-                                      Factory<? extends ClassLoader> factory,
-                                      Action<? super CachedClassLoader> action) {
-        CachedClassLoader cachedClassLoader;
-        lock.lock();
+    fun withCachedClassLoader(
+        libClasspath: ClassPath,
+        gradleApiGroovy: GroovySystemLoader?,
+        antBuilderAdapterGroovy: GroovySystemLoader?,
+        factory: Factory<out ClassLoader?>,
+        action: Action<in CachedClassLoader?>
+    ) {
+        var cachedClassLoader: CachedClassLoader?
+        lock.lock()
         try {
-            CacheEntry cacheEntry = cacheEntries.get(libClasspath);
-            cachedClassLoader = maybeGet(cacheEntry);
+            var cacheEntry = cacheEntries.get(libClasspath)
+            cachedClassLoader = maybeGet(cacheEntry)
             if (cachedClassLoader == null) {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Classloader cache miss for classpath : {}. Creating classloader.", libClasspath.getAsURIs());
+                    LOG.debug("Classloader cache miss for classpath : {}. Creating classloader.", libClasspath.getAsURIs())
                 }
                 // Lock is held while creating ClassLoader - nothing else can happen while this is running
-                ClassLoader classLoader = factory.create();
-                cachedClassLoader = new CachedClassLoader(libClasspath, classLoader);
-                cacheEntry = new CacheEntry(libClasspath, cachedClassLoader);
-                GroovySystemLoader groovySystemForLoader = groovySystemLoaderFactory.forClassLoader(classLoader);
-                Cleanup cleanup = new Cleanup(libClasspath, cachedClassLoader, finalizerThread.getReferenceQueue(), classLoader, groovySystemForLoader, gradleApiGroovy, antBuilderAdapterGroovy);
-                finalizerThread.putCleanup(libClasspath, cleanup);
-                cacheEntries.put(libClasspath, cacheEntry);
+                val classLoader: ClassLoader? = factory.create()
+                cachedClassLoader = CachedClassLoader(libClasspath, classLoader)
+                cacheEntry = CacheEntry(libClasspath, cachedClassLoader)
+                val groovySystemForLoader = groovySystemLoaderFactory.forClassLoader(classLoader!!)
+                val cleanup = Cleanup(libClasspath, cachedClassLoader, finalizerThread.getReferenceQueue(), classLoader, groovySystemForLoader, gradleApiGroovy, antBuilderAdapterGroovy)
+                finalizerThread.putCleanup(libClasspath, cleanup)
+                cacheEntries.put(libClasspath, cacheEntry)
             } else {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Classloader found in cache: {}", libClasspath.getAsURIs());
+                    LOG.debug("Classloader found in cache: {}", libClasspath.getAsURIs())
                 }
             }
 
             // in order to make sure that the CacheEntry is not collected
             // while the cached class loader is still in use, we need to keep a strong reference onto
             // the cached class loader as long as the action is executed
-            inUseClassLoaders.add(cachedClassLoader);
+            inUseClassLoaders.add(cachedClassLoader)
         } finally {
-            lock.unlock();
+            lock.unlock()
         }
 
         try {
-            action.execute(cachedClassLoader);
+            action.execute(cachedClassLoader)
         } finally {
-            lock.lock();
+            lock.lock()
             try {
-                inUseClassLoaders.remove(cachedClassLoader);
+                inUseClassLoaders.remove(cachedClassLoader)
             } finally {
-                lock.unlock();
+                lock.unlock()
             }
         }
     }
 
-    private CachedClassLoader maybeGet(CacheEntry cacheEntry) {
-        return cacheEntry != null ? cacheEntry.get() : null;
+    private fun maybeGet(cacheEntry: CacheEntry?): CachedClassLoader? {
+        return if (cacheEntry != null) cacheEntry.get() else null
     }
 
+    companion object {
+        private val LOG: Logger = LoggerFactory.getLogger(ClassPathToClassLoaderCache::class.java)
+    }
 }

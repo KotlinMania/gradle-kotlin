@@ -13,29 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.nativeplatform.BuildType;
+import org.gradle.nativeplatform.BuildType
 
-public class DefaultBuildType implements BuildType {
-    private final String name;
-
-    public DefaultBuildType(String name) {
-        this.name = name;
+class DefaultBuildType(private val name: String) : BuildType {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
-    }
-
-    @Override
-    public String getDisplayName() {
-        return "build type '" + name + "'";
+    override fun getDisplayName(): String {
+        return "build type '" + name + "'"
     }
 }

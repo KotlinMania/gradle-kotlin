@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import org.gradle.tooling.internal.protocol.cpp.InternalCppTestSuite
 
-import org.gradle.tooling.internal.protocol.cpp.InternalCppTestSuite;
-
-import java.util.List;
-
-public class DefaultCppTestSuiteModel extends DefaultCppComponentModel implements InternalCppTestSuite {
-    public DefaultCppTestSuiteModel(String name, String baseName, List<DefaultCppBinaryModel> binaries) {
-        super(name, baseName, binaries);
-    }
-}
+class DefaultCppTestSuiteModel(name: String?, baseName: String?, binaries: MutableList<DefaultCppBinaryModel?>?) : DefaultCppComponentModel(name, baseName, binaries), InternalCppTestSuite

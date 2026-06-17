@@ -13,50 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins
 
-package org.gradle.buildinit.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices;
-import org.gradle.api.provider.Provider;
-import org.gradle.buildinit.InsecureProtocolOption;
-import org.gradle.buildinit.tasks.InitBuild;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.plugins.jvm.internal.JvmPluginServices
+import org.gradle.api.provider.Provider
+import org.gradle.buildinit.InsecureProtocolOption
+import org.gradle.buildinit.tasks.InitBuild
 
 /**
  * The build init plugin.
  *
- * @see <a href="https://docs.gradle.org/current/userguide/build_init_plugin.html">Build Init plugin reference</a>
+ * @see [Build Init plugin reference](https://docs.gradle.org/current/userguide/build_init_plugin.html)
  */
-public abstract class BuildInitPlugin implements Plugin<Project> {
-
-    private static final String COMMENTS_PROPERTY = "org.gradle.buildinit.comments";
-
-    @Override
-    public void apply(Project project) {
+abstract class BuildInitPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
         if (project.getParent() == null) {
-            project.getTasks().register("init", InitBuild.class, initBuild -> {
-                initBuild.setGroup("Build Setup");
-                initBuild.setDescription("Initializes a new Gradle build.");
+            project.getTasks().register<InitBuild?>("init", InitBuild::class.java, Action { initBuild: InitBuild? ->
+                initBuild!!.setGroup("Build Setup")
+                initBuild.setDescription("Initializes a new Gradle build.")
 
-                ProjectInternal projectInternal = (ProjectInternal) project;
+                val projectInternal = project as ProjectInternal
 
-                ProjectInternal.DetachedResolver detachedResolver = projectInternal.newDetachedResolver();
+                val detachedResolver = projectInternal.newDetachedResolver()
                 initBuild.getProjectLayoutRegistry().getBuildConverter().configureClasspath(
-                    detachedResolver, project.getObjects(), projectInternal.getServices().get(JvmPluginServices.class));
+                    detachedResolver, project.getObjects(), projectInternal.getServices().get<JvmPluginServices?>(JvmPluginServices::class.java)!!
+                )
 
-                initBuild.getUseDefaults().convention(false);
-                initBuild.getInsecureProtocol().convention(InsecureProtocolOption.WARN);
-                initBuild.getAllowFileOverwrite().convention(false);
-                initBuild.getComments().convention(getCommentsProperty(project).orElse(true));
-                initBuild.getProjectDirectory().convention(project.getLayout().getProjectDirectory());
-            });
+                initBuild.getUseDefaults().convention(false)
+                initBuild.getInsecureProtocol().convention(InsecureProtocolOption.WARN)
+                initBuild.getAllowFileOverwrite().convention(false)
+                initBuild.getComments().convention(getCommentsProperty(project).orElse(true))
+                initBuild.getProjectDirectory().convention(project.getLayout().getProjectDirectory())
+            })
         }
     }
 
-    private static Provider<Boolean> getCommentsProperty(Project project) {
-        return project.getProviders().gradleProperty(COMMENTS_PROPERTY).map(SerializableLambdas.transformer(Boolean::parseBoolean));
+    companion object {
+        private const val COMMENTS_PROPERTY = "org.gradle.buildinit.comments"
+
+        private fun getCommentsProperty(project: Project): Provider<Boolean?> {
+            return project.getProviders().gradleProperty(COMMENTS_PROPERTY)
+                .map<Boolean?>(SerializableLambdas.transformer<Boolean?, String?>(SerializableLambdas.SerializableTransformer { s: String? -> s.toBoolean() }))
+        }
     }
 }

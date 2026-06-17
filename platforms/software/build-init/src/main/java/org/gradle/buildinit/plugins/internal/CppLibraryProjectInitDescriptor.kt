@@ -13,52 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-
-public class CppLibraryProjectInitDescriptor extends CppProjectInitDescriptor {
-    public CppLibraryProjectInitDescriptor(TemplateOperationFactory templateOperationFactory, DocumentationRegistry documentationRegistry) {
-        super(templateOperationFactory, documentationRegistry);
+class CppLibraryProjectInitDescriptor(templateOperationFactory: TemplateOperationFactory, documentationRegistry: DocumentationRegistry) :
+    CppProjectInitDescriptor(templateOperationFactory, documentationRegistry) {
+    override fun getId(): String {
+        return "cpp-library"
     }
 
-    @Override
-    public String getId() {
-        return "cpp-library";
+    override fun getComponentType(): ComponentType {
+        return ComponentType.LIBRARY
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.LIBRARY;
+    override fun sourceTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cpplibrary/hello.cpp.template", settings, "main", "cpp")
     }
 
-    @Override
-    protected TemplateOperation sourceTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cpplibrary/hello.cpp.template", settings, "main", "cpp");
+    override fun headerTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cpplibrary/hello.h.template", settings.getProjectName() + ".h", settings, "main", "public")
     }
 
-    @Override
-    protected TemplateOperation headerTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cpplibrary/hello.h.template", settings.getProjectName() + ".h", settings, "main", "public");
+    override fun testTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cpplibrary/hello_test.cpp.template", settings, "test", "cpp")
     }
 
-    @Override
-    protected TemplateOperation testTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cpplibrary/hello_test.cpp.template", settings, "test", "cpp");
-    }
-
-    @Override
-    protected void configureBuildScript(InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun configureBuildScript(settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
         buildScriptBuilder
             .plugin(
                 "Apply the cpp-library plugin to add support for building C++ libraries",
-                "cpp-library")
-            .plugin("Apply the cpp-unit-test plugin to add support for building and running C++ test executables",
-                "cpp-unit-test")
-            .block(null,
+                "cpp-library"
+            )
+            .plugin(
+                "Apply the cpp-unit-test plugin to add support for building and running C++ test executables",
+                "cpp-unit-test"
+            )
+            .block(
+                null,
                 "library",
-                b -> b.methodInvocation("Set the target operating system and architecture for this library", "targetMachines.add", buildScriptBuilder.propertyExpression(getHostTargetMachineDefinition())));
+                Action { b: ScriptBlockBuilder? ->
+                    b!!.methodInvocation(
+                        "Set the target operating system and architecture for this library",
+                        "targetMachines.add",
+                        buildScriptBuilder.propertyExpression(getHostTargetMachineDefinition())
+                    )
+                })
     }
 }

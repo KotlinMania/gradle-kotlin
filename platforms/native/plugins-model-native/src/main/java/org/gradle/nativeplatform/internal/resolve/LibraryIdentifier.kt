@@ -13,45 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
-
-public class LibraryIdentifier {
-    private final String projectPath;
-    private final String libraryName;
-
-    public LibraryIdentifier(String projectPath, String libraryName) {
-        this.libraryName = libraryName;
-        this.projectPath = projectPath;
+class LibraryIdentifier(val projectPath: String, val libraryName: String) {
+    override fun toString(): String {
+        return projectPath + ":" + libraryName
     }
 
-    public String getLibraryName() {
-        return libraryName;
-    }
-
-    public String getProjectPath() {
-        return projectPath;
-    }
-
-    @Override
-    public String toString() {
-        return projectPath + ":" + libraryName;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any?): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        LibraryIdentifier other = (LibraryIdentifier) obj;
-        return projectPath.equals(other.projectPath) && libraryName.equals(other.libraryName);
+        val other = obj as LibraryIdentifier
+        return projectPath == other.projectPath && libraryName == other.libraryName
     }
 
-    @Override
-    public int hashCode() {
-        return projectPath.hashCode() ^ libraryName.hashCode();
+    override fun hashCode(): Int {
+        return projectPath.hashCode() xor libraryName.hashCode()
     }
 }

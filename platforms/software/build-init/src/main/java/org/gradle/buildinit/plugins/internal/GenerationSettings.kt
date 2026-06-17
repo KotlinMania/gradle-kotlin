@@ -13,26 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.buildinit.plugins.internal;
+package org.gradle.buildinit.plugins.internal
 
 /**
  * Settings used to generate a Gradle build.
  */
-public class GenerationSettings {
-    private final BuildInitializer initializer;
-    private final InitSettings settings;
-
-    public GenerationSettings(BuildInitializer initializer, InitSettings settings) {
-        this.initializer = initializer;
-        this.settings = settings;
-    }
-
-    public BuildInitializer getInitializer() {
-        return initializer;
-    }
-
-    public InitSettings getSettings() {
-        return settings;
-    }
-}
+class GenerationSettings(val initializer: BuildInitializer, val settings: InitSettings)

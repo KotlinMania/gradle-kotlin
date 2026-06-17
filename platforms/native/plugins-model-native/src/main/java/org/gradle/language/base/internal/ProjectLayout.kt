@@ -13,27 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal
 
-package org.gradle.language.base.internal;
+import org.gradle.api.internal.project.ProjectIdentifier
+import java.io.File
 
-import org.gradle.api.internal.project.ProjectIdentifier;
-
-import java.io.File;
-
-public class ProjectLayout {
-    private final ProjectIdentifier projectIdentifier;
-    private final File buildDir;
-
-    public ProjectLayout(ProjectIdentifier projectIdentifier, File buildDir) {
-        this.projectIdentifier = projectIdentifier;
-        this.buildDir = buildDir;
-    }
-
-    public ProjectIdentifier getProjectIdentifier() {
-        return projectIdentifier;
-    }
-
-    public File getBuildDir() {
-        return buildDir;
-    }
-}
+class ProjectLayout(val projectIdentifier: ProjectIdentifier?, val buildDir: File?)

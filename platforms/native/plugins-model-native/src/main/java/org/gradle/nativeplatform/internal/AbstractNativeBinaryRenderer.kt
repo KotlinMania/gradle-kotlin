@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.NativeBinarySpec
 
-import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer;
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.NativeBinarySpec;
-
-public abstract class AbstractNativeBinaryRenderer<T extends NativeBinarySpec> extends AbstractBinaryRenderer<T> {
-    protected AbstractNativeBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
-    }
-
-    @Override
-    protected void renderDetails(T binary, TextReportBuilder builder) {
-        builder.item("tool chain", binary.getToolChain().displayName);
+abstract class AbstractNativeBinaryRenderer<T : NativeBinarySpec?> protected constructor(schemaStore: ModelSchemaStore) : AbstractBinaryRenderer<T?>(schemaStore) {
+    override fun renderDetails(binary: T?, builder: TextReportBuilder) {
+        builder.< String > item < kotlin . String ? > ("tool chain", binary.getToolChain().displayName)
     }
 }

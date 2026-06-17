@@ -215,7 +215,7 @@ abstract class Checkstyle : AbstractCodeQualityTask(), Reporting<CheckstyleRepor
     }
 
     private fun setupParameters(parameters: CheckstyleActionParameters) {
-        parameters.getAntLibraryClasspath().setFrom(this.checkstyleClasspath)
+        parameters.antLibraryClasspath.setFrom(this.checkstyleClasspath)
         parameters.config.set(this.configFile)
         parameters.maxErrors.set(this.maxErrors)
         parameters.maxWarnings.set(this.maxWarnings)

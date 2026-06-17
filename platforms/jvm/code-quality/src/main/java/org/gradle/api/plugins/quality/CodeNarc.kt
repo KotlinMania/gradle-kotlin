@@ -150,7 +150,7 @@ abstract class CodeNarc : AbstractCodeQualityTask(), Reporting<CodeNarcReports> 
     }
 
     private fun setupParameters(parameters: CodeNarcActionParameters) {
-        parameters.getAntLibraryClasspath().setFrom(this.codenarcClasspath)
+        parameters.antLibraryClasspath.setFrom(this.codenarcClasspath)
         parameters.compilationClasspath.setFrom(this.compilationClasspath)
         parameters.config.set(this.configFile)
         parameters.maxPriority1Violations.set(this.maxPriority1Violations)

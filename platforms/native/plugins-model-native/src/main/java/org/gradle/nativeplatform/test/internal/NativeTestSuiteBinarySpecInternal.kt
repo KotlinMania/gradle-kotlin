@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.internal
 
-package org.gradle.nativeplatform.test.internal;
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
 
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
-
-public interface NativeTestSuiteBinarySpecInternal extends NativeTestSuiteBinarySpec, NativeBinarySpecInternal {
-    void setTestedBinary(NativeBinarySpecInternal testedBinary);
+interface NativeTestSuiteBinarySpecInternal : NativeTestSuiteBinarySpec, NativeBinarySpecInternal {
+    fun setTestedBinary(testedBinary: NativeBinarySpecInternal?)
 }

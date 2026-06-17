@@ -13,25 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.nativeplatform.NativeDependencySet
 
-import org.gradle.nativeplatform.NativeDependencySet;
-
-public class InputHandlingNativeDependencyResolver implements NativeDependencyResolver {
-    private final NativeDependencyResolver delegate;
-
-    public InputHandlingNativeDependencyResolver(NativeDependencyResolver delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public void resolve(NativeBinaryResolveResult nativeBinaryResolveResult) {
-        for (NativeBinaryRequirementResolveResult resolution : nativeBinaryResolveResult.getPendingResolutions()) {
-            if (resolution.getInput() instanceof NativeDependencySet) {
-                resolution.setNativeDependencySet((NativeDependencySet) resolution.getInput());
+class InputHandlingNativeDependencyResolver(private val delegate: NativeDependencyResolver) : NativeDependencyResolver {
+    override fun resolve(nativeBinaryResolveResult: NativeBinaryResolveResult) {
+        for (resolution in nativeBinaryResolveResult.getPendingResolutions()) {
+            if (resolution.getInput() is NativeDependencySet) {
+                resolution.setNativeDependencySet(resolution.getInput() as NativeDependencySet?)
             }
         }
-        delegate.resolve(nativeBinaryResolveResult);
+        delegate.resolve(nativeBinaryResolveResult)
     }
 }

@@ -13,53 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.platform.base.BinaryTasksCollection;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.BinaryTasksCollection
 
 /**
  * A shared library binary built by Gradle for a native library.
  */
 @Incubating
-public interface SharedLibraryBinarySpec extends NativeLibraryBinarySpec {
+interface SharedLibraryBinarySpec : NativeLibraryBinarySpec {
     /**
      * Provides access to key tasks used for building the binary.
      */
-    interface TasksCollection extends BinaryTasksCollection {
+    interface TasksCollection : BinaryTasksCollection {
         /**
          * Returns the link task for this binary.
          */
-        Task getLink();
+        val link: Task?
     }
 
     /**
      * The shared library file.
      */
-    File getSharedLibraryFile();
-
-    /**
-     * The shared library link file.
-     */
-    File getSharedLibraryLinkFile();
-
     /**
      * The shared library file.
      */
-    void setSharedLibraryFile(File sharedLibraryFile);
+    var sharedLibraryFile: File?
 
     /**
      * The shared library link file.
      */
-    void setSharedLibraryLinkFile(File sharedLibraryLinkFile);
+    /**
+     * The shared library link file.
+     */
+    var sharedLibraryLinkFile: File?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    TasksCollection getTasks();
+    override fun getTasks(): TasksCollection?
 }

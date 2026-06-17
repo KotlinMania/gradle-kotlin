@@ -13,38 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project;
+package org.gradle.api.internal.project
 
-import org.gradle.api.Project;
-import org.gradle.api.internal.project.ant.AntLoggingAdapter;
-import org.gradle.api.internal.project.ant.AntLoggingAdapterFactory;
-import org.gradle.internal.concurrent.CompositeStoppable;
+import org.gradle.api.Project
+import org.gradle.api.internal.project.ant.AntLoggingAdapterFactory
+import org.gradle.internal.concurrent.CompositeStoppable
+import java.io.Closeable
 
-import java.io.Closeable;
+class DefaultAntBuilderFactory(private val project: Project, private val loggingAdapterFactory: AntLoggingAdapterFactory) : AntBuilderFactory, Closeable {
+    private val stoppable = CompositeStoppable()
 
-public class DefaultAntBuilderFactory implements AntBuilderFactory, Closeable {
-    private final Project project;
-    private final AntLoggingAdapterFactory loggingAdapterFactory;
-    private final CompositeStoppable stoppable = new CompositeStoppable();
-
-    public DefaultAntBuilderFactory(Project project, AntLoggingAdapterFactory loggingAdapterFactory) {
-        this.project = project;
-        this.loggingAdapterFactory = loggingAdapterFactory;
+    override fun createAntBuilder(): DefaultAntBuilder {
+        val loggingAdapter = loggingAdapterFactory.create()
+        val antBuilder = DefaultAntBuilder(project, loggingAdapter!!)
+        antBuilder.getProject().setBaseDir(project.getProjectDir())
+        antBuilder.getProject().removeBuildListener(antBuilder.getProject().getBuildListeners().get(0))
+        antBuilder.getProject().addBuildListener(loggingAdapter)
+        stoppable.add(antBuilder)
+        return antBuilder
     }
 
-    @Override
-    public DefaultAntBuilder createAntBuilder() {
-        AntLoggingAdapter loggingAdapter = loggingAdapterFactory.create();
-        DefaultAntBuilder antBuilder = new DefaultAntBuilder(project, loggingAdapter);
-        antBuilder.getProject().setBaseDir(project.getProjectDir());
-        antBuilder.getProject().removeBuildListener(antBuilder.getProject().getBuildListeners().get(0));
-        antBuilder.getProject().addBuildListener(loggingAdapter);
-        stoppable.add(antBuilder);
-        return antBuilder;
-    }
-
-    @Override
-    public void close() {
-        stoppable.stop();
+    override fun close() {
+        stoppable.stop()
     }
 }

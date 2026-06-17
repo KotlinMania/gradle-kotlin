@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Plugins for building from Objective-C++ language sources.
  */
-@org.gradle.api.Incubating
-package org.gradle.language.objectivecpp.plugins;
+package org.gradle.language.objectivecpp.plugins

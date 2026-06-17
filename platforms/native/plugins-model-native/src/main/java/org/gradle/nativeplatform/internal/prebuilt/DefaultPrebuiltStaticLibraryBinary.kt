@@ -13,48 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.PrebuiltLibrary
+import org.gradle.nativeplatform.PrebuiltStaticLibraryBinary
+import org.gradle.nativeplatform.platform.NativePlatform
+import java.io.File
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.PrebuiltLibrary;
-import org.gradle.nativeplatform.PrebuiltStaticLibraryBinary;
-import org.gradle.nativeplatform.platform.NativePlatform;
+class DefaultPrebuiltStaticLibraryBinary(
+    name: String?,
+    library: PrebuiltLibrary?,
+    buildType: BuildType?,
+    targetPlatform: NativePlatform?,
+    flavor: Flavor?,
+    fileCollectionFactory: FileCollectionFactory?
+) : AbstractPrebuiltLibraryBinary(name, library, buildType, targetPlatform, flavor, fileCollectionFactory), PrebuiltStaticLibraryBinary {
+    private var staticLibraryFile: File? = null
 
-import java.io.File;
-
-public class DefaultPrebuiltStaticLibraryBinary extends AbstractPrebuiltLibraryBinary implements PrebuiltStaticLibraryBinary {
-    private File staticLibraryFile;
-
-    public DefaultPrebuiltStaticLibraryBinary(String name, PrebuiltLibrary library, BuildType buildType, NativePlatform targetPlatform, Flavor flavor, FileCollectionFactory fileCollectionFactory) {
-        super(name, library, buildType, targetPlatform, flavor, fileCollectionFactory);
+    override fun getDisplayName(): String {
+        return "prebuilt static library '" + getComponent().getName() + ":" + getName() + "'"
     }
 
-    @Override
-    public String getDisplayName() {
-        return "prebuilt static library '" + getComponent().getName() + ":" + getName() + "'";
+    override fun setStaticLibraryFile(staticLibraryFile: File?) {
+        this.staticLibraryFile = staticLibraryFile
     }
 
-    @Override
-    public void setStaticLibraryFile(File staticLibraryFile) {
-        this.staticLibraryFile = staticLibraryFile;
+    override fun getStaticLibraryFile(): File? {
+        return staticLibraryFile
     }
 
-    @Override
-    public File getStaticLibraryFile() {
-        return staticLibraryFile;
+    override fun getLinkFiles(): FileCollection? {
+        return createFileCollection(getStaticLibraryFile(), "link files", "Static library file")
     }
 
-    @Override
-    public FileCollection getLinkFiles() {
-        return createFileCollection(getStaticLibraryFile(), "link files", "Static library file");
-    }
-
-    @Override
-    public FileCollection getRuntimeFiles() {
-        return FileCollectionFactory.empty("runtime files for " + getDisplayName());
+    override fun getRuntimeFiles(): FileCollection {
+        return FileCollectionFactory.empty("runtime files for " + getDisplayName())
     }
 }

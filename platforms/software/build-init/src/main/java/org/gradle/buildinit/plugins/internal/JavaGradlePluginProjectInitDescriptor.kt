@@ -13,83 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import org.gradle.jvm.toolchain.JavaLanguageVersion.Companion.of
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-
-import java.util.Set;
-
-public class JavaGradlePluginProjectInitDescriptor extends JvmGradlePluginProjectInitDescriptor {
-    private final TemplateLibraryVersionProvider libraryVersionProvider;
-
-    public JavaGradlePluginProjectInitDescriptor(TemplateLibraryVersionProvider libraryVersionProvider, DocumentationRegistry documentationRegistry) {
-        super(documentationRegistry, libraryVersionProvider);
-        this.libraryVersionProvider = libraryVersionProvider;
+class JavaGradlePluginProjectInitDescriptor(private val libraryVersionProvider: TemplateLibraryVersionProvider, documentationRegistry: DocumentationRegistry) : JvmGradlePluginProjectInitDescriptor(
+    documentationRegistry,
+    libraryVersionProvider
+) {
+    override fun getId(): String {
+        return "java-gradle-plugin"
     }
 
-    @Override
-    public String getId() {
-        return "java-gradle-plugin";
+    override fun getLanguage(): Language {
+        return Language.JAVA
     }
 
-    @Override
-    public Language getLanguage() {
-        return Language.JAVA;
+    override fun getDefaultTestFramework(modularizationOption: ModularizationOption): BuildInitTestFramework {
+        return BuildInitTestFramework.JUNIT_JUPITER
     }
 
-    @Override
-    public BuildInitTestFramework getDefaultTestFramework(ModularizationOption modularizationOption) {
-        return BuildInitTestFramework.JUNIT_JUPITER;
+    override fun getTestFrameworks(modularizationOption: ModularizationOption): MutableSet<BuildInitTestFramework> {
+        return ImmutableSet.of<BuildInitTestFramework>(BuildInitTestFramework.JUNIT_JUPITER)
     }
 
-    @Override
-    public Set<BuildInitTestFramework> getTestFrameworks(ModularizationOption modularizationOption) {
-        return ImmutableSet.of(BuildInitTestFramework.JUNIT_JUPITER);
-    }
-
-    @Override
-    public void generateProjectBuildScript(String projectName, InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
-        super.generateProjectBuildScript(projectName, settings, buildScriptBuilder);
+    override fun generateProjectBuildScript(projectName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
+        super.generateProjectBuildScript(projectName, settings, buildScriptBuilder)
         if (!settings.isUseTestSuites()) {
             buildScriptBuilder.testImplementationDependency(
                 "Use JUnit Jupiter for testing.",
-                BuildInitDependency.of("org.junit.jupiter:junit-jupiter", libraryVersionProvider.getVersion("junit-jupiter")));
-            buildScriptBuilder.testRuntimeOnlyDependency(null, BuildInitDependency.of("org.junit.platform:junit-platform-launcher"));
+                BuildInitDependency.Companion.of("org.junit.jupiter:junit-jupiter", libraryVersionProvider.getVersion("junit-jupiter"))
+            )
+            buildScriptBuilder.testRuntimeOnlyDependency(null, BuildInitDependency.Companion.of("org.junit.platform:junit-platform-launcher"))
         }
     }
 
-    @Override
-    protected TemplateOperation sourceTemplate(InitSettings settings, TemplateFactory templateFactory, String pluginId, String pluginClassName) {
-        return templateFactory.fromSourceTemplate("plugin/java/Plugin.java.template", t -> {
-            t.subproject(settings.getSubprojects().get(0));
-            t.sourceSet("main");
-            t.className(pluginClassName);
-            t.binding("pluginId", pluginId);
-        });
+    override fun sourceTemplate(settings: InitSettings, templateFactory: TemplateFactory, pluginId: String, pluginClassName: String): TemplateOperation {
+        return templateFactory.fromSourceTemplate("plugin/java/Plugin.java.template", Action { t: TemplateFactory.SourceFileTemplate? ->
+            t!!.subproject(settings.getSubprojects().get(0))
+            t.sourceSet("main")
+            t.className(pluginClassName)
+            t.binding("pluginId", pluginId)
+        })
     }
 
-    @Override
-    protected TemplateOperation testTemplate(InitSettings settings, TemplateFactory templateFactory, String pluginId, String testClassName) {
-        return templateFactory.fromSourceTemplate("plugin/java/junit/PluginTest.java.template", t -> {
-            t.subproject(settings.getSubprojects().get(0));
-            t.sourceSet("test");
-            t.className(testClassName);
-            t.binding("pluginId", pluginId);
-        });
+    override fun testTemplate(settings: InitSettings, templateFactory: TemplateFactory, pluginId: String, testClassName: String): TemplateOperation {
+        return templateFactory.fromSourceTemplate("plugin/java/junit/PluginTest.java.template", Action { t: TemplateFactory.SourceFileTemplate? ->
+            t!!.subproject(settings.getSubprojects().get(0))
+            t.sourceSet("test")
+            t.className(testClassName)
+            t.binding("pluginId", pluginId)
+        })
     }
 
-    @Override
-    protected TemplateOperation functionalTestTemplate(InitSettings settings, TemplateFactory templateFactory, String pluginId, String testClassName) {
-        return templateFactory.fromSourceTemplate("plugin/java/junit/PluginFunctionalTest.java.template", t -> {
-            t.subproject(settings.getSubprojects().get(0));
-            t.sourceSet("functionalTest");
-            t.className(testClassName);
-            t.binding("pluginId", pluginId);
-        });
+    override fun functionalTestTemplate(settings: InitSettings, templateFactory: TemplateFactory, pluginId: String, testClassName: String): TemplateOperation {
+        return templateFactory.fromSourceTemplate("plugin/java/junit/PluginFunctionalTest.java.template", Action { t: TemplateFactory.SourceFileTemplate? ->
+            t!!.subproject(settings.getSubprojects().get(0))
+            t.sourceSet("functionalTest")
+            t.className(testClassName)
+            t.binding("pluginId", pluginId)
+        })
     }
 }

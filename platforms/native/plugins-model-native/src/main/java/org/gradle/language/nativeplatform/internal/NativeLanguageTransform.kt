@@ -13,28 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.nativeplatform.internal
 
-package org.gradle.language.nativeplatform.internal;
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.internal.registry.LanguageTransform
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.ObjectFile
+import org.gradle.platform.base.BinarySpec
 
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.internal.registry.LanguageTransform;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.ObjectFile;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.BinarySpec;
-
-public abstract class NativeLanguageTransform<U extends LanguageSourceSet> implements LanguageTransform<U, ObjectFile> {
-
-    @Override
-    public boolean applyToBinary(BinarySpec binary) {
-        return binary instanceof NativeBinarySpec;
+abstract class NativeLanguageTransform<U : LanguageSourceSet?> : LanguageTransform<U?, ObjectFile?> {
+    override fun applyToBinary(binary: BinarySpec?): Boolean {
+        return binary is NativeBinarySpec
     }
 
-    public abstract ToolType getToolType();
+    abstract val toolType: ToolType?
 
-    @Override
-    public Class<ObjectFile> getOutputType() {
-        return ObjectFile.class;
-    }
-
+    val outputType: Class<ObjectFile?>?
+        get() = ObjectFile::class.java
 }

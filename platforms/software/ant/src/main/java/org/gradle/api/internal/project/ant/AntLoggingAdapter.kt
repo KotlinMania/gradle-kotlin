@@ -13,122 +13,108 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.ant;
+package org.gradle.api.internal.project.ant
 
-import org.apache.tools.ant.BuildEvent;
-import org.apache.tools.ant.BuildLogger;
-import org.gradle.api.AntBuilder.AntMessagePriority;
-import org.gradle.api.logging.LogLevel;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.logging.LogLevelMapping;
+import org.apache.tools.ant.BuildEvent
+import org.apache.tools.ant.BuildLogger
+import org.gradle.api.AntBuilder
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.logging.LogLevelMapping
+import java.io.PrintStream
 
-import java.io.PrintStream;
+class AntLoggingAdapter : BuildLogger {
+    private val logger = getLogger(AntLoggingAdapter::class.java)
 
-public class AntLoggingAdapter implements BuildLogger {
-    private final Logger logger = Logging.getLogger(AntLoggingAdapter.class);
+    var lifecycleLogLevel: AntBuilder.AntMessagePriority? = null
+        private set
 
-    private AntMessagePriority lifecycleLogLevel;
-
-    @Override
-    public void setMessageOutputLevel(int level) {
+    override fun setMessageOutputLevel(level: Int) {
         // ignore
     }
 
-    @Override
-    public void setOutputPrintStream(PrintStream output) {
+    override fun setOutputPrintStream(output: PrintStream?) {
         // ignore
     }
 
-    @Override
-    public void setEmacsMode(boolean emacsMode) {
+    override fun setEmacsMode(emacsMode: Boolean) {
         // ignore
     }
 
-    @Override
-    public void setErrorPrintStream(PrintStream err) {
+    override fun setErrorPrintStream(err: PrintStream?) {
         // ignore
     }
 
-    @Override
-    public void buildStarted(BuildEvent event) {
+    override fun buildStarted(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void buildFinished(BuildEvent event) {
+    override fun buildFinished(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void targetStarted(BuildEvent event) {
+    override fun targetStarted(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void targetFinished(BuildEvent event) {
+    override fun targetFinished(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void taskStarted(BuildEvent event) {
+    override fun taskStarted(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void taskFinished(BuildEvent event) {
+    override fun taskFinished(event: BuildEvent?) {
         // ignore
     }
 
-    @Override
-    public void messageLogged(BuildEvent event) {
-        final StringBuffer message = new StringBuffer();
+    override fun messageLogged(event: BuildEvent) {
+        val message = StringBuffer()
         if (event.getTask() != null) {
-            String taskName = event.getTask().getTaskName();
-            message.append("[ant:").append(taskName).append("] ");
+            val taskName = event.getTask().getTaskName()
+            message.append("[ant:").append(taskName).append("] ")
         }
-        final String messageText = event.getMessage();
-        message.append(messageText);
+        val messageText = event.getMessage()
+        message.append(messageText)
 
-        LogLevel level = getLogLevelForMessagePriority(event.getPriority());
+        val level = getLogLevelForMessagePriority(event.getPriority())
 
         if (event.getException() != null) {
-            logger.log(level, message.toString(), event.getException());
+            logger!!.log(level, message.toString(), event.getException())
         } else {
-            logger.log(level, message.toString());
+            logger!!.log(level, message.toString())
         }
     }
 
-    public void setLifecycleLogLevel(String lifecycleLogLevel) {
-        setLifecycleLogLevel(lifecycleLogLevel == null ? null : AntMessagePriority.valueOf(lifecycleLogLevel));
+    fun setLifecycleLogLevel(lifecycleLogLevel: String?) {
+        setLifecycleLogLevel(if (lifecycleLogLevel == null) null else AntBuilder.AntMessagePriority.valueOf(lifecycleLogLevel))
     }
 
-    public void setLifecycleLogLevel(AntMessagePriority lifecycleLogLevel) {
-        this.lifecycleLogLevel = lifecycleLogLevel;
+    fun setLifecycleLogLevel(lifecycleLogLevel: AntBuilder.AntMessagePriority?) {
+        this.lifecycleLogLevel = lifecycleLogLevel
     }
 
-    public AntMessagePriority getLifecycleLogLevel() {
-        return lifecycleLogLevel;
-    }
-
-    private LogLevel getLogLevelForMessagePriority(int messagePriority) {
-        LogLevel defaultLevel = LogLevelMapping.ANT_IVY_2_SLF4J.get(messagePriority);
+    private fun getLogLevelForMessagePriority(messagePriority: Int): LogLevel? {
+        val defaultLevel = LogLevelMapping.ANT_IVY_2_SLF4J.get(messagePriority)
 
         // Check to see if we should adjust the level based on a set lifecycle log level
         if (lifecycleLogLevel != null) {
-            if (defaultLevel.ordinal() < LogLevel.LIFECYCLE.ordinal()
-                && AntMessagePriority.from(messagePriority).ordinal() >= lifecycleLogLevel.ordinal()) {
+            if (defaultLevel!!.ordinal < LogLevel.LIFECYCLE.ordinal
+                && AntBuilder.AntMessagePriority.from(messagePriority).ordinal >= lifecycleLogLevel!!.ordinal
+            ) {
                 // we would normally log at a lower level than lifecycle, but the Ant message priority is actually higher
                 // than (or equal to) the set lifecycle log level
-                return LogLevel.LIFECYCLE;
-            } else if (defaultLevel.ordinal() >= LogLevel.LIFECYCLE.ordinal()
-                && AntMessagePriority.from(messagePriority).ordinal() < lifecycleLogLevel.ordinal()) {
+                return LogLevel.LIFECYCLE
+            } else if (defaultLevel.ordinal >= LogLevel.LIFECYCLE.ordinal
+                && AntBuilder.AntMessagePriority.from(messagePriority).ordinal < lifecycleLogLevel!!.ordinal
+            ) {
                 // would normally log at a level higher than (or equal to) lifecycle, but the Ant message priority is
                 // actually lower than the set lifecycle log level
-                return LogLevel.INFO;
+                return LogLevel.INFO
             }
         }
 
-        return defaultLevel;
+        return defaultLevel
     }
 }

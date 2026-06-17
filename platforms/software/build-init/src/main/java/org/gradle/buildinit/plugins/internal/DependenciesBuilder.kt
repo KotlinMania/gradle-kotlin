@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+interface DependenciesBuilder {
+    fun projectDependency(configuration: String, comment: String?, projectPath: String)
 
-import org.jspecify.annotations.Nullable;
+    fun platformDependency(configuration: String, comment: String?, vararg dependencies: BuildInitDependency)
 
-public interface DependenciesBuilder {
-    void projectDependency(String configuration, @Nullable String comment, String projectPath);
+    fun selfDependency(configuration: String, comment: String?)
 
-    void platformDependency(String configuration, @Nullable String comment, BuildInitDependency... dependencies);
+    fun dependency(configuration: String, comment: String?, vararg dependencies: BuildInitDependency)
 
-    void selfDependency(String configuration, @Nullable String comment);
-
-    void dependency(String configuration, @Nullable String comment, BuildInitDependency... dependencies);
-
-    void dependencyConstraint(String configuration, @Nullable String comment, BuildInitDependency... dependencies);
+    fun dependencyConstraint(configuration: String, comment: String?, vararg dependencies: BuildInitDependency)
 }

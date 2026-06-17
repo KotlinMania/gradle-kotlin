@@ -13,97 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.tasks.util.internal
 
-package org.gradle.api.tasks.util.internal;
-
-import groovy.lang.Closure;
-import groovy.lang.GroovyObject;
-import org.gradle.api.Action;
-import org.gradle.api.tasks.AntBuilderAware;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import groovy.lang.Closure
+import groovy.lang.GroovyObject
+import org.gradle.api.Action
+import org.gradle.api.tasks.AntBuilderAware
 
 /**
  * Externalised from PatternSet to isolate the Groovy usage.
  */
-public class PatternSetAntBuilderDelegate implements AntBuilderAware {
-
-    private final Set<String> includes;
-    private final Set<String> excludes;
-    private final boolean caseSensitive;
-
-    public PatternSetAntBuilderDelegate(Set<String> includes, Set<String> excludes, boolean caseSensitive) {
-        this.includes = includes;
-        this.excludes = excludes;
-        this.caseSensitive = caseSensitive;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static Object logical(Object node, String op, final Action<Object> withNode) {
-        GroovyObject groovyObject = (GroovyObject) node;
-        groovyObject.invokeMethod(op, new Closure(null, null) {
-            @SuppressWarnings("unused")
-            void doCall() {
-                withNode.execute(getDelegate());
-            }
-        });
-        return node;
-    }
-
-    public static Object and(Object node, Action<Object> withNode) {
-        return logical(node, "and", withNode);
-    }
-
-    private static Object or(Object node, Action<Object> withNode) {
-        return logical(node, "or", withNode);
-    }
-
-    private static Object not(Object node, Action<Object> withNode) {
-        return logical(node, "not", withNode);
-    }
-
-    private static Object addFilenames(Object node, Iterable<String> filenames, boolean caseSensitive) {
-        GroovyObject groovyObject = (GroovyObject) node;
-        Map<String, Object> props = new HashMap<String, Object>(2);
-        props.put("casesensitive", caseSensitive);
-        for (String filename : filenames) {
-            props.put("name", filename.replaceAll("\\$", "\\$\\$"));
-            groovyObject.invokeMethod("filename", props);
-        }
-        return node;
-    }
-
-    @Override
-    public Object addToAntBuilder(Object node, String childNodeName) {
-        return and(node, new Action<Object>() {
-            @Override
-            public void execute(Object node) {
+class PatternSetAntBuilderDelegate(private val includes: MutableSet<String>, private val excludes: MutableSet<String>, private val caseSensitive: Boolean) : AntBuilderAware {
+    override fun addToAntBuilder(node: Any, childNodeName: String): Any {
+        return and(node, object : Action<Any> {
+            override fun execute(node: Any) {
                 if (!includes.isEmpty()) {
-                    or(node, new Action<Object>() {
-                        @Override
-                        public void execute(Object node) {
-                            addFilenames(node, includes, caseSensitive);
+                    or(node, object : Action<Any> {
+                        override fun execute(node: Any) {
+                            addFilenames(node, includes, caseSensitive)
                         }
-                    });
+                    })
                 }
 
                 if (!excludes.isEmpty()) {
-                    not(node, new Action<Object>() {
-                        @Override
-                        public void execute(Object node) {
-                            or(node, new Action<Object>() {
-                                @Override
-                                public void execute(Object node) {
-                                    addFilenames(node, excludes, caseSensitive);
+                    not(node, object : Action<Any> {
+                        override fun execute(node: Any) {
+                            or(node, object : Action<Any> {
+                                override fun execute(node: Any) {
+                                    addFilenames(node, excludes, caseSensitive)
                                 }
-                            });
+                            })
                         }
-                    });
+                    })
                 }
             }
-        });
+        })
     }
 
+    companion object {
+        private fun logical(node: Any, op: String, withNode: Action<Any>): Any {
+            val groovyObject = node as GroovyObject
+            groovyObject.invokeMethod(op, object : Closure<Any?>(null, null) {
+                @Suppress("unused")
+                fun doCall() {
+                    withNode.execute(getDelegate())
+                }
+            })
+            return node
+        }
+
+        fun and(node: Any, withNode: Action<Any>): Any {
+            return logical(node, "and", withNode)
+        }
+
+        private fun or(node: Any, withNode: Action<Any>): Any {
+            return logical(node, "or", withNode)
+        }
+
+        private fun not(node: Any, withNode: Action<Any>): Any {
+            return logical(node, "not", withNode)
+        }
+
+        private fun addFilenames(node: Any, filenames: Iterable<String>, caseSensitive: Boolean): Any {
+            val groovyObject = node as GroovyObject
+            val props: MutableMap<String, Any> = HashMap<String, Any>(2)
+            props.put("casesensitive", caseSensitive)
+            for (filename in filenames) {
+                props.put("name", filename.replace("\\$".toRegex(), "\\$\\$"))
+                groovyObject.invokeMethod("filename", props)
+            }
+            return node
+        }
+    }
 }

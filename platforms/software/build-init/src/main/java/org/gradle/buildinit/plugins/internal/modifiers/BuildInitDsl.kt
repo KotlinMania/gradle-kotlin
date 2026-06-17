@@ -13,66 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.buildinit.plugins.internal.modifiers;
+package org.gradle.buildinit.plugins.internal.modifiers
 
-import com.google.common.collect.ImmutableList;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.GradleException;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.GradleException
+import org.gradle.internal.logging.text.TreeFormatter
 
-import java.util.List;
-import java.util.Locale;
-
-public enum BuildInitDsl implements WithIdentifier {
-
+enum class BuildInitDsl(private val fileExtension: String) : WithIdentifier {
     KOTLIN(".gradle.kts"),
     GROOVY(".gradle");
 
-    private final String fileExtension;
-
-    BuildInitDsl(String fileExtension) {
-        this.fileExtension = fileExtension;
+    override fun getId(): String {
+        return Names.idFor(this)
     }
 
-    public static BuildInitDsl fromName(@Nullable String name) {
-        if (name == null) {
-            return KOTLIN;
-        }
-        for (BuildInitDsl language : values()) {
-            if (language.getId().equals(name)) {
-                return language;
+    fun fileNameFor(fileNameWithoutExtension: String?): String {
+        return fileNameWithoutExtension + fileExtension
+    }
+
+    override fun toString(): String {
+        return StringUtils.capitalize(name.lowercase())
+    }
+
+    companion object {
+        fun fromName(name: String?): BuildInitDsl {
+            if (name == null) {
+                return BuildInitDsl.KOTLIN
             }
+            for (language in entries) {
+                if (language.getId() == name) {
+                    return language
+                }
+            }
+            val formatter = TreeFormatter()
+            formatter.node("The requested build script DSL '" + name + "' is not supported. Supported DSLs")
+            formatter.startChildren()
+            for (dsl in entries) {
+                formatter.node("'" + dsl.getId() + "'")
+            }
+            formatter.endChildren()
+            throw GradleException(formatter.toString())
         }
-        TreeFormatter formatter = new TreeFormatter();
-        formatter.node("The requested build script DSL '" + name + "' is not supported. Supported DSLs");
-        formatter.startChildren();
-        for (BuildInitDsl dsl : values()) {
-            formatter.node("'" + dsl.getId() + "'");
+
+        fun listSupported(): MutableList<String?> {
+            val supported = ImmutableList.builder<String?>()
+            for (dsl in entries) {
+                supported.add(dsl.getId())
+            }
+            return supported.build()
         }
-        formatter.endChildren();
-        throw new GradleException(formatter.toString());
-    }
-
-    public static List<String> listSupported() {
-        ImmutableList.Builder<String> supported = ImmutableList.builder();
-        for (BuildInitDsl dsl : values()) {
-            supported.add(dsl.getId());
-        }
-        return supported.build();
-    }
-
-    @Override
-    public String getId() {
-        return Names.idFor(this);
-    }
-
-    public String fileNameFor(String fileNameWithoutExtension) {
-        return fileNameWithoutExtension + fileExtension;
-    }
-
-    @Override
-    public String toString() {
-        return StringUtils.capitalize(name().toLowerCase(Locale.ROOT));
     }
 }

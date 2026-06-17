@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.objectivec.internal
 
-package org.gradle.language.objectivec.internal;
+import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet
+import org.gradle.language.objectivec.ObjectiveCSourceSet
 
-import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet;
-import org.gradle.language.objectivec.ObjectiveCSourceSet;
-
-public class DefaultObjectiveCSourceSet extends AbstractHeaderExportingDependentSourceSet implements ObjectiveCSourceSet {
-    @Override
-    protected String getLanguageName() {
-        return "Objective-C";
-    }
+class DefaultObjectiveCSourceSet : AbstractHeaderExportingDependentSourceSet(), ObjectiveCSourceSet {
+    val languageName: String
+        get() = "Objective-C"
 }

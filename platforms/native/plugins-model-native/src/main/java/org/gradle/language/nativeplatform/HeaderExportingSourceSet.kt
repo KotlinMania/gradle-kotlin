@@ -13,24 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.nativeplatform;
+package org.gradle.language.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.language.base.LanguageSourceSet;
+import org.gradle.api.Incubating
+import org.gradle.language.base.LanguageSourceSet
 
 /**
  * A source set that exposes headers
  */
 @Incubating
-public interface HeaderExportingSourceSet extends LanguageSourceSet {
+interface HeaderExportingSourceSet : LanguageSourceSet {
     /**
      * The headers as a directory set.
      */
-    SourceDirectorySet getExportedHeaders();
+    @JvmField
+    val exportedHeaders: SourceDirectorySet?
 
     /**
      * The headers that are private to this source set and implicitly available. These are not explicitly made available for compilation.
      */
-    SourceDirectorySet getImplicitHeaders();
+    @JvmField
+    val implicitHeaders: SourceDirectorySet?
 }

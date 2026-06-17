@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.Incubating
+import org.gradle.api.NamedDomainObjectContainer
 
 /**
- * A container of {@link BuildType}s.
+ * A container of [BuildType]s.
  */
 @Incubating
-public interface BuildTypeContainer extends NamedDomainObjectContainer<BuildType> {
-}
+interface BuildTypeContainer : NamedDomainObjectContainer<BuildType?>

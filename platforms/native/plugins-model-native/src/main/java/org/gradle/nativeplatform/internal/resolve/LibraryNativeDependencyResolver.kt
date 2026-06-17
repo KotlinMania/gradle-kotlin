@@ -13,25 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
-
-import org.gradle.nativeplatform.NativeLibraryBinary;
-
-public class LibraryNativeDependencyResolver implements NativeDependencyResolver {
-    private final LibraryBinaryLocator libraryBinaryLocator;
-
-    public LibraryNativeDependencyResolver(final LibraryBinaryLocator locator) {
-        libraryBinaryLocator = locator;
-    }
-
-    @Override
-    public void resolve(NativeBinaryResolveResult resolution) {
-        for (NativeBinaryRequirementResolveResult requirementResolution : resolution.getPendingResolutions()) {
-            DefaultLibraryResolver libraryResolver = new DefaultLibraryResolver(libraryBinaryLocator, requirementResolution.getRequirement(), resolution.getTarget());
-            NativeLibraryBinary libraryBinary = libraryResolver.resolveLibraryBinary();
-            requirementResolution.setLibraryBinary(libraryBinary);
-            requirementResolution.setNativeDependencySet(new DefaultNativeDependencySet(libraryBinary));
+class LibraryNativeDependencyResolver(private val libraryBinaryLocator: LibraryBinaryLocator?) : NativeDependencyResolver {
+    override fun resolve(resolution: NativeBinaryResolveResult) {
+        for (requirementResolution in resolution.getPendingResolutions()) {
+            val libraryResolver = DefaultLibraryResolver(libraryBinaryLocator, requirementResolution.getRequirement(), resolution.getTarget())
+            val libraryBinary = libraryResolver.resolveLibraryBinary()
+            requirementResolution.setLibraryBinary(libraryBinary)
+            requirementResolution.setNativeDependencySet(DefaultNativeDependencySet(libraryBinary))
         }
     }
 }

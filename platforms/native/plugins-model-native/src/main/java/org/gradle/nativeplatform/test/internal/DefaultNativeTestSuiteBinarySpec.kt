@@ -13,103 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test.internal;
+package org.gradle.nativeplatform.test.internal
 
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeExecutableFileSpec;
-import org.gradle.nativeplatform.NativeInstallationSpec;
-import org.gradle.nativeplatform.internal.AbstractNativeBinarySpec;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.tasks.InstallExecutable;
-import org.gradle.nativeplatform.tasks.LinkExecutable;
-import org.gradle.nativeplatform.tasks.ObjectFilesToBinary;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.NativeTestSuiteSpec;
-import org.gradle.nativeplatform.test.tasks.RunTestExecutable;
-import org.gradle.platform.base.BinaryTasksCollection;
-import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper;
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeExecutableFileSpec
+import org.gradle.nativeplatform.NativeInstallationSpec
+import org.gradle.nativeplatform.internal.AbstractNativeBinarySpec
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.tasks.InstallExecutable
+import org.gradle.nativeplatform.tasks.LinkExecutable
+import org.gradle.nativeplatform.tasks.ObjectFilesToBinary
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
+import org.gradle.nativeplatform.test.NativeTestSuiteSpec
+import org.gradle.nativeplatform.test.tasks.RunTestExecutable
+import org.gradle.platform.base.BinaryTasksCollection
+import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper
+import java.io.File
 
-import java.io.File;
+open class DefaultNativeTestSuiteBinarySpec : AbstractNativeBinarySpec(), NativeTestSuiteBinarySpecInternal {
+    private val tasks = DefaultTasksCollection(super.getTasks())
+    private var testedBinary: NativeBinarySpecInternal? = null
+    private val installation = NativeInstallationSpec()
+    private val executable = NativeExecutableFileSpec()
 
-public class DefaultNativeTestSuiteBinarySpec extends AbstractNativeBinarySpec implements NativeTestSuiteBinarySpecInternal {
-    private final DefaultTasksCollection tasks = new DefaultTasksCollection(super.getTasks());
-    private NativeBinarySpecInternal testedBinary;
-    private NativeInstallationSpec installation = new NativeInstallationSpec();
-    private NativeExecutableFileSpec executable = new NativeExecutableFileSpec();
-
-    @Override
-    public NativeTestSuiteSpec getComponent() {
-        return getComponentAs(NativeTestSuiteSpec.class);
+    override fun getComponent(): NativeTestSuiteSpec? {
+        return getComponentAs<NativeTestSuiteSpec?>(NativeTestSuiteSpec::class.java)
     }
 
-    @Override
-    public NativeTestSuiteSpec getTestSuite() {
-        return getComponent();
+    override fun getTestSuite(): NativeTestSuiteSpec {
+        return getComponent()!!
     }
 
-    @Override
-    public NativeBinarySpec getTestedBinary() {
-        return testedBinary;
+    override fun getTestedBinary(): NativeBinarySpec {
+        return testedBinary!!
     }
 
-    @Override
-    public void setTestedBinary(NativeBinarySpecInternal testedBinary) {
-        this.testedBinary = testedBinary;
-        setTargetPlatform(testedBinary.getTargetPlatform());
-        setToolChain(testedBinary.getToolChain());
-        setPlatformToolProvider(testedBinary.getPlatformToolProvider());
-        setBuildType(testedBinary.getBuildType());
-        setFlavor(testedBinary.getFlavor());
+    override fun setTestedBinary(testedBinary: NativeBinarySpecInternal) {
+        this.testedBinary = testedBinary
+        setTargetPlatform(testedBinary.getTargetPlatform())
+        setToolChain(testedBinary.getToolChain())
+        setPlatformToolProvider(testedBinary.getPlatformToolProvider())
+        setBuildType(testedBinary.getBuildType())
+        setFlavor(testedBinary.getFlavor())
     }
 
-    @Override
-    public File getExecutableFile() {
-        return getExecutable().getFile();
+    override fun getExecutableFile(): File? {
+        return getExecutable().getFile()
     }
 
-    @Override
-    public NativeInstallationSpec getInstallation() {
-        return installation;
+    override fun getInstallation(): NativeInstallationSpec {
+        return installation
     }
 
-    @Override
-    public NativeExecutableFileSpec getExecutable() {
-        return executable;
+    override fun getExecutable(): NativeExecutableFileSpec {
+        return executable
     }
 
-    @Override
-    public File getPrimaryOutput() {
-        return getExecutableFile();
+    override fun getPrimaryOutput(): File? {
+        return getExecutableFile()
     }
 
-    @Override
-    protected ObjectFilesToBinary getCreateOrLink() {
-        return tasks.getLink();
+    override fun getCreateOrLink(): ObjectFilesToBinary? {
+        return tasks.getLink()
     }
 
-    @Override
-    public NativeTestSuiteBinarySpec.TasksCollection getTasks() {
-        return tasks;
+    override fun getTasks(): NativeTestSuiteBinarySpec.TasksCollection {
+        return tasks
     }
 
-    private static class DefaultTasksCollection extends BinaryTasksCollectionWrapper implements NativeTestSuiteBinarySpec.TasksCollection {
-        public DefaultTasksCollection(BinaryTasksCollection delegate) {
-            super(delegate);
+    private class DefaultTasksCollection(delegate: BinaryTasksCollection?) : BinaryTasksCollectionWrapper(delegate), NativeTestSuiteBinarySpec.TasksCollection {
+        override fun getLink(): LinkExecutable? {
+            return findSingleTaskWithType<LinkExecutable?>(LinkExecutable::class.java)
         }
 
-        @Override
-        public LinkExecutable getLink() {
-            return findSingleTaskWithType(LinkExecutable.class);
+        override fun getInstall(): InstallExecutable? {
+            return findSingleTaskWithType<InstallExecutable?>(InstallExecutable::class.java)
         }
 
-        @Override
-        public InstallExecutable getInstall() {
-            return findSingleTaskWithType(InstallExecutable.class);
-        }
-
-        @Override
-        public RunTestExecutable getRun() {
-            return findSingleTaskWithType(RunTestExecutable.class);
+        override fun getRun(): RunTestExecutable {
+            return findSingleTaskWithType<RunTestExecutable>(RunTestExecutable::class.java)
         }
     }
 }

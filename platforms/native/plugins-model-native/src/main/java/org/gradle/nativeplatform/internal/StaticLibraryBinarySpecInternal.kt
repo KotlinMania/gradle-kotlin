@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.nativeplatform.StaticLibraryBinarySpec
 
-import org.gradle.nativeplatform.StaticLibraryBinarySpec;
-
-public interface StaticLibraryBinarySpecInternal extends StaticLibraryBinarySpec, NativeBinarySpecInternal {
-}
+interface StaticLibraryBinarySpecInternal : StaticLibraryBinarySpec, NativeBinarySpecInternal

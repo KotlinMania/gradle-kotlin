@@ -13,33 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.tooling.r410
 
-package org.gradle.language.cpp.tooling.r410;
+import org.gradle.tooling.BuildAction
+import org.gradle.tooling.BuildController
+import org.gradle.tooling.model.cpp.CppProject
+import org.gradle.tooling.model.gradle.GradleBuild
+import java.io.Serializable
+import kotlin.collections.ArrayList
+import kotlin.collections.MutableList
 
-import org.gradle.tooling.BuildAction;
-import org.gradle.tooling.BuildController;
-import org.gradle.tooling.model.cpp.CppProject;
-import org.gradle.tooling.model.gradle.BasicGradleProject;
-import org.gradle.tooling.model.gradle.GradleBuild;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
-public class FetchAllCppProjects implements BuildAction<List<CppProject>>, Serializable {
-    @Override
-    public List<CppProject> execute(BuildController controller) {
-        List<CppProject> projects = new ArrayList<CppProject>();
-        collectModelsForBuild(controller, controller.getBuildModel(), projects);
-        for (GradleBuild build : controller.getBuildModel().getEditableBuilds()) {
-            collectModelsForBuild(controller, build, projects);
+class FetchAllCppProjects : BuildAction<MutableList<CppProject?>?>, Serializable {
+    public override fun execute(controller: BuildController): MutableList<CppProject?> {
+        val projects: MutableList<CppProject?> = ArrayList<CppProject?>()
+        collectModelsForBuild(controller, controller.getBuildModel(), projects)
+        for (build in controller.getBuildModel().getEditableBuilds()) {
+            collectModelsForBuild(controller, build, projects)
         }
-        return projects;
+        return projects
     }
 
-    private void collectModelsForBuild(BuildController controller, GradleBuild build, List<CppProject> projects) {
-        for (BasicGradleProject project : build.getProjects()) {
-            projects.add(controller.getModel(project, CppProject.class));
+    private fun collectModelsForBuild(controller: BuildController, build: GradleBuild, projects: MutableList<CppProject?>) {
+        for (project in build.getProjects()) {
+            projects.add(controller.getModel(project, CppProject::class.java))
         }
     }
 }

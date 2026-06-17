@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.pch
 
-package org.gradle.nativeplatform.internal.pch;
+import org.gradle.language.base.internal.registry.LanguageTransform
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.nativeplatform.ObjectFile
 
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.base.internal.registry.LanguageTransform;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.nativeplatform.ObjectFile;
-
-public interface PchEnabledLanguageTransform<U extends DependentSourceSet> extends LanguageTransform<U, ObjectFile> {
-    SourceTransformTaskConfig getPchTransformTask();
+interface PchEnabledLanguageTransform<U : DependentSourceSet?> : LanguageTransform<U?, ObjectFile?> {
+    val pchTransformTask: SourceTransformTaskConfig?
 }

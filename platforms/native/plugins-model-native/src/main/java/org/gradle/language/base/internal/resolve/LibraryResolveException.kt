@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.resolve
 
-package org.gradle.language.base.internal.resolve;
-
-import org.gradle.internal.exceptions.Contextual;
-import org.gradle.internal.exceptions.DefaultMultiCauseException;
+import org.gradle.internal.exceptions.Contextual
+import org.gradle.internal.exceptions.DefaultMultiCauseException
 
 @Contextual
-public class LibraryResolveException extends DefaultMultiCauseException {
+class LibraryResolveException : DefaultMultiCauseException {
+    constructor(message: String?) : super(message)
 
-    public LibraryResolveException(String message) {
-        super(message);
-    }
-
-    public LibraryResolveException(String message, Iterable<? extends Throwable> causes) {
-        super(message, causes);
-    }
+    constructor(message: String?, causes: Iterable<out Throwable?>) : super(message, causes)
 }

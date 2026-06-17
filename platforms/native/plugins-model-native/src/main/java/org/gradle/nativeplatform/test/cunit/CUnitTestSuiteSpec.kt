@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test.cunit;
+package org.gradle.nativeplatform.test.cunit
 
-import org.gradle.api.Incubating;
-import org.gradle.nativeplatform.test.NativeTestSuiteSpec;
+import org.gradle.api.Incubating
+import org.gradle.nativeplatform.test.NativeTestSuiteSpec
 
 /**
  * Test suite of CUnit tests.
  */
 @Incubating
-public interface CUnitTestSuiteSpec extends NativeTestSuiteSpec {
-}
+interface CUnitTestSuiteSpec : NativeTestSuiteSpec

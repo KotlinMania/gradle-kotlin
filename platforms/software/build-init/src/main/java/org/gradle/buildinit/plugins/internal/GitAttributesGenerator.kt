@@ -13,40 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.IOException
+import java.io.PrintWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
-import org.gradle.internal.UncheckedException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-public class GitAttributesGenerator implements BuildContentGenerator {
-
-    @Override
-    public void generate(InitSettings settings, BuildContentGenerationContext buildContentGenerationContext) {
-        File file = settings.getTarget().file(".gitattributes").getAsFile();
+class GitAttributesGenerator : BuildContentGenerator {
+    override fun generate(settings: InitSettings, buildContentGenerationContext: BuildContentGenerationContext) {
+        val file = settings.getTarget().file(".gitattributes").getAsFile()
         try {
-            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(file.toPath(), UTF_8))) {
-                writer.println("#");
-                writer.println("# https://help.github.com/articles/dealing-with-line-endings/");
-                writer.println("#");
-                writer.println("# Linux start script should use lf");
-                writer.println("/gradlew        text eol=lf");
-                writer.println();
-                writer.println("# These are Windows script files and should use crlf");
-                writer.println("*.bat           text eol=crlf");
-                writer.println();
-                writer.println("# Binary files should be left untouched");
-                writer.println("*.jar           binary");
-                writer.println();
+            PrintWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)).use { writer ->
+                writer.println("#")
+                writer.println("# https://help.github.com/articles/dealing-with-line-endings/")
+                writer.println("#")
+                writer.println("# Linux start script should use lf")
+                writer.println("/gradlew        text eol=lf")
+                writer.println()
+                writer.println("# These are Windows script files and should use crlf")
+                writer.println("*.bat           text eol=crlf")
+                writer.println()
+                writer.println("# Binary files should be left untouched")
+                writer.println("*.jar           binary")
+                writer.println()
             }
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
     }
 }

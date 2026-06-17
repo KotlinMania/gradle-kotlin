@@ -13,47 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.project.ant
 
-package org.gradle.api.internal.project.ant;
-
-import org.gradle.api.Project;
-import org.gradle.api.internal.ClassPathRegistry;
-import org.gradle.api.internal.classpath.ModuleRegistry;
-import org.gradle.api.internal.project.AntBuilderFactory;
-import org.gradle.api.internal.project.DefaultAntBuilderFactory;
-import org.gradle.api.internal.project.IsolatedAntBuilder;
-import org.gradle.api.internal.project.antbuilder.DefaultIsolatedAntBuilder;
-import org.gradle.internal.classloader.ClassLoaderFactory;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.Project
+import org.gradle.api.internal.ClassPathRegistry
+import org.gradle.api.internal.classpath.ModuleRegistry
+import org.gradle.api.internal.project.AntBuilderFactory
+import org.gradle.api.internal.project.DefaultAntBuilderFactory
+import org.gradle.api.internal.project.IsolatedAntBuilder
+import org.gradle.api.internal.project.antbuilder.DefaultIsolatedAntBuilder
+import org.gradle.internal.classloader.ClassLoaderFactory
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class AntModuleServices extends AbstractGradleModuleServices {
-
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.addProvider(new AntBuildScopeServices());
+class AntModuleServices : AbstractGradleModuleServices() {
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.addProvider(AntBuildScopeServices())
     }
 
-    @Override
-    public void registerProjectServices(ServiceRegistration registration) {
-        registration.addProvider(new AntProjectScopeServices());
+    public override fun registerProjectServices(registration: ServiceRegistration) {
+        registration.addProvider(AntProjectScopeServices())
     }
 
-    private static class AntBuildScopeServices implements ServiceRegistrationProvider {
+    private class AntBuildScopeServices : ServiceRegistrationProvider {
         @Provides
-        IsolatedAntBuilder createIsolatedAntBuilder(ClassPathRegistry classPathRegistry, ClassLoaderFactory classLoaderFactory, ModuleRegistry moduleRegistry) {
-            return new DefaultIsolatedAntBuilder(classPathRegistry, classLoaderFactory, moduleRegistry);
+        fun createIsolatedAntBuilder(classPathRegistry: ClassPathRegistry, classLoaderFactory: ClassLoaderFactory, moduleRegistry: ModuleRegistry): IsolatedAntBuilder {
+            return DefaultIsolatedAntBuilder(classPathRegistry, classLoaderFactory, moduleRegistry)
         }
     }
 
-    private static class AntProjectScopeServices implements ServiceRegistrationProvider {
+    private class AntProjectScopeServices : ServiceRegistrationProvider {
         @Provides
-        AntBuilderFactory createAntBuilderFactory(Project project) {
-            return new DefaultAntBuilderFactory(project, new DefaultAntLoggingAdapterFactory());
+        fun createAntBuilderFactory(project: Project): AntBuilderFactory {
+            return DefaultAntBuilderFactory(project, DefaultAntLoggingAdapterFactory())
         }
     }
 }

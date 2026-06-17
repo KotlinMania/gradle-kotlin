@@ -13,42 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal.execution
 
-package org.gradle.nativeplatform.test.xctest.internal.execution;
-
-import org.gradle.api.internal.tasks.testing.TestExecutionSpec;
-
-import java.io.File;
+import org.gradle.api.internal.tasks.testing.TestExecutionSpec
+import java.io.File
 
 /**
  * Describes an XCTest execution run
  */
-public class XCTestTestExecutionSpec implements TestExecutionSpec {
-    private final File workingDir;
-    private final File runScript;
-    private final String path;
-    private final XCTestSelection testSelection;
-
-    public XCTestTestExecutionSpec(File workingDir, File runScript, String path, XCTestSelection testSelection) {
-        this.workingDir = workingDir;
-        this.runScript = runScript;
-        this.path = path;
-        this.testSelection = testSelection;
-    }
-
-    public File getWorkingDir() {
-        return workingDir;
-    }
-
-    public File getRunScript() {
-        return runScript;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public XCTestSelection getTestSelection() {
-        return testSelection;
-    }
-}
+class XCTestTestExecutionSpec(val workingDir: File?, val runScript: File?, val path: String?, val testSelection: XCTestSelection?) : TestExecutionSpec

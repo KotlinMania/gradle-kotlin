@@ -13,29 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.nativeplatform.PreprocessingTool
 
-import org.gradle.nativeplatform.PreprocessingTool;
+class DefaultPreprocessingTool : DefaultTool(), PreprocessingTool {
+    private val definitions: MutableMap<String?, String?> = LinkedHashMap<String?, String?>()
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-public class DefaultPreprocessingTool extends DefaultTool implements PreprocessingTool {
-    private final Map<String, String> definitions = new LinkedHashMap<String, String>();
-
-    @Override
-    public Map<String, String> getMacros() {
-        return definitions;
+    override fun getMacros(): MutableMap<String?, String?> {
+        return definitions
     }
 
-    @Override
-    public void define(String name) {
-        definitions.put(name, null);
+    override fun define(name: String?) {
+        definitions.put(name, null)
     }
 
-    @Override
-    public void define(String name, String definition) {
-        definitions.put(name, definition);
+    override fun define(name: String?, definition: String?) {
+        definitions.put(name, definition)
     }
 }

@@ -13,118 +13,93 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import org.gradle.internal.Factory.create
+import java.util.Optional
 
 /**
  * Generator for some software and an associated Gradle build.
  */
-public class SourceGeneratingBuildGenerator extends AbstractBuildGenerator implements CompositeProjectInitDescriptor {
-    private final ProjectGenerator descriptor;
-    private final List<? extends BuildContentGenerator> generators;
-
-    public SourceGeneratingBuildGenerator(ProjectGenerator projectGenerator, List<? extends BuildContentGenerator> generators) {
-        super(projectGenerator, generators);
-        this.generators = generators;
-        this.descriptor = projectGenerator;
+class SourceGeneratingBuildGenerator(private val descriptor: ProjectGenerator, private val generators: MutableList<out BuildContentGenerator>) : AbstractBuildGenerator(
+    descriptor,
+    generators
+), CompositeProjectInitDescriptor {
+    override fun getId(): String {
+        return descriptor.getId()
     }
 
-    @Override
-    public String getId() {
-        return descriptor.getId();
+    override fun getComponentType(): ComponentType {
+        return descriptor.getComponentType()
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return descriptor.getComponentType();
+    override fun getLanguage(): Language {
+        return descriptor.getLanguage()
     }
 
-    @Override
-    public Language getLanguage() {
-        return descriptor.getLanguage();
+    override fun productionCodeUses(language: Language): Boolean {
+        return descriptor.getLanguage() == language
     }
 
-    @Override
-    public boolean productionCodeUses(Language language) {
-        return descriptor.getLanguage().equals(language);
+    override fun getDefaultProjectNames(): MutableList<String> {
+        return getComponentType().getDefaultProjectNames()
     }
 
-    @Override
-    public List<String> getDefaultProjectNames() {
-        return getComponentType().getDefaultProjectNames();
+    override fun supportsJavaTargets(): Boolean {
+        return descriptor.isJvmLanguage()
     }
 
-    @Override
-    public boolean supportsJavaTargets() {
-        return descriptor.isJvmLanguage();
+    override fun getModularizationOptions(): MutableSet<ModularizationOption> {
+        return descriptor.getModularizationOptions()
     }
 
-    @Override
-    public Set<ModularizationOption> getModularizationOptions() {
-        return descriptor.getModularizationOptions();
+    override fun supportsPackage(): Boolean {
+        return descriptor.supportsPackage()
     }
 
-    @Override
-    public boolean supportsPackage() {
-        return descriptor.supportsPackage();
+    override fun getDefaultDsl(): BuildInitDsl {
+        return descriptor.getDefaultDsl()
     }
 
-    @Override
-    public BuildInitDsl getDefaultDsl() {
-        return descriptor.getDefaultDsl();
+    override fun getDefaultTestFramework(): BuildInitTestFramework {
+        return getDefaultTestFramework(ModularizationOption.SINGLE_PROJECT)
     }
 
-    @Override
-    public BuildInitTestFramework getDefaultTestFramework() {
-        return getDefaultTestFramework(ModularizationOption.SINGLE_PROJECT);
+    override fun getDefaultTestFramework(modularizationOption: ModularizationOption): BuildInitTestFramework {
+        return descriptor.getDefaultTestFramework(modularizationOption)
     }
 
-    @Override
-    public BuildInitTestFramework getDefaultTestFramework(ModularizationOption modularizationOption) {
-        return descriptor.getDefaultTestFramework(modularizationOption);
+    override fun getTestFrameworks(): MutableSet<BuildInitTestFramework> {
+        return getTestFrameworks(ModularizationOption.SINGLE_PROJECT)
     }
 
-    @Override
-    public Set<BuildInitTestFramework> getTestFrameworks() {
-        return getTestFrameworks(ModularizationOption.SINGLE_PROJECT);
+    override fun getTestFrameworks(modularizationOption: ModularizationOption): MutableSet<BuildInitTestFramework> {
+        return descriptor.getTestFrameworks(modularizationOption)
     }
 
-    @Override
-    public Set<BuildInitTestFramework> getTestFrameworks(ModularizationOption modularizationOption) {
-        return descriptor.getTestFrameworks(modularizationOption);
+    override fun getFurtherReading(settings: InitSettings): Optional<String> {
+        return descriptor.getFurtherReading(settings)
     }
 
-    @Override
-    public Optional<String> getFurtherReading(InitSettings settings) {
-        return descriptor.getFurtherReading(settings);
-    }
-
-    @Override
-    public Map<String, List<String>> generateWithExternalComments(InitSettings settings) {
-        BuildContentGenerationContext buildContentGenerationContext = new BuildContentGenerationContext(new VersionCatalogDependencyRegistry(false));
-        if (!(descriptor instanceof LanguageSpecificAdaptor)) {
-            throw new UnsupportedOperationException();
+    override fun generateWithExternalComments(settings: InitSettings): MutableMap<String, MutableList<String>> {
+        val buildContentGenerationContext = BuildContentGenerationContext(VersionCatalogDependencyRegistry(false))
+        if (descriptor !is LanguageSpecificAdaptor) {
+            throw UnsupportedOperationException()
         }
-        for (BuildContentGenerator generator : generators) {
-            if (generator instanceof SimpleGlobalFilesBuildSettingsDescriptor) {
-                ((SimpleGlobalFilesBuildSettingsDescriptor) generator).generateWithoutComments(settings, buildContentGenerationContext);
+        for (generator in generators) {
+            if (generator is SimpleGlobalFilesBuildSettingsDescriptor) {
+                generator.generateWithoutComments(settings, buildContentGenerationContext)
             } else {
-                generator.generate(settings, buildContentGenerationContext);
+                generator.generate(settings, buildContentGenerationContext)
             }
         }
-        Map<String, List<String>> comments = ((LanguageSpecificAdaptor) descriptor).generateWithExternalComments(settings, buildContentGenerationContext);
-        VersionCatalogGenerator.create(settings.getTarget()).generate(buildContentGenerationContext, settings.isWithComments());
-        return comments;
+        val comments = descriptor.generateWithExternalComments(settings, buildContentGenerationContext)
+        VersionCatalogGenerator.Companion.create(settings.getTarget()).generate(buildContentGenerationContext, settings.isWithComments())
+        return comments
     }
 }

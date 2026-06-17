@@ -13,52 +13,88 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal.configure;
+package org.gradle.nativeplatform.internal.configure
 
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.internal.BiAction;
-import org.gradle.model.ModelMap;
-import org.gradle.model.internal.core.*;
-import org.gradle.model.internal.core.rule.describe.SimpleModelRuleDescriptor;
-import org.gradle.model.internal.manage.instance.ManagedInstance;
-import org.gradle.nativeplatform.*;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.platform.base.internal.BinaryNamingScheme;
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.internal.BiAction
+import org.gradle.model.ModelMap
+import org.gradle.model.internal.core.DirectNodeNoInputsModelAction
+import org.gradle.model.internal.core.ModelActionRole
+import org.gradle.model.internal.core.ModelReference
+import org.gradle.model.internal.core.MutableModelNode
+import org.gradle.model.internal.core.rule.describe.SimpleModelRuleDescriptor
+import org.gradle.model.internal.manage.instance.ManagedInstance
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.NativeExecutableBinarySpec
+import org.gradle.nativeplatform.NativeLibrarySpec
+import org.gradle.nativeplatform.SharedLibraryBinarySpec
+import org.gradle.nativeplatform.StaticLibraryBinarySpec
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver
+import org.gradle.nativeplatform.platform.NativePlatform
+import org.gradle.platform.base.internal.BinaryNamingScheme
 
-public class NativeBinaries {
-
-    public static void createNativeBinaries(
-        NativeComponentSpec component,
-        ModelMap<NativeBinarySpec> binaries,
-        NativeDependencyResolver resolver,
-        FileCollectionFactory fileCollectionFactory,
-        BinaryNamingScheme namingScheme,
-        NativePlatform platform,
-        BuildType buildType,
-        Flavor flavor
+object NativeBinaries {
+    fun createNativeBinaries(
+        component: NativeComponentSpec?,
+        binaries: ModelMap<NativeBinarySpec?>,
+        resolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?,
+        namingScheme: BinaryNamingScheme,
+        platform: NativePlatform?,
+        buildType: BuildType?,
+        flavor: Flavor?
     ) {
-        if (component instanceof NativeLibrarySpec) {
-            createNativeBinary(SharedLibraryBinarySpec.class, binaries, resolver, fileCollectionFactory, namingScheme.withBinaryType("SharedLibrary").withRole("shared", false), platform, buildType, flavor);
-            createNativeBinary(StaticLibraryBinarySpec.class, binaries, resolver, fileCollectionFactory, namingScheme.withBinaryType("StaticLibrary").withRole("static", false), platform, buildType, flavor);
+        if (component is NativeLibrarySpec) {
+            NativeBinaries.createNativeBinary<SharedLibraryBinarySpec?>(
+                SharedLibraryBinarySpec::class.java,
+                binaries,
+                resolver,
+                fileCollectionFactory,
+                namingScheme.withBinaryType("SharedLibrary").withRole("shared", false),
+                platform,
+                buildType,
+                flavor
+            )
+            NativeBinaries.createNativeBinary<StaticLibraryBinarySpec?>(
+                StaticLibraryBinarySpec::class.java,
+                binaries,
+                resolver,
+                fileCollectionFactory,
+                namingScheme.withBinaryType("StaticLibrary").withRole("static", false),
+                platform,
+                buildType,
+                flavor
+            )
         } else {
-            createNativeBinary(NativeExecutableBinarySpec.class, binaries, resolver, fileCollectionFactory, namingScheme.withBinaryType("Executable").withRole("executable", true), platform, buildType, flavor);
+            NativeBinaries.createNativeBinary<NativeExecutableBinarySpec?>(
+                NativeExecutableBinarySpec::class.java,
+                binaries,
+                resolver,
+                fileCollectionFactory,
+                namingScheme.withBinaryType("Executable").withRole("executable", true),
+                platform,
+                buildType,
+                flavor
+            )
         }
     }
 
-    private static <T extends NativeBinarySpec> void createNativeBinary(
-        Class<T> type,
-        ModelMap<NativeBinarySpec> binaries,
-        final NativeDependencyResolver resolver,
-        final FileCollectionFactory fileCollectionFactory,
-        final BinaryNamingScheme namingScheme,
-        final NativePlatform platform,
-        final BuildType buildType,
-        final Flavor flavor
+    private fun <T : NativeBinarySpec?> createNativeBinary(
+        type: Class<T?>?,
+        binaries: ModelMap<NativeBinarySpec?>,
+        resolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?,
+        namingScheme: BinaryNamingScheme,
+        platform: NativePlatform?,
+        buildType: BuildType?,
+        flavor: Flavor?
     ) {
-        final String name = namingScheme.getBinaryName();
-        binaries.create(name, type);
+        val name = namingScheme.getBinaryName()
+        binaries.create<T?>(name, type)
 
         // TODO:REUSE Refactor after removing reuse
         // This is horrendously bad.
@@ -69,37 +105,36 @@ public class NativeBinaries {
         // We have to use a @Defaults rule to assign the tool chain because it needs to be there in user @Mutate rules
         // Or at least, the file locations do so that they can be tweaked.
         // LD - 5/6/14
-        MutableModelNode backingNode = ((ManagedInstance) binaries).getBackingNode();
-        ModelPath binaryPath = backingNode.getPath().child(name);
-        backingNode.applyToLink(ModelActionRole.Defaults, DirectNodeNoInputsModelAction.of(
-            ModelReference.of(binaryPath, NativeBinarySpec.class),
-            new SimpleModelRuleDescriptor("initialize binary " + binaryPath),
-            new BiAction<MutableModelNode, NativeBinarySpec>() {
-                @Override
-                public void execute(MutableModelNode mutableModelNode, NativeBinarySpec nativeBinarySpec) {
-                    initialize(nativeBinarySpec, namingScheme, resolver, fileCollectionFactory, platform, buildType, flavor);
+        val backingNode = (binaries as ManagedInstance).getBackingNode()
+        val binaryPath = backingNode.getPath().child(name)
+        backingNode.applyToLink(
+            ModelActionRole.Defaults, DirectNodeNoInputsModelAction.of<NativeBinarySpec?>(
+                ModelReference.of<NativeBinarySpec?>(binaryPath, NativeBinarySpec::class.java),
+                SimpleModelRuleDescriptor("initialize binary " + binaryPath),
+                object : BiAction<MutableModelNode?, NativeBinarySpec?> {
+                    override fun execute(mutableModelNode: MutableModelNode?, nativeBinarySpec: NativeBinarySpec?) {
+                        initialize(nativeBinarySpec, namingScheme, resolver, fileCollectionFactory, platform, buildType, flavor)
+                    }
                 }
-            }
-        ));
-        binaries.named(name, NativeBinaryRules.class);
+            ))
+        binaries.named(name, NativeBinaryRules::class.java)
     }
 
-    public static void initialize(
-        NativeBinarySpec nativeBinarySpec,
-        BinaryNamingScheme namingScheme,
-        NativeDependencyResolver resolver,
-        FileCollectionFactory fileCollectionFactory,
-        NativePlatform platform,
-        BuildType buildType,
-        Flavor flavor
+    fun initialize(
+        nativeBinarySpec: NativeBinarySpec?,
+        namingScheme: BinaryNamingScheme?,
+        resolver: NativeDependencyResolver?,
+        fileCollectionFactory: FileCollectionFactory?,
+        platform: NativePlatform?,
+        buildType: BuildType?,
+        flavor: Flavor?
     ) {
-        NativeBinarySpecInternal nativeBinary = (NativeBinarySpecInternal) nativeBinarySpec;
-        nativeBinary.setNamingScheme(namingScheme);
-        nativeBinary.setTargetPlatform(platform);
-        nativeBinary.setBuildType(buildType);
-        nativeBinary.setFlavor(flavor);
-        nativeBinary.setResolver(resolver);
-        nativeBinary.setFileCollectionFactory(fileCollectionFactory);
+        val nativeBinary = nativeBinarySpec as NativeBinarySpecInternal
+        nativeBinary.setNamingScheme(namingScheme)
+        nativeBinary.setTargetPlatform(platform)
+        nativeBinary.setBuildType(buildType)
+        nativeBinary.setFlavor(flavor)
+        nativeBinary.setResolver(resolver)
+        nativeBinary.setFileCollectionFactory(fileCollectionFactory)
     }
-
 }

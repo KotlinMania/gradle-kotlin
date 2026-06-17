@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.resolve
 
-package org.gradle.api.internal.resolve;
+import org.gradle.platform.base.Binary
 
-import org.gradle.platform.base.Binary;
+interface LibraryResolutionErrorMessageBuilder {
+    fun multipleCompatibleVariantsErrorMessage(libraryName: String?, binaries: Iterable<out Binary?>?): String?
 
-public interface LibraryResolutionErrorMessageBuilder {
-    String multipleCompatibleVariantsErrorMessage(String libraryName, Iterable<? extends Binary> binaries);
-
-    String noCompatibleVariantErrorMessage(String libraryName, Iterable<? extends Binary> allBinaries);
-
+    fun noCompatibleVariantErrorMessage(libraryName: String?, allBinaries: Iterable<out Binary?>?): String?
 }

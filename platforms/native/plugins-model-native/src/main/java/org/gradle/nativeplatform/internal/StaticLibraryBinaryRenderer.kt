@@ -13,28 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.StaticLibraryBinarySpec
+import javax.inject.Inject
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.StaticLibraryBinarySpec;
+class StaticLibraryBinaryRenderer @Inject constructor(schemaStore: ModelSchemaStore?) : AbstractNativeBinaryRenderer<StaticLibraryBinarySpec?>(schemaStore) {
+    val targetType: Class<StaticLibraryBinarySpec?>?
+        get() = StaticLibraryBinarySpec::class.java
 
-import javax.inject.Inject;
-
-public class StaticLibraryBinaryRenderer extends AbstractNativeBinaryRenderer<StaticLibraryBinarySpec> {
-    @Inject
-    public StaticLibraryBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
-    }
-
-    @Override
-    public Class<StaticLibraryBinarySpec> getTargetType() {
-        return StaticLibraryBinarySpec.class;
-    }
-
-    @Override
-    protected void renderOutputs(StaticLibraryBinarySpec binary, TextReportBuilder builder) {
-        builder.item("static library file", binary.getStaticLibraryFile());
+    override fun renderOutputs(binary: StaticLibraryBinarySpec, builder: TextReportBuilder) {
+        builder.item("static library file", binary.getStaticLibraryFile())
     }
 }

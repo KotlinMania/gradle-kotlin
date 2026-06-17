@@ -13,51 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-
-public class CppApplicationProjectInitDescriptor extends CppProjectInitDescriptor {
-    public CppApplicationProjectInitDescriptor(TemplateOperationFactory templateOperationFactory, DocumentationRegistry documentationRegistry) {
-        super(templateOperationFactory, documentationRegistry);
+class CppApplicationProjectInitDescriptor(templateOperationFactory: TemplateOperationFactory, documentationRegistry: DocumentationRegistry) :
+    CppProjectInitDescriptor(templateOperationFactory, documentationRegistry) {
+    override fun getId(): String {
+        return "cpp-application"
     }
 
-    @Override
-    public String getId() {
-        return "cpp-application";
+    override fun getComponentType(): ComponentType {
+        return ComponentType.APPLICATION
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.APPLICATION;
+    override fun sourceTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cppapp/app.cpp.template", settings, "main", "cpp")
     }
 
-    @Override
-    protected TemplateOperation sourceTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cppapp/app.cpp.template", settings, "main", "cpp");
+    override fun headerTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cppapp/app.h.template", settings, "main", "headers")
     }
 
-    @Override
-    protected TemplateOperation headerTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cppapp/app.h.template", settings, "main", "headers");
+    override fun testTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromCppTemplate("cppapp/app_test.cpp.template", settings, "test", "cpp")
     }
 
-    @Override
-    protected TemplateOperation testTemplateOperation(InitSettings settings) {
-        return fromCppTemplate("cppapp/app_test.cpp.template", settings, "test", "cpp");
-    }
-
-    @Override
-    protected void configureBuildScript(InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun configureBuildScript(settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
         buildScriptBuilder
             .plugin(
                 "Apply the cpp-application plugin to add support for building C++ executables",
-                "cpp-application")
-            .plugin("Apply the cpp-unit-test plugin to add support for building and running C++ test executables",
-                "cpp-unit-test")
-            .block("Set the target operating system and architecture for this application", "application",
-                b -> b.methodInvocation(null, "targetMachines.add", buildScriptBuilder.propertyExpression(getHostTargetMachineDefinition())));
+                "cpp-application"
+            )
+            .plugin(
+                "Apply the cpp-unit-test plugin to add support for building and running C++ test executables",
+                "cpp-unit-test"
+            )
+            .block(
+                "Set the target operating system and architecture for this application", "application",
+                Action { b: ScriptBlockBuilder? -> b!!.methodInvocation(null, "targetMachines.add", buildScriptBuilder.propertyExpression(getHostTargetMachineDefinition())) })
     }
 }

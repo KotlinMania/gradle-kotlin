@@ -13,83 +13,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal
 
-package org.gradle.nativeplatform.test.xctest.internal;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.language.ComponentDependencies;
-import org.gradle.language.cpp.internal.NativeVariantIdentity;
-import org.gradle.language.internal.DefaultComponentDependencies;
-import org.gradle.language.nativeplatform.internal.Names;
-import org.gradle.language.swift.SwiftComponent;
-import org.gradle.language.swift.SwiftPlatform;
-import org.gradle.language.swift.internal.DefaultSwiftComponent;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestBinary;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestBundle;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestExecutable;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestSuite;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-
-import javax.inject.Inject;
+import org.gradle.api.Action
+import org.gradle.api.provider.Property
+import org.gradle.internal.Describables
+import org.gradle.language.ComponentDependencies
+import org.gradle.language.cpp.internal.NativeVariantIdentity
+import org.gradle.language.internal.DefaultComponentDependencies
+import org.gradle.language.internal.NativeComponentFactory.newInstance
+import org.gradle.language.nativeplatform.internal.Names
+import org.gradle.language.swift.SwiftComponent
+import org.gradle.language.swift.SwiftPlatform
+import org.gradle.language.swift.internal.DefaultSwiftComponent
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestBinary
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestBundle
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestExecutable
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestSuite
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
+import javax.inject.Inject
 
 /**
  * Abstract software component representing an XCTest suite.
  */
-public abstract class DefaultSwiftXCTestSuite extends DefaultSwiftComponent<SwiftXCTestBinary> implements SwiftXCTestSuite {
-    private final Property<SwiftXCTestBinary> testBinary;
-    private final Property<SwiftComponent> testedComponent;
-    private final DefaultComponentDependencies dependencies;
+abstract class DefaultSwiftXCTestSuite @Inject constructor(name: String) : DefaultSwiftComponent<SwiftXCTestBinary?>(name, SwiftXCTestBinary::class.java), SwiftXCTestSuite {
+    private val testBinary: Property<SwiftXCTestBinary?>?
+    val testedComponent: Property<SwiftComponent?>?
+    private val dependencies: DefaultComponentDependencies
 
-    @Inject
-    public DefaultSwiftXCTestSuite(String name) {
-        super(name, SwiftXCTestBinary.class);
-        this.testedComponent = objectFactory.property(SwiftComponent.class);
-        this.testBinary = objectFactory.property(SwiftXCTestBinary.class);
-        this.dependencies = objectFactory.newInstance(DefaultComponentDependencies.class, getNames().withSuffix("implementation"));
+    init {
+        this.testedComponent = objectFactory.property(SwiftComponent::class.java)
+        this.testBinary = objectFactory.property(SwiftXCTestBinary::class.java)
+        this.dependencies = objectFactory.newInstance(DefaultComponentDependencies::class.java, getNames().withSuffix("implementation"))
     }
 
-    @Override
-    public DisplayName getDisplayName() {
-        return Describables.withTypeAndName("XCTest suite", getName());
+    val displayName: DisplayName
+        get() = Describables.withTypeAndName("XCTest suite", getName()!!)
+
+    fun addExecutable(identity: NativeVariantIdentity?, targetPlatform: SwiftPlatform?, toolChain: NativeToolChainInternal?, platformToolProvider: PlatformToolProvider?): SwiftXCTestExecutable? {
+        val result: SwiftXCTestExecutable? = objectFactory.newInstance(
+            DefaultSwiftXCTestExecutable::class.java,
+            Names.of(getName() + "Executable", getName()!!),
+            module,
+            false,
+            getSwiftSource(),
+            implementationDependencies,
+            targetPlatform,
+            toolChain,
+            platformToolProvider,
+            identity
+        )
+        getBinaries().add(result)
+        return result
     }
 
-    public SwiftXCTestExecutable addExecutable(NativeVariantIdentity identity, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider) {
-        SwiftXCTestExecutable result = objectFactory.newInstance(DefaultSwiftXCTestExecutable.class, Names.of(getName() + "Executable", getName()), module, false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
-        getBinaries().add(result);
-        return result;
+    fun addBundle(identity: NativeVariantIdentity?, targetPlatform: SwiftPlatform?, toolChain: NativeToolChainInternal?, platformToolProvider: PlatformToolProvider?): SwiftXCTestBundle? {
+        val result: SwiftXCTestBundle? = objectFactory.newInstance(
+            DefaultSwiftXCTestBundle::class.java,
+            Names.of(getName() + "Executable", getName()!!),
+            module,
+            false,
+            getSwiftSource(),
+            implementationDependencies,
+            targetPlatform,
+            toolChain,
+            platformToolProvider,
+            identity
+        )
+        getBinaries().add(result)
+        return result
     }
 
-    public SwiftXCTestBundle addBundle(NativeVariantIdentity identity, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider) {
-        SwiftXCTestBundle result = objectFactory.newInstance(DefaultSwiftXCTestBundle.class, Names.of(getName() + "Executable", getName()), module, false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
-        getBinaries().add(result);
-        return result;
+    val implementationDependencies: Configuration
+        get() = dependencies.implementationDependencies
+
+    override fun getDependencies(): ComponentDependencies {
+        return dependencies
     }
 
-    @Override
-    public Configuration getImplementationDependencies() {
-        return dependencies.getImplementationDependencies();
+    fun dependencies(action: Action<in ComponentDependencies?>) {
+        action.execute(dependencies)
     }
 
-    @Override
-    public ComponentDependencies getDependencies() {
-        return dependencies;
-    }
-
-    public void dependencies(Action<? super ComponentDependencies> action) {
-        action.execute(dependencies);
-    }
-
-    public Property<SwiftComponent> getTestedComponent() {
-        return testedComponent;
-    }
-
-    @Override
-    public Property<SwiftXCTestBinary> getTestBinary() {
-        return testBinary;
+    override fun getTestBinary(): Property<SwiftXCTestBinary?>? {
+        return testBinary
     }
 }

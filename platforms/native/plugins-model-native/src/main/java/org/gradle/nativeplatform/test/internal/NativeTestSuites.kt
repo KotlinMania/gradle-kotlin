@@ -13,119 +13,112 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.internal
 
-package org.gradle.nativeplatform.test.internal;
-
-import org.gradle.api.Action;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.model.ModelMap;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.NativeExecutableFileSpec;
-import org.gradle.nativeplatform.NativeInstallationSpec;
-import org.gradle.nativeplatform.SharedLibraryBinary;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.internal.NativeComponents;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.NativeTestSuiteSpec;
-import org.gradle.nativeplatform.test.tasks.RunTestExecutable;
-import org.gradle.platform.base.InvalidModelException;
-import org.gradle.platform.base.VariantComponentSpec;
-import org.gradle.platform.base.internal.BinaryNamingScheme;
-import org.gradle.testing.base.TestSuiteContainer;
-
-import java.io.File;
-import java.util.Collection;
-
-import static org.gradle.nativeplatform.internal.configure.NativeBinaryRules.executableFileFor;
-import static org.gradle.nativeplatform.internal.configure.NativeBinaryRules.installationDirFor;
+import org.gradle.api.Action
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.model.ModelMap
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.SharedLibraryBinary
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.internal.NativeComponents
+import org.gradle.nativeplatform.internal.configure.NativeBinaryRules
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
+import org.gradle.nativeplatform.test.NativeTestSuiteSpec
+import org.gradle.nativeplatform.test.tasks.RunTestExecutable
+import org.gradle.platform.base.InvalidModelException
+import org.gradle.platform.base.VariantComponentSpec
+import org.gradle.platform.base.internal.BinaryNamingScheme
+import org.gradle.testing.base.TestSuiteContainer
+import java.io.File
 
 /**
  * Functions for creation and configuration of native test suites.
  */
-public class NativeTestSuites {
-
-    public static <S extends NativeTestSuiteBinarySpec> void createNativeTestSuiteBinaries(ModelMap<S> binaries,
-                                                     NativeTestSuiteSpec testSuite,
-                                                     final Class<S> testSuiteBinaryClass,
-                                                     final String typeString, final File buildDir, final ServiceRegistry serviceRegistry) {
-        for (final NativeBinarySpec testedBinary : testedBinariesOf(testSuite)) {
-            if (testedBinary instanceof SharedLibraryBinary) {
+object NativeTestSuites {
+    fun <S : NativeTestSuiteBinarySpec?> createNativeTestSuiteBinaries(
+        binaries: ModelMap<S?>,
+        testSuite: NativeTestSuiteSpec,
+        testSuiteBinaryClass: Class<S?>?,
+        typeString: String?, buildDir: File?, serviceRegistry: ServiceRegistry
+    ) {
+        for (testedBinary in testedBinariesOf(testSuite)!!) {
+            if (testedBinary is SharedLibraryBinary) {
                 // For now, we only create test suites for static library variants
-                continue;
+                continue
             }
-            createNativeTestSuiteBinary(binaries, testSuite, testSuiteBinaryClass, typeString, testedBinary, buildDir, serviceRegistry);
+            createNativeTestSuiteBinary<S?>(binaries, testSuite, testSuiteBinaryClass, typeString, testedBinary, buildDir, serviceRegistry)
         }
     }
 
-    private static <S extends NativeTestSuiteBinarySpec> void createNativeTestSuiteBinary(ModelMap<S> binaries,
-                                                    NativeTestSuiteSpec testSuite,
-                                                    Class<S> testSuiteBinaryClass,
-                                                    String typeString,
-                                                    final NativeBinarySpec testedBinary,
-                                                    final File buildDir, ServiceRegistry serviceRegistry) {
+    private fun <S : NativeTestSuiteBinarySpec?> createNativeTestSuiteBinary(
+        binaries: ModelMap<S?>,
+        testSuite: NativeTestSuiteSpec,
+        testSuiteBinaryClass: Class<S?>?,
+        typeString: String?,
+        testedBinary: NativeBinarySpec?,
+        buildDir: File?, serviceRegistry: ServiceRegistry
+    ) {
+        val namingScheme = NativeTestSuites.namingSchemeFor(testSuite, (testedBinary as org.gradle.nativeplatform.internal.NativeBinarySpecInternal?)!!, typeString)
+        val resolver = serviceRegistry.get<NativeDependencyResolver?>(NativeDependencyResolver::class.java)
 
-        final BinaryNamingScheme namingScheme = namingSchemeFor(testSuite, (NativeBinarySpecInternal) testedBinary, typeString);
-        final NativeDependencyResolver resolver = serviceRegistry.get(NativeDependencyResolver.class);
-
-        binaries.create(namingScheme.getBinaryName(), testSuiteBinaryClass, new Action<S>() {
-            @Override
-            public void execute(S binary) {
-                final NativeTestSuiteBinarySpecInternal testBinary = (NativeTestSuiteBinarySpecInternal) binary;
-                testBinary.setTestedBinary((NativeBinarySpecInternal) testedBinary);
-                testBinary.setNamingScheme(namingScheme);
-                testBinary.setResolver(resolver);
-                testBinary.setToolChain(testedBinary.getToolChain());
-                NativeExecutableFileSpec executable = testBinary.getExecutable();
-                NativeInstallationSpec installation = testBinary.getInstallation();
-                executable.setToolChain(testedBinary.getToolChain());
-                executable.setFile(executableFileFor(testBinary, buildDir));
-                installation.setDirectory(installationDirFor(testBinary, buildDir));
-                NativeComponents.createInstallTask(testBinary, installation, executable, namingScheme);
-                NativeComponents.createExecutableTask(testBinary, testBinary.getExecutableFile());
-                createRunTask(testBinary, namingScheme.getTaskName("run"));
+        binaries.create<S?>(namingScheme.getBinaryName(), testSuiteBinaryClass, object : Action<S?> {
+            override fun execute(binary: S?) {
+                val testBinary = binary as NativeTestSuiteBinarySpecInternal
+                testBinary.setTestedBinary(testedBinary as NativeBinarySpecInternal)
+                testBinary.setNamingScheme(namingScheme)
+                testBinary.setResolver(resolver)
+                testBinary.setToolChain(testedBinary.getToolChain())
+                val executable = testBinary.getExecutable()
+                val installation = testBinary.getInstallation()
+                executable.setToolChain(testedBinary.getToolChain())
+                executable.setFile(NativeBinaryRules.executableFileFor(testBinary, buildDir))
+                installation.setDirectory(NativeBinaryRules.installationDirFor(testBinary, buildDir))
+                NativeComponents.createInstallTask(testBinary, installation, executable, namingScheme)
+                NativeComponents.createExecutableTask(testBinary, testBinary.getExecutableFile())
+                createRunTask(testBinary, namingScheme.getTaskName("run"))
             }
-        });
+        })
     }
 
-    private static void createRunTask(final NativeTestSuiteBinarySpecInternal testBinary, String name) {
-        testBinary.getTasks().create(name, RunTestExecutable.class, new Action<RunTestExecutable>() {
-            @Override
-            public void execute(RunTestExecutable runTask) {
-                runTask.setDescription("Runs the " + testBinary);
-                testBinary.getTasks().add(runTask);
+    private fun createRunTask(testBinary: NativeTestSuiteBinarySpecInternal, name: String?) {
+        testBinary.getTasks().create<RunTestExecutable?>(name, RunTestExecutable::class.java, object : Action<RunTestExecutable?> {
+            override fun execute(runTask: RunTestExecutable) {
+                runTask.setDescription("Runs the " + testBinary)
+                testBinary.getTasks().add(runTask)
             }
-        });
-    }
-    public static Collection<NativeBinarySpec> testedBinariesOf(NativeTestSuiteSpec testSuite) {
-        return testedBinariesWithType(NativeBinarySpec.class, testSuite);
+        })
     }
 
-    public static <S> Collection<S> testedBinariesWithType(Class<S> type, NativeTestSuiteSpec testSuite) {
-        VariantComponentSpec spec = (VariantComponentSpec) testSuite.getTestedComponent();
+    fun testedBinariesOf(testSuite: NativeTestSuiteSpec): MutableCollection<NativeBinarySpec?>? {
+        return NativeTestSuites.testedBinariesWithType<NativeBinarySpec?>(NativeBinarySpec::class.java, testSuite)
+    }
+
+    fun <S> testedBinariesWithType(type: Class<S?>?, testSuite: NativeTestSuiteSpec): MutableCollection<S?>? {
+        val spec = testSuite.getTestedComponent() as VariantComponentSpec
         if (spec == null) {
-            throw new InvalidModelException(String.format("Test suite '%s' doesn't declare component under test. Please specify it with `testing $.components.myComponent`.", testSuite.getName()));
+            throw InvalidModelException(String.format("Test suite '%s' doesn't declare component under test. Please specify it with `testing $.components.myComponent`.", testSuite.getName()))
         }
-        return spec.getBinaries().withType(type).values();
+        return spec.getBinaries().withType<S?>(type).values()
     }
 
-    private static BinaryNamingScheme namingSchemeFor(NativeTestSuiteSpec testSuite, NativeBinarySpecInternal testedBinary, String typeString) {
+    private fun namingSchemeFor(testSuite: NativeTestSuiteSpec, testedBinary: NativeBinarySpecInternal, typeString: String?): BinaryNamingScheme {
         return testedBinary.getNamingScheme()
             .withComponentName(testSuite.getBaseName())
             .withBinaryType(typeString)
-            .withRole("executable", true);
+            .withRole("executable", true)
     }
 
-    public static <S extends NativeTestSuiteSpec> void createConventionalTestSuites(TestSuiteContainer testSuites, ModelMap<NativeComponentSpec> components, Class<S> testSuiteSpecClass) {
-        for (final NativeComponentSpec component : components.values()) {
-            final String suiteName = component.getName() + "Test";
-            testSuites.create(suiteName, testSuiteSpecClass, new Action<S>() {
-                @Override
-                public void execute(S testSuite) {
-                    testSuite.testing(component);
+    fun <S : NativeTestSuiteSpec?> createConventionalTestSuites(testSuites: TestSuiteContainer, components: ModelMap<NativeComponentSpec>, testSuiteSpecClass: Class<S?>?) {
+        for (component in components.values()) {
+            val suiteName = component.getName() + "Test"
+            testSuites.create<S?>(suiteName, testSuiteSpecClass, object : Action<S?> {
+                override fun execute(testSuite: S?) {
+                    testSuite!!.testing(component)
                 }
-            });
+            })
         }
     }
 }

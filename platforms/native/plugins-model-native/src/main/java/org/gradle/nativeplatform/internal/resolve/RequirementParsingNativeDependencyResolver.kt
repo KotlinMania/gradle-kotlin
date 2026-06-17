@@ -13,30 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.nativeplatform.NativeLibraryRequirement
 
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.nativeplatform.NativeLibraryRequirement;
+class RequirementParsingNativeDependencyResolver(private val delegate: NativeDependencyResolver) : NativeDependencyResolver {
+    private val parser: NotationParser<Any?, NativeLibraryRequirement> = NativeDependencyNotationParser.parser()
 
-public class RequirementParsingNativeDependencyResolver implements NativeDependencyResolver {
-    private final NotationParser<Object, NativeLibraryRequirement> parser = NativeDependencyNotationParser.parser();
-
-    private final NativeDependencyResolver delegate;
-
-    public RequirementParsingNativeDependencyResolver(NativeDependencyResolver delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public void resolve(NativeBinaryResolveResult nativeBinaryResolveResult) {
-        for (NativeBinaryRequirementResolveResult resolution : nativeBinaryResolveResult.getPendingResolutions()) {
-            NativeLibraryRequirement requirement = parser.parseNotation(resolution.getInput());
+    override fun resolve(nativeBinaryResolveResult: NativeBinaryResolveResult) {
+        for (resolution in nativeBinaryResolveResult.getPendingResolutions()) {
+            var requirement = parser.parseNotation(resolution.getInput())
             if (requirement.getProjectPath() == null || requirement.getProjectPath().isEmpty()) {
-                requirement = requirement.withProjectPath(nativeBinaryResolveResult.getTarget().getProjectPath());
+                requirement = requirement.withProjectPath(nativeBinaryResolveResult.getTarget().getProjectPath())
             }
-            resolution.setRequirement(requirement);
+            resolution.setRequirement(requirement)
         }
-        delegate.resolve(nativeBinaryResolveResult);
+        delegate.resolve(nativeBinaryResolveResult)
     }
 }

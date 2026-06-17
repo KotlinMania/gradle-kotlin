@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
-
-import java.util.Locale;
-
-public enum Language {
+enum class Language(val name: String?, private val displayName: String?, val extension: String?) {
     // These are in display order
     JAVA("Java"),
     KOTLIN("kotlin", "Kotlin", "kt"),
@@ -27,30 +24,9 @@ public enum Language {
     CPP("cpp", "C++", "cpp"),
     SWIFT("swift", "Swift", "swift");
 
-    private final String displayName;
-    private final String name;
-    private final String extension;
+    constructor(displayName: String) : this(displayName.lowercase(), displayName, displayName.lowercase())
 
-    Language(String displayName) {
-        this(displayName.toLowerCase(Locale.ROOT), displayName, displayName.toLowerCase(Locale.ROOT));
-    }
-
-    Language(String name, String displayName, String extension) {
-        this.name = name;
-        this.displayName = displayName;
-        this.extension = extension;
-    }
-
-    @Override
-    public String toString() {
-        return displayName;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getExtension() {
-        return extension;
+    override fun toString(): String {
+        return displayName!!
     }
 }

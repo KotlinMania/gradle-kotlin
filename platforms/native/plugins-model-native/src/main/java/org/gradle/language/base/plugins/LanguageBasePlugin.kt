@@ -13,48 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base.plugins;
+package org.gradle.language.base.plugins
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.ProjectSourceSet;
-import org.gradle.language.base.internal.DefaultProjectSourceSet;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.base.sources.BaseLanguageSourceSet;
-import org.gradle.model.Model;
-import org.gradle.model.RuleSource;
-import org.gradle.platform.base.ComponentType;
-import org.gradle.platform.base.TypeBuilder;
-import org.gradle.platform.base.plugins.ComponentBasePlugin;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.ProjectSourceSet
+import org.gradle.language.base.internal.DefaultProjectSourceSet
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.base.sources.BaseLanguageSourceSet
+import org.gradle.model.Model
+import org.gradle.model.RuleSource
+import org.gradle.platform.base.ComponentType
+import org.gradle.platform.base.TypeBuilder
+import org.gradle.platform.base.plugins.ComponentBasePlugin
 
 /**
  * Base plugin for language support.
  *
- * - Adds a {@link ProjectSourceSet} named {@code sources} to the project.
- * - Registers the base {@link LanguageSourceSet} type.
+ * - Adds a [ProjectSourceSet] named `sources` to the project.
+ * - Registers the base [LanguageSourceSet] type.
  */
 @Incubating
-public abstract class LanguageBasePlugin implements Plugin<Project> {
-    @Override
-    public void apply(Project project) {
-        project.getPluginManager().apply(ComponentBasePlugin.class);
+abstract class LanguageBasePlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(ComponentBasePlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
+    internal class Rules : RuleSource() {
         @ComponentType
-        void registerBaseLanguageSourceSet(TypeBuilder<LanguageSourceSet> builder) {
-            builder.defaultImplementation(BaseLanguageSourceSet.class);
-            builder.internalView(LanguageSourceSetInternal.class);
+        fun registerBaseLanguageSourceSet(builder: TypeBuilder<LanguageSourceSet?>) {
+            builder.defaultImplementation(BaseLanguageSourceSet::class.java)
+            builder.internalView(LanguageSourceSetInternal::class.java)
         }
 
         @Model
-        ProjectSourceSet sources(Instantiator instantiator, CollectionCallbackActionDecorator decorator) {
-            return instantiator.newInstance(DefaultProjectSourceSet.class, decorator);
+        fun sources(instantiator: Instantiator, decorator: CollectionCallbackActionDecorator): ProjectSourceSet {
+            return instantiator.newInstance<DefaultProjectSourceSet>(DefaultProjectSourceSet::class.java, decorator)
         }
     }
 }

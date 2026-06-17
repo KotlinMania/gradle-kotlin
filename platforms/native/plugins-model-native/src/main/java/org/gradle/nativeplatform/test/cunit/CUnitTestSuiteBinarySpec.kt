@@ -13,27 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cunit
 
-package org.gradle.nativeplatform.test.cunit;
-
-import org.gradle.api.Incubating;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
+import org.gradle.api.Incubating
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
 
 /**
  * An executable which run a CUnit test suite.
  */
 @Incubating
-public interface CUnitTestSuiteBinarySpec extends NativeTestSuiteBinarySpec {
+interface CUnitTestSuiteBinarySpec : NativeTestSuiteBinarySpec {
+    /**
+     * {@inheritDoc}
+     */
+    override fun getComponent(): CUnitTestSuiteSpec?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    CUnitTestSuiteSpec getComponent();
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    CUnitTestSuiteSpec getTestSuite();
+    override fun getTestSuite(): CUnitTestSuiteSpec
 }

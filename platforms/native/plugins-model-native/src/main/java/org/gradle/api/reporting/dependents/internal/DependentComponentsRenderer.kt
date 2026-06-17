@@ -13,103 +13,84 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents.internal
 
-package org.gradle.api.reporting.dependents.internal;
+import org.gradle.api.Action
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.internal.graph.GraphRenderer
+import org.gradle.internal.logging.text.StyledTextOutput
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.VariantComponentSpec
+import org.gradle.platform.base.internal.BinarySpecInternal
+import org.gradle.platform.base.internal.ComponentSpecInternal
+import org.gradle.platform.base.internal.dependents.DependentBinariesResolver
+import org.gradle.reporting.ReportRenderer
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.internal.graph.GraphRenderer;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.VariantComponentSpec;
-import org.gradle.platform.base.internal.BinarySpecInternal;
-import org.gradle.platform.base.internal.ComponentSpecInternal;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolutionResult;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolver;
-import org.gradle.reporting.ReportRenderer;
-import org.jspecify.annotations.Nullable;
+class DependentComponentsRenderer(private val resolver: DependentBinariesResolver?, private val showNonBuildable: Boolean, private val showTestSuites: Boolean) :
+    ReportRenderer<ComponentSpec?, TextReportBuilder?>() {
+    private var seenTestSuite = false
+    private var hiddenTestSuite = false
+    private var hiddenNonBuildable = false
 
-import java.util.LinkedHashSet;
-
-import static org.gradle.internal.logging.text.StyledTextOutput.Style.Description;
-import static org.gradle.internal.logging.text.StyledTextOutput.Style.Identifier;
-import static org.gradle.internal.logging.text.StyledTextOutput.Style.Info;
-
-public class DependentComponentsRenderer extends ReportRenderer<ComponentSpec, TextReportBuilder> {
-
-    private final DependentBinariesResolver resolver;
-    private final boolean showNonBuildable;
-    private final boolean showTestSuites;
-
-    private boolean seenTestSuite;
-    private boolean hiddenTestSuite;
-    private boolean hiddenNonBuildable;
-
-    public DependentComponentsRenderer(@Nullable DependentBinariesResolver dependentBinariesResolver, boolean showNonBuildable, boolean showTestSuites) {
-        this.resolver = dependentBinariesResolver;
-        this.showNonBuildable = showNonBuildable;
-        this.showTestSuites = showTestSuites;
-    }
-
-    @Override
-    public void render(final ComponentSpec component, final TextReportBuilder builder) {
-        ComponentSpecInternal internalProtocol = (ComponentSpecInternal) component;
-        DependentComponentsRenderableDependency root = getRenderableDependencyOf(component, internalProtocol);
+    public override fun render(component: ComponentSpec, builder: TextReportBuilder) {
+        val internalProtocol = component as ComponentSpecInternal
+        val root = getRenderableDependencyOf(component, internalProtocol)
         if (!showNonBuildable && !root.isBuildable()) {
-            hiddenNonBuildable = true;
-            return;
+            hiddenNonBuildable = true
+            return
         }
-        StyledTextOutput output = builder.getOutput();
-        GraphRenderer renderer = new GraphRenderer(output);
-        renderer.visit(output1 -> {
-            output1.withStyle(Identifier).text(component.getName());
-            output1.withStyle(Description).text(" - Components that depend on " + component.getDisplayName());
-        }, true);
-        DependentComponentsGraphRenderer dependentsGraphRenderer = new DependentComponentsGraphRenderer(renderer, showNonBuildable, showTestSuites);
+        val output = builder.getOutput()
+        val renderer = GraphRenderer(output)
+        renderer.visit(Action { output1: StyledTextOutput? ->
+            output1!!.withStyle(StyledTextOutput.Style.Identifier)!!.text(component.getName())
+            output1.withStyle(StyledTextOutput.Style.Description)!!.text(" - Components that depend on " + component.getDisplayName())
+        }, true)
+        val dependentsGraphRenderer = DependentComponentsGraphRenderer(renderer, showNonBuildable, showTestSuites)
         if (root.getChildren().isEmpty()) {
-            output.withStyle(Info).text("No dependents");
-            output.println();
+            output.withStyle(StyledTextOutput.Style.Info)!!.text("No dependents")
+            output.println()
         } else {
-            dependentsGraphRenderer.render(root);
-            output.println();
+            dependentsGraphRenderer.render(root)
+            output.println()
         }
         if (dependentsGraphRenderer.hasSeenTestSuite()) {
-            seenTestSuite = true;
+            seenTestSuite = true
         }
         if (dependentsGraphRenderer.hasHiddenTestSuite()) {
-            hiddenTestSuite = true;
+            hiddenTestSuite = true
         }
         if (dependentsGraphRenderer.hasHiddenNonBuildable()) {
-            hiddenNonBuildable = true;
+            hiddenNonBuildable = true
         }
     }
 
-    private DependentComponentsRenderableDependency getRenderableDependencyOf(final ComponentSpec componentSpec, ComponentSpecInternal internalProtocol) {
-        if (resolver != null && componentSpec instanceof VariantComponentSpec) {
-            VariantComponentSpec variantComponentSpec = (VariantComponentSpec) componentSpec;
-            LinkedHashSet<DependentComponentsRenderableDependency> children = new LinkedHashSet<>();
-            for (BinarySpecInternal binarySpec : variantComponentSpec.getBinaries().withType(BinarySpecInternal.class)) {
-                DependentBinariesResolutionResult resolvedBinary = resolver.resolve(binarySpec);
-                children.add(DependentComponentsRenderableDependency.of(resolvedBinary.getRoot()));
+    private fun getRenderableDependencyOf(componentSpec: ComponentSpec, internalProtocol: ComponentSpecInternal): DependentComponentsRenderableDependency {
+        if (resolver != null && componentSpec is VariantComponentSpec) {
+            val variantComponentSpec = componentSpec
+            val children = LinkedHashSet<DependentComponentsRenderableDependency>()
+            for (binarySpec in variantComponentSpec.getBinaries().withType<BinarySpecInternal>(BinarySpecInternal::class.java)) {
+                val resolvedBinary = resolver.resolve(binarySpec)
+                children.add(DependentComponentsRenderableDependency.Companion.of(resolvedBinary.getRoot()))
             }
-            return DependentComponentsRenderableDependency.of(componentSpec, internalProtocol, children);
+            return DependentComponentsRenderableDependency.Companion.of(componentSpec, internalProtocol, children)
         } else {
-            return DependentComponentsRenderableDependency.of(componentSpec, internalProtocol);
+            return of(componentSpec, internalProtocol)
         }
     }
 
-    public void printLegend(TextReportBuilder builder) {
+    fun printLegend(builder: TextReportBuilder) {
         if (seenTestSuite || hiddenTestSuite || hiddenNonBuildable) {
-            StyledTextOutput output = builder.getOutput();
+            val output = builder.getOutput()
             if (seenTestSuite) {
-                output.withStyle(Info).println("(t) - Test suite binary");
+                output.withStyle(StyledTextOutput.Style.Info)!!.println("(t) - Test suite binary")
                 if (hiddenNonBuildable) {
-                    output.println();
+                    output.println()
                 }
             } else if (hiddenTestSuite) {
-                output.withStyle(Info).println("Some test suites were not shown, use --test-suites or --all to show them.");
+                output.withStyle(StyledTextOutput.Style.Info)!!.println("Some test suites were not shown, use --test-suites or --all to show them.")
             }
             if (hiddenNonBuildable) {
-                output.withStyle(Info).println("Some non-buildable components were not shown, use --non-buildable or --all to show them.");
+                output.withStyle(StyledTextOutput.Style.Info)!!.println("Some non-buildable components were not shown, use --non-buildable or --all to show them.")
             }
         }
     }

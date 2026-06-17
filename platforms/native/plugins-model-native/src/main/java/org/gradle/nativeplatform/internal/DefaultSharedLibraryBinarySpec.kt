@@ -13,139 +13,113 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.file.FileCollection
+import org.gradle.language.nativeplatform.NativeResourceSet
+import org.gradle.nativeplatform.SharedLibraryBinary
+import org.gradle.nativeplatform.SharedLibraryBinarySpec
+import org.gradle.nativeplatform.tasks.LinkSharedLibrary
+import org.gradle.nativeplatform.tasks.ObjectFilesToBinary
+import org.gradle.platform.base.BinaryTasksCollection
+import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper
+import java.io.File
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.nativeplatform.NativeResourceSet;
-import org.gradle.nativeplatform.SharedLibraryBinary;
-import org.gradle.nativeplatform.SharedLibraryBinarySpec;
-import org.gradle.nativeplatform.tasks.LinkSharedLibrary;
-import org.gradle.nativeplatform.tasks.ObjectFilesToBinary;
-import org.gradle.platform.base.BinaryTasksCollection;
-import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper;
+class DefaultSharedLibraryBinarySpec : AbstractNativeLibraryBinarySpec(), SharedLibraryBinary, SharedLibraryBinarySpecInternal {
+    private val tasks = DefaultTasksCollection(super.getTasks())
+    private var sharedLibraryFile: File? = null
+    private var sharedLibraryLinkFile: File? = null
 
-import java.io.File;
-import java.util.Collections;
-import java.util.Set;
-
-public class DefaultSharedLibraryBinarySpec extends AbstractNativeLibraryBinarySpec implements SharedLibraryBinary, SharedLibraryBinarySpecInternal {
-    private final DefaultTasksCollection tasks = new DefaultTasksCollection(super.getTasks());
-    private File sharedLibraryFile;
-    private File sharedLibraryLinkFile;
-
-    @Override
-    public File getSharedLibraryFile() {
-        return sharedLibraryFile;
+    override fun getSharedLibraryFile(): File? {
+        return sharedLibraryFile
     }
 
-    @Override
-    public void setSharedLibraryFile(File sharedLibraryFile) {
-        this.sharedLibraryFile = sharedLibraryFile;
+    override fun setSharedLibraryFile(sharedLibraryFile: File?) {
+        this.sharedLibraryFile = sharedLibraryFile
     }
 
-    @Override
-    public File getSharedLibraryLinkFile() {
-        return sharedLibraryLinkFile;
+    override fun getSharedLibraryLinkFile(): File? {
+        return sharedLibraryLinkFile
     }
 
-    @Override
-    public void setSharedLibraryLinkFile(File sharedLibraryLinkFile) {
-        this.sharedLibraryLinkFile = sharedLibraryLinkFile;
+    override fun setSharedLibraryLinkFile(sharedLibraryLinkFile: File?) {
+        this.sharedLibraryLinkFile = sharedLibraryLinkFile
     }
 
-    @Override
-    public File getPrimaryOutput() {
-        return getSharedLibraryFile();
+    override fun getPrimaryOutput(): File? {
+        return getSharedLibraryFile()
     }
 
-    @Override
-    public FileCollection getLinkFiles() {
-        return getFileCollectionFactory().create(new SharedLibraryLinkOutputs());
+    override fun getLinkFiles(): FileCollection {
+        return getFileCollectionFactory().create(DefaultSharedLibraryBinarySpec.SharedLibraryLinkOutputs())
     }
 
-    @Override
-    public FileCollection getRuntimeFiles() {
-        return getFileCollectionFactory().create(new SharedLibraryRuntimeOutputs());
+    override fun getRuntimeFiles(): FileCollection {
+        return getFileCollectionFactory().create(DefaultSharedLibraryBinarySpec.SharedLibraryRuntimeOutputs())
     }
 
-    @Override
-    protected ObjectFilesToBinary getCreateOrLink() {
-        return tasks.getLink();
+    override fun getCreateOrLink(): ObjectFilesToBinary? {
+        return tasks.getLink()
     }
 
-    @Override
-    public SharedLibraryBinarySpec.TasksCollection getTasks() {
-        return tasks;
+    override fun getTasks(): SharedLibraryBinarySpec.TasksCollection {
+        return tasks
     }
 
-    private static class DefaultTasksCollection extends BinaryTasksCollectionWrapper implements SharedLibraryBinarySpec.TasksCollection {
-        public DefaultTasksCollection(BinaryTasksCollection delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public LinkSharedLibrary getLink() {
-            return findSingleTaskWithType(LinkSharedLibrary.class);
+    private class DefaultTasksCollection(delegate: BinaryTasksCollection?) : BinaryTasksCollectionWrapper(delegate), SharedLibraryBinarySpec.TasksCollection {
+        override fun getLink(): LinkSharedLibrary? {
+            return findSingleTaskWithType<LinkSharedLibrary?>(LinkSharedLibrary::class.java)
         }
     }
 
-    private class SharedLibraryLinkOutputs extends LibraryOutputs {
-        @Override
-        public String getDisplayName() {
-            return "Link files for " + DefaultSharedLibraryBinarySpec.this.getDisplayName();
+    private inner class SharedLibraryLinkOutputs : LibraryOutputs() {
+        override fun getDisplayName(): String {
+            return "Link files for " + this@DefaultSharedLibraryBinarySpec.getDisplayName()
         }
 
-        @Override
-        protected boolean hasOutputs() {
-            return hasSources() && !isResourceOnly();
+        override fun hasOutputs(): Boolean {
+            return hasSources() && !this.isResourceOnly
         }
 
-        @Override
-        protected Set<File> getOutputs() {
-            return Collections.singleton(getSharedLibraryLinkFile());
+        override fun getOutputs(): MutableSet<File?> {
+            return mutableSetOf<File?>(getSharedLibraryLinkFile())
         }
 
-        private boolean isResourceOnly() {
-            return hasResources() && !hasExportedSymbols();
-        }
+        val isResourceOnly: Boolean
+            get() = hasResources() && !hasExportedSymbols()
 
-        private boolean hasResources() {
-            for (NativeResourceSet windowsResourceSet : getInputs().withType(NativeResourceSet.class)) {
-                if (!windowsResourceSet.getSource().isEmpty()) {
-                    return true;
+        fun hasResources(): Boolean {
+            for (windowsResourceSet in getInputs().withType<NativeResourceSet?>(NativeResourceSet::class.java)) {
+                if (!windowsResourceSet!!.getSource().isEmpty()) {
+                    return true
                 }
             }
-            return false;
+            return false
         }
 
-        private boolean hasExportedSymbols() {
-            for (LanguageSourceSet languageSourceSet : getInputs()) {
-                if (!(languageSourceSet instanceof NativeResourceSet)) {
+        fun hasExportedSymbols(): Boolean {
+            for (languageSourceSet in getInputs()) {
+                if (languageSourceSet !is NativeResourceSet) {
                     if (!languageSourceSet.getSource().isEmpty()) {
-                        return true;
+                        return true
                     }
                 }
             }
-            return false;
+            return false
         }
     }
 
-    private class SharedLibraryRuntimeOutputs extends LibraryOutputs {
-        @Override
-        public String getDisplayName() {
-            return "Runtime files for " + DefaultSharedLibraryBinarySpec.this.getDisplayName();
+    private inner class SharedLibraryRuntimeOutputs : LibraryOutputs() {
+        override fun getDisplayName(): String {
+            return "Runtime files for " + this@DefaultSharedLibraryBinarySpec.getDisplayName()
         }
 
-        @Override
-        protected boolean hasOutputs() {
-            return hasSources();
+        override fun hasOutputs(): Boolean {
+            return hasSources()
         }
 
-        @Override
-        protected Set<File> getOutputs() {
-            return Collections.singleton(getSharedLibraryFile());
+        override fun getOutputs(): MutableSet<File?> {
+            return mutableSetOf<File?>(getSharedLibraryFile())
         }
     }
 }

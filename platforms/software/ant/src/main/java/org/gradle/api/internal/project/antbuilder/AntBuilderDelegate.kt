@@ -13,134 +13,124 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.api.file.DirectoryTree;
-import org.gradle.api.tasks.util.PatternSet;
-import org.gradle.api.tasks.util.internal.IntersectionPatternSet;
-import org.gradle.internal.metaobject.DynamicObject;
-import org.gradle.internal.metaobject.DynamicObjectUtil;
+import org.gradle.api.file.DirectoryTree
+import org.gradle.api.tasks.util.PatternSet
+import org.gradle.api.tasks.util.internal.IntersectionPatternSet
+import org.gradle.internal.metaobject.DynamicObject
+import org.gradle.internal.metaobject.DynamicObjectUtil
+import java.io.File
+import java.util.Collections
 
-import java.io.File;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+class AntBuilderDelegate(builder: Any?, private val antlibClassLoader: ClassLoader) {
+    private val builder: DynamicObject
 
-public class AntBuilderDelegate {
+    private var current: Any? = null
 
-    private final DynamicObject builder;
-    private final ClassLoader antlibClassLoader;
-
-    private Object current;
-
-    public AntBuilderDelegate(Object builder, ClassLoader antlibClassLoader) {
-        this.builder = DynamicObjectUtil.asDynamicObject(builder);
-        this.antlibClassLoader = antlibClassLoader;
+    init {
+        this.builder = DynamicObjectUtil.asDynamicObject(builder!!)
     }
 
-    public void addFiles(String childNodeName, Iterable<File> params) {
-        createNode(childNodeName, Collections.emptyMap(), () -> {
-            for (File file : params) {
-                String filename = maskFilename(file.getAbsolutePath());
-                createNode("file", Collections.singletonMap("file", filename));
+    fun addFiles(childNodeName: String, params: Iterable<File>) {
+        createNode(childNodeName, mutableMapOf<String?, Any?>(), Runnable? {
+            for (file in params) {
+                val filename: String = maskFilename(file.getAbsolutePath())
+                createNode("file", Collections.singletonMap<String?, Any?>("file", filename))
             }
-        });
+        })
     }
 
-    public void addDirectoryTrees(String childNodeName, Collection<DirectoryTree> directoryTrees) {
-        for (DirectoryTree tree : directoryTrees) {
+    fun addDirectoryTrees(childNodeName: String, directoryTrees: MutableCollection<DirectoryTree>) {
+        for (tree in directoryTrees) {
             if (!tree.getDir().exists()) {
-                continue;
+                continue
             }
 
-            String directory = maskFilename(tree.getDir().getAbsolutePath());
-            createNode(childNodeName, Collections.singletonMap("dir", directory), () -> {
-                addPatternSet(tree.getPatterns());
-            });
+            val directory: String = maskFilename(tree.getDir().getAbsolutePath())
+            createNode(childNodeName, Collections.singletonMap<String?, Any?>("dir", directory), Runnable? {
+                addPatternSet(tree.getPatterns())
+            })
         }
     }
 
-    private void addPatternSet(PatternSet patterns) {
+    private fun addPatternSet(patterns: PatternSet) {
         if (!patterns.getIncludeSpecsView().isEmpty() || !patterns.getExcludeSpecsView().isEmpty()) {
-            throw new UnsupportedOperationException("Cannot add include/exclude specs to Ant node. Only include/exclude patterns are currently supported.");
+            throw UnsupportedOperationException("Cannot add include/exclude specs to Ant node. Only include/exclude patterns are currently supported.")
         }
 
-        addPatternToAntBuilder(patterns);
+        addPatternToAntBuilder(patterns)
     }
 
-    private void addPatternToAntBuilder(PatternSet patterns) {
-        if (patterns instanceof IntersectionPatternSet) {
-            createNode("and", Collections.emptyMap(), () -> {
-                addIncludesAndExcludes(patterns);
-                addPatternToAntBuilder(((IntersectionPatternSet) patterns).getOther());
-            });
+    private fun addPatternToAntBuilder(patterns: PatternSet) {
+        if (patterns is IntersectionPatternSet) {
+            createNode("and", mutableMapOf<String?, Any?>(), Runnable? {
+                addIncludesAndExcludes(patterns)
+                addPatternToAntBuilder(patterns.getOther())
+            })
         } else {
-            addIncludesAndExcludes(patterns);
+            addIncludesAndExcludes(patterns)
         }
     }
 
-    private void addIncludesAndExcludes(PatternSet patterns) {
-        createNode("and", Collections.emptyMap(), () -> {
-            boolean caseSensitive = patterns.isCaseSensitive();
-            Set<String> includes = patterns.getIncludesView();
+    private fun addIncludesAndExcludes(patterns: PatternSet) {
+        createNode("and", mutableMapOf<String?, Any?>(), Runnable? {
+            val caseSensitive = patterns.isCaseSensitive()
+            val includes = patterns.getIncludesView()
             if (!includes.isEmpty()) {
-                createNode("or", Collections.emptyMap(), () ->
-                    addFilenames(includes, caseSensitive)
-                );
+                createNode("or", mutableMapOf<String?, Any?>(), Runnable? { addFilenames(includes, caseSensitive) }
+                )
             }
 
-            Set<String> excludes = patterns.getExcludesView();
+            val excludes = patterns.getExcludesView()
             if (!excludes.isEmpty()) {
-                createNode("not", Collections.emptyMap(), () -> {
-                    createNode("or", Collections.emptyMap(), () ->
-                        addFilenames(excludes, caseSensitive)
-                    );
-                });
+                createNode("not", mutableMapOf<String?, Any?>(), Runnable? {
+                    createNode("or", mutableMapOf<String?, Any?>(), Runnable? { addFilenames(excludes, caseSensitive) }
+                    )
+                })
             }
-        });
+        })
     }
 
-    private void addFilenames(Iterable<String> filenames, boolean caseSensitive) {
-        Map<String, Object> props = new HashMap<>(2);
-        props.put("casesensitive", caseSensitive);
-        for (String filename : filenames) {
-            props.put("name", maskFilename(filename));
-            createNode("filename", props);
+    private fun addFilenames(filenames: Iterable<String>, caseSensitive: Boolean) {
+        val props: MutableMap<String?, Any?> = HashMap<String?, Any?>(2)
+        props.put("casesensitive", caseSensitive)
+        for (filename in filenames) {
+            props.put("name", maskFilename(filename))
+            createNode("filename", props)
         }
     }
 
-    public void taskdef(String name, String classname) {
+    fun taskdef(name: String, classname: String?) {
         try {
-            getProject().invokeMethod("addTaskDefinition", name, antlibClassLoader.loadClass(classname));
-        } catch (ClassNotFoundException ex) {
-            throw new RuntimeException(ex);
+            this.project.invokeMethod("addTaskDefinition", name, antlibClassLoader.loadClass(classname))
+        } catch (ex: ClassNotFoundException) {
+            throw RuntimeException(ex)
         }
     }
 
-    public void createNode(String methodName, String content) {
-        Object node = builder.invokeMethod("createNode", methodName, content);
-        nodeCompleted(current, node);
+    fun createNode(methodName: String, content: String?) {
+        val node = builder.invokeMethod("createNode", methodName, content)
+        nodeCompleted(current!!, node)
     }
 
-    public void createNode(String methodName, Map<String, Object> parameters) {
-        Object node = builder.invokeMethod("createNode", methodName, parameters);
-        nodeCompleted(current, node);
+    fun createNode(methodName: String, parameters: MutableMap<String?, Any?>?) {
+        val node = builder.invokeMethod("createNode", methodName, parameters)
+        nodeCompleted(current!!, node)
     }
 
-    public void createNode(String methodName, Map<String, Object> parameters, Runnable closure) {
-        Object node = builder.invokeMethod("createNode", methodName, parameters);
+    fun createNode(methodName: String, parameters: MutableMap<String?, Any?>?, closure: Runnable?) {
+        val node = builder.invokeMethod("createNode", methodName, parameters)
 
         if (closure != null) {
             // push new node on stack
-            Object oldCurrent = current;
-            this.current = node;
-            closure.run();
-            this.current = oldCurrent;
+            val oldCurrent = current
+            this.current = node
+            closure.run()
+            this.current = oldCurrent
         }
 
-        nodeCompleted(current, node);
+        nodeCompleted(current!!, node)
     }
 
     /**
@@ -150,33 +140,31 @@ public class AntBuilderDelegate {
      * @param node   the current node being processed
      * @param parent the parent of the node being processed
      */
-    private void nodeCompleted(Object parent, Object node) {
-        builder.invokeMethod("nodeCompleted", parent, node);
+    private fun nodeCompleted(parent: Any, node: Any?) {
+        builder.invokeMethod("nodeCompleted", parent, node)
     }
 
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> getProjectProperties() {
-        return (Map<String, Object>) getProject().invokeMethod("getProperties");
+    val projectProperties: MutableMap<String?, Any?>?
+        get() = this.project.invokeMethod("getProperties") as MutableMap<String?, Any?>?
+
+    val project: DynamicObject
+        get() = DynamicObjectUtil.asDynamicObject(builder.invokeMethod("getProject")!!)
+
+    fun setSaveStreams(value: Boolean) {
+        builder.invokeMethod("setSaveStreams", value)
     }
 
-    public DynamicObject getProject() {
-        return DynamicObjectUtil.asDynamicObject(builder.invokeMethod("getProject"));
+    companion object {
+        /**
+         * Masks a string against Ant property expansion.
+         * This needs to be used when adding a File as a String property.
+         *
+         * @param string to mask
+         *
+         * @return The masked String
+         */
+        fun maskFilename(string: String): String {
+            return string.replace("\\$".toRegex(), "\\$\\$")
+        }
     }
-
-    public void setSaveStreams(boolean value) {
-        builder.invokeMethod("setSaveStreams", value);
-    }
-
-    /**
-     * Masks a string against Ant property expansion.
-     * This needs to be used when adding a File as a String property.
-     *
-     * @param string to mask
-     *
-     * @return The masked String
-     */
-    public static String maskFilename(String string) {
-        return string.replaceAll("\\$", "\\$\\$");
-    }
-
 }

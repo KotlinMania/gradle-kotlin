@@ -13,32 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.api.file.FileCollection
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.NativeLibraryBinary
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-
-public class DefaultNativeDependencySet implements NativeDependencySet {
-    private final NativeLibraryBinary binary;
-
-    public DefaultNativeDependencySet(NativeLibraryBinary binary) {
-        this.binary = binary;
+class DefaultNativeDependencySet(private val binary: NativeLibraryBinary) : NativeDependencySet {
+    override fun getIncludeRoots(): FileCollection? {
+        return binary.getHeaderDirs()
     }
 
-    @Override
-    public FileCollection getIncludeRoots() {
-        return binary.getHeaderDirs();
+    override fun getLinkFiles(): FileCollection? {
+        return binary.getLinkFiles()
     }
 
-    @Override
-    public FileCollection getLinkFiles() {
-        return binary.getLinkFiles();
-    }
-
-    @Override
-    public FileCollection getRuntimeFiles() {
-        return binary.getRuntimeFiles();
+    override fun getRuntimeFiles(): FileCollection? {
+        return binary.getRuntimeFiles()
     }
 }

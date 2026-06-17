@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.platform.base.TransformationFileType;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.TransformationFileType
 
 /**
  * LanguageOutputType marking object file output type.
- * */
+ */
 @Incubating
-public class ObjectFile implements TransformationFileType {
-}
+class ObjectFile : TransformationFileType

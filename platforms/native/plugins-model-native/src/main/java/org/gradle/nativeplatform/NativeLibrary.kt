@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.platform.base.Library;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.Library
 
 /**
  * A library component that is built by a gradle project.
  */
 @Incubating
-public interface NativeLibrary extends Library {
-}
+interface NativeLibrary : Library

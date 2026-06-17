@@ -13,31 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components.internal
 
-package org.gradle.api.reporting.components.internal;
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
 
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-
-import java.util.List;
-
-public class DiagnosticsServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.addProvider(new ServiceRegistrationProvider() {
+class DiagnosticsServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.addProvider(object : ServiceRegistrationProvider {
             @Provides
-            @SuppressWarnings("rawtypes")
-            TypeAwareBinaryRenderer createBinaryRenderer(List<AbstractBinaryRenderer> renderers, ModelSchemaStore schemaStore) {
-                TypeAwareBinaryRenderer renderer = new TypeAwareBinaryRenderer();
-                renderer.register(new BinaryRenderer(schemaStore));
-                for (AbstractBinaryRenderer<?> binaryRenderer : renderers) {
-                    renderer.register(binaryRenderer);
+            fun createBinaryRenderer(renderers: MutableList<AbstractBinaryRenderer<*>?>, schemaStore: ModelSchemaStore?): TypeAwareBinaryRenderer {
+                val renderer = TypeAwareBinaryRenderer()
+                renderer.register(BinaryRenderer(schemaStore))
+                for (binaryRenderer in renderers) {
+                    renderer.register(binaryRenderer)
                 }
-                return renderer;
+                return renderer
             }
-        });
+        })
     }
 }

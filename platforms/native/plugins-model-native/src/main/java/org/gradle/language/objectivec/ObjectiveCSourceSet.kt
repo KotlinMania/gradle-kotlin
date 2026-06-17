@@ -13,45 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.objectivec
 
-package org.gradle.language.objectivec;
-
-import org.gradle.api.Incubating;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.language.base.LanguageSourceSet;
-
+import org.gradle.api.Incubating
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
 
 /**
  * A set of Objective-C source files.
  *
- * <p>An ObjectiveC source set contains a set of source files, together with an optional set of exported header files.</p>
+ *
+ * An ObjectiveC source set contains a set of source files, together with an optional set of exported header files.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'objective-c'
+ * id 'objective-c'
  * }
  *
  * model {
- *     components {
- *         main(NativeLibrarySpec) {
- *             sources {
- *                 objc {
- *                     source {
- *                         srcDirs "src/main/objectiveC", "src/shared/objectiveC"
- *                         include "**{@literal /}*.m"
- *                     }
- *                     exportedHeaders {
- *                         srcDirs "src/main/include"
- *                     }
- *                 }
- *             }
- *         }
- *     }
- * }
- * </pre>
- */
-@Incubating
-public interface ObjectiveCSourceSet extends HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet {
-
+ * components {
+ * main(NativeLibrarySpec) {
+ * sources {
+ * objc {
+ * source {
+ * srcDirs "src/main/objectiveC", "src/shared/objectiveC"
+ * include "**/
+*.m"
+* }
+* exportedHeaders {
+    * srcDirs "src/main/include"
+    *
 }
+* }
+* }
+* }
+* }
+* }
+</pre> *
+*/
+@Incubating
+interface ObjectiveCSourceSet : HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet

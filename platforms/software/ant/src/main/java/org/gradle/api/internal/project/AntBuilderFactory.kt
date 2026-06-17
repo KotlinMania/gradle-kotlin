@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.project
 
-package org.gradle.api.internal.project;
+import org.gradle.api.AntBuilder
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.AntBuilder;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-@ServiceScope(Scope.Project.class)
-public interface AntBuilderFactory {
-
-    AntBuilder createAntBuilder();
-
+@ServiceScope(Scope.Project::class)
+interface AntBuilderFactory {
+    fun createAntBuilder(): AntBuilder?
 }

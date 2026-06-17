@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
+import com.google.common.base.Joiner
 
-import com.google.common.base.Joiner;
-
-import java.util.Locale;
-
-class Names {
-    static String displayNameFor(Enum<?> value) {
-        String[] parts = value.name().toLowerCase(Locale.US).split("_");
-        return Joiner.on(' ').join(parts);
+internal object Names {
+    fun displayNameFor(value: Enum<*>): String {
+        val parts: Array<String?> = value.name.lowercase().split("_".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        return Joiner.on(' ').join(parts)
     }
 
-    static String idFor(Enum<?> value) {
-        String[] parts = value.name().toLowerCase(Locale.US).split("_");
-        return Joiner.on('-').join(parts);
+    fun idFor(value: Enum<*>): String {
+        val parts: Array<String?> = value.name.lowercase().split("_".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        return Joiner.on('-').join(parts)
     }
 }

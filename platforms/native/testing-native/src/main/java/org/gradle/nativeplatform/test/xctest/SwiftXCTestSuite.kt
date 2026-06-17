@@ -13,31 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest
 
-package org.gradle.nativeplatform.test.xctest;
-
-import org.gradle.api.provider.Provider;
-import org.gradle.language.BinaryCollection;
-import org.gradle.language.swift.SwiftComponent;
-import org.gradle.nativeplatform.test.TestSuiteComponent;
+import org.gradle.api.provider.Provider
+import org.gradle.language.BinaryCollection
+import org.gradle.language.swift.SwiftComponent
+import org.gradle.nativeplatform.test.TestSuiteComponent
 
 /**
  * A XCTest suite, implemented in Swift.
  *
  * @since 4.2
  */
-public interface SwiftXCTestSuite extends SwiftComponent, TestSuiteComponent {
+interface SwiftXCTestSuite : SwiftComponent, TestSuiteComponent {
     /**
      * {@inheritDoc}
      */
-    @Override
-    Provider<? extends SwiftXCTestBinary> getTestBinary();
+    override fun getTestBinary(): Provider<out SwiftXCTestBinary?>?
 
     /**
      * Returns the binaries for this library.
      *
      * @since 5.6
      */
-    @Override
-    BinaryCollection<? extends SwiftXCTestBinary> getBinaries();
+    override fun getBinaries(): BinaryCollection<out SwiftXCTestBinary?>?
 }

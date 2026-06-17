@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.tasks.wrapper.internal
 
-package org.gradle.api.tasks.wrapper.internal;
-
-import org.gradle.api.tasks.wrapper.Wrapper;
-import org.gradle.wrapper.Install;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.tasks.wrapper.Wrapper
+import org.gradle.wrapper.Install
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class WrapperDefaults {
-    public static final String SCRIPT_PATH = "gradlew";
-    public static final String JAR_FILE_PATH = "gradle/wrapper/gradle-wrapper.jar";
-    public static final Wrapper.DistributionType DISTRIBUTION_TYPE = Wrapper.DistributionType.BIN;
+object WrapperDefaults {
+    const val SCRIPT_PATH: String = "gradlew"
+    const val JAR_FILE_PATH: String = "gradle/wrapper/gradle-wrapper.jar"
+    val DISTRIBUTION_TYPE: Wrapper.DistributionType = Wrapper.DistributionType.BIN
 
-    public static final String DISTRIBUTION_PATH = Install.DEFAULT_DISTRIBUTION_PATH;
-    public static final Wrapper.PathBase DISTRIBUTION_BASE = Wrapper.PathBase.GRADLE_USER_HOME;
-    public static final String ARCHIVE_PATH = DISTRIBUTION_PATH;
-    public static final Wrapper.PathBase ARCHIVE_BASE = DISTRIBUTION_BASE;
+    val DISTRIBUTION_PATH: String = Install.DEFAULT_DISTRIBUTION_PATH
+    val DISTRIBUTION_BASE: Wrapper.PathBase = Wrapper.PathBase.GRADLE_USER_HOME
+    val ARCHIVE_PATH: String = DISTRIBUTION_PATH
+    val ARCHIVE_BASE: Wrapper.PathBase = DISTRIBUTION_BASE
 
-    public static final int NETWORK_TIMEOUT = 10000;
-    public static final boolean VALIDATE_DISTRIBUTION_URL = true;
+    const val NETWORK_TIMEOUT: Int = 10000
+    const val VALIDATE_DISTRIBUTION_URL: Boolean = true
 
-    public static final int RETRIES = Install.DEFAULT_NETWORK_RETRIES;
-    public static final int RETRY_BACK_OFF_MS = Install.DEFAULT_NETWORK_RETRY_BACK_OFF_MS;
+    val RETRIES: Int = Install.DEFAULT_NETWORK_RETRIES
+    val RETRY_BACK_OFF_MS: Int = Install.DEFAULT_NETWORK_RETRY_BACK_OFF_MS
 }

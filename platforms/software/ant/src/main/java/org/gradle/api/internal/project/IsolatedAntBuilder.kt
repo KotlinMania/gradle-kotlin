@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project;
+package org.gradle.api.internal.project
 
-import org.gradle.api.Action;
-import org.gradle.api.internal.project.antbuilder.AntBuilderDelegate;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.File;
+import org.gradle.api.Action
+import org.gradle.api.internal.project.antbuilder.AntBuilderDelegate
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
 
 /**
- * Executes a closure against an isolated {@link org.gradle.api.AntBuilder} instance.
+ * Executes a closure against an isolated [org.gradle.api.AntBuilder] instance.
  */
-@ServiceScope(Scope.Build.class)
-public interface IsolatedAntBuilder {
-
+@ServiceScope(Scope.Build::class)
+interface IsolatedAntBuilder {
     /**
      * Creates a copy of this builder which uses the given libraries. These classes are visible for use in
      * taskdef/typedef tasks.
@@ -35,12 +33,12 @@ public interface IsolatedAntBuilder {
      * @param classpath The library classpath
      * @return a copy of this builder
      */
-    IsolatedAntBuilder withClasspath(Iterable<File> classpath);
+    fun withClasspath(classpath: Iterable<File?>?): IsolatedAntBuilder?
 
     /**
      * Executes the given closure against an isolated Ant builder instance. The builder will
      * have visible to it an isolated version of Ant, Groovy and the specified libraries (if any). Each call to this
      * method is given a separate Ant project.
      */
-    void execute(Action<AntBuilderDelegate> antBuilderAction);
+    fun execute(antBuilderAction: Action<AntBuilderDelegate?>?)
 }

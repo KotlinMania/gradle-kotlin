@@ -13,32 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
+import org.gradle.api.Incubating
 
 /**
  * A dependency on a native library within the build.
  */
 @Incubating
-public interface NativeLibraryRequirement {
+interface NativeLibraryRequirement {
     /**
      * The path to the project containing the library.
      */
-    String getProjectPath();
+    val projectPath: String?
 
     /**
      * The name of the required library.
      */
-    String getLibraryName();
+    val libraryName: String?
 
     /**
      * The required linkage.
      */
-    String getLinkage();
+    val linkage: String?
 
     /**
      * Creates a copy of this requirement with the specified project path
      */
-    NativeLibraryRequirement withProjectPath(String projectPath);
+    fun withProjectPath(projectPath: String?): NativeLibraryRequirement?
 }

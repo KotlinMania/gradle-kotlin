@@ -13,47 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.model.internal.core.UnmanagedStruct;
-import org.gradle.nativeplatform.toolchain.NativeToolChain;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.model.internal.core.UnmanagedStruct
+import org.gradle.nativeplatform.toolchain.NativeToolChain
+import java.io.File
 
 /**
  * Specifies how to build and where to place a native executable file.
  *
- * <p>TODO:HH resolve naming conflict with existing NativeExecutableSpec</p>
+ *
+ * TODO:HH resolve naming conflict with existing NativeExecutableSpec
  */
-@Incubating @UnmanagedStruct
-public class NativeExecutableFileSpec {
-
-    private File file;
-    private NativeToolChain toolChain;
-
-    public File getFile() {
-        return file;
-    }
-
-    public void setFile(File file) {
-        this.file = file;
-    }
-
+@Incubating
+@UnmanagedStruct
+class NativeExecutableFileSpec {
+    var file: File? = null
     /**
      * The Tool Chain that produces the native executable.
      * @since 4.7
      */
-    public NativeToolChain getToolChain() {
-        return toolChain;
-    }
-
     /**
      * Sets the Tool Chain that produces the native executable.
      * @since 4.7
      */
-    public void setToolChain(NativeToolChain toolChain) {
-        this.toolChain = toolChain;
-    }
+    var toolChain: NativeToolChain? = null
 }

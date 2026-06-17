@@ -13,41 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
+import com.google.common.collect.ImmutableList
 
-import com.google.common.collect.ImmutableList;
-import java.util.List;
-
-public enum ComponentType {
+enum class ComponentType(val displayName: String?, vararg defaultProjectNames: String?) {
     // These are in display order
     APPLICATION("Application", "app", "list", "utilities"),
     LIBRARY("Library", "lib"),
     GRADLE_PLUGIN("Gradle plugin", "plugin"),
     BASIC("Basic (build structure only)");
 
-    private final String displayName;
-    private final ImmutableList<String> defaultProjectNames;
+    private val defaultProjectNames: ImmutableList<String?>
 
-    ComponentType(String displayName, String... defaultProjectNames) {
-        this.displayName = displayName;
-        this.defaultProjectNames = ImmutableList.copyOf(defaultProjectNames);
+    init {
+        this.defaultProjectNames = ImmutableList.copyOf<String?>(defaultProjectNames)
     }
 
-    public List<String> getDefaultProjectNames() {
-        return defaultProjectNames;
+    fun getDefaultProjectNames(): MutableList<String?> {
+        return defaultProjectNames
     }
 
-    public String getDisplayName() {
-        return displayName;
+    override fun toString(): String {
+        return Names.displayNameFor(this)
     }
 
-    @Override
-    public String toString() {
-        return Names.displayNameFor(this);
-    }
-
-    public String pluralName() {
-        return (this + "s").replace("ys", "ies");
+    fun pluralName(): String {
+        return (this.toString() + "s").replace("ys", "ies")
     }
 }

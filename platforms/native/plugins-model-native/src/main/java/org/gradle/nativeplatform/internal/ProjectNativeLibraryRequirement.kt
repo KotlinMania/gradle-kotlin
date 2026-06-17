@@ -13,44 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.nativeplatform.NativeLibraryRequirement;
+import org.gradle.nativeplatform.NativeLibraryRequirement
 
-public class ProjectNativeLibraryRequirement implements NativeLibraryRequirement {
-    private final String projectPath;
-    private final String libraryName;
-    private final String linkage;
+class ProjectNativeLibraryRequirement : NativeLibraryRequirement {
+    private val projectPath: String?
+    private val libraryName: String?
+    private val linkage: String?
 
-    public ProjectNativeLibraryRequirement(String libraryName, String linkage) {
-        this.projectPath = null;
-        this.libraryName = libraryName;
-        this.linkage = linkage;
+    constructor(libraryName: String?, linkage: String?) {
+        this.projectPath = null
+        this.libraryName = libraryName
+        this.linkage = linkage
     }
 
-    public ProjectNativeLibraryRequirement(String projectPath, String libraryName, String linkage) {
-        this.projectPath = projectPath;
-        this.libraryName = libraryName;
-        this.linkage = linkage;
+    constructor(projectPath: String?, libraryName: String?, linkage: String?) {
+        this.projectPath = projectPath
+        this.libraryName = libraryName
+        this.linkage = linkage
     }
 
-    @Override
-    public NativeLibraryRequirement withProjectPath(String projectPath) {
-        return new ProjectNativeLibraryRequirement(projectPath, libraryName, linkage);
+    override fun withProjectPath(projectPath: String?): NativeLibraryRequirement {
+        return ProjectNativeLibraryRequirement(projectPath, libraryName, linkage)
     }
 
-    @Override
-    public String getProjectPath() {
-        return projectPath;
+    override fun getProjectPath(): String? {
+        return projectPath
     }
 
-    @Override
-    public String getLibraryName() {
-        return libraryName;
+    override fun getLibraryName(): String? {
+        return libraryName
     }
 
-    @Override
-    public String getLinkage() {
-        return linkage;
+    override fun getLinkage(): String? {
+        return linkage
     }
 }

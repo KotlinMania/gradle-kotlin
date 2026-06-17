@@ -13,35 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.plugins.internal.ant
 
-package org.gradle.api.plugins.internal.ant;
+import org.gradle.api.Action
+import org.gradle.api.internal.project.IsolatedAntBuilder.execute
+import org.gradle.api.internal.project.IsolatedAntBuilder.withClasspath
+import org.gradle.api.internal.project.antbuilder.AntBuilderDelegate
+import org.gradle.internal.jvm.Jvm
+import org.gradle.workers.WorkAction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-import org.gradle.api.internal.project.IsolatedAntBuilder;
-import org.gradle.api.internal.project.antbuilder.AntBuilderDelegate;
-import org.gradle.internal.jvm.Jvm;
-import org.gradle.workers.WorkAction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+abstract class AntWorkAction<T : AntWorkParameters?> : WorkAction<T?> {
+    override fun execute() {
+        LOGGER.info("Running {} with toolchain '{}'.", this.actionName, Jvm.current().getJavaHome().getAbsolutePath())
 
-import javax.inject.Inject;
-
-public abstract class AntWorkAction<T extends AntWorkParameters> implements WorkAction<T> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AntWorkAction.class);
-
-    @Override
-    public void execute() {
-        LOGGER.info("Running {} with toolchain '{}'.", getActionName(), Jvm.current().getJavaHome().getAbsolutePath());
-
-        getIsolatedAntBuilder()
-            .withClasspath(getParameters().getAntLibraryClasspath())
-            .execute(this::execute);
+        this.isolatedAntBuilder
+            .withClasspath(getParameters()!!.getAntLibraryClasspath())
+            .execute(Action { antBuilder: AntBuilderDelegate? -> this.execute(antBuilder) })
     }
 
-    protected abstract String getActionName();
+    protected abstract val actionName: String?
 
-    protected abstract void execute(AntBuilderDelegate antBuilder);
+    protected abstract fun execute(antBuilder: AntBuilderDelegate?)
 
-    @Inject
-    protected abstract IsolatedAntBuilder getIsolatedAntBuilder();
+    @get:Inject
+    protected abstract val isolatedAntBuilder: IsolatedAntBuilder?
 
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(AntWorkAction::class.java)
+    }
 }

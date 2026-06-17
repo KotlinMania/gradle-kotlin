@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import org.gradle.tooling.internal.protocol.cpp.InternalCppApplication
 
-import org.gradle.tooling.internal.protocol.cpp.InternalCppApplication;
-
-import java.util.List;
-
-public class DefaultCppApplicationModel extends DefaultCppComponentModel implements InternalCppApplication {
-    public DefaultCppApplicationModel(String name, String baseName, List<DefaultCppBinaryModel> binaries) {
-        super(name, baseName, binaries);
-    }
-}
+class DefaultCppApplicationModel(name: String?, baseName: String?, binaries: MutableList<DefaultCppBinaryModel?>?) : DefaultCppComponentModel(name, baseName, binaries), InternalCppApplication

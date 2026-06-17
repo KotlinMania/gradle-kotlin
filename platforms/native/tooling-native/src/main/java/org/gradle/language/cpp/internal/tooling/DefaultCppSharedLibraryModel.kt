@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import org.gradle.tooling.internal.protocol.cpp.InternalCppSharedLibrary
 
-import org.gradle.tooling.internal.protocol.cpp.InternalCppSharedLibrary;
-
-public class DefaultCppSharedLibraryModel extends DefaultCppBinaryModel implements InternalCppSharedLibrary {
-    public DefaultCppSharedLibraryModel(String name, String variantName, String baseName, DefaultCompilationDetails compilationDetails, DefaultLinkageDetails linkageDetails) {
-        super(name, variantName, baseName, compilationDetails, linkageDetails);
-    }
-}
+class DefaultCppSharedLibraryModel(name: String?, variantName: String?, baseName: String?, compilationDetails: DefaultCompilationDetails?, linkageDetails: DefaultLinkageDetails?) :
+    DefaultCppBinaryModel(name, variantName, baseName, compilationDetails, linkageDetails), InternalCppSharedLibrary

@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.file.ant;
+package org.gradle.api.internal.file.ant
 
-import org.apache.tools.ant.types.selectors.FileSelector;
+import org.apache.tools.ant.types.selectors.FileSelector
+import java.io.File
 
-import java.io.File;
+class BaseDirSelector : FileSelector {
+    private var baseDir: File? = null
 
-public class BaseDirSelector implements FileSelector {
-    private File baseDir;
-
-    public void setBaseDir(File baseDir) {
-        this.baseDir = baseDir;
+    fun setBaseDir(baseDir: File?) {
+        this.baseDir = baseDir
     }
 
-    @Override
-    public String toString() {
-        return String.format("{basedir: %s}", baseDir);
+    override fun toString(): String {
+        return String.format("{basedir: %s}", baseDir)
     }
 
-    @Override
-    public boolean isSelected(File baseDir, String filename, File file) {
-        return baseDir.equals(this.baseDir);
+    override fun isSelected(baseDir: File, filename: String?, file: File?): Boolean {
+        return baseDir == this.baseDir
     }
 }

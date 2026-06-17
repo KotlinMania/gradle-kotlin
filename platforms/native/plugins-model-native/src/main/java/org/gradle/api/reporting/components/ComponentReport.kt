@@ -13,105 +13,98 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components
 
-package org.gradle.api.reporting.components;
-
-import org.gradle.api.DefaultTask;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.reporting.components.internal.ComponentReportRenderer;
-import org.gradle.api.reporting.components.internal.TypeAwareBinaryRenderer;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.diagnostics.internal.ProjectDetails;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.internal.logging.text.StyledTextOutputFactory;
-import org.gradle.language.base.ProjectSourceSet;
-import org.gradle.model.ModelMap;
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.model.internal.type.ModelType;
-import org.gradle.platform.base.BinaryContainer;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.ComponentSpecContainer;
-import org.gradle.work.DisableCachingByDefault;
-
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import static org.gradle.api.internal.ConfigurationCacheDegradation.requireDegradation;
-import static org.gradle.model.internal.type.ModelTypes.modelMap;
+import org.gradle.api.DefaultTask
+import org.gradle.api.internal.ConfigurationCacheDegradation
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.reporting.components.internal.ComponentReportRenderer
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.diagnostics.internal.ProjectDetails
+import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
+import org.gradle.internal.logging.text.StyledTextOutputFactory.create
+import org.gradle.language.base.ProjectSourceSet
+import org.gradle.model.ModelMap
+import org.gradle.model.internal.type.ModelType
+import org.gradle.model.internal.type.ModelTypes
+import org.gradle.platform.base.BinaryContainer
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.ComponentSpecContainer
+import org.gradle.work.DisableCachingByDefault
+import javax.inject.Inject
 
 /**
  * Displays some details about the software components produced by the project.
  */
-@Deprecated
+@Deprecated("")
 @DisableCachingByDefault(because = "Produces only non-cacheable console output")
-public abstract class ComponentReport extends DefaultTask {
-    @Inject
-    protected abstract StyledTextOutputFactory getTextOutputFactory();
+abstract class ComponentReport @Inject constructor() : DefaultTask() {
+    @get:Inject
+    protected abstract val textOutputFactory: StyledTextOutputFactory?
 
-    @Inject
-    protected abstract FileResolver getFileResolver();
+    @get:Inject
+    protected abstract val fileResolver: FileResolver?
 
-    @Inject
-    protected abstract ModelRegistry getModelRegistry();
+    @get:Inject
+    protected abstract val modelRegistry: ModelRegistry?
 
-    @Inject
-    protected abstract TypeAwareBinaryRenderer getBinaryRenderer();
+    @get:Inject
+    protected abstract val binaryRenderer: TypeAwareBinaryRenderer?
 
-    @Inject
-    public ComponentReport() {
-        requireDegradation(this, "Task is not compatible with the Configuration Cache");
+    init {
+        ConfigurationCacheDegradation.requireDegradation<ComponentReport>(this, "Task is not compatible with the Configuration Cache")
     }
 
     @TaskAction
-    public void report() {
-        DeprecationLogger.whileDisabled(this::doReport);
+    fun report() {
+        whileDisabled(Runnable { this.doReport() })
     }
 
-    private void doReport() {
-        ProjectInternal project = (ProjectInternal) getProject();
-        project.prepareForRuleBasedPlugins();
+    private fun doReport() {
+        val project = getProject() as ProjectInternal
+        project.prepareForRuleBasedPlugins()
 
-        StyledTextOutput textOutput = getTextOutputFactory().create(ComponentReport.class);
-        ComponentReportRenderer renderer = new ComponentReportRenderer(getFileResolver(), getBinaryRenderer());
-        renderer.setOutput(textOutput);
+        val textOutput = this.textOutputFactory.create(ComponentReport::class.java)
+        val renderer = ComponentReportRenderer(
+            this.fileResolver,
+            this.binaryRenderer
+        )
+        renderer.setOutput(textOutput)
 
-        ProjectDetails projectDetails = ProjectDetails.of(project);
-        renderer.startProject(projectDetails);
+        val projectDetails = ProjectDetails.of(project)
+        renderer.startProject(projectDetails)
 
-        Collection<ComponentSpec> components = new ArrayList<>();
-        ComponentSpecContainer componentSpecs = modelElement("components", ComponentSpecContainer.class);
+        val components: MutableCollection<ComponentSpec> = ArrayList<ComponentSpec>()
+        val componentSpecs = modelElement<ComponentSpecContainer>("components", ComponentSpecContainer::class.java)
         if (componentSpecs != null) {
-            components.addAll(componentSpecs.values());
+            components.addAll(componentSpecs.values())
         }
 
-        ModelMap<ComponentSpec> testSuites = modelElement("testSuites", modelMap(ComponentSpec.class));
+        val testSuites = modelElement<ModelMap<ComponentSpec>>("testSuites", ModelTypes.modelMap<ComponentSpec>(ComponentSpec::class.java))!!
         if (testSuites != null) {
-            components.addAll(testSuites.values());
+            components.addAll(testSuites.values())
         }
 
-        renderer.renderComponents(components);
+        renderer.renderComponents(components)
 
-        ProjectSourceSet sourceSets = modelElement("sources", ProjectSourceSet.class);
+        val sourceSets = modelElement<ProjectSourceSet>("sources", ProjectSourceSet::class.java)
         if (sourceSets != null) {
-            renderer.renderSourceSets(sourceSets);
+            renderer.renderSourceSets(sourceSets)
         }
-        BinaryContainer binaries = modelElement("binaries", BinaryContainer.class);
+        val binaries = modelElement<BinaryContainer>("binaries", BinaryContainer::class.java)
         if (binaries != null) {
-            renderer.renderBinaries(binaries.values());
+            renderer.renderBinaries(binaries.values())
         }
 
-        renderer.completeProject(projectDetails);
-        renderer.complete();
+        renderer.completeProject(projectDetails)
+        renderer.complete()
     }
 
-    private <T> T modelElement(String path, Class<T> clazz) {
-        return getModelRegistry().find(path, clazz);
+    private fun <T> modelElement(path: String, clazz: Class<T?>): T? {
+        return this.modelRegistry.find<T?>(path, clazz)
     }
 
-    private <T> T modelElement(String path, ModelType<T> modelType) {
-        return getModelRegistry().find(path, modelType);
+    private fun <T> modelElement(path: String, modelType: ModelType<T?>): T? {
+        return this.modelRegistry.find<T?>(path, modelType)
     }
 }

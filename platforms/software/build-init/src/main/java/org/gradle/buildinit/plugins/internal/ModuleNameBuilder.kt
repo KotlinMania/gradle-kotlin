@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.util.internal.TextUtil
 
-import org.gradle.util.internal.TextUtil;
-
-public class ModuleNameBuilder {
-    public static String toModuleName(String name) {
-        return TextUtil.toCamelCase(name);
+object ModuleNameBuilder {
+    fun toModuleName(name: String): String {
+        return TextUtil.toCamelCase(name)!!
     }
 }

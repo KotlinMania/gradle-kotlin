@@ -13,38 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal
 
-package org.gradle.nativeplatform.test.xctest.internal;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.language.cpp.internal.NativeDependencyCache
+import org.gradle.language.cpp.internal.NativeVariantIdentity
+import org.gradle.language.nativeplatform.internal.Names
+import org.gradle.language.swift.SwiftPlatform
+import org.gradle.nativeplatform.tasks.LinkMachOBundle
+import org.gradle.nativeplatform.test.xctest.SwiftXCTestBundle
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
+import javax.inject.Inject
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
-import org.gradle.language.cpp.internal.NativeDependencyCache;
-import org.gradle.language.cpp.internal.NativeVariantIdentity;
-import org.gradle.language.nativeplatform.internal.Names;
-import org.gradle.language.swift.SwiftPlatform;
-import org.gradle.nativeplatform.tasks.LinkMachOBundle;
-import org.gradle.nativeplatform.test.xctest.SwiftXCTestBundle;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
+class DefaultSwiftXCTestBundle @Inject constructor(
+    names: Names?,
+    objectFactory: ObjectFactory,
+    nativeDependencyCache: NativeDependencyCache?,
+    taskDependencyFactory: TaskDependencyFactory?,
+    module: Provider<String?>?,
+    testable: Boolean,
+    source: FileCollection?,
+    configurations: ConfigurationContainer?,
+    implementation: Configuration?,
+    targetPlatform: SwiftPlatform?,
+    toolChain: NativeToolChainInternal?,
+    platformToolProvider: PlatformToolProvider?,
+    identity: NativeVariantIdentity?
+) : DefaultSwiftXCTestBinary(
+    names,
+    objectFactory,
+    nativeDependencyCache,
+    taskDependencyFactory,
+    module,
+    testable,
+    source,
+    configurations,
+    implementation,
+    targetPlatform,
+    toolChain,
+    platformToolProvider,
+    identity
+), SwiftXCTestBundle {
+    private val linkTask: Property<LinkMachOBundle?>
 
-import javax.inject.Inject;
-
-public class DefaultSwiftXCTestBundle extends DefaultSwiftXCTestBinary implements SwiftXCTestBundle {
-    private final Property<LinkMachOBundle> linkTask;
-
-    @Inject
-    public DefaultSwiftXCTestBundle(Names names, ObjectFactory objectFactory, NativeDependencyCache nativeDependencyCache, TaskDependencyFactory taskDependencyFactory, Provider<String> module, boolean testable, FileCollection source, ConfigurationContainer configurations, Configuration implementation, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider, NativeVariantIdentity identity) {
-        super(names, objectFactory, nativeDependencyCache, taskDependencyFactory, module, testable, source, configurations, implementation, targetPlatform, toolChain, platformToolProvider, identity);
-        linkTask = objectFactory.property(LinkMachOBundle.class);
+    init {
+        linkTask = objectFactory.property<LinkMachOBundle?>(LinkMachOBundle::class.java)
     }
 
-    @Override
-    public Property<LinkMachOBundle> getLinkTask() {
-        return linkTask;
+    override fun getLinkTask(): Property<LinkMachOBundle?> {
+        return linkTask
     }
 }

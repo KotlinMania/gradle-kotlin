@@ -13,37 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.tasks
 
-package org.gradle.nativeplatform.test.xctest.tasks;
-
-import com.google.common.io.Files;
-import org.apache.commons.io.FilenameUtils;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileSystemOperations;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.SkipWhenEmpty;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.nativeintegration.filesystem.FileSystem;
-import org.gradle.nativeplatform.toolchain.internal.xcode.SwiftStdlibToolLocator;
-import org.gradle.process.ExecOperations;
-import org.gradle.util.internal.GFileUtils;
-import org.gradle.work.DisableCachingByDefault;
-import org.jspecify.annotations.Nullable;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
+import com.google.common.io.Files
+import org.apache.commons.io.FilenameUtils
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.CopySpec
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.SyncSpec
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SkipWhenEmpty
+import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.file.Chmod.chmod
+import org.gradle.language.swift.internal.DefaultSwiftComponent.getName
+import org.gradle.process.ExecResult.assertNormalExitValue
+import org.gradle.process.ExecSpec
+import org.gradle.util.internal.GFileUtils
+import org.gradle.work.DisableCachingByDefault
+import java.io.File
+import java.io.IOException
+import java.nio.charset.Charset
+import javax.inject.Inject
 
 /**
  * Creates a XCTest bundle with a run script so it can be easily executed.
@@ -51,101 +47,103 @@ import java.nio.charset.Charset;
  * @since 4.4
  */
 @DisableCachingByDefault(because = "Not worth caching")
-public abstract class InstallXCTestBundle extends DefaultTask {
-    public InstallXCTestBundle() {
+abstract class InstallXCTestBundle : DefaultTask() {
+    init {
         // A work around for not being able to skip the task when an input _file_ does not exist
-        dependsOn(getBundleBinaryFile());
+        dependsOn(this.bundleBinaryFile)
     }
 
-    @Inject
-    protected abstract SwiftStdlibToolLocator getSwiftStdlibToolLocator();
+    @get:Inject
+    protected abstract val swiftStdlibToolLocator: SwiftStdlibToolLocator?
 
-    @Inject
-    protected abstract FileSystem getFileSystem();
+    @get:Inject
+    protected abstract val fileSystem: FileSystem?
 
-    @Inject
-    protected abstract FileSystemOperations getFileSystemOperations();
+    @get:Inject
+    protected abstract val fileSystemOperations: FileSystemOperations?
 
     @TaskAction
-    protected void install() throws IOException {
-        File bundleFile = getBundleBinaryFile().get().getAsFile();
-        File bundleDir = getInstallDirectory().get().file(bundleFile.getName() + ".xctest").getAsFile();
-        installToDir(bundleDir, bundleFile);
+    @Throws(IOException::class)
+    protected fun install() {
+        val bundleFile = this.bundleBinaryFile.get().getAsFile()
+        val bundleDir = this.installDirectory.get().file(bundleFile.getName() + ".xctest").getAsFile()
+        installToDir(bundleDir, bundleFile)
 
-        File runScript = getRunScriptFile().get().getAsFile();
-        String runScriptText =
-            "#!/bin/sh"
-                + "\nAPP_BASE_NAME=`dirname \"$0\"`"
-                + "\nXCTEST_LOCATION=`xcrun --find xctest`"
-                + "\nexec \"$XCTEST_LOCATION\" \"$@\" \"$APP_BASE_NAME/" + bundleDir.getName() + "\""
-                + "\n";
+        val runScript = this.runScriptFile.get().getAsFile()
+        val runScriptText =
+            ("#!/bin/sh"
+                    + "\nAPP_BASE_NAME=`dirname \"$0\"`"
+                    + "\nXCTEST_LOCATION=`xcrun --find xctest`"
+                    + "\nexec \"\$XCTEST_LOCATION\" \"$@\" \"\$APP_BASE_NAME/" + bundleDir.getName() + "\""
+                    + "\n")
 
-        GFileUtils.writeFile(runScriptText, runScript);
-        getFileSystem().chmod(runScript, 0755);
+        GFileUtils.writeFile(runScriptText, runScript)
+        this.fileSystem.chmod(runScript, 493)
     }
 
-    private void installToDir(final File bundleDir, final File bundleFile) throws IOException {
-        getFileSystemOperations().sync(SerializableLambdas.action(topSpec -> {
-            topSpec.from(bundleFile, SerializableLambdas.action(spec -> spec.into("Contents/MacOS")));
-            topSpec.into(bundleDir);
-        }));
+    @Throws(IOException::class)
+    private fun installToDir(bundleDir: File, bundleFile: File) {
+        this.fileSystemOperations.sync(SerializableLambdas.action<SyncSpec?>(SerializableLambdas.SerializableAction { topSpec: SyncSpec? ->
+            topSpec!!.from(bundleFile, SerializableLambdas.action<CopySpec?>(SerializableLambdas.SerializableAction { spec: CopySpec? -> spec!!.into("Contents/MacOS") }))
+            topSpec.into(bundleDir)
+        }))
 
-        File outputFile = new File(bundleDir, "Contents/Info.plist");
+        val outputFile = File(bundleDir, "Contents/Info.plist")
 
-        Files.asCharSink(outputFile, Charset.forName("UTF-8")).write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
-            + "<plist version=\"1.0\">\n"
-            + "<dict/>\n"
-            + "</plist>");
+        Files.asCharSink(outputFile, Charset.forName("UTF-8")).write(
+            ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+                    + "<plist version=\"1.0\">\n"
+                    + "<dict/>\n"
+                    + "</plist>")
+        )
 
-        getExecOperations().exec(SerializableLambdas.action(execSpec -> {
-            execSpec.setWorkingDir(bundleDir);
-            execSpec.executable(getSwiftStdlibToolLocator().find());
+        this.execOperations.exec(SerializableLambdas.action<ExecSpec?>(SerializableLambdas.SerializableAction { execSpec: ExecSpec? ->
+            execSpec!!.setWorkingDir(bundleDir)
+            execSpec.executable(this.swiftStdlibToolLocator.find())
             execSpec.args(
                 "--copy",
                 "--scan-executable", bundleFile.getAbsolutePath(),
-                "--destination", new File(bundleDir, "Contents/Frameworks").getAbsolutePath(),
+                "--destination", File(bundleDir, "Contents/Frameworks").getAbsolutePath(),
                 "--platform", "macosx",
-                "--resource-destination", new File(bundleDir, "Contents/Resources").getAbsolutePath(),
-                "--scan-folder", new File(bundleDir, "Contents/Frameworks").getAbsolutePath()
-            );
-        })).assertNormalExitValue();
+                "--resource-destination", File(bundleDir, "Contents/Resources").getAbsolutePath(),
+                "--scan-folder", File(bundleDir, "Contents/Frameworks").getAbsolutePath()
+            )
+        })).assertNormalExitValue()
     }
 
-    /**
-     * Returns the script file that can be used to run the install image.
-     */
-    @Internal
-    public Provider<RegularFile> getRunScriptFile() {
-        return getInstallDirectory().file(getBundleBinaryFile().getLocationOnly().map(SerializableLambdas.transformer(file -> FilenameUtils.removeExtension(file.getAsFile().getName()))));
-    }
+    @get:Internal
+    val runScriptFile: Provider<RegularFile?>
+        /**
+         * Returns the script file that can be used to run the install image.
+         */
+        get() = this.installDirectory.file(
+            this.bundleBinaryFile.getLocationOnly()
+                .map<String?>(SerializableLambdas.transformer<String?, RegularFile?>(SerializableLambdas.SerializableTransformer { file: RegularFile? ->
+                    FilenameUtils.removeExtension(file!!.getAsFile().getName())
+                }))
+        )
 
-    /**
-     * Returns the bundle binary file property.
-     */
-    @Internal("covered by getBundleBinary()")
-    public abstract RegularFileProperty getBundleBinaryFile();
+    @get:Internal("covered by getBundleBinary()")
+    abstract val bundleBinaryFile: RegularFileProperty?
 
-    @SkipWhenEmpty
-    @Nullable
-    @Optional
-    @PathSensitive(PathSensitivity.NAME_ONLY)
-    @InputFile
-    protected File getBundleBinary() {
-        RegularFile bundle = getBundleBinaryFile().get();
-        File bundleFile = bundle.getAsFile();
-        if (!bundleFile.exists()) {
-            return null;
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    @get:Optional
+    @get:SkipWhenEmpty
+    protected val bundleBinary: File?
+        get() {
+            val bundle = this.bundleBinaryFile.get()
+            val bundleFile = bundle.getAsFile()
+            if (!bundleFile.exists()) {
+                return null
+            }
+            return bundleFile
         }
-        return bundleFile;
-    }
 
-    /**
-     * Returns the install directory property.
-     */
-    @OutputDirectory
-    public abstract DirectoryProperty getInstallDirectory();
+    @get:OutputDirectory
+    abstract val installDirectory: DirectoryProperty?
 
-    @Inject
-    protected abstract ExecOperations getExecOperations();
+    @get:Inject
+    protected abstract val execOperations: ExecOperations?
 }

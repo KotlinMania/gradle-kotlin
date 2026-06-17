@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest
 
-package org.gradle.nativeplatform.test.xctest;
-
-import org.gradle.api.provider.Provider;
-import org.gradle.nativeplatform.tasks.LinkMachOBundle;
+import org.gradle.api.provider.Provider
+import org.gradle.nativeplatform.tasks.LinkMachOBundle
 
 /**
  * An XCTest executable for tests implemented in Swift.
  *
  * @since 4.5
  */
-public interface SwiftXCTestBundle extends SwiftXCTestBinary {
+interface SwiftXCTestBundle : SwiftXCTestBinary {
     /**
      * Returns the link task for this bundle.
      */
-    @Override
-    Provider<? extends LinkMachOBundle> getLinkTask();
+    override fun getLinkTask(): Provider<out LinkMachOBundle?>?
 }

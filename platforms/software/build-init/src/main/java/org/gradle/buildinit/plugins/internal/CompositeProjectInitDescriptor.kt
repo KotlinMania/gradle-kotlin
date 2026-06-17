@@ -13,15 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+package org.gradle.buildinit.plugins.internal
 
 /**
  * This is used by SamplesGenerator in build logic.
@@ -29,12 +21,12 @@ import java.util.Set;
  * It would be better to introduce a specific API for the generator to use so that it is decouled from
  * the internals of build init infrastructure.
  */
-public interface CompositeProjectInitDescriptor extends BuildGenerator {
-    Language getLanguage();
+interface CompositeProjectInitDescriptor : BuildGenerator {
+    val language: Language?
 
-    Map<String, List<String>> generateWithExternalComments(InitSettings settings);
+    fun generateWithExternalComments(settings: InitSettings): MutableMap<String, MutableList<String>>?
 
-    BuildInitTestFramework getDefaultTestFramework();
+    val defaultTestFramework: BuildInitTestFramework?
 
-    Set<BuildInitTestFramework> getTestFrameworks();
+    val testFrameworks: MutableSet<BuildInitTestFramework>?
 }

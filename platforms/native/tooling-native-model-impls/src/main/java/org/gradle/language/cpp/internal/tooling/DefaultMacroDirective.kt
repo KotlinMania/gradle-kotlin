@@ -13,25 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import java.io.Serializable
 
-import java.io.Serializable;
-
-public class DefaultMacroDirective implements Serializable {
-    private final String name;
-    private final String value;
-
-    public DefaultMacroDirective(String name, String value) {
-        this.name = name;
-        this.value = value;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getValue() {
-        return value;
-    }
-}
+class DefaultMacroDirective(val name: String?, val value: String?) : Serializable

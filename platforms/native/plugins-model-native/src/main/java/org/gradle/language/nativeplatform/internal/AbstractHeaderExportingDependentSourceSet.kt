@@ -13,59 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.nativeplatform.internal;
+package org.gradle.language.nativeplatform.internal
 
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.util.internal.CollectionUtils;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
+import org.gradle.util.internal.CollectionUtils
+import java.io.File
 
 /**
  * A convenience base class for implementing language source sets with dependencies and exported headers.
  */
-public abstract class AbstractHeaderExportingDependentSourceSet extends AbstractHeaderExportingSourceSet
-        implements HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSetInternal {
+abstract class AbstractHeaderExportingDependentSourceSet : AbstractHeaderExportingSourceSet(), HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSetInternal {
+    private val libs: MutableList<Any?> = ArrayList<Any?>()
+    private var preCompiledHeader: String? = null
+    private var prefixHeaderFile: File? = null
 
-    private final List<Object> libs = new ArrayList<Object>();
-    private String preCompiledHeader;
-    private File prefixHeaderFile;
-
-    @Override
-    public Collection<?> getLibs() {
-        return libs;
+    override fun getLibs(): MutableCollection<*> {
+        return libs
     }
 
-    @Override
-    public void lib(Object library) {
-        if (library instanceof Iterable<?>) {
-            Iterable<?> iterable = (Iterable) library;
-            CollectionUtils.addAll(libs, iterable);
+    override fun lib(library: Any?) {
+        if (library is Iterable<*>) {
+            val iterable = library
+            CollectionUtils.addAll(libs, iterable)
         } else {
-            libs.add(library);
+            libs.add(library)
         }
     }
 
-    @Override
-    public String getPreCompiledHeader() {
-        return preCompiledHeader;
+    override fun getPreCompiledHeader(): String? {
+        return preCompiledHeader
     }
 
-    @Override
-    public void setPreCompiledHeader(String header) {
-        this.preCompiledHeader = header;
+    override fun setPreCompiledHeader(header: String?) {
+        this.preCompiledHeader = header
     }
 
-    @Override
-    public File getPrefixHeaderFile() {
-        return prefixHeaderFile;
+    override fun getPrefixHeaderFile(): File? {
+        return prefixHeaderFile
     }
 
-    @Override
-    public void setPrefixHeaderFile(File prefixHeaderFile) {
-        this.prefixHeaderFile = prefixHeaderFile;
+    override fun setPrefixHeaderFile(prefixHeaderFile: File?) {
+        this.prefixHeaderFile = prefixHeaderFile
     }
 }

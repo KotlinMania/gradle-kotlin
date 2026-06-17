@@ -13,60 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.platform.base.ApplicationBinarySpec;
-import org.gradle.platform.base.BinaryTasksCollection;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.ApplicationBinarySpec
+import org.gradle.platform.base.BinaryTasksCollection
 
 /**
  * An binary built by Gradle for a native application.
  */
 @Incubating
-public interface NativeExecutableBinarySpec extends NativeBinarySpec, ApplicationBinarySpec {
-
+interface NativeExecutableBinarySpec : NativeBinarySpec, ApplicationBinarySpec {
     /**
      * Provides access to key tasks used for building the binary.
      */
-    interface TasksCollection extends BinaryTasksCollection {
+    interface TasksCollection : BinaryTasksCollection {
         /**
          * The link task.
          */
-        Task getLink();
+        val link: Task?
 
         /**
          * The install task.
          */
-        Task getInstall();
+        val install: Task?
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    NativeExecutableSpec getApplication();
+    override fun getApplication(): NativeExecutableSpec?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    NativeExecutableSpec getComponent();
+    override fun getComponent(): NativeExecutableSpec?
 
     /**
      * Native Installation location for a native executable.
      */
-    NativeInstallationSpec getInstallation();
+    val installation: NativeInstallationSpec?
 
     /**
      * Native Executable File.
      */
-    NativeExecutableFileSpec getExecutable();
+    val executable: NativeExecutableFileSpec?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    TasksCollection getTasks();
+    override fun getTasks(): TasksCollection?
 }

@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base.internal;
+package org.gradle.language.base.internal
 
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultDomainObjectSet;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.ProjectSourceSet;
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultDomainObjectSet
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.ProjectSourceSet
 
-public class DefaultProjectSourceSet extends DefaultDomainObjectSet<LanguageSourceSet> implements ProjectSourceSet {
-    public DefaultProjectSourceSet(CollectionCallbackActionDecorator decorator) {
-        super(LanguageSourceSet.class, decorator);
-    }
-}
+class DefaultProjectSourceSet(decorator: CollectionCallbackActionDecorator) : DefaultDomainObjectSet<LanguageSourceSet?>(LanguageSourceSet::class.java, decorator), ProjectSourceSet

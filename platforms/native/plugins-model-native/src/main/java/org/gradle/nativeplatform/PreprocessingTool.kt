@@ -13,33 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-
-import java.util.Map;
+import org.gradle.api.Incubating
 
 /**
  * A tool that permits configuration of the C preprocessor.
  */
 // TODO:HH This should be moved back into languageNative project
 @Incubating
-public interface PreprocessingTool extends Tool {
+interface PreprocessingTool : Tool {
     /**
      * The set of preprocessor macros to define when compiling this binary.
      */
-    Map<String, String> getMacros();
+    val macros: MutableMap<String?, String?>?
 
     /**
      * Defines a named preprocessor macros to use when compiling this binary.
      * The macro will be supplied to the compiler as '-D name'.
      */
-    void define(String name);
+    fun define(name: String?)
 
     /**
      * Defines a named preprocessor macro with a value, which will be used when compiling this binary.
      * The macro will be supplied to the compiler as '-D name=definition'.
      */
-    void define(String name, String definition);
+    fun define(name: String?, definition: String?)
 }

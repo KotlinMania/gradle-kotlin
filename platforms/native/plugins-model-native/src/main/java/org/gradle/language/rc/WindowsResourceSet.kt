@@ -13,42 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.rc;
+package org.gradle.language.rc
 
-import org.gradle.api.Incubating;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.language.nativeplatform.NativeResourceSet;
-import org.gradle.language.base.LanguageSourceSet;
+import org.gradle.api.Incubating
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
+import org.gradle.language.nativeplatform.NativeResourceSet
 
 /**
  * A set of Windows Resource definition files.
  *
- * <p>A Windows Resource set contains a set of script files, together with an optional set of header files.</p>
+ *
+ * A Windows Resource set contains a set of script files, together with an optional set of header files.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'windows-resources'
+ * id 'windows-resources'
  * }
  *
  * model {
- *     components {
- *         main(NativeLibrarySpec) {
- *             sources {
- *                 rc {
- *                     source {
- *                         srcDirs "src/main/rc"
- *                         include "**{@literal /}*.rc"
- *                     }
- *                     exportedHeaders {
- *                         srcDirs "src/main/include"
- *                     }
- *                 }
- *             }
- *         }
- *     }
- * }
- * </pre>
- */
-@Incubating
-public interface WindowsResourceSet extends LanguageSourceSet, HeaderExportingSourceSet, NativeResourceSet {
+ * components {
+ * main(NativeLibrarySpec) {
+ * sources {
+ * rc {
+ * source {
+ * srcDirs "src/main/rc"
+ * include "**/
+*.rc"
+* }
+* exportedHeaders {
+    * srcDirs "src/main/include"
+    *
 }
+* }
+* }
+* }
+* }
+* }
+</pre> *
+*/
+@Incubating
+interface WindowsResourceSet : LanguageSourceSet, HeaderExportingSourceSet, NativeResourceSet

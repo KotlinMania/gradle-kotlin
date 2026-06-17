@@ -13,41 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import java.util.Optional
 
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
+interface LanguageSpecificProjectGenerator {
+    val id: String?
 
-import java.util.Optional;
-import java.util.Set;
+    val componentType: ComponentType?
 
-public interface LanguageSpecificProjectGenerator {
-    String getId();
+    val language: Language?
 
-    ComponentType getComponentType();
+    val isJvmLanguage: Boolean
+        get() = false
 
-    Language getLanguage();
+    val modularizationOptions: MutableSet<ModularizationOption>?
 
-    default boolean isJvmLanguage() {
-        return false;
-    };
+    fun getFurtherReading(settings: InitSettings): Optional<String>?
 
-    Set<ModularizationOption> getModularizationOptions();
+    fun getTestFrameworks(modularizationOption: ModularizationOption): MutableSet<BuildInitTestFramework>?
 
-    Optional<String> getFurtherReading(InitSettings settings);
+    fun getDefaultTestFramework(modularizationOption: ModularizationOption): BuildInitTestFramework?
 
-    Set<BuildInitTestFramework> getTestFrameworks(ModularizationOption modularizationOption);
+    fun supportsPackage(): Boolean
 
-    BuildInitTestFramework getDefaultTestFramework(ModularizationOption modularizationOption);
+    fun generateProjectBuildScript(projectName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder)
 
-    boolean supportsPackage();
+    fun generateConventionPluginBuildScript(conventionPluginName: String, settings: InitSettings, buildScriptBuilder: BuildScriptBuilder)
 
-    void generateProjectBuildScript(String projectName, InitSettings settings, BuildScriptBuilder buildScriptBuilder);
-
-    void generateConventionPluginBuildScript(String conventionPluginName, InitSettings settings, BuildScriptBuilder buildScriptBuilder);
-
-    void generateSources(InitSettings settings, TemplateFactory templateFactory);
+    fun generateSources(settings: InitSettings, templateFactory: TemplateFactory)
 }

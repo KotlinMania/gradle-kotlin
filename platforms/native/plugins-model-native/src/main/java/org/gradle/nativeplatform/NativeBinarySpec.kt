@@ -13,137 +13,125 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.toolchain.NativeToolChain;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.platform.base.Variant;
-
-import java.util.Collection;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.platform.base.BinarySpec
+import org.gradle.platform.base.Variant
 
 /**
  * Represents a binary artifact that is the result of building a native component.
  */
-@Incubating @HasInternalProtocol
-public interface NativeBinarySpec extends BinarySpec {
+@Incubating
+@HasInternalProtocol
+interface NativeBinarySpec : BinarySpec {
     /**
      * The component that this binary was built from.
      */
-    NativeComponentSpec getComponent();
+    val component: NativeComponentSpec?
 
-    /**
-     * The {@link org.gradle.nativeplatform.Flavor} that this binary was built with.
-     */
-    @Variant
-    Flavor getFlavor();
+    @get:Variant
+    val flavor: Flavor?
 
-    /**
-     * Returns the {@link org.gradle.nativeplatform.platform.NativePlatform} that this binary is targeted to run on.
-     */
-    @Variant
-    NativePlatform getTargetPlatform();
+    @get:Variant
+    val targetPlatform: NativePlatform?
 
-    /**
-     * Returns the {@link org.gradle.nativeplatform.BuildType} used to construct this binary.
-     */
-    @Variant
-    BuildType getBuildType();
+    @get:Variant
+    val buildType: BuildType?
 
     /**
      * The libraries that should be linked into this binary.
      */
-    Collection<NativeDependencySet> getLibs();
+    val libs: MutableCollection<NativeDependencySet?>?
 
     /**
      * Adds a library as input to this binary.
-     * <p>
+     *
+     *
      * This method accepts the following types:
      *
-     * <ul>
-     *     <li>A {@link NativeLibrarySpec}</li>
-     *     <li>A {@link NativeDependencySet}</li>
-     *     <li>A {@link java.util.Map} containing the library selector.</li>
-     * </ul>
+     *
+     *  * A [NativeLibrarySpec]
+     *  * A [NativeDependencySet]
+     *  * A [java.util.Map] containing the library selector.
+     *
      *
      * The Map notation supports the following String attributes:
      *
-     * <ul>
-     *     <li>project: the path to the project containing the library (optional, defaults to current project)</li>
-     *     <li>library: the name of the library (required)</li>
-     *     <li>linkage: the library linkage required ['shared'/'static'] (optional, defaults to 'shared')</li>
-     * </ul>
+     *
+     *  * project: the path to the project containing the library (optional, defaults to current project)
+     *  * library: the name of the library (required)
+     *  * linkage: the library linkage required ['shared'/'static'] (optional, defaults to 'shared')
+     *
      */
-    void lib(Object library);
+    fun lib(library: Any?)
 
     /**
-     * Returns the {@link org.gradle.nativeplatform.toolchain.NativeToolChain} that will be used to build this binary.
+     * Returns the [org.gradle.nativeplatform.toolchain.NativeToolChain] that will be used to build this binary.
      */
-    NativeToolChain getToolChain();
+    val toolChain: NativeToolChain?
 
     // TODO It would be better if these were added via a separate managed view, rather than hard coded.
     /**
      * The configuration of the linker used when linking this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec} and {@link NativeExecutableBinarySpec}.
+     * Valid for [SharedLibraryBinarySpec] and [NativeExecutableBinarySpec].
      */
-    Tool getLinker();
+    val linker: Tool?
 
     /**
      * The configuration of the static library archiver used when creating this binary.
      *
-     * Valid for {@link StaticLibraryBinarySpec}.
+     * Valid for [StaticLibraryBinarySpec].
      */
-    Tool getStaticLibArchiver();
+    val staticLibArchiver: Tool?
 
     /**
      * The configuration of the assembler used when compiling assembly sources this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'assembler' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'assembler' plugin is applied.
      */
-    Tool getAssembler();
+    val assembler: Tool?
 
     /**
      * The configuration of the C compiler used when compiling C sources for this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'c' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'c' plugin is applied.
      */
-    PreprocessingTool getcCompiler();
+    fun getcCompiler(): PreprocessingTool?
 
     /**
      * The configuration of the C++ compiler used when compiling C++ sources for this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'cpp' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'cpp' plugin is applied.
      */
-    PreprocessingTool getCppCompiler();
+    val cppCompiler: PreprocessingTool?
 
     /**
      * The configuration of the Objective-C compiler used when compiling Objective-C sources for this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'objective-c' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'objective-c' plugin is applied.
      */
-    PreprocessingTool getObjcCompiler();
+    val objcCompiler: PreprocessingTool?
 
     /**
      * The configuration of the Objective-C++ compiler used when compiling Objective-C++ sources for this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'objective-cpp' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'objective-cpp' plugin is applied.
      */
-    PreprocessingTool getObjcppCompiler();
+    val objcppCompiler: PreprocessingTool?
 
     /**
      * The configuration of the Resource compiler used when compiling resources for this binary.
      *
-     * Valid for {@link SharedLibraryBinarySpec}, {@link StaticLibraryBinarySpec} and
-     * {@link NativeExecutableBinarySpec} when the 'windows-resources' plugin is applied.
+     * Valid for [SharedLibraryBinarySpec], [StaticLibraryBinarySpec] and
+     * [NativeExecutableBinarySpec] when the 'windows-resources' plugin is applied.
      */
-    PreprocessingTool getRcCompiler();
+    val rcCompiler: PreprocessingTool?
 }

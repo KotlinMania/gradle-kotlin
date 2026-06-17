@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.resolve
 
-package org.gradle.api.internal.resolve;
+import org.gradle.platform.base.Binary
+import org.gradle.platform.base.VariantComponent
 
-import org.gradle.platform.base.Binary;
-import org.gradle.platform.base.VariantComponent;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-
-public interface VariantBinarySelector {
-    Collection<? extends Binary> selectVariants(VariantComponent componentSpec, @Nullable String requestedVariant);
+interface VariantBinarySelector {
+    fun selectVariants(componentSpec: VariantComponent?, requestedVariant: String?): MutableCollection<out Binary?>?
 }

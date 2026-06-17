@@ -13,32 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.api.DomainObjectSet
+import org.gradle.nativeplatform.NativeLibraryBinary
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.jspecify.annotations.Nullable;
+class ChainedLibraryBinaryLocator(locators: MutableList<out LibraryBinaryLocator?>) : LibraryBinaryLocator {
+    private val locators: MutableList<LibraryBinaryLocator> = ArrayList<LibraryBinaryLocator>()
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class ChainedLibraryBinaryLocator implements LibraryBinaryLocator {
-    private final List<LibraryBinaryLocator> locators = new ArrayList<LibraryBinaryLocator>();
-
-    public ChainedLibraryBinaryLocator(List<? extends LibraryBinaryLocator> locators) {
-        this.locators.addAll(locators);
+    init {
+        this.locators.addAll(locators)
     }
 
-    @Nullable
-    @Override
-    public DomainObjectSet<NativeLibraryBinary> getBinaries(LibraryIdentifier library) {
-        for (LibraryBinaryLocator locator : locators) {
-            DomainObjectSet<NativeLibraryBinary> binaries = locator.getBinaries(library);
+    override fun getBinaries(library: LibraryIdentifier?): DomainObjectSet<NativeLibraryBinary?>? {
+        for (locator in locators) {
+            val binaries: DomainObjectSet<NativeLibraryBinary?>? = locator.getBinaries(library)
             if (binaries != null) {
-                return binaries;
+                return binaries
             }
         }
-        return null;
+        return null
     }
 }

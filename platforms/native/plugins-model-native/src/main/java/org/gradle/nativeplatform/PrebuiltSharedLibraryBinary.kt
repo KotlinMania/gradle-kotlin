@@ -13,25 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import java.io.File
 
 /**
  * A shared library that exists at a known location on the filesystem.
  */
 @Incubating
-public interface PrebuiltSharedLibraryBinary extends SharedLibraryBinary {
+interface PrebuiltSharedLibraryBinary : SharedLibraryBinary {
     /**
      * The shared library file.
      */
-    void setSharedLibraryFile(File sharedLibraryFile);
+    fun setSharedLibraryFile(sharedLibraryFile: File?)
 
     /**
      * The shared library link file.
      */
-    void setSharedLibraryLinkFile(File sharedLibraryLinkFile);
+    fun setSharedLibraryLinkFile(sharedLibraryLinkFile: File?)
 }

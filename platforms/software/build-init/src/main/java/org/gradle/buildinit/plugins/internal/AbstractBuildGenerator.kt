@@ -13,42 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
+import org.gradle.internal.Factory.create
+import java.util.Arrays
+import java.util.TreeSet
 
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-public abstract class AbstractBuildGenerator implements BuildGenerator {
-    private final BuildContentGenerator generator;
-    private final List<? extends BuildContentGenerator> generators;
-
-    public AbstractBuildGenerator(BuildContentGenerator projectGenerator, List<? extends BuildContentGenerator> generators) {
-        this.generators = generators;
-        this.generator = projectGenerator;
+abstract class AbstractBuildGenerator(private val generator: BuildContentGenerator, private val generators: MutableList<out BuildContentGenerator>) : BuildGenerator {
+    override fun supportsProjectName(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean supportsProjectName() {
-        return true;
+    override fun getDsls(): MutableSet<BuildInitDsl> {
+        return TreeSet<BuildInitDsl>(Arrays.asList<BuildInitDsl>(*BuildInitDsl.entries.toTypedArray()))
     }
 
-    @Override
-    public Set<BuildInitDsl> getDsls() {
-        return new TreeSet<>(Arrays.asList(BuildInitDsl.values()));
-    }
-
-    @Override
-    public void generate(InitSettings settings) {
-        BuildContentGenerationContext buildContentGenerationContext = new BuildContentGenerationContext(new VersionCatalogDependencyRegistry(false));
-        for (BuildContentGenerator generator : generators) {
-            generator.generate(settings, buildContentGenerationContext);
+    override fun generate(settings: InitSettings) {
+        val buildContentGenerationContext = BuildContentGenerationContext(VersionCatalogDependencyRegistry(false))
+        for (generator in generators) {
+            generator.generate(settings, buildContentGenerationContext)
         }
-        generator.generate(settings, buildContentGenerationContext);
-        VersionCatalogGenerator.create(settings.getTarget()).generate(buildContentGenerationContext, settings.isWithComments());
+        generator.generate(settings, buildContentGenerationContext)
+        VersionCatalogGenerator.Companion.create(settings.getTarget()).generate(buildContentGenerationContext, settings.isWithComments())
     }
 }

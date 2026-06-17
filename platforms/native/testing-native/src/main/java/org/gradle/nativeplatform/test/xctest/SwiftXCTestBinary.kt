@@ -13,54 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest
 
-package org.gradle.nativeplatform.test.xctest;
-
-import org.gradle.api.file.Directory;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.provider.Provider;
-import org.gradle.language.swift.SwiftBinary;
-import org.gradle.nativeplatform.tasks.AbstractLinkTask;
-import org.gradle.nativeplatform.test.TestComponent;
-import org.gradle.nativeplatform.test.xctest.tasks.XCTest;
+import org.gradle.api.provider.Provider
+import org.gradle.language.swift.SwiftBinary
+import org.gradle.nativeplatform.test.TestComponent
+import org.gradle.nativeplatform.test.xctest.tasks.XCTest
 
 /**
  * An test binary built from Swift source.
  *
  * @since 4.4
  */
-public interface SwiftXCTestBinary extends SwiftBinary, TestComponent {
+interface SwiftXCTestBinary : SwiftBinary, TestComponent {
     /**
      * Returns the executable test file for this binary.
      *
      * @since 4.5
      */
-    Provider<RegularFile> getExecutableFile();
+    val executableFile: Provider<RegularFile?>?
 
     /**
      * Returns the installation directory for this binary.
      *
      * @since 4.4
      */
-    Provider<Directory> getInstallDirectory();
+    val installDirectory: Provider<Directory?>?
 
     /**
      * Returns the script for running this binary.
      *
      * @since 4.4
      */
-    Provider<RegularFile> getRunScriptFile();
+    val runScriptFile: Provider<RegularFile?>?
 
     /**
      * Returns the link task for this binary.
      *
      * @since 4.5
      */
-    Provider<? extends AbstractLinkTask> getLinkTask();
+    val linkTask: Provider<out AbstractLinkTask?>?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    Provider<? extends XCTest> getRunTask();
+    override fun getRunTask(): Provider<out XCTest?>?
 }

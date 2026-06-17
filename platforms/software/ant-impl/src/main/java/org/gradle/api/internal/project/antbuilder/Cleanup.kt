@@ -13,52 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.internal.classloader.ClassLoaderUtils;
-import org.gradle.internal.classpath.ClassPath;
-import org.gradle.internal.groovyloader.GroovySystemLoader;
+import org.gradle.internal.classloader.ClassLoaderUtils
+import org.gradle.internal.classpath.ClassPath
+import org.gradle.internal.groovyloader.GroovySystemLoader
+import java.lang.ref.PhantomReference
+import java.lang.ref.ReferenceQueue
 
-import java.lang.ref.PhantomReference;
-import java.lang.ref.ReferenceQueue;
-
-class Cleanup extends PhantomReference<CachedClassLoader> {
-    enum Mode {
+internal class Cleanup(
+    val key: ClassPath?,
+    cachedClassLoader: CachedClassLoader?,
+    referenceQueue: ReferenceQueue<CachedClassLoader?>?,
+    private val classLoader: ClassLoader,
+    private val groovySystemForClassLoader: GroovySystemLoader,
+    private val gradleApiGroovyLoader: GroovySystemLoader,
+    private val antBuilderGroovyLoader: GroovySystemLoader
+) : PhantomReference<CachedClassLoader?>(cachedClassLoader, referenceQueue) {
+    internal enum class Mode {
         DONT_CLOSE_CLASSLOADER,
         CLOSE_CLASSLOADER
     }
 
-    private final ClassPath key;
-    private final ClassLoader classLoader;
-    private final GroovySystemLoader groovySystemForClassLoader;
-    private final GroovySystemLoader gradleApiGroovyLoader;
-    private final GroovySystemLoader antBuilderGroovyLoader;
-
-    Cleanup(ClassPath classPath,
-            CachedClassLoader cachedClassLoader,
-            ReferenceQueue<CachedClassLoader> referenceQueue,
-            ClassLoader classLoader,
-            GroovySystemLoader groovySystemForClassLoader,
-            GroovySystemLoader gradleApiGroovyLoader,
-            GroovySystemLoader antBuilderGroovyLoader) {
-        super(cachedClassLoader, referenceQueue);
-        this.groovySystemForClassLoader = groovySystemForClassLoader;
-        this.gradleApiGroovyLoader = gradleApiGroovyLoader;
-        this.antBuilderGroovyLoader = antBuilderGroovyLoader;
-        this.key = classPath;
-        this.classLoader = classLoader;
-    }
-
-    ClassPath getKey() {
-        return key;
-    }
-
-    void cleanup(Mode mode) {
-        groovySystemForClassLoader.shutdown();
-        gradleApiGroovyLoader.discardTypesFrom(classLoader);
-        antBuilderGroovyLoader.discardTypesFrom(classLoader);
+    fun cleanup(mode: Mode?) {
+        groovySystemForClassLoader.shutdown()
+        gradleApiGroovyLoader.discardTypesFrom(classLoader)
+        antBuilderGroovyLoader.discardTypesFrom(classLoader)
         if (mode == Mode.CLOSE_CLASSLOADER) {
-            ClassLoaderUtils.tryClose(classLoader);
+            ClassLoaderUtils.tryClose(classLoader)
         }
     }
 }

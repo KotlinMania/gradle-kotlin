@@ -13,99 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.util.internal.TextUtil
 
-import static org.gradle.util.internal.TextUtil.getPlatformLineSeparator;
+class TemplateValue(val raw: String) {
+    val groovyComment: String
+        get() = raw.replace("\\", "\\\\")
 
-public class TemplateValue {
-    private final String value;
+    val groovyString: String
+        get() {
+            val result = StringBuilder()
+            for (i in 0..<raw.length) {
+                val ch = raw.get(i)
+                when (ch) {
+                    '\\' -> result.append('\\').append('\\')
+                    '\'' -> result.append('\\').append('\'')
+                    '\n' -> result.append('\\').append('n')
+                    '\r' -> result.append('\\').append('r')
+                    '\t' -> result.append('\\').append('t')
+                    '\f' -> result.append('\\').append('f')
+                    '\b' -> result.append('\\').append('b')
+                    else -> result.append(ch)
+                }
+            }
+            return result.toString()
+        }
 
-    public TemplateValue(String value) {
-        this.value = value;
-    }
-
-    public String getGroovyComment() {
-        return value.replace("\\", "\\\\");
-    }
-
-    public String getGroovyString() {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < value.length(); i++) {
-            char ch = value.charAt(i);
-            switch (ch) {
-                case '\\':
-                    result.append('\\').append('\\');
-                    break;
-                case '\'':
-                    result.append('\\').append('\'');
-                    break;
-                case '\n':
-                    result.append('\\').append('n');
-                    break;
-                case '\r':
-                    result.append('\\').append('r');
-                    break;
-                case '\t':
-                    result.append('\\').append('t');
-                    break;
-                case '\f':
-                    result.append('\\').append('f');
-                    break;
-                case '\b':
-                    result.append('\\').append('b');
-                    break;
-                default:
-                    result.append(ch);
+    val statement: String
+        get() {
+            if (raw.isEmpty()) {
+                return ""
+            } else {
+                return this.raw + TextUtil.getPlatformLineSeparator()
             }
         }
-        return result.toString();
-    }
 
-    public String getStatement() {
-        if (value.isEmpty()) {
-            return "";
-        } else {
-            return value + getPlatformLineSeparator();
-        }
-    }
-
-    public String getJavaStatement() {
-        if (value.isEmpty()) {
-            return "";
-        } else {
-            return value + ";" + getPlatformLineSeparator();
-        }
-    }
-
-    public String getJavaIdentifier() {
-        return value;
-    }
-
-    public String getMultilineComment() {
-        if (value.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("/*").append(getPlatformLineSeparator());
-        for (String line : value.split("\n")) {
-            sb.append(" *");
-            if (!line.isEmpty()) {
-                sb.append(" ").append(line);
+    val javaStatement: String
+        get() {
+            if (raw.isEmpty()) {
+                return ""
+            } else {
+                return this.raw + ";" + TextUtil.getPlatformLineSeparator()
             }
-            sb.append(getPlatformLineSeparator());
         }
-        sb.append(" */").append(getPlatformLineSeparator());
-        return sb.toString();
-    }
 
-    public String getRaw() {
-        return value;
-    }
+    val multilineComment: String
+        get() {
+            if (raw.isEmpty()) {
+                return ""
+            }
 
-    @Override
-    public String toString() {
-        return ">>>" + value + "<<<";
+            val sb = StringBuilder()
+            sb.append("/*").append(TextUtil.getPlatformLineSeparator())
+            for (line in raw.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+                sb.append(" *")
+                if (!line.isEmpty()) {
+                    sb.append(" ").append(line)
+                }
+                sb.append(TextUtil.getPlatformLineSeparator())
+            }
+            sb.append(" */").append(TextUtil.getPlatformLineSeparator())
+            return sb.toString()
+        }
+
+    override fun toString(): String {
+        return ">>>" + this.raw + "<<<"
     }
 }

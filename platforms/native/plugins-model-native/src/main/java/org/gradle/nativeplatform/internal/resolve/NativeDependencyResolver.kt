@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal.resolve;
+package org.gradle.nativeplatform.internal.resolve
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Build.class)
-public interface NativeDependencyResolver {
-    void resolve(NativeBinaryResolveResult resolution);
+@ServiceScope(Scope.Build::class)
+interface NativeDependencyResolver {
+    fun resolve(resolution: NativeBinaryResolveResult?)
 }

@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.util.internal.GFileUtils
 
-import org.gradle.util.internal.GFileUtils;
-
-public class ResourceDirsGenerator implements BuildContentGenerator {
-
-    @Override
-    public void generate(InitSettings settings, BuildContentGenerationContext buildContentGenerationContext) {
-        for (String subproject : settings.getSubprojects()) {
-            GFileUtils.mkdirs(settings.getTarget().dir(subproject + "/src/main/resources").getAsFile());
-            GFileUtils.mkdirs(settings.getTarget().dir(subproject + "/src/test/resources").getAsFile());
+class ResourceDirsGenerator : BuildContentGenerator {
+    override fun generate(settings: InitSettings, buildContentGenerationContext: BuildContentGenerationContext) {
+        for (subproject in settings.getSubprojects()) {
+            GFileUtils.mkdirs(settings.getTarget().dir(subproject + "/src/main/resources").getAsFile())
+            GFileUtils.mkdirs(settings.getTarget().dir(subproject + "/src/test/resources").getAsFile())
         }
     }
 }

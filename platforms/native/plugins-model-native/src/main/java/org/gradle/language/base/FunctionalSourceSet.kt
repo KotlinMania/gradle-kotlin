@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base;
+package org.gradle.language.base
 
-import org.gradle.api.Incubating;
-import org.gradle.model.ModelMap;
+import org.gradle.api.Incubating
+import org.gradle.model.ModelMap
 
 /**
- * A container holding {@link LanguageSourceSet}s with a similar function
+ * A container holding [LanguageSourceSet]s with a similar function
  * (production code, test code, etc.).
  */
 @Incubating
-public interface FunctionalSourceSet extends ModelMap<LanguageSourceSet> {
-}
+interface FunctionalSourceSet : ModelMap<LanguageSourceSet?>

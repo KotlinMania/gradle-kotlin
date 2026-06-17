@@ -13,95 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents
 
-package org.gradle.api.reporting.dependents;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.reporting.dependents.internal.TextDependentComponentsReportRenderer;
-import org.gradle.api.tasks.Console;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.diagnostics.internal.ProjectDetails;
-import org.gradle.api.tasks.options.Option;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.internal.logging.text.StyledTextOutputFactory;
-import org.gradle.internal.work.WorkerLeaseService;
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolver;
-import org.gradle.work.DisableCachingByDefault;
-
-import javax.inject.Inject;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import static org.gradle.api.internal.ConfigurationCacheDegradation.requireDegradation;
-import static org.gradle.api.reporting.dependents.internal.DependentComponentsUtils.getAllComponents;
-import static org.gradle.api.reporting.dependents.internal.DependentComponentsUtils.getAllTestSuites;
+import com.google.common.base.Joiner
+import com.google.common.collect.Lists
+import org.gradle.api.DefaultTask
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.internal.ConfigurationCacheDegradation
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.reporting.dependents.internal.DependentComponentsUtils
+import org.gradle.api.reporting.dependents.internal.TextDependentComponentsReportRenderer
+import org.gradle.api.tasks.Console
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.diagnostics.internal.ProjectDetails
+import org.gradle.api.tasks.options.Option
+import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
+import org.gradle.internal.logging.text.StyledTextOutputFactory.create
+import org.gradle.model.internal.registry.ModelRegistry
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.internal.dependents.DependentBinariesResolver
+import org.gradle.work.DisableCachingByDefault
+import java.util.function.Consumer
+import javax.inject.Inject
 
 /**
  * Displays dependent components.
  */
-@Deprecated
+@Deprecated("")
 @DisableCachingByDefault(because = "Produces only non-cacheable console output")
-public abstract class DependentComponentsReport extends DefaultTask {
-
-    private boolean showNonBuildable;
-    private boolean showTestSuites;
-    private List<String> components;
-
-    @Inject
-    public DependentComponentsReport() {
-        requireDegradation(this, "Task is not compatible with the Configuration Cache");
-    }
-
+abstract class DependentComponentsReport @Inject constructor() : DefaultTask() {
     /**
      * Should this include non-buildable components in the report?
      */
-    @Console
-    public boolean isShowNonBuildable() {
-        return showNonBuildable;
-    }
-
-    @Option(option = "non-buildable", description = "Show non-buildable components.")
-    public void setShowNonBuildable(boolean showNonBuildable) {
-        this.showNonBuildable = showNonBuildable;
-    }
+    @get:Console
+    @set:Option(option = "non-buildable", description = "Show non-buildable components.")
+    var isShowNonBuildable: Boolean = false
 
     /**
      * Should this include test suites in the report?
      */
-    @Console
-    public boolean isShowTestSuites() {
-        return showTestSuites;
+    @get:Console
+    @set:Option(option = "test-suites", description = "Show test suites components.")
+    var isShowTestSuites: Boolean = false
+    private var components: MutableList<String>? = null
+
+    init {
+        ConfigurationCacheDegradation.requireDegradation<DependentComponentsReport>(this, "Task is not compatible with the Configuration Cache")
     }
 
-    @Option(option = "test-suites", description = "Show test suites components.")
-    public void setShowTestSuites(boolean showTestSuites) {
-        this.showTestSuites = showTestSuites;
-    }
-
-    /**
-     * Should this include both non-buildable and test suites in the report?
-     */
-    @Console
-    public boolean getShowAll() {
-        return showNonBuildable && showTestSuites;
-    }
-
-    /**
-     * Set this to include both non buildable components and test suites in the report.
-     */
-    @Option(option = "all", description = "Show all components (non-buildable and test suites).")
-    public void setShowAll(boolean showAll) {
-        this.showNonBuildable = showAll;
-        this.showTestSuites = showAll;
-    }
+    @get:Console
+    @set:Option(option = "all", description = "Show all components (non-buildable and test suites).")
+    var showAll: Boolean
+        /**
+         * Should this include both non-buildable and test suites in the report?
+         */
+        get() = this.isShowNonBuildable && this.isShowTestSuites
+        /**
+         * Set this to include both non buildable components and test suites in the report.
+         */
+        set(showAll) {
+            this.isShowNonBuildable = showAll
+            this.isShowTestSuites = showAll
+        }
 
     /**
      * Returns the components to generate the report for.
@@ -110,8 +83,8 @@ public abstract class DependentComponentsReport extends DefaultTask {
      * @return the components.
      */
     @Console
-    public List<String> getComponents() {
-        return components;
+    fun getComponents(): MutableList<String> {
+        return components!!
     }
 
     /**
@@ -120,85 +93,87 @@ public abstract class DependentComponentsReport extends DefaultTask {
      * @param components the components.
      */
     @Option(option = "component", description = "Component to generate the report for (can be specified more than once).")
-    public void setComponents(List<String> components) {
-        this.components = components;
+    fun setComponents(components: MutableList<String>) {
+        this.components = components
     }
 
-    @Inject
-    protected abstract StyledTextOutputFactory getTextOutputFactory();
+    @get:Inject
+    protected abstract val textOutputFactory: StyledTextOutputFactory?
 
-    @Inject
-    protected abstract ModelRegistry getModelRegistry();
+    @get:Inject
+    protected abstract val modelRegistry: ModelRegistry
 
-    @Inject
-    protected abstract WorkerLeaseService getWorkerLeaseService();
+    @get:Inject
+    protected abstract val workerLeaseService: WorkerLeaseService?
 
     @TaskAction
-    public void report() {
-        DeprecationLogger.whileDisabled(this::doReport);
+    fun report() {
+        whileDisabled(Runnable { this.doReport() })
     }
 
-    private void doReport() {
+    private fun doReport() {
         // Once we are here, the project lock is held. If we synchronize to avoid cross-project operations, we will have a dead lock.
-        getWorkerLeaseService().runAsIsolatedTask(() -> {
+        this.workerLeaseService.runAsIsolatedTask(Runnable {
             // Output reports per execution, not mixed.
             // Cross-project ModelRegistry operations do not happen concurrently.
-            synchronized (DependentComponentsReport.class) {
-                ((ProjectInternal) getProject()).getOwner().applyToMutableState(project -> {
-                    ModelRegistry modelRegistry = getModelRegistry();
+            synchronized(DependentComponentsReport::class.java) {
+                (getProject() as ProjectInternal).getOwner().applyToMutableState(Consumer { project: ProjectInternal? ->
+                    val modelRegistry = this.modelRegistry
+                    val dependentBinariesResolver = modelRegistry.find<DependentBinariesResolver>("dependentBinariesResolver", DependentBinariesResolver::class.java)
 
-                    DependentBinariesResolver dependentBinariesResolver = modelRegistry.find("dependentBinariesResolver", DependentBinariesResolver.class);
+                    val textOutput = this.textOutputFactory.create(DependentComponentsReport::class.java)
+                    val reportRenderer = TextDependentComponentsReportRenderer(
+                        dependentBinariesResolver,
+                        this.isShowNonBuildable,
+                        this.isShowTestSuites
+                    )
 
-                    StyledTextOutput textOutput = getTextOutputFactory().create(DependentComponentsReport.class);
-                    TextDependentComponentsReportRenderer reportRenderer = new TextDependentComponentsReportRenderer(dependentBinariesResolver, showNonBuildable, showTestSuites);
+                    reportRenderer.setOutput(textOutput)
+                    val projectDetails = ProjectDetails.of(project)
+                    reportRenderer.startProject(projectDetails)
 
-                    reportRenderer.setOutput(textOutput);
-                    ProjectDetails projectDetails = ProjectDetails.of(project);
-                    reportRenderer.startProject(projectDetails);
-
-                    Set<ComponentSpec> allComponents = getAllComponents(modelRegistry);
-                    if (showTestSuites) {
-                        allComponents.addAll(getAllTestSuites(modelRegistry));
+                    val allComponents = DependentComponentsUtils.getAllComponents(modelRegistry)
+                    if (this.isShowTestSuites) {
+                        allComponents.addAll(DependentComponentsUtils.getAllTestSuites(modelRegistry))
                     }
-                    reportRenderer.renderComponents(getReportedComponents(allComponents));
-                    reportRenderer.renderLegend();
+                    reportRenderer.renderComponents(getReportedComponents(allComponents))
+                    reportRenderer.renderLegend()
 
-                    reportRenderer.completeProject(projectDetails);
-
-                    reportRenderer.complete();
-                });
+                    reportRenderer.completeProject(projectDetails)
+                    reportRenderer.complete()
+                })
             }
-        });
+        })
     }
 
-    private Set<ComponentSpec> getReportedComponents(Set<ComponentSpec> allComponents) {
-        if (components == null || components.isEmpty()) {
-            return allComponents;
+    private fun getReportedComponents(allComponents: MutableSet<ComponentSpec>): MutableSet<ComponentSpec> {
+        if (components == null || components!!.isEmpty()) {
+            return allComponents
         }
-        Set<ComponentSpec> reportedComponents = new LinkedHashSet<>();
-        List<String> notFound = Lists.newArrayList(components);
-        for (ComponentSpec candidate : allComponents) {
-            String candidateName = candidate.getName();
-            if (components.contains(candidateName)) {
-                reportedComponents.add(candidate);
-                notFound.remove(candidateName);
+        val reportedComponents: MutableSet<ComponentSpec> = LinkedHashSet<ComponentSpec>()
+        val notFound: MutableList<String> = Lists.newArrayList<String>(components)
+        for (candidate in allComponents) {
+            val candidateName = candidate.getName()
+            if (components!!.contains(candidateName!!)) {
+                reportedComponents.add(candidate)
+                notFound.remove(candidateName)
             }
         }
         if (!notFound.isEmpty()) {
-            onComponentsNotFound(notFound);
+            onComponentsNotFound(notFound)
         }
-        return reportedComponents;
+        return reportedComponents
     }
 
-    private void onComponentsNotFound(List<String> notFound) {
-        StringBuilder error = new StringBuilder("Component");
-        if (notFound.size() == 1) {
-            error.append(" '").append(notFound.get(0));
+    private fun onComponentsNotFound(notFound: MutableList<String>) {
+        val error = StringBuilder("Component")
+        if (notFound.size == 1) {
+            error.append(" '").append(notFound.get(0))
         } else {
-            String last = notFound.remove(notFound.size() - 1);
-            error.append("s '").append(Joiner.on("', '").join(notFound)).append("' and '").append(last);
+            val last = notFound.removeAt(notFound.size - 1)
+            error.append("s '").append(Joiner.on("', '").join(notFound)).append("' and '").append(last)
         }
-        error.append("' not found.");
-        throw new InvalidUserDataException(error.toString());
+        error.append("' not found.")
+        throw InvalidUserDataException(error.toString())
     }
 }

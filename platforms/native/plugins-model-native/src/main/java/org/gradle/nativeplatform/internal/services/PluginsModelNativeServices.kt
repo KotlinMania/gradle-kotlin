@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal.services;
+package org.gradle.nativeplatform.internal.services
 
-import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.gradle.nativeplatform.internal.NativeBinaryRenderer;
-import org.gradle.nativeplatform.internal.NativeExecutableBinaryRenderer;
-import org.gradle.nativeplatform.internal.SharedLibraryBinaryRenderer;
-import org.gradle.nativeplatform.internal.StaticLibraryBinaryRenderer;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolverServices;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.gradle.nativeplatform.internal.NativeBinaryRenderer
+import org.gradle.nativeplatform.internal.NativeExecutableBinaryRenderer
+import org.gradle.nativeplatform.internal.SharedLibraryBinaryRenderer
+import org.gradle.nativeplatform.internal.StaticLibraryBinaryRenderer
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolverServices
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class PluginsModelNativeServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.add(AbstractBinaryRenderer.class, NativeBinaryRenderer.class);
-        registration.add(AbstractBinaryRenderer.class, SharedLibraryBinaryRenderer.class);
-        registration.add(AbstractBinaryRenderer.class, StaticLibraryBinaryRenderer.class);
-        registration.add(AbstractBinaryRenderer.class, NativeExecutableBinaryRenderer.class);
+class PluginsModelNativeServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.add<NativeBinaryRenderer?>(AbstractBinaryRenderer::class.java, NativeBinaryRenderer::class.java)
+        registration.add<SharedLibraryBinaryRenderer?>(AbstractBinaryRenderer::class.java, SharedLibraryBinaryRenderer::class.java)
+        registration.add<StaticLibraryBinaryRenderer?>(AbstractBinaryRenderer::class.java, StaticLibraryBinaryRenderer::class.java)
+        registration.add<NativeExecutableBinaryRenderer?>(AbstractBinaryRenderer::class.java, NativeExecutableBinaryRenderer::class.java)
     }
 
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.addProvider(new NativeDependencyResolverServices());
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.addProvider(NativeDependencyResolverServices())
     }
 }

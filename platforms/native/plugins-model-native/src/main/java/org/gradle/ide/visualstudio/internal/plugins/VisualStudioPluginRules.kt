@@ -13,61 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.ide.visualstudio.internal.plugins
 
-package org.gradle.ide.visualstudio.internal.plugins;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.internal.project.ProjectIdentifier;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.project.ProjectRegistry;
-import org.gradle.api.internal.resolve.ProjectModelResolver;
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.ide.visualstudio.VisualStudioExtension;
-import org.gradle.ide.visualstudio.internal.NativeSpecVisualStudioTargetBinary;
-import org.gradle.ide.visualstudio.internal.VisualStudioExtensionInternal;
-import org.gradle.internal.Cast;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.model.Model;
-import org.gradle.model.Mutate;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.platform.base.BinaryContainer;
+import org.gradle.api.Incubating
+import org.gradle.api.internal.project.ProjectIdentifier
+import org.gradle.api.internal.project.ProjectRegistry
+import org.gradle.api.internal.resolve.ProjectModelResolver
+import org.gradle.api.plugins.ExtensionContainer
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.ide.visualstudio.VisualStudioExtension
+import org.gradle.ide.visualstudio.internal.NativeSpecVisualStudioTargetBinary
+import org.gradle.ide.visualstudio.internal.VisualStudioExtensionInternal
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.model.Model
+import org.gradle.model.Mutate
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.platform.base.BinaryContainer
 
 @Incubating
-public class VisualStudioPluginRules {
-    public static class VisualStudioExtensionRules extends RuleSource {
+class VisualStudioPluginRules {
+    object VisualStudioExtensionRules : RuleSource() {
         @Model
-        public static VisualStudioExtensionInternal visualStudio(ExtensionContainer extensionContainer) {
-            return (VisualStudioExtensionInternal) extensionContainer.getByType(VisualStudioExtension.class);
+        fun visualStudio(extensionContainer: ExtensionContainer): VisualStudioExtensionInternal {
+            return extensionContainer.getByType<VisualStudioExtension>(VisualStudioExtension::class.java) as VisualStudioExtensionInternal
         }
     }
 
-    public static class VisualStudioPluginRootRules extends RuleSource {
+    object VisualStudioPluginRootRules : RuleSource() {
         // This ensures that subprojects are realized and register their project and project configuration IDE artifacts
         @Mutate
-        public static void ensureSubprojectsAreRealized(TaskContainer tasks, ProjectIdentifier projectIdentifier, ServiceRegistry serviceRegistry) {
-            ProjectModelResolver projectModelResolver = serviceRegistry.get(ProjectModelResolver.class);
-            ProjectRegistry projectRegistry = Cast.uncheckedCast(serviceRegistry.get(ProjectRegistry.class));
+        fun ensureSubprojectsAreRealized(tasks: TaskContainer, projectIdentifier: ProjectIdentifier, serviceRegistry: ServiceRegistry) {
+            val projectModelResolver = serviceRegistry.get<ProjectModelResolver?>(ProjectModelResolver::class.java)
+            val projectRegistry = uncheckedCast<ProjectRegistry?>(serviceRegistry.get<ProjectRegistry?>(ProjectRegistry::class.java))
 
-            for (ProjectInternal subproject : projectRegistry.getSubProjects(projectIdentifier.getPath())) {
-                projectModelResolver.resolveProjectModel(subproject.getPath()).find("visualStudio", VisualStudioExtension.class);
+            for (subproject in projectRegistry!!.getSubProjects(projectIdentifier.getPath())) {
+                projectModelResolver!!.resolveProjectModel(subproject.getPath())!!.find<VisualStudioExtension>("visualStudio", VisualStudioExtension::class.java)
             }
         }
     }
 
-    public static class VisualStudioPluginProjectRules extends RuleSource {
+    object VisualStudioPluginProjectRules : RuleSource() {
         @Mutate
-        public static void createVisualStudioModelForBinaries(VisualStudioExtensionInternal visualStudioExtension, BinaryContainer binaries) {
-            for (NativeBinarySpec binary : binaries.withType(NativeBinarySpec.class)) {
+        fun createVisualStudioModelForBinaries(visualStudioExtension: VisualStudioExtensionInternal, binaries: BinaryContainer) {
+            for (binary in binaries.withType<NativeBinarySpec>(NativeBinarySpec::class.java)) {
                 if (binary.isBuildable()) {
-                    visualStudioExtension.projectRegistry.addProjectConfiguration(new NativeSpecVisualStudioTargetBinary(binary));
+                    visualStudioExtension.projectRegistry!!.addProjectConfiguration(NativeSpecVisualStudioTargetBinary(binary))
                 }
             }
         }
 
         @Mutate
-        public static void realizeExtension(TaskContainer tasks, VisualStudioExtensionInternal visualStudioExtension) {
+        fun realizeExtension(tasks: TaskContainer, visualStudioExtension: VisualStudioExtensionInternal) {
             // Dummy rule to cause the extension to be realized
         }
     }

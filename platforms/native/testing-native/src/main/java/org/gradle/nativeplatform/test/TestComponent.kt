@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test
 
-package org.gradle.nativeplatform.test;
-
-import org.gradle.api.Task;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.provider.Provider;
+import org.gradle.api.component.SoftwareComponent
 
 /**
  * Represents a component that can run tests.
  *
  * @since 4.5
  */
-public interface TestComponent extends SoftwareComponent {
+interface TestComponent : SoftwareComponent {
     /**
      * Returns the task that runs the tests for this component.
      */
-    Provider<? extends Task> getRunTask();
+    val runTask: Provider<out Task?>?
 }

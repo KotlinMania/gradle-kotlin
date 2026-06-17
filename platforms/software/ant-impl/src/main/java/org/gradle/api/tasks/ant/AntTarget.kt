@@ -13,94 +13,73 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.tasks.ant;
+package org.gradle.api.tasks.ant
 
-import org.apache.tools.ant.Target;
-import org.gradle.api.internal.ConventionTask;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.gradle.work.DisableCachingByDefault;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-
-import static org.gradle.api.internal.ConfigurationCacheDegradation.requireDegradation;
+import org.apache.tools.ant.Target
+import org.gradle.api.internal.ConfigurationCacheDegradation
+import org.gradle.api.internal.ConventionTask
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.work.DisableCachingByDefault
+import java.io.File
 
 /**
  * A task which executes an Ant target.
  */
 @DisableCachingByDefault(because = "Gradle would require more information to cache this task")
-public abstract class AntTarget extends ConventionTask {
+abstract class AntTarget : ConventionTask() {
+    /**
+     * Returns the Ant target to execute.
+     */
+    /**
+     * Sets the Ant target to execute.
+     */
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    @get:Internal
+    var target: Target? = null
+    /**
+     * Returns the Ant project base directory to use when executing the target.
+     */
+    /**
+     * Sets the Ant project base directory to use when executing the target.
+     */
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    @get:Internal
+    var baseDir: File? = null
 
-    private Target target;
-    private File baseDir;
-
-    public AntTarget() {
-        requireDegradation(this, "Task is not compatible with the Configuration Cache");
+    init {
+        ConfigurationCacheDegradation.requireDegradation<AntTarget?>(this, "Task is not compatible with the Configuration Cache")
     }
 
     @TaskAction
-    protected void executeAntTarget() {
-        File oldBaseDir = target.getProject().getBaseDir();
-        target.getProject().setBaseDir(baseDir);
+    fun executeAntTarget() {
+        val oldBaseDir = target!!.getProject().getBaseDir()
+        target!!.getProject().setBaseDir(baseDir)
         try {
-            target.performTasks();
+            target!!.performTasks()
         } finally {
-            target.getProject().setBaseDir(oldBaseDir);
+            target!!.getProject().setBaseDir(oldBaseDir)
         }
     }
 
     /**
-     * Returns the Ant target to execute.
+     * {@inheritDoc}
      */
     @Internal
     @ToBeReplacedByLazyProperty
-    public Target getTarget() {
-        return target;
-    }
-
-    /**
-     * Sets the Ant target to execute.
-     */
-    public void setTarget(Target target) {
-        this.target = target;
-    }
-
-    /**
-     * Returns the Ant project base directory to use when executing the target.
-     */
-    @Internal
-    @ToBeReplacedByLazyProperty
-    public File getBaseDir() {
-        return baseDir;
-    }
-
-    /**
-     * Sets the Ant project base directory to use when executing the target.
-     */
-    public void setBaseDir(File baseDir) {
-        this.baseDir = baseDir;
+    override fun getDescription(): String? {
+        return if (target == null) null else target!!.getDescription()
     }
 
     /**
      * {@inheritDoc}
      */
-    @Internal
-    @Override
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    public String getDescription() {
-        return target == null ? null : target.getDescription();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setDescription(@Nullable String description) {
+    override fun setDescription(description: String?) {
         if (target != null) {
-            target.setDescription(description);
+            target!!.setDescription(description)
         }
     }
 }

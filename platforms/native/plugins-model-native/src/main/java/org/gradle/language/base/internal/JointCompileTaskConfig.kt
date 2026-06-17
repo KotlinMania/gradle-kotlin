@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal
 
-package org.gradle.language.base.internal;
+import org.gradle.api.Task
+import org.gradle.language.base.LanguageSourceSet
 
-import org.gradle.api.Task;
-import org.gradle.language.base.LanguageSourceSet;
+interface JointCompileTaskConfig : SourceTransformTaskConfig {
+    fun canTransform(candidate: LanguageSourceSet?): Boolean
 
-public interface JointCompileTaskConfig extends SourceTransformTaskConfig {
-    boolean canTransform(LanguageSourceSet candidate);
-
-    void configureAdditionalTransform(Task task, LanguageSourceSet sourceSet);
+    fun configureAdditionalTransform(task: Task?, sourceSet: LanguageSourceSet?)
 }

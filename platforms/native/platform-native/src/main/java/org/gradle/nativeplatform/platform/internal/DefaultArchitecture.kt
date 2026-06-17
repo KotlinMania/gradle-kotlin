@@ -13,69 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.platform.internal;
+package org.gradle.nativeplatform.platform.internal
 
-public class DefaultArchitecture implements ArchitectureInternal {
-    private final String name;
-
-    public DefaultArchitecture(String name) {
-        this.name = name;
+class DefaultArchitecture(private val name: String) : ArchitectureInternal {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun toString(): String {
+        return displayName!!
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    val displayName: String?
+        get() = "architecture '" + name + "'"
+
+    override fun isI386(): Boolean {
+        return Architectures.X86.isAlias(name)
     }
 
-    @Override
-    public String getDisplayName() {
-        return "architecture '" + name + "'";
+    override fun isAmd64(): Boolean {
+        return Architectures.X86_64.isAlias(name)
     }
 
-    @Override
-    public boolean isI386() {
-        return Architectures.X86.isAlias(name);
+    override fun isIa64(): Boolean {
+        return Architectures.IA_64.isAlias(name)
     }
 
-    @Override
-    public boolean isAmd64() {
-        return Architectures.X86_64.isAlias(name);
+    override fun isArm32(): Boolean {
+        return Architectures.ARM_V7.isAlias(name)
     }
 
-    @Override
-    public boolean isIa64() {
-        return Architectures.IA_64.isAlias(name);
+    override fun isArm64(): Boolean {
+        return Architectures.AARCH64.isAlias(name)
     }
 
-    @Override
-    public boolean isArm32() {
-        return Architectures.ARM_V7.isAlias(name);
-    }
-
-    @Override
-    public boolean isArm64() {
-        return Architectures.AARCH64.isAlias(name);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultArchitecture other = (DefaultArchitecture) o;
-        return name.equals(other.name);
+        val other = o as DefaultArchitecture
+        return name == other.name
     }
 
-    @Override
-    public int hashCode() {
-        return name.hashCode();
+    override fun hashCode(): Int {
+        return name.hashCode()
     }
 }

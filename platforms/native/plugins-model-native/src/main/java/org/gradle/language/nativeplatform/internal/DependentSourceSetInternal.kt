@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.nativeplatform.internal
 
-package org.gradle.language.nativeplatform.internal;
+import org.gradle.language.nativeplatform.DependentSourceSet
 
-import org.gradle.language.nativeplatform.DependentSourceSet;
-
-import java.io.File;
-
-public interface DependentSourceSetInternal extends DependentSourceSet {
-    File getPrefixHeaderFile();
-
-    void setPrefixHeaderFile(File prefixHeaderFile);
+interface DependentSourceSetInternal : DependentSourceSet {
+    @JvmField
+    var prefixHeaderFile: File?
 }

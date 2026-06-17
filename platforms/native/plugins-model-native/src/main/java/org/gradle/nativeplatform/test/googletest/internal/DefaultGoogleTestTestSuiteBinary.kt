@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.googletest.internal
 
-package org.gradle.nativeplatform.test.googletest.internal;
+import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteBinarySpec
+import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec
+import org.gradle.nativeplatform.test.internal.DefaultNativeTestSuiteBinarySpec
 
-import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec;
-import org.gradle.nativeplatform.test.internal.DefaultNativeTestSuiteBinarySpec;
-
-public class DefaultGoogleTestTestSuiteBinary extends DefaultNativeTestSuiteBinarySpec implements GoogleTestTestSuiteBinarySpec {
-    @Override
-    public GoogleTestTestSuiteSpec getComponent() {
-        return getComponentAs(GoogleTestTestSuiteSpec.class);
+class DefaultGoogleTestTestSuiteBinary : DefaultNativeTestSuiteBinarySpec(), GoogleTestTestSuiteBinarySpec {
+    override fun getComponent(): GoogleTestTestSuiteSpec {
+        return getComponentAs<GoogleTestTestSuiteSpec>(GoogleTestTestSuiteSpec::class.java)!!
     }
 
-    @Override
-    public GoogleTestTestSuiteSpec getTestSuite() {
-        return getComponent();
+    override fun getTestSuite(): GoogleTestTestSuiteSpec {
+        return getComponent()
     }
 }

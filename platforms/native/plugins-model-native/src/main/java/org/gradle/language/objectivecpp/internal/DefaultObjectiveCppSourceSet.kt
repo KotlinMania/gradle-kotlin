@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.objectivecpp.internal
 
-package org.gradle.language.objectivecpp.internal;
+import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet
+import org.gradle.language.objectivecpp.ObjectiveCppSourceSet
 
-import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingDependentSourceSet;
-import org.gradle.language.objectivecpp.ObjectiveCppSourceSet;
-
-public class DefaultObjectiveCppSourceSet extends AbstractHeaderExportingDependentSourceSet implements ObjectiveCppSourceSet {
-    @Override
-    protected String getLanguageName() {
-        return "Objective-C++";
-    }
+class DefaultObjectiveCppSourceSet : AbstractHeaderExportingDependentSourceSet(), ObjectiveCppSourceSet {
+    val languageName: String
+        get() = "Objective-C++"
 }

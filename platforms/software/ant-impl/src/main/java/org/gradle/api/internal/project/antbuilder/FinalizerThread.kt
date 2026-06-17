@@ -13,94 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.internal.classpath.ClassPath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gradle.internal.classpath.ClassPath
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.lang.ref.ReferenceQueue
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.Lock
 
-import java.lang.ref.ReferenceQueue;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-
-import static org.gradle.api.internal.project.antbuilder.Cleanup.Mode.CLOSE_CLASSLOADER;
-import static org.gradle.api.internal.project.antbuilder.Cleanup.Mode.DONT_CLOSE_CLASSLOADER;
-
-class FinalizerThread extends Thread {
-    private final static Logger LOG = LoggerFactory.getLogger(FinalizerThread.class);
-
-    private final ReferenceQueue<CachedClassLoader> referenceQueue;
-    private final AtomicBoolean stopped = new AtomicBoolean();
+internal class FinalizerThread(cacheEntries: MutableMap<ClassPath?, CacheEntry?>, lock: Lock) : Thread() {
+    val referenceQueue: ReferenceQueue<CachedClassLoader?>
+    private val stopped = AtomicBoolean()
 
     // Protects the following fields
-    private final Lock lock;
-    private final Map<ClassPath, Cleanup> cleanups;
-    private final Map<ClassPath, CacheEntry> cacheEntries;
+    private val lock: Lock
+    private val cleanups: MutableMap<ClassPath?, Cleanup?>
+    private val cacheEntries: MutableMap<ClassPath?, CacheEntry?>
 
-    public FinalizerThread(Map<ClassPath, CacheEntry> cacheEntries, Lock lock) {
-        this.setName("Classloader cache reference queue poller");
-        this.setDaemon(true);
-        this.referenceQueue = new ReferenceQueue<CachedClassLoader>();
-        this.cacheEntries = cacheEntries;
-        this.cleanups = new ConcurrentHashMap<>();
-        this.lock = lock;
+    init {
+        this.setName("Classloader cache reference queue poller")
+        this.setDaemon(true)
+        this.referenceQueue = ReferenceQueue<CachedClassLoader?>()
+        this.cacheEntries = cacheEntries
+        this.cleanups = ConcurrentHashMap<ClassPath?, Cleanup?>()
+        this.lock = lock
     }
 
-    @Override
-    public void run() {
-
+    override fun run() {
         try {
             while (!stopped.get()) {
-                Cleanup entry = (Cleanup) referenceQueue.remove();
-                ClassPath key = entry.getKey();
-                removeCacheEntry(key, entry, DONT_CLOSE_CLASSLOADER);
+                val entry = referenceQueue.remove() as Cleanup
+                val key = entry.getKey()
+                removeCacheEntry(key, entry, Cleanup.Mode.DONT_CLOSE_CLASSLOADER)
             }
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
+        } catch (ex: InterruptedException) {
+            currentThread().interrupt()
         }
     }
 
-    private void removeCacheEntry(ClassPath key, Cleanup entry, Cleanup.Mode mode) {
+    private fun removeCacheEntry(key: ClassPath, entry: Cleanup, mode: Cleanup.Mode?) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Removing classloader from cache, classpath = {}", key.getAsURIs());
+            LOG.debug("Removing classloader from cache, classpath = {}", key.getAsURIs())
         }
-        lock.lock();
+        lock.lock()
         try {
-            cacheEntries.remove(key);
-            cleanups.remove(key);
+            cacheEntries.remove(key)
+            cleanups.remove(key)
         } finally {
-            lock.unlock();
+            lock.unlock()
         }
         try {
-            entry.clear();
-            entry.cleanup(mode);
-        } catch (Exception ex) {
-            LOG.error("Unable to perform cleanup of classloader for classpath: "+key, ex);
+            entry.clear()
+            entry.cleanup(mode)
+        } catch (ex: Exception) {
+            LOG.error("Unable to perform cleanup of classloader for classpath: " + key, ex)
         }
     }
 
-    public ReferenceQueue<CachedClassLoader> getReferenceQueue() {
-        return referenceQueue;
-    }
-
-    public void exit() {
-        stopped.set(true);
-        interrupt();
-        lock.lock();
+    fun exit() {
+        stopped.set(true)
+        interrupt()
+        lock.lock()
         try {
             while (!cleanups.isEmpty()) {
-                Map.Entry<ClassPath, Cleanup> entry = cleanups.entrySet().iterator().next();
-                removeCacheEntry(entry.getKey(), entry.getValue(), CLOSE_CLASSLOADER);
+                val entry = cleanups.entries.iterator().next()
+                removeCacheEntry(entry.key!!, entry.value!!, Cleanup.Mode.CLOSE_CLASSLOADER)
             }
-            LOG.debug("Completed shutdown");
+            LOG.debug("Completed shutdown")
         } finally {
-            lock.unlock();
+            lock.unlock()
         }
     }
 
-    public void putCleanup(ClassPath key, Cleanup cleanup) {
-        cleanups.put(key, cleanup);
+    fun putCleanup(key: ClassPath?, cleanup: Cleanup?) {
+        cleanups.put(key, cleanup)
+    }
+
+    companion object {
+        private val LOG: Logger = LoggerFactory.getLogger(FinalizerThread::class.java)
     }
 }

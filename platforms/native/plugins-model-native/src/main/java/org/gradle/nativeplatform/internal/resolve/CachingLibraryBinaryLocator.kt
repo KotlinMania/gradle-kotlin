@@ -13,41 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory
+import org.gradle.nativeplatform.NativeLibraryBinary
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.jspecify.annotations.Nullable;
+class CachingLibraryBinaryLocator(private val delegate: LibraryBinaryLocator, domainObjectCollectionFactory: DomainObjectCollectionFactory) : LibraryBinaryLocator {
+    private val libraries: MutableMap<LibraryIdentifier?, DomainObjectSet<NativeLibraryBinary?>?> = HashMap<LibraryIdentifier?, DomainObjectSet<NativeLibraryBinary?>?>()
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class CachingLibraryBinaryLocator implements LibraryBinaryLocator {
-    private static DomainObjectSet<NativeLibraryBinary> nullResult;
-    private final LibraryBinaryLocator delegate;
-    private final Map<LibraryIdentifier, DomainObjectSet<NativeLibraryBinary>> libraries = new HashMap<LibraryIdentifier, DomainObjectSet<NativeLibraryBinary>>();
-
-    @SuppressWarnings("StaticAssignmentInConstructor") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    public CachingLibraryBinaryLocator(LibraryBinaryLocator delegate, DomainObjectCollectionFactory domainObjectCollectionFactory) {
-        this.delegate = delegate;
+    init {
         if (nullResult == null) {
-            nullResult = domainObjectCollectionFactory.newDomainObjectSet(NativeLibraryBinary.class);
+            nullResult = domainObjectCollectionFactory.newDomainObjectSet<NativeLibraryBinary?>(NativeLibraryBinary::class.java)
         }
     }
 
-    @Nullable
-    @Override
-    public DomainObjectSet<NativeLibraryBinary> getBinaries(LibraryIdentifier library) {
-        DomainObjectSet<NativeLibraryBinary> libraryBinaries = libraries.get(library);
+    override fun getBinaries(library: LibraryIdentifier?): DomainObjectSet<NativeLibraryBinary?>? {
+        var libraryBinaries: DomainObjectSet<NativeLibraryBinary?>? = libraries.get(library)
         if (libraryBinaries == null) {
-            libraryBinaries = delegate.getBinaries(library);
+            libraryBinaries = delegate.getBinaries(library)
             if (libraryBinaries == null) {
-                libraryBinaries = nullResult;
+                libraryBinaries = nullResult
             }
-            libraries.put(library, libraryBinaries);
+            libraries.put(library, libraryBinaries)
         }
-        return libraryBinaries == nullResult ? null : libraryBinaries;
+        return if (libraryBinaries === nullResult) null else libraryBinaries
+    }
+
+    companion object {
+        private var nullResult: DomainObjectSet<NativeLibraryBinary?>? = null
     }
 }

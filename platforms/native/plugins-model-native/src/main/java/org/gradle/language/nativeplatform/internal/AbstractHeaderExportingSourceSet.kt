@@ -13,34 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.nativeplatform.internal;
+package org.gradle.language.nativeplatform.internal
 
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.sources.BaseLanguageSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.base.sources.BaseLanguageSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
 
 /**
  * A convenience base class for implementing language source sets with dependencies and exported headers.
  */
-public abstract class AbstractHeaderExportingSourceSet extends BaseLanguageSourceSet
-        implements HeaderExportingSourceSet, LanguageSourceSet {
+abstract class AbstractHeaderExportingSourceSet : BaseLanguageSourceSet(), HeaderExportingSourceSet, LanguageSourceSet {
+    private val exportedHeaders: SourceDirectorySet
+    private val implicitHeaders: SourceDirectorySet
 
-    private final SourceDirectorySet exportedHeaders;
-    private final SourceDirectorySet implicitHeaders;
-
-    public AbstractHeaderExportingSourceSet() {
-        this.exportedHeaders = objectFactory.sourceDirectorySet("exported", "exported headers");
-        this.implicitHeaders = objectFactory.sourceDirectorySet("implicit", "implicit headers");
+    init {
+        this.exportedHeaders = objectFactory.sourceDirectorySet("exported", "exported headers")
+        this.implicitHeaders = objectFactory.sourceDirectorySet("implicit", "implicit headers")
     }
 
-    @Override
-    public SourceDirectorySet getExportedHeaders() {
-        return exportedHeaders;
+    override fun getExportedHeaders(): SourceDirectorySet {
+        return exportedHeaders
     }
 
-    @Override
-    public SourceDirectorySet getImplicitHeaders() {
-        return implicitHeaders;
+    override fun getImplicitHeaders(): SourceDirectorySet {
+        return implicitHeaders
     }
 }

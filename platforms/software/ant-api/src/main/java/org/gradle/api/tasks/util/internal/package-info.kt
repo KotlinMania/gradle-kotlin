@@ -13,5 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@org.jspecify.annotations.NullMarked
-package org.gradle.api.tasks.util.internal;
+package org.gradle.api.tasks.util.internal

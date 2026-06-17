@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base.internal;
+package org.gradle.language.base.internal
 
-import org.gradle.api.Task;
-import org.gradle.language.base.LanguageSourceSet;
+import org.gradle.language.base.LanguageSourceSet
 
-public interface LanguageSourceSetInternal extends LanguageSourceSet {
+interface LanguageSourceSetInternal : LanguageSourceSet {
     /**
      * Returns a name for this source set that is unique for all source sets in the current project.
      */
-    String getProjectScopedName();
+    val projectScopedName: String?
 
     /**
      * Return true if the source set contains sources, or if the source set is generated.
      */
-    boolean getMayHaveSources();
+    val mayHaveSources: Boolean
 
-    Task getGeneratorTask();
-
+    val generatorTask: Task?
 }

@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Named;
+import org.gradle.api.Incubating
+import org.gradle.api.Named
 
 /**
- * Defines a custom variant that differentiate a {@link NativeBinary}.
+ * Defines a custom variant that differentiate a [NativeBinary].
  */
 @Incubating
-public interface Flavor extends Named {
+interface Flavor : Named {
     /**
      * Returns a human-consumable display name for this flavor.
      */
-    String getDisplayName();
+    val displayName: String?
 }

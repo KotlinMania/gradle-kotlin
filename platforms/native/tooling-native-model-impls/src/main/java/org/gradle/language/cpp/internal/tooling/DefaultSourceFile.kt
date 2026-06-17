@@ -13,26 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import java.io.File
+import java.io.Serializable
 
-import java.io.File;
-import java.io.Serializable;
-
-public class DefaultSourceFile implements Serializable {
-    private final File sourceFile;
-    private final File objectFile;
-
-    public DefaultSourceFile(File sourceFile, File objectFile) {
-        this.sourceFile = sourceFile;
-        this.objectFile = objectFile;
-    }
-
-    public File getSourceFile() {
-        return sourceFile;
-    }
-
-    public File getObjectFile() {
-        return objectFile;
-    }
-}
+class DefaultSourceFile(val sourceFile: File?, val objectFile: File?) : Serializable

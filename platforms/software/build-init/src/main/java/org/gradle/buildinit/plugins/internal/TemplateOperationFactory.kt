@@ -13,101 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.util.GradleVersion
+import java.io.File
+import java.net.URL
+import java.text.DateFormat
+import java.util.Date
 
-package org.gradle.buildinit.plugins.internal;
+class TemplateOperationFactory(private val templatepackage: String, private val documentationRegistry: DocumentationRegistry) {
+    private val defaultBindings: MutableMap<String, String>
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.util.GradleVersion;
-
-import java.io.File;
-import java.net.URL;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-
-public class TemplateOperationFactory {
-
-    private final String templatepackage;
-    private final DocumentationRegistry documentationRegistry;
-    private final Map<String, String> defaultBindings;
-
-    public TemplateOperationFactory(String templatepackage, DocumentationRegistry documentationRegistry) {
-        this.documentationRegistry = documentationRegistry;
-        this.templatepackage = templatepackage;
-        this.defaultBindings = loadDefaultBindings();
+    init {
+        this.defaultBindings = loadDefaultBindings()
     }
 
-    private Map<String, String> loadDefaultBindings() {
-        String now = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date());
-        Map<String, String> map = new LinkedHashMap<>(3);
-        map.put("genDate", now);
-        map.put("genUser", System.getProperty("user.name"));
-        map.put("genGradleVersion", GradleVersion.current().toString());
-        return map;
+    private fun loadDefaultBindings(): MutableMap<String, String> {
+        val now = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date())
+        val map: MutableMap<String, String> = LinkedHashMap<String, String>(3)
+        map.put("genDate", now!!)
+        map.put("genUser", System.getProperty("user.name"))
+        map.put("genGradleVersion", GradleVersion.current().toString())
+        return map
     }
 
-    public TemplateOperationBuilder newTemplateOperation() {
-        return new TemplateOperationBuilder(defaultBindings);
+    fun newTemplateOperation(): TemplateOperationBuilder {
+        return TemplateOperationFactory.TemplateOperationBuilder(defaultBindings)
     }
 
-    public class TemplateOperationBuilder {
-        private File target;
-        final private Map<String, String> bindings =  new HashMap<>();
-        private URL templateUrl;
+    inner class TemplateOperationBuilder(defaultBindings: MutableMap<String, String>) {
+        private var target: File? = null
+        private val bindings: MutableMap<String, String> = HashMap<String, String>()
+        private var templateUrl: URL? = null
 
-        public TemplateOperationBuilder(Map<String, String> defaultBindings) {
-            this.bindings.putAll(defaultBindings);
+        init {
+            this.bindings.putAll(defaultBindings)
         }
 
-        public TemplateOperationBuilder withTemplate(final String relativeTemplatePath) {
-            this.templateUrl = getClass().getResource(templatepackage + "/" + relativeTemplatePath);
-            if (templateUrl == null) {
-                throw new IllegalArgumentException(String.format("Could not find template '%s' in classpath.", relativeTemplatePath));
+        fun withTemplate(relativeTemplatePath: String): TemplateOperationBuilder {
+            this.templateUrl = javaClass.getResource(templatepackage + "/" + relativeTemplatePath)
+            requireNotNull(templateUrl) { String.format("Could not find template '%s' in classpath.", relativeTemplatePath) }
+            return this
+        }
+
+        fun withTemplate(templateUrl: URL): TemplateOperationBuilder {
+            this.templateUrl = templateUrl
+            return this
+        }
+
+        fun withTarget(targetFilePath: File): TemplateOperationBuilder {
+            this.target = targetFilePath
+            return this
+        }
+
+        fun withDocumentationBindings(documentationBindings: MutableMap<String, String>): TemplateOperationBuilder {
+            for (entry in documentationBindings.entries) {
+                bindings.put(entry.key, documentationRegistry.getDocumentationFor(entry.value))
             }
-            return this;
+            return this
         }
 
-        public TemplateOperationBuilder withTemplate(URL templateUrl) {
-            this.templateUrl = templateUrl;
-            return this;
+        fun withBindings(bindings: MutableMap<String, String>): TemplateOperationBuilder {
+            this.bindings.putAll(bindings)
+            return this
         }
 
-        public TemplateOperationBuilder withTarget(File targetFilePath) {
-            this.target = targetFilePath;
-            return this;
+        fun withBinding(name: String, value: String): TemplateOperationBuilder {
+            bindings.put(name, value)
+            return this
         }
 
-        public TemplateOperationBuilder withDocumentationBindings(Map<String, String> documentationBindings) {
-            for (Map.Entry<String, String> entry : documentationBindings.entrySet()){
-                bindings.put(entry.getKey(), documentationRegistry.getDocumentationFor(entry.getValue()));
+        fun create(): TemplateOperation {
+            val entries = bindings.entries
+            val wrappedBindings: MutableMap<String, TemplateValue> = HashMap<String, TemplateValue>(entries.size)
+            for (entry in entries) {
+                requireNotNull(entry.value) { "Null value provided for binding '" + entry.key + "'." }
+                wrappedBindings.put(entry.key, TemplateValue(entry.value))
             }
-            return this;
-        }
-
-        public TemplateOperationBuilder withBindings(Map<String, String> bindings) {
-            this.bindings.putAll(bindings);
-            return this;
-        }
-
-        public TemplateOperationBuilder withBinding(String name, String value) {
-            bindings.put(name, value);
-            return this;
-        }
-
-        public TemplateOperation create() {
-            final Set<Map.Entry<String, String>> entries = bindings.entrySet();
-            Map<String, TemplateValue> wrappedBindings = new HashMap<>(entries.size());
-            for (Map.Entry<String, String> entry : entries) {
-                if (entry.getValue() == null) {
-                    throw new IllegalArgumentException("Null value provided for binding '" + entry.getKey() + "'.");
-                }
-                wrappedBindings.put(entry.getKey(), new TemplateValue(entry.getValue()));
-            }
-            return new SimpleTemplateOperation(templateUrl, target, wrappedBindings);
+            return SimpleTemplateOperation(templateUrl!!, target!!, wrappedBindings)
         }
     }
 }

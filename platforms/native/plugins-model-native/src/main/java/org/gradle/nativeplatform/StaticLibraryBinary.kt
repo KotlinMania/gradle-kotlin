@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
 
 /**
- * A {@link NativeLibrary} that has been compiled and archived into a static library.
+ * A [NativeLibrary] that has been compiled and archived into a static library.
  */
 @Incubating
 @HasInternalProtocol
-public interface StaticLibraryBinary extends NativeLibraryBinary {
+interface StaticLibraryBinary : NativeLibraryBinary {
     /**
      * The static library file.
      */
-    File getStaticLibraryFile();
+    val staticLibraryFile: File?
 }

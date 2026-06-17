@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public enum BuildInitTestFramework implements WithIdentifier {
-
+enum class BuildInitTestFramework(displayName: String) : WithIdentifier {
     NONE("none"),
     JUNIT("JUnit 4"),
     TESTNG("TestNG"),
@@ -31,29 +26,29 @@ public enum BuildInitTestFramework implements WithIdentifier {
     XCTEST("XCTest"),
     CPPTest("C++ executable");
 
-    public static List<String> listSupported() {
-        List<String> result = new ArrayList<>();
-        for (BuildInitTestFramework testFramework : values()) {
-            if (testFramework != NONE) {
-                result.add(testFramework.getId());
+    private val displayName: String?
+
+    init {
+        this.displayName = displayName
+    }
+
+    override fun getId(): String {
+        return Names.idFor(this)
+    }
+
+    override fun toString(): String {
+        return displayName!!
+    }
+
+    companion object {
+        fun listSupported(): MutableList<String?> {
+            val result: MutableList<String?> = ArrayList<String?>()
+            for (testFramework in entries) {
+                if (testFramework != BuildInitTestFramework.NONE) {
+                    result.add(testFramework.getId())
+                }
             }
+            return result
         }
-        return result;
-    }
-
-    private final String displayName;
-
-    BuildInitTestFramework(String displayName) {
-        this.displayName = displayName;
-    }
-
-    @Override
-    public String getId() {
-        return Names.idFor(this);
-    }
-
-    @Override
-    public String toString() {
-        return displayName;
     }
 }

@@ -13,8 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Model classes for building from Windows Resource scripts.
  */
-package org.gradle.language.rc;
+package org.gradle.language.rc
+
+import org.gradle.language.rc.tasks.WindowsResourceCompile.includes
+import org.gradle.internal.service.ServiceRegistry.get
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal.select
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider.getSystemLibraries
+import org.gradle.language.rc.tasks.WindowsResourceCompile.source
+import org.gradle.language.base.internal.LanguageSourceSetInternal.projectScopedName
+import org.gradle.language.rc.tasks.WindowsResourceCompile.macros
+

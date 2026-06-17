@@ -13,44 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.registry
 
-package org.gradle.language.base.internal.registry;
-
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.platform.base.TransformationFileType;
-
-import java.util.Map;
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.platform.base.BinarySpec
+import org.gradle.platform.base.TransformationFileType
 
 /**
  * A registered language transformation.
  */
-public interface LanguageTransform<U extends LanguageSourceSet, V extends TransformationFileType> {
+interface LanguageTransform<U : LanguageSourceSet?, V : TransformationFileType?> {
     /**
      * The language name.
      */
-    String getLanguageName();
+    val languageName: String?
 
     /**
      * The interface type of the language source set.
      */
-    Class<U> getSourceSetType();
+    val sourceSetType: Class<U?>?
 
     /**
      * The output type generated from these language sources.
      */
-    Class<V> getOutputType();
+    val outputType: Class<V?>?
 
     /**
      * The tool extensions that should be added to any binary with these language sources.
      */
-    Map<String, Class<?>> getBinaryTools();
+    val binaryTools: MutableMap<String?, Class<*>?>?
 
     /**
      * The task used to transform sources into code for the target runtime.
      */
-    SourceTransformTaskConfig getTransformTask();
+    val transformTask: SourceTransformTaskConfig?
 
-    boolean applyToBinary(BinarySpec binary);
+    fun applyToBinary(binary: BinarySpec?): Boolean
 }

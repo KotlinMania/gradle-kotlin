@@ -13,39 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.googletest.plugins
 
-package org.gradle.nativeplatform.test.googletest.plugins;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.model.Defaults;
-import org.gradle.model.ModelMap;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec;
-import org.gradle.nativeplatform.test.internal.NativeTestSuites;
-import org.gradle.testing.base.TestSuiteContainer;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.model.Defaults
+import org.gradle.model.ModelMap
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.test.googletest.GoogleTestTestSuiteSpec
+import org.gradle.nativeplatform.test.internal.NativeTestSuites
+import org.gradle.testing.base.TestSuiteContainer
 
 /**
- * A plugin that applies the {@link GoogleTestPlugin} and adds conventions on top of it.
+ * A plugin that applies the [GoogleTestPlugin] and adds conventions on top of it.
  */
 @Incubating
-public abstract class GoogleTestConventionPlugin implements Plugin<Project> {
-
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(GoogleTestPlugin.class);
+abstract class GoogleTestConventionPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(GoogleTestPlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
-
+    internal class Rules : RuleSource() {
         @Defaults
-        public void createCUnitTestSuitePerComponent(TestSuiteContainer testSuites, ModelMap<NativeComponentSpec> components) {
-            NativeTestSuites.createConventionalTestSuites(testSuites, components, GoogleTestTestSuiteSpec.class);
+        fun createCUnitTestSuitePerComponent(testSuites: TestSuiteContainer?, components: ModelMap<NativeComponentSpec?>) {
+            NativeTestSuites.createConventionalTestSuites<GoogleTestTestSuiteSpec?>(testSuites, components, GoogleTestTestSuiteSpec::class.java)
         }
     }
-
 }

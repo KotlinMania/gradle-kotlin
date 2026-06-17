@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.api.DomainObjectSet
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.nativeplatform.NativeLibraryBinary
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.jspecify.annotations.Nullable;
-
-@ServiceScope(Scope.Build.class)
-public interface LibraryBinaryLocator {
+@ServiceScope(Scope.Build::class)
+interface LibraryBinaryLocator {
     /**
      * Locates the binaries for the given library.
      *
      * @return null when no such library.
      */
-    @Nullable
-    DomainObjectSet<NativeLibraryBinary> getBinaries(LibraryIdentifier library);
+    fun getBinaries(library: LibraryIdentifier?): DomainObjectSet<NativeLibraryBinary?>?
 }

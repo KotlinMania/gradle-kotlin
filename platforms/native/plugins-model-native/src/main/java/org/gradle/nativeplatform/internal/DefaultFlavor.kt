@@ -13,31 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.nativeplatform.Flavor
 
-import org.gradle.nativeplatform.Flavor;
-
-public class DefaultFlavor implements Flavor {
-    public static final String DEFAULT = "default";
-    private final String name;
-
-    public DefaultFlavor(String name) {
-        this.name = name;
+class DefaultFlavor(private val name: String) : Flavor {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun getDisplayName(): String {
+        return "flavor '" + name + "'"
     }
 
-    @Override
-    public String getDisplayName() {
-        return "flavor '" + name + "'";
+    companion object {
+        const val DEFAULT: String = "default"
     }
 }

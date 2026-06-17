@@ -13,33 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.ResolutionProvider;
-
-import java.util.Collections;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.ResolutionProvider
 
 /**
  * Exception thrown when the build init plugin fails to initialize a new project.
  */
-public class BuildInitException extends GradleException implements ResolutionProvider {
-    private final List<String> resolutions;
+class BuildInitException @JvmOverloads constructor(message: String, resolutions: Iterable<String> = mutableListOf<String>()) : GradleException(message), ResolutionProvider {
+    val resolutions: MutableList<String>
 
-    public BuildInitException(String message) {
-        this(message, Collections.emptyList());
-    }
-
-    public BuildInitException(String message, Iterable<String> resolutions) {
-        super(message);
-        this.resolutions = ImmutableList.copyOf(resolutions);
-    }
-
-    @Override
-    public List<String> getResolutions() {
-        return resolutions;
+    init {
+        this.resolutions = ImmutableList.copyOf<String>(resolutions)
     }
 }

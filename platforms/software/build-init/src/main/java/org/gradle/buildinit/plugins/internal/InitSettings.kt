@@ -13,122 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Incubating
+import org.gradle.api.file.Directory
+import org.gradle.buildinit.InsecureProtocolOption
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import java.util.Optional
 
-import org.gradle.api.Incubating;
-import org.gradle.api.file.Directory;
-import org.gradle.buildinit.InsecureProtocolOption;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitTestFramework;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-import org.gradle.jvm.toolchain.JavaLanguageVersion;
-import org.jspecify.annotations.Nullable;
+class InitSettings(
+    val projectName: String, @get:Incubating @get:Incubating val isUseTestSuites: Boolean, subprojects: MutableList<String>, val modularizationOption: ModularizationOption,
+    val dsl: BuildInitDsl, private val packageName: String?, val testFramework: BuildInitTestFramework, private val insecureProtocolOption: InsecureProtocolOption, val target: Directory,
+    private val javaLanguageVersion: JavaLanguageVersion?, @get:Incubating val isWithComments: Boolean
+) {
+    val subprojects: MutableList<String>
 
-import java.util.List;
-import java.util.Optional;
+    constructor(
+        projectName: String, useIncubatingAPIs: Boolean, subprojects: MutableList<String>, modularizationOption: ModularizationOption,
+        dsl: BuildInitDsl, packageName: String?, testFramework: BuildInitTestFramework, target: Directory
+    ) : this(projectName, useIncubatingAPIs, subprojects, modularizationOption, dsl, packageName, testFramework, InsecureProtocolOption.WARN, target, null, true)
 
-import static java.util.Collections.singletonList;
-
-public class InitSettings {
-
-    public static final String CONVENTION_PLUGIN_NAME_PREFIX = "buildlogic";
-
-    private final BuildInitDsl dsl;
-    private final boolean useIncubatingAPIs;
-    private final String packageName;
-    private final BuildInitTestFramework testFramework;
-    private final String projectName;
-    private final List<String> subprojects;
-    private final ModularizationOption modularizationOption;
-    private final Directory target;
-    private final InsecureProtocolOption insecureProtocolOption;
-    @Nullable
-    private final JavaLanguageVersion javaLanguageVersion;
-    private final boolean comments;
-
-    public InitSettings(
-        String projectName, boolean useIncubatingAPIs, List<String> subprojects, ModularizationOption modularizationOption,
-        BuildInitDsl dsl, @Nullable String packageName, BuildInitTestFramework testFramework, Directory target
-    ) {
-        this(projectName, useIncubatingAPIs, subprojects, modularizationOption, dsl, packageName, testFramework, InsecureProtocolOption.WARN, target, null, true);
+    init {
+        this.subprojects = getSubprojects(subprojects, modularizationOption)
     }
 
-    public InitSettings(
-        String projectName, boolean useIncubatingAPIs, List<String> subprojects, ModularizationOption modularizationOption,
-        BuildInitDsl dsl, @Nullable String packageName, BuildInitTestFramework testFramework, InsecureProtocolOption insecureProtocolOption, Directory target,
-        @Nullable JavaLanguageVersion javaLanguageVersion, boolean comments
-    ) {
-        this.projectName = projectName;
-        this.useIncubatingAPIs = useIncubatingAPIs;
-        this.subprojects = getSubprojects(subprojects, modularizationOption);
-        this.modularizationOption = modularizationOption;
-        this.dsl = dsl;
-        this.packageName = packageName;
-        this.testFramework = testFramework;
-        this.insecureProtocolOption = insecureProtocolOption;
-        this.target = target;
-        this.javaLanguageVersion = javaLanguageVersion;
-        this.comments = comments;
+    fun getPackageName(): String {
+        return packageName!!
     }
 
-    private static List<String> getSubprojects(List<String> subprojects, ModularizationOption modularizationOption) {
-        if (!subprojects.isEmpty() && modularizationOption == ModularizationOption.SINGLE_PROJECT) {
-            return singletonList(subprojects.get(0));
+    fun getInsecureProtocolOption(): InsecureProtocolOption? {
+        return insecureProtocolOption
+    }
+
+    @Incubating
+    fun getJavaLanguageVersion(): Optional<JavaLanguageVersion> {
+        return Optional.ofNullable<JavaLanguageVersion>(javaLanguageVersion)
+    }
+
+    companion object {
+        const val CONVENTION_PLUGIN_NAME_PREFIX: String = "buildlogic"
+
+        private fun getSubprojects(subprojects: MutableList<String>, modularizationOption: ModularizationOption): MutableList<String> {
+            if (!subprojects.isEmpty() && modularizationOption == ModularizationOption.SINGLE_PROJECT) {
+                return mutableListOf<String>(subprojects.get(0))
+            }
+            return subprojects
         }
-        return subprojects;
-    }
-
-    public String getProjectName() {
-        return projectName;
-    }
-
-    public List<String> getSubprojects() {
-        return subprojects;
-    }
-
-    public ModularizationOption getModularizationOption() {
-        return modularizationOption;
-    }
-
-    public BuildInitDsl getDsl() {
-        return dsl;
-    }
-
-    public String getPackageName() {
-        return packageName;
-    }
-
-    public BuildInitTestFramework getTestFramework() {
-        return testFramework;
-    }
-
-    public Directory getTarget() {
-        return target;
-    }
-
-    @Nullable
-    public InsecureProtocolOption getInsecureProtocolOption() {
-        return insecureProtocolOption;
-    }
-
-    @Incubating
-    public boolean isUseIncubatingAPIs() {
-        return useIncubatingAPIs;
-    }
-
-    @Incubating
-    public boolean isUseTestSuites() {
-        return useIncubatingAPIs;
-    }
-
-    @Incubating
-    public Optional<JavaLanguageVersion> getJavaLanguageVersion() {
-        return Optional.ofNullable(javaLanguageVersion);
-    }
-
-    @Incubating
-    public boolean isWithComments() {
-        return comments;
     }
 }

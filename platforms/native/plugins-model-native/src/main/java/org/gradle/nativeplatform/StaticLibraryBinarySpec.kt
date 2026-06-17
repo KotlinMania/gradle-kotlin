@@ -13,49 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.api.file.FileCollection;
-import org.gradle.platform.base.BinaryTasksCollection;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.api.file.FileCollection
+import org.gradle.platform.base.BinaryTasksCollection
 
 /**
  * A static library binary built by Gradle for a native library.
  */
 @Incubating
-public interface StaticLibraryBinarySpec extends NativeLibraryBinarySpec {
+interface StaticLibraryBinarySpec : NativeLibraryBinarySpec {
     /**
      * Provides access to key tasks used for building the binary.
      */
-    interface TasksCollection extends BinaryTasksCollection {
+    interface TasksCollection : BinaryTasksCollection {
         /**
          * The create static library task.
          */
-        Task getCreateStaticLib();
+        val createStaticLib: Task?
     }
 
     /**
      * The static library file.
      */
-    File getStaticLibraryFile();
-
     /**
      * The static library binary file.
      */
-    void setStaticLibraryFile(File staticLibraryFile);
+    var staticLibraryFile: File?
 
     /**
      * Add some additional files required by consumers of this library at link time.
      */
-    void additionalLinkFiles(FileCollection files);
+    fun additionalLinkFiles(files: FileCollection?)
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    TasksCollection getTasks();
+    override fun getTasks(): TasksCollection?
 }

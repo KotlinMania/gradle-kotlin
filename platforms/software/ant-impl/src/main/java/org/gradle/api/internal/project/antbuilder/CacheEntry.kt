@@ -13,22 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.project.antbuilder;
+package org.gradle.api.internal.project.antbuilder
 
-import org.gradle.internal.classpath.ClassPath;
+import org.gradle.internal.classpath.ClassPath
+import java.lang.ref.SoftReference
 
-import java.lang.ref.SoftReference;
-
-class CacheEntry extends SoftReference<CachedClassLoader> {
-
-    private final ClassPath key;
-
-    CacheEntry(ClassPath key, CachedClassLoader cached) {
-        super(cached);
-        this.key = key;
-    }
-
-    public ClassPath getKey() {
-        return key;
-    }
-}
+internal class CacheEntry(val key: ClassPath?, cached: CachedClassLoader?) : SoftReference<CachedClassLoader?>(cached)

@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test;
+package org.gradle.nativeplatform.test
 
-import org.gradle.api.Incubating;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.testing.base.TestSuiteSpec;
+import org.gradle.api.Incubating
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.testing.base.TestSuiteSpec
 
 /**
  * A component representing a suite of tests that will be executed together.
@@ -25,7 +25,6 @@ import org.gradle.testing.base.TestSuiteSpec;
  * @since 4.2
  */
 @Incubating
-public interface NativeTestSuiteSpec extends TestSuiteSpec, NativeComponentSpec {
-    @Override
-    NativeComponentSpec getTestedComponent();
+interface NativeTestSuiteSpec : TestSuiteSpec, NativeComponentSpec {
+    override fun getTestedComponent(): NativeComponentSpec
 }

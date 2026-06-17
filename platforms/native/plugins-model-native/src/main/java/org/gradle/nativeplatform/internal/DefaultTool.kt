@@ -13,27 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.nativeplatform.Tool;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import org.gradle.nativeplatform.Tool
+import java.util.Collections
 
 /**
  * A tool that is part of a tool chain (compiler, linker, assembler, etc).
  */
-public class DefaultTool implements Tool {
-    private final ArrayList<String> args = new ArrayList<String>();
+open class DefaultTool : Tool {
+    private val args = ArrayList<String?>()
 
-    @Override
-    public List<String> getArgs() {
-        return args;
+    override fun getArgs(): MutableList<String?> {
+        return args
     }
 
-    @Override
-    public void args(String... args) {
-        Collections.addAll(this.args, args);
+    override fun args(vararg args: String?) {
+        Collections.addAll<String?>(this.args, *args)
     }
 }

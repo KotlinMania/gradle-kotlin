@@ -13,83 +13,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import com.google.common.collect.Sets
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.io.IOException
+import java.io.PrintWriter
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+import java.util.function.Consumer
+import java.util.stream.Collectors
+import java.util.stream.StreamSupport
 
-import com.google.common.collect.Sets;
-import org.gradle.internal.UncheckedException;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardOpenOption.APPEND;
-import static java.nio.file.StandardOpenOption.CREATE;
-
-public class GitIgnoreGenerator implements BuildContentGenerator {
-
-    @Override
-    public void generate(InitSettings settings, BuildContentGenerationContext buildContentGenerationContext) {
-        File file = settings.getTarget().file(".gitignore").getAsFile();
-        Set<String> gitignoresToAppend = getGitignoresToAppend(file);
+class GitIgnoreGenerator : BuildContentGenerator {
+    override fun generate(settings: InitSettings, buildContentGenerationContext: BuildContentGenerationContext) {
+        val file = settings.getTarget().file(".gitignore").getAsFile()
+        val gitignoresToAppend: MutableSet<String> = getGitignoresToAppend(file)
         if (!gitignoresToAppend.isEmpty()) {
-            boolean shouldAppendNewLine = file.exists();
-            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(file.toPath(), UTF_8, CREATE, APPEND))) {
-                if (shouldAppendNewLine) {
-                    writer.println();
+            val shouldAppendNewLine = file.exists()
+            try {
+                PrintWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND)).use { writer ->
+                    if (shouldAppendNewLine) {
+                        writer.println()
+                    }
+                    val it = gitignoresToAppend.spliterator()
+                    if (it.tryAdvance(Consumer { e: String? -> Companion.withComment(e!!).forEach(Consumer { x: String? -> writer.println(x) }) })) {
+                        StreamSupport.stream<String>(it, false).forEach { e: String? -> withSeparator(Companion.withComment(e!!)).forEach(Consumer { x: String? -> writer.println(x) }) }
+                    }
                 }
-                Spliterator<String> it = gitignoresToAppend.spliterator();
-                if (it.tryAdvance(e -> withComment(e).forEach(writer::println))) {
-                    StreamSupport.stream(it, false).forEach(e -> withSeparator(withComment(e)).forEach(writer::println));
-                }
-            } catch (IOException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
             }
         }
     }
 
-    @SuppressWarnings("DefaultCharset") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private static Set<String> getGitignoresToAppend(File gitignoreFile) {
-        Set<String> result = Sets.newLinkedHashSet(Arrays.asList(".gradle", "build", ".kotlin"));
-        if (gitignoreFile.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(gitignoreFile))){
-                result.removeAll(reader.lines().filter(it -> result.contains(it)).collect(Collectors.toSet()));
-            } catch (IOException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+    companion object {
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        private fun getGitignoresToAppend(gitignoreFile: File): MutableSet<String> {
+            val result: MutableSet<String> = Sets.newLinkedHashSet<String>(mutableListOf<String>(".gradle", "build", ".kotlin"))
+            if (gitignoreFile.exists()) {
+                try {
+                    BufferedReader(FileReader(gitignoreFile)).use { reader ->
+                        result.removeAll(reader.lines().filter { it: String? -> result.contains(it) }.collect(Collectors.toSet()))
+                    }
+                } catch (e: IOException) {
+                    throw throwAsUncheckedException(e)
+                }
             }
+            return result
         }
-        return result;
-    }
 
-    private static List<String> withComment(String entry) {
-        List<String> result = new ArrayList<>();
-        if (entry.startsWith(".gradle")) {
-            result.add("# Ignore Gradle project-specific cache directory");
-        } else if (entry.startsWith("build")) {
-            result.add("# Ignore Gradle build output directory");
-        } else if (entry.startsWith(".kotlin")) {
-            result.add("# Ignore Kotlin plugin data");
+        private fun withComment(entry: String): MutableList<String> {
+            val result: MutableList<String> = ArrayList<String>()
+            if (entry.startsWith(".gradle")) {
+                result.add("# Ignore Gradle project-specific cache directory")
+            } else if (entry.startsWith("build")) {
+                result.add("# Ignore Gradle build output directory")
+            } else if (entry.startsWith(".kotlin")) {
+                result.add("# Ignore Kotlin plugin data")
+            }
+            result.add(entry)
+
+            return result
         }
-        result.add(entry);
 
-        return result;
-    }
-
-    private static List<String> withSeparator(List<String> entry) {
-        List<String> result = new ArrayList<>(1 + entry.size());
-        result.add("");
-        result.addAll(entry);
-        return result;
+        private fun withSeparator(entry: MutableList<String>): MutableList<String> {
+            val result: MutableList<String> = ArrayList<String>(1 + entry.size)
+            result.add("")
+            result.addAll(entry)
+            return result
+        }
     }
 }

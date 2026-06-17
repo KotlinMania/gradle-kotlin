@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.rc.internal;
+package org.gradle.language.rc.internal
 
-import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingSourceSet;
-import org.gradle.language.rc.WindowsResourceSet;
+import org.gradle.language.nativeplatform.internal.AbstractHeaderExportingSourceSet
+import org.gradle.language.rc.WindowsResourceSet
 
-public class DefaultWindowsResourceSet extends AbstractHeaderExportingSourceSet implements WindowsResourceSet {
-    @Override
-    protected String getLanguageName() {
-        return "windows resources";
-    }
+class DefaultWindowsResourceSet : AbstractHeaderExportingSourceSet(), WindowsResourceSet {
+    val languageName: String
+        get() = "windows resources"
 }

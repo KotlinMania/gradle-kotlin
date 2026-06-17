@@ -13,42 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.cpp;
+package org.gradle.language.cpp
 
-import org.gradle.api.Incubating;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
+import org.gradle.api.Incubating
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
 
 /**
  * A set of C++ source files.
  *
- * <p>A C++ source set contains a set of source files, together with an optional set of exported header files.</p>
+ *
+ * A C++ source set contains a set of source files, together with an optional set of exported header files.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'cpp'
+ * id 'cpp'
  * }
  *
  * model {
- *     components {
- *         main(NativeLibrarySpec) {
- *             sources {
- *                 cpp {
- *                     source {
- *                         srcDirs "src/main/cpp", "src/shared/c++"
- *                         include "**{@literal /}*.cpp"
- *                     }
- *                     exportedHeaders {
- *                         srcDirs "src/main/include", "src/shared/include"
- *                     }
- *                 }
- *             }
- *         }
- *     }
- * }
- * </pre>
- */
-@Incubating
-public interface CppSourceSet extends HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet {
+ * components {
+ * main(NativeLibrarySpec) {
+ * sources {
+ * cpp {
+ * source {
+ * srcDirs "src/main/cpp", "src/shared/c++"
+ * include "**/
+*.cpp"
+* }
+* exportedHeaders {
+    * srcDirs "src/main/include", "src/shared/include"
+    *
 }
+* }
+* }
+* }
+* }
+* }
+</pre> *
+*/
+@Incubating
+interface CppSourceSet : HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet

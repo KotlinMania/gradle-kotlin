@@ -13,44 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.objectivecpp
 
-package org.gradle.language.objectivecpp;
-
-import org.gradle.api.Incubating;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.language.base.LanguageSourceSet;
+import org.gradle.api.Incubating
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
 
 /**
  * A set of Objective-C++ source files.
  *
- * <p>An Objective-C++ source set contains a set of source files, together with an optional set of exported header files.</p>
+ *
+ * An Objective-C++ source set contains a set of source files, together with an optional set of exported header files.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'objective-cpp'
+ * id 'objective-cpp'
  * }
  *
  * model {
- *     components {
- *         main(NativeLibrarySpec) {
- *             sources {
- *                 objcpp {
- *                     source {
- *                         srcDirs "src/main/objectiveCpp", "src/shared/objectiveCpp"
- *                         include "**{@literal /}*.mm"
- *                     }
- *                     exportedHeaders {
- *                         srcDirs "src/main/include"
- *                     }
- *                 }
- *             }
- *         }
- *     }
- * }
- * </pre>
- */
-@Incubating
-public interface ObjectiveCppSourceSet extends HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet {
-
+ * components {
+ * main(NativeLibrarySpec) {
+ * sources {
+ * objcpp {
+ * source {
+ * srcDirs "src/main/objectiveCpp", "src/shared/objectiveCpp"
+ * include "**/
+*.mm"
+* }
+* exportedHeaders {
+    * srcDirs "src/main/include"
+    *
 }
+* }
+* }
+* }
+* }
+* }
+</pre> *
+*/
+@Incubating
+interface ObjectiveCppSourceSet : HeaderExportingSourceSet, LanguageSourceSet, DependentSourceSet

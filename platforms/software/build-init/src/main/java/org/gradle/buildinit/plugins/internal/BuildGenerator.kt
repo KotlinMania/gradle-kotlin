@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
+import org.gradle.buildinit.plugins.internal.modifiers.Language
 
 /**
  * Generates a new Gradle build.
  */
-public interface BuildGenerator extends BuildInitializer {
+interface BuildGenerator : BuildInitializer {
     /**
      * What kind of component does this initializer create?
      */
-    ComponentType getComponentType();
+    val componentType: ComponentType?
 
     /**
      * Does this generator use the given language for production code?
      */
-    boolean productionCodeUses(Language language);
+    fun productionCodeUses(language: Language): Boolean
 }

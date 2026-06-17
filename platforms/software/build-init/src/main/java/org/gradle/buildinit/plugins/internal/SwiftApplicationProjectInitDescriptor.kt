@@ -13,50 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.plugins.internal.modifiers.ComponentType
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.plugins.internal.modifiers.ComponentType;
-
-public class SwiftApplicationProjectInitDescriptor extends SwiftProjectInitDescriptor {
-    public SwiftApplicationProjectInitDescriptor(TemplateOperationFactory templateOperationFactory, DocumentationRegistry documentationRegistry) {
-        super(templateOperationFactory, documentationRegistry);
+class SwiftApplicationProjectInitDescriptor(templateOperationFactory: TemplateOperationFactory, documentationRegistry: DocumentationRegistry) :
+    SwiftProjectInitDescriptor(templateOperationFactory, documentationRegistry) {
+    override fun getId(): String {
+        return "swift-application"
     }
 
-    @Override
-    public String getId() {
-        return "swift-application";
+    override fun getComponentType(): ComponentType {
+        return ComponentType.APPLICATION
     }
 
-    @Override
-    public ComponentType getComponentType() {
-        return ComponentType.APPLICATION;
+    override fun sourceTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftapp/main.swift.template", settings, "main", "swift")
     }
 
-    @Override
-    protected TemplateOperation sourceTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftapp/main.swift.template", settings, "main", "swift");
+    override fun testTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftapp/GreeterTests.swift.template", settings, "test", "swift")
     }
 
-    @Override
-    protected TemplateOperation testTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftapp/GreeterTests.swift.template", settings, "test", "swift");
+    override fun testEntryPointTemplateOperation(settings: InitSettings): TemplateOperation {
+        return fromSwiftTemplate("swiftapp/LinuxMain.swift.template", settings, "test", "swift")
     }
 
-    @Override
-    protected TemplateOperation testEntryPointTemplateOperation(InitSettings settings) {
-        return fromSwiftTemplate("swiftapp/LinuxMain.swift.template", settings, "test", "swift");
-    }
-
-    @Override
-    protected void configureBuildScript(InitSettings settings, BuildScriptBuilder buildScriptBuilder) {
+    override fun configureBuildScript(settings: InitSettings, buildScriptBuilder: BuildScriptBuilder) {
         buildScriptBuilder
             .plugin(
                 "Apply the swift-application plugin to add support for building Swift executables",
-                "swift-application")
-            .plugin("Apply the xctest plugin to add support for building and running Swift test executables (Linux) or bundles (macOS)",
-                "xctest")
-            .block("Set the target operating system and architecture for this application", "application", this::configureTargetMachineDefinition);
+                "swift-application"
+            )
+            .plugin(
+                "Apply the xctest plugin to add support for building and running Swift test executables (Linux) or bundles (macOS)",
+                "xctest"
+            )
+            .block(
+                "Set the target operating system and architecture for this application",
+                "application",
+                Action { buildScriptBuilder: ScriptBlockBuilder? -> this.configureTargetMachineDefinition(buildScriptBuilder!!) })
     }
 }

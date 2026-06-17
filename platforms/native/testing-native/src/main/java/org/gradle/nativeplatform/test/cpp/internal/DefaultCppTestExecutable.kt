@@ -13,117 +13,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cpp.internal
 
-package org.gradle.nativeplatform.test.cpp.internal;
+import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.language.cpp.CppComponent
+import org.gradle.language.cpp.CppPlatform
+import org.gradle.language.cpp.internal.DefaultCppBinary
+import org.gradle.language.cpp.internal.DefaultCppComponent
+import org.gradle.language.cpp.internal.NativeVariantIdentity
+import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithExecutable
+import org.gradle.language.nativeplatform.internal.Names
+import org.gradle.nativeplatform.tasks.InstallExecutable
+import org.gradle.nativeplatform.tasks.LinkExecutable
+import org.gradle.nativeplatform.test.cpp.CppTestExecutable
+import org.gradle.nativeplatform.test.tasks.RunTestExecutable
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
+import java.util.concurrent.Callable
+import javax.inject.Inject
 
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.ProjectLayout;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
-import org.gradle.language.cpp.CppComponent;
-import org.gradle.language.cpp.CppPlatform;
-import org.gradle.language.cpp.internal.DefaultCppBinary;
-import org.gradle.language.cpp.internal.DefaultCppComponent;
-import org.gradle.language.cpp.internal.NativeVariantIdentity;
-import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithExecutable;
-import org.gradle.language.nativeplatform.internal.Names;
-import org.gradle.nativeplatform.tasks.InstallExecutable;
-import org.gradle.nativeplatform.tasks.LinkExecutable;
-import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
-import org.gradle.nativeplatform.test.tasks.RunTestExecutable;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
+class DefaultCppTestExecutable @Inject constructor(
+    names: Names,
+    private val projectLayout: ProjectLayout,
+    baseName: Provider<String?>?,
+    sourceFiles: FileCollection?,
+    componentHeaderDirs: FileCollection,
+    implementation: Configuration?,
+    private val testedComponent: Provider<CppComponent?>,
+    targetPlatform: CppPlatform,
+    toolChain: NativeToolChainInternal?,
+    platformToolProvider: PlatformToolProvider?,
+    identity: NativeVariantIdentity,
+    configurations: RoleBasedConfigurationContainerInternal,
+    objects: ObjectFactory
+) : DefaultCppBinary(names, objects, baseName, sourceFiles, componentHeaderDirs, configurations, implementation, targetPlatform, toolChain, platformToolProvider, identity), CppTestExecutable,
+    ConfigurableComponentWithExecutable {
+    private val executableFile: RegularFileProperty
+    private val executableFileProducer: Property<Task?>
+    private val installationDirectory: DirectoryProperty
+    private val installTaskProperty: Property<InstallExecutable?>
+    private val linkTaskProperty: Property<LinkExecutable?>
+    val runTask: Property<RunTestExecutable?>
+    private val outputs: ConfigurableFileCollection
+    private val debuggerExecutableFile: RegularFileProperty
 
-import javax.inject.Inject;
-import java.util.concurrent.Callable;
-
-public class DefaultCppTestExecutable extends DefaultCppBinary implements CppTestExecutable, ConfigurableComponentWithExecutable {
-    private final ProjectLayout projectLayout;
-    private final Provider<CppComponent> testedComponent;
-    private final RegularFileProperty executableFile;
-    private final Property<Task> executableFileProducer;
-    private final DirectoryProperty installationDirectory;
-    private final Property<InstallExecutable> installTaskProperty;
-    private final Property<LinkExecutable> linkTaskProperty;
-    private final Property<RunTestExecutable> runTask;
-    private final ConfigurableFileCollection outputs;
-    private final RegularFileProperty debuggerExecutableFile;
-
-    @Inject
-    public DefaultCppTestExecutable(Names names, ProjectLayout projectLayout, Provider<String> baseName, FileCollection sourceFiles, FileCollection componentHeaderDirs, Configuration implementation, Provider<CppComponent> testedComponent, CppPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider, NativeVariantIdentity identity, RoleBasedConfigurationContainerInternal configurations, ObjectFactory objects) {
-        super(names, objects, baseName, sourceFiles, componentHeaderDirs, configurations, implementation, targetPlatform, toolChain, platformToolProvider, identity);
-        this.projectLayout = projectLayout;
-        this.testedComponent = testedComponent;
-        this.executableFile = objects.fileProperty();
-        this.executableFileProducer = objects.property(Task.class);
-        this.debuggerExecutableFile = objects.fileProperty();
-        this.installationDirectory = objects.directoryProperty();
-        this.linkTaskProperty = objects.property(LinkExecutable.class);
-        this.installTaskProperty = objects.property(InstallExecutable.class);
-        this.outputs = objects.fileCollection();
-        this.runTask = objects.property(RunTestExecutable.class);
+    init {
+        this.executableFile = objects.fileProperty()
+        this.executableFileProducer = objects.property<Task?>(Task::class.java)
+        this.debuggerExecutableFile = objects.fileProperty()
+        this.installationDirectory = objects.directoryProperty()
+        this.linkTaskProperty = objects.property<LinkExecutable?>(LinkExecutable::class.java)
+        this.installTaskProperty = objects.property<InstallExecutable?>(InstallExecutable::class.java)
+        this.outputs = objects.fileCollection()
+        this.runTask = objects.property<RunTestExecutable?>(RunTestExecutable::class.java)
     }
 
-    @Override
-    public ConfigurableFileCollection getOutputs() {
-        return outputs;
+    override fun getOutputs(): ConfigurableFileCollection {
+        return outputs
     }
 
-    @Override
-    public RegularFileProperty getExecutableFile() {
-        return executableFile;
+    override fun getExecutableFile(): RegularFileProperty {
+        return executableFile
     }
 
-    @Override
-    public Property<Task> getExecutableFileProducer() {
-        return executableFileProducer;
+    override fun getExecutableFileProducer(): Property<Task?> {
+        return executableFileProducer
     }
 
-    @Override
-    public Property<RegularFile> getDebuggerExecutableFile() {
-        return debuggerExecutableFile;
+    override fun getDebuggerExecutableFile(): Property<RegularFile?> {
+        return debuggerExecutableFile
     }
 
-    @Override
-    public DirectoryProperty getInstallDirectory() {
-        return installationDirectory;
+    override fun getInstallDirectory(): DirectoryProperty {
+        return installationDirectory
     }
 
-    @Override
-    public Property<InstallExecutable> getInstallTask() {
-        return installTaskProperty;
+    override fun getInstallTask(): Property<InstallExecutable?> {
+        return installTaskProperty
     }
 
-    @Override
-    public Property<LinkExecutable> getLinkTask() {
-        return linkTaskProperty;
+    override fun getLinkTask(): Property<LinkExecutable?> {
+        return linkTaskProperty
     }
 
-    @Override
-    public Property<RunTestExecutable> getRunTask() {
-        return runTask;
-    }
-
-    @Override
-    public FileCollection getCompileIncludePath() {
+    override fun getCompileIncludePath(): FileCollection {
         // TODO: This should be modeled differently, perhaps as a dependency on the implementation configuration
-        return super.getCompileIncludePath().plus(projectLayout.files(new Callable<FileCollection>() {
-            @Override
-            public FileCollection call() {
-                CppComponent tested = testedComponent.getOrNull();
+        return super.getCompileIncludePath().plus(projectLayout.files(object : Callable<FileCollection?> {
+            override fun call(): FileCollection {
+                val tested = testedComponent.getOrNull()
                 if (tested == null) {
-                    return projectLayout.files();
+                    return projectLayout.files()
                 }
-                return ((DefaultCppComponent) tested).getAllHeaderDirs();
+                return (tested as DefaultCppComponent).allHeaderDirs
             }
-        }));
+        }))
     }
 }

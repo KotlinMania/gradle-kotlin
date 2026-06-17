@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Named;
+import org.gradle.api.Incubating
+import org.gradle.api.Named
 
 /**
  * Specifies a build-type for a native binary. Common build types are 'debug' and 'release', but others may be defined.
  */
 @Incubating
-public interface BuildType extends Named {
+interface BuildType : Named {
     /**
      * Returns a human-consumable name for this build type.
      */
-    String getDisplayName();
+    val displayName: String?
 }

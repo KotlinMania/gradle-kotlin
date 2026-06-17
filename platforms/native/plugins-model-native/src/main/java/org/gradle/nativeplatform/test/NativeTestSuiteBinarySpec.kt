@@ -13,70 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test;
+package org.gradle.nativeplatform.test
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.nativeplatform.NativeBinarySpec;
-import org.gradle.nativeplatform.NativeExecutableFileSpec;
-import org.gradle.nativeplatform.NativeInstallationSpec;
-import org.gradle.testing.base.TestSuiteBinarySpec;
-import org.gradle.testing.base.TestSuiteTaskCollection;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.nativeplatform.NativeBinarySpec
+import org.gradle.testing.base.TestSuiteBinarySpec
+import org.gradle.testing.base.TestSuiteTaskCollection
 
 /**
  * An executable which runs a suite of tests.
  *
  * @since 4.2
  */
-@Incubating @HasInternalProtocol
-public interface NativeTestSuiteBinarySpec extends TestSuiteBinarySpec, NativeBinarySpec {
-
+@Incubating
+@HasInternalProtocol
+interface NativeTestSuiteBinarySpec : TestSuiteBinarySpec, NativeBinarySpec {
     /**
      * Provides access to key tasks used for building the binary.
      */
-    interface TasksCollection extends TestSuiteTaskCollection {
+    interface TasksCollection : TestSuiteTaskCollection {
         /**
          * The link task.
          */
-        Task getLink();
+        val link: Task?
 
         /**
          * The install task.
          */
-        Task getInstall();
-
+        val install: Task?
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    NativeTestSuiteSpec getTestSuite();
+    override fun getTestSuite(): NativeTestSuiteSpec
 
-    @Override
-    NativeTestSuiteSpec getComponent();
+    override fun getComponent(): NativeTestSuiteSpec?
 
     /**
      * The tested binary.
      */
-    @Override
-    NativeBinarySpec getTestedBinary();
+    override fun getTestedBinary(): NativeBinarySpec
 
     /**
      * The executable file.
      */
-    File getExecutableFile();
+    val executableFile: File?
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    TasksCollection getTasks();
+    override fun getTasks(): TasksCollection?
 
-    NativeInstallationSpec getInstallation();
+    val installation: NativeInstallationSpec?
 
-    NativeExecutableFileSpec getExecutable();
+    val executable: NativeExecutableFileSpec?
 }

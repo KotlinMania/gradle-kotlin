@@ -13,52 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.nativeplatform.NativeLibraryRequirement
 
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.nativeplatform.NativeLibraryRequirement;
+class NativeBinaryRequirementResolveResult(val input: Any?) {
+    var requirement: NativeLibraryRequirement? = null
+    var libraryBinary: NativeLibraryBinary? = null
+    var nativeDependencySet: NativeDependencySet? = null
 
-public class NativeBinaryRequirementResolveResult {
-    private Object input;
-    private NativeLibraryRequirement requirement;
-    private NativeLibraryBinary libraryBinary;
-    private NativeDependencySet nativeDependencySet;
-
-    public NativeBinaryRequirementResolveResult(Object input) {
-        this.input = input;
-    }
-
-    public Object getInput() {
-        return input;
-    }
-
-    public void setRequirement(NativeLibraryRequirement requirement) {
-        this.requirement = requirement;
-    }
-
-    public NativeLibraryRequirement getRequirement() {
-        return requirement;
-    }
-
-    public NativeLibraryBinary getLibraryBinary() {
-        return libraryBinary;
-    }
-
-    public void setLibraryBinary(NativeLibraryBinary libraryBinary) {
-        this.libraryBinary = libraryBinary;
-    }
-
-    public NativeDependencySet getNativeDependencySet() {
-        return nativeDependencySet;
-    }
-
-    public void setNativeDependencySet(NativeDependencySet nativeDependencySet) {
-        this.nativeDependencySet = nativeDependencySet;
-    }
-
-    public boolean isComplete() {
-        return nativeDependencySet != null;
-    }
+    val isComplete: Boolean
+        get() = nativeDependencySet != null
 }

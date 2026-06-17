@@ -13,104 +13,74 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
-
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.NativeLibraryRequirement;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.NativeLibraryRequirement
 
 /**
  * Adapts an 'api' library requirement to a default linkage, and then wraps the result so that only headers are provided.
  */
-public class ApiRequirementNativeDependencyResolver implements NativeDependencyResolver {
-    private final NativeDependencyResolver delegate;
-
-    public ApiRequirementNativeDependencyResolver(NativeDependencyResolver delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public void resolve(NativeBinaryResolveResult nativeBinaryResolveResult) {
-        for (NativeBinaryRequirementResolveResult resolution : nativeBinaryResolveResult.getAllResolutions()) {
-            String linkage = getLinkage(resolution);
-            if ("api".equals(linkage)) {
-                resolution.setRequirement(new ApiAdaptedNativeLibraryRequirement(resolution.getRequirement()));
+class ApiRequirementNativeDependencyResolver(private val delegate: NativeDependencyResolver) : NativeDependencyResolver {
+    override fun resolve(nativeBinaryResolveResult: NativeBinaryResolveResult) {
+        for (resolution in nativeBinaryResolveResult.getAllResolutions()) {
+            val linkage = getLinkage(resolution)
+            if ("api" == linkage) {
+                resolution.setRequirement(ApiAdaptedNativeLibraryRequirement(resolution.getRequirement()))
             }
         }
 
-        delegate.resolve(nativeBinaryResolveResult);
+        delegate.resolve(nativeBinaryResolveResult)
 
-        for (NativeBinaryRequirementResolveResult resolution : nativeBinaryResolveResult.getAllResolutions()) {
-            if (resolution.getRequirement() instanceof ApiAdaptedNativeLibraryRequirement) {
-                ApiAdaptedNativeLibraryRequirement adaptedRequirement = (ApiAdaptedNativeLibraryRequirement) resolution.getRequirement();
-                resolution.setRequirement(adaptedRequirement.getOriginal());
-//                resolution.setLibraryBinary(null);
-                resolution.setNativeDependencySet(new ApiNativeDependencySet(resolution.getNativeDependencySet()));
+        for (resolution in nativeBinaryResolveResult.getAllResolutions()) {
+            if (resolution.getRequirement() is ApiAdaptedNativeLibraryRequirement) {
+                val adaptedRequirement = resolution.getRequirement() as ApiAdaptedNativeLibraryRequirement
+                resolution.setRequirement(adaptedRequirement.original)
+                //                resolution.setLibraryBinary(null);
+                resolution.setNativeDependencySet(ApiNativeDependencySet(resolution.getNativeDependencySet()))
             }
         }
     }
 
-    private String getLinkage(NativeBinaryRequirementResolveResult resolution) {
+    private fun getLinkage(resolution: NativeBinaryRequirementResolveResult): String? {
         if (resolution.getRequirement() == null) {
-            return null;
+            return null
         }
-        return resolution.getRequirement().getLinkage();
+        return resolution.getRequirement().getLinkage()
     }
 
-    private static class ApiAdaptedNativeLibraryRequirement implements NativeLibraryRequirement {
-        private final NativeLibraryRequirement original;
-        public ApiAdaptedNativeLibraryRequirement(NativeLibraryRequirement original) {
-            this.original = original;
+    private class ApiAdaptedNativeLibraryRequirement(val original: NativeLibraryRequirement) : NativeLibraryRequirement {
+        override fun withProjectPath(projectPath: String?): NativeLibraryRequirement {
+            return ApiAdaptedNativeLibraryRequirement(original.withProjectPath(projectPath))
         }
 
-        public NativeLibraryRequirement getOriginal() {
-            return original;
+        override fun getProjectPath(): String? {
+            return original.getProjectPath()
         }
 
-        @Override
-        public NativeLibraryRequirement withProjectPath(String projectPath) {
-            return new ApiAdaptedNativeLibraryRequirement(original.withProjectPath(projectPath));
+        override fun getLibraryName(): String? {
+            return original.getLibraryName()
         }
 
-        @Override
-        public String getProjectPath() {
-            return original.getProjectPath();
-        }
-
-        @Override
-        public String getLibraryName() {
-            return original.getLibraryName();
-        }
-
-        @Override
-        public String getLinkage() {
+        override fun getLinkage(): String? {
             // Rely on the default linkage for providing the headers
-            return null;
+            return null
         }
     }
 
-    private static class ApiNativeDependencySet implements NativeDependencySet {
-        private final NativeDependencySet delegate;
-
-        public ApiNativeDependencySet(NativeDependencySet delegate) {
-            this.delegate = delegate;
+    private class ApiNativeDependencySet(private val delegate: NativeDependencySet) : NativeDependencySet {
+        override fun getIncludeRoots(): FileCollection? {
+            return delegate.getIncludeRoots()
         }
 
-        @Override
-        public FileCollection getIncludeRoots() {
-            return delegate.getIncludeRoots();
+        override fun getLinkFiles(): FileCollection {
+            return FileCollectionFactory.empty(delegate.getLinkFiles().toString())
         }
 
-        @Override
-        public FileCollection getLinkFiles() {
-            return FileCollectionFactory.empty(delegate.getLinkFiles().toString());
-        }
-
-        @Override
-        public FileCollection getRuntimeFiles() {
-            return FileCollectionFactory.empty(delegate.getRuntimeFiles().toString());
+        override fun getRuntimeFiles(): FileCollection {
+            return FileCollectionFactory.empty(delegate.getRuntimeFiles().toString())
         }
     }
 }

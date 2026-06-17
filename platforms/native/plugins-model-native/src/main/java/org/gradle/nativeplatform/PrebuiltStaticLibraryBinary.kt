@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-
-import java.io.File;
+import org.gradle.api.Incubating
+import java.io.File
 
 /**
  * A static library that exists at a known location on the filesystem.
  */
 @Incubating
-public interface PrebuiltStaticLibraryBinary extends StaticLibraryBinary {
+interface PrebuiltStaticLibraryBinary : StaticLibraryBinary {
     /**
      * The static library binary file.
      */
-    void setStaticLibraryFile(File staticLibraryFile);
+    fun setStaticLibraryFile(staticLibraryFile: File?)
 }

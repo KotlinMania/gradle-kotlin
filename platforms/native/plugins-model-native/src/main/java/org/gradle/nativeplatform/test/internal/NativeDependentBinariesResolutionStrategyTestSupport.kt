@@ -13,30 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.internal
 
-package org.gradle.nativeplatform.test.internal;
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.internal.NativeDependentBinariesResolutionStrategy
+import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec
+import org.gradle.platform.base.internal.BinarySpecInternal
+import org.gradle.testing.base.TestSuiteBinarySpec
 
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.internal.NativeDependentBinariesResolutionStrategy;
-import org.gradle.nativeplatform.test.NativeTestSuiteBinarySpec;
-import org.gradle.platform.base.internal.BinarySpecInternal;
-import org.gradle.testing.base.TestSuiteBinarySpec;
-
-import java.util.Collections;
-import java.util.List;
-
-public class NativeDependentBinariesResolutionStrategyTestSupport implements NativeDependentBinariesResolutionStrategy.TestSupport {
-    @Override
-    public boolean isTestSuite(BinarySpecInternal target) {
-        return target instanceof TestSuiteBinarySpec;
+class NativeDependentBinariesResolutionStrategyTestSupport : NativeDependentBinariesResolutionStrategy.TestSupport {
+    override fun isTestSuite(target: BinarySpecInternal?): Boolean {
+        return target is TestSuiteBinarySpec
     }
 
-    @Override
-    public List<NativeBinarySpecInternal> getTestDependencies(NativeBinarySpecInternal nativeBinary) {
-        if (nativeBinary instanceof NativeTestSuiteBinarySpec) {
-            NativeBinarySpecInternal testedBinary = (NativeBinarySpecInternal) ((NativeTestSuiteBinarySpec) nativeBinary).getTestedBinary();
-            return Collections.singletonList(testedBinary);
+    override fun getTestDependencies(nativeBinary: NativeBinarySpecInternal?): MutableList<NativeBinarySpecInternal?> {
+        if (nativeBinary is NativeTestSuiteBinarySpec) {
+            val testedBinary = (nativeBinary as NativeTestSuiteBinarySpec).getTestedBinary() as NativeBinarySpecInternal
+            return mutableListOf<NativeBinarySpecInternal?>(testedBinary)
         }
-        return Collections.emptyList();
+        return mutableListOf<NativeBinarySpecInternal?>()
     }
 }

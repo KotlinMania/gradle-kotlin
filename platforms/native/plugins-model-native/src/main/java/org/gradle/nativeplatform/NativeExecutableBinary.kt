@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-
-import java.io.File;
+import org.gradle.api.Incubating
 
 /**
- * A binary artifact for a {@link NativeExecutable}, targeted at a particular platform with specific configuration.
+ * A binary artifact for a [NativeExecutable], targeted at a particular platform with specific configuration.
  */
 @Incubating
-public interface NativeExecutableBinary extends NativeBinary {
+interface NativeExecutableBinary : NativeBinary {
     /**
      * The executable file.
      */
-    File getExecutableFile();
+    val executableFile: File?
 }

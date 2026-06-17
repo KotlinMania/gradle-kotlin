@@ -13,23 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.internal.AbstractNamedDomainObjectContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.BuildTypeContainer
 
-import org.gradle.api.internal.AbstractNamedDomainObjectContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.BuildTypeContainer;
-
-public class DefaultBuildTypeContainer extends AbstractNamedDomainObjectContainer<BuildType> implements BuildTypeContainer {
-
-    public DefaultBuildTypeContainer(Instantiator instantiator, CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        super(BuildType.class, instantiator, collectionCallbackActionDecorator);
-    }
-
-    @Override
-    protected BuildType doCreate(String name) {
-        return getInstantiator().newInstance(DefaultBuildType.class, name);
+class DefaultBuildTypeContainer(instantiator: Instantiator, collectionCallbackActionDecorator: CollectionCallbackActionDecorator) :
+    AbstractNamedDomainObjectContainer<BuildType?>(BuildType::class.java, instantiator, collectionCallbackActionDecorator), BuildTypeContainer {
+    override fun doCreate(name: String): BuildType {
+        return getInstantiator().newInstance<DefaultBuildType>(DefaultBuildType::class.java, name)
     }
 }

@@ -13,106 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.resolve
 
-package org.gradle.nativeplatform.internal.resolve;
+import org.gradle.api.Buildable
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
+import org.gradle.nativeplatform.NativeDependencySet
+import java.io.File
 
-import org.gradle.api.Buildable;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.nativeplatform.NativeDependencySet;
-
-import java.io.File;
-import java.util.Set;
-
-public class SourceSetNativeDependencyResolver implements NativeDependencyResolver {
-    private final NativeDependencyResolver delegate;
-    private final FileCollectionFactory fileCollectionFactory;
-
-    public SourceSetNativeDependencyResolver(NativeDependencyResolver delegate, FileCollectionFactory fileCollectionFactory) {
-        this.delegate = delegate;
-        this.fileCollectionFactory = fileCollectionFactory;
-    }
-
-    @Override
-    public void resolve(NativeBinaryResolveResult nativeBinaryResolveResult) {
-        for (NativeBinaryRequirementResolveResult resolution : nativeBinaryResolveResult.getPendingResolutions()) {
-            if (resolution.getInput() instanceof LanguageSourceSet) {
-                LanguageSourceSet input = (LanguageSourceSet) resolution.getInput();
-                resolution.setNativeDependencySet(createNativeDependencySet(input));
+class SourceSetNativeDependencyResolver(private val delegate: NativeDependencyResolver, private val fileCollectionFactory: FileCollectionFactory) : NativeDependencyResolver {
+    override fun resolve(nativeBinaryResolveResult: NativeBinaryResolveResult) {
+        for (resolution in nativeBinaryResolveResult.getPendingResolutions()) {
+            if (resolution.getInput() is LanguageSourceSet) {
+                val input = resolution.getInput() as LanguageSourceSet?
+                resolution.setNativeDependencySet(createNativeDependencySet(input))
             }
         }
-        delegate.resolve(nativeBinaryResolveResult);
+        delegate.resolve(nativeBinaryResolveResult)
     }
 
-    private NativeDependencySet createNativeDependencySet(LanguageSourceSet sourceSet) {
-        if (sourceSet instanceof HeaderExportingSourceSet) {
-            return new LanguageSourceSetNativeDependencySet((HeaderExportingSourceSet) sourceSet, fileCollectionFactory);
+    private fun createNativeDependencySet(sourceSet: LanguageSourceSet?): NativeDependencySet {
+        if (sourceSet is HeaderExportingSourceSet) {
+            return LanguageSourceSetNativeDependencySet(sourceSet, fileCollectionFactory)
         }
-        return EmptyNativeDependencySet.INSTANCE;
+        return EmptyNativeDependencySet.Companion.INSTANCE
     }
 
-    private static class EmptyNativeDependencySet implements NativeDependencySet {
-
-        private static final NativeDependencySet INSTANCE = new EmptyNativeDependencySet();
-
-        @Override
-        public FileCollection getIncludeRoots() {
-            return FileCollectionFactory.empty();
+    private class EmptyNativeDependencySet : NativeDependencySet {
+        override fun getIncludeRoots(): FileCollection {
+            return FileCollectionFactory.empty()
         }
 
-        @Override
-        public FileCollection getLinkFiles() {
-            return FileCollectionFactory.empty();
+        override fun getLinkFiles(): FileCollection {
+            return FileCollectionFactory.empty()
         }
 
-        @Override
-        public FileCollection getRuntimeFiles() {
-            return FileCollectionFactory.empty();
+        override fun getRuntimeFiles(): FileCollection {
+            return FileCollectionFactory.empty()
+        }
+
+        companion object {
+            private val INSTANCE: NativeDependencySet = EmptyNativeDependencySet()
         }
     }
 
-    private static class LanguageSourceSetNativeDependencySet implements NativeDependencySet {
-        private final HeaderExportingSourceSet sourceSet;
-        private final FileCollectionFactory fileCollectionFactory;
-
-        private LanguageSourceSetNativeDependencySet(HeaderExportingSourceSet sourceSet, FileCollectionFactory fileCollectionFactory) {
-            this.sourceSet = sourceSet;
-            this.fileCollectionFactory = fileCollectionFactory;
+    private class LanguageSourceSetNativeDependencySet(private val sourceSet: HeaderExportingSourceSet, private val fileCollectionFactory: FileCollectionFactory) : NativeDependencySet {
+        override fun getIncludeRoots(): FileCollection {
+            return fileCollectionFactory.create(LanguageSourceSetNativeDependencySet.HeaderFileCollection())
         }
 
-        @Override
-        public FileCollection getIncludeRoots() {
-            return fileCollectionFactory.create(new HeaderFileCollection());
+        override fun getLinkFiles(): FileCollection {
+            return FileCollectionFactory.empty()
         }
 
-        @Override
-        public FileCollection getLinkFiles() {
-            return FileCollectionFactory.empty();
+        override fun getRuntimeFiles(): FileCollection {
+            return FileCollectionFactory.empty()
         }
 
-        @Override
-        public FileCollection getRuntimeFiles() {
-            return FileCollectionFactory.empty();
-        }
-
-        private class HeaderFileCollection implements MinimalFileSet, Buildable {
-            @Override
-            public String getDisplayName() {
-                return "Include roots of " + sourceSet.getName();
+        private inner class HeaderFileCollection : MinimalFileSet, Buildable {
+            override fun getDisplayName(): String {
+                return "Include roots of " + sourceSet.getName()
             }
 
-            @Override
-            public Set<File> getFiles() {
-                return sourceSet.getExportedHeaders().getSrcDirs();
+            override fun getFiles(): MutableSet<File?> {
+                return sourceSet.exportedHeaders.getSrcDirs()
             }
 
-            @Override
-            public TaskDependency getBuildDependencies() {
-                return sourceSet.getBuildDependencies();
+            override fun getBuildDependencies(): TaskDependency {
+                return sourceSet.getBuildDependencies()
             }
         }
     }

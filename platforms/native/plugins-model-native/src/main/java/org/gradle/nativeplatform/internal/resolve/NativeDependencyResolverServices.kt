@@ -13,33 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal.resolve;
+package org.gradle.nativeplatform.internal.resolve
 
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.resolve.ProjectModelResolver;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.nativeplatform.internal.prebuilt.PrebuiltLibraryBinaryLocator;
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.resolve.ProjectModelResolver
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.nativeplatform.internal.prebuilt.PrebuiltLibraryBinaryLocator
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class NativeDependencyResolverServices implements ServiceRegistrationProvider {
+class NativeDependencyResolverServices : ServiceRegistrationProvider {
     @Provides
-    public LibraryBinaryLocator createLibraryBinaryLocator(ProjectModelResolver projectModelResolver, DomainObjectCollectionFactory domainObjectCollectionFactory) {
-        List<LibraryBinaryLocator> locators = new ArrayList<LibraryBinaryLocator>();
-        locators.add(new ProjectLibraryBinaryLocator(projectModelResolver, domainObjectCollectionFactory));
-        locators.add(new PrebuiltLibraryBinaryLocator(projectModelResolver));
-        return new CachingLibraryBinaryLocator(new ChainedLibraryBinaryLocator(locators), domainObjectCollectionFactory);
+    fun createLibraryBinaryLocator(projectModelResolver: ProjectModelResolver?, domainObjectCollectionFactory: DomainObjectCollectionFactory?): LibraryBinaryLocator {
+        val locators: MutableList<LibraryBinaryLocator?> = ArrayList<LibraryBinaryLocator?>()
+        locators.add(ProjectLibraryBinaryLocator(projectModelResolver, domainObjectCollectionFactory))
+        locators.add(PrebuiltLibraryBinaryLocator(projectModelResolver))
+        return CachingLibraryBinaryLocator(ChainedLibraryBinaryLocator(locators), domainObjectCollectionFactory)
     }
 
     @Provides
-    public NativeDependencyResolver createResolver(LibraryBinaryLocator locator, FileCollectionFactory fileCollectionFactory) {
-        NativeDependencyResolver resolver = new LibraryNativeDependencyResolver(locator);
-        resolver = new ApiRequirementNativeDependencyResolver(resolver);
-        resolver = new RequirementParsingNativeDependencyResolver(resolver);
-        resolver = new SourceSetNativeDependencyResolver(resolver, fileCollectionFactory);
-        return new InputHandlingNativeDependencyResolver(resolver);
+    fun createResolver(locator: LibraryBinaryLocator?, fileCollectionFactory: FileCollectionFactory?): NativeDependencyResolver {
+        var resolver: NativeDependencyResolver = LibraryNativeDependencyResolver(locator)
+        resolver = ApiRequirementNativeDependencyResolver(resolver)
+        resolver = RequirementParsingNativeDependencyResolver(resolver)
+        resolver = SourceSetNativeDependencyResolver(resolver, fileCollectionFactory)
+        return InputHandlingNativeDependencyResolver(resolver)
     }
 }

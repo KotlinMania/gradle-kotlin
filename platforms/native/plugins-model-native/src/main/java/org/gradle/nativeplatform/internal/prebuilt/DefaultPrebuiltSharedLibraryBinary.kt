@@ -13,62 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.PrebuiltLibrary
+import org.gradle.nativeplatform.PrebuiltSharedLibraryBinary
+import org.gradle.nativeplatform.platform.NativePlatform
+import java.io.File
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.PrebuiltLibrary;
-import org.gradle.nativeplatform.PrebuiltSharedLibraryBinary;
-import org.gradle.nativeplatform.platform.NativePlatform;
+class DefaultPrebuiltSharedLibraryBinary(
+    name: String?,
+    library: PrebuiltLibrary?,
+    buildType: BuildType?,
+    targetPlatform: NativePlatform?,
+    flavor: Flavor?,
+    fileCollectionFactory: FileCollectionFactory?
+) : AbstractPrebuiltLibraryBinary(name, library, buildType, targetPlatform, flavor, fileCollectionFactory), PrebuiltSharedLibraryBinary {
+    private var sharedLibraryFile: File? = null
+    private var sharedLibraryLinkFile: File? = null
 
-import java.io.File;
-
-public class DefaultPrebuiltSharedLibraryBinary extends AbstractPrebuiltLibraryBinary implements PrebuiltSharedLibraryBinary {
-    private File sharedLibraryFile;
-    private File sharedLibraryLinkFile;
-
-    public DefaultPrebuiltSharedLibraryBinary(String name, PrebuiltLibrary library, BuildType buildType, NativePlatform targetPlatform, Flavor flavor, FileCollectionFactory fileCollectionFactory) {
-        super(name, library, buildType, targetPlatform, flavor, fileCollectionFactory);
+    override fun getDisplayName(): String {
+        return "prebuilt shared library '" + getComponent().getName() + ":" + getName() + "'"
     }
 
-    @Override
-    public String getDisplayName() {
-        return "prebuilt shared library '" + getComponent().getName() + ":" + getName() + "'";
+    override fun setSharedLibraryFile(sharedLibraryFile: File?) {
+        this.sharedLibraryFile = sharedLibraryFile
     }
 
-    @Override
-    public void setSharedLibraryFile(File sharedLibraryFile) {
-        this.sharedLibraryFile = sharedLibraryFile;
+    override fun getSharedLibraryFile(): File? {
+        return sharedLibraryFile
     }
 
-    @Override
-    public File getSharedLibraryFile() {
-        return sharedLibraryFile;
+    override fun setSharedLibraryLinkFile(sharedLibraryLinkFile: File?) {
+        this.sharedLibraryLinkFile = sharedLibraryLinkFile
     }
 
-    @Override
-    public void setSharedLibraryLinkFile(File sharedLibraryLinkFile) {
-        this.sharedLibraryLinkFile = sharedLibraryLinkFile;
-    }
-
-    @Override
-    public File getSharedLibraryLinkFile() {
+    override fun getSharedLibraryLinkFile(): File? {
         if (sharedLibraryLinkFile != null) {
-            return sharedLibraryLinkFile;
+            return sharedLibraryLinkFile
         }
-        return sharedLibraryFile;
+        return sharedLibraryFile
     }
 
-    @Override
-    public FileCollection getLinkFiles() {
-        return createFileCollection(getSharedLibraryLinkFile(), "link files", "Shared library link files");
+    override fun getLinkFiles(): FileCollection? {
+        return createFileCollection(getSharedLibraryLinkFile(), "link files", "Shared library link files")
     }
 
-    @Override
-    public FileCollection getRuntimeFiles() {
-        return createFileCollection(getSharedLibraryFile(), "runtime files", "Shared library runtime files");
+    override fun getRuntimeFiles(): FileCollection? {
+        return createFileCollection(getSharedLibraryFile(), "runtime files", "Shared library runtime files")
     }
 }

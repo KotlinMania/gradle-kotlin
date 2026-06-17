@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform;
+package org.gradle.nativeplatform
 
-import org.gradle.api.Incubating;
-import org.gradle.platform.base.LibrarySpec;
+import org.gradle.api.Incubating
+import org.gradle.platform.base.LibrarySpec
 
 /**
  * Definition of a native library component that is to be built by Gradle.
  */
 @Incubating
-public interface NativeLibrarySpec extends LibrarySpec, NativeComponentSpec, TargetedNativeComponent {
+interface NativeLibrarySpec : LibrarySpec, NativeComponentSpec, TargetedNativeComponent {
     /**
      * Converts this library to a native library requirement that uses the shared library variant. This is the default.
      */
-    NativeLibraryRequirement getShared();
+    val shared: NativeLibraryRequirement?
 
     /**
      * Converts this library to a native library requirement that uses the static library variant.
      */
-    NativeLibraryRequirement getStatic();
+    val static: NativeLibraryRequirement?
 
     /**
      * Converts this library to a native library requirement that uses the api library linkage.
      */
-    NativeLibraryRequirement getApi();
+    val api: NativeLibraryRequirement?
 }

@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-public interface TargetsBuilder {
-    void all(boolean testTaskShouldRunAfter);
+interface TargetsBuilder {
+    fun all(testTaskShouldRunAfter: Boolean)
 }

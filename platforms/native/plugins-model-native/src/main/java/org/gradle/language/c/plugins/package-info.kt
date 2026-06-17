@@ -13,9 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Plugins for building from C language sources.
  */
-@org.gradle.api.Incubating
-package org.gradle.language.c.plugins;
+package org.gradle.language.c.plugins
+
+import org.gradle.internal.logging.text.TreeFormatter.node
+import org.gradle.internal.logging.text.TreeFormatter.startChildren
+import org.gradle.internal.logging.text.TreeFormatter.endChildren
+import org.gradle.internal.logging.text.TreeFormatter.toString
+

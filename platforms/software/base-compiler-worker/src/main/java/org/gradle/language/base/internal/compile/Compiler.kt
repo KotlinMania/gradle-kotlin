@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base.internal.compile;
+package org.gradle.language.base.internal.compile
 
-import org.gradle.api.tasks.WorkResult;
+import org.gradle.api.tasks.WorkResult
 
-public interface Compiler<T extends CompileSpec> {
-    WorkResult execute(T spec);
+interface Compiler<T : CompileSpec?> {
+    fun execute(spec: T?): WorkResult?
 }

@@ -13,31 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.components.internal
 
-package org.gradle.api.reporting.components.internal;
+import org.gradle.reporting.ReportRenderer
+import java.io.IOException
 
-import org.gradle.reporting.ReportRenderer;
+class TrackingReportRenderer<T, E>(private val delegate: ReportRenderer<in T?, in E?>) : ReportRenderer<T?, E?>() {
+    val items: MutableSet<T?> = HashSet<T?>()
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
-public class TrackingReportRenderer<T, E> extends ReportRenderer<T, E> {
-    private final Set<T> items = new HashSet<>();
-    private final ReportRenderer<? super T, ? super E> delegate;
-
-    public TrackingReportRenderer(ReportRenderer<? super T, ? super E> delegate) {
-        this.delegate = delegate;
-    }
-
-    public Set<T> getItems() {
-        return items;
-    }
-
-    @Override
-    public void render(T model, E output) throws IOException {
+    @Throws(IOException::class)
+    public override fun render(model: T?, output: E?) {
         if (items.add(model)) {
-            delegate.render(model, output);
+            delegate.render(model, output)
         }
     }
 }

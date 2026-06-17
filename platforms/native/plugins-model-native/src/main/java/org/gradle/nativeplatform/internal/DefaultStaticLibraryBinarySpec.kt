@@ -13,102 +13,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.nativeplatform.StaticLibraryBinary
+import org.gradle.nativeplatform.StaticLibraryBinarySpec
+import org.gradle.nativeplatform.tasks.CreateStaticLibrary
+import org.gradle.nativeplatform.tasks.ObjectFilesToBinary
+import org.gradle.platform.base.BinaryTasksCollection
+import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper
+import java.io.File
 
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.nativeplatform.StaticLibraryBinary;
-import org.gradle.nativeplatform.StaticLibraryBinarySpec;
-import org.gradle.nativeplatform.tasks.CreateStaticLibrary;
-import org.gradle.nativeplatform.tasks.ObjectFilesToBinary;
-import org.gradle.platform.base.BinaryTasksCollection;
-import org.gradle.platform.base.internal.BinaryTasksCollectionWrapper;
+class DefaultStaticLibraryBinarySpec : AbstractNativeLibraryBinarySpec(), StaticLibraryBinary, StaticLibraryBinarySpecInternal {
+    private val additionalLinkFiles: MutableList<FileCollection?> = ArrayList<FileCollection?>()
+    private val tasks = DefaultTasksCollection(super.getTasks())
+    private var staticLibraryFile: File? = null
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-public class DefaultStaticLibraryBinarySpec extends AbstractNativeLibraryBinarySpec implements StaticLibraryBinary, StaticLibraryBinarySpecInternal {
-    private final List<FileCollection> additionalLinkFiles = new ArrayList<FileCollection>();
-    private final DefaultTasksCollection tasks = new DefaultTasksCollection(super.getTasks());
-    private File staticLibraryFile;
-
-    @Override
-    public File getStaticLibraryFile() {
-        return staticLibraryFile;
+    override fun getStaticLibraryFile(): File? {
+        return staticLibraryFile
     }
 
-    @Override
-    public void setStaticLibraryFile(File staticLibraryFile) {
-        this.staticLibraryFile = staticLibraryFile;
+    override fun setStaticLibraryFile(staticLibraryFile: File?) {
+        this.staticLibraryFile = staticLibraryFile
     }
 
-    @Override
-    public File getPrimaryOutput() {
-        return getStaticLibraryFile();
+    override fun getPrimaryOutput(): File? {
+        return getStaticLibraryFile()
     }
 
-    @Override
-    public void additionalLinkFiles(FileCollection files) {
-        this.additionalLinkFiles.add(files);
+    override fun additionalLinkFiles(files: FileCollection?) {
+        this.additionalLinkFiles.add(files)
     }
 
-    @Override
-    public FileCollection getLinkFiles() {
-        ConfigurableFileCollection result = getFileCollectionFactory().configurableFiles("Link files for " + getDisplayName());
-        result.from(getFileCollectionFactory().create(new StaticLibraryLinkOutputs()));
-        result.from(additionalLinkFiles);
-        return result;
+    override fun getLinkFiles(): FileCollection {
+        val result = getFileCollectionFactory().configurableFiles("Link files for " + getDisplayName())
+        result.from(getFileCollectionFactory().create(DefaultStaticLibraryBinarySpec.StaticLibraryLinkOutputs()))
+        result.from(additionalLinkFiles)
+        return result
     }
 
-    @Override
-    public FileCollection getRuntimeFiles() {
-        return FileCollectionFactory.empty("Runtime files for " + getDisplayName());
+    override fun getRuntimeFiles(): FileCollection {
+        return FileCollectionFactory.empty("Runtime files for " + getDisplayName())
     }
 
-    @Override
-    protected ObjectFilesToBinary getCreateOrLink() {
-        return tasks.getCreateStaticLib();
+    override fun getCreateOrLink(): ObjectFilesToBinary? {
+        return tasks.getCreateStaticLib()
     }
 
-    @Override
-    public StaticLibraryBinarySpec.TasksCollection getTasks() {
-        return tasks;
+    override fun getTasks(): StaticLibraryBinarySpec.TasksCollection {
+        return tasks
     }
 
-    static class DefaultTasksCollection extends BinaryTasksCollectionWrapper implements StaticLibraryBinarySpec.TasksCollection {
-        public DefaultTasksCollection(BinaryTasksCollection delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public CreateStaticLibrary getCreateStaticLib() {
-            return findSingleTaskWithType(CreateStaticLibrary.class);
+    internal class DefaultTasksCollection(delegate: BinaryTasksCollection?) : BinaryTasksCollectionWrapper(delegate), StaticLibraryBinarySpec.TasksCollection {
+        override fun getCreateStaticLib(): CreateStaticLibrary? {
+            return findSingleTaskWithType<CreateStaticLibrary?>(CreateStaticLibrary::class.java)
         }
     }
 
-    private class StaticLibraryLinkOutputs extends LibraryOutputs {
-        @Override
-        public String getDisplayName() {
-            return "Static library file for " + DefaultStaticLibraryBinarySpec.this.getDisplayName();
+    private inner class StaticLibraryLinkOutputs : LibraryOutputs() {
+        override fun getDisplayName(): String {
+            return "Static library file for " + this@DefaultStaticLibraryBinarySpec.getDisplayName()
         }
 
-        @Override
-        protected boolean hasOutputs() {
-            return hasSources();
+        override fun hasOutputs(): Boolean {
+            return hasSources()
         }
 
-        @Override
-        protected Set<File> getOutputs() {
-            Set<File> allFiles = new LinkedHashSet<File>();
+        override fun getOutputs(): MutableSet<File?> {
+            val allFiles: MutableSet<File?> = LinkedHashSet<File?>()
             if (hasSources()) {
-                allFiles.add(getStaticLibraryFile());
+                allFiles.add(getStaticLibraryFile())
             }
-            return allFiles;
+            return allFiles
         }
     }
 }

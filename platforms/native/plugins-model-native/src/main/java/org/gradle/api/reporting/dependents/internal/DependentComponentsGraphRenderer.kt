@@ -13,115 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents.internal
 
-package org.gradle.api.reporting.dependents.internal;
+import com.google.common.base.Predicate
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.tasks.diagnostics.internal.graph.NodeRenderer
+import org.gradle.api.tasks.diagnostics.internal.graph.nodes.RenderableDependency
+import org.gradle.internal.graph.GraphRenderer
+import org.gradle.internal.logging.text.StyledTextOutput
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Sets;
-import org.gradle.api.tasks.diagnostics.internal.graph.NodeRenderer;
-import org.gradle.api.tasks.diagnostics.internal.graph.nodes.RenderableDependency;
-import org.gradle.internal.graph.GraphRenderer;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.jspecify.annotations.Nullable;
+class DependentComponentsGraphRenderer(private val renderer: GraphRenderer, showNonBuildable: Boolean, showTestSuites: Boolean) {
+    private val nodeRenderer: DependentBinaryNodeRenderer
+    private val showDependentPredicate: ShowDependentPredicate
 
-import java.util.Set;
-
-import static org.gradle.internal.logging.text.StyledTextOutput.Style.Info;
-
-public class DependentComponentsGraphRenderer {
-
-    private final GraphRenderer renderer;
-    private final DependentBinaryNodeRenderer nodeRenderer;
-    private final ShowDependentPredicate showDependentPredicate;
-
-    public DependentComponentsGraphRenderer(GraphRenderer renderer, boolean showNonBuildable, boolean showTestSuites) {
-        this.renderer = renderer;
-        this.nodeRenderer = new DependentBinaryNodeRenderer();
-        this.showDependentPredicate = new ShowDependentPredicate(showNonBuildable, showTestSuites);
+    init {
+        this.nodeRenderer = DependentBinaryNodeRenderer()
+        this.showDependentPredicate = ShowDependentPredicate(showNonBuildable, showTestSuites)
     }
 
-    public void render(DependentComponentsRenderableDependency root) {
-        renderChildren(getChildren(root));
+    fun render(root: DependentComponentsRenderableDependency) {
+        renderChildren(getChildren(root))
     }
 
-    private void renderChildren(Set<? extends RenderableDependency> children) {
-        renderer.startChildren();
-        int idx = 0;
-        for (RenderableDependency child : children) {
-            boolean last = idx++ == children.size() - 1;
-            doRender(child, last);
+    private fun renderChildren(children: MutableSet<out RenderableDependency>) {
+        renderer.startChildren()
+        var idx = 0
+        for (child in children) {
+            val last = idx++ == children.size - 1
+            doRender(child, last)
         }
-        renderer.completeChildren();
+        renderer.completeChildren()
     }
 
-    private void doRender(final RenderableDependency node, boolean last) {
-        renderer.visit(output -> nodeRenderer.renderNode(output, node, false), last);
-        renderChildren(getChildren(node));
+    private fun doRender(node: RenderableDependency, last: Boolean) {
+        renderer.visit(Action { output: StyledTextOutput? -> nodeRenderer.renderNode(output!!, node, false) }, last)
+        renderChildren(getChildren(node))
     }
 
-    public boolean hasSeenTestSuite() {
-        return nodeRenderer.seenTestSuite;
+    fun hasSeenTestSuite(): Boolean {
+        return nodeRenderer.seenTestSuite
     }
 
-    public boolean hasHiddenTestSuite() {
-        return showDependentPredicate.hiddenTestSuite;
+    fun hasHiddenTestSuite(): Boolean {
+        return showDependentPredicate.hiddenTestSuite
     }
 
-    public boolean hasHiddenNonBuildable() {
-        return showDependentPredicate.hiddenNonBuildable;
+    fun hasHiddenNonBuildable(): Boolean {
+        return showDependentPredicate.hiddenNonBuildable
     }
 
-    private Set<? extends RenderableDependency> getChildren(RenderableDependency node) {
-        return Sets.filter(node.getChildren(), showDependentPredicate);
+    private fun getChildren(node: RenderableDependency): MutableSet<out RenderableDependency> {
+        return Sets.filter(node.getChildren(), showDependentPredicate)
     }
 
-    private static class DependentBinaryNodeRenderer implements NodeRenderer {
+    private class DependentBinaryNodeRenderer : NodeRenderer {
+        private var seenTestSuite = false
 
-        private boolean seenTestSuite;
-
-        @Override
-        public void renderNode(StyledTextOutput output, RenderableDependency node, boolean alreadyRendered) {
-            output.text(node.getName());
-            if (node instanceof DependentComponentsRenderableDependency) {
-                DependentComponentsRenderableDependency dep = (DependentComponentsRenderableDependency) node;
+        override fun renderNode(output: StyledTextOutput, node: RenderableDependency, alreadyRendered: Boolean) {
+            output.text(node.getName())
+            if (node is DependentComponentsRenderableDependency) {
+                val dep = node
                 if (dep.isTestSuite()) {
-                    output.withStyle(Info).text(" (t)");
-                    seenTestSuite = true;
+                    output.withStyle(StyledTextOutput.Style.Info)!!.text(" (t)")
+                    seenTestSuite = true
                 }
                 if (!dep.isBuildable()) {
-                    output.withStyle(Info).text(" NOT BUILDABLE");
+                    output.withStyle(StyledTextOutput.Style.Info)!!.text(" NOT BUILDABLE")
                 }
             }
         }
     }
 
-    private static class ShowDependentPredicate implements Predicate<RenderableDependency> {
-        private final boolean showNonBuildable;
-        private final boolean showTestSuites;
+    private class ShowDependentPredicate(private val showNonBuildable: Boolean, private val showTestSuites: Boolean) : Predicate<RenderableDependency?> {
+        private var hiddenNonBuildable = false
+        private var hiddenTestSuite = false
 
-        private boolean hiddenNonBuildable;
-        private boolean hiddenTestSuite;
-
-        private ShowDependentPredicate(boolean showNonBuildable, boolean showTestSuites) {
-            this.showNonBuildable = showNonBuildable;
-            this.showTestSuites = showTestSuites;
-        }
-
-        @Override
-        public boolean apply(@Nullable RenderableDependency node) {
-            if (node instanceof DependentComponentsRenderableDependency) {
-                DependentComponentsRenderableDependency dep = (DependentComponentsRenderableDependency) node;
-                boolean hideNonBuildable = !dep.isBuildable() && !showNonBuildable;
-                boolean hideTestSuite = dep.isTestSuite() && !showTestSuites;
+        override fun apply(node: RenderableDependency?): Boolean {
+            if (node is DependentComponentsRenderableDependency) {
+                val dep = node
+                val hideNonBuildable = !dep.isBuildable() && !showNonBuildable
+                val hideTestSuite = dep.isTestSuite() && !showTestSuites
                 if (hideNonBuildable) {
-                    hiddenNonBuildable = true;
+                    hiddenNonBuildable = true
                 }
                 if (hideTestSuite) {
-                    hiddenTestSuite = true;
+                    hiddenTestSuite = true
                 }
-                return !hideNonBuildable && !hideTestSuite;
+                return !hideNonBuildable && !hideTestSuite
             }
-            return false;
+            return false
         }
     }
 }

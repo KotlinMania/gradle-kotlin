@@ -13,24 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+import org.gradle.tooling.provider.model.internal.BuildScopeToolingModelBuilderRegistryAction
 
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry;
-import org.gradle.tooling.provider.model.internal.BuildScopeToolingModelBuilderRegistryAction;
-
-public class ToolingNativeServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.add(BuildScopeToolingModelBuilderRegistryAction.class, ToolingModelRegistration.class);
+class ToolingNativeServices : AbstractGradleModuleServices() {
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.add<ToolingModelRegistration?>(BuildScopeToolingModelBuilderRegistryAction::class.java, ToolingModelRegistration::class.java)
     }
 
-    public static class ToolingModelRegistration implements BuildScopeToolingModelBuilderRegistryAction {
-        @Override
-        public void execute(ToolingModelBuilderRegistry registry) {
-            registry.register(new CppModelBuilder());
+    class ToolingModelRegistration : BuildScopeToolingModelBuilderRegistryAction {
+        override fun execute(registry: ToolingModelBuilderRegistry) {
+            registry.register(CppModelBuilder())
         }
     }
 }

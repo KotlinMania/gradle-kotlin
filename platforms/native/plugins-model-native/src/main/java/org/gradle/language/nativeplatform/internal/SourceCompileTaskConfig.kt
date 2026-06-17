@@ -13,46 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.nativeplatform.internal
 
-package org.gradle.language.nativeplatform.internal;
+import org.gradle.api.DefaultTask
+import org.gradle.api.Transformer
+import org.gradle.api.tasks.util.PatternSet
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask
+import org.gradle.language.nativeplatform.tasks.AbstractNativeSourceCompileTask
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader
+import java.io.File
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
-import org.gradle.api.tasks.util.PatternSet;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask;
-import org.gradle.language.nativeplatform.tasks.AbstractNativeSourceCompileTask;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader;
+class SourceCompileTaskConfig(languageTransform: NativeLanguageTransform<*>?, taskType: Class<out DefaultTask?>?) : CompileTaskConfig(languageTransform, taskType) {
+    protected override fun configureCompileTask(abstractTask: AbstractNativeCompileTask?, binary: NativeBinarySpecInternal, sourceSet: LanguageSourceSetInternal) {
+        val task = abstractTask as AbstractNativeSourceCompileTask
 
-import java.io.File;
+        task.setDescription("Compiles the " + sourceSet + " of " + binary)
 
-public class SourceCompileTaskConfig extends CompileTaskConfig {
-    public SourceCompileTaskConfig(NativeLanguageTransform<?> languageTransform, Class<? extends DefaultTask> taskType) {
-        super(languageTransform, taskType);
-    }
+        task.source(sourceSet.getSource())
 
-    @Override
-    protected void configureCompileTask(AbstractNativeCompileTask abstractTask, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal sourceSet) {
-        AbstractNativeSourceCompileTask task = (AbstractNativeSourceCompileTask) abstractTask;
+        val project = task.getProject()
 
-        task.setDescription("Compiles the " + sourceSet + " of " + binary);
-
-        task.source(sourceSet.getSource());
-
-        final Project project = task.getProject();
-
-        task.objectFileDir.fileProvider(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())));
+        task.objectFileDir.fileProvider(
+            project.getLayout().getBuildDirectory().getAsFile().map<S?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.projectScopedName) })
+        )
 
         // If this task uses a pre-compiled header
-        if (sourceSet instanceof DependentSourceSetInternal && ((DependentSourceSetInternal) sourceSet).getPreCompiledHeader() != null) {
-            final DependentSourceSetInternal dependentSourceSet = (DependentSourceSetInternal)sourceSet;
-            PreCompiledHeader pch = binary.getPrefixFileToPCH().get(dependentSourceSet.getPrefixHeaderFile());
-            pch.prefixHeaderFile = dependentSourceSet.getPrefixHeaderFile();
-            pch.includeString = dependentSourceSet.getPreCompiledHeader();
-            task.preCompiledHeader = pch;
+        if (sourceSet is DependentSourceSetInternal && (sourceSet as DependentSourceSetInternal).getPreCompiledHeader() != null) {
+            val dependentSourceSet = sourceSet as DependentSourceSetInternal
+            val pch: PreCompiledHeader = binary.getPrefixFileToPCH().get(dependentSourceSet.getPrefixHeaderFile())!!
+            pch.prefixHeaderFile = dependentSourceSet.getPrefixHeaderFile()
+            pch.includeString = dependentSourceSet.getPreCompiledHeader()
+            task.preCompiledHeader = pch
         }
 
-        binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.obj", "**/*.o")));
+        binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(PatternSet().include("**/*.obj", "**/*.o")))
     }
 }

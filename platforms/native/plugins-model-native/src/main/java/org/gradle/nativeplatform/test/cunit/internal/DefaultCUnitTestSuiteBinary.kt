@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cunit.internal
 
-package org.gradle.nativeplatform.test.cunit.internal;
+import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteBinarySpec
+import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec
+import org.gradle.nativeplatform.test.internal.DefaultNativeTestSuiteBinarySpec
 
-import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec;
-import org.gradle.nativeplatform.test.internal.DefaultNativeTestSuiteBinarySpec;
-
-public class DefaultCUnitTestSuiteBinary extends DefaultNativeTestSuiteBinarySpec implements CUnitTestSuiteBinarySpec {
-    @Override
-    public CUnitTestSuiteSpec getComponent() {
-        return getComponentAs(CUnitTestSuiteSpec.class);
+class DefaultCUnitTestSuiteBinary : DefaultNativeTestSuiteBinarySpec(), CUnitTestSuiteBinarySpec {
+    override fun getComponent(): CUnitTestSuiteSpec {
+        return getComponentAs<CUnitTestSuiteSpec>(CUnitTestSuiteSpec::class.java)!!
     }
-    
-    @Override
-    public CUnitTestSuiteSpec getTestSuite() {
-        return getComponent();
+
+    override fun getTestSuite(): CUnitTestSuiteSpec {
+        return getComponent()
     }
 }

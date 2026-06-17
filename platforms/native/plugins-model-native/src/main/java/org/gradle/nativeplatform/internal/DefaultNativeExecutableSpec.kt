@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.nativeplatform.NativeExecutableSpec;
+import org.gradle.nativeplatform.NativeExecutableSpec
 
-public class DefaultNativeExecutableSpec extends AbstractTargetedNativeComponentSpec implements NativeExecutableSpec {
-    @Override
-    protected String getTypeName() {
-        return "native executable";
+class DefaultNativeExecutableSpec : AbstractTargetedNativeComponentSpec(), NativeExecutableSpec {
+    override fun getTypeName(): String {
+        return "native executable"
     }
 }

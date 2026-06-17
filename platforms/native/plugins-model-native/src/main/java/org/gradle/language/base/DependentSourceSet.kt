@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base
 
-package org.gradle.language.base;
-
-import org.gradle.api.Incubating;
-import org.gradle.platform.base.DependencySpecContainer;
+import org.gradle.api.Incubating
 
 /**
  * A source set that can have dependencies on other Libraries.
  */
 @Incubating
-public interface DependentSourceSet extends LanguageSourceSet {
-    DependencySpecContainer getDependencies();
+interface DependentSourceSet : LanguageSourceSet {
+    val dependencies: DependencySpecContainer?
 }

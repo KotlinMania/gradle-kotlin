@@ -13,96 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.internal;
+package org.gradle.nativeplatform.internal
 
-import org.gradle.api.Buildable;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.tasks.DefaultTaskDependency;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.nativeplatform.HeaderExportingSourceSet;
-import org.gradle.nativeplatform.NativeLibrarySpec;
-import org.gradle.platform.base.LibraryBinarySpec;
+import org.gradle.api.Buildable
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.tasks.DefaultTaskDependency
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.language.nativeplatform.HeaderExportingSourceSet
+import org.gradle.nativeplatform.NativeLibrarySpec
+import org.gradle.platform.base.LibraryBinarySpec
+import java.io.File
 
-import java.io.File;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public abstract class AbstractNativeLibraryBinarySpec extends AbstractNativeBinarySpec implements LibraryBinarySpec {
-
-    @Override
-    public NativeLibrarySpec getComponent() {
-        return getComponentAs(NativeLibrarySpec.class);
+abstract class AbstractNativeLibraryBinarySpec : AbstractNativeBinarySpec(), LibraryBinarySpec {
+    override fun getComponent(): NativeLibrarySpec? {
+        return getComponentAs<NativeLibrarySpec?>(NativeLibrarySpec::class.java)
     }
 
-    @Override
-    public NativeLibrarySpec getLibrary() {
-        return getComponentAs(NativeLibrarySpec.class);
+    override fun getLibrary(): NativeLibrarySpec? {
+        return getComponentAs<NativeLibrarySpec?>(NativeLibrarySpec::class.java)
     }
 
-    protected boolean hasSources() {
-        for (LanguageSourceSet sourceSet : getInputs()) {
+    protected fun hasSources(): Boolean {
+        for (sourceSet in getInputs()) {
             if (!sourceSet.getSource().isEmpty()) {
-                return true;
+                return true
             }
             if (sourceSet.hasBuildDependencies()) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    public FileCollection getHeaderDirs() {
-        return getFileCollectionFactory().create(new HeaderFileSet());
-    }
+    val headerDirs: FileCollection
+        get() = getFileCollectionFactory().create(AbstractNativeLibraryBinarySpec.HeaderFileSet())
 
-    protected abstract class LibraryOutputs implements MinimalFileSet, Buildable {
-        @Override
-        public final Set<File> getFiles() {
+    protected abstract inner class LibraryOutputs : MinimalFileSet, Buildable {
+        override fun getFiles(): MutableSet<File?> {
             if (hasOutputs()) {
-                return getOutputs();
+                return this.outputs
             }
-            return Collections.emptySet();
+            return mutableSetOf<File?>()
         }
 
-        @Override
-        public final TaskDependency getBuildDependencies() {
+        override fun getBuildDependencies(): TaskDependency {
             if (hasOutputs()) {
-                return AbstractNativeLibraryBinarySpec.this.getBuildDependencies();
+                return this@AbstractNativeLibraryBinarySpec.getBuildDependencies()
             }
-            return TaskDependencyInternal.EMPTY;
+            return TaskDependencyInternal.EMPTY
         }
 
-        protected abstract boolean hasOutputs();
+        protected abstract fun hasOutputs(): Boolean
 
-        protected abstract Set<File> getOutputs();
+        protected abstract val outputs: MutableSet<File?>
     }
 
-    private class HeaderFileSet implements MinimalFileSet, Buildable {
-        @Override
-        public String getDisplayName() {
-            return "Headers for " + AbstractNativeLibraryBinarySpec.this.getDisplayName();
+    private inner class HeaderFileSet : MinimalFileSet, Buildable {
+        override fun getDisplayName(): String {
+            return "Headers for " + this@AbstractNativeLibraryBinarySpec.getDisplayName()
         }
 
-        @Override
-        public Set<File> getFiles() {
-            Set<File> headerDirs = new LinkedHashSet<File>();
-            for (HeaderExportingSourceSet sourceSet : getInputs().withType(HeaderExportingSourceSet.class)) {
-                headerDirs.addAll(sourceSet.getExportedHeaders().getSrcDirs());
+        override fun getFiles(): MutableSet<File?> {
+            val headerDirs: MutableSet<File?> = LinkedHashSet<File?>()
+            for (sourceSet in getInputs().withType<HeaderExportingSourceSet?>(HeaderExportingSourceSet::class.java)) {
+                headerDirs.addAll(sourceSet!!.exportedHeaders.getSrcDirs())
             }
-            return headerDirs;
+            return headerDirs
         }
 
-        @Override
-        public TaskDependency getBuildDependencies() {
-            DefaultTaskDependency dependency = new DefaultTaskDependency();
-            for (HeaderExportingSourceSet sourceSet : getInputs().withType(HeaderExportingSourceSet.class)) {
-                dependency.add(sourceSet.getBuildDependencies());
+        override fun getBuildDependencies(): TaskDependency {
+            val dependency = DefaultTaskDependency()
+            for (sourceSet in getInputs().withType<HeaderExportingSourceSet?>(HeaderExportingSourceSet::class.java)) {
+                dependency.add(sourceSet!!.getBuildDependencies())
             }
-            return dependency;
+            return dependency
         }
     }
 }

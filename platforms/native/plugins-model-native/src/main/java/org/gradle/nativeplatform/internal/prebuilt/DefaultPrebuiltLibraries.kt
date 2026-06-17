@@ -13,64 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.prebuilt
 
-package org.gradle.nativeplatform.internal.prebuilt;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
+import org.gradle.api.internal.AbstractNamedDomainObjectContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.nativeplatform.PrebuiltLibraries
+import org.gradle.nativeplatform.PrebuiltLibrary
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor;
-import org.gradle.api.internal.AbstractNamedDomainObjectContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.nativeplatform.PrebuiltLibraries;
-import org.gradle.nativeplatform.PrebuiltLibrary;
-
-public class DefaultPrebuiltLibraries extends AbstractNamedDomainObjectContainer<PrebuiltLibrary> implements PrebuiltLibraries {
-    private final ObjectFactory objectFactory;
-    private final Action<PrebuiltLibrary> libraryInitializer;
-    private String name;
-    private final DomainObjectCollectionFactory domainObjectCollectionFactory;
-
-    public DefaultPrebuiltLibraries(String name, Instantiator instantiator, ObjectFactory objectFactory, Action<PrebuiltLibrary> libraryInitializer, CollectionCallbackActionDecorator collectionCallbackActionDecorator, DomainObjectCollectionFactory domainObjectCollectionFactory) {
-        super(PrebuiltLibrary.class, instantiator, collectionCallbackActionDecorator);
-        this.name = name;
-        this.objectFactory = objectFactory;
-        this.libraryInitializer = libraryInitializer;
-        this.domainObjectCollectionFactory = domainObjectCollectionFactory;
+class DefaultPrebuiltLibraries(
+    private var name: String,
+    instantiator: Instantiator,
+    private val objectFactory: ObjectFactory?,
+    private val libraryInitializer: Action<PrebuiltLibrary?>,
+    collectionCallbackActionDecorator: CollectionCallbackActionDecorator,
+    private val domainObjectCollectionFactory: DomainObjectCollectionFactory?
+) : AbstractNamedDomainObjectContainer<PrebuiltLibrary?>(
+    PrebuiltLibrary::class.java, instantiator, collectionCallbackActionDecorator
+), PrebuiltLibraries {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun setName(name: String) {
+        this.name = name
     }
 
-    @Override
-    public void setName(String name) {
-        this.name = name;
+    override fun content(configureAction: Action<in RepositoryContentDescriptor?>) {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void content(Action<? super RepositoryContentDescriptor> configureAction) {
-        throw new UnsupportedOperationException();
+    override fun doCreate(name: String): PrebuiltLibrary {
+        return getInstantiator().newInstance<DefaultPrebuiltLibrary>(DefaultPrebuiltLibrary::class.java, name, objectFactory, domainObjectCollectionFactory)
     }
 
-    @Override
-    protected PrebuiltLibrary doCreate(String name) {
-        return getInstantiator().newInstance(DefaultPrebuiltLibrary.class, name, objectFactory, domainObjectCollectionFactory);
-    }
-
-    @Override
-    public PrebuiltLibrary resolveLibrary(String name) {
-        PrebuiltLibrary library = findByName(name);
+    override fun resolveLibrary(name: String): PrebuiltLibrary? {
+        val library = findByName(name)
         if (library != null) {
-            synchronized (library.getBinaries()) {
+            synchronized(library.getBinaries()) {
                 if (library.getBinaries().isEmpty()) {
-                    libraryInitializer.execute(library);
+                    libraryInitializer.execute(library)
                 }
             }
         }
-        return library;
+        return library
     }
-
 }

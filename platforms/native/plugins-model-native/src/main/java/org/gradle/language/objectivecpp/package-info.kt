@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Model classes for building from Objective-C++ language sources.
  */
-package org.gradle.language.objectivecpp;
+package org.gradle.language.objectivecpp

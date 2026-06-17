@@ -13,61 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
 
-import org.gradle.api.Action;
-import org.jspecify.annotations.Nullable;
-
-public interface ScriptBlockBuilder {
+interface ScriptBlockBuilder {
     /**
      * Adds a property assignment statement to this block
      */
-    void propertyAssignment(@Nullable String comment, String propertyName, Object propertyValue, boolean assignOperator);
+    fun propertyAssignment(comment: String?, propertyName: String, propertyValue: Any, assignOperator: Boolean)
 
     /**
      * Adds a method invocation statement to this block
      */
-    void methodInvocation(@Nullable String comment, String methodName, Object... methodArgs);
+    fun methodInvocation(comment: String?, methodName: String, vararg methodArgs: Any)
 
     /**
      * Adds a method invocation statement to this block
      */
-    void methodInvocation(@Nullable String comment, BuildScriptBuilder.Expression target, String methodName, Object... methodArgs);
+    fun methodInvocation(comment: String?, target: BuildScriptBuilder.Expression, methodName: String, vararg methodArgs: Any)
 
     /**
      * Adds a statement to this block.
      */
-    void statement(@Nullable String comment, BuildScriptBuilder.Statement statement);
+    fun statement(comment: String?, statement: BuildScriptBuilder.Statement)
 
     /**
      * Adds a block statement to this block.
      *
      * @return The body of the block, to which further statements can be added.
      */
-    ScriptBlockBuilder block(@Nullable String comment, String methodName);
+    fun block(comment: String?, methodName: String): ScriptBlockBuilder?
 
     /**
      * Adds a block statement to this block.
      */
-    void block(@Nullable String comment, String methodName, Action<? super ScriptBlockBuilder> blockContentsBuilder);
+    fun block(comment: String?, methodName: String, blockContentsBuilder: Action<in ScriptBlockBuilder>)
 
     /**
      * Adds an element to the given container.
      *
      * @return an expression that can be used to refer to the element. Note: currently this expression can only be used within this current block.
      */
-    BuildScriptBuilder.Expression containerElement(@Nullable String comment, String container, String elementName, @Nullable String elementType, Action<? super ScriptBlockBuilder> blockContentsBuilder);
+    fun containerElement(comment: String?, container: String, elementName: String, elementType: String?, blockContentsBuilder: Action<in ScriptBlockBuilder>): BuildScriptBuilder.Expression?
 
     /**
      * Returns a property expression that can be used as a method argument or property assignment value
      */
-    BuildScriptBuilder.Expression propertyExpression(String value);
+    fun propertyExpression(value: String): BuildScriptBuilder.Expression?
 
     /**
      * Adds a single line comment to this block.
      *
      * @param comment the comment to add
      */
-    void comment(String comment);
+    fun comment(comment: String)
 }

@@ -13,109 +13,102 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cunit.plugins
 
-package org.gradle.nativeplatform.test.cunit.plugins;
-
-import org.gradle.api.Action;
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.c.CSourceSet;
-import org.gradle.language.c.plugins.CLangPlugin;
-import org.gradle.model.Each;
-import org.gradle.model.ModelMap;
-import org.gradle.model.Mutate;
-import org.gradle.model.Path;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteBinarySpec;
-import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec;
-import org.gradle.nativeplatform.test.cunit.internal.DefaultCUnitTestSuiteBinary;
-import org.gradle.nativeplatform.test.cunit.internal.DefaultCUnitTestSuiteSpec;
-import org.gradle.nativeplatform.test.cunit.tasks.GenerateCUnitLauncher;
-import org.gradle.nativeplatform.test.plugins.NativeBinariesTestPlugin;
-import org.gradle.platform.base.ComponentBinaries;
-import org.gradle.platform.base.ComponentType;
-import org.gradle.platform.base.TypeBuilder;
-import org.gradle.testing.base.TestSuiteContainer;
-
-import java.io.File;
-
-import static org.gradle.nativeplatform.test.internal.NativeTestSuites.createNativeTestSuiteBinaries;
+import org.gradle.api.Action
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.c.CSourceSet
+import org.gradle.language.c.plugins.CLangPlugin
+import org.gradle.model.Each
+import org.gradle.model.ModelMap
+import org.gradle.model.Mutate
+import org.gradle.model.Path
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteBinarySpec
+import org.gradle.nativeplatform.test.cunit.CUnitTestSuiteSpec
+import org.gradle.nativeplatform.test.cunit.internal.DefaultCUnitTestSuiteBinary
+import org.gradle.nativeplatform.test.cunit.internal.DefaultCUnitTestSuiteSpec
+import org.gradle.nativeplatform.test.cunit.tasks.GenerateCUnitLauncher
+import org.gradle.nativeplatform.test.internal.NativeTestSuites
+import org.gradle.nativeplatform.test.plugins.NativeBinariesTestPlugin
+import org.gradle.platform.base.ComponentBinaries
+import org.gradle.platform.base.ComponentType
+import org.gradle.platform.base.TypeBuilder
+import org.gradle.testing.base.TestSuiteContainer
+import java.io.File
 
 /**
  * A plugin that sets up the infrastructure for testing native binaries with CUnit.
  */
 @Incubating
-public abstract class CUnitPlugin implements Plugin<Project> {
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(NativeBinariesTestPlugin.class);
-        project.getPluginManager().apply(CLangPlugin.class);
+abstract class CUnitPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(NativeBinariesTestPlugin::class.java)
+        project.getPluginManager().apply(CLangPlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
-
-        private static final String CUNIT_LAUNCHER_SOURCE_SET = "cunitLauncher";
-
+    internal class Rules : RuleSource() {
         @ComponentType
-        public void registerCUnitTestSuiteSpecType(TypeBuilder<CUnitTestSuiteSpec> builder) {
-            builder.defaultImplementation(DefaultCUnitTestSuiteSpec.class);
+        fun registerCUnitTestSuiteSpecType(builder: TypeBuilder<CUnitTestSuiteSpec?>) {
+            builder.defaultImplementation(DefaultCUnitTestSuiteSpec::class.java)
         }
 
         @Mutate
-        public void configureCUnitTestSuiteSources(@Each final CUnitTestSuiteSpec suite, @Path("buildDir") final File buildDir) {
-            suite.getSources().create(CUNIT_LAUNCHER_SOURCE_SET, CSourceSet.class, new Action<CSourceSet>() {
-                @Override
-                public void execute(CSourceSet launcherSources) {
-                    File baseDir = new File(buildDir, "src/" + suite.getName() + "/cunitLauncher");
-                    launcherSources.getSource().srcDir(new File(baseDir, "c"));
-                    launcherSources.getExportedHeaders().srcDir(new File(baseDir, "headers"));
+        fun configureCUnitTestSuiteSources(@Each suite: CUnitTestSuiteSpec, @Path("buildDir") buildDir: File?) {
+            suite.getSources().create<CSourceSet?>(CUNIT_LAUNCHER_SOURCE_SET, CSourceSet::class.java, object : Action<CSourceSet?> {
+                override fun execute(launcherSources: CSourceSet) {
+                    val baseDir = File(buildDir, "src/" + suite.getName() + "/cunitLauncher")
+                    launcherSources.getSource().srcDir(File(baseDir, "c"))
+                    launcherSources.exportedHeaders.srcDir(File(baseDir, "headers"))
                 }
-            });
+            })
 
-            suite.getSources().withType(CSourceSet.class).named("c", new Action<CSourceSet>() {
-                @Override
-                public void execute(CSourceSet cSourceSet) {
-                    cSourceSet.lib(suite.getSources().get(CUNIT_LAUNCHER_SOURCE_SET));
+            suite.getSources().withType<CSourceSet?>(CSourceSet::class.java).named("c", object : Action<CSourceSet?> {
+                override fun execute(cSourceSet: CSourceSet) {
+                    cSourceSet.lib(suite.getSources().get(CUNIT_LAUNCHER_SOURCE_SET))
                 }
-            });
+            })
         }
 
         @Mutate
-        public void createCUnitLauncherTasks(TaskContainer tasks, TestSuiteContainer testSuites) {
-            for (final CUnitTestSuiteSpec suite : testSuites.withType(CUnitTestSuiteSpec.class).values()) {
+        fun createCUnitLauncherTasks(tasks: TaskContainer, testSuites: TestSuiteContainer) {
+            for (suite in testSuites.withType<CUnitTestSuiteSpec>(CUnitTestSuiteSpec::class.java).values()) {
+                val taskName = suite.getName() + "CUnitLauncher"
+                @Suppress("deprecation") val skeletonTask = tasks.create<GenerateCUnitLauncher>(taskName, GenerateCUnitLauncher::class.java)
 
-                String taskName = suite.getName() + "CUnitLauncher";
-                @SuppressWarnings("deprecation")
-                GenerateCUnitLauncher skeletonTask = tasks.create(taskName, GenerateCUnitLauncher.class);
-
-                CSourceSet launcherSources = findLauncherSources(suite);
-                skeletonTask.setSourceDir(launcherSources.getSource().getSrcDirs().iterator().next());
-                skeletonTask.setHeaderDir(launcherSources.getExportedHeaders().getSrcDirs().iterator().next());
-                launcherSources.builtBy(skeletonTask);
+                val launcherSources = findLauncherSources(suite)
+                skeletonTask.setSourceDir(launcherSources.getSource().getSrcDirs().iterator().next())
+                skeletonTask.setHeaderDir(launcherSources.exportedHeaders.getSrcDirs().iterator().next())
+                launcherSources.builtBy(skeletonTask)
             }
         }
 
-        private CSourceSet findLauncherSources(CUnitTestSuiteSpec suite) {
-            return suite.getSources().withType(CSourceSet.class).get(CUNIT_LAUNCHER_SOURCE_SET);
+        private fun findLauncherSources(suite: CUnitTestSuiteSpec): CSourceSet {
+            return suite.getSources().withType<CSourceSet>(CSourceSet::class.java)
+                .get(org.gradle.nativeplatform.test.cunit.plugins.CUnitPlugin.Rules.Companion.CUNIT_LAUNCHER_SOURCE_SET)!!
         }
 
         @ComponentType
-        public void registerCUnitTestBinaryType(TypeBuilder<CUnitTestSuiteBinarySpec> builder) {
-            builder.defaultImplementation(DefaultCUnitTestSuiteBinary.class);
+        fun registerCUnitTestBinaryType(builder: TypeBuilder<CUnitTestSuiteBinarySpec?>) {
+            builder.defaultImplementation(DefaultCUnitTestSuiteBinary::class.java)
         }
 
         @ComponentBinaries
-        public void createCUnitTestBinaries(ModelMap<CUnitTestSuiteBinarySpec> binaries,
-                                            CUnitTestSuiteSpec testSuite,
-                                            @Path("buildDir") final File buildDir,
-                                            final ServiceRegistry serviceRegistry) {
-            createNativeTestSuiteBinaries(binaries, testSuite, CUnitTestSuiteBinarySpec.class, "CUnitExe", buildDir, serviceRegistry);
+        fun createCUnitTestBinaries(
+            binaries: ModelMap<CUnitTestSuiteBinarySpec?>?,
+            testSuite: CUnitTestSuiteSpec?,
+            @Path("buildDir") buildDir: File?,
+            serviceRegistry: ServiceRegistry?
+        ) {
+            NativeTestSuites.createNativeTestSuiteBinaries<CUnitTestSuiteBinarySpec?>(binaries, testSuite, CUnitTestSuiteBinarySpec::class.java, "CUnitExe", buildDir, serviceRegistry)
+        }
+
+        companion object {
+            private const val CUNIT_LAUNCHER_SOURCE_SET = "cunitLauncher"
         }
     }
-
 }

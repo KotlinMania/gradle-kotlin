@@ -13,32 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal.execution
 
-package org.gradle.nativeplatform.test.xctest.internal.execution;
-
-import org.gradle.api.internal.tasks.testing.TestDescriptorInternal;
-import org.jspecify.annotations.NullMarked;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.gradle.api.internal.tasks.testing.TestDescriptorInternal
+import org.jspecify.annotations.NullMarked
 
 /**
  * A test descriptor generated from scraping XCTest's output.
  */
 @NullMarked
-class XCTestDescriptor {
-    private final TestDescriptorInternal descriptorInternal;
-    private final List<String> messages = new ArrayList<>();
-
-    public XCTestDescriptor(TestDescriptorInternal descriptorInternal) {
-        this.descriptorInternal = descriptorInternal;
-    }
-
-    public TestDescriptorInternal getDescriptorInternal() {
-        return descriptorInternal;
-    }
-
-    public List<String> getMessages() {
-        return messages;
-    }
+internal class XCTestDescriptor(val descriptorInternal: TestDescriptorInternal) {
+    val messages: MutableList<String> = ArrayList<String>()
 }

@@ -13,37 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents.internal
 
-package org.gradle.api.reporting.dependents.internal;
+import org.gradle.api.tasks.diagnostics.internal.TextReportRenderer
+import org.gradle.internal.logging.text.StyledTextOutput
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.internal.dependents.DependentBinariesResolver
 
-import org.gradle.api.tasks.diagnostics.internal.TextReportRenderer;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolver;
-import org.jspecify.annotations.Nullable;
+class TextDependentComponentsReportRenderer(dependentBinariesResolver: DependentBinariesResolver?, showNonBuildable: Boolean, showTestSuites: Boolean) : TextReportRenderer() {
+    private val dependentComponentsRenderer: DependentComponentsRenderer
 
-import java.util.Set;
-
-import static org.gradle.internal.logging.text.StyledTextOutput.Style.Info;
-
-public class TextDependentComponentsReportRenderer extends TextReportRenderer {
-
-    private final DependentComponentsRenderer dependentComponentsRenderer;
-
-    public TextDependentComponentsReportRenderer(@Nullable DependentBinariesResolver dependentBinariesResolver, boolean showNonBuildable, boolean showTestSuites) {
-        this.dependentComponentsRenderer = new DependentComponentsRenderer(dependentBinariesResolver, showNonBuildable, showTestSuites);
+    init {
+        this.dependentComponentsRenderer = DependentComponentsRenderer(dependentBinariesResolver, showNonBuildable, showTestSuites)
     }
 
-    public void renderComponents(Set<ComponentSpec> components) {
+    fun renderComponents(components: MutableSet<ComponentSpec>) {
         if (components.isEmpty()) {
-            getTextOutput().withStyle(Info).println("No components.");
-            return;
+            getTextOutput()!!.withStyle(StyledTextOutput.Style.Info)!!.println("No components.")
+            return
         }
-        for (ComponentSpec component : components) {
-            getBuilder().item(component, dependentComponentsRenderer);
+        for (component in components) {
+            getBuilder()!!.item<ComponentSpec>(component, dependentComponentsRenderer)
         }
     }
 
-    public void renderLegend() {
-        dependentComponentsRenderer.printLegend(getBuilder());
+    fun renderLegend() {
+        dependentComponentsRenderer.printLegend(getBuilder()!!)
     }
 }

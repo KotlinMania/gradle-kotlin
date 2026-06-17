@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * General purpose types for language support.
  */
-package org.gradle.language.base;
+package org.gradle.language.base
+
+import org.gradle.internal.logging.text.TreeFormatter.node
+import org.gradle.internal.logging.text.TreeFormatter.startChildren
+import org.gradle.internal.logging.text.TreeFormatter.endChildren
+import org.gradle.internal.logging.text.TreeFormatter.toString
+

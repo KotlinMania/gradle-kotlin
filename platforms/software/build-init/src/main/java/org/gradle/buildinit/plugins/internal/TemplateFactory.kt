@@ -13,154 +13,124 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.Action
+import org.gradle.buildinit.plugins.internal.modifiers.Language
+import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption
+import java.util.Arrays
 
-import org.gradle.api.Action;
-import org.gradle.api.file.FileTree;
-import org.gradle.buildinit.plugins.internal.modifiers.Language;
-import org.gradle.buildinit.plugins.internal.modifiers.ModularizationOption;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-public class TemplateFactory {
-    private final TemplateOperationFactory templateOperationFactory;
-    private final InitSettings initSettings;
-    private final Language language;
-
-    public TemplateFactory(InitSettings initSettings, Language language, TemplateOperationFactory templateOperationFactory) {
-        this.initSettings = initSettings;
-        this.language = language;
-        this.templateOperationFactory = templateOperationFactory;
+class TemplateFactory(private val initSettings: InitSettings, private val language: Language, private val templateOperationFactory: TemplateOperationFactory) {
+    fun whenNoSourcesAvailable(vararg operations: TemplateOperation): TemplateOperation {
+        return whenNoSourcesAvailable(initSettings.getSubprojects().get(0), Arrays.asList<TemplateOperation>(*operations))
     }
 
-    public TemplateOperation whenNoSourcesAvailable(TemplateOperation... operations) {
-        return whenNoSourcesAvailable(initSettings.getSubprojects().get(0), Arrays.asList(operations));
+    fun whenNoSourcesAvailable(subproject: String, operations: MutableList<TemplateOperation>): TemplateOperation {
+        return ConditionalTemplateOperation(org.gradle.internal.Factory {
+            val mainFiles = initSettings.getTarget().dir(subproject + "/src/main/" + language.getName()).getAsFileTree()
+            val testFiles = initSettings.getTarget().dir(subproject + "/src/test/" + language.getName()).getAsFileTree()
+            mainFiles.isEmpty() || testFiles.isEmpty()
+        }, operations)
     }
 
-    public TemplateOperation whenNoSourcesAvailable(String subproject, List<TemplateOperation> operations) {
-        return new ConditionalTemplateOperation(() -> {
-            FileTree mainFiles = initSettings.getTarget().dir(subproject + "/src/main/" + language.getName()).getAsFileTree();
-            FileTree testFiles = initSettings.getTarget().dir(subproject + "/src/test/" + language.getName()).getAsFileTree();
-            return mainFiles.isEmpty() || testFiles.isEmpty();
-        }, operations);
+    fun fromSourceTemplate(clazzTemplate: String, sourceSetName: String, subprojectName: String): TemplateOperation {
+        return fromSourceTemplate(clazzTemplate, sourceSetName, subprojectName, language)
     }
 
-    public TemplateOperation fromSourceTemplate(String clazzTemplate, String sourceSetName) {
-        return fromSourceTemplate(clazzTemplate, sourceSetName, initSettings.getSubprojects().get(0), language);
+    @JvmOverloads
+    fun fromSourceTemplate(clazzTemplate: String, sourceSetName: String, subprojectName: String = initSettings.getSubprojects().get(0), language: Language = this.language): TemplateOperation {
+        return fromSourceTemplate(clazzTemplate, Action { t: SourceFileTemplate ->
+            t.subproject(subprojectName)
+            t.sourceSet(sourceSetName)
+            t.language(language)
+        })
     }
 
-    public TemplateOperation fromSourceTemplate(String clazzTemplate, String sourceSetName, String subprojectName) {
-        return fromSourceTemplate(clazzTemplate, sourceSetName, subprojectName, language);
-    }
+    fun fromSourceTemplate(sourceTemplate: String, config: Action<in SourceFileTemplate>): TemplateOperation {
+        var targetFileName = sourceTemplate.substring(sourceTemplate.lastIndexOf("/") + 1).replace(".template", "")
 
-    public TemplateOperation fromSourceTemplate(String clazzTemplate, String sourceSetName, String subprojectName, Language language) {
-        return fromSourceTemplate(clazzTemplate, t -> {
-            t.subproject(subprojectName);
-            t.sourceSet(sourceSetName);
-            t.language(language);
-        });
-    }
+        val details = TemplateDetails(language, targetFileName)
+        config.execute(details)
 
-    public TemplateOperation fromSourceTemplate(String sourceTemplate, Action<? super SourceFileTemplate> config) {
-        String targetFileName = sourceTemplate.substring(sourceTemplate.lastIndexOf("/") + 1).replace(".template", "");
-
-        TemplateDetails details = new TemplateDetails(language, targetFileName);
-        config.execute(details);
-
-        String basePackageName = "";
-        String packageDecl = "";
-        String className = details.className == null ? "" : details.className;
+        var basePackageName = ""
+        var packageDecl = ""
+        val className: String = (if (details.className == null) "" else details.className)!!
         if (initSettings != null) {
-            basePackageName = initSettings.getPackageName();
-            String packageName = basePackageName;
+            basePackageName = initSettings.getPackageName()
+            var packageName = basePackageName
             if (initSettings.getModularizationOption() == ModularizationOption.WITH_LIBRARY_PROJECTS) {
-                packageName = joinIfNotEmpty(packageName, ".") + details.subproject;
+                packageName = joinIfNotEmpty(packageName, ".") + details.subproject
             }
-            packageDecl = joinIfNotEmpty("package ", packageName);
-            targetFileName = joinIfNotEmpty(packageName.replace(".", "/"), "/") + details.getTargetFileName();
+            packageDecl = joinIfNotEmpty("package ", packageName)
+            targetFileName = joinIfNotEmpty(packageName.replace(".", "/"), "/") + details.targetFileName
         } else {
-            targetFileName = details.getTargetFileName();
+            targetFileName = details.targetFileName
         }
 
-        TemplateOperationFactory.TemplateOperationBuilder operationBuilder = templateOperationFactory.newTemplateOperation()
+        val operationBuilder = templateOperationFactory.newTemplateOperation()
             .withTemplate(sourceTemplate)
             .withTarget(initSettings.getTarget().file(details.subproject + "/src/" + details.sourceSet + "/" + details.language.getName() + "/" + targetFileName).getAsFile())
             .withBinding("basePackagePrefix", joinIfNotEmpty(basePackageName, "."))
             .withBinding("packageDecl", packageDecl)
             .withBinding("className", className)
-            .withBinding("fileComment", initSettings.isWithComments() ? "This source file was generated by the Gradle 'init' task" : "");
-        for (Map.Entry<String, String> entry : details.bindings.entrySet()) {
-            operationBuilder.withBinding(entry.getKey(), entry.getValue());
+            .withBinding("fileComment", if (initSettings.isWithComments()) "This source file was generated by the Gradle 'init' task" else "")
+        for (entry in details.bindings.entries) {
+            operationBuilder.withBinding(entry.key, entry.value)
         }
-        return operationBuilder.create();
+        return operationBuilder.create()
     }
 
-    private static String joinIfNotEmpty(String left, String right) {
-        return left.isEmpty() || right.isEmpty() ? "" : (left + right);
-    }
+    private class TemplateDetails(var language: Language, var fileName: String) : SourceFileTemplate {
+        val bindings: MutableMap<String, String> = HashMap<String, String>()
+        var subproject: String? = null
+        var sourceSet: String = "main"
+        var className: String? = null
 
-    private static class TemplateDetails implements SourceFileTemplate {
-        final Map<String, String> bindings = new HashMap<>();
-        String subproject;
-        String sourceSet = "main";
-        Language language;
-        String fileName;
-        @Nullable
-        String className;
-
-        TemplateDetails(Language language, String fileName) {
-            this.language = language;
-            this.fileName = fileName;
+        override fun subproject(subproject: String) {
+            this.subproject = subproject
         }
 
-        @Override
-        public void subproject(String subproject) {
-            this.subproject = subproject;
+        override fun sourceSet(name: String) {
+            this.sourceSet = name
         }
 
-        @Override
-        public void sourceSet(String name) {
-            this.sourceSet = name;
+        override fun language(language: Language) {
+            this.language = language
         }
 
-        @Override
-        public void language(Language language) {
-            this.language = language;
+        override fun className(name: String) {
+            this.className = name
         }
 
-        @Override
-        public void className(String name) {
-            this.className = name;
+        override fun binding(name: String, value: String) {
+            this.bindings.put(name, value)
         }
 
-        @Override
-        public void binding(String name, String value) {
-            this.bindings.put(name, value);
-        }
-
-        public String getTargetFileName() {
-            if (className != null) {
-                return className + "." + language.getExtension();
+        val targetFileName: String
+            get() {
+                if (className != null) {
+                    return className + "." + language.getExtension()
+                }
+                return fileName
             }
-            return fileName;
-        }
     }
 
     protected interface SourceFileTemplate {
-        void sourceSet(String name);
+        fun sourceSet(name: String)
 
-        void language(Language language);
+        fun language(language: Language)
 
-        void className(String name);
+        fun className(name: String)
 
-        void binding(String name, String value);
+        fun binding(name: String, value: String)
 
-        void subproject(String subproject);
+        fun subproject(subproject: String)
+    }
+
+    companion object {
+        private fun joinIfNotEmpty(left: String, right: String): String {
+            return if (left.isEmpty() || right.isEmpty()) "" else (left + right)
+        }
     }
 }
 

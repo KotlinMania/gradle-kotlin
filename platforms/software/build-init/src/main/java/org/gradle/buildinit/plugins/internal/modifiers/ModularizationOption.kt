@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal.modifiers
 
-package org.gradle.buildinit.plugins.internal.modifiers;
-
-public enum ModularizationOption {
+enum class ModularizationOption(displayName: String) {
     SINGLE_PROJECT("Single application project"),
     WITH_LIBRARY_PROJECTS("Application and library project");
 
-    private final String displayName;
+    val displayName: String?
 
-    ModularizationOption(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
+    init {
+        this.displayName = displayName
     }
 }

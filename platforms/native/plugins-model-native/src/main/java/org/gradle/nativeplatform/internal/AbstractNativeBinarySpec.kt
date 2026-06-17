@@ -13,251 +13,212 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.language.nativeplatform.DependentSourceSet
+import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal
+import org.gradle.nativeplatform.BuildType
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.NativeComponentSpec
+import org.gradle.nativeplatform.NativeDependencySet
+import org.gradle.nativeplatform.NativeLibraryBinary
+import org.gradle.nativeplatform.PreprocessingTool
+import org.gradle.nativeplatform.Tool
+import org.gradle.nativeplatform.internal.resolve.NativeBinaryRequirementResolveResult
+import org.gradle.nativeplatform.internal.resolve.NativeBinaryResolveResult
+import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver
+import org.gradle.nativeplatform.platform.NativePlatform
+import org.gradle.nativeplatform.platform.internal.NativePlatformInternal
+import org.gradle.nativeplatform.tasks.ObjectFilesToBinary.source
+import org.gradle.nativeplatform.toolchain.NativeToolChain
+import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal
+import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider
+import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader
+import org.gradle.platform.base.binary.BaseBinarySpec
+import org.gradle.platform.base.internal.BinaryBuildAbility
+import org.gradle.platform.base.internal.ToolSearchBuildAbility
+import java.io.File
 
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.language.nativeplatform.DependentSourceSet;
-import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal;
-import org.gradle.nativeplatform.BuildType;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.NativeComponentSpec;
-import org.gradle.nativeplatform.NativeDependencySet;
-import org.gradle.nativeplatform.NativeLibraryBinary;
-import org.gradle.nativeplatform.PreprocessingTool;
-import org.gradle.nativeplatform.Tool;
-import org.gradle.nativeplatform.internal.resolve.NativeBinaryRequirementResolveResult;
-import org.gradle.nativeplatform.internal.resolve.NativeBinaryResolveResult;
-import org.gradle.nativeplatform.internal.resolve.NativeDependencyResolver;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.platform.internal.NativePlatformInternal;
-import org.gradle.nativeplatform.tasks.ObjectFilesToBinary;
-import org.gradle.nativeplatform.toolchain.NativeToolChain;
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
-import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader;
-import org.gradle.platform.base.binary.BaseBinarySpec;
-import org.gradle.platform.base.internal.BinaryBuildAbility;
-import org.gradle.platform.base.internal.ToolSearchBuildAbility;
-
-import java.io.File;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
-public abstract class AbstractNativeBinarySpec extends BaseBinarySpec implements NativeBinarySpecInternal {
-    private final Set<? super Object> libs = new LinkedHashSet<Object>();
-    private final Tool linker = new DefaultTool();
-    private final Tool staticLibArchiver = new DefaultTool();
+abstract class AbstractNativeBinarySpec : BaseBinarySpec(), NativeBinarySpecInternal {
+    private val libs: MutableSet<in Any?> = LinkedHashSet<Any?>()
+    private val linker: Tool = DefaultTool()
+    private val staticLibArchiver: Tool = DefaultTool()
 
     // TODO:HH Use managed views for this, only applied when the respective language is applied
-    private final Tool assembler = new DefaultTool();
-    private final PreprocessingTool cCompiler = new DefaultPreprocessingTool();
-    private final PreprocessingTool cppCompiler = new DefaultPreprocessingTool();
-    private final PreprocessingTool objcCompiler = new DefaultPreprocessingTool();
-    private final PreprocessingTool objcppCompiler = new DefaultPreprocessingTool();
-    private final PreprocessingTool rcCompiler = new DefaultPreprocessingTool();
-    private final Map<String, Tool> toolsByName = ImmutableMap.<String, Tool>builder()
-            .put("assembler", assembler)
-            .put("cCompiler", cCompiler)
-            .put("cppCompiler", cppCompiler)
-            .put("objcCompiler", objcCompiler)
-            .put("objcppCompiler", objcppCompiler)
-            .put("rcCompiler", rcCompiler)
-            .build();
+    private val assembler: Tool = DefaultTool()
+    private val cCompiler: PreprocessingTool = DefaultPreprocessingTool()
+    private val cppCompiler: PreprocessingTool = DefaultPreprocessingTool()
+    private val objcCompiler: PreprocessingTool = DefaultPreprocessingTool()
+    private val objcppCompiler: PreprocessingTool = DefaultPreprocessingTool()
+    private val rcCompiler: PreprocessingTool = DefaultPreprocessingTool()
+    private val toolsByName: MutableMap<String?, Tool?> = ImmutableMap.builder<String?, Tool?>()
+        .put("assembler", assembler)
+        .put("cCompiler", cCompiler)
+        .put("cppCompiler", cppCompiler)
+        .put("objcCompiler", objcCompiler)
+        .put("objcppCompiler", objcppCompiler)
+        .put("rcCompiler", rcCompiler)
+        .build()
 
-    private PlatformToolProvider toolProvider;
-    private Flavor flavor;
-    private NativeToolChain toolChain;
-    private NativePlatform targetPlatform;
-    private BuildType buildType;
-    private NativeDependencyResolver resolver;
-    private Map<File, PreCompiledHeader> prefixFileToPCH = new HashMap<>();
-    private FileCollectionFactory fileCollectionFactory;
+    private var toolProvider: PlatformToolProvider? = null
+    private var flavor: Flavor? = null
+    private var toolChain: NativeToolChain? = null
+    private var targetPlatform: NativePlatform? = null
+    private var buildType: BuildType? = null
+    private var resolver: NativeDependencyResolver? = null
+    private val prefixFileToPCH: MutableMap<File?, PreCompiledHeader?> = HashMap<File?, PreCompiledHeader?>()
+    private var fileCollectionFactory: FileCollectionFactory? = null
 
-    @Override
-    public String getDisplayName() {
-        return getNamingScheme().getDescription();
+    override fun getDisplayName(): String? {
+        return getNamingScheme().getDescription()
     }
 
-    @Override
-    public NativeComponentSpec getComponent() {
-        return getComponentAs(NativeComponentSpec.class);
+    override fun getComponent(): NativeComponentSpec? {
+        return getComponentAs<NativeComponentSpec?>(NativeComponentSpec::class.java)
     }
 
-    @Override
-    public Flavor getFlavor() {
-        return flavor;
+    override fun getFlavor(): Flavor? {
+        return flavor
     }
 
-    @Override
-    public void setFlavor(Flavor flavor) {
-        this.flavor = flavor;
+    override fun setFlavor(flavor: Flavor?) {
+        this.flavor = flavor
     }
 
-    @Override
-    public NativeToolChain getToolChain() {
-        return toolChain;
+    override fun getToolChain(): NativeToolChain? {
+        return toolChain
     }
 
-    @Override
-    public void setToolChain(NativeToolChain toolChain) {
-        this.toolChain = toolChain;
+    override fun setToolChain(toolChain: NativeToolChain?) {
+        this.toolChain = toolChain
     }
 
-    @Override
-    public NativePlatform getTargetPlatform() {
-        return targetPlatform;
+    override fun getTargetPlatform(): NativePlatform? {
+        return targetPlatform
     }
 
-    @Override
-    public void setTargetPlatform(NativePlatform targetPlatform) {
-        this.targetPlatform = targetPlatform;
+    override fun setTargetPlatform(targetPlatform: NativePlatform?) {
+        this.targetPlatform = targetPlatform
     }
 
-    @Override
-    public BuildType getBuildType() {
-        return buildType;
+    override fun getBuildType(): BuildType? {
+        return buildType
     }
 
-    @Override
-    public void setBuildType(BuildType buildType) {
-        this.buildType = buildType;
+    override fun setBuildType(buildType: BuildType?) {
+        this.buildType = buildType
     }
 
-    @Override
-    public Tool getLinker() {
-        return linker;
+    override fun getLinker(): Tool {
+        return linker
     }
 
-    @Override
-    public Tool getStaticLibArchiver() {
-        return staticLibArchiver;
+    override fun getStaticLibArchiver(): Tool {
+        return staticLibArchiver
     }
 
-    @Override
-    public Tool getAssembler() {
-        return assembler;
+    override fun getAssembler(): Tool {
+        return assembler
     }
 
-    @Override
-    public PreprocessingTool getcCompiler() {
-        return cCompiler;
+    override fun getcCompiler(): PreprocessingTool {
+        return cCompiler
     }
 
-    @Override
-    public PreprocessingTool getCppCompiler() {
-        return cppCompiler;
+    override fun getCppCompiler(): PreprocessingTool {
+        return cppCompiler
     }
 
-    @Override
-    public PreprocessingTool getObjcCompiler() {
-        return objcCompiler;
+    override fun getObjcCompiler(): PreprocessingTool {
+        return objcCompiler
     }
 
-    @Override
-    public PreprocessingTool getObjcppCompiler() {
-        return objcppCompiler;
+    override fun getObjcppCompiler(): PreprocessingTool {
+        return objcppCompiler
     }
 
-    @Override
-    public PreprocessingTool getRcCompiler() {
-        return rcCompiler;
+    override fun getRcCompiler(): PreprocessingTool {
+        return rcCompiler
     }
 
-    @Override
-    public Tool getToolByName(String name) {
-        return toolsByName.get(name);
+    override fun getToolByName(name: String?): Tool? {
+        return toolsByName.get(name)
     }
 
-    @Override
-    public Collection<NativeDependencySet> getLibs() {
-        return resolve(getInputs().withType(DependentSourceSet.class)).getAllResults();
+    override fun getLibs(): MutableCollection<NativeDependencySet?>? {
+        return resolve(getInputs().withType<DependentSourceSet?>(DependentSourceSet::class.java)).getAllResults()
     }
 
-    @Override
-    public Collection<NativeDependencySet> getLibs(DependentSourceSet sourceSet) {
-        return resolve(Collections.singleton(sourceSet)).getAllResults();
+    override fun getLibs(sourceSet: DependentSourceSet?): MutableCollection<NativeDependencySet?>? {
+        return resolve(mutableSetOf<DependentSourceSet?>(sourceSet)).getAllResults()
     }
 
-    @Override
-    public void lib(Object notation) {
-        libs.add(notation);
+    override fun lib(notation: Any?) {
+        libs.add(notation)
     }
 
-    @Override
-    public Collection<NativeLibraryBinary> getDependentBinaries() {
-        return resolve(getInputs().withType(DependentSourceSet.class)).getAllLibraryBinaries();
+    override fun getDependentBinaries(): MutableCollection<NativeLibraryBinary?>? {
+        return resolve(getInputs().withType<DependentSourceSet?>(DependentSourceSet::class.java)).getAllLibraryBinaries()
     }
 
-    @Override
-    public Collection<NativeBinaryRequirementResolveResult> getAllResolutions() {
-        return resolve(getInputs().withType(DependentSourceSet.class)).getAllResolutions();
+    override fun getAllResolutions(): MutableCollection<NativeBinaryRequirementResolveResult?>? {
+        return resolve(getInputs().withType<DependentSourceSet?>(DependentSourceSet::class.java)).getAllResolutions()
     }
 
-    @Override
-    public Map<File, PreCompiledHeader> getPrefixFileToPCH() {
-        return prefixFileToPCH;
+    override fun getPrefixFileToPCH(): MutableMap<File?, PreCompiledHeader?> {
+        return prefixFileToPCH
     }
 
-    @Override
-    public void addPreCompiledHeaderFor(DependentSourceSet sourceSet) {
+    override fun addPreCompiledHeaderFor(sourceSet: DependentSourceSet) {
         prefixFileToPCH.put(
-            ((DependentSourceSetInternal)sourceSet).getPrefixHeaderFile(),
-            new PreCompiledHeader(getIdentifier().child("pch")));
+            (sourceSet as DependentSourceSetInternal).prefixHeaderFile,
+            PreCompiledHeader(getIdentifier().child("pch"))
+        )
     }
 
-    private NativeBinaryResolveResult resolve(Iterable<? extends DependentSourceSet> sourceSets) {
-        Set<? super Object> allLibs = new LinkedHashSet<Object>(libs);
-        for (DependentSourceSet dependentSourceSet : sourceSets) {
-            allLibs.addAll(dependentSourceSet.getLibs());
+    private fun resolve(sourceSets: Iterable<out DependentSourceSet>): NativeBinaryResolveResult {
+        val allLibs: MutableSet<in Any?> = LinkedHashSet<Any?>(libs)
+        for (dependentSourceSet in sourceSets) {
+            allLibs.addAll(dependentSourceSet.libs!!)
         }
-        NativeBinaryResolveResult resolution = new NativeBinaryResolveResult(this, allLibs);
-        resolver.resolve(resolution);
-        return resolution;
+        val resolution = NativeBinaryResolveResult(this, allLibs)
+        resolver!!.resolve(resolution)
+        return resolution
     }
 
-    @Override
-    public PlatformToolProvider getPlatformToolProvider() {
-        return toolProvider;
+    override fun getPlatformToolProvider(): PlatformToolProvider? {
+        return toolProvider
     }
 
-    @Override
-    public void setPlatformToolProvider(PlatformToolProvider toolProvider) {
-        this.toolProvider = toolProvider;
+    override fun setPlatformToolProvider(toolProvider: PlatformToolProvider?) {
+        this.toolProvider = toolProvider
     }
 
-    @Override
-    public void setResolver(NativeDependencyResolver resolver) {
-        this.resolver = resolver;
+    override fun setResolver(resolver: NativeDependencyResolver) {
+        this.resolver = resolver
     }
 
-    protected FileCollectionFactory getFileCollectionFactory() {
-        return fileCollectionFactory;
+    protected fun getFileCollectionFactory(): FileCollectionFactory? {
+        return fileCollectionFactory
     }
 
-    @Override
-    public void setFileCollectionFactory(FileCollectionFactory fileCollectionFactory) {
-        this.fileCollectionFactory = fileCollectionFactory;
+    override fun setFileCollectionFactory(fileCollectionFactory: FileCollectionFactory?) {
+        this.fileCollectionFactory = fileCollectionFactory
     }
 
-    @Override
-    protected BinaryBuildAbility getBinaryBuildAbility() {
-        NativeToolChainInternal toolChainInternal = (NativeToolChainInternal) getToolChain();
-        NativePlatformInternal platformInternal = (NativePlatformInternal) getTargetPlatform();
-        return new ToolSearchBuildAbility(toolChainInternal.select(platformInternal));
+    override fun getBinaryBuildAbility(): BinaryBuildAbility {
+        val toolChainInternal = getToolChain() as NativeToolChainInternal
+        val platformInternal = getTargetPlatform() as NativePlatformInternal?
+        return ToolSearchBuildAbility(toolChainInternal.select(platformInternal)!!)
     }
 
-    @Override
-    public void binaryInputs(FileCollection files) {
+    override fun binaryInputs(files: FileCollection?) {
         // TODO - should split this up, so that the inputs are attached to an object that represents the binary, which is then later used to configure the link/assemble tasks
-        getCreateOrLink().source(files);
+        this.createOrLink.source(files)
     }
 
-    protected abstract ObjectFilesToBinary getCreateOrLink();
+    protected abstract val createOrLink: ObjectFilesToBinary?
 }

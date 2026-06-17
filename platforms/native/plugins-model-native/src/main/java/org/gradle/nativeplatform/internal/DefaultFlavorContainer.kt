@@ -13,23 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.nativeplatform.Flavor
+import org.gradle.nativeplatform.FlavorContainer
 
-import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.nativeplatform.Flavor;
-import org.gradle.nativeplatform.FlavorContainer;
-
-public class DefaultFlavorContainer extends AbstractValidatingNamedDomainObjectContainer<Flavor> implements FlavorContainer {
-
-    public DefaultFlavorContainer(Instantiator instantiator, CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        super(Flavor.class, instantiator, collectionCallbackActionDecorator);
-    }
-
-    @Override
-    protected Flavor doCreate(String name) {
-        return getInstantiator().newInstance(DefaultFlavor.class, name);
+class DefaultFlavorContainer(instantiator: Instantiator, collectionCallbackActionDecorator: CollectionCallbackActionDecorator) :
+    AbstractValidatingNamedDomainObjectContainer<Flavor?>(Flavor::class.java, instantiator, collectionCallbackActionDecorator), FlavorContainer {
+    override fun doCreate(name: String): Flavor {
+        return getInstantiator().newInstance<DefaultFlavor>(DefaultFlavor::class.java, name)
     }
 }

@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * <p>Gradle's build language API, which is available from your build files.
- * Location of the main interfaces involved in build scripts.</p>
+ *
+ * Gradle's build language API, which is available from your build files.
+ * Location of the main interfaces involved in build scripts.
  */
-@org.jspecify.annotations.NullMarked
-package org.gradle.api;
+package org.gradle.api

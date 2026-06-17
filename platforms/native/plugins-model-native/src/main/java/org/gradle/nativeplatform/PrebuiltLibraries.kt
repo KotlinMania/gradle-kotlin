@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.NamedDomainObjectSet;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
+import org.gradle.api.Incubating
+import org.gradle.api.NamedDomainObjectSet
+import org.gradle.api.artifacts.repositories.ArtifactRepository
 
 /**
- * A container of {@link PrebuiltLibrary} instances.
+ * A container of [PrebuiltLibrary] instances.
  */
 @Incubating
-public interface PrebuiltLibraries extends ArtifactRepository, NamedDomainObjectSet<PrebuiltLibrary> {
-    PrebuiltLibrary resolveLibrary(String name);
+interface PrebuiltLibraries : ArtifactRepository, NamedDomainObjectSet<PrebuiltLibrary?> {
+    fun resolveLibrary(name: String?): PrebuiltLibrary?
 }

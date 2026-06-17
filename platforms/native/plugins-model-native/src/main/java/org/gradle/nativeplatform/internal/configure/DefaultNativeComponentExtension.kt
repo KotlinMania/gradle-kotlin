@@ -13,41 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal.configure
 
-package org.gradle.nativeplatform.internal.configure;
+import org.gradle.api.Action
+import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.nativeplatform.NativeComponentExtension
+import org.gradle.nativeplatform.NativeExecutableSpec
+import org.gradle.nativeplatform.NativeLibrarySpec
 
-import org.gradle.api.Action;
-import org.gradle.api.NamedDomainObjectContainer;
-import org.gradle.nativeplatform.NativeExecutableSpec;
-import org.gradle.nativeplatform.NativeLibrarySpec;
-import org.gradle.nativeplatform.NativeComponentExtension;
-
-public class DefaultNativeComponentExtension implements NativeComponentExtension {
-    private final NamedDomainObjectContainer<NativeExecutableSpec> executables;
-    private final NamedDomainObjectContainer<NativeLibrarySpec> libraries;
-
-    public DefaultNativeComponentExtension(NamedDomainObjectContainer<NativeExecutableSpec> executables, NamedDomainObjectContainer<NativeLibrarySpec> libraries) {
-        this.executables = executables;
-        this.libraries = libraries;
+class DefaultNativeComponentExtension(private val executables: NamedDomainObjectContainer<NativeExecutableSpec?>?, private val libraries: NamedDomainObjectContainer<NativeLibrarySpec?>?) :
+    NativeComponentExtension {
+    override fun getExecutables(): NamedDomainObjectContainer<NativeExecutableSpec?>? {
+        return executables
     }
 
-    @Override
-    public NamedDomainObjectContainer<NativeExecutableSpec> getExecutables() {
-        return executables;
+    override fun executables(action: Action<in NamedDomainObjectContainer<in NativeExecutableSpec?>?>) {
+        action.execute(executables)
     }
 
-    @Override
-    public void executables(Action<? super NamedDomainObjectContainer<? super NativeExecutableSpec>> action) {
-        action.execute(executables);
+    override fun getLibraries(): NamedDomainObjectContainer<NativeLibrarySpec?>? {
+        return libraries
     }
 
-    @Override
-    public NamedDomainObjectContainer<NativeLibrarySpec> getLibraries() {
-        return libraries;
-    }
-
-    @Override
-    public void libraries(Action<? super NamedDomainObjectContainer<? super NativeLibrarySpec>> action) {
-        action.execute(libraries);
+    override fun libraries(action: Action<in NamedDomainObjectContainer<in NativeLibrarySpec?>?>) {
+        action.execute(libraries)
     }
 }

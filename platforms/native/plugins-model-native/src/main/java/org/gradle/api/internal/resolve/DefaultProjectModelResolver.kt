@@ -13,34 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.resolve
 
-package org.gradle.api.internal.resolve;
+import org.gradle.api.UnknownProjectException
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectRegistry
+import org.gradle.model.internal.registry.ModelRegistry
+import java.util.function.Function
 
-import org.gradle.api.UnknownProjectException;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.project.ProjectRegistry;
-import org.gradle.model.internal.registry.ModelRegistry;
-
-public class DefaultProjectModelResolver implements ProjectModelResolver {
-    private final ProjectRegistry delegate;
-
-    public DefaultProjectModelResolver(ProjectRegistry delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public ModelRegistry resolveProjectModel(String path) {
-        ProjectInternal projectInternal = delegate.getProjectInternal(path);
+class DefaultProjectModelResolver(private val delegate: ProjectRegistry) : ProjectModelResolver {
+    override fun resolveProjectModel(path: String): ModelRegistry? {
+        val projectInternal = delegate.getProjectInternal(path)
         if (projectInternal == null) {
-            throw new UnknownProjectException("Project with path '" + path + "' not found.");
+            throw UnknownProjectException("Project with path '" + path + "' not found.")
         }
 
         // TODO This is a brain-dead way to ensure that the reference project's model is ready to access
-        return projectInternal.getOwner().fromMutableState(project -> {
-            project.prepareForRuleBasedPlugins();
-            project.evaluateUnchecked();
-            project.getTasks().discoverTasks();
-            return project.getModelRegistry();
-        });
+        return projectInternal.getOwner().fromMutableState<ModelRegistry?>(Function { project: ProjectInternal? ->
+            project!!.prepareForRuleBasedPlugins()
+            project.evaluateUnchecked()
+            project.getTasks().discoverTasks()
+            project.getModelRegistry()
+        })
     }
 }

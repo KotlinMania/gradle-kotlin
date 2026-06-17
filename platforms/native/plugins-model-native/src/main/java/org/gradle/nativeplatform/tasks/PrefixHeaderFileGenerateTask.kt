@@ -13,92 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.tasks
 
-package org.gradle.nativeplatform.tasks;
-
-import org.gradle.api.Action;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Incubating;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.nativeplatform.toolchain.internal.PCHUtils;
-import org.gradle.work.DisableCachingByDefault;
-import org.gradle.workers.WorkAction;
-import org.gradle.workers.WorkParameters;
-import org.gradle.workers.WorkQueue;
-import org.gradle.workers.WorkerExecutor;
-import org.jspecify.annotations.NonNull;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.util.Collections;
+import org.gradle.api.Action
+import org.gradle.api.DefaultTask
+import org.gradle.api.Incubating
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.nativeplatform.toolchain.internal.PCHUtils.generatePrefixHeaderFile
+import org.gradle.work.DisableCachingByDefault
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
+import java.io.File
+import javax.inject.Inject
 
 /**
  * Generates a prefix header file from a list of headers to be precompiled.
  */
 @Incubating
 @DisableCachingByDefault(because = "Not made cacheable, yet")
-public abstract class PrefixHeaderFileGenerateTask extends DefaultTask {
-    private String header;
-    private File prefixHeaderFile;
-    private final WorkerExecutor workerExecutor;
+abstract class PrefixHeaderFileGenerateTask
+/**
+ * Injects a [WorkerExecutor] instance.
+ *
+ * @since 4.2
+ */ @Inject constructor(private val workerExecutor: WorkerExecutor) : DefaultTask() {
+    @get:Input
+    var header: String? = null
 
-    /**
-     * Injects a {@link WorkerExecutor} instance.
-     *
-     * @since 4.2
-     */
-    @Inject
-    public PrefixHeaderFileGenerateTask(WorkerExecutor workerExecutor) {
-        this.workerExecutor = workerExecutor;
-    }
+    @get:OutputFile
+    var prefixHeaderFile: File? = null
 
     @TaskAction
-    void generatePrefixHeaderFile() {
-        WorkQueue workQueue = workerExecutor.noIsolation();
+    fun generatePrefixHeaderFile() {
+        val workQueue = workerExecutor.noIsolation()
 
-        workQueue.submit(GeneratePrefixHeaderFile.class, new Action<PrefixHeaderFileParameters>() {
-            @Override
-            public void execute(@NonNull PrefixHeaderFileParameters parameters) {
-                parameters.getHeader().set(header);
-                parameters.getPrefixHeaderFile().set(prefixHeaderFile);
+        workQueue.submit<PrefixHeaderFileParameters?>(GeneratePrefixHeaderFile::class.java, object : Action<PrefixHeaderFileParameters?> {
+            override fun execute(parameters: PrefixHeaderFileParameters) {
+                parameters.getHeader()!!.set(header)
+                parameters.getPrefixHeaderFile()!!.set(prefixHeaderFile)
             }
-        });
+        })
     }
 
-    @Input
-    public String getHeader() {
-        return header;
+    internal interface PrefixHeaderFileParameters : WorkParameters {
+        fun getHeader(): Property<String?>?
+        fun getPrefixHeaderFile(): RegularFileProperty?
     }
 
-    public void setHeader(String header) {
-        this.header = header;
-    }
-
-    @OutputFile
-    public File getPrefixHeaderFile() {
-        return prefixHeaderFile;
-    }
-
-    public void setPrefixHeaderFile(File prefixHeaderFile) {
-        this.prefixHeaderFile = prefixHeaderFile;
-    }
-
-    interface PrefixHeaderFileParameters extends WorkParameters {
-        Property<String> getHeader();
-        RegularFileProperty getPrefixHeaderFile();
-    }
-
-    static abstract class GeneratePrefixHeaderFile implements WorkAction<PrefixHeaderFileParameters> {
-        @Inject
-        public GeneratePrefixHeaderFile() { }
-
-        @Override
-        public void execute() {
-            PCHUtils.generatePrefixHeaderFile(Collections.singletonList(getParameters().getHeader().get()), getParameters().getPrefixHeaderFile().getAsFile().get());
+    internal abstract class GeneratePrefixHeaderFile @Inject constructor() : WorkAction<PrefixHeaderFileParameters?> {
+        override fun execute() {
+            generatePrefixHeaderFile(mutableListOf<String?>(getParameters()!!.getHeader()!!.get()), getParameters()!!.getPrefixHeaderFile()!!.getAsFile().get())
         }
     }
 }

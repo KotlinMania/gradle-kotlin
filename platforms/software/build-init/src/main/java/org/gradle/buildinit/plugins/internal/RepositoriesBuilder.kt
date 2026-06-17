@@ -13,17 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+interface RepositoriesBuilder {
+    fun mavenLocal(comment: String?)
 
-import org.jspecify.annotations.Nullable;
+    fun maven(comment: String?, url: String)
 
-public interface RepositoriesBuilder {
-    void mavenLocal(@Nullable String comment);
+    fun mavenCentral(comment: String?)
 
-    void maven(@Nullable String comment, String url);
-
-    void mavenCentral(@Nullable String comment);
-
-    void gradlePluginPortal(@Nullable String comment);
+    fun gradlePluginPortal(comment: String?)
 }

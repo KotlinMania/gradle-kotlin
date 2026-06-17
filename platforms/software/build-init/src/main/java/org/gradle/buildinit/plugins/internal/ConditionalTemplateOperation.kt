@@ -13,27 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.buildinit.plugins.internal;
+package org.gradle.buildinit.plugins.internal
 
-import org.gradle.internal.Factory;
+import org.gradle.internal.Factory
 
-import java.util.List;
-
-public class ConditionalTemplateOperation implements TemplateOperation {
-    private final List<TemplateOperation> optionalOperations;
-    private final Factory<Boolean> condition;
-
-    public ConditionalTemplateOperation(Factory<Boolean> precondition, List<TemplateOperation> optionalOperations) {
-        this.condition = precondition;
-        this.optionalOperations = optionalOperations;
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    @Override
-    public void generate() {
+class ConditionalTemplateOperation(private val condition: Factory<Boolean?>, private val optionalOperations: MutableList<TemplateOperation>) : TemplateOperation {
+    override fun generate() {
         if (condition.create()) {
-            for (TemplateOperation operation : optionalOperations) {
-                operation.generate();
+            for (operation in optionalOperations) {
+                operation.generate()
             }
         }
     }

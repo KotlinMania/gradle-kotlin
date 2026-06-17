@@ -13,27 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.internal.DocumentationRegistry
 
-import org.gradle.api.internal.DocumentationRegistry;
-
-public class BasicProjectGenerator implements BuildContentGenerator {
-    private final BuildScriptBuilderFactory scriptBuilderFactory;
-    private final DocumentationRegistry documentationRegistry;
-
-    public BasicProjectGenerator(BuildScriptBuilderFactory scriptBuilderFactory, DocumentationRegistry documentationRegistry) {
-        this.scriptBuilderFactory = scriptBuilderFactory;
-        this.documentationRegistry = documentationRegistry;
-    }
-
-    @Override
-    public void generate(InitSettings settings, BuildContentGenerationContext buildContentGenerationContext) {
+class BasicProjectGenerator(private val scriptBuilderFactory: BuildScriptBuilderFactory, private val documentationRegistry: DocumentationRegistry) : BuildContentGenerator {
+    override fun generate(settings: InitSettings, buildContentGenerationContext: BuildContentGenerationContext) {
         scriptBuilderFactory.scriptForNewProjects(settings.getDsl(), buildContentGenerationContext, "build", settings.isUseIncubatingAPIs())
-            .withComments(settings.isWithComments() ? BuildInitComments.ON : BuildInitComments.OFF)
-            .fileComment("This is a general purpose Gradle build.\n"
-                + documentationRegistry.getSampleForMessage())
+            .withComments(if (settings.isWithComments()) BuildInitComments.ON else BuildInitComments.OFF)
+            .fileComment(
+                "This is a general purpose Gradle build.\n"
+                        + documentationRegistry.sampleForMessage
+            )
             .create(settings.getTarget())
-            .generate();
+            .generate()
     }
 }

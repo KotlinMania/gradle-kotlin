@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base;
+package org.gradle.language.base
 
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.Incubating;
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.Incubating
 
 /**
- * A container of {@link org.gradle.language.base.LanguageSourceSet}s. Added to a project by the {@link org.gradle.language.base.plugins.LanguageBasePlugin}.
+ * A container of [LanguageSourceSet]s. Added to a project by the [org.gradle.language.base.plugins.LanguageBasePlugin].
  */
 @Incubating
-public interface ProjectSourceSet extends DomainObjectSet<LanguageSourceSet> {}
+interface ProjectSourceSet : DomainObjectSet<LanguageSourceSet?>

@@ -13,55 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.nativeplatform.internal
 
-package org.gradle.language.nativeplatform.internal;
+import org.gradle.api.DefaultTask
+import org.gradle.api.Transformer
+import org.gradle.api.specs.Spec
+import org.gradle.api.tasks.util.PatternSet
+import org.gradle.language.base.internal.LanguageSourceSetInternal
+import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask
+import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
+import org.gradle.nativeplatform.tasks.PrefixHeaderFileGenerateTask
+import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader
+import java.io.File
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
-import org.gradle.api.specs.Spec;
-import org.gradle.api.tasks.util.PatternSet;
-import org.gradle.language.base.internal.LanguageSourceSetInternal;
-import org.gradle.language.nativeplatform.tasks.AbstractNativeCompileTask;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
-import org.gradle.nativeplatform.tasks.PrefixHeaderFileGenerateTask;
-import org.gradle.nativeplatform.toolchain.internal.PreCompiledHeader;
-
-import java.io.File;
-
-public class PCHCompileTaskConfig extends CompileTaskConfig {
-    public PCHCompileTaskConfig(NativeLanguageTransform<?> languageTransform, Class<? extends DefaultTask> taskType) {
-        super(languageTransform, taskType);
-    }
-
-    @Override
-    protected void configureCompileTask(AbstractNativeCompileTask task, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal languageSourceSet) {
+class PCHCompileTaskConfig(languageTransform: NativeLanguageTransform<*>?, taskType: Class<out DefaultTask?>?) : CompileTaskConfig(languageTransform, taskType) {
+    protected override fun configureCompileTask(task: AbstractNativeCompileTask, binary: NativeBinarySpecInternal, languageSourceSet: LanguageSourceSetInternal?) {
         // Note that the sourceSet is the sourceSet this pre-compiled header will be used with - it's not an
         // input sourceSet to the compile task.
-        final DependentSourceSetInternal sourceSet = (DependentSourceSetInternal) languageSourceSet;
+        val sourceSet = languageSourceSet as DependentSourceSetInternal
 
-        task.setDescription("Compiles a pre-compiled header for the " + sourceSet + " of " + binary);
+        task.setDescription("Compiles a pre-compiled header for the " + sourceSet + " of " + binary)
 
         // Add the source of the source set to the include paths to resolve any headers that may be in source directories
-        task.includes(sourceSet.getSource().getSourceDirectories());
+        task.includes(sourceSet.getSource().getSourceDirectories())
 
-        final Project project = task.getProject();
-        task.source(sourceSet.getPrefixHeaderFile());
+        val project = task.getProject()
+        task.source(sourceSet.getPrefixHeaderFile())
 
 
-        task.objectFileDir.fileProvider(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), languageSourceSet.getProjectScopedName() + "PCH")));
+        task.objectFileDir.fileProvider(
+            project.getLayout().getBuildDirectory().getAsFile()
+                .map<S?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), languageSourceSet.projectScopedName + "PCH") })
+        )
 
-        task.dependsOn(project.getTasks().withType(PrefixHeaderFileGenerateTask.class).matching(new Spec<PrefixHeaderFileGenerateTask>() {
-            @Override
-            public boolean isSatisfiedBy(PrefixHeaderFileGenerateTask prefixHeaderFileGenerateTask) {
-                return prefixHeaderFileGenerateTask.getPrefixHeaderFile().equals(sourceSet.getPrefixHeaderFile());
+        task.dependsOn(project.getTasks().withType<PrefixHeaderFileGenerateTask?>(PrefixHeaderFileGenerateTask::class.java).matching(object : Spec<PrefixHeaderFileGenerateTask?> {
+            override fun isSatisfiedBy(prefixHeaderFileGenerateTask: PrefixHeaderFileGenerateTask): Boolean {
+                return prefixHeaderFileGenerateTask.getPrefixHeaderFile() == sourceSet.getPrefixHeaderFile()
             }
-        }));
+        }))
 
         // This is so that VisualCpp has the object file of the generated source file available at link time
-        binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.obj", "**/*.o")));
+        binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(PatternSet().include("**/*.obj", "**/*.o")))
 
-        PreCompiledHeader pch = binary.getPrefixFileToPCH().get(sourceSet.getPrefixHeaderFile());
-        pch.pchObjects = task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.pch", "**/*.gch"));
-        pch.builtBy(task);
+        val pch: PreCompiledHeader = binary.getPrefixFileToPCH().get(sourceSet.getPrefixHeaderFile())!!
+        pch.pchObjects = task.getOutputs().getFiles().getAsFileTree().matching(PatternSet().include("**/*.pch", "**/*.gch"))
+        pch.builtBy(task)
     }
 }

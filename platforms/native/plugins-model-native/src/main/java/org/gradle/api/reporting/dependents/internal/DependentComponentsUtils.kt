@@ -13,68 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents.internal
 
-package org.gradle.api.reporting.dependents.internal;
+import org.gradle.api.Project
+import org.gradle.api.artifacts.component.LibraryBinaryIdentifier
+import org.gradle.model.ModelMap
+import org.gradle.model.internal.registry.ModelRegistry
+import org.gradle.model.internal.type.ModelType
+import org.gradle.model.internal.type.ModelTypes
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.ComponentSpecContainer
+import org.gradle.platform.base.internal.ComponentSpecIdentifier
 
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.component.LibraryBinaryIdentifier;
-import org.gradle.model.ModelMap;
-import org.gradle.model.internal.registry.ModelRegistry;
-import org.gradle.model.internal.type.ModelType;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.ComponentSpecContainer;
-import org.gradle.platform.base.internal.ComponentSpecIdentifier;
-import org.jspecify.annotations.Nullable;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import static org.gradle.model.internal.type.ModelTypes.modelMap;
-
-public class DependentComponentsUtils {
-
-    public static String getBuildScopedTerseName(ComponentSpecIdentifier id) {
-        return getProjectPrefix(id.getProjectPath()) + id.getProjectScopedName();
+object DependentComponentsUtils {
+    fun getBuildScopedTerseName(id: ComponentSpecIdentifier): String {
+        return getProjectPrefix(id.getProjectPath()) + id.getProjectScopedName()
     }
 
-    public static String getBuildScopedTerseName(LibraryBinaryIdentifier id) {
-        return getProjectPrefix(id.getProjectPath()) + id.getLibraryName() + Project.PATH_SEPARATOR + id.getVariant();
+    fun getBuildScopedTerseName(id: LibraryBinaryIdentifier): String {
+        return getProjectPrefix(id.getProjectPath()) + id.getLibraryName() + Project.PATH_SEPARATOR + id.getVariant()
     }
 
-    private static String getProjectPrefix(String projectPath) {
-        if (Project.PATH_SEPARATOR.equals(projectPath)) {
-            return "";
+    private fun getProjectPrefix(projectPath: String): String {
+        if (Project.PATH_SEPARATOR == projectPath) {
+            return ""
         }
-        return projectPath + Project.PATH_SEPARATOR;
+        return projectPath + Project.PATH_SEPARATOR
     }
 
 
-    public static Set<ComponentSpec> getAllComponents(ModelRegistry registry) {
-        Set<ComponentSpec> components = new LinkedHashSet<>();
-        ComponentSpecContainer componentSpecs = modelElement(registry, "components", ComponentSpecContainer.class);
+    fun getAllComponents(registry: ModelRegistry): MutableSet<ComponentSpec> {
+        val components: MutableSet<ComponentSpec> = LinkedHashSet<ComponentSpec>()
+        val componentSpecs = DependentComponentsUtils.modelElement<ComponentSpecContainer>(registry, "components", ComponentSpecContainer::class.java)
         if (componentSpecs != null) {
-            components.addAll(componentSpecs.values());
+            components.addAll(componentSpecs.values())
         }
-        return components;
+        return components
     }
 
-    public static Set<ComponentSpec> getAllTestSuites(ModelRegistry registry) {
-        Set<ComponentSpec> components = new LinkedHashSet<>();
-        ModelMap<ComponentSpec> testSuites = modelElement(registry, "testSuites", modelMap(ComponentSpec.class));
+    fun getAllTestSuites(registry: ModelRegistry): MutableSet<ComponentSpec> {
+        val components: MutableSet<ComponentSpec> = LinkedHashSet<ComponentSpec>()
+        val testSuites = modelElement<ModelMap<ComponentSpec>>(registry, "testSuites", ModelTypes.modelMap<ComponentSpec>(ComponentSpec::class.java))
         if (testSuites != null) {
-            components.addAll(testSuites.values());
+            components.addAll(testSuites.values())
         }
-        return components;
+        return components
     }
 
-    @Nullable
-    private static <T> T modelElement(ModelRegistry registry, String path, Class<T> clazz) {
-        return registry.find(path, clazz);
+    private fun <T> modelElement(registry: ModelRegistry, path: String, clazz: Class<T?>): T? {
+        return registry.find<T?>(path, clazz)
     }
 
-    @Nullable
-    private static <T> T modelElement(ModelRegistry registry, String path, ModelType<T> modelType) {
-        return registry.find(path, modelType);
+    private fun <T> modelElement(registry: ModelRegistry, path: String, modelType: ModelType<T?>): T? {
+        return registry.find<T?>(path, modelType)
     }
-
 }

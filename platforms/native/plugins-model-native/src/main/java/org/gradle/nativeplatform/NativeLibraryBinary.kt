@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.file.FileCollection;
+import org.gradle.api.Incubating
 
 /**
- * A physical representation of a {@link NativeLibrary} component.
+ * A physical representation of a [NativeLibrary] component.
  */
 @Incubating
-public interface NativeLibraryBinary extends NativeBinary {
+interface NativeLibraryBinary : NativeBinary {
+    val headerDirs: FileCollection?
 
-    FileCollection getHeaderDirs();
+    val linkFiles: FileCollection?
 
-    FileCollection getLinkFiles();
-
-    FileCollection getRuntimeFiles();
+    val runtimeFiles: FileCollection?
 }

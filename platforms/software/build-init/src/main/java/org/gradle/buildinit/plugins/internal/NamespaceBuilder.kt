@@ -13,38 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
-
-public class NamespaceBuilder {
-    public static String toNamespace(String name) {
-        StringBuilder result = new StringBuilder();
-        int pos = 0;
-        while (pos < name.length()) {
-            while (pos < name.length() && !isCppIdentifierCharacterStart(name.charAt(pos))) {
-                pos++;
+object NamespaceBuilder {
+    fun toNamespace(name: String): String {
+        val result = StringBuilder()
+        var pos = 0
+        while (pos < name.length) {
+            while (pos < name.length && !isCppIdentifierCharacterStart(name.get(pos))) {
+                pos++
             }
-            if (pos == name.length()) {
-                break;
+            if (pos == name.length) {
+                break
             }
-            if (result.length() != 0) {
-                result.append('_');
+            if (result.length != 0) {
+                result.append('_')
             }
-            result.append(name.charAt(pos));
-            pos++;
-            while (pos < name.length() && isCppIdentifierCharacterPart(name.charAt(pos))) {
-                result.append(name.charAt(pos));
-                pos++;
+            result.append(name.get(pos))
+            pos++
+            while (pos < name.length && isCppIdentifierCharacterPart(name.get(pos))) {
+                result.append(name.get(pos))
+                pos++
             }
         }
-        return result.toString();
+        return result.toString()
     }
 
-    private static boolean isCppIdentifierCharacterStart(char c) {
-        return Character.isLetter(c) || c == '_';
+    private fun isCppIdentifierCharacterStart(c: Char): Boolean {
+        return Character.isLetter(c) || c == '_'
     }
 
-    private static boolean isCppIdentifierCharacterPart(char c) {
-        return Character.isLetter(c) || Character.isDigit(c) || c == '_';
+    private fun isCppIdentifierCharacterPart(c: Char): Boolean {
+        return Character.isLetter(c) || Character.isDigit(c) || c == '_'
     }
 }

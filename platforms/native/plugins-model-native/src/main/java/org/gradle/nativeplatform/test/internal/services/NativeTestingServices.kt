@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.nativeplatform.test.internal.services;
+package org.gradle.nativeplatform.test.internal.services
 
-import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.gradle.nativeplatform.test.internal.NativeTestSuiteBinaryRenderer;
+import org.gradle.api.reporting.components.internal.AbstractBinaryRenderer
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.gradle.nativeplatform.test.internal.NativeTestSuiteBinaryRenderer
 
-public class NativeTestingServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.add(AbstractBinaryRenderer.class, NativeTestSuiteBinaryRenderer.class);
+class NativeTestingServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.add<NativeTestSuiteBinaryRenderer?>(AbstractBinaryRenderer::class.java, NativeTestSuiteBinaryRenderer::class.java)
     }
 }

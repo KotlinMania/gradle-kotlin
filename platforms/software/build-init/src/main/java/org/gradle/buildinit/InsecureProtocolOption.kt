@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.buildinit;
+package org.gradle.buildinit
 
 /**
  * Options for handling insecure protocols when generating a project with repositories.
  *
  * @since 7.3
  */
-public enum InsecureProtocolOption {
+enum class InsecureProtocolOption {
     /**
      * Fail if a URL with an insecure protocol is found.
      *
@@ -48,5 +47,5 @@ public enum InsecureProtocolOption {
      *
      * The generated Gradle build will not fail, but the repository may not be usable over a secure protocol.
      */
-    UPGRADE;
+    UPGRADE
 }

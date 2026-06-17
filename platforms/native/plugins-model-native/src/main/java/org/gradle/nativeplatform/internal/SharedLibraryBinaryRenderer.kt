@@ -13,28 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.SharedLibraryBinarySpec
+import javax.inject.Inject
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.SharedLibraryBinarySpec;
+class SharedLibraryBinaryRenderer @Inject constructor(schemaStore: ModelSchemaStore?) : AbstractNativeBinaryRenderer<SharedLibraryBinarySpec?>(schemaStore) {
+    val targetType: Class<SharedLibraryBinarySpec?>?
+        get() = SharedLibraryBinarySpec::class.java
 
-import javax.inject.Inject;
-
-public class SharedLibraryBinaryRenderer extends AbstractNativeBinaryRenderer<SharedLibraryBinarySpec> {
-    @Inject
-    public SharedLibraryBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
-    }
-
-    @Override
-    public Class<SharedLibraryBinarySpec> getTargetType() {
-        return SharedLibraryBinarySpec.class;
-    }
-
-    @Override
-    protected void renderOutputs(SharedLibraryBinarySpec binary, TextReportBuilder builder) {
-        builder.item("shared library file", binary.getSharedLibraryFile());
+    override fun renderOutputs(binary: SharedLibraryBinarySpec, builder: TextReportBuilder) {
+        builder.item("shared library file", binary.getSharedLibraryFile())
     }
 }

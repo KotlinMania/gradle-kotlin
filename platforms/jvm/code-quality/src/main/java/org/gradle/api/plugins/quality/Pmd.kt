@@ -209,7 +209,7 @@ abstract class Pmd : AbstractCodeQualityTask(), Reporting<PmdReports> {
     }
 
     private fun setupParameters(parameters: PmdActionParameters) {
-        parameters.getAntLibraryClasspath().setFrom(this.pmdClasspath)
+        parameters.antLibraryClasspath.setFrom(this.pmdClasspath)
         parameters.pmdClasspath.setFrom(this.pmdClasspath)
         parameters.targetJdk.set(whileDisabled<TargetJdk?>(org.gradle.internal.Factory { this.targetJdk }))
         parameters.ruleSets.set(this.ruleSets)

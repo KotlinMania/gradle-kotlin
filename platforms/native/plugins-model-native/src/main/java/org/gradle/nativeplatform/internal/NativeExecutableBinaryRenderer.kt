@@ -13,33 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.NativeExecutableBinarySpec
+import javax.inject.Inject
 
-import org.gradle.api.tasks.diagnostics.internal.text.TextReportBuilder;
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.NativeExecutableBinarySpec;
+class NativeExecutableBinaryRenderer @Inject constructor(schemaStore: ModelSchemaStore?) : AbstractNativeBinaryRenderer<NativeExecutableBinarySpec?>(schemaStore) {
+    val targetType: Class<NativeExecutableBinarySpec?>?
+        get() = NativeExecutableBinarySpec::class.java
 
-import javax.inject.Inject;
-
-public class NativeExecutableBinaryRenderer extends AbstractNativeBinaryRenderer<NativeExecutableBinarySpec> {
-    @Inject
-    public NativeExecutableBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
+    override fun renderTasks(binary: NativeExecutableBinarySpec, builder: TextReportBuilder) {
+        builder.item("install using task", binary.getTasks().getInstall().getPath())
     }
 
-    @Override
-    public Class<NativeExecutableBinarySpec> getTargetType() {
-        return NativeExecutableBinarySpec.class;
-    }
-
-    @Override
-    protected void renderTasks(NativeExecutableBinarySpec binary, TextReportBuilder builder) {
-        builder.item("install using task", binary.getTasks().getInstall().getPath());
-    }
-
-    @Override
-    protected void renderOutputs(NativeExecutableBinarySpec binary, TextReportBuilder builder) {
-        builder.item("executable file", binary.getExecutable().getFile());
+    override fun renderOutputs(binary: NativeExecutableBinarySpec, builder: TextReportBuilder) {
+        builder.item("executable file", binary.getExecutable().getFile())
     }
 }

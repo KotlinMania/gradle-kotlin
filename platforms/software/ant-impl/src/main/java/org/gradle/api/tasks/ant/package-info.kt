@@ -13,8 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * The Ant integration {@link org.gradle.api.Task} implementations.
+ * The Ant integration [org.gradle.api.Task] implementations.
  */
-package org.gradle.api.tasks.ant;
+package org.gradle.api.tasks.ant
+
+import org.gradle.internal.service.ServiceRegistration.addProvider
+import org.gradle.internal.groovyloader.GroovySystemLoader.shutdown
+import org.gradle.internal.groovyloader.GroovySystemLoader.discardTypesFrom
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.groovyloader.GroovySystemLoaderFactory.forClassLoader
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.Factory.create
+import org.gradle.api.internal.project.ant.AntLoggingAdapter.setLifecycleLogLevel
+import org.gradle.api.internal.project.ant.AntLoggingAdapter.lifecycleLogLevel
+import org.gradle.api.internal.project.ant.AntLoggingAdapterFactory.create
+

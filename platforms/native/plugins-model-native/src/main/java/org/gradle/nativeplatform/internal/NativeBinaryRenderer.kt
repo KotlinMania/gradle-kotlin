@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.model.internal.manage.schema.ModelSchemaStore
+import org.gradle.nativeplatform.NativeBinarySpec
 
-import org.gradle.model.internal.manage.schema.ModelSchemaStore;
-import org.gradle.nativeplatform.NativeBinarySpec;
-
-public class NativeBinaryRenderer extends AbstractNativeBinaryRenderer<NativeBinarySpec> {
-    public NativeBinaryRenderer(ModelSchemaStore schemaStore) {
-        super(schemaStore);
-    }
-
-    @Override
-    public Class<NativeBinarySpec> getTargetType() {
-        return NativeBinarySpec.class;
-    }
+class NativeBinaryRenderer(schemaStore: ModelSchemaStore?) : AbstractNativeBinaryRenderer<NativeBinarySpec?>(schemaStore) {
+    val targetType: Class<NativeBinarySpec?>?
+        get() = NativeBinarySpec::class.java
 }

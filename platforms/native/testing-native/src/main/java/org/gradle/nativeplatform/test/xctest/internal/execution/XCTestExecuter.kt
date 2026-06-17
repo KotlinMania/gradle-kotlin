@@ -13,39 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal.execution
 
-package org.gradle.nativeplatform.test.xctest.internal.execution;
-
-import org.gradle.api.internal.tasks.testing.ClassTestDefinition;
-import org.gradle.api.internal.tasks.testing.TestDefinitionProcessor;
-import org.gradle.api.internal.tasks.testing.TestExecuter;
-import org.gradle.api.internal.tasks.testing.TestResultProcessor;
-import org.gradle.api.internal.tasks.testing.detection.TestDetector;
-import org.gradle.api.internal.tasks.testing.processors.TestMainAction;
-import org.gradle.api.tasks.testing.TestOutputEvent;
-import org.gradle.internal.SystemProperties;
-import org.gradle.internal.id.IdGenerator;
-import org.gradle.internal.id.LongIdGenerator;
-import org.gradle.internal.io.LineBufferingOutputStream;
-import org.gradle.internal.io.TextStream;
-import org.gradle.internal.os.OperatingSystem;
-import org.gradle.internal.time.Clock;
-import org.gradle.internal.work.WorkerLeaseService;
-import org.gradle.process.ExecResult;
-import org.gradle.process.ProcessExecutionException;
-import org.gradle.process.internal.ClientExecHandleBuilder;
-import org.gradle.process.internal.ClientExecHandleBuilderFactory;
-import org.gradle.process.internal.ExecHandle;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.OutputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import org.gradle.api.internal.tasks.testing.ClassTestDefinition
+import org.gradle.api.internal.tasks.testing.TestDefinitionProcessor
+import org.gradle.api.internal.tasks.testing.TestExecuter
+import org.gradle.api.internal.tasks.testing.TestResultProcessor
+import org.gradle.api.internal.tasks.testing.detection.TestDetector
+import org.gradle.api.internal.tasks.testing.processors.TestMainAction
+import org.gradle.api.tasks.testing.TestOutputEvent
+import org.gradle.internal.SystemProperties
+import org.gradle.internal.id.IdGenerator
+import org.gradle.internal.id.LongIdGenerator
+import org.gradle.internal.io.LineBufferingOutputStream
+import org.gradle.internal.io.TextStream
+import org.gradle.internal.os.OperatingSystem.Companion.current
+import org.gradle.internal.time.Clock
+import org.gradle.process.ProcessExecutionException
+import org.gradle.process.internal.ClientExecHandleBuilder
+import org.gradle.process.internal.ClientExecHandleBuilderFactory.newExecHandleBuilder
+import org.gradle.process.internal.ExecHandle
+import java.io.File
+import java.io.OutputStream
+import java.util.ArrayDeque
+import java.util.Deque
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
 
 /**
  * Takes an XCTestTestExecutionSpec and executes the given test binary.
@@ -60,139 +53,126 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Smarter/fancier test filtering
  * - Test probing (so we know which tests exist without executing them)
  */
-public abstract class XCTestExecuter implements TestExecuter<XCTestTestExecutionSpec> {
-    @Inject
-    public abstract ClientExecHandleBuilderFactory getExecHandleFactory();
+abstract class XCTestExecuter : TestExecuter<XCTestTestExecutionSpec?> {
+    @get:Inject
+    abstract val execHandleFactory: ClientExecHandleBuilderFactory?
 
-    @Inject
-    public abstract WorkerLeaseService getWorkerLeaseService();
+    @get:Inject
+    abstract val workerLeaseService: WorkerLeaseService?
 
-    public IdGenerator<?> getIdGenerator() {
-        return new LongIdGenerator();
+    val idGenerator: IdGenerator<*>
+        get() = LongIdGenerator()
+
+    @get:Inject
+    abstract val clock: Clock?
+
+    @get:Inject
+    abstract val timeProvider: Clock?
+
+    override fun execute(testExecutionSpec: XCTestTestExecutionSpec, testResultProcessor: TestResultProcessor?) {
+        val executable = testExecutionSpec.getRunScript()
+        val workingDir = testExecutionSpec.getWorkingDir()
+
+        val rootTestSuiteId = testExecutionSpec.getPath()
+
+        val processor = XCTestProcessor(
+            this.clock, executable, workingDir, this.execHandleFactory.newExecHandleBuilder(),
+            this.idGenerator, rootTestSuiteId
+        )
+
+        val detector: TestDetector = XCTestDetector(processor, testExecutionSpec.getTestSelection())
+
+        TestMainAction(detector, processor, testResultProcessor, this.workerLeaseService, this.timeProvider, rootTestSuiteId, "Gradle Test Run " + testExecutionSpec.getPath()).run()
     }
 
-    @Inject
-    public abstract Clock getClock();
-
-    @Inject
-    public abstract Clock getTimeProvider();
-
-    @Override
-    public void execute(XCTestTestExecutionSpec testExecutionSpec, TestResultProcessor testResultProcessor) {
-        File executable = testExecutionSpec.getRunScript();
-        File workingDir = testExecutionSpec.getWorkingDir();
-
-        String rootTestSuiteId = testExecutionSpec.getPath();
-
-        XCTestProcessor processor = new XCTestProcessor(getClock(), executable, workingDir, getExecHandleFactory().newExecHandleBuilder(), getIdGenerator(), rootTestSuiteId);
-
-        TestDetector detector = new XCTestDetector(processor, testExecutionSpec.getTestSelection());
-
-        new TestMainAction(detector, processor, testResultProcessor, getWorkerLeaseService(), getTimeProvider(), rootTestSuiteId, "Gradle Test Run " + testExecutionSpec.getPath()).run();
+    override fun stopNow() {
+        throw UnsupportedOperationException("XCTest does not support failing fast on first test failure.")
     }
 
-    @Override
-    public void stopNow() {
-        throw new UnsupportedOperationException("XCTest does not support failing fast on first test failure.");
-    }
-
-    private static class XCTestDetector implements TestDetector {
-        private final XCTestProcessor testClassProcessor;
-        private final XCTestSelection testSelection;
-
-        XCTestDetector(XCTestProcessor testClassProcessor, XCTestSelection testSelection) {
-            this.testClassProcessor = testClassProcessor;
-            this.testSelection = testSelection;
-        }
-
-        @Override
-        public void detect() {
-            for (String includedTests : testSelection.getIncludedTests()) {
-                ClassTestDefinition testDefinition = new ClassTestDefinition(includedTests);
-                testClassProcessor.processTestDefinition(testDefinition);
+    private class XCTestDetector(private val testClassProcessor: XCTestProcessor, private val testSelection: XCTestSelection) : TestDetector {
+        override fun detect() {
+            for (includedTests in testSelection.getIncludedTests()) {
+                val testDefinition = ClassTestDefinition(includedTests)
+                testClassProcessor.processTestDefinition(testDefinition)
             }
         }
     }
 
-    static class XCTestProcessor implements TestDefinitionProcessor<ClassTestDefinition> {
-        private TestResultProcessor resultProcessor;
-        private ExecHandle execHandle;
-        private final ClientExecHandleBuilder execHandleBuilder;
-        private final IdGenerator<?> idGenerator;
-        private final Clock clock;
-        private final String rootTestSuiteId;
+    internal class XCTestProcessor @Inject constructor(
+        private val clock: Clock?,
+        executable: File,
+        workingDir: File?,
+        private val execHandleBuilder: ClientExecHandleBuilder,
+        private val idGenerator: IdGenerator<*>?,
+        private val rootTestSuiteId: String?
+    ) : TestDefinitionProcessor<ClassTestDefinition?> {
+        private var resultProcessor: TestResultProcessor? = null
+        private var execHandle: ExecHandle? = null
 
-        @Inject
-        public XCTestProcessor(Clock clock, File executable, File workingDir, ClientExecHandleBuilder execHandleBuilder, IdGenerator<?> idGenerator, String rootTestSuiteId) {
-            this.execHandleBuilder = execHandleBuilder;
-            this.idGenerator = idGenerator;
-            this.clock = clock;
-            this.rootTestSuiteId = rootTestSuiteId;
-            execHandleBuilder.setExecutable(executable.getAbsolutePath());
-            execHandleBuilder.setWorkingDir(workingDir);
+        init {
+            execHandleBuilder.executable = executable.getAbsolutePath()
+            execHandleBuilder.setWorkingDir(workingDir)
         }
 
-        @Override
-        public void startProcessing(TestResultProcessor resultProcessor) {
-            this.resultProcessor = resultProcessor;
+        override fun startProcessing(resultProcessor: TestResultProcessor?) {
+            this.resultProcessor = resultProcessor
         }
 
-        @Override
-        public void processTestDefinition(ClassTestDefinition testDefinition) {
-            Map<String, Object> testSuiteIds = new ConcurrentHashMap<>();
-            Deque<XCTestDescriptor> testDescriptors = new ArrayDeque<XCTestDescriptor>();
-            TextStream stdOut = new XCTestScraper(TestOutputEvent.Destination.StdOut, resultProcessor, idGenerator, clock, rootTestSuiteId, testDescriptors, testSuiteIds);
-            TextStream stdErr = new XCTestScraper(TestOutputEvent.Destination.StdErr, resultProcessor, idGenerator, clock, rootTestSuiteId, testDescriptors, testSuiteIds);
+        override fun processTestDefinition(testDefinition: ClassTestDefinition) {
+            val testSuiteIds: MutableMap<String?, Any?> = ConcurrentHashMap<String?, Any?>()
+            val testDescriptors: Deque<XCTestDescriptor?> = ArrayDeque<XCTestDescriptor?>()
+            val stdOut: TextStream = XCTestScraper(TestOutputEvent.Destination.StdOut, resultProcessor, idGenerator, clock, rootTestSuiteId, testDescriptors, testSuiteIds)
+            val stdErr: TextStream = XCTestScraper(TestOutputEvent.Destination.StdErr, resultProcessor, idGenerator, clock, rootTestSuiteId, testDescriptors, testSuiteIds)
 
-            String lineSeparator = SystemProperties.getInstance().getLineSeparator();
-            execHandle = executeTest(testDefinition.getTestClassName(), new LineBufferingOutputStream(stdOut, lineSeparator), new LineBufferingOutputStream(stdErr, lineSeparator));
+            val lineSeparator = SystemProperties.getInstance().getLineSeparator()
+            execHandle = executeTest(testDefinition.getTestClassName(), LineBufferingOutputStream(stdOut, lineSeparator), LineBufferingOutputStream(stdErr, lineSeparator))
 
             try {
-                execHandle.start();
-                ExecResult result = execHandle.waitForFinish();
+                execHandle!!.start()
+                val result = execHandle!!.waitForFinish()
                 // Exit code 0 = success
                 // Exit code 1 = failed test(s)
                 // anything else is considered an execution failure
-                if (result.exitValue != 0 && result.exitValue != 1) {
-                    result.rethrowFailure().assertNormalExitValue();
+                if (result!!.exitValue !== 0 && result.exitValue !== 1) {
+                    result.rethrowFailure()!!.assertNormalExitValue()
                 }
-            } catch (ProcessExecutionException e) {
-                stdOut.endOfStream(e);
-                stdErr.endOfStream(null);
+            } catch (e: ProcessExecutionException) {
+                stdOut.endOfStream(e)
+                stdErr.endOfStream(null)
             } finally {
-                execHandle = null;
+                execHandle = null
             }
         }
 
-        private ExecHandle executeTest(String testName, OutputStream outputStream, OutputStream errorStream) {
-            execHandleBuilder.setArgs(toTestArgs(testName));
-            execHandleBuilder.setStandardOutput(outputStream);
-            execHandleBuilder.setErrorOutput(errorStream);
-            return execHandleBuilder.build();
+        private fun executeTest(testName: String, outputStream: OutputStream, errorStream: OutputStream): ExecHandle? {
+            execHandleBuilder.setArgs(toTestArgs(testName))
+            execHandleBuilder.setStandardOutput(outputStream)
+            execHandleBuilder.setErrorOutput(errorStream)
+            return execHandleBuilder.build()
         }
 
-        private static List<String> toTestArgs(String testName) {
-            List<String> args = new ArrayList<>();
-            if (!testName.equals(XCTestSelection.INCLUDE_ALL_TESTS)) {
-                if (OperatingSystem.current().isMacOsX()) {
-                    args.add("-XCTest");
-                }
-                args.add(testName);
-            }
-            return args;
-        }
-
-        @Override
-        public void stop() {
+        override fun stop() {
             if (execHandle != null) {
-                execHandle.abort();
-                execHandle.waitForFinish();
+                execHandle!!.abort()
+                execHandle!!.waitForFinish()
             }
         }
 
-        @Override
-        public void stopNow() {
-            throw new UnsupportedOperationException("XCTest does not support failing fast on first test failure.");
+        override fun stopNow() {
+            throw UnsupportedOperationException("XCTest does not support failing fast on first test failure.")
+        }
+
+        companion object {
+            private fun toTestArgs(testName: String): MutableList<String?> {
+                val args: MutableList<String?> = ArrayList<String?>()
+                if (testName != XCTestSelection.Companion.INCLUDE_ALL_TESTS) {
+                    if (current()!!.isMacOsX) {
+                        args.add("-XCTest")
+                    }
+                    args.add(testName)
+                }
+                return args
+            }
         }
     }
 }

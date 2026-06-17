@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform
 
-package org.gradle.nativeplatform;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.Incubating
+import org.gradle.api.NamedDomainObjectContainer
 
 /**
- * A container of {@link Flavor}s.
- * <p>
- * If no flavor is explicitly configured, will contain a single {@link Flavor} named 'default'.
+ * A container of [Flavor]s.
+ *
+ *
+ * If no flavor is explicitly configured, will contain a single [Flavor] named 'default'.
  * Any flavors explicitly configured will overwrite the default flavor.
  */
 @Incubating
-public interface FlavorContainer extends NamedDomainObjectContainer<Flavor> {
-}
+interface FlavorContainer : NamedDomainObjectContainer<Flavor?>

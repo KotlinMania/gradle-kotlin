@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.internal
 
-package org.gradle.nativeplatform.internal;
+import org.gradle.nativeplatform.NativeExecutableBinarySpec
 
-import org.gradle.nativeplatform.NativeExecutableBinarySpec;
-
-public interface NativeExecutableBinarySpecInternal extends NativeExecutableBinarySpec, NativeBinarySpecInternal {
-}
+interface NativeExecutableBinarySpecInternal : NativeExecutableBinarySpec, NativeBinarySpecInternal

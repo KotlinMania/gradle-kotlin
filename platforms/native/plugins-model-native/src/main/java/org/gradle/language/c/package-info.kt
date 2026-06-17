@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Model classes for building from C language sources.
  */
-package org.gradle.language.c;
+package org.gradle.language.c
+
+import org.gradle.internal.logging.text.TreeFormatter.node
+import org.gradle.internal.logging.text.TreeFormatter.startChildren
+import org.gradle.internal.logging.text.TreeFormatter.endChildren
+import org.gradle.internal.logging.text.TreeFormatter.toString
+

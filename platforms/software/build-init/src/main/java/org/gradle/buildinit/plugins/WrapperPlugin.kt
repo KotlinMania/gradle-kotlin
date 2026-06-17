@@ -13,33 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins
 
-package org.gradle.buildinit.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.tasks.wrapper.Wrapper;
-import org.gradle.api.tasks.wrapper.internal.WrapperDefaults;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.tasks.wrapper.Wrapper
+import org.gradle.api.tasks.wrapper.internal.WrapperDefaults
 
 /**
  * The wrapper plugin.
  *
- * @see <a href="https://docs.gradle.org/current/userguide/gradle_wrapper.html">Gradle Wrapper reference</a>
+ * @see [Gradle Wrapper reference](https://docs.gradle.org/current/userguide/gradle_wrapper.html)
  */
-public abstract class WrapperPlugin implements Plugin<Project> {
-
-    @Override
-    public void apply(Project project) {
+abstract class WrapperPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
         if (project.getParent() == null) {
-            project.getTasks().register("wrapper", Wrapper.class, wrapper -> {
-                wrapper.setGroup("Build Setup");
-                wrapper.setDescription("Generates Gradle wrapper files.");
-                wrapper.getNetworkTimeout().convention(WrapperDefaults.NETWORK_TIMEOUT);
-                wrapper.getValidateDistributionUrl().convention(WrapperDefaults.VALIDATE_DISTRIBUTION_URL);
-                wrapper.getRetries().convention(WrapperDefaults.RETRIES);
-                wrapper.getRetryBackOffMs().convention(WrapperDefaults.RETRY_BACK_OFF_MS);
-            });
+            project.getTasks().register<Wrapper?>("wrapper", Wrapper::class.java, Action { wrapper: Wrapper? ->
+                wrapper!!.setGroup("Build Setup")
+                wrapper.setDescription("Generates Gradle wrapper files.")
+                wrapper.getNetworkTimeout().convention(WrapperDefaults.NETWORK_TIMEOUT)
+                wrapper.getValidateDistributionUrl().convention(WrapperDefaults.VALIDATE_DISTRIBUTION_URL)
+                wrapper.getRetries().convention(WrapperDefaults.RETRIES)
+                wrapper.getRetryBackOffMs().convention(WrapperDefaults.RETRY_BACK_OFF_MS)
+            })
         }
     }
-
 }

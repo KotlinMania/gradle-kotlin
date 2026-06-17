@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.registry
 
-package org.gradle.language.base.internal.registry;
-
-import org.gradle.api.DomainObjectSet;
+import org.gradle.api.DomainObjectSet
 
 /**
  * A registry of language transforms.
  */
-public interface LanguageTransformContainer extends DomainObjectSet<LanguageTransform<?, ?>> {
-}
+interface LanguageTransformContainer : DomainObjectSet<LanguageTransform<*, *>?>

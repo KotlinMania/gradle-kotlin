@@ -13,33 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.plugins.internal
 
-package org.gradle.buildinit.plugins.internal;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.buildinit.InsecureProtocolOption
+import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.buildinit.InsecureProtocolOption;
-import org.gradle.buildinit.plugins.internal.modifiers.BuildInitDsl;
-
-public class BuildScriptBuilderFactory {
-    private final DocumentationRegistry documentationRegistry;
-
-    public BuildScriptBuilderFactory(DocumentationRegistry documentationRegistry) {
-        this.documentationRegistry = documentationRegistry;
+class BuildScriptBuilderFactory(private val documentationRegistry: DocumentationRegistry) {
+    fun scriptForNewProjects(dsl: BuildInitDsl, buildContentGenerationContext: BuildContentGenerationContext, fileNameWithoutExtension: String, useIncubatingAPIs: Boolean): BuildScriptBuilder {
+        return BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, InsecureProtocolOption.FAIL, true)
     }
 
-    public BuildScriptBuilder scriptForNewProjects(BuildInitDsl dsl, BuildContentGenerationContext buildContentGenerationContext, String fileNameWithoutExtension, boolean useIncubatingAPIs) {
-        return new BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, InsecureProtocolOption.FAIL, true);
+    fun scriptForNewProjectsWithoutVersionCatalog(
+        dsl: BuildInitDsl,
+        buildContentGenerationContext: BuildContentGenerationContext,
+        fileNameWithoutExtension: String,
+        useIncubatingAPIs: Boolean
+    ): BuildScriptBuilder {
+        return BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, InsecureProtocolOption.FAIL, false)
     }
 
-    public BuildScriptBuilder scriptForNewProjectsWithoutVersionCatalog(BuildInitDsl dsl, BuildContentGenerationContext buildContentGenerationContext, String fileNameWithoutExtension, boolean useIncubatingAPIs) {
-        return new BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, InsecureProtocolOption.FAIL, false);
+    fun scriptForMavenConversion(
+        dsl: BuildInitDsl,
+        buildContentGenerationContext: BuildContentGenerationContext,
+        fileNameWithoutExtension: String,
+        useIncubatingAPIs: Boolean,
+        insecureProtocolOption: InsecureProtocolOption
+    ): BuildScriptBuilder {
+        return BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, insecureProtocolOption, true)
     }
 
-    public BuildScriptBuilder scriptForMavenConversion(BuildInitDsl dsl, BuildContentGenerationContext buildContentGenerationContext, String fileNameWithoutExtension, boolean useIncubatingAPIs, InsecureProtocolOption insecureProtocolOption) {
-        return new BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, insecureProtocolOption, true);
-    }
-
-    public BuildScriptBuilder scriptForMavenConversionWithoutVersionCatalog(BuildInitDsl dsl, BuildContentGenerationContext buildContentGenerationContext, String fileNameWithoutExtension, boolean useIncubatingAPIs, InsecureProtocolOption insecureProtocolOption) {
-        return new BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, insecureProtocolOption, false);
+    fun scriptForMavenConversionWithoutVersionCatalog(
+        dsl: BuildInitDsl,
+        buildContentGenerationContext: BuildContentGenerationContext,
+        fileNameWithoutExtension: String,
+        useIncubatingAPIs: Boolean,
+        insecureProtocolOption: InsecureProtocolOption
+    ): BuildScriptBuilder {
+        return BuildScriptBuilder(dsl, documentationRegistry, buildContentGenerationContext, fileNameWithoutExtension, useIncubatingAPIs, insecureProtocolOption, false)
     }
 }

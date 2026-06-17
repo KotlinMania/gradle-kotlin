@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.googletest
 
-package org.gradle.nativeplatform.test.googletest;
-
-import org.gradle.api.Incubating;
-import org.gradle.nativeplatform.test.NativeTestSuiteSpec;
+import org.gradle.api.Incubating
+import org.gradle.nativeplatform.test.NativeTestSuiteSpec
 
 /**
  * Test suite of Google Test tests.
  */
 @Incubating
-public interface GoogleTestTestSuiteSpec extends NativeTestSuiteSpec {
-}
+interface GoogleTestTestSuiteSpec : NativeTestSuiteSpec

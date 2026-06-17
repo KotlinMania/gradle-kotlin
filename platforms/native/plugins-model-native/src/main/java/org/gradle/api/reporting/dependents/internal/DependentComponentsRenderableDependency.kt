@@ -13,107 +13,88 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.dependents.internal
 
-package org.gradle.api.reporting.dependents.internal;
+import com.google.common.base.Preconditions
+import com.google.common.base.Strings
+import org.gradle.api.tasks.diagnostics.internal.graph.nodes.AbstractRenderableDependency
+import org.gradle.api.tasks.diagnostics.internal.graph.nodes.RenderableDependency
+import org.gradle.platform.base.BinarySpec
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.VariantComponentSpec
+import org.gradle.platform.base.internal.ComponentSpecInternal
+import org.gradle.platform.base.internal.dependents.DependentBinariesResolvedResult
 
-import org.gradle.api.artifacts.component.LibraryBinaryIdentifier;
-import org.gradle.api.tasks.diagnostics.internal.graph.nodes.AbstractRenderableDependency;
-import org.gradle.api.tasks.diagnostics.internal.graph.nodes.RenderableDependency;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.VariantComponentSpec;
-import org.gradle.platform.base.internal.ComponentSpecIdentifier;
-import org.gradle.platform.base.internal.ComponentSpecInternal;
-import org.gradle.platform.base.internal.dependents.DependentBinariesResolvedResult;
+class DependentComponentsRenderableDependency(id: Any, name: String, description: String, buildable: Boolean, testSuite: Boolean, children: LinkedHashSet<out RenderableDependency>) :
+    AbstractRenderableDependency() {
+    private val id: Any
+    private val name: String
+    private val description: String
+    val isBuildable: Boolean
+    val isTestSuite: Boolean
+    private val children: LinkedHashSet<out RenderableDependency>
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Strings.emptyToNull;
-
-public class DependentComponentsRenderableDependency extends AbstractRenderableDependency {
-
-    public static DependentComponentsRenderableDependency of(ComponentSpec componentSpec, ComponentSpecInternal internalProtocol) {
-        return of(componentSpec, internalProtocol, new LinkedHashSet<>());
+    init {
+        Preconditions.checkNotNull<Any>(id, "id must not be null")
+        Preconditions.checkNotNull<String?>(Strings.emptyToNull(name), "name must not be null nor empty")
+        this.id = id
+        this.name = name
+        this.description = Strings.emptyToNull(description)!!
+        this.isBuildable = buildable
+        this.isTestSuite = testSuite
+        this.children = children
     }
 
-    @SuppressWarnings("NonApiType") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    public static DependentComponentsRenderableDependency of(ComponentSpec componentSpec, ComponentSpecInternal internalProtocol, LinkedHashSet<DependentComponentsRenderableDependency> children) {
-        ComponentSpecIdentifier id = internalProtocol.getIdentifier();
-        String name = DependentComponentsUtils.getBuildScopedTerseName(id);
-        String description = componentSpec.getDisplayName();
-        boolean buildable = true;
-        if (componentSpec instanceof VariantComponentSpec) {
-            // Consider variant aware components with no buildable binaries as non-buildables
-            VariantComponentSpec variantComponentSpec = (VariantComponentSpec) componentSpec;
-            buildable = variantComponentSpec.getBinaries().values().stream().anyMatch(BinarySpec::isBuildable);
+    override fun getId(): Any {
+        return id
+    }
+
+    override fun getName(): String {
+        return name
+    }
+
+    override fun getDescription(): String {
+        return description
+    }
+
+    override fun getResolutionState(): RenderableDependency.ResolutionState {
+        return RenderableDependency.ResolutionState.RESOLVED
+    }
+
+    override fun getChildren(): MutableSet<out RenderableDependency> {
+        return children
+    }
+
+    companion object {
+        @JvmOverloads  //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        fun of(
+            componentSpec: ComponentSpec,
+            internalProtocol: ComponentSpecInternal,
+            children: LinkedHashSet<DependentComponentsRenderableDependency> = LinkedHashSet<DependentComponentsRenderableDependency>()
+        ): DependentComponentsRenderableDependency {
+            val id = internalProtocol.getIdentifier()
+            val name = DependentComponentsUtils.getBuildScopedTerseName(id)
+            val description = componentSpec.getDisplayName()
+            var buildable = true
+            if (componentSpec is VariantComponentSpec) {
+                // Consider variant aware components with no buildable binaries as non-buildables
+                val variantComponentSpec = componentSpec
+                buildable = variantComponentSpec.getBinaries().values().stream().anyMatch { obj: BinarySpec? -> obj!!.isBuildable() }
+            }
+            return DependentComponentsRenderableDependency(id, name, description, buildable, false, children)
         }
-        return new DependentComponentsRenderableDependency(id, name, description, buildable, false, children);
-    }
 
-    public static DependentComponentsRenderableDependency of(DependentBinariesResolvedResult resolvedResult) {
-        LibraryBinaryIdentifier id = resolvedResult.getId();
-        String name = DependentComponentsUtils.getBuildScopedTerseName(id);
-        String description = id.getDisplayName();
-        boolean buildable = resolvedResult.isBuildable();
-        boolean testSuite = resolvedResult.isTestSuite();
-        LinkedHashSet<DependentComponentsRenderableDependency> children = new LinkedHashSet<>();
-        for (DependentBinariesResolvedResult childResolutionResult : resolvedResult.getChildren()) {
-            children.add(of(childResolutionResult));
+        fun of(resolvedResult: DependentBinariesResolvedResult): DependentComponentsRenderableDependency {
+            val id = resolvedResult.getId()
+            val name = DependentComponentsUtils.getBuildScopedTerseName(id)
+            val description = id.getDisplayName()
+            val buildable = resolvedResult.isBuildable()
+            val testSuite = resolvedResult.isTestSuite()
+            val children = LinkedHashSet<DependentComponentsRenderableDependency>()
+            for (childResolutionResult in resolvedResult.getChildren()) {
+                children.add(of(childResolutionResult))
+            }
+            return DependentComponentsRenderableDependency(id, name, description, buildable, testSuite, children)
         }
-        return new DependentComponentsRenderableDependency(id, name, description, buildable, testSuite, children);
-    }
-
-    private final Object id;
-    private final String name;
-    private final String description;
-    private final boolean buildable;
-    private final boolean testSuite;
-    private final LinkedHashSet<? extends RenderableDependency> children;
-
-    @SuppressWarnings("NonApiType") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    public DependentComponentsRenderableDependency(Object id, String name, String description, boolean buildable, boolean testSuite, LinkedHashSet<? extends RenderableDependency> children) {
-        checkNotNull(id, "id must not be null");
-        checkNotNull(emptyToNull(name), "name must not be null nor empty");
-        this.id = id;
-        this.name = name;
-        this.description = emptyToNull(description);
-        this.buildable = buildable;
-        this.testSuite = testSuite;
-        this.children = children;
-    }
-
-    @Override
-    public Object getId() {
-        return id;
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public ResolutionState getResolutionState() {
-        return ResolutionState.RESOLVED;
-    }
-
-    @Override
-    public Set<? extends RenderableDependency> getChildren() {
-        return children;
-    }
-
-    public boolean isBuildable() {
-        return buildable;
-    }
-
-    public boolean isTestSuite() {
-        return testSuite;
     }
 }

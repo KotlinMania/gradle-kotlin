@@ -13,25 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.cpp
 
-package org.gradle.nativeplatform.test.cpp;
-
-import org.gradle.api.provider.Provider;
-import org.gradle.language.cpp.CppBinary;
-import org.gradle.language.nativeplatform.ComponentWithExecutable;
-import org.gradle.language.nativeplatform.ComponentWithInstallation;
-import org.gradle.nativeplatform.test.TestComponent;
-import org.gradle.nativeplatform.test.tasks.RunTestExecutable;
+import org.gradle.language.cpp.CppBinary
+import org.gradle.language.nativeplatform.ComponentWithExecutable
+import org.gradle.language.nativeplatform.ComponentWithInstallation
+import org.gradle.nativeplatform.test.TestComponent
 
 /**
  * A test executable with tests implemented in C++.
  *
  * @since 4.5
  */
-public interface CppTestExecutable extends CppBinary, ComponentWithExecutable, ComponentWithInstallation, TestComponent {
+interface CppTestExecutable : CppBinary, ComponentWithExecutable, ComponentWithInstallation, TestComponent {
     /**
      * {@inheritDoc}
      */
-    @Override
-    Provider<? extends RunTestExecutable> getRunTask();
+    val runTask: Provider<out RunTestExecutable?>
 }

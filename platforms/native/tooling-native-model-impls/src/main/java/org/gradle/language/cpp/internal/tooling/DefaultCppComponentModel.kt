@@ -13,32 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.cpp.internal.tooling
 
-package org.gradle.language.cpp.internal.tooling;
+import java.io.Serializable
 
-import java.io.Serializable;
-import java.util.List;
-
-public class DefaultCppComponentModel implements Serializable {
-    private final String name;
-    private final String baseName;
-    private final List<DefaultCppBinaryModel> binaries;
-
-    public DefaultCppComponentModel(String name, String baseName, List<DefaultCppBinaryModel> binaries) {
-        this.name = name;
-        this.baseName = baseName;
-        this.binaries = binaries;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getBaseName() {
-        return baseName;
-    }
-
-    public List<DefaultCppBinaryModel> getBinaries() {
-        return binaries;
-    }
-}
+open class DefaultCppComponentModel(val name: String?, val baseName: String?, val binaries: MutableList<DefaultCppBinaryModel?>?) : Serializable

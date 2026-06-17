@@ -13,17 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.nativeplatform.test.xctest.internal.execution
 
-package org.gradle.nativeplatform.test.xctest.internal.execution;
-
-import com.google.common.collect.ImmutableList;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import org.apache.commons.lang3.StringUtils
 
 /**
  * Describes the set of filtered XCTests.
@@ -33,81 +26,81 @@ import java.util.Set;
  * test discovery we can do and the kind of filtering we can specify from the command-line.  This class reflects
  * those limitations.
  */
-public class XCTestSelection {
-    public static final String INCLUDE_ALL_TESTS = "All";
-    private static final String WILDCARD = "*";
-    private final Set<String> includedTests = new LinkedHashSet<String>();
+class XCTestSelection(includedTests: MutableCollection<String>, includedTestsCommandLine: MutableCollection<String>) {
+    private val includedTests: MutableSet<String?> = LinkedHashSet<String?>()
 
-    public XCTestSelection(Collection<String> includedTests, Collection<String> includedTestsCommandLine) {
-        Set<String> testSuiteCache = new HashSet<String>();
+    init {
+        val testSuiteCache: MutableSet<String?> = HashSet<String?>()
 
-        prepareIncludedTestList(includedTests, testSuiteCache);
-        prepareIncludedTestList(includedTestsCommandLine, testSuiteCache);
+        prepareIncludedTestList(includedTests, testSuiteCache)
+        prepareIncludedTestList(includedTestsCommandLine, testSuiteCache)
 
-        removeLogicalDuplication(testSuiteCache);
+        removeLogicalDuplication(testSuiteCache)
 
-        includeAllTestIfEmpty();
+        includeAllTestIfEmpty()
     }
 
-    private void removeLogicalDuplication(Set<String> testSuiteCache) {
-        for (Iterator<String> it = includedTests.iterator(); it.hasNext();) {
-            String includedTest = it.next();
+    private fun removeLogicalDuplication(testSuiteCache: MutableSet<String?>) {
+        val it = includedTests.iterator()
+        while (it.hasNext()) {
+            val includedTest = it.next()
             if (isIncludedTestCase(includedTest)) {
                 if (testSuiteCache.contains(getTestSuiteName(includedTest))) {
-                    it.remove();
+                    it.remove()
                 }
             }
         }
     }
 
-    private static boolean isIncludedTestCase(String includedTest) {
-        return includedTest.contains("/");
-    }
-
-    private static String getTestSuiteName(String includedTestCase) {
-        return StringUtils.split(includedTestCase, '/')[0];
-    }
-
-    private void includeAllTestIfEmpty() {
+    private fun includeAllTestIfEmpty() {
         if (includedTests.isEmpty()) {
-            includedTests.add(INCLUDE_ALL_TESTS);
+            includedTests.add(INCLUDE_ALL_TESTS)
         }
     }
 
-    private void prepareIncludedTestList(Collection<String> testFilters, Set<String> testSuiteCache) {
-        for (String testFilter : testFilters) {
-            includedTests.add(prepareIncludedTest(disallowForwardSlash(testFilter), testSuiteCache));
+    private fun prepareIncludedTestList(testFilters: MutableCollection<String>, testSuiteCache: MutableSet<String?>) {
+        for (testFilter in testFilters) {
+            includedTests.add(prepareIncludedTest(disallowForwardSlash(testFilter), testSuiteCache))
         }
     }
 
-    private String disallowForwardSlash(String testFilter) {
-        if (testFilter.contains("/")) {
-            throw new IllegalArgumentException(String.format("'%s' is an invalid pattern. Patterns cannot contain forward slash.", testFilter));
-        }
-        return testFilter;
+    private fun disallowForwardSlash(testFilter: String): String {
+        require(!testFilter.contains("/")) { String.format("'%s' is an invalid pattern. Patterns cannot contain forward slash.", testFilter) }
+        return testFilter
     }
 
-    private String prepareIncludedTest(String testFilter, Set<String> testSuiteCache) {
-        String[] tokens = StringUtils.splitPreserveAllTokens(testFilter, '.');
-        if (tokens.length > 3) {
-            throw new IllegalArgumentException(String.format("'%s' is an invalid pattern. Patterns should have one or two dots.", testFilter));
-        } else if (tokens.length == 3) {
-            if (WILDCARD.equals(tokens[2])) {
-                String filter = tokens[0] + "." + tokens[1];
-                testSuiteCache.add(filter);
-                return filter;
-            } else if (tokens[2].isEmpty()) {
-                return testFilter;
+    private fun prepareIncludedTest(testFilter: String?, testSuiteCache: MutableSet<String?>): String? {
+        val tokens = StringUtils.splitPreserveAllTokens(testFilter, '.')
+        require(tokens.size <= 3) { String.format("'%s' is an invalid pattern. Patterns should have one or two dots.", testFilter) }
+        if (tokens.size == 3) {
+            if (WILDCARD == tokens[2]) {
+                val filter = tokens[0] + "." + tokens[1]
+                testSuiteCache.add(filter)
+                return filter
+            } else if (tokens[2]!!.isEmpty()) {
+                return testFilter
             }
-            return tokens[0] + "." + tokens[1] + "/" + tokens[2];
-        } else if (tokens.length == 2 && !WILDCARD.equals(tokens[1])) {
-            testSuiteCache.add(testFilter);
+            return tokens[0] + "." + tokens[1] + "/" + tokens[2]
+        } else if (tokens.size == 2 && WILDCARD != tokens[1]) {
+            testSuiteCache.add(testFilter)
         }
 
-        return testFilter;
+        return testFilter
     }
 
-    public Collection<String> getIncludedTests() {
-        return ImmutableList.copyOf(includedTests);
+    fun getIncludedTests(): MutableCollection<String?> {
+        return ImmutableList.copyOf<String?>(includedTests)
+    }
+
+    companion object {
+        const val INCLUDE_ALL_TESTS: String = "All"
+        private const val WILDCARD = "*"
+        private fun isIncludedTestCase(includedTest: String): Boolean {
+            return includedTest.contains("/")
+        }
+
+        private fun getTestSuiteName(includedTestCase: String?): String? {
+            return StringUtils.split(includedTestCase, '/')[0]
+        }
     }
 }

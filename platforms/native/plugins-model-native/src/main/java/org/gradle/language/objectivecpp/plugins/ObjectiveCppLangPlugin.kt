@@ -13,89 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.objectivecpp.plugins;
+package org.gradle.language.objectivecpp.plugins
 
-import org.gradle.api.Incubating;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.language.base.internal.SourceTransformTaskConfig;
-import org.gradle.language.base.internal.registry.LanguageTransformContainer;
-import org.gradle.language.base.plugins.ComponentModelBasePlugin;
-import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal;
-import org.gradle.language.nativeplatform.internal.NativeLanguageTransform;
-import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig;
-import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig;
-import org.gradle.language.objectivecpp.ObjectiveCppSourceSet;
-import org.gradle.language.objectivecpp.internal.DefaultObjectiveCppSourceSet;
-import org.gradle.language.objectivecpp.tasks.ObjectiveCppCompile;
-import org.gradle.language.objectivecpp.tasks.ObjectiveCppPreCompiledHeaderCompile;
-import org.gradle.model.Mutate;
-import org.gradle.model.RuleSource;
-import org.gradle.nativeplatform.internal.DefaultPreprocessingTool;
-import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform;
-import org.gradle.nativeplatform.toolchain.internal.ToolType;
-import org.gradle.platform.base.ComponentType;
-import org.gradle.platform.base.TypeBuilder;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
+import org.gradle.api.Incubating
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.language.base.internal.SourceTransformTaskConfig
+import org.gradle.language.base.internal.registry.LanguageTransformContainer
+import org.gradle.language.base.plugins.ComponentModelBasePlugin
+import org.gradle.language.nativeplatform.internal.DependentSourceSetInternal
+import org.gradle.language.nativeplatform.internal.NativeLanguageTransform
+import org.gradle.language.nativeplatform.internal.PCHCompileTaskConfig
+import org.gradle.language.nativeplatform.internal.SourceCompileTaskConfig
+import org.gradle.language.objectivecpp.ObjectiveCppSourceSet
+import org.gradle.language.objectivecpp.internal.DefaultObjectiveCppSourceSet
+import org.gradle.language.objectivecpp.tasks.ObjectiveCppCompile
+import org.gradle.language.objectivecpp.tasks.ObjectiveCppPreCompiledHeaderCompile
+import org.gradle.model.Mutate
+import org.gradle.model.RuleSource
+import org.gradle.nativeplatform.internal.DefaultPreprocessingTool
+import org.gradle.nativeplatform.internal.pch.PchEnabledLanguageTransform
+import org.gradle.nativeplatform.toolchain.internal.ToolType
+import org.gradle.platform.base.ComponentType
+import org.gradle.platform.base.TypeBuilder
 
 /**
  * Adds core Objective-Cpp language support.
  */
 @Incubating
-public abstract class ObjectiveCppLangPlugin implements Plugin<Project> {
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(ComponentModelBasePlugin.class);
+abstract class ObjectiveCppLangPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(ComponentModelBasePlugin::class.java)
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    static class Rules extends RuleSource {
+    internal class Rules : RuleSource() {
         @ComponentType
-        void registerLanguage(TypeBuilder<ObjectiveCppSourceSet> builder) {
-            builder.defaultImplementation(DefaultObjectiveCppSourceSet.class);
-            builder.internalView(DependentSourceSetInternal.class);
+        fun registerLanguage(builder: TypeBuilder<ObjectiveCppSourceSet?>) {
+            builder.defaultImplementation(DefaultObjectiveCppSourceSet::class.java)
+            builder.internalView(DependentSourceSetInternal::class.java)
         }
 
         @Mutate
-        void registerLanguageTransform(LanguageTransformContainer languages, ServiceRegistry serviceRegistry) {
-            languages.add(new ObjectiveCpp());
+        fun registerLanguageTransform(languages: LanguageTransformContainer, serviceRegistry: ServiceRegistry?) {
+            languages.add(ObjectiveCpp())
         }
     }
 
-    private static class ObjectiveCpp extends NativeLanguageTransform<ObjectiveCppSourceSet> implements PchEnabledLanguageTransform<ObjectiveCppSourceSet> {
-        @Override
-        public Class<ObjectiveCppSourceSet> getSourceSetType() {
-            return ObjectiveCppSourceSet.class;
-        }
+    private class ObjectiveCpp : NativeLanguageTransform<ObjectiveCppSourceSet?>(), PchEnabledLanguageTransform<ObjectiveCppSourceSet?> {
+        val sourceSetType: Class<ObjectiveCppSourceSet?>?
+            get() = ObjectiveCppSourceSet::class.java
 
-        @Override
-        public Map<String, Class<?>> getBinaryTools() {
-            Map<String, Class<?>> tools = new LinkedHashMap<>();
-            tools.put("objcppCompiler", DefaultPreprocessingTool.class);
-            return tools;
-        }
+        val binaryTools: MutableMap<String?, Class<*>?>
+            get() {
+                val tools: MutableMap<String?, Class<*>?> = LinkedHashMap<String?, Class<*>?>()
+                tools.put("objcppCompiler", DefaultPreprocessingTool::class.java)
+                return tools
+            }
 
-        @Override
-        public String getLanguageName() {
-            return "objcpp";
-        }
+        val languageName: String
+            get() = "objcpp"
 
-        @Override
-        public ToolType getToolType() {
-            return ToolType.OBJECTIVECPP_COMPILER;
-        }
+        val toolType: ToolType
+            get() = ToolType.OBJECTIVECPP_COMPILER
 
-        @Override
-        public SourceTransformTaskConfig getTransformTask() {
-            return new SourceCompileTaskConfig(this, ObjectiveCppCompile.class);
-        }
+        val transformTask: SourceTransformTaskConfig
+            get() = SourceCompileTaskConfig(this, ObjectiveCppCompile::class.java)
 
-        @Override
-        public SourceTransformTaskConfig getPchTransformTask() {
-            return new PCHCompileTaskConfig(this, ObjectiveCppPreCompiledHeaderCompile.class);
+        override fun getPchTransformTask(): SourceTransformTaskConfig {
+            return PCHCompileTaskConfig(this, ObjectiveCppPreCompiledHeaderCompile::class.java)
         }
     }
 }
