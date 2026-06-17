@@ -13,64 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.transport
 
-package org.gradle.api.internal.artifacts.repositories.transport;
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.concurrent.Callable
 
-import org.gradle.internal.UncheckedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.Callable;
-
-
-public class NetworkOperationBackOffAndRetry<T> {
-    private final static String MAX_ATTEMPTS = "org.gradle.internal.network.retry.max.attempts";
-    private final static String INITIAL_BACKOFF_MS = "org.gradle.internal.network.retry.initial.backOff";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkOperationBackOffAndRetry.class);
-    private final int maxDeployAttempts;
-    private final int initialBackOff;
-
-    public NetworkOperationBackOffAndRetry() {
-        this(Integer.getInteger(MAX_ATTEMPTS, 3), Integer.getInteger(INITIAL_BACKOFF_MS, 1000));
+class NetworkOperationBackOffAndRetry<T> @JvmOverloads constructor(
+    private val maxDeployAttempts: Int = Integer.getInteger(MAX_ATTEMPTS, 3), private val initialBackOff: Int = Integer.getInteger(
+        INITIAL_BACKOFF_MS, 1000
+    )
+) {
+    init {
+        assert(maxDeployAttempts > 0)
+        assert(initialBackOff > 0)
     }
 
-    public NetworkOperationBackOffAndRetry(int maxDeployAttempts, int initialBackOff) {
-        this.maxDeployAttempts = maxDeployAttempts;
-        this.initialBackOff = initialBackOff;
-        assert maxDeployAttempts > 0;
-        assert initialBackOff > 0;
-    }
-
-    public T withBackoffAndRetry(Callable<T> operation) {
-        int backoff = initialBackOff;
-        int retries = 0;
-        T returnValue = null;
+    fun withBackoffAndRetry(operation: Callable<T?>): T? {
+        var backoff = initialBackOff
+        var retries = 0
+        var returnValue: T? = null
         while (retries < maxDeployAttempts) {
-            retries++;
-            Throwable failure;
+            retries++
+            val failure: Throwable?
             try {
-                returnValue = operation.call();
+                returnValue = operation.call()
                 if (retries > 1) {
-                    LOGGER.info("Successfully ran '{}' after {} retries", operation, retries - 1);
+                    LOGGER.info("Successfully ran '{}' after {} retries", operation, retries - 1)
                 }
-                break;
-            } catch (Exception throwable) {
-                failure = throwable;
+                break
+            } catch (throwable: Exception) {
+                failure = throwable
             }
-            if (!NetworkingIssueVerifier.isLikelyTransientNetworkingIssue(failure) || retries == maxDeployAttempts) {
-                throw UncheckedException.throwAsUncheckedException(failure);
+            if (!NetworkingIssueVerifier.isLikelyTransientNetworkingIssue<Throwable?>(failure) || retries == maxDeployAttempts) {
+                throw throwAsUncheckedException(failure)
             } else {
-                LOGGER.info("Error in '{}'. Waiting {}ms before next retry, {} retries left", operation, backoff, maxDeployAttempts - retries);
-                LOGGER.debug("Network operation failed", failure);
+                LOGGER.info("Error in '{}'. Waiting {}ms before next retry, {} retries left", operation, backoff, maxDeployAttempts - retries)
+                LOGGER.debug("Network operation failed", failure)
                 try {
-                    Thread.sleep(backoff);
-                    backoff *= 2;
-                } catch (InterruptedException e) {
-                    throw UncheckedException.throwAsUncheckedException(e);
+                    Thread.sleep(backoff.toLong())
+                    backoff *= 2
+                } catch (e: InterruptedException) {
+                    throw throwAsUncheckedException(e)
                 }
             }
         }
-        return returnValue;
+        return returnValue
+    }
+
+    companion object {
+        private const val MAX_ATTEMPTS = "org.gradle.internal.network.retry.max.attempts"
+        private const val INITIAL_BACKOFF_MS = "org.gradle.internal.network.retry.initial.backOff"
+
+        private val LOGGER: Logger = LoggerFactory.getLogger(NetworkOperationBackOffAndRetry::class.java)
     }
 }

@@ -13,313 +13,280 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import com.google.common.collect.ImmutableList;
-import org.bouncycastle.openpgp.PGPObjectFactory;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPUtil;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.gradle.cache.FileLockManager;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.IndexedCacheParameters;
-import org.gradle.cache.PersistentCache;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.BaseSerializerFactory;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.ListSerializer;
-import org.gradle.security.internal.Fingerprint;
-import org.gradle.security.internal.PublicKeyResultBuilder;
-import org.gradle.security.internal.PublicKeyService;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.collect.ImmutableList
+import org.bouncycastle.openpgp.PGPObjectFactory
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
+import org.gradle.cache.FileLockManager
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.IndexedCacheParameters
+import org.gradle.cache.PersistentCache
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.internal.ProducerGuard
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.BaseSerializerFactory
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.ListSerializer
+import org.gradle.security.internal.Fingerprint
+import org.gradle.security.internal.Fingerprint.Companion.of
+import org.gradle.security.internal.Fingerprint.Companion.wrap
+import org.gradle.security.internal.PublicKeyResultBuilder
+import org.gradle.security.internal.PublicKeyService
+import org.gradle.security.internal.SecuritySupport.toLongIdHexString
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.ByteArrayInputStream
+import java.io.Closeable
+import java.io.EOFException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Supplier
 
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.EOFException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+class CrossBuildCachingKeyService(
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    decoratorFactory: InMemoryCacheDecoratorFactory,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val delegate: PublicKeyService,
+    private val timeProvider: BuildCommencedTimeProvider,
+    private val refreshKeys: Boolean
+) : PublicKeyService, Closeable {
+    private val cache: PersistentCache
+    private val publicKeyRings: IndexedCache<Fingerprint?, CacheEntry<PGPPublicKeyRing?>?>
 
-import static org.gradle.security.internal.SecuritySupport.toLongIdHexString;
-
-public class CrossBuildCachingKeyService implements PublicKeyService, Closeable {
-    final static long MISSING_KEY_TIMEOUT = TimeUnit.MILLISECONDS.convert(24, TimeUnit.HOURS);
-
-    private final PersistentCache cache;
-    private final BuildOperationRunner buildOperationRunner;
-    private final PublicKeyService delegate;
-    private final BuildCommencedTimeProvider timeProvider;
-    private final boolean refreshKeys;
-    private final IndexedCache<Fingerprint, CacheEntry<PGPPublicKeyRing>> publicKeyRings;
     // Some long key Id may have collisions. This is extremely unlikely but if it happens, we know how to workaround
-    private final IndexedCache<Long, CacheEntry<List<Fingerprint>>> longIdToFingerprint;
-    private final ProducerGuard<Fingerprint> fingerPrintguard = ProducerGuard.adaptive();
-    private final ProducerGuard<Long> longIdGuard = ProducerGuard.adaptive();
+    private val longIdToFingerprint: IndexedCache<Long?, CacheEntry<MutableList<Fingerprint>?>?>
+    private val fingerPrintguard: ProducerGuard<Fingerprint?> = ProducerGuard.adaptive<Fingerprint?>()
+    private val longIdGuard: ProducerGuard<Long?> = ProducerGuard.adaptive<Long?>()
 
-    public CrossBuildCachingKeyService(
-        GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-        InMemoryCacheDecoratorFactory decoratorFactory,
-        BuildOperationRunner buildOperationRunner,
-        PublicKeyService delegate,
-        BuildCommencedTimeProvider timeProvider,
-        boolean refreshKeys) {
+    init {
         cache = cacheBuilderFactory
             .createCrossVersionCacheBuilder("keyrings")
             .withInitialLockMode(FileLockManager.LockMode.OnDemand)
-            .open();
-        this.buildOperationRunner = buildOperationRunner;
-        this.delegate = delegate;
-        this.timeProvider = timeProvider;
-        this.refreshKeys = refreshKeys;
-        FingerprintSerializer fingerprintSerializer = new FingerprintSerializer();
-        IndexedCacheParameters<Fingerprint, CacheEntry<PGPPublicKeyRing>> keyringParams = IndexedCacheParameters.of(
+            .open()
+        val fingerprintSerializer = FingerprintSerializer()
+        val keyringParams: IndexedCacheParameters<Fingerprint?, CacheEntry<PGPPublicKeyRing?>?> = IndexedCacheParameters.of<Fingerprint?, CacheEntry<PGPPublicKeyRing?>?>(
             "publickeyrings",
             fingerprintSerializer,
-            new PublicKeyRingCacheEntrySerializer()
+            PublicKeyRingCacheEntrySerializer()
         ).withCacheDecorator(
             decoratorFactory.decorator(2000, true)
-        );
-        publicKeyRings = cache.createIndexedCache(keyringParams);
+        )
+        publicKeyRings = cache.createIndexedCache<Fingerprint?, CacheEntry<PGPPublicKeyRing?>?>(keyringParams)
 
-        IndexedCacheParameters<Long, CacheEntry<List<Fingerprint>>> mappingParameters = IndexedCacheParameters.of(
+        val mappingParameters: IndexedCacheParameters<Long?, CacheEntry<MutableList<Fingerprint?>?>?> = IndexedCacheParameters.of<Long?, CacheEntry<MutableList<Fingerprint?>?>?>(
             "keymappings",
             BaseSerializerFactory.LONG_SERIALIZER,
-            new FingerprintListCacheEntrySerializer(new ListSerializer<>(fingerprintSerializer))
+            FingerprintListCacheEntrySerializer(ListSerializer<Fingerprint?>(fingerprintSerializer))
         ).withCacheDecorator(
             decoratorFactory.decorator(2000, true)
-        );
-        longIdToFingerprint = cache.createIndexedCache(mappingParameters);
+        )
+        longIdToFingerprint = cache.createIndexedCache<Long?, CacheEntry<MutableList<Fingerprint?>?>?>(mappingParameters)
     }
 
-    @Override
-    public void close() {
-        cache.close();
+    override fun close() {
+        cache.close()
     }
 
-    private boolean hasExpired(CacheEntry<?> key) {
+    private fun hasExpired(key: CacheEntry<*>): Boolean {
         if (key.value != null) {
             // if a key was found in the cache, it's permanent
-            return false;
+            return false
         }
-        long elapsed = timeProvider.getCurrentTime() - key.timestamp;
-        return refreshKeys || elapsed > MISSING_KEY_TIMEOUT;
+        val elapsed = timeProvider.getCurrentTime() - key.timestamp
+        return refreshKeys || elapsed > MISSING_KEY_TIMEOUT
     }
 
-    @Override
-    public void findByLongId(long keyId, PublicKeyResultBuilder builder) {
-        longIdGuard.guardByKey(keyId, () -> {
-            CacheEntry<List<Fingerprint>> fingerprints = longIdToFingerprint.getIfPresent(keyId);
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
+        longIdGuard.guardByKey<Any?>(keyId, Supplier {
+            val fingerprints = longIdToFingerprint.getIfPresent(keyId)
             if (fingerprints == null || hasExpired(fingerprints)) {
-                buildOperationRunner.run(new RunnableBuildOperation() {
-                    @Override
-                    public void run(BuildOperationContext context) {
-                        long currentTime = timeProvider.getCurrentTime();
-                        AtomicBoolean missing = new AtomicBoolean(true);
-                        delegate.findByLongId(keyId, new PublicKeyResultBuilder() {
-                            @Override
-                            public void keyRing(PGPPublicKeyRing keyring) {
-                                missing.set(false);
-                                builder.keyRing(keyring);
-                                Iterator<PGPPublicKey> pkIt = keyring.getPublicKeys();
+                buildOperationRunner.run(object : RunnableBuildOperation {
+                    override fun run(context: BuildOperationContext) {
+                        val currentTime = timeProvider.getCurrentTime()
+                        val missing = AtomicBoolean(true)
+                        delegate.findByLongId(keyId, object : PublicKeyResultBuilder {
+                            override fun keyRing(keyring: PGPPublicKeyRing) {
+                                missing.set(false)
+                                builder.keyRing(keyring)
+                                val pkIt = keyring.getPublicKeys()
                                 while (pkIt.hasNext()) {
-                                    PGPPublicKey publicKey = pkIt.next();
-                                    Fingerprint fingerprint = Fingerprint.of(publicKey);
-                                    publicKeyRings.put(fingerprint, new CacheEntry<>(currentTime, keyring));
-                                    updateLongKeyIndex(fingerprint, keyId);
+                                    val publicKey = pkIt.next()
+                                    val fingerprint = of(publicKey)
+                                    publicKeyRings.put(fingerprint, CacheEntry<PGPPublicKeyRing?>(currentTime, keyring))
+                                    updateLongKeyIndex(fingerprint, keyId)
                                 }
                             }
 
-                            @Override
-                            public void publicKey(PGPPublicKey publicKey) {
-                                missing.set(false);
+                            override fun publicKey(publicKey: PGPPublicKey) {
+                                missing.set(false)
                                 if (publicKey.getKeyID() == keyId) {
-                                    builder.publicKey(publicKey);
+                                    builder.publicKey(publicKey)
                                 }
                             }
-                        });
+                        })
                         if (missing.get()) {
-                            longIdToFingerprint.put(keyId, new CacheEntry<>(currentTime, null));
+                            longIdToFingerprint.put(keyId, CacheEntry<MutableList<Fingerprint?>?>(currentTime, null))
                         }
                     }
 
-                    @Override
-                    public BuildOperationDescriptor.Builder description() {
-                        return BuildOperationDescriptor.displayName("Fetching public key")
-                            .progressDisplayName("Downloading public key " + toLongIdHexString(keyId));
+                    override fun description(): BuildOperationDescriptor.Builder {
+                        return@guardByKey BuildOperationDescriptor.displayName("Fetching public key")
+                            .progressDisplayName("Downloading public key " + toLongIdHexString(keyId))
                     }
-                });
+                })
             } else {
                 if (fingerprints.value != null) {
-                    for (Fingerprint fingerprint : fingerprints.value) {
-                        findByFingerprint(fingerprint.getBytes(), new PublicKeyResultBuilder() {
-                            @Override
-                            public void keyRing(PGPPublicKeyRing keyring) {
-                                builder.keyRing(keyring);
+                    for (fingerprint in fingerprints.value) {
+                        findByFingerprint(fingerprint.bytes, object : PublicKeyResultBuilder {
+                            override fun keyRing(keyring: PGPPublicKeyRing?) {
+                                builder.keyRing(keyring)
                             }
 
-                            @Override
-                            public void publicKey(PGPPublicKey publicKey) {
+                            override fun publicKey(publicKey: PGPPublicKey) {
                                 if (publicKey.getKeyID() == keyId) {
-                                    builder.publicKey(publicKey);
+                                    builder.publicKey(publicKey)
                                 }
                             }
-                        });
+                        })
                     }
                 }
             }
-            return null;
-        });
+            null
+        })
     }
 
-    private void updateLongKeyIndex(Fingerprint fingerprint, long keyId) {
-        CacheEntry<List<Fingerprint>> fprints = longIdToFingerprint.getIfPresent(keyId);
-        long currentTime = timeProvider.getCurrentTime();
+    private fun updateLongKeyIndex(fingerprint: Fingerprint, keyId: Long) {
+        val fprints = longIdToFingerprint.getIfPresent(keyId)
+        val currentTime = timeProvider.getCurrentTime()
         if (fprints == null) {
-            longIdToFingerprint.put(keyId, new CacheEntry<>(currentTime, Collections.singletonList(fingerprint)));
+            longIdToFingerprint.put(keyId, CacheEntry<MutableList<Fingerprint?>?>(currentTime, mutableListOf<Fingerprint?>(fingerprint)))
         } else {
-            longIdToFingerprint.remove(keyId);
-            ImmutableList.Builder<Fingerprint> list = ImmutableList.builderWithExpectedSize(1 + fprints.value.size());
-            list.addAll(fprints.value);
-            list.add(fingerprint);
-            longIdToFingerprint.put(keyId, new CacheEntry<>(currentTime, list.build()));
+            longIdToFingerprint.remove(keyId)
+            val list = ImmutableList.builderWithExpectedSize<Fingerprint?>(1 + fprints.value!!.size)
+            list.addAll(fprints.value)
+            list.add(fingerprint)
+            longIdToFingerprint.put(keyId, CacheEntry<MutableList<Fingerprint?>?>(currentTime, list.build()))
         }
     }
 
-    @Override
-    public void findByFingerprint(byte[] bytes, PublicKeyResultBuilder builder) {
-        Fingerprint fingerprint = Fingerprint.wrap(bytes);
-        fingerPrintguard.guardByKey(fingerprint, () -> {
-            CacheEntry<PGPPublicKeyRing> cacheEntry = publicKeyRings.getIfPresent(fingerprint);
+    override fun findByFingerprint(bytes: ByteArray, builder: PublicKeyResultBuilder) {
+        val fingerprint = wrap(bytes)
+        fingerPrintguard.guardByKey<Any?>(fingerprint, Supplier {
+            var cacheEntry = publicKeyRings.getIfPresent(fingerprint)
             if (cacheEntry == null || hasExpired(cacheEntry)) {
-                LookupPublicKeyResultBuilder keyResultBuilder = new LookupPublicKeyResultBuilder();
-                delegate.findByFingerprint(bytes, keyResultBuilder);
-                cacheEntry = keyResultBuilder.entry;
+                val keyResultBuilder: LookupPublicKeyResultBuilder = CrossBuildCachingKeyService.LookupPublicKeyResultBuilder()
+                delegate.findByFingerprint(bytes, keyResultBuilder)
+                cacheEntry = keyResultBuilder.entry
             }
             if (cacheEntry != null) {
-                builder.keyRing(cacheEntry.value);
-                Iterator<PGPPublicKey> pkIt = cacheEntry.value.getPublicKeys();
+                builder.keyRing(cacheEntry.value)
+                val pkIt = cacheEntry.value!!.getPublicKeys()
                 while (pkIt.hasNext()) {
-                    PGPPublicKey publicKey = pkIt.next();
-                    if (Arrays.equals(publicKey.getFingerprint(), bytes)) {
-                        builder.publicKey(publicKey);
+                    val publicKey = pkIt.next()
+                    if (publicKey.getFingerprint().contentEquals(bytes)) {
+                        builder.publicKey(publicKey)
                     }
                 }
             }
-            return null;
-        });
+            null
+        })
     }
 
-    private static class PublicKeyRingCacheEntrySerializer extends AbstractSerializer<CacheEntry<PGPPublicKeyRing>> {
-
-        @Override
-        public CacheEntry<PGPPublicKeyRing> read(Decoder decoder) throws Exception {
-            long timestamp = decoder.readLong();
-            boolean present = decoder.readBoolean();
+    private class PublicKeyRingCacheEntrySerializer : AbstractSerializer<CacheEntry<PGPPublicKeyRing?>?>() {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): CacheEntry<PGPPublicKeyRing?> {
+            val timestamp = decoder.readLong()
+            val present = decoder.readBoolean()
             if (present) {
-                byte[] encoded = decoder.readBinary();
-                PGPObjectFactory objectFactory = new PGPObjectFactory(
-                    PGPUtil.getDecoderStream(new ByteArrayInputStream(encoded)), new BcKeyFingerprintCalculator());
-                Object object = objectFactory.nextObject();
-                if (object instanceof PGPPublicKeyRing) {
-                    return new CacheEntry<>(timestamp, (PGPPublicKeyRing) object);
+                val encoded = decoder.readBinary()
+                val objectFactory = PGPObjectFactory(
+                    PGPUtil.getDecoderStream(ByteArrayInputStream(encoded)), BcKeyFingerprintCalculator()
+                )
+                val `object` = objectFactory.nextObject()
+                if (`object` is PGPPublicKeyRing) {
+                    return CacheEntry<PGPPublicKeyRing?>(timestamp, `object`)
                 }
-                throw new IllegalStateException("Unexpected key in cache: " + object.getClass());
+                throw IllegalStateException("Unexpected key in cache: " + `object`.javaClass)
             }
-            return new CacheEntry<>(timestamp, null);
+            return CacheEntry<PGPPublicKeyRing?>(timestamp, null)
         }
 
-        @Override
-        public void write(Encoder encoder, CacheEntry<PGPPublicKeyRing> value) throws Exception {
-            encoder.writeLong(value.timestamp);
-            PGPPublicKeyRing key = value.value;
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CacheEntry<PGPPublicKeyRing?>) {
+            encoder.writeLong(value.timestamp)
+            val key = value.value
             if (key != null) {
-                encoder.writeBoolean(true);
-                encoder.writeBinary(key.getEncoded());
+                encoder.writeBoolean(true)
+                encoder.writeBinary(key.getEncoded())
             } else {
-                encoder.writeBoolean(false);
+                encoder.writeBoolean(false)
             }
         }
     }
 
-    private static class CacheEntry<T> {
-        private final long timestamp;
-        private final T value;
+    private class CacheEntry<T>(private val timestamp: Long, private val value: T?)
 
-        private CacheEntry(long timestamp, T value) {
-            this.timestamp = timestamp;
-            this.value = value;
+    private class FingerprintSerializer : AbstractSerializer<Fingerprint?>() {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): Fingerprint {
+            return Fingerprint.wrap(decoder.readBinary()!!)
+        }
+
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: Fingerprint) {
+            encoder.writeBinary(value.bytes)
         }
     }
 
-    private static class FingerprintSerializer extends AbstractSerializer<Fingerprint> {
+    private inner class LookupPublicKeyResultBuilder : PublicKeyResultBuilder {
+        var entry: CacheEntry<PGPPublicKeyRing?>? = null
 
-        @Override
-        public Fingerprint read(Decoder decoder) throws Exception {
-            return Fingerprint.wrap(decoder.readBinary());
-        }
-
-        @Override
-        public void write(Encoder encoder, Fingerprint value) throws Exception {
-            encoder.writeBinary(value.getBytes());
-        }
-    }
-
-    private class LookupPublicKeyResultBuilder implements PublicKeyResultBuilder {
-        CacheEntry<PGPPublicKeyRing> entry;
-
-        @Override
-        public void keyRing(PGPPublicKeyRing keyring) {
-            entry = new CacheEntry<>(timeProvider.getCurrentTime(), keyring);
-            Iterator<PGPPublicKey> pkIt = keyring.getPublicKeys();
+        override fun keyRing(keyring: PGPPublicKeyRing) {
+            entry = CacheEntry<PGPPublicKeyRing?>(timeProvider.getCurrentTime(), keyring)
+            val pkIt = keyring.getPublicKeys()
             while (pkIt.hasNext()) {
-                PGPPublicKey publicKey = pkIt.next();
-                Fingerprint fingerprint = Fingerprint.of(publicKey);
-                long keyID = publicKey.getKeyID();
-                updateLongKeyIndex(fingerprint, keyID);
+                val publicKey = pkIt.next()
+                val fingerprint = of(publicKey)
+                val keyID = publicKey.getKeyID()
+                updateLongKeyIndex(fingerprint, keyID)
             }
         }
 
-        @Override
-        public void publicKey(PGPPublicKey publicKey) {
+        override fun publicKey(publicKey: PGPPublicKey?) {
         }
     }
 
-    private static class FingerprintListCacheEntrySerializer extends AbstractSerializer<CacheEntry<List<Fingerprint>>> {
-        private final ListSerializer<Fingerprint> listSerializer;
-
-        public FingerprintListCacheEntrySerializer(ListSerializer<Fingerprint> listSerializer) {
-            this.listSerializer = listSerializer;
+    private class FingerprintListCacheEntrySerializer(private val listSerializer: ListSerializer<Fingerprint?>) : AbstractSerializer<CacheEntry<MutableList<Fingerprint?>?>?>() {
+        @Throws(EOFException::class, Exception::class)
+        override fun read(decoder: Decoder): CacheEntry<MutableList<Fingerprint?>?> {
+            val timestamp = decoder.readLong()
+            val fingerprints: MutableList<Fingerprint?>? = if (decoder.readBoolean()) listSerializer.read(decoder) else null
+            return CacheEntry<MutableList<Fingerprint?>?>(timestamp, fingerprints)
         }
 
-        @Override
-        public CacheEntry<List<Fingerprint>> read(Decoder decoder) throws EOFException, Exception {
-            long timestamp = decoder.readLong();
-            List<Fingerprint> fingerprints = decoder.readBoolean() ? listSerializer.read(decoder) : null;
-            return new CacheEntry<>(timestamp, fingerprints);
-        }
-
-        @Override
-        public void write(Encoder encoder, CacheEntry<List<Fingerprint>> value) throws Exception {
-            encoder.writeLong(value.timestamp);
-            List<Fingerprint> fingerprints = value.value;
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CacheEntry<MutableList<Fingerprint?>?>) {
+            encoder.writeLong(value.timestamp)
+            val fingerprints = value.value
             if (fingerprints == null) {
-                encoder.writeBoolean(false);
+                encoder.writeBoolean(false)
             } else {
-                encoder.writeBoolean(true);
-                listSerializer.write(encoder, fingerprints);
+                encoder.writeBoolean(true)
+                listSerializer.write(encoder, fingerprints)
             }
         }
+    }
+
+    companion object {
+        val MISSING_KEY_TIMEOUT: Long = TimeUnit.MILLISECONDS.convert(24, TimeUnit.HOURS)
     }
 }

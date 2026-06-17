@@ -13,132 +13,131 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.AbstractRealisedModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.DefaultVirtualModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ExternalDependencyDescriptor;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.VirtualComponentIdentifier;
-import org.gradle.internal.component.external.model.ivy.DefaultIvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadataSerializationHelper;
-import org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor;
-import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadataSerializationHelper;
-import org.gradle.internal.resolve.caching.DesugaringAttributeContainerSerializer;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.AbstractRealisedModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.DefaultVirtualModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ExternalDependencyDescriptor
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.VirtualComponentIdentifier
+import org.gradle.internal.component.external.model.ivy.DefaultIvyModuleResolveMetadata
+import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadata
+import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadataSerializationHelper
+import org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor
+import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadataSerializationHelper
+import org.gradle.internal.resolve.caching.DesugaringAttributeContainerSerializer
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.EOFException
+import java.io.IOException
 
 /**
- * Serializer for {@link ModuleComponentResolveMetadata}.
+ * Serializer for [ModuleComponentResolveMetadata].
  *
- * This serializer will first transform any {@link  AbstractLazyModuleComponentResolveMetadata lazy} metadata
- * in the {@link AbstractRealisedModuleComponentResolveMetadata realised} version so that the complete state can be serialized.
+ * This serializer will first transform any [lazy][AbstractLazyModuleComponentResolveMetadata] metadata
+ * in the [realised][AbstractRealisedModuleComponentResolveMetadata] version so that the complete state can be serialized.
  */
-@ServiceScope(Scope.Build.class)
-public class ModuleComponentResolveMetadataSerializer extends AbstractSerializer<ModuleComponentResolveMetadata> {
+@ServiceScope(Scope.Build::class)
+class ModuleComponentResolveMetadataSerializer(
+    private val delegate: ModuleMetadataSerializer,
+    attributeContainerSerializer: DesugaringAttributeContainerSerializer,
+    capabilitySelectorSerializer: CapabilitySelectorSerializer,
+    moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+) : AbstractSerializer<ModuleComponentResolveMetadata?>() {
+    private val ivySerializationHelper: RealisedIvyModuleResolveMetadataSerializationHelper
+    private val mavenSerializationHelper: RealisedMavenModuleResolveMetadataSerializationHelper
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory?
 
-    private final RealisedIvyModuleResolveMetadataSerializationHelper ivySerializationHelper;
-    private final RealisedMavenModuleResolveMetadataSerializationHelper mavenSerializationHelper;
-    private final ModuleMetadataSerializer delegate;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    public ModuleComponentResolveMetadataSerializer(ModuleMetadataSerializer delegate, DesugaringAttributeContainerSerializer attributeContainerSerializer, CapabilitySelectorSerializer capabilitySelectorSerializer, ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        this.delegate = delegate;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        ivySerializationHelper = new RealisedIvyModuleResolveMetadataSerializationHelper(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory);
-        mavenSerializationHelper = new RealisedMavenModuleResolveMetadataSerializationHelper(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory);
+    init {
+        this.moduleIdentifierFactory = moduleIdentifierFactory
+        ivySerializationHelper = RealisedIvyModuleResolveMetadataSerializationHelper(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory)
+        mavenSerializationHelper = RealisedMavenModuleResolveMetadataSerializationHelper(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory)
     }
 
-    @Override
-    public ModuleComponentResolveMetadata read(Decoder decoder) throws EOFException, Exception {
+    @Throws(EOFException::class, Exception::class)
+    override fun read(decoder: Decoder): ModuleComponentResolveMetadata? {
+        val deduplicationDependencyCache: MutableMap<Int?, MavenDependencyDescriptor?> = HashMap<Int?, MavenDependencyDescriptor?>()
+        val mutable = delegate.read(decoder, moduleIdentifierFactory, deduplicationDependencyCache)
+        readPlatformOwners(decoder, mutable)
+        val resolveMetadata = mutable.asImmutable() as AbstractLazyModuleComponentResolveMetadata?
 
-        Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache = new HashMap<>();
-        MutableModuleComponentResolveMetadata mutable = delegate.read(decoder, moduleIdentifierFactory, deduplicationDependencyCache);
-        readPlatformOwners(decoder, mutable);
-        AbstractLazyModuleComponentResolveMetadata resolveMetadata = (AbstractLazyModuleComponentResolveMetadata) mutable.asImmutable();
-
-        if (resolveMetadata instanceof DefaultIvyModuleResolveMetadata) {
-            return ivySerializationHelper.readMetadata(decoder, (DefaultIvyModuleResolveMetadata) resolveMetadata);
-        } else if (resolveMetadata instanceof DefaultMavenModuleResolveMetadata) {
-            return mavenSerializationHelper.readMetadata(decoder, (DefaultMavenModuleResolveMetadata) resolveMetadata, deduplicationDependencyCache);
+        if (resolveMetadata is DefaultIvyModuleResolveMetadata) {
+            return ivySerializationHelper.readMetadata(decoder, resolveMetadata)
+        } else if (resolveMetadata is DefaultMavenModuleResolveMetadata) {
+            return mavenSerializationHelper.readMetadata(decoder, resolveMetadata, deduplicationDependencyCache)
         } else {
-            throw new IllegalStateException("Unknown resolved metadata type: " + resolveMetadata.getClass());
+            throw IllegalStateException("Unknown resolved metadata type: " + resolveMetadata!!.javaClass)
         }
     }
 
-    private void readPlatformOwners(Decoder decoder, MutableModuleComponentResolveMetadata mutable) throws IOException {
-        int len = decoder.readSmallInt();
-        if (len>0) {
-            for (int i=0; i<len; i++) {
-                VirtualComponentIdentifier moduleComponentIdentifier = readModuleIdentifier(decoder);
-                mutable.belongsTo(moduleComponentIdentifier);
+    @Throws(IOException::class)
+    private fun readPlatformOwners(decoder: Decoder, mutable: MutableModuleComponentResolveMetadata) {
+        val len = decoder.readSmallInt()
+        if (len > 0) {
+            for (i in 0..<len) {
+                val moduleComponentIdentifier = readModuleIdentifier(decoder)
+                mutable.belongsTo(moduleComponentIdentifier)
             }
         }
     }
 
-    private VirtualComponentIdentifier readModuleIdentifier(Decoder decoder) throws IOException {
-        String group = decoder.readString();
-        String module = decoder.readString();
-        String version = decoder.readString();
-        ModuleIdentifier moduleIdentifier = DefaultModuleIdentifier.newId(group, module);
-        return new DefaultVirtualModuleComponentIdentifier(moduleIdentifier, version);
+    @Throws(IOException::class)
+    private fun readModuleIdentifier(decoder: Decoder): VirtualComponentIdentifier {
+        val group = decoder.readString()
+        val module = decoder.readString()
+        val version = decoder.readString()
+        val moduleIdentifier = DefaultModuleIdentifier.newId(group, module!!)
+        return DefaultVirtualModuleComponentIdentifier(moduleIdentifier, version!!)
     }
 
-    @Override
-    public void write(Encoder encoder, ModuleComponentResolveMetadata value) throws Exception {
-        AbstractRealisedModuleComponentResolveMetadata transformed = assertRealized(value);
-        HashMap<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache = new HashMap<>();
-        delegate.write(encoder, transformed, deduplicationDependencyCache);
-        writeOwners(encoder, value.platformOwners);
-        if (transformed instanceof RealisedIvyModuleResolveMetadata) {
-            ivySerializationHelper.writeRealisedVariantsData(encoder, transformed);
-            ivySerializationHelper.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache);
-        } else if (transformed instanceof RealisedMavenModuleResolveMetadata) {
-            mavenSerializationHelper.writeRealisedVariantsData(encoder, transformed);
-            mavenSerializationHelper.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache);
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ModuleComponentResolveMetadata) {
+        val transformed = assertRealized(value)
+        val deduplicationDependencyCache = HashMap<ExternalDependencyDescriptor?, Int?>()
+        delegate.write(encoder, transformed, deduplicationDependencyCache)
+        writeOwners(encoder, value.platformOwners)
+        if (transformed is RealisedIvyModuleResolveMetadata) {
+            ivySerializationHelper.writeRealisedVariantsData(encoder, transformed)
+            ivySerializationHelper.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache)
+        } else if (transformed is RealisedMavenModuleResolveMetadata) {
+            mavenSerializationHelper.writeRealisedVariantsData(encoder, transformed)
+            mavenSerializationHelper.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache)
         } else {
-            throw new IllegalStateException("Unexpected realised module component resolve metadata type: " + transformed.getClass());
+            throw IllegalStateException("Unexpected realised module component resolve metadata type: " + transformed.javaClass)
         }
     }
 
-    private void writeOwners(Encoder encoder, ImmutableList<? extends VirtualComponentIdentifier> platformOwners) throws IOException {
-        encoder.writeSmallInt(platformOwners.size());
-        for (ComponentIdentifier platformOwner : platformOwners) {
-            writeComponentIdentifier(encoder, (ModuleComponentIdentifier) platformOwner);
+    @Throws(IOException::class)
+    private fun writeOwners(encoder: Encoder, platformOwners: ImmutableList<out VirtualComponentIdentifier?>) {
+        encoder.writeSmallInt(platformOwners.size)
+        for (platformOwner in platformOwners) {
+            writeComponentIdentifier(encoder, (platformOwner as org.gradle.api.artifacts.component.ModuleComponentIdentifier?)!!)
         }
     }
 
-    private void writeComponentIdentifier(Encoder encoder, ModuleComponentIdentifier platformOwner) throws IOException {
-        encoder.writeString(platformOwner.getGroup());
-        encoder.writeString(platformOwner.getModule());
-        encoder.writeString(platformOwner.getVersion());
+    @Throws(IOException::class)
+    private fun writeComponentIdentifier(encoder: Encoder, platformOwner: ModuleComponentIdentifier) {
+        encoder.writeString(platformOwner.getGroup())
+        encoder.writeString(platformOwner.getModule())
+        encoder.writeString(platformOwner.getVersion())
     }
 
-    private AbstractRealisedModuleComponentResolveMetadata assertRealized(ModuleComponentResolveMetadata metadata) {
-        if (metadata instanceof AbstractRealisedModuleComponentResolveMetadata) {
-            return (AbstractRealisedModuleComponentResolveMetadata) metadata;
+    private fun assertRealized(metadata: ModuleComponentResolveMetadata): AbstractRealisedModuleComponentResolveMetadata {
+        if (metadata is AbstractRealisedModuleComponentResolveMetadata) {
+            return metadata
         }
-        throw new IllegalStateException("The type of metadata received is not supported - " + metadata.getClass().getName());
+        throw IllegalStateException("The type of metadata received is not supported - " + metadata.javaClass.getName())
     }
 }

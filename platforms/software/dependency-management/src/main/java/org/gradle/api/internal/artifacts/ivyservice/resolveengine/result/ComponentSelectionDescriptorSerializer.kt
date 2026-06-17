@@ -13,43 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.IOException;
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link ComponentSelectionDescriptor} if and only if the passed in
- * {@link ComponentSelectionDescriptorFactory} is thread-safe and reusable.
+ * A thread-safe and reusable serializer for [ComponentSelectionDescriptor] if and only if the passed in
+ * [ComponentSelectionDescriptorFactory] is thread-safe and reusable.
  */
-public class ComponentSelectionDescriptorSerializer implements Serializer<ComponentSelectionDescriptorInternal> {
-
-    private final ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory;
-
-    public ComponentSelectionDescriptorSerializer(ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory) {
-        this.componentSelectionDescriptorFactory = componentSelectionDescriptorFactory;
-    }
-
-    @Override
-    public ComponentSelectionDescriptorInternal read(Decoder decoder) throws IOException {
-        ComponentSelectionCause cause = ComponentSelectionCause.values()[decoder.readByte()];
-        String desc = decoder.readString();
-        String defaultReason = cause.getDefaultReason();
-        if (desc.equals(defaultReason)) {
-            return componentSelectionDescriptorFactory.newDescriptor(cause);
+class ComponentSelectionDescriptorSerializer(private val componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory) : Serializer<ComponentSelectionDescriptorInternal?> {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ComponentSelectionDescriptorInternal {
+        val cause = ComponentSelectionCause.entries[decoder.readByte().toInt()]
+        val desc = decoder.readString()
+        val defaultReason = cause.getDefaultReason()
+        if (desc == defaultReason) {
+            return componentSelectionDescriptorFactory.newDescriptor(cause)
         }
-        return componentSelectionDescriptorFactory.newDescriptor(cause, desc);
+        return componentSelectionDescriptorFactory.newDescriptor(cause, desc!!)
     }
 
-    @Override
-    public void write(Encoder encoder, ComponentSelectionDescriptorInternal value) throws IOException {
-        encoder.writeByte((byte) value.getCause().ordinal());
-        encoder.writeString(value.getDescription());
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: ComponentSelectionDescriptorInternal) {
+        encoder.writeByte(value.getCause().ordinal.toByte())
+        encoder.writeString(value.getDescription())
     }
 }

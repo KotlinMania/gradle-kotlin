@@ -13,65 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ResolutionStrategy
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ResolutionStrategy;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public class DefaultVisitedArtifactResults implements VisitedArtifactResults {
-
+class DefaultVisitedArtifactResults(artifactsById: ImmutableList<ArtifactSet>) : VisitedArtifactResults {
     // Index of the artifact set == the id of the artifact set
-    private final List<ArtifactSet> artifactsById;
+    private val artifactsById: MutableList<ArtifactSet>
 
-    public DefaultVisitedArtifactResults(ImmutableList<ArtifactSet> artifactsById) {
-        this.artifactsById = artifactsById;
+    init {
+        this.artifactsById = artifactsById
     }
 
-    @Override
-    public SelectedArtifactResults select(
-        ArtifactSelectionServices consumerServices,
-        ArtifactSelectionSpec spec,
-        boolean lenient
-    ) {
-        List<ResolvedArtifactSet> resolvedArtifactSets = new ArrayList<>(artifactsById.size());
-        for (ArtifactSet artifactSet : artifactsById) {
-            ResolvedArtifactSet resolvedArtifacts = artifactSet.select(consumerServices, spec);
-            if (!lenient || !(resolvedArtifacts instanceof UnavailableResolvedArtifactSet)) {
-                resolvedArtifactSets.add(resolvedArtifacts);
+    override fun select(
+        consumerServices: ArtifactSelectionServices?,
+        spec: ArtifactSelectionSpec,
+        lenient: Boolean
+    ): SelectedArtifactResults? {
+        val resolvedArtifactSets: MutableList<ResolvedArtifactSet?> = ArrayList<ResolvedArtifactSet?>(artifactsById.size)
+        for (artifactSet in artifactsById) {
+            val resolvedArtifacts = artifactSet.select(consumerServices, spec)
+            if (!lenient || resolvedArtifacts !is UnavailableResolvedArtifactSet) {
+                resolvedArtifactSets.add(resolvedArtifacts)
             } else {
-                resolvedArtifactSets.add(ResolvedArtifactSet.EMPTY);
+                resolvedArtifactSets.add(ResolvedArtifactSet.EMPTY)
             }
         }
 
-        return new DefaultSelectedArtifactResults(spec.getSortOrder(), resolvedArtifactSets);
+        return DefaultSelectedArtifactResults(spec.getSortOrder(), resolvedArtifactSets)
     }
 
-    private static class DefaultSelectedArtifactResults implements SelectedArtifactResults {
-        private final ResolvedArtifactSet allArtifacts;
+    private class DefaultSelectedArtifactResults(sortOrder: ResolutionStrategy.SortOrder?, resolvedArtifactsById: MutableList<ResolvedArtifactSet?>) : SelectedArtifactResults {
+        val artifacts: ResolvedArtifactSet?
+
         // Index of the artifact set == the id of the artifact set
-        private final List<ResolvedArtifactSet> resolvedArtifactsById;
+        private val resolvedArtifactsById: MutableList<ResolvedArtifactSet?>
 
-        DefaultSelectedArtifactResults(ResolutionStrategy.SortOrder sortOrder, List<ResolvedArtifactSet> resolvedArtifactsById) {
-            this.resolvedArtifactsById = resolvedArtifactsById;
-            ResolvedArtifactSet artifacts = CompositeResolvedArtifactSet.of(resolvedArtifactsById);
+        init {
+            this.resolvedArtifactsById = resolvedArtifactsById
+            var artifacts: ResolvedArtifactSet? = CompositeResolvedArtifactSet.Companion.of(resolvedArtifactsById)
             if (sortOrder == ResolutionStrategy.SortOrder.DEPENDENCY_FIRST) {
-                artifacts = CompositeResolvedArtifactSet.reverse(artifacts);
+                artifacts = CompositeResolvedArtifactSet.Companion.reverse(artifacts)
             }
-            this.allArtifacts = artifacts;
+            this.artifacts = artifacts
         }
 
-        @Override
-        public ResolvedArtifactSet getArtifacts() {
-            return allArtifacts;
-        }
-
-        @Override
-        public ResolvedArtifactSet getArtifactsWithId(int id) {
-            return resolvedArtifactsById.get(id);
+        override fun getArtifactsWithId(id: Int): ResolvedArtifactSet? {
+            return resolvedArtifactsById.get(id)
         }
     }
 }

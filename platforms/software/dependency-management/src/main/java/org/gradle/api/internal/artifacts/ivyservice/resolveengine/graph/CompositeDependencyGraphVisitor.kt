@@ -13,43 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
+class CompositeDependencyGraphVisitor(visitors: MutableList<DependencyGraphVisitor>) : DependencyGraphVisitor {
+    private val visitors: MutableList<DependencyGraphVisitor>
 
-import java.util.List;
-
-public class CompositeDependencyGraphVisitor implements DependencyGraphVisitor {
-    private final List<DependencyGraphVisitor> visitors;
-
-    public CompositeDependencyGraphVisitor(List<DependencyGraphVisitor> visitors) {
-        this.visitors = visitors;
+    init {
+        this.visitors = visitors
     }
 
-    @Override
-    public void start(RootGraphNode root) {
-        for (DependencyGraphVisitor visitor : visitors) {
-            visitor.start(root);
+    override fun start(root: RootGraphNode) {
+        for (visitor in visitors) {
+            visitor.start(root)
         }
     }
 
-    @Override
-    public void visitNode(DependencyGraphNode node) {
-        for (DependencyGraphVisitor visitor : visitors) {
-            visitor.visitNode(node);
+    override fun visitNode(node: DependencyGraphNode) {
+        for (visitor in visitors) {
+            visitor.visitNode(node)
         }
     }
 
-    @Override
-    public void visitEdges(DependencyGraphNode node) {
-        for (DependencyGraphVisitor visitor : visitors) {
-            visitor.visitEdges(node);
+    override fun visitEdges(node: DependencyGraphNode) {
+        for (visitor in visitors) {
+            visitor.visitEdges(node)
         }
     }
 
-    @Override
-    public void finish(RootGraphNode root) {
-        for (DependencyGraphVisitor visitor : visitors) {
-            visitor.finish(root);
+    override fun finish(root: RootGraphNode) {
+        for (visitor in visitors) {
+            visitor.finish(root)
         }
     }
 }

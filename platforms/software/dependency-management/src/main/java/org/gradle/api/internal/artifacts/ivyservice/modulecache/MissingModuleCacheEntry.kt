@@ -13,11 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
-
-class MissingModuleCacheEntry extends ModuleMetadataCacheEntry {
-    public MissingModuleCacheEntry(long createTimestamp) {
-        super(TYPE_MISSING, false, createTimestamp);
-    }
-}
+internal class MissingModuleCacheEntry(createTimestamp: Long) : ModuleMetadataCacheEntry(ModuleMetadataCacheEntry.Companion.TYPE_MISSING, false, createTimestamp)

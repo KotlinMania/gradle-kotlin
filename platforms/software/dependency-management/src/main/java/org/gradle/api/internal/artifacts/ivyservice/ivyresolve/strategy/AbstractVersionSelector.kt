@@ -13,49 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+import org.gradle.api.artifacts.ComponentMetadata
 
-import org.gradle.api.artifacts.ComponentMetadata;
-
-abstract class AbstractVersionSelector implements VersionSelector {
-    private final String selector;
-
-    protected AbstractVersionSelector(String selector) {
-        this.selector = selector;
+internal abstract class AbstractVersionSelector protected constructor(private val selector: String) : VersionSelector {
+    override fun getSelector(): String {
+        return selector
     }
 
-    @Override
-    public String getSelector() {
-        return selector;
+    override fun accept(candidate: ComponentMetadata): Boolean {
+        return accept(candidate.getId().getVersion())
     }
 
-    @Override
-    public boolean accept(ComponentMetadata candidate) {
-        return accept(candidate.getId().getVersion());
+    override fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean canShortCircuitWhenVersionAlreadyPreselected() {
-        return true;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        AbstractVersionSelector that = (AbstractVersionSelector) o;
+        val that = o as AbstractVersionSelector
 
-        return selector.equals(that.selector);
+        return selector == that.selector
     }
 
-    @Override
-    public int hashCode() {
-        return selector.hashCode();
+    override fun hashCode(): Int {
+        return selector.hashCode()
     }
 }

@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import org.gradle.internal.concurrent.Stoppable;
-import org.gradle.security.internal.PublicKeyService;
+import org.gradle.internal.concurrent.Stoppable
+import java.io.File
 
-import java.io.File;
-import java.util.Set;
+interface SignatureVerificationService : Stoppable {
+    fun verify(origin: File?, signature: File?, trustedKeys: MutableSet<String?>?, ignoredKeys: MutableSet<String?>?, result: SignatureVerificationResultBuilder?)
 
-public interface SignatureVerificationService extends Stoppable {
-    void verify(File origin, File signature, Set<String> trustedKeys, Set<String> ignoredKeys, SignatureVerificationResultBuilder result);
-
-    PublicKeyService getPublicKeyService();
+    val publicKeyService: PublicKeyService?
 }

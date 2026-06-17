@@ -13,74 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.internal.component.external.descriptor.Artifact
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor;
-import org.apache.ivy.core.module.id.ModuleRevisionId;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.NamespaceId;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ivy.IvyDependencyDescriptor;
-import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata;
-import org.gradle.internal.component.model.Exclude;
-import org.gradle.internal.component.model.IvyArtifactName;
+internal class IvyModuleResolveMetaDataBuilder(
+    private val ivyDescriptor: DefaultModuleDescriptor,
+    private val converter: IvyModuleDescriptorConverter,
+    private val metadataFactory: IvyMutableModuleMetadataFactory
+) {
+    val artifacts: MutableList<Artifact> = ArrayList<Artifact>()
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-class IvyModuleResolveMetaDataBuilder {
-    private final List<Artifact> artifacts = new ArrayList<>();
-    private final DefaultModuleDescriptor ivyDescriptor;
-    private final IvyModuleDescriptorConverter converter;
-    private final IvyMutableModuleMetadataFactory metadataFactory;
-
-    public IvyModuleResolveMetaDataBuilder(DefaultModuleDescriptor module, IvyModuleDescriptorConverter converter, IvyMutableModuleMetadataFactory metadataFactory) {
-        this.ivyDescriptor = module;
-        this.converter = converter;
-        this.metadataFactory = metadataFactory;
+    fun addArtifact(newArtifact: IvyArtifactName?, configurations: MutableSet<String?>) {
+        require(!configurations.isEmpty()) { "Artifact should be attached to at least one configuration." }
+        val artifact = findOrCreate(newArtifact)
+        artifact.configurations!!.addAll(configurations)
     }
 
-    public void addArtifact(IvyArtifactName newArtifact, Set<String> configurations) {
-        if (configurations.isEmpty()) {
-            throw new IllegalArgumentException("Artifact should be attached to at least one configuration.");
-        }
-        Artifact artifact = findOrCreate(newArtifact);
-        artifact.configurations.addAll(configurations);
-    }
-
-    private Artifact findOrCreate(IvyArtifactName artifactName) {
-        for (Artifact existingArtifact : artifacts) {
-            if (existingArtifact.artifactName.equals(artifactName)) {
-                return existingArtifact;
+    private fun findOrCreate(artifactName: IvyArtifactName?): Artifact {
+        for (existingArtifact in artifacts) {
+            if (existingArtifact.artifactName == artifactName) {
+                return existingArtifact
             }
         }
-        Artifact newArtifact = new Artifact(artifactName);
-        artifacts.add(newArtifact);
-        return newArtifact;
+        val newArtifact = Artifact(artifactName)
+        artifacts.add(newArtifact)
+        return newArtifact
     }
 
-    public List<Artifact> getArtifacts() {
-        return artifacts;
-    }
-
-    public MutableIvyModuleResolveMetadata build() {
-        ModuleRevisionId moduleRevisionId = ivyDescriptor.getModuleRevisionId();
-        ModuleComponentIdentifier cid = DefaultModuleComponentIdentifier.newId(DefaultModuleIdentifier.newId(moduleRevisionId.getOrganisation(), moduleRevisionId.getName()), moduleRevisionId.getRevision());
-        List<Configuration> configurations = converter.extractConfigurations(ivyDescriptor);
-        List<IvyDependencyDescriptor> dependencies = converter.extractDependencies(ivyDescriptor);
-        List<Exclude> excludes = converter.extractExcludes(ivyDescriptor);
-        Map<NamespaceId, String> extraAttributes = converter.extractExtraAttributes(ivyDescriptor);
-        MutableIvyModuleResolveMetadata metadata = metadataFactory.create(cid, dependencies, configurations, artifacts, excludes);
-        metadata.setStatus(ivyDescriptor.getStatus());
-        metadata.setExtraAttributes(extraAttributes);
-        metadata.branch = ivyDescriptor.getModuleRevisionId().getBranch();
-        return metadata;
+    fun build(): MutableIvyModuleResolveMetadata {
+        val moduleRevisionId = ivyDescriptor.getModuleRevisionId()
+        val cid = newId(DefaultModuleIdentifier.newId(moduleRevisionId.getOrganisation(), moduleRevisionId.getName()), moduleRevisionId.getRevision())
+        val configurations = converter.extractConfigurations(ivyDescriptor)
+        val dependencies = converter.extractDependencies(ivyDescriptor)
+        val excludes = converter.extractExcludes(ivyDescriptor)
+        val extraAttributes = converter.extractExtraAttributes(ivyDescriptor)
+        val metadata = metadataFactory.create(cid, dependencies, configurations, artifacts, excludes)
+        metadata.status = ivyDescriptor.getStatus()
+        metadata.extraAttributes = extraAttributes
+        metadata.branch = ivyDescriptor.getModuleRevisionId().getBranch()
+        return metadata
     }
 }

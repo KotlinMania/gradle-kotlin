@@ -13,124 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.descriptor
 
-package org.gradle.api.internal.artifacts.repositories.descriptor;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSortedMap
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.internal.cache.StringInterner
+import org.gradle.internal.hash.Hasher
+import org.gradle.internal.hash.Hashing
+import org.gradle.internal.scan.UsedByScanPlugin
+import java.net.URI
+import java.util.function.Consumer
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.internal.cache.StringInterner;
-import org.gradle.internal.hash.Hasher;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.scan.UsedByScanPlugin;
-
-import java.net.URI;
-import java.util.List;
-import java.util.function.Consumer;
-
-public abstract class UrlRepositoryDescriptor extends RepositoryDescriptor {
-
+abstract class UrlRepositoryDescriptor protected constructor(
+    id: String?,
+    name: String?,
+    val url: URI?,
+    val metadataSources: ImmutableList<String?>,
+    val authenticated: Boolean,
+    val authenticationSchemes: ImmutableList<String?>
+) : RepositoryDescriptor(id, name) {
     @UsedByScanPlugin("doesn't link against this type, but expects these values - See ResolveConfigurationDependenciesBuildOperationType")
-    public enum Property {
+    enum class Property {
         URL,
         METADATA_SOURCES,
         AUTHENTICATED,
         AUTHENTICATION_SCHEMES,
     }
 
-    public final URI url;
-    public final ImmutableList<String> metadataSources;
-    public final boolean authenticated;
-    public final ImmutableList<String> authenticationSchemes;
+    abstract val metadataResources: ImmutableList<ResourcePattern?>?
 
-    protected UrlRepositoryDescriptor(
-        String id,
-        String name,
-        URI url,
-        ImmutableList<String> metadataSources,
-        boolean authenticated,
-        ImmutableList<String> authenticationSchemes
-    ) {
-        super(id, name);
-        this.url = url;
-        this.metadataSources = metadataSources;
-        this.authenticated = authenticated;
-        this.authenticationSchemes = authenticationSchemes;
-    }
+    abstract val artifactResources: ImmutableList<ResourcePattern?>?
 
-    public abstract ImmutableList<ResourcePattern> getMetadataResources();
-
-    public abstract ImmutableList<ResourcePattern> getArtifactResources();
-
-    @Override
-    protected void addProperties(ImmutableSortedMap.Builder<String, Object> builder) {
+    override fun addProperties(builder: ImmutableSortedMap.Builder<String?, Any?>) {
         if (url != null) {
-            builder.put(Property.URL.name(), url);
+            builder.put(Property.URL.name, url)
         }
-        builder.put(Property.METADATA_SOURCES.name(), metadataSources);
-        builder.put(Property.AUTHENTICATED.name(), authenticated);
-        builder.put(Property.AUTHENTICATION_SCHEMES.name(), authenticationSchemes);
+        builder.put(Property.METADATA_SOURCES.name, metadataSources)
+        builder.put(Property.AUTHENTICATED.name, authenticated)
+        builder.put(Property.AUTHENTICATION_SCHEMES.name, authenticationSchemes)
     }
 
-    static abstract class Builder<T extends Builder<T>> {
-        private static final StringInterner REPOSITORY_ID_INTERNER = new StringInterner();
+    internal abstract class Builder<T : Builder<T?>?>(val name: String?, val url: URI?) {
+        var metadataSources: ImmutableList<String?>? = null
+        var authenticated: Boolean? = null
+        var authenticationSchemes: ImmutableList<String?>? = null
 
-        final String name;
-        final URI url;
-
-        ImmutableList<String> metadataSources;
-        Boolean authenticated;
-        ImmutableList<String> authenticationSchemes;
-
-        Builder(String name, URI url) {
-            this.name = name;
-            this.url = url;
+        protected fun self(): T? {
+            return this as T
         }
 
-        @SuppressWarnings("unchecked")
-        protected T self() {
-            return (T) this;
+        fun setMetadataSources(metadataSources: MutableList<String?>): T? {
+            this.metadataSources = ImmutableList.copyOf<String?>(metadataSources)
+            return self()
         }
 
-        public T setMetadataSources(List<String> metadataSources) {
-            this.metadataSources = ImmutableList.copyOf(metadataSources);
-            return self();
+        fun setAuthenticated(authenticated: Boolean): T? {
+            this.authenticated = authenticated
+            return self()
         }
 
-        public T setAuthenticated(boolean authenticated) {
-            this.authenticated = authenticated;
-            return self();
+        fun setAuthenticationSchemes(authenticationSchemes: MutableList<String?>): T? {
+            this.authenticationSchemes = ImmutableList.copyOf<String?>(authenticationSchemes)
+            return self()
         }
 
-        public T setAuthenticationSchemes(List<String> authenticationSchemes) {
-            this.authenticationSchemes = ImmutableList.copyOf(authenticationSchemes);
-            return self();
-        }
-
-        protected String calculateId(
-            Class<? extends ExternalResourceResolver> implementation,
-            List<ResourcePattern> metadataResources,
-            List<ResourcePattern> artifactResources,
-            List<String> metadataSources,
-            Consumer<Hasher> additionalInputs
-        ) {
-            Hasher cacheHasher = Hashing.newHasher();
-            cacheHasher.putString(implementation.getName());
-            cacheHasher.putInt(metadataResources.size());
-            for (ResourcePattern ivyPattern : metadataResources) {
-                cacheHasher.putString(ivyPattern.getPattern());
+        protected fun calculateId(
+            implementation: Class<out ExternalResourceResolver?>,
+            metadataResources: MutableList<ResourcePattern>,
+            artifactResources: MutableList<ResourcePattern>,
+            metadataSources: MutableList<String>,
+            additionalInputs: Consumer<Hasher?>
+        ): String {
+            val cacheHasher = Hashing.newHasher()
+            cacheHasher.putString(implementation.getName())
+            cacheHasher.putInt(metadataResources.size)
+            for (ivyPattern in metadataResources) {
+                cacheHasher.putString(ivyPattern.getPattern())
             }
-            cacheHasher.putInt(artifactResources.size());
-            for (ResourcePattern artifactPattern : artifactResources) {
-                cacheHasher.putString(artifactPattern.getPattern());
+            cacheHasher.putInt(artifactResources.size)
+            for (artifactPattern in artifactResources) {
+                cacheHasher.putString(artifactPattern.getPattern())
             }
-            cacheHasher.putInt(metadataResources.size());
-            for (String source : metadataSources) {
-                cacheHasher.putString(source);
+            cacheHasher.putInt(metadataResources.size)
+            for (source in metadataSources) {
+                cacheHasher.putString(source)
             }
-            additionalInputs.accept(cacheHasher);
-            return REPOSITORY_ID_INTERNER.intern(cacheHasher.hash().toString());
+            additionalInputs.accept(cacheHasher)
+            return REPOSITORY_ID_INTERNER.intern(cacheHasher.hash().toString())
+        }
+
+        companion object {
+            private val REPOSITORY_ID_INTERNER = StringInterner()
         }
     }
 }

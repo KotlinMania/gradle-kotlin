@@ -13,42 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DirectDependenciesMetadata
+import org.gradle.api.artifacts.DirectDependencyMetadata
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
 
-import org.gradle.api.artifacts.DirectDependenciesMetadata;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-
-public class DirectDependenciesMetadataAdapter extends AbstractDependenciesMetadataAdapter<DirectDependencyMetadata, DirectDependencyMetadataAdapter> implements DirectDependenciesMetadata {
-    public DirectDependenciesMetadataAdapter(
-        AttributesFactory attributesFactory,
-        Instantiator instantiator,
-        NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser) {
-        super(attributesFactory, instantiator, dependencyNotationParser);
+class DirectDependenciesMetadataAdapter(
+    attributesFactory: AttributesFactory,
+    instantiator: Instantiator,
+    dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>
+) : AbstractDependenciesMetadataAdapter<DirectDependencyMetadata?, DirectDependencyMetadataAdapter?>(attributesFactory, instantiator, dependencyNotationParser), DirectDependenciesMetadata {
+    override fun adapterImplementationType(): Class<DirectDependencyMetadataAdapter> {
+        return DirectDependencyMetadataAdapter::class.java
     }
 
-    @Override
-    protected Class<DirectDependencyMetadataAdapter> adapterImplementationType() {
-        return DirectDependencyMetadataAdapter.class;
+    override fun getAdapterMetadata(adapter: DirectDependencyMetadataAdapter): ModuleDependencyMetadata {
+        return adapter.getMetadata()
     }
 
-    @Override
-    protected ModuleDependencyMetadata getAdapterMetadata(DirectDependencyMetadataAdapter adapter) {
-        return adapter.getMetadata();
+    override fun isConstraint(): Boolean {
+        return false
     }
 
-    @Override
-    protected boolean isConstraint() {
-        return false;
+    override fun isEndorsingStrictVersions(details: DirectDependencyMetadata): Boolean {
+        return details.isEndorsingStrictVersions()
     }
-
-    @Override
-    protected boolean isEndorsingStrictVersions(DirectDependencyMetadata details) {
-        return details.isEndorsingStrictVersions();
-    }
-
 }

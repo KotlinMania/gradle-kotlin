@@ -13,49 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.internal.operations.BuildOperationType;
-import org.gradle.internal.scan.UsedByScanPlugin;
+import org.gradle.internal.operations.BuildOperationType
+import org.gradle.internal.scan.UsedByScanPlugin
 
 /**
  * Details about an artifact being downloaded.
  *
  * @since 4.0
  */
-public final class DownloadArtifactBuildOperationType implements BuildOperationType<DownloadArtifactBuildOperationType.Details, DownloadArtifactBuildOperationType.Result> {
+object DownloadArtifactBuildOperationType : BuildOperationType<DownloadArtifactBuildOperationType.Details?, DownloadArtifactBuildOperationType.Result?> {
+    val RESULT: Result = object : Result {
+    }
 
     @UsedByScanPlugin
-    public interface Details {
-
-        String getArtifactIdentifier();
-
+    interface Details {
+        val artifactIdentifier: String?
     }
 
-    public interface Result {
+    interface Result
 
-    }
-
-    public static class DetailsImpl implements Details {
-
-        private final String artifactIdentifier;
-
-        public DetailsImpl(String artifactIdentifier) {
-            this.artifactIdentifier = artifactIdentifier;
+    class DetailsImpl(private val artifactIdentifier: String?) : Details {
+        override fun getArtifactIdentifier(): String? {
+            return artifactIdentifier
         }
-
-        @Override
-        public String getArtifactIdentifier() {
-            return artifactIdentifier;
-        }
-
     }
-
-    public final static Result RESULT = new Result() {
-    };
-
-    private DownloadArtifactBuildOperationType() {
-    }
-
 }

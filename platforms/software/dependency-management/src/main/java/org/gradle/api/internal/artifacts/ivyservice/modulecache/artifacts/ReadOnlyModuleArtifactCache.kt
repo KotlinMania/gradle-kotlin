@@ -13,44 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.internal.file.FileAccessTracker
+import org.gradle.internal.hash.HashCode
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
+import java.nio.file.Path
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-
-public class ReadOnlyModuleArtifactCache extends DefaultModuleArtifactCache {
-    public ReadOnlyModuleArtifactCache(String persistentCacheFile, BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, FileAccessTracker fileAccessTracker, Path commonRootPath) {
-        super(persistentCacheFile, timeProvider, cacheAccessCoordinator, fileAccessTracker, commonRootPath);
+class ReadOnlyModuleArtifactCache(
+    persistentCacheFile: String?,
+    timeProvider: BuildCommencedTimeProvider?,
+    cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator?,
+    fileAccessTracker: FileAccessTracker?,
+    commonRootPath: Path?
+) : DefaultModuleArtifactCache(persistentCacheFile, timeProvider, cacheAccessCoordinator, fileAccessTracker, commonRootPath) {
+    override fun store(key: ArtifactAtRepositoryKey?, artifactFile: File?, moduleDescriptorHash: HashCode?) {
+        operationShouldNotHaveBeenCalled()
     }
 
-    @Override
-    public void store(ArtifactAtRepositoryKey key, File artifactFile, HashCode moduleDescriptorHash) {
-        operationShouldNotHaveBeenCalled();
+    override fun storeMissing(key: ArtifactAtRepositoryKey?, attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?) {
+        operationShouldNotHaveBeenCalled()
     }
 
-    @Override
-    public void storeMissing(ArtifactAtRepositoryKey key, List<String> attemptedLocations, HashCode descriptorHash) {
-        operationShouldNotHaveBeenCalled();
+    override fun storeInternal(key: ArtifactAtRepositoryKey?, entry: CachedArtifact?) {
+        operationShouldNotHaveBeenCalled()
     }
 
-    @Override
-    protected void storeInternal(ArtifactAtRepositoryKey key, CachedArtifact entry) {
-        operationShouldNotHaveBeenCalled();
-    }
-
-    @Override
-    public void clear(ArtifactAtRepositoryKey key) {
+    override fun clear(key: ArtifactAtRepositoryKey?) {
         // clear is actually called from org.gradle.internal.resource.cached.AbstractCachedIndex.lookup which
         // is a read operation, in case of missing entry, so we can't fail here, but should be a no-op only
     }
 
-    private static void operationShouldNotHaveBeenCalled() {
-        throw new UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache");
+    companion object {
+        private fun operationShouldNotHaveBeenCalled() {
+            throw UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache")
+        }
     }
 }

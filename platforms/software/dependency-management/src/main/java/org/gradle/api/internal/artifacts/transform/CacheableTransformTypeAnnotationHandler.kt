@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.internal.properties.annotations.AbstractTypeAnnotationHandler
+import org.gradle.internal.reflect.validation.TypeValidationContext
 
-import org.gradle.api.artifacts.transform.CacheableTransform;
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.internal.properties.annotations.AbstractTypeAnnotationHandler;
-import org.gradle.internal.reflect.validation.TypeValidationContext;
-
-public class CacheableTransformTypeAnnotationHandler extends AbstractTypeAnnotationHandler {
-    public CacheableTransformTypeAnnotationHandler() {
-        super(CacheableTransform.class);
-    }
-
-    @Override
-    public void validateTypeMetadata(Class<?> classWithAnnotationAttached, TypeValidationContext visitor) {
-        if (!TransformAction.class.isAssignableFrom(classWithAnnotationAttached)) {
-            reportInvalidUseOfTypeAnnotation(classWithAnnotationAttached,
+class CacheableTransformTypeAnnotationHandler : AbstractTypeAnnotationHandler(CacheableTransform::class.java) {
+    override fun validateTypeMetadata(classWithAnnotationAttached: Class<*>, visitor: TypeValidationContext) {
+        if (!TransformAction::class.java.isAssignableFrom(classWithAnnotationAttached)) {
+            reportInvalidUseOfTypeAnnotation(
+                classWithAnnotationAttached,
                 visitor,
                 getAnnotationType(),
-                TransformAction.class);
+                TransformAction::class.java
+            )
         }
     }
 }

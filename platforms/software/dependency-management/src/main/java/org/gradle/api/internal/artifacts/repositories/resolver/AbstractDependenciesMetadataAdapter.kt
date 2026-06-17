@@ -13,100 +13,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependenciesMetadata
+import org.gradle.api.artifacts.DependencyMetadata
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
+import org.gradle.internal.component.external.model.GradleDependencyMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependenciesMetadata;
-import org.gradle.api.artifacts.DependencyMetadata;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.component.external.model.GradleDependencyMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.jspecify.annotations.Nullable;
+abstract class AbstractDependenciesMetadataAdapter<T : DependencyMetadata<T?>?, E : T?>(
+    private val attributesFactory: AttributesFactory,
+    private val instantiator: Instantiator,
+    private val dependencyNotationParser: NotationParser<Any, T?>
+) : ArrayList<T?>(), DependenciesMetadata<T?> {
+    protected abstract fun adapterImplementationType(): Class<E?>?
 
-import java.util.ArrayList;
-import java.util.Map;
+    protected abstract fun getAdapterMetadata(adapter: E?): ModuleDependencyMetadata?
 
-public abstract class AbstractDependenciesMetadataAdapter<T extends DependencyMetadata<T>, E extends T> extends ArrayList<T> implements DependenciesMetadata<T> {
-    private final Instantiator instantiator;
-    private final NotationParser<Object, T> dependencyNotationParser;
-    private final AttributesFactory attributesFactory;
+    protected abstract val isConstraint: Boolean
 
-    public AbstractDependenciesMetadataAdapter(AttributesFactory attributesFactory, Instantiator instantiator, NotationParser<Object, T> dependencyNotationParser) {
-        this.attributesFactory = attributesFactory;
-        this.instantiator = instantiator;
-        this.dependencyNotationParser = dependencyNotationParser;
+    protected abstract fun isEndorsingStrictVersions(details: T?): Boolean
+
+    override fun add(dependencyNotation: String) {
+        doAdd(dependencyNotation, null)
     }
 
-    protected abstract Class<E> adapterImplementationType();
-
-    protected abstract ModuleDependencyMetadata getAdapterMetadata(E adapter);
-
-    protected abstract boolean isConstraint();
-
-    protected abstract boolean isEndorsingStrictVersions(T details);
-
-    @Override
-    public void add(String dependencyNotation) {
-        doAdd(dependencyNotation, null);
+    @Deprecated("")
+    override fun add(dependencyNotation: MutableMap<String, String>) {
+        doAdd(dependencyNotation, null)
     }
 
-    @Override
-    @Deprecated
-    public void add(Map<String, String> dependencyNotation) {
-        doAdd(dependencyNotation, null);
+    override fun add(dependencyNotation: String, configureAction: Action<in T?>) {
+        doAdd(dependencyNotation, configureAction)
     }
 
-    @Override
-    public void add(String dependencyNotation, Action<? super T> configureAction) {
-        doAdd(dependencyNotation, configureAction);
+    @Deprecated("")
+    override fun add(dependencyNotation: MutableMap<String, String>, configureAction: Action<in T?>) {
+        doAdd(dependencyNotation, configureAction)
     }
 
-    @Override
-    @Deprecated
-    public void add(Map<String, String> dependencyNotation, Action<? super T> configureAction) {
-        doAdd(dependencyNotation, configureAction);
-    }
-
-    private void doAdd(Object dependencyNotation, @Nullable Action<? super T> configureAction) {
-        T dependencyMetadata = dependencyNotationParser.parseNotation(dependencyNotation);
-        if (dependencyMetadata instanceof AbstractDependencyImpl) {
+    private fun doAdd(dependencyNotation: Any, configureAction: Action<in T?>?) {
+        val dependencyMetadata = dependencyNotationParser.parseNotation(dependencyNotation)
+        if (dependencyMetadata is AbstractDependencyImpl<*>) {
             // This is not super nice, but dependencies are created through reflection, for decoration
             // and assume a constructor with 3 arguments (Group, Name, Version) which is suitable for
             // most cases. We could create an empty attribute set directly in the AbstractDependencyImpl,
             // but then it wouldn't be mutable. Therefore we proceed with "late injection" of the attributes
-            ((AbstractDependencyImpl<?>) dependencyMetadata).setAttributes(attributesFactory.mutable());
+            (dependencyMetadata as AbstractDependencyImpl<*>).setAttributes(attributesFactory.mutable())
         }
 
-        T adapted = adapt(dependencyMetadata);
+        val adapted: T? = adapt(dependencyMetadata)
         if (configureAction != null) {
-            configureAction.execute(adapted);
+            configureAction.execute(adapted)
         }
-        add(adapted);
+        add(adapted)
     }
 
-    public ImmutableList<ModuleDependencyMetadata> getMetadatas() {
-        return this.stream().map(this::maybeAdapt).map(this::getAdapterMetadata).collect(ImmutableList.toImmutableList());
-    }
+    val metadatas: ImmutableList<ModuleDependencyMetadata>
+        get() = this.stream().map<E?> { details: T? -> this.maybeAdapt(details) }
+            .map<ModuleDependencyMetadata> { adapter: E? -> this.getAdapterMetadata(adapter) }
+            .collect(ImmutableList.toImmutableList<ModuleDependencyMetadata>())
 
-    private E maybeAdapt(T details) {
-        if (adapterImplementationType().isInstance(details)) {
-            return adapterImplementationType().cast(details);
+    private fun maybeAdapt(details: T?): E? {
+        if (adapterImplementationType()!!.isInstance(details)) {
+            return adapterImplementationType()!!.cast(details)
         }
 
-        return adapt(details);
+        return adapt(details)
     }
 
-    private E adapt(T details) {
-        ModuleComponentSelector selector = DefaultModuleComponentSelector.newSelector(details.getModule(), DefaultImmutableVersionConstraint.of(details.getVersionConstraint()), details.getAttributes(), ImmutableSet.of());
-        GradleDependencyMetadata dependencyMetadata = new GradleDependencyMetadata(selector, ImmutableList.of(), isConstraint(), isEndorsingStrictVersions(details), details.getReason(), false, null);
-        return instantiator.newInstance(adapterImplementationType(), attributesFactory, dependencyMetadata);
+    private fun adapt(details: T?): E? {
+        val selector =
+            DefaultModuleComponentSelector.newSelector(details!!.getModule(), DefaultImmutableVersionConstraint.of(details.getVersionConstraint()), details.getAttributes(), ImmutableSet.of<E?>())
+        val dependencyMetadata = GradleDependencyMetadata(
+            selector, ImmutableList.of<ExcludeMetadata?>(),
+            this.isConstraint, isEndorsingStrictVersions(details), details.getReason(), false, null
+        )
+        return instantiator.newInstance<E?>(adapterImplementationType(), attributesFactory, dependencyMetadata)
     }
 }

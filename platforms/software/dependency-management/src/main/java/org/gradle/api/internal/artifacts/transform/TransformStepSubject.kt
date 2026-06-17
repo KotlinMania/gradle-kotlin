@@ -13,92 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-
-import java.io.File;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Describable
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import java.io.File
 
 /**
  * Transform subject is either an initial artifact for the transform chain or a result of a previous transform step.
  */
-public abstract class TransformStepSubject implements Describable {
-
-    public static TransformStepSubject initial(ResolvableArtifact artifact) {
-        return new Initial(artifact);
-    }
-
+abstract class TransformStepSubject : Describable {
     /**
      * The files which should be transformed.
      */
-    public abstract ImmutableList<File> getFiles();
+    abstract val files: ImmutableList<File>?
 
     /**
      * Component identifier of the initial subject.
      */
-    public abstract ComponentIdentifier getInitialComponentIdentifier();
+    abstract val initialComponentIdentifier: ComponentIdentifier
 
     /**
      * Creates a subsequent subject by having transformed this subject.
      */
-    public TransformStepSubject createSubjectFromResult(ImmutableList<File> result) {
-        return new Transformed(this, result);
+    fun createSubjectFromResult(result: ImmutableList<File>): TransformStepSubject {
+        return Transformed(this, result)
     }
 
-    private static class Initial extends TransformStepSubject {
-        private final ResolvableArtifact artifact;
-
-        public Initial(ResolvableArtifact artifact) {
-            this.artifact = artifact;
+    private class Initial(private val artifact: ResolvableArtifact) : TransformStepSubject() {
+        override fun getFiles(): ImmutableList<File> {
+            return ImmutableList.of<File>(artifact.file)
         }
 
-        @Override
-        public ImmutableList<File> getFiles() {
-            return ImmutableList.of(artifact.getFile());
+        override fun getDisplayName(): String {
+            return artifact.id.getDisplayName()
         }
 
-        @Override
-        public String getDisplayName() {
-            return artifact.getId().getDisplayName();
-        }
-
-        @Override
-        public ComponentIdentifier getInitialComponentIdentifier() {
-            return artifact.getId().getComponentIdentifier();
+        override fun getInitialComponentIdentifier(): ComponentIdentifier {
+            return artifact.id.getComponentIdentifier()
         }
     }
 
-    private static class Transformed extends TransformStepSubject {
-        private final TransformStepSubject previous;
-        private final ImmutableList<File> files;
-
-        public Transformed(TransformStepSubject previous, ImmutableList<File> files) {
-            this.previous = previous;
-            this.files = files;
+    private class Transformed(private val previous: TransformStepSubject, private val files: ImmutableList<File>) : TransformStepSubject() {
+        override fun getFiles(): ImmutableList<File> {
+            return files
         }
 
-        @Override
-        public ImmutableList<File> getFiles() {
-            return files;
+        override fun getInitialComponentIdentifier(): ComponentIdentifier {
+            return previous.initialComponentIdentifier
         }
 
-        @Override
-        public ComponentIdentifier getInitialComponentIdentifier() {
-            return previous.getInitialComponentIdentifier();
+        override fun getDisplayName(): String {
+            return previous.getDisplayName()
         }
 
-        @Override
-        public String getDisplayName() {
-            return previous.getDisplayName();
+        override fun toString(): String {
+            return getDisplayName()
         }
+    }
 
-        @Override
-        public String toString() {
-            return getDisplayName();
+    companion object {
+        fun initial(artifact: ResolvableArtifact): TransformStepSubject {
+            return Initial(artifact)
         }
     }
 }

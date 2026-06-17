@@ -13,17 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-import org.gradle.internal.logging.text.TreeFormatter
-import java.io.File
-
-class OnlyIgnoredKeys(file: File?) : AbstractVerificationFailure(file) {
-    override fun isFatal(): Boolean {
-        return false
-    }
-
-    override fun explainTo(formatter: TreeFormatter) {
-        formatter.append("artifact was signed but all keys were ignored")
-    }
-}
+interface ExcludeAllOf : CompositeExclude

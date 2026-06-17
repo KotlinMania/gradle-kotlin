@@ -13,142 +13,126 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+import com.google.common.primitives.Longs
+import org.gradle.api.Transformer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.primitives.Longs;
-import org.gradle.api.Transformer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.Global::class)
+class VersionParser : Transformer<Version?, String?> {
+    private val cache: MutableMap<String?, Version?> = ConcurrentHashMap<String?, Version?>()
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-@ServiceScope(Scope.Global.class)
-public class VersionParser implements Transformer<Version, String> {
-    private final Map<String, Version> cache = new ConcurrentHashMap<>();
-
-    public VersionParser() {
+    override fun transform(original: String?): Version? {
+        return cache.computeIfAbsent(original) { original: String? -> Companion.parse(original!!) }
     }
 
-    @Override
-    public Version transform(String original) {
-        return cache.computeIfAbsent(original, VersionParser::parse);
+    private class DefaultVersion(private val source: String, parts: MutableList<String?>, baseVersion: DefaultVersion?) : Version {
+        private val parts: Array<String?>
+        private val numericParts: Array<Long?>
+        private val baseVersion: DefaultVersion
+
+        init {
+            this.parts = parts.toTypedArray<String?>()
+            this.numericParts = arrayOfNulls<Long>(this.parts.size)
+            for (i in parts.indices) {
+                this.numericParts[i] = Longs.tryParse(this.parts[i]!!)
+            }
+            this.baseVersion = if (baseVersion == null) this else baseVersion
+        }
+
+        override fun toString(): String {
+            return source
+        }
+
+        override fun equals(obj: Any?): Boolean {
+            if (obj === this) {
+                return true
+            }
+            if (obj == null || obj.javaClass != javaClass) {
+                return false
+            }
+            val other = obj as DefaultVersion
+            return source == other.source
+        }
+
+        override fun hashCode(): Int {
+            return source.hashCode()
+        }
+
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        override fun isQualified(): Boolean {
+            return baseVersion !== this
+        }
+
+        override fun getBaseVersion(): Version {
+            return baseVersion
+        }
+
+        override fun getParts(): Array<String?> {
+            return parts
+        }
+
+        override fun getNumericParts(): Array<Long?> {
+            return numericParts
+        }
+
+        override fun getSource(): String {
+            return source
+        }
     }
 
-    private static Version parse(String original) {
-        List<String> parts = new ArrayList<>();
-        boolean digit = false;
-        int startPart = 0;
-        int pos = 0;
-        int endBase = 0;
-        int endBaseStr = 0;
-        for (; pos < original.length(); pos++) {
-            char ch = original.charAt(pos);
-            if (ch == '.' || ch == '_' || ch == '-' || ch == '+') {
-                parts.add(original.substring(startPart, pos));
-                startPart = pos + 1;
-                digit = false;
-                if (ch != '.' && endBaseStr == 0) {
-                    endBase = parts.size();
-                    endBaseStr = pos;
-                }
-            } else if (ch >= '0' && ch <= '9') {
-                if (!digit && pos > startPart) {
-                    if (endBaseStr == 0) {
-                        endBase = parts.size() + 1;
-                        endBaseStr = pos;
+    companion object {
+        private fun parse(original: String): Version {
+            val parts: MutableList<String?> = ArrayList<String?>()
+            var digit = false
+            var startPart = 0
+            var pos = 0
+            var endBase = 0
+            var endBaseStr = 0
+            while (pos < original.length) {
+                val ch = original.get(pos)
+                if (ch == '.' || ch == '_' || ch == '-' || ch == '+') {
+                    parts.add(original.substring(startPart, pos))
+                    startPart = pos + 1
+                    digit = false
+                    if (ch != '.' && endBaseStr == 0) {
+                        endBase = parts.size
+                        endBaseStr = pos
                     }
-                    parts.add(original.substring(startPart, pos));
-                    startPart = pos;
-                }
-                digit = true;
-            } else {
-                if (digit) {
-                    if (endBaseStr == 0) {
-                        endBase = parts.size() + 1;
-                        endBaseStr = pos;
+                } else if (ch >= '0' && ch <= '9') {
+                    if (!digit && pos > startPart) {
+                        if (endBaseStr == 0) {
+                            endBase = parts.size + 1
+                            endBaseStr = pos
+                        }
+                        parts.add(original.substring(startPart, pos))
+                        startPart = pos
                     }
-                    parts.add(original.substring(startPart, pos));
-                    startPart = pos;
+                    digit = true
+                } else {
+                    if (digit) {
+                        if (endBaseStr == 0) {
+                            endBase = parts.size + 1
+                            endBaseStr = pos
+                        }
+                        parts.add(original.substring(startPart, pos))
+                        startPart = pos
+                    }
+                    digit = false
                 }
-                digit = false;
+                pos++
             }
-        }
-        if (pos > startPart) {
-            parts.add(original.substring(startPart, pos));
-        }
-        DefaultVersion base = null;
-        if (endBaseStr > 0) {
-            base = new DefaultVersion(original.substring(0, endBaseStr), parts.subList(0, endBase), null);
-        }
-        return new DefaultVersion(original, parts, base);
-    }
-
-    private static class DefaultVersion implements Version {
-        private final String source;
-        private final String[] parts;
-        private final Long[] numericParts;
-        private final DefaultVersion baseVersion;
-
-        public DefaultVersion(String source, List<String> parts, DefaultVersion baseVersion) {
-            this.source = source;
-            this.parts = parts.toArray(new String[0]);
-            this.numericParts = new Long[this.parts.length];
-            for (int i = 0; i < parts.size(); i++) {
-                this.numericParts[i] = Longs.tryParse(this.parts[i]);
+            if (pos > startPart) {
+                parts.add(original.substring(startPart, pos))
             }
-            this.baseVersion = baseVersion == null ? this : baseVersion;
-        }
-
-        @Override
-        public String toString() {
-            return source;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
+            var base: DefaultVersion? = null
+            if (endBaseStr > 0) {
+                base = DefaultVersion(original.substring(0, endBaseStr), parts.subList(0, endBase), null)
             }
-            if (obj == null || obj.getClass() != getClass()) {
-                return false;
-            }
-            DefaultVersion other = (DefaultVersion) obj;
-            return source.equals(other.source);
-        }
-
-        @Override
-        public int hashCode() {
-            return source.hashCode();
-        }
-
-        @Override
-        @SuppressWarnings("ReferenceEquality") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-        public boolean isQualified() {
-            return baseVersion != this;
-        }
-
-        @Override
-        public Version getBaseVersion() {
-            return baseVersion;
-        }
-
-        @Override
-        public String[] getParts() {
-            return parts;
-        }
-
-        @Override
-        public Long[] getNumericParts() {
-            return numericParts;
-        }
-
-        @Override
-        public String getSource() {
-            return source;
+            return DefaultVersion(original, parts, base)
         }
     }
 }

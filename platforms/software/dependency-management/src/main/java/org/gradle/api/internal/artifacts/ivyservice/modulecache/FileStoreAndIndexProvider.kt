@@ -13,35 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.api.internal.filestore.ArtifactIdentifierFileStore;
-import org.gradle.internal.resource.cached.CachedExternalResourceIndex;
-import org.gradle.internal.resource.cached.ExternalResourceFileStore;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.filestore.ArtifactIdentifierFileStore
+import org.gradle.internal.resource.cached.CachedExternalResourceIndex
+import org.gradle.internal.resource.cached.ExternalResourceFileStore
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.BuildTree.class)
-public class FileStoreAndIndexProvider {
-    private final CachedExternalResourceIndex<String> externalResourceIndex;
-    private final ExternalResourceFileStore externalResourceFileStore;
-    private final ArtifactIdentifierFileStore artifactIdentifierFileStore;
-
-    public FileStoreAndIndexProvider(CachedExternalResourceIndex<String> externalResourceIndex, ExternalResourceFileStore externalResourceFileStore, ArtifactIdentifierFileStore artifactIdentifierFileStore) {
-        this.externalResourceIndex = externalResourceIndex;
-        this.externalResourceFileStore = externalResourceFileStore;
-        this.artifactIdentifierFileStore = artifactIdentifierFileStore;
-    }
-
-    public CachedExternalResourceIndex<String> getExternalResourceIndex() {
-        return externalResourceIndex;
-    }
-
-    public ExternalResourceFileStore getExternalResourceFileStore() {
-        return externalResourceFileStore;
-    }
-
-    public ArtifactIdentifierFileStore getArtifactIdentifierFileStore() {
-        return artifactIdentifierFileStore;
-    }
-}
+@ServiceScope(Scope.BuildTree::class)
+class FileStoreAndIndexProvider(
+    val externalResourceIndex: CachedExternalResourceIndex<String?>?,
+    val externalResourceFileStore: ExternalResourceFileStore?,
+    val artifactIdentifierFileStore: ArtifactIdentifierFileStore?
+)

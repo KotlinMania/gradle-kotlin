@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.file.FileCollection;
-
-import java.util.Optional;
-
-public interface TransformDependencies {
+interface TransformDependencies {
     /**
      * Returns the dependency artifacts of the artifact being transformed.
      * The order of the files match that of the dependencies in the source artifact view.
      */
-    Optional<FileCollection> getFiles();
+    val files: Optional<FileCollection>?
 }

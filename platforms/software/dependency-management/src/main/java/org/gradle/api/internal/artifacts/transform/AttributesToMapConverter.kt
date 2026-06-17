@@ -13,53 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.Named;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-
-import java.util.Arrays;
-import java.util.Map;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.Named
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
 
 /**
  * Converts attributes to a stringy map preserving the order.
  */
-public class AttributesToMapConverter {
-
-    private AttributesToMapConverter() {}
-
+object AttributesToMapConverter {
     /**
      * Converts attributes to a stringy map preserving the order.
      */
-    public static Map<String, String> convertToMap(AttributeContainer attributes) {
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (Attribute<?> attribute : attributes.keySet()) {
-            String strValue = getAttributeValueAsString(attributes, attribute);
-            builder.put(attribute.getName(), strValue);
+    fun convertToMap(attributes: AttributeContainer): MutableMap<String, String> {
+        val builder = ImmutableMap.builder<String, String>()
+        for (attribute in attributes.keySet()) {
+            val strValue = getAttributeValueAsString(attributes, attribute)
+            builder.put(attribute.getName(), strValue)
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private static String getAttributeValueAsString(AttributeContainer attributeContainer, Attribute<?> attribute) {
+    private fun getAttributeValueAsString(attributeContainer: AttributeContainer, attribute: Attribute<*>): String {
         // We use the same algorithm that Gradle uses when desugaring these on the build op, so that we don't end up
         // with unexpectedly different values due to arrays or Named objects being converted to Strings differently.
         // See LazyDesugaringAttributeContainer in the gradle/gradle codebase.
-        Object attributeValue = attributeContainer.getAttribute(attribute);
-        if (attributeValue == null) {
-            throw new IllegalStateException("No attribute value for " + attribute);
-        }
+        val attributeValue: Any? = attributeContainer.getAttribute(attribute)
+        checkNotNull(attributeValue) { "No attribute value for " + attribute }
 
-        if (attributeValue instanceof Named) {
-            return ((Named) attributeValue).getName();
-        } else if (attributeValue instanceof Object[]) {
+        if (attributeValue is Named) {
+            return attributeValue.getName()
+        } else if (attributeValue is Array<Any>) {
             // don't bother trying to handle primitive arrays specially
-            return Arrays.toString((Object[]) attributeValue);
+            return (attributeValue as Array<Any?>).contentToString()
         } else {
-            return attributeValue.toString();
+            return attributeValue.toString()
         }
     }
-
 }

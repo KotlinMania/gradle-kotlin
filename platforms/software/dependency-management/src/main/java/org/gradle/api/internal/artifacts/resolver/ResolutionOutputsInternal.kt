@@ -13,22 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.resolver
 
-package org.gradle.api.internal.artifacts.resolver;
-
-import org.gradle.api.internal.artifacts.configurations.ArtifactCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionInternal;
+import org.gradle.api.internal.artifacts.configurations.ArtifactCollectionInternal
+import org.gradle.api.internal.file.FileCollectionInternal
 
 /**
- * Internal counterpart of {@link ResolutionOutputs} that exposes the results as
+ * Internal counterpart of [ResolutionOutputs] that exposes the results as
  * their internal types, as well as the raw results before conversion to user-facing types.
  */
-public interface ResolutionOutputsInternal extends ResolutionOutputs {
+interface ResolutionOutputsInternal : ResolutionOutputs {
+    override fun getFiles(): FileCollectionInternal?
 
-    @Override
-    FileCollectionInternal getFiles();
-
-    @Override
-    ArtifactCollectionInternal getArtifacts();
-
+    override fun getArtifacts(): ArtifactCollectionInternal?
 }

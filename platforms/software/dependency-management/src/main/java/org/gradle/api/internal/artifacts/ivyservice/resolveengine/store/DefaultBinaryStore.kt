@@ -13,148 +13,120 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.store;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.store
 
-import org.gradle.cache.internal.BinaryStore;
-import org.gradle.internal.concurrent.CompositeStoppable;
-import org.gradle.internal.file.RandomAccessFileInputStream;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.kryo.StringDeduplicatingKryoBackedDecoder;
-import org.gradle.internal.serialize.kryo.StringDeduplicatingKryoBackedEncoder;
+import org.gradle.cache.internal.BinaryStore
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.concurrent.CompositeStoppable
+import org.gradle.internal.file.RandomAccessFileInputStream
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.kryo.StringDeduplicatingKryoBackedDecoder
+import org.gradle.internal.serialize.kryo.StringDeduplicatingKryoBackedEncoder
+import java.io.Closeable
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.RandomAccessFile
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.RandomAccessFile;
+internal class DefaultBinaryStore(var file: File) : BinaryStore, Closeable {
+    private var encoder: StringDeduplicatingKryoBackedEncoder? = null
+    private var offset: Long = -1
 
-import static org.gradle.internal.UncheckedException.throwAsUncheckedException;
-
-class DefaultBinaryStore implements BinaryStore, Closeable {
-    private File file;
-    private StringDeduplicatingKryoBackedEncoder encoder;
-    private long offset = -1;
-
-    public DefaultBinaryStore(File file) {
-        this.file = file;
-    }
-
-    @Override
-    public void write(WriteAction write) {
+    override fun write(write: BinaryStore.WriteAction) {
         if (encoder == null) {
             try {
-                encoder = new StringDeduplicatingKryoBackedEncoder(new FileOutputStream(file));
-            } catch (FileNotFoundException e) {
-                throw throwAsUncheckedException(e);
+                encoder = StringDeduplicatingKryoBackedEncoder(FileOutputStream(file))
+            } catch (e: FileNotFoundException) {
+                throw throwAsUncheckedException(e)
             }
         }
-        if (offset == -1) {
-            offset = encoder.getWritePosition();
-            if (offset == Integer.MAX_VALUE) {
-                throw new IllegalStateException("Unable to write to binary store. "
-                        + "The bytes offset has reached a point where using it is unsafe. Please report this error.");
+        if (offset == -1L) {
+            offset = encoder!!.getWritePosition()
+            check(offset != Int.MAX_VALUE.toLong()) {
+                ("Unable to write to binary store. "
+                        + "The bytes offset has reached a point where using it is unsafe. Please report this error.")
             }
         }
         try {
-            write.write(encoder);
-        } catch (Exception e) {
-            throw new RuntimeException("Problems writing to " + diagnose(), e);
+            write.write(encoder)
+        } catch (e: Exception) {
+            throw RuntimeException("Problems writing to " + diagnose(), e)
         }
     }
 
-    private String diagnose() {
-        return toString() + " (exist: " + file.exists() + ")";
+    private fun diagnose(): String {
+        return toString() + " (exist: " + file.exists() + ")"
     }
 
-    @Override
-    public String toString() {
-        return "Binary store in " + file;
+    override fun toString(): String {
+        return "Binary store in " + file
     }
 
-    @Override
-    public BinaryData done() {
+    override fun done(): BinaryStore.BinaryData {
         try {
             if (encoder != null) {
-                encoder.done();
-                encoder.flush();
+                encoder!!.done()
+                encoder!!.flush()
             }
-            return new SimpleBinaryData(file, offset);
+            return SimpleBinaryData(file, offset)
         } finally {
-            offset = -1;
+            offset = -1
         }
     }
 
-    @Override
-    public void close() {
+    override fun close() {
         try {
             if (encoder != null) {
-                encoder.close();
+                encoder!!.close()
             }
         } finally {
             if (file != null) {
-                file.delete();
+                file.delete()
             }
-            encoder = null;
-            file = null;
+            encoder = null
+            file = null
         }
     }
 
-    File getFile() {
-        return file;
-    }
+    val size: Long
+        get() = file.length()
 
-    long getSize() {
-        return file.length();
-    }
+    val isInUse: Boolean
+        get() = offset != -1L
 
-    public boolean isInUse() {
-        return offset != -1;
-    }
+    private class SimpleBinaryData(private val inputFile: File, private val offset: Long) : BinaryStore.BinaryData {
+        private var decoder: Decoder? = null
+        private var resources: CompositeStoppable? = null
 
-    private static class SimpleBinaryData implements BinaryStore.BinaryData {
-        private final long offset;
-        private final File inputFile;
-
-        private Decoder decoder;
-        private CompositeStoppable resources;
-
-        public SimpleBinaryData(File inputFile, long offset) {
-            this.inputFile = inputFile;
-            this.offset = offset;
-        }
-
-        @Override
-        public <T> T read(BinaryStore.ReadAction<T> readAction) {
+        override fun <T> read(readAction: BinaryStore.ReadAction<T?>): T? {
             try {
                 if (decoder == null) {
-                    RandomAccessFile randomAccess = new RandomAccessFile(inputFile, "r");
-                    randomAccess.seek(offset);
-                    decoder = new StringDeduplicatingKryoBackedDecoder(new RandomAccessFileInputStream(randomAccess));
-                    resources = new CompositeStoppable().add(randomAccess, decoder);
+                    val randomAccess = RandomAccessFile(inputFile, "r")
+                    randomAccess.seek(offset)
+                    decoder = StringDeduplicatingKryoBackedDecoder(RandomAccessFileInputStream(randomAccess))
+                    resources = CompositeStoppable().add(randomAccess, decoder!!)
                 }
-                return readAction.read(decoder);
-            } catch (Exception e) {
-                throw new RuntimeException("Problems reading data from " + toString(), e);
+                return readAction.read(decoder)
+            } catch (e: Exception) {
+                throw RuntimeException("Problems reading data from " + toString(), e)
             }
         }
 
-        @Override
-        public void close() {
+        override fun close() {
             try {
                 if (resources != null) {
-                    resources.stop();
+                    resources!!.stop()
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Problems cleaning resources of " + toString(), e);
+            } catch (e: Exception) {
+                throw RuntimeException("Problems cleaning resources of " + toString(), e)
             } finally {
-                decoder = null;
-                resources = null;
+                decoder = null
+                resources = null
             }
         }
 
-        @Override
-        public String toString() {
-            return "Binary store in " + inputFile + " offset " + offset + " exists? " + inputFile.exists();
+        override fun toString(): String {
+            return "Binary store in " + inputFile + " offset " + offset + " exists? " + inputFile.exists()
         }
     }
 }

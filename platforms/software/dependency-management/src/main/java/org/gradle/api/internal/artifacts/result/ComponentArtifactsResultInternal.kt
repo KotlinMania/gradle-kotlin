@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
-
-import org.gradle.api.artifacts.result.ArtifactResult;
-import org.gradle.api.artifacts.result.ComponentArtifactsResult;
-
-import java.util.Set;
+import org.gradle.api.artifacts.result.ComponentArtifactsResult
 
 /**
- * Internal extension to {@link ComponentArtifactsResult} that allows access to all artifacts, for CC serialization.
+ * Internal extension to [ComponentArtifactsResult] that allows access to all artifacts, for CC serialization.
  */
-public interface ComponentArtifactsResultInternal extends ComponentArtifactsResult {
+interface ComponentArtifactsResultInternal : ComponentArtifactsResult {
     /**
      * Returns all artifacts, including resolved and unresolved artifacts.
      */
-    Set<ArtifactResult> getAllArtifacts();
+    val allArtifacts: MutableSet<ArtifactResult>?
 }

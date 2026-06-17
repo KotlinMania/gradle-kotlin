@@ -13,317 +13,251 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultResolvableArtifact;
-import org.gradle.api.internal.artifacts.transform.AbstractTransformedArtifactSet;
-import org.gradle.api.internal.artifacts.transform.ArtifactVariantSelector;
-import org.gradle.api.internal.artifacts.transform.TransformChain;
-import org.gradle.api.internal.artifacts.transform.TransformUpstreamDependenciesResolver;
-import org.gradle.api.internal.artifacts.transform.TransformedArtifactSet;
-import org.gradle.api.internal.artifacts.transform.VariantDefinition;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistry;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.api.specs.Spec;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier;
-import org.gradle.internal.component.local.model.LocalFileDependencyMetadata;
-import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.jspecify.annotations.NonNull;
-
-import java.io.File;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultResolvableArtifact
+import org.gradle.api.internal.artifacts.transform.AbstractTransformedArtifactSet
+import org.gradle.api.internal.artifacts.transform.ArtifactVariantSelector
+import org.gradle.api.internal.artifacts.transform.TransformChain
+import org.gradle.api.internal.artifacts.transform.TransformUpstreamDependenciesResolver
+import org.gradle.api.internal.artifacts.transform.TransformedArtifactSet
+import org.gradle.api.internal.artifacts.transform.VariantDefinition
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistry
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.specs.Spec
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier
+import org.gradle.internal.component.local.model.LocalFileDependencyMetadata
+import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier
+import org.gradle.internal.component.model.DefaultIvyArtifactName.Companion.forFile
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import java.io.File
 
 /**
- * Abstract file dependency implementation. The two {@code default} and {@code deserialized} subtypes
+ * Abstract file dependency implementation. The two `default` and `deserialized` subtypes
  * represent the artifact set before and after configuration cache serialization. The deserialized
  * type only stores a subset of the information originally stored by the default type.
  *
- * <p>This is required since the files in a given file dependency artifact set are unknown until
+ *
+ * This is required since the files in a given file dependency artifact set are unknown until
  * dependencies are executed. For this reason, we delay artifact selection until after this artifact
  * set is restored from the configuration cache. This differs from normal artifact variant selection
- * where we can perform selection before serialization.</p>
+ * where we can perform selection before serialization.
  *
- * <p>The tricky part that due to the artifactType registry, artifact variant selection depends on the
+ *
+ * The tricky part that due to the artifactType registry, artifact variant selection depends on the
  * file names of the artifacts exposed by a variant. Normal variants have access to these file names
- * before the dependencies are executed, but file dependencies do not.</p>
+ * before the dependencies are executed, but file dependencies do not.
  *
- * <p>We should do one of these things to fix the current mess here:</p>
- * <ul>
- *     <li>Kill file dependencies</li>
- *     <li>Enhance file dependencies to know what files they produce</li>
- *     <li>Kill artifactType registry</li>
- * </ul>
+ *
+ * We should do one of these things to fix the current mess here:
+ *
+ *  * Kill file dependencies
+ *  * Enhance file dependencies to know what files they produce
+ *  * Kill artifactType registry
+ *
  */
-public abstract class LocalFileDependencyBackedArtifactSet implements TransformedArtifactSet, LocalDependencyFiles {
-    private static final DisplayName LOCAL_FILE = Describables.of("local file");
+abstract class LocalFileDependencyBackedArtifactSet(
+    val dependencyMetadata: LocalFileDependencyMetadata,
+    val sourceVariantId: VariantIdentifier,
+    val componentFilter: Spec<in ComponentIdentifier?>,
+    val variantSelector: ArtifactVariantSelector,
+    val artifactTypeRegistry: ImmutableArtifactTypeRegistry,
+    private val calculatedValueContainerFactory: CalculatedValueContainerFactory,
+    val allowNoMatchingVariants: Boolean
+) : TransformedArtifactSet, LocalDependencyFiles {
+    abstract val requestAttributes: ImmutableAttributes?
 
-    private final LocalFileDependencyMetadata dependencyMetadata;
-    private final VariantIdentifier sourceVariantId;
-    private final Spec<? super ComponentIdentifier> componentFilter;
-    private final ArtifactVariantSelector variantSelector;
-    private final ImmutableArtifactTypeRegistry artifactTypeRegistry;
-    private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-    private final boolean allowNoMatchingVariants;
-
-    public LocalFileDependencyBackedArtifactSet(
-        LocalFileDependencyMetadata dependencyMetadata,
-        VariantIdentifier sourceVariantId,
-        Spec<? super ComponentIdentifier> componentFilter,
-        ArtifactVariantSelector variantSelector,
-        ImmutableArtifactTypeRegistry artifactTypeRegistry,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        boolean allowNoMatchingVariants
-    ) {
-        this.dependencyMetadata = dependencyMetadata;
-        this.sourceVariantId = sourceVariantId;
-        this.componentFilter = componentFilter;
-        this.variantSelector = variantSelector;
-        this.artifactTypeRegistry = artifactTypeRegistry;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.allowNoMatchingVariants = allowNoMatchingVariants;
-    }
-
-    public LocalFileDependencyMetadata getDependencyMetadata() {
-        return dependencyMetadata;
-    }
-
-    public VariantIdentifier getSourceVariantId() {
-        return sourceVariantId;
-    }
-
-    public ImmutableArtifactTypeRegistry getArtifactTypeRegistry() {
-        return artifactTypeRegistry;
-    }
-
-    public Spec<? super ComponentIdentifier> getComponentFilter() {
-        return componentFilter;
-    }
-
-    public ArtifactVariantSelector getVariantSelector() {
-        return variantSelector;
-    }
-
-    public boolean getAllowNoMatchingVariants() {
-        return allowNoMatchingVariants;
-    }
-
-    public abstract ImmutableAttributes getRequestAttributes();
-
-    @Override
-    public void visit(Visitor listener) {
-        FileCollectionStructureVisitor.VisitType visitType = listener.prepareForVisit(this);
+    override fun visit(listener: ResolvedArtifactSet.Visitor) {
+        val visitType = listener.prepareForVisit(this)
         if (visitType == FileCollectionStructureVisitor.VisitType.NoContents) {
-            listener.visitArtifacts(new EndCollection(this));
-            return;
+            listener.visitArtifacts(EndCollection(this))
+            return
         }
 
-        ComponentIdentifier componentIdentifier = dependencyMetadata.getComponentId();
+        val componentIdentifier: ComponentIdentifier = dependencyMetadata.componentId
         if (componentIdentifier != null && !componentFilter.isSatisfiedBy(componentIdentifier)) {
-            listener.visitArtifacts(new EndCollection(this));
-            return;
+            listener.visitArtifacts(EndCollection(this))
+            return
         }
 
-        FileCollectionInternal fileCollection = dependencyMetadata.getFiles();
-        Set<File> files;
+        val fileCollection: FileCollectionInternal = dependencyMetadata.files
+        val files: MutableSet<File>?
         try {
-            files = fileCollection.getFiles();
-        } catch (Exception throwable) {
-            listener.visitArtifacts(new BrokenArtifacts(throwable));
-            return;
+            files = fileCollection.getFiles()
+        } catch (throwable: Exception) {
+            listener.visitArtifacts(BrokenArtifacts(throwable))
+            return
         }
 
-        ImmutableList.Builder<ResolvedArtifactSet> selectedArtifacts = ImmutableList.builderWithExpectedSize(files.size());
-        for (File file : files) {
-            ComponentArtifactIdentifier artifactIdentifier;
+        val selectedArtifacts = ImmutableList.builderWithExpectedSize<ResolvedArtifactSet>(files.size)
+        for (file in files) {
+            val artifactIdentifier: ComponentArtifactIdentifier
             if (componentIdentifier == null) {
-                artifactIdentifier = new OpaqueComponentArtifactIdentifier(file);
+                artifactIdentifier = OpaqueComponentArtifactIdentifier(file)
                 if (!componentFilter.isSatisfiedBy(artifactIdentifier.getComponentIdentifier())) {
-                    continue;
+                    continue
                 }
             } else {
-                artifactIdentifier = new ComponentFileArtifactIdentifier(componentIdentifier, file.getName());
+                artifactIdentifier = ComponentFileArtifactIdentifier(componentIdentifier, file.getName())
             }
 
-            ImmutableAttributes variantAttributes = artifactTypeRegistry.mapAttributesFor(file);
-            SingletonFileResolvedVariant variant = new SingletonFileResolvedVariant(file, artifactIdentifier, sourceVariantId, LOCAL_FILE, variantAttributes, dependencyMetadata, calculatedValueContainerFactory);
-            selectedArtifacts.add(variantSelector.select(variant, getRequestAttributes(), allowNoMatchingVariants));
+            val variantAttributes = artifactTypeRegistry.mapAttributesFor(file)
+            val variant = SingletonFileResolvedVariant(file, artifactIdentifier, sourceVariantId, LOCAL_FILE, variantAttributes, dependencyMetadata, calculatedValueContainerFactory)
+            selectedArtifacts.add(variantSelector.select(variant, this.requestAttributes, allowNoMatchingVariants)!!)
         }
-        CompositeResolvedArtifactSet.of(selectedArtifacts.build()).visit(listener);
+        CompositeResolvedArtifactSet.of(selectedArtifacts.build()).visit(listener)
     }
 
-    @Override
-    public void visitTransformSources(TransformSourceVisitor visitor) {
+    override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
         // Should not be called
-        throw new UnsupportedOperationException();
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
+    override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
         // Should not be called
-        throw new UnsupportedOperationException();
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        context.add(dependencyMetadata.getFiles().getBuildDependencies());
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        context.add(dependencyMetadata.files.getBuildDependencies())
     }
 
-    private static class SingletonFileResolvedVariant implements ResolvedVariant, ResolvedArtifactSet, Artifacts, ResolvedVariantSet {
-        private final ComponentArtifactIdentifier artifactIdentifier;
-        private final VariantIdentifier sourceVariantId;
-        private final DisplayName artifactSetName;
-        private final ImmutableAttributes variantAttributes;
-        private final LocalFileDependencyMetadata dependencyMetadata;
-        private final ResolvableArtifact artifact;
-        private final CalculatedValueContainerFactory calculatedValueContainerFactory;
+    private class SingletonFileResolvedVariant(
+        file: File,
+        private val artifactIdentifier: ComponentArtifactIdentifier,
+        private val sourceVariantId: VariantIdentifier,
+        private val artifactSetName: DisplayName,
+        val attributes: ImmutableAttributes,
+        private val dependencyMetadata: LocalFileDependencyMetadata,
+        private val calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ) : ResolvedVariant, ResolvedArtifactSet, ResolvedArtifactSet.Artifacts, ResolvedVariantSet {
+        private val artifact: ResolvableArtifact
 
-        SingletonFileResolvedVariant(File file, ComponentArtifactIdentifier artifactIdentifier, VariantIdentifier sourceVariantId, DisplayName artifactSetName, ImmutableAttributes variantAttributes, LocalFileDependencyMetadata dependencyMetadata, CalculatedValueContainerFactory calculatedValueContainerFactory) {
-            this.artifactIdentifier = artifactIdentifier;
-            this.sourceVariantId = sourceVariantId;
-            this.artifactSetName = artifactSetName;
-            this.variantAttributes = variantAttributes;
-            this.dependencyMetadata = dependencyMetadata;
-            this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-
-            artifact = new DefaultResolvableArtifact(null, DefaultIvyArtifactName.forFile(file, null), this.artifactIdentifier, this.dependencyMetadata.getFiles(), calculatedValueContainerFactory.create(Describables.of(artifactIdentifier), file), calculatedValueContainerFactory);
+        init {
+            artifact = DefaultResolvableArtifact(
+                null, forFile(file, null), this.artifactIdentifier, this.dependencyMetadata.files, calculatedValueContainerFactory.create<File>(
+                    Describables.of(
+                        artifactIdentifier
+                    ), file
+                ),
+                calculatedValueContainerFactory
+            )
         }
 
-        @Override
-        public VariantResolveMetadata.Identifier getIdentifier() {
-            return null;
+        override fun getIdentifier(): VariantResolveMetadata.Identifier {
+            return null
         }
 
-        @Override
-        public String toString() {
-            return asDescribable().getDisplayName();
+        override fun toString(): String {
+            return asDescribable().getDisplayName()
         }
 
-        @Override
-        @NonNull
-        public ComponentIdentifier getComponentIdentifier() {
-            return artifactIdentifier.getComponentIdentifier();
+        override fun getComponentIdentifier(): ComponentIdentifier {
+            return artifactIdentifier.getComponentIdentifier()
         }
 
-        @Override
-        public VariantIdentifier getSourceVariantId() {
-            return sourceVariantId;
+        override fun getSourceVariantId(): VariantIdentifier {
+            return sourceVariantId
         }
 
-        @Override
-        public ResolvedArtifactSet getArtifacts() {
-            return this;
+        override fun getArtifacts(): ResolvedArtifactSet {
+            return this
         }
 
-        @Override
-        public DisplayName asDescribable() {
-            return Describables.of(artifactIdentifier);
+        override fun asDescribable(): DisplayName {
+            return Describables.of(artifactIdentifier)
         }
 
-        @Override
-        public List<ResolvedVariant> getCandidates() {
-            return Collections.singletonList(this);
+        override fun getCandidates(): MutableList<ResolvedVariant> {
+            return mutableListOf<ResolvedVariant>(this)
         }
 
-        @Override
-        public ImmutableAttributes getOverriddenAttributes() {
-            return ImmutableAttributes.EMPTY;
+        override fun getOverriddenAttributes(): ImmutableAttributes {
+            return ImmutableAttributes.EMPTY
         }
 
-        @Override
-        public ImmutableAttributesSchema getProducerSchema() {
-            return ImmutableAttributesSchema.EMPTY;
+        override fun getProducerSchema(): ImmutableAttributesSchema {
+            return ImmutableAttributesSchema.EMPTY
         }
 
-        @Override
-        public void visit(Visitor visitor) {
-            visitor.visitArtifacts(this);
+        override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+            visitor.visitArtifacts(this)
         }
 
-        @Override
-        public void visitTransformSources(TransformSourceVisitor visitor) {
+        override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
             // Should not be called
-            throw new UnsupportedOperationException();
+            throw UnsupportedOperationException()
         }
 
-        @Override
-        public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
+        override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
             // Should not be called
-            throw new UnsupportedOperationException();
+            throw UnsupportedOperationException()
         }
 
-        @Override
-        public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
+        override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation>, requireFiles: Boolean) {
         }
 
-        @Override
-        public void visit(ArtifactVisitor visitor) {
-            visitor.visitArtifact(artifactSetName, sourceVariantId, variantAttributes, ImmutableCapabilities.EMPTY, artifact);
-            visitor.endVisitCollection(FileCollectionInternal.OTHER);
+        override fun visit(visitor: ArtifactVisitor) {
+            visitor.visitArtifact(artifactSetName, sourceVariantId, this.attributes, ImmutableCapabilities.EMPTY, artifact)
+            visitor.endVisitCollection(FileCollectionInternal.OTHER)
         }
 
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-            context.add(dependencyMetadata.getFiles().getBuildDependencies());
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
+            context.add(dependencyMetadata.files.getBuildDependencies())
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return variantAttributes;
+        override fun getCapabilities(): ImmutableCapabilities {
+            return ImmutableCapabilities.EMPTY
         }
 
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            return ImmutableCapabilities.EMPTY;
-        }
-
-        @Override
-        public ResolvedArtifactSet transformCandidate(ResolvedVariant sourceVariant, VariantDefinition variantDefinition) {
-            assert sourceVariant == this;
-            return new TransformedLocalFileArtifactSet(this, sourceVariantId, variantDefinition.getTargetAttributes(), variantDefinition.getTransformChain(), calculatedValueContainerFactory);
+        override fun transformCandidate(sourceVariant: ResolvedVariant, variantDefinition: VariantDefinition): ResolvedArtifactSet {
+            assert(sourceVariant === this)
+            return LocalFileDependencyBackedArtifactSet.TransformedLocalFileArtifactSet(
+                this,
+                sourceVariantId,
+                variantDefinition.targetAttributes,
+                variantDefinition.transformChain!!,
+                calculatedValueContainerFactory
+            )
         }
     }
 
     /**
      * An artifact set that contains a single transformed local file.
      */
-    private static class TransformedLocalFileArtifactSet extends AbstractTransformedArtifactSet implements FileCollectionInternal.Source {
-        public TransformedLocalFileArtifactSet(
-            SingletonFileResolvedVariant delegate,
-            VariantIdentifier sourceVariantId,
-            ImmutableAttributes attributes,
-            TransformChain transformChain,
-            CalculatedValueContainerFactory calculatedValueContainerFactory
-        ) {
-            super(
-                delegate.getComponentIdentifier(),
-                sourceVariantId,
-                delegate,
-                attributes,
-                ImmutableCapabilities.EMPTY,
-                transformChain,
-                TransformUpstreamDependenciesResolver.NO_DEPENDENCIES, // File dependencies do not themselves depend on other artifacts.
-                calculatedValueContainerFactory
-            );
-        }
+    private class TransformedLocalFileArtifactSet(
+        delegate: SingletonFileResolvedVariant,
+        sourceVariantId: VariantIdentifier,
+        attributes: ImmutableAttributes,
+        transformChain: TransformChain,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ) : AbstractTransformedArtifactSet(
+        delegate.getComponentIdentifier(),
+        sourceVariantId,
+        delegate,
+        attributes,
+        ImmutableCapabilities.EMPTY,
+        transformChain,
+        TransformUpstreamDependenciesResolver.NO_DEPENDENCIES,  // File dependencies do not themselves depend on other artifacts.
+        calculatedValueContainerFactory
+    ), FileCollectionInternal.Source
+
+    companion object {
+        private val LOCAL_FILE = Describables.of("local file")
     }
 }

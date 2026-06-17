@@ -13,39 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.transform.VariantDefinition;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-
-import java.util.List;
+import org.gradle.api.Describable
+import org.gradle.api.internal.artifacts.transform.VariantDefinition
 
 /**
- * Represents some provider of {@link ResolvedVariant} instances to select from.
+ * Represents some provider of [ResolvedVariant] instances to select from.
  * Used to select the artifacts given a particular variant selected during graph resolution.
  */
-public interface ResolvedVariantSet {
-
+interface ResolvedVariantSet {
     /**
      * Returns the component identifier for the component that this set of artifacts belongs to.
      */
-    ComponentIdentifier getComponentIdentifier();
+    val componentIdentifier: ComponentIdentifier?
 
-    Describable asDescribable();
+    fun asDescribable(): Describable?
 
     /**
      * The attribute schema for the component that produced these artifacts.
      */
-    ImmutableAttributesSchema getProducerSchema();
+    val producerSchema: ImmutableAttributesSchema?
 
     /**
      * The artifact sets available for selection from this graph variant.
      */
-    List<ResolvedVariant> getCandidates();
+    val candidates: MutableList<ResolvedVariant>?
 
     /**
      * Additional attributes attached to the edge that selected the producing graph
@@ -53,14 +46,13 @@ public interface ResolvedVariantSet {
      *
      * @return attributes which will override the consumer attributes
      */
-    ImmutableAttributes getOverriddenAttributes();
+    val overriddenAttributes: ImmutableAttributes?
 
     /**
      * Transform a candidate artifact set sourced by this variant set.
      */
-    ResolvedArtifactSet transformCandidate(
-        ResolvedVariant sourceVariant,
-        VariantDefinition variantDefinition
-    );
-
+    fun transformCandidate(
+        sourceVariant: ResolvedVariant,
+        variantDefinition: VariantDefinition
+    ): ResolvedArtifactSet?
 }

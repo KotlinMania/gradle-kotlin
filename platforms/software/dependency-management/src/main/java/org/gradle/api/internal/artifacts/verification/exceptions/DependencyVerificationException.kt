@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.verification.exceptions
 
-package org.gradle.api.internal.artifacts.verification.exceptions;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class DependencyVerificationException extends GradleException {
+class DependencyVerificationException : GradleException {
+    constructor(message: String?) : super(message)
 
-    public DependencyVerificationException(String message) {
-        super(message);
-    }
-
-    public DependencyVerificationException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 }

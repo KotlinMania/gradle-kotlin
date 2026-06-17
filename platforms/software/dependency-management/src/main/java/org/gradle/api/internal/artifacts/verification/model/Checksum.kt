@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import com.google.common.collect.ImmutableSet;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Objects;
-import java.util.Set;
+import com.google.common.collect.ImmutableSet
 
 /**
- * Internal representation of a checksum, aimed at <i>verification</i>.
+ * Internal representation of a checksum, aimed at *verification*.
  * A checksum consists of a kind (md5, sha1, ...), a value, but also
- * provides <i>alternatives</i>. Alternatives are checksums which are
+ * provides *alternatives*. Alternatives are checksums which are
  * deemed trusted, because sometimes in a single build we can see different
  * checksums for the same module, because they are sourced from different
  * repositories.
@@ -40,84 +36,50 @@ import java.util.Set;
  * In addition to the list of alternatives, a checksum also provides a source,
  * which is documentation to explain where a checksum was found.
  */
-public class Checksum {
-    private final ChecksumKind kind;
-    private final String value;
-    private final Set<String> alternatives;
-    private final String origin;
-    private final String reason;
-    private final int hashCode;
+class Checksum(val kind: ChecksumKind, val value: String, alternatives: MutableSet<String?>?, val origin: String?, val reason: String?) {
+    val alternatives: MutableSet<String?>?
+    private val hashCode: Int
 
-    public Checksum(ChecksumKind kind, String value, @Nullable Set<String> alternatives, @Nullable String origin, @Nullable String reason) {
-        this.kind = kind;
-        this.value = value;
-        this.alternatives = alternatives == null ? null : ImmutableSet.copyOf(alternatives);
-        this.origin = origin;
-        this.reason = reason;
-        this.hashCode = computeHashcode();
+    init {
+        this.alternatives = if (alternatives == null) null else ImmutableSet.copyOf<String?>(alternatives)
+        this.hashCode = computeHashcode()
     }
 
-    private int computeHashcode() {
-        int result = kind.hashCode();
-        result = 31 * result + value.hashCode();
-        result = 31 * result + (alternatives != null ? alternatives.hashCode() : 0);
-        result = 31 * result + (origin != null ? origin.hashCode() : 0);
-        result = 31 * result + (reason != null ? reason.hashCode() : 0);
-        return result;
+    private fun computeHashcode(): Int {
+        var result = kind.hashCode()
+        result = 31 * result + value.hashCode()
+        result = 31 * result + (if (alternatives != null) alternatives.hashCode() else 0)
+        result = 31 * result + (if (origin != null) origin.hashCode() else 0)
+        result = 31 * result + (if (reason != null) reason.hashCode() else 0)
+        return result
     }
 
-    public ChecksumKind getKind() {
-        return kind;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    @Nullable
-    public Set<String> getAlternatives() {
-        return alternatives;
-    }
-
-    @Nullable
-    public String getOrigin() {
-        return origin;
-    }
-
-    @Nullable
-    public String getReason() {
-        return reason;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        Checksum checksum = (Checksum) o;
+        val checksum = o as Checksum
 
         if (kind != checksum.kind) {
-            return false;
+            return false
         }
-        if (!value.equals(checksum.value)) {
-            return false;
+        if (value != checksum.value) {
+            return false
         }
-        if (!Objects.equals(alternatives, checksum.alternatives)) {
-            return false;
+        if (alternatives != checksum.alternatives) {
+            return false
         }
-        if (!Objects.equals(origin, checksum.origin)) {
-            return false;
+        if (origin != checksum.origin) {
+            return false
         }
-        return Objects.equals(reason, checksum.reason);
+        return reason == checksum.reason
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
-
 }

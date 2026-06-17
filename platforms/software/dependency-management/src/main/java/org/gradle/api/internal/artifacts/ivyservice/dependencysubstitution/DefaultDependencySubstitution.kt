@@ -13,123 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.ArtifactSelectionDetails
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.api.artifacts.result.ComponentSelectionDescriptor
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal
+import org.gradle.api.internal.artifacts.dsl.ComponentSelectorParsers
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons
+import org.gradle.internal.component.model.IvyArtifactName
+import javax.inject.Inject
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.ArtifactSelectionDetails;
-import org.gradle.api.artifacts.DependencyArtifactSelector;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.dsl.ComponentSelectorParsers;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.jspecify.annotations.Nullable;
+class DefaultDependencySubstitution @Inject constructor(
+    private val componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory,
+    private val requestedSelector: ComponentSelector,
+    private val requestedArtifacts: ImmutableList<IvyArtifactName>
+) : DependencySubstitutionInternal {
+    var configuredTargetSelector: ComponentSelector? = null
+        private set
+    private var ruleDescriptors: MutableList<ComponentSelectionDescriptorInternal>? = null
+    private var artifactSelectionDetails: ArtifactSelectionDetailsInternal? = null
 
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.gradle.api.artifacts.result.ComponentSelectionCause.SELECTED_BY_RULE;
-
-public class DefaultDependencySubstitution implements DependencySubstitutionInternal {
-
-    private static final NotationParser<Object, ComponentSelector> COMPONENT_SELECTOR_PARSER = ComponentSelectorParsers.parser();
-
-    private final ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory;
-    private final ComponentSelector requestedSelector;
-    private final ImmutableList<IvyArtifactName> requestedArtifacts;
-
-    private @Nullable ComponentSelector target;
-    private @Nullable List<ComponentSelectionDescriptorInternal> ruleDescriptors;
-    private @Nullable ArtifactSelectionDetailsInternal artifactSelectionDetails;
-
-    @Inject
-    public DefaultDependencySubstitution(
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory,
-        ComponentSelector requestedSelector,
-        ImmutableList<IvyArtifactName> requestedArtifacts
-    ) {
-        this.componentSelectionDescriptorFactory = componentSelectionDescriptorFactory;
-        this.requestedSelector = requestedSelector;
-        this.requestedArtifacts = requestedArtifacts;
+    override fun getRequested(): ComponentSelector {
+        return requestedSelector
     }
 
-    @Override
-    public ComponentSelector getRequested() {
-        return requestedSelector;
+    override fun useTarget(notation: Any) {
+        useTarget(notation, ComponentSelectionReasons.SELECTED_BY_RULE)
     }
 
-    @Override
-    public void useTarget(Object notation) {
-        useTarget(notation, ComponentSelectionReasons.SELECTED_BY_RULE);
+    override fun useTarget(notation: Any, reason: String) {
+        useTarget(notation, componentSelectionDescriptorFactory.newDescriptor(ComponentSelectionCause.SELECTED_BY_RULE, reason)!!)
     }
 
-    @Override
-    public void useTarget(Object notation, String reason) {
-        useTarget(notation, componentSelectionDescriptorFactory.newDescriptor(SELECTED_BY_RULE, reason));
-    }
-
-    @Override
-    public void artifactSelection(Action<? super ArtifactSelectionDetails> action) {
+    override fun artifactSelection(action: Action<in ArtifactSelectionDetails>) {
         if (artifactSelectionDetails == null) {
-            artifactSelectionDetails = new DefaultArtifactSelectionDetails(requestedArtifacts);
+            artifactSelectionDetails = DefaultArtifactSelectionDetails(requestedArtifacts)
         }
-        action.execute(artifactSelectionDetails);
+        action.execute(artifactSelectionDetails)
     }
 
-    @Override
-    public void useTarget(Object notation, ComponentSelectionDescriptor ruleDescriptor) {
-        this.target = COMPONENT_SELECTOR_PARSER.parseNotation(notation);
+    override fun useTarget(notation: Any, ruleDescriptor: ComponentSelectionDescriptor) {
+        this.configuredTargetSelector = COMPONENT_SELECTOR_PARSER.parseNotation(notation)
         if (this.ruleDescriptors == null) {
-            this.ruleDescriptors = new ArrayList<>();
+            this.ruleDescriptors = ArrayList<ComponentSelectionDescriptorInternal>()
         }
-        this.ruleDescriptors.add((ComponentSelectionDescriptorInternal) ruleDescriptor);
-        validateTarget(target);
+        this.ruleDescriptors!!.add(ruleDescriptor as ComponentSelectionDescriptorInternal)
+        Companion.validateTarget(this.configuredTargetSelector!!)
     }
 
-    @Override
-    public @Nullable ImmutableList<ComponentSelectionDescriptorInternal> getRuleDescriptors() {
-        boolean hasConfiguredTarget = getConfiguredTargetSelector() != null;
-        boolean hasConfiguredArtifactSelectors = getConfiguredArtifactSelectors() != null;
+    override fun getRuleDescriptors(): ImmutableList<ComponentSelectionDescriptorInternal>? {
+        val hasConfiguredTarget = configuredTargetSelector != null
+        val hasConfiguredArtifactSelectors = configuredArtifactSelectors != null
 
         if (!hasConfiguredTarget && !hasConfiguredArtifactSelectors) {
-            return null;
+            return null
         }
 
-        ImmutableList.Builder<ComponentSelectionDescriptorInternal> builder = ImmutableList.builder();
+        val builder = ImmutableList.builder<ComponentSelectionDescriptorInternal>()
         if (hasConfiguredTarget) {
-            assert ruleDescriptors != null;
-            builder.addAll(ruleDescriptors);
+            checkNotNull(ruleDescriptors)
+            builder.addAll(ruleDescriptors!!)
         }
 
         if (hasConfiguredArtifactSelectors) {
-            builder.add(ComponentSelectionReasons.SELECTED_BY_RULE);
+            builder.add(ComponentSelectionReasons.SELECTED_BY_RULE)
         }
 
-        return builder.build();
+        return builder.build()
     }
 
-    @Override
-    public @Nullable ComponentSelector getConfiguredTargetSelector() {
-        return target;
-    }
+    val configuredArtifactSelectors: ImmutableList<DependencyArtifactSelector>?
+        get() = if (artifactSelectionDetails != null) artifactSelectionDetails!!.getConfiguredSelectors() else null
 
-    @Override
-    public @Nullable ImmutableList<DependencyArtifactSelector> getConfiguredArtifactSelectors() {
-        return artifactSelectionDetails != null ? artifactSelectionDetails.getConfiguredSelectors() : null;
-    }
+    companion object {
+        private val COMPONENT_SELECTOR_PARSER = ComponentSelectorParsers.parser()
 
-    public static void validateTarget(ComponentSelector componentSelector) {
-        if (componentSelector instanceof UnversionedModuleComponentSelector) {
-            throw new InvalidUserDataException("Must specify version for target of dependency substitution");
+        fun validateTarget(componentSelector: ComponentSelector) {
+            if (componentSelector is UnversionedModuleComponentSelector) {
+                throw InvalidUserDataException("Must specify version for target of dependency substitution")
+            }
         }
     }
-
 }

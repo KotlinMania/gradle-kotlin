@@ -13,70 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude
+import org.gradle.internal.component.model.IvyArtifactName
 
-final class DefaultGroupExclude implements GroupExclude {
-    private final String group;
-    private final int hashCode;
+internal class DefaultGroupExclude private constructor(private val group: String) : GroupExclude {
+    private val hashCode: Int
 
-    private DefaultGroupExclude(String group) {
-        this.group = group;
-        this.hashCode = group.hashCode();
+    init {
+        this.hashCode = group.hashCode()
     }
 
-    static GroupExclude of(String group) {
-        return new DefaultGroupExclude(group);
+    override fun getGroup(): String {
+        return group
     }
 
-    @Override
-    public String getGroup() {
-        return group;
+    override fun excludes(module: ModuleIdentifier): Boolean {
+        return group == module.getGroup()
     }
 
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
-        return group.equals(module.getGroup());
+    override fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean {
+        return false
     }
 
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName) {
-        return false;
+    override fun mayExcludeArtifacts(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
-        return false;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultGroupExclude that = (DefaultGroupExclude) o;
+        val that = o as DefaultGroupExclude
 
         if (hashCode != that.hashCode) {
-            return false;
+            return false
         }
-        return group.equals(that.group);
-
+        return group == that.group
     }
 
-    @Override
-    public int hashCode() {
-        return group.hashCode();
+    override fun hashCode(): Int {
+        return group.hashCode()
     }
 
-    @Override
-    public String toString() {
-        return "{\"exclude group\" : \"" + group + "\"}";
+    override fun toString(): String {
+        return "{\"exclude group\" : \"" + group + "\"}"
+    }
+
+    companion object {
+        fun of(group: String): GroupExclude {
+            return DefaultGroupExclude(group)
+        }
     }
 }

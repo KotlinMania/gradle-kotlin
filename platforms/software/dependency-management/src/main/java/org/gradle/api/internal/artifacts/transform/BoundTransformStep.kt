@@ -13,29 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.transform;
+package org.gradle.api.internal.artifacts.transform
 
 /**
  * A transform step with all of its parameters bound to their providers.
- * <p>
+ *
+ *
  * A transform step may take parameters from a parameters object specified when the transform is registered
  * and may also take the upstream dependencies of the source artifact as a parameter.
  */
-public class BoundTransformStep {
-    private final TransformStep transformStep;
-    private final TransformUpstreamDependencies upstreamDependencies;
-
-    public BoundTransformStep(TransformStep transformStep, TransformUpstreamDependencies upstreamDependencies) {
-        this.transformStep = transformStep;
-        this.upstreamDependencies = upstreamDependencies;
-    }
-
-    public TransformStep getTransformStep() {
-        return transformStep;
-    }
-
-    public TransformUpstreamDependencies getUpstreamDependencies() {
-        return upstreamDependencies;
-    }
-}
+class BoundTransformStep(val transformStep: TransformStep, val upstreamDependencies: TransformUpstreamDependencies)

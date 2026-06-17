@@ -13,37 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import java.io.File
 
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-
-import java.io.File;
-
-public interface ResolvedFileVisitor {
+interface ResolvedFileVisitor {
     /**
      * Called prior to scheduling resolution of a set of artifacts. Should be called in result order.
      */
-    default FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-        return FileCollectionStructureVisitor.VisitType.Visit;
+    fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+        return FileCollectionStructureVisitor.VisitType.Visit
     }
 
     /**
      * Visits an artifact file.
      *
-     * <p>Note that a given artifact may be visited multiple times. The implementation is required to filter out duplicates.</p>
+     *
+     * Note that a given artifact may be visited multiple times. The implementation is required to filter out duplicates.
      */
-    void visitFile(File file);
+    fun visitFile(file: File)
 
     /**
      * Called when some problem occurs visiting some element of the set. Visiting may continue.
      */
-    void visitFailure(Throwable failure);
+    fun visitFailure(failure: Throwable)
 
     /**
      * Called after a set of artifacts has been visited.
      */
-    default void endVisitCollection(FileCollectionInternal.Source source) {
+    fun endVisitCollection(source: FileCollectionInternal.Source) {
     }
 }

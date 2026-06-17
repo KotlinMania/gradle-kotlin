@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.internal.Try;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.NullMarked;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.internal.Try
+import org.gradle.internal.component.model.IvyArtifactName
+import org.jspecify.annotations.NullMarked
 
 /**
  * A dependency substitution applicator is responsible for applying substitution rules to dependency metadata.
@@ -27,18 +27,23 @@ import org.jspecify.annotations.NullMarked;
  * is going to be different) or a failure.
  */
 @NullMarked
-public interface DependencySubstitutionApplicator {
-
-    /**
-     * A substitution applicator that does not perform any substitutions.
-     */
-    DependencySubstitutionApplicator NO_OP = (selector, artifacts) -> Try.successful(DefaultDependencySubstitutionApplicator.DefaultSubstitutionResult.NO_OP);
-
+interface DependencySubstitutionApplicator {
     /**
      * Execute any dependency substitution rules that apply to the given dependency sector and artifacts.
      *
      * @return the result of applying any substitution rules.
      */
-    Try<SubstitutionResult> applySubstitutions(ComponentSelector selector, ImmutableList<IvyArtifactName> artifacts);
+    fun applySubstitutions(selector: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): Try<SubstitutionResult?>?
 
+    companion object {
+        /**
+         * A substitution applicator that does not perform any substitutions.
+         */
+        val NO_OP: DependencySubstitutionApplicator =
+            org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionApplicator { selector: ComponentSelector, artifacts: ImmutableList<IvyArtifactName> ->
+                Try.successful(
+                    DefaultDependencySubstitutionApplicator.DefaultSubstitutionResult.Companion.NO_OP
+                )
+            }
+    }
 }

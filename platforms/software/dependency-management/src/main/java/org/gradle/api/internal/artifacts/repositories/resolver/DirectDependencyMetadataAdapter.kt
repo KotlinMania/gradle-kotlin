@@ -13,89 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.DirectDependencyMetadata
+import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyArtifact
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.component.external.descriptor.Artifact
+import org.gradle.internal.component.external.model.GradleDependencyMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.external.model.ivy.IvyDependencyDescriptor
+import org.gradle.internal.component.external.model.ivy.IvyDependencyMetadata
+import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor
+import org.gradle.internal.component.external.model.maven.MavenDependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import java.util.stream.Collectors
 
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
-import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyArtifact;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.model.GradleDependencyMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.ivy.IvyDependencyDescriptor;
-import org.gradle.internal.component.external.model.ivy.IvyDependencyMetadata;
-import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor;
-import org.gradle.internal.component.external.model.maven.MavenDependencyMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class DirectDependencyMetadataAdapter extends AbstractDependencyMetadataAdapter<DirectDependencyMetadata> implements DirectDependencyMetadata {
-
-    public DirectDependencyMetadataAdapter(AttributesFactory attributesFactory, ModuleDependencyMetadata metadata) {
-        super(attributesFactory, metadata);
+class DirectDependencyMetadataAdapter(attributesFactory: AttributesFactory, metadata: ModuleDependencyMetadata) :
+    AbstractDependencyMetadataAdapter<DirectDependencyMetadata>(attributesFactory, metadata), DirectDependencyMetadata {
+    override fun endorseStrictVersions() {
+        updateMetadata(getMetadata().withEndorseStrictVersions(true)!!)
     }
 
-    @Override
-    public void endorseStrictVersions() {
-        updateMetadata(getMetadata().withEndorseStrictVersions(true));
+    override fun doNotEndorseStrictVersions() {
+        updateMetadata(getMetadata().withEndorseStrictVersions(false)!!)
     }
 
-    @Override
-    public void doNotEndorseStrictVersions() {
-        updateMetadata(getMetadata().withEndorseStrictVersions(false));
+    override fun isEndorsingStrictVersions(): Boolean {
+        return getMetadata().isEndorsingStrictVersions
     }
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return getMetadata().isEndorsingStrictVersions;
+    override fun getArtifactSelectors(): MutableList<DependencyArtifact> {
+        return this.ivyArtifacts.stream().map<DependencyArtifact> { ivyArtifactName: IvyArtifactName? -> this.asDependencyArtifact(ivyArtifactName!!) }.collect(Collectors.toList())
     }
 
-    @Override
-    public List<DependencyArtifact> getArtifactSelectors() {
-        return getIvyArtifacts().stream().map(this::asDependencyArtifact).collect(Collectors.toList());
+    private fun asDependencyArtifact(ivyArtifactName: IvyArtifactName): DependencyArtifact {
+        return DefaultDependencyArtifact(ivyArtifactName.name, ivyArtifactName.type, ivyArtifactName.extension, ivyArtifactName.classifier, null)
     }
 
-    private DependencyArtifact asDependencyArtifact(IvyArtifactName ivyArtifactName) {
-        return new DefaultDependencyArtifact(ivyArtifactName.name, ivyArtifactName.type, ivyArtifactName.extension, ivyArtifactName.classifier, null);
-    }
-
-    private List<IvyArtifactName> getIvyArtifacts() {
-        ModuleDependencyMetadata originalMetadata = getMetadata();
-        if (originalMetadata instanceof MavenDependencyMetadata) {
-            MavenDependencyMetadata mavenMetadata = (MavenDependencyMetadata) originalMetadata;
-            return fromMavenDescriptor(mavenMetadata.dependencyDescriptor);
-        } else if (originalMetadata instanceof IvyDependencyMetadata) {
-            IvyDependencyMetadata ivyMetadata = (IvyDependencyMetadata) originalMetadata;
-            return fromIvyDescriptor(ivyMetadata.dependencyDescriptor);
-        } else if (originalMetadata instanceof GradleDependencyMetadata){
-            return fromGradleMetadata((GradleDependencyMetadata) originalMetadata);
+    private val ivyArtifacts: MutableList<IvyArtifactName>
+        get() {
+            val originalMetadata = getMetadata()
+            if (originalMetadata is MavenDependencyMetadata) {
+                val mavenMetadata =
+                    originalMetadata
+                return fromMavenDescriptor(mavenMetadata.dependencyDescriptor)
+            } else if (originalMetadata is IvyDependencyMetadata) {
+                val ivyMetadata = originalMetadata
+                return fromIvyDescriptor(ivyMetadata.dependencyDescriptor)
+            } else if (originalMetadata is GradleDependencyMetadata) {
+                return fromGradleMetadata(originalMetadata)
+            }
+            return mutableListOf<IvyArtifactName>()
         }
-        return Collections.emptyList();
-    }
 
-    private List<IvyArtifactName> fromGradleMetadata(GradleDependencyMetadata metadata) {
-        IvyArtifactName artifact = metadata.getDependencyArtifact();
-        if(artifact != null) {
-            return Collections.singletonList(artifact);
+    private fun fromGradleMetadata(metadata: GradleDependencyMetadata): MutableList<IvyArtifactName> {
+        val artifact = metadata.dependencyArtifact
+        if (artifact != null) {
+            return mutableListOf<IvyArtifactName>(artifact)
         }
-        return Collections.emptyList();
+        return mutableListOf<IvyArtifactName>()
     }
 
-    private List<IvyArtifactName> fromIvyDescriptor(IvyDependencyDescriptor descriptor) {
-        List<Artifact> artifacts = descriptor.dependencyArtifacts;
-        return artifacts.stream().map(Artifact::getArtifactName).collect(Collectors.toList());
+    private fun fromIvyDescriptor(descriptor: IvyDependencyDescriptor): MutableList<IvyArtifactName> {
+        val artifacts = descriptor.dependencyArtifacts
+        return artifacts.stream().map<Any>(Artifact::getArtifactName).collect(Collectors.toList())
     }
 
-    private List<IvyArtifactName> fromMavenDescriptor(MavenDependencyDescriptor descriptor) {
-        IvyArtifactName artifact = descriptor.dependencyArtifact;
-        if(artifact != null) {
-            return Collections.singletonList(artifact);
+    private fun fromMavenDescriptor(descriptor: MavenDependencyDescriptor): MutableList<IvyArtifactName> {
+        val artifact = descriptor.dependencyArtifact
+        if (artifact != null) {
+            return mutableListOf<IvyArtifactName>(artifact)
         }
-        return Collections.emptyList();
+        return mutableListOf<IvyArtifactName>()
     }
-
 }

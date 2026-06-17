@@ -13,86 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.Action;
-import org.gradle.api.Describable;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.DependencySet;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.internal.DelegatingDomainObjectSet;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.MutationValidator;
-import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.Actions;
+import org.gradle.api.Action
+import org.gradle.api.Describable
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.internal.DelegatingDomainObjectSet
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.MutationValidator
+import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.Actions
 
-import java.util.Collection;
+class DefaultDependencySet(private val displayName: Describable, private val clientConfiguration: ConfigurationInternal, backingSet: DomainObjectSet<Dependency?>) :
+    DelegatingDomainObjectSet<Dependency?>(backingSet), DependencySet {
+    private val mutationValidator: Action<in ModuleDependency?>
 
-public class DefaultDependencySet extends DelegatingDomainObjectSet<Dependency> implements DependencySet {
-    private final Describable displayName;
-    private final ConfigurationInternal clientConfiguration;
-    private final Action<? super ModuleDependency> mutationValidator;
-
-    public DefaultDependencySet(Describable displayName, final ConfigurationInternal clientConfiguration, DomainObjectSet<Dependency> backingSet) {
-        super(backingSet);
-        this.displayName = displayName;
-        this.clientConfiguration = clientConfiguration;
-        this.mutationValidator = toMutationValidator(clientConfiguration);
+    init {
+        this.mutationValidator = toMutationValidator(clientConfiguration)
     }
 
-    protected Action<ModuleDependency> toMutationValidator(final Configuration clientConfiguration) {
-        return clientConfiguration instanceof MutationValidator ? new MutationValidationAction(clientConfiguration) : Actions.doNothing();
+    protected fun toMutationValidator(clientConfiguration: Configuration?): Action<ModuleDependency?> {
+        return if (clientConfiguration is MutationValidator) MutationValidationAction(clientConfiguration) else Actions.doNothing<ModuleDependency?>()
     }
 
-    @Override
-    public String toString() {
-        return displayName.getDisplayName();
+    override fun toString(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return clientConfiguration.getBuildDependencies();
+    override fun getBuildDependencies(): TaskDependency {
+        return clientConfiguration.getBuildDependencies()
     }
 
-    @Override
-    public boolean add(final Dependency o) {
-        assertConfigurationIsDeclarable();
-        clientConfiguration.maybeEmitDeclarationDeprecation();
-        if (o instanceof AbstractModuleDependency) {
-            ((AbstractModuleDependency) o).addMutationValidator(mutationValidator);
+    override fun add(o: Dependency): Boolean {
+        assertConfigurationIsDeclarable()
+        clientConfiguration.maybeEmitDeclarationDeprecation()
+        if (o is AbstractModuleDependency) {
+            o.addMutationValidator(mutationValidator)
         }
-        return super.add(o);
+        return super.add(o)
     }
 
-    private void assertConfigurationIsDeclarable() {
+    private fun assertConfigurationIsDeclarable() {
         if (!clientConfiguration.isCanBeDeclared()) {
-            throw new InvalidUserCodeException("Dependencies can not be declared against the `" + clientConfiguration.getName() + "` configuration.");
+            throw InvalidUserCodeException("Dependencies can not be declared against the `" + clientConfiguration.getName() + "` configuration.")
         }
     }
 
-    @Override
-    public boolean addAll(Collection<? extends Dependency> dependencies) {
-        boolean added = false;
-        for (Dependency dependency : dependencies) {
-            added |= add(dependency);
+    override fun addAll(dependencies: MutableCollection<out Dependency>): Boolean {
+        var added = false
+        for (dependency in dependencies) {
+            added = added or add(dependency)
         }
-        return added;
+        return added
     }
 
-    private static class MutationValidationAction implements Action<ModuleDependency> {
-        private final Configuration clientConfiguration;
-
-        public MutationValidationAction(Configuration clientConfiguration) {
-            this.clientConfiguration = clientConfiguration;
-        }
-
-        @Override
-        public void execute(ModuleDependency moduleDependency) {
-            ((MutationValidator) clientConfiguration).validateMutation(MutationValidator.MutationType.DEPENDENCY_ATTRIBUTES);
+    private class MutationValidationAction(private val clientConfiguration: Configuration) : Action<ModuleDependency?> {
+        override fun execute(moduleDependency: ModuleDependency?) {
+            (clientConfiguration as MutationValidator).validateMutation(MutationValidator.MutationType.DEPENDENCY_ATTRIBUTES)
         }
     }
 }

@@ -82,7 +82,7 @@ public class VersionMappingComponentDependencyResolver implements ComponentDepen
 
     @Override
     public ResolvedCoordinates resolveComponentCoordinates(DefaultProjectDependencyConstraint dependency) {
-        return resolveComponentCoordinates(dependency.getProjectDependency());
+        return resolveComponentCoordinates(dependency.projectDependency);
     }
 
     @Nullable

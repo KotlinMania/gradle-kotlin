@@ -13,68 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeAllOf;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.collect.PersistentSet;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeAllOf
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.collect.PersistentSet
+import org.gradle.internal.component.model.IvyArtifactName
 
-final class DefaultExcludeAllOf extends DefaultCompositeExclude implements ExcludeAllOf {
-    public static ExcludeAllOf of(PersistentSet<ExcludeSpec> components) {
-        return new DefaultExcludeAllOf(components);
+internal class DefaultExcludeAllOf private constructor(components: PersistentSet<ExcludeSpec?>?) : DefaultCompositeExclude(components), ExcludeAllOf {
+    override fun mask(): Int {
+        return 1877062907
     }
 
-    private DefaultExcludeAllOf(PersistentSet<ExcludeSpec> components) {
-        super(components);
+    private var mayExcludeArtifacts: Boolean? = null
+
+    override fun getDisplayName(): String {
+        return "all of"
     }
 
-    @Override
-    int mask() {
-        return 1877062907;
-    }
-
-    private Boolean mayExcludeArtifacts;
-
-    @Override
-    protected String getDisplayName() {
-        return "all of";
-    }
-
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
-        for (ExcludeSpec component : getComponents()) {
+    override fun excludes(module: ModuleIdentifier?): Boolean {
+        for (component in getComponents()) {
             if (!component.excludes(module)) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName) {
-        for (ExcludeSpec component : getComponents()) {
+    override fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean {
+        for (component in getComponents()) {
             if (!component.excludesArtifact(module, artifactName)) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
+    override fun mayExcludeArtifacts(): Boolean {
         if (mayExcludeArtifacts != null) {
-            return mayExcludeArtifacts;
+            return mayExcludeArtifacts!!
         }
-        mayExcludeArtifacts = true;
-        for (ExcludeSpec component : getComponents()) {
+        mayExcludeArtifacts = true
+        for (component in getComponents()) {
             if (!component.mayExcludeArtifacts()) {
-                mayExcludeArtifacts = false;
-                break;
+                mayExcludeArtifacts = false
+                break
             }
         }
-        return mayExcludeArtifacts;
+        return mayExcludeArtifacts!!
     }
 
+    companion object {
+        fun of(components: PersistentSet<ExcludeSpec?>?): ExcludeAllOf {
+            return DefaultExcludeAllOf(components)
+        }
+    }
 }

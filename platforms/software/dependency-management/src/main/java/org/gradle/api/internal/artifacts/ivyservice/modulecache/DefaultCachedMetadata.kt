@@ -13,90 +13,73 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.time.Duration
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
 
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+internal class DefaultCachedMetadata private constructor(private val ageMillis: Long, private val metadata: ModuleComponentResolveMetadata?) : ModuleMetadataCache.CachedMetadata {
+    @Volatile
+    private var processedMetadataByRules: MutableMap<Int?, ExternalModuleComponentGraphResolveState?>? = null
 
-class DefaultCachedMetadata implements ModuleMetadataCache.CachedMetadata {
-    private final long ageMillis;
-    private final ModuleComponentResolveMetadata metadata;
+    constructor(entry: ModuleMetadataCacheEntry, metadata: ModuleComponentResolveMetadata?, timeProvider: BuildCommencedTimeProvider) : this(
+        timeProvider.getCurrentTime() - entry.createTimestamp,
+        metadata
+    )
 
-    private volatile Map<Integer, ExternalModuleComponentGraphResolveState> processedMetadataByRules;
-
-    DefaultCachedMetadata(ModuleMetadataCacheEntry entry, ModuleComponentResolveMetadata metadata, BuildCommencedTimeProvider timeProvider) {
-        this(timeProvider.getCurrentTime() - entry.createTimestamp, metadata);
+    override fun isMissing(): Boolean {
+        return metadata == null
     }
 
-    private DefaultCachedMetadata(long age, ModuleComponentResolveMetadata metadata) {
-        this.ageMillis = age;
-        this.metadata = metadata;
+    override fun getModuleSources(): ModuleSources {
+        return metadata!!.sources
     }
 
-    @Override
-    public boolean isMissing() {
-        return metadata == null;
+    override fun getModuleVersion(): ResolvedModuleVersion? {
+        return if (isMissing()) null else DefaultResolvedModuleVersion(getMetadata()!!.moduleVersionId)
     }
 
-    @Override
-    public ModuleSources getModuleSources() {
-        return metadata.sources;
+    override fun getMetadata(): ModuleComponentResolveMetadata? {
+        return metadata
     }
 
-    @Override
-    public ResolvedModuleVersion getModuleVersion() {
-        return isMissing() ? null : new DefaultResolvedModuleVersion(getMetadata().moduleVersionId);
+    override fun getAge(): Duration? {
+        return Duration.ofMillis(ageMillis)
     }
 
-    @Override
-    public ModuleComponentResolveMetadata getMetadata() {
-        return metadata;
-    }
-
-    @Override
-    public Duration getAge() {
-        return Duration.ofMillis(ageMillis);
-    }
-
-    @Nullable
-    @Override
-    public ExternalModuleComponentGraphResolveState getProcessedMetadata(int key) {
+    override fun getProcessedMetadata(key: Int): ExternalModuleComponentGraphResolveState? {
         if (processedMetadataByRules != null) {
-            return processedMetadataByRules.get(key);
+            return processedMetadataByRules!!.get(key)
         }
-        return null;
+        return null
     }
 
-    @Override
-    public synchronized void putProcessedMetadata(int hash, ExternalModuleComponentGraphResolveState processed) {
+    @Synchronized
+    override fun putProcessedMetadata(hash: Int, processed: ExternalModuleComponentGraphResolveState?) {
         if (processedMetadataByRules == null) {
-            processedMetadataByRules = Collections.singletonMap(hash, processed);
-            return;
-        } else if (processedMetadataByRules.size() == 1) {
-            processedMetadataByRules = new ConcurrentHashMap<>(processedMetadataByRules);
+            processedMetadataByRules = Collections.singletonMap<Int?, ExternalModuleComponentGraphResolveState?>(hash, processed)
+            return
+        } else if (processedMetadataByRules!!.size == 1) {
+            processedMetadataByRules = ConcurrentHashMap<Int?, ExternalModuleComponentGraphResolveState?>(processedMetadataByRules)
         }
-        processedMetadataByRules.put(hash, processed);
+        processedMetadataByRules!!.put(hash, processed)
     }
 
-    @Override
-    public ModuleMetadataCache.CachedMetadata dehydrate() {
+    override fun dehydrate(): ModuleMetadataCache.CachedMetadata {
         if (metadata == null) {
-            return this;
+            return this
         }
-        MutableModuleComponentResolveMetadata copy = this.metadata.asMutable();
+        val copy = this.metadata.asMutable()
 
-        ModuleComponentResolveMetadata asImmutable = copy.asImmutable();
-        return new DefaultCachedMetadata(ageMillis, asImmutable);
+        val asImmutable = copy!!.asImmutable()
+        return DefaultCachedMetadata(ageMillis, asImmutable)
     }
 }

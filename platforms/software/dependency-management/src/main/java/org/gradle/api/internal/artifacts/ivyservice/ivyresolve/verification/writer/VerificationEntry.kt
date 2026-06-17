@@ -13,88 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import java.io.File
+import java.util.function.Function
 
-import java.io.File;
-import java.util.Comparator;
+internal abstract class VerificationEntry protected constructor(val id: ModuleComponentArtifactIdentifier, val artifactKind: ArtifactVerificationOperation.ArtifactKind, val file: File) :
+    Comparable<VerificationEntry> {
+    val group: String
+        get() = id.getComponentIdentifier().getGroup()
 
-abstract class VerificationEntry implements Comparable<VerificationEntry> {
-    private static final Comparator<VerificationEntry> ENTRY_COMPARATOR = Comparator.comparing(VerificationEntry::getGroup)
-        .thenComparing(VerificationEntry::getModule)
-        .thenComparing(VerificationEntry::getVersion)
-        .thenComparing(VerificationEntry::getFile)
-        .thenComparing(VerificationEntry::getArtifactKind)
-        .thenComparing(VerificationEntry::getOrder);
+    val module: String
+        get() = id.getComponentIdentifier().getModule()
 
-    protected final ModuleComponentArtifactIdentifier id;
-    protected final ArtifactVerificationOperation.ArtifactKind artifactKind;
-    protected final File file;
+    val version: String
+        get() = id.getComponentIdentifier().getVersion()
 
-    protected VerificationEntry(ModuleComponentArtifactIdentifier id, ArtifactVerificationOperation.ArtifactKind artifactKind, File file) {
-        this.id = id;
-        this.artifactKind = artifactKind;
-        this.file = file;
-    }
+    abstract val order: Int
 
-    public ModuleComponentArtifactIdentifier getId() {
-        return id;
-    }
-
-    String getGroup() {
-        return id.getComponentIdentifier().getGroup();
-    }
-
-    String getModule() {
-        return id.getComponentIdentifier().getModule();
-    }
-
-    String getVersion() {
-        return id.getComponentIdentifier().getVersion();
-    }
-
-    public ArtifactVerificationOperation.ArtifactKind getArtifactKind() {
-        return artifactKind;
-    }
-
-    public File getFile() {
-        return file;
-    }
-
-    abstract int getOrder();
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        VerificationEntry that = (VerificationEntry) o;
+        val that = o as VerificationEntry
 
-        if (!id.equals(that.id)) {
-            return false;
+        if (id != that.id) {
+            return false
         }
         if (artifactKind != that.artifactKind) {
-            return false;
+            return false
         }
-        return file.equals(that.file);
+        return file == that.file
     }
 
-    @Override
-    public int hashCode() {
-        int result = id.hashCode();
-        result = 31 * result + artifactKind.hashCode();
-        result = 31 * result + file.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + artifactKind.hashCode()
+        result = 31 * result + file.hashCode()
+        return result
     }
 
-    @Override
-    public int compareTo(VerificationEntry other) {
-        return ENTRY_COMPARATOR.compare(this, other);
+    override fun compareTo(other: VerificationEntry): Int {
+        return ENTRY_COMPARATOR.compare(this, other)
+    }
+
+    companion object {
+        private val ENTRY_COMPARATOR: Comparator<VerificationEntry> = Comparator.comparing<VerificationEntry, String>(Function { obj: VerificationEntry -> obj.group })
+            .thenComparing<String>(Function { obj: VerificationEntry -> obj.module })
+            .thenComparing<String>(Function { obj: VerificationEntry -> obj.version })
+            .thenComparing<File>(Function { obj: VerificationEntry -> obj.file })
+            .thenComparing<ArtifactVerificationOperation.ArtifactKind>(Function { obj: VerificationEntry -> obj.artifactKind })
+            .thenComparing<Int>(Function { obj: VerificationEntry -> obj.order })
     }
 }

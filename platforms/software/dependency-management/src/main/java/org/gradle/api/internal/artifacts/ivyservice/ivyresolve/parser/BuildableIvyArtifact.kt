@@ -13,34 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
+internal class BuildableIvyArtifact(name: String, type: String, ext: String?, classifier: String?) {
+    val artifact: IvyArtifactName
+    val configurations: MutableSet<String?> = LinkedHashSet<String?>()
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-class BuildableIvyArtifact {
-
-    private final IvyArtifactName ivyArtifactName;
-    private final Set<String> configurations = new LinkedHashSet<>();
-
-    public BuildableIvyArtifact(String name, String type, String ext, String classifier) {
-        this.ivyArtifactName = new DefaultIvyArtifactName(name, type, ext, classifier);
+    init {
+        this.artifact = DefaultIvyArtifactName(name, type, ext, classifier)
     }
 
-    public BuildableIvyArtifact addConfiguration(String confName) {
-        configurations.add(confName);
-        return this;
-    }
-
-    public IvyArtifactName getArtifact() {
-        return ivyArtifactName;
-    }
-
-    public Set<String> getConfigurations() {
-        return configurations;
+    fun addConfiguration(confName: String?): BuildableIvyArtifact {
+        configurations.add(confName)
+        return this
     }
 }

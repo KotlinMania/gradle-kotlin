@@ -13,105 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.Namer
+import org.gradle.api.UnknownDomainObjectException
+import org.gradle.api.artifacts.ArtifactRepositoryContainer
+import org.gradle.api.artifacts.UnknownRepositoryException
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultNamedDomainObjectList
+import org.gradle.api.internal.InternalAction
+import org.gradle.api.internal.artifacts.repositories.ArtifactRepositoryInternal
+import org.gradle.internal.Actions
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.util.internal.ConfigureUtil
+import org.gradle.util.internal.GUtil
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.Namer;
-import org.gradle.api.UnknownDomainObjectException;
-import org.gradle.api.artifacts.ArtifactRepositoryContainer;
-import org.gradle.api.artifacts.UnknownRepositoryException;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultNamedDomainObjectList;
-import org.gradle.api.internal.InternalAction;
-import org.gradle.api.internal.artifacts.repositories.ArtifactRepositoryInternal;
-import org.gradle.internal.Actions;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.util.internal.ConfigureUtil;
-import org.gradle.util.internal.GUtil;
+open class DefaultArtifactRepositoryContainer(instantiator: Instantiator, callbackActionDecorator: CollectionCallbackActionDecorator) : DefaultNamedDomainObjectList<ArtifactRepository?>(
+    ArtifactRepository::class.java, instantiator, RepositoryNamer(), callbackActionDecorator
+), ArtifactRepositoryContainer {
+    private val addLastAction = Action { toAdd: ArtifactRepository? -> super@DefaultArtifactRepositoryContainer.add(toAdd) }
 
-public class DefaultArtifactRepositoryContainer extends DefaultNamedDomainObjectList<ArtifactRepository>
-        implements ArtifactRepositoryContainer {
-
-    private final Action<ArtifactRepository> addLastAction = DefaultArtifactRepositoryContainer.super::add;
-
-    public DefaultArtifactRepositoryContainer(Instantiator instantiator, CollectionCallbackActionDecorator callbackActionDecorator) {
-        super(ArtifactRepository.class, instantiator, new RepositoryNamer(), callbackActionDecorator);
-        whenObjectAdded((InternalAction<ArtifactRepository>) artifactRepository -> {
-            if (artifactRepository instanceof ArtifactRepositoryInternal) {
-                ArtifactRepositoryInternal repository = (ArtifactRepositoryInternal) artifactRepository;
-                repository.onAddToContainer(DefaultArtifactRepositoryContainer.this);
+    init {
+        whenObjectAdded(InternalAction { artifactRepository: ArtifactRepository? ->
+            if (artifactRepository is ArtifactRepositoryInternal) {
+                val repository = artifactRepository
+                repository.onAddToContainer(this@DefaultArtifactRepositoryContainer)
             }
-        });
+        })
     }
 
-    private static class RepositoryNamer implements Namer<ArtifactRepository> {
-        @Override
-        public String determineName(ArtifactRepository r) {
-            return r.getName();
+    private class RepositoryNamer : Namer<ArtifactRepository?> {
+        override fun determineName(r: ArtifactRepository): String {
+            return r.getName()
         }
     }
 
-    @Override
-    public String getTypeDisplayName() {
-        return "repository";
+    public override fun getTypeDisplayName(): String {
+        return "repository"
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public DefaultArtifactRepositoryContainer configure(Closure closure) {
-        return ConfigureUtil.configureSelf(closure, this);
+    override fun configure(closure: Closure<*>?): DefaultArtifactRepositoryContainer? {
+        return ConfigureUtil.configureSelf<DefaultArtifactRepositoryContainer?>(closure, this)
     }
 
-    @Override
-    public void addFirst(ArtifactRepository repository) {
-        add(0, repository);
+    override fun addFirst(repository: ArtifactRepository) {
+        add(0, repository)
     }
 
-    @Override
-    public void addLast(ArtifactRepository repository) {
-        add(repository);
+    override fun addLast(repository: ArtifactRepository) {
+        add(repository)
     }
 
-    @Override
-    protected UnknownDomainObjectException createNotFoundException(String name) {
-        return new UnknownRepositoryException(String.format("Repository with name '%s' not found.", name));
+    override fun createNotFoundException(name: String): UnknownDomainObjectException {
+        return UnknownRepositoryException(String.format("Repository with name '%s' not found.", name))
     }
 
-    public <T extends ArtifactRepository> T addRepository(T repository, String defaultName) {
-        return addRepository(repository, defaultName, Actions.doNothing());
+    fun <T : ArtifactRepository?> addRepository(repository: T?, defaultName: String): T? {
+        return addRepository<T?>(repository, defaultName, Actions.doNothing<T?>())
     }
 
-    public <T extends ArtifactRepository> T addRepository(T repository, String defaultName, Action<? super T> configureAction) {
-        configureAction.execute(repository);
-        return addWithUniqueName(repository, defaultName, addLastAction);
+    fun <T : ArtifactRepository?> addRepository(repository: T?, defaultName: String, configureAction: Action<in T?>): T? {
+        configureAction.execute(repository)
+        return addWithUniqueName<T?>(repository, defaultName, addLastAction)
     }
 
-    private <T extends ArtifactRepository> T addWithUniqueName(T repository, String defaultName, Action<? super T> insertion) {
-        String repositoryName = repository.getName();
+    private fun <T : ArtifactRepository?> addWithUniqueName(repository: T?, defaultName: String, insertion: Action<in T?>): T? {
+        val repositoryName = repository!!.getName()
         if (!GUtil.isTrue(repositoryName)) {
-            repository.setName(uniquifyName(defaultName));
+            repository.setName(uniquifyName(defaultName))
         } else {
-            repository.setName(uniquifyName(repositoryName));
+            repository.setName(uniquifyName(repositoryName))
         }
 
-        assertElementNotPresent(repository.getName());
-        insertion.execute(repository);
-        return repository;
+        assertElementNotPresent(repository.getName())
+        insertion.execute(repository)
+        return repository
     }
 
-    private String uniquifyName(String proposedName) {
+    private fun uniquifyName(proposedName: String): String {
         if (findByName(proposedName) == null) {
-            return proposedName;
+            return proposedName
         }
-        for (int index = 2; true; index++) {
-            String candidate = proposedName + index;
-            if (findByName(candidate) == null) {
-                return candidate;
+        run {
+            var index = 2
+            while (true) {
+                val candidate = proposedName + index
+                if (findByName(candidate) == null) {
+                    return candidate
+                }
+                index++
             }
         }
     }
-
 }

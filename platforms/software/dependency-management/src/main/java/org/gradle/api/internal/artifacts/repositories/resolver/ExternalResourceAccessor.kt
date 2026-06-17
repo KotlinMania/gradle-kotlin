@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import java.net.URI
 
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.jspecify.annotations.Nullable;
+interface ExternalResourceAccessor {
+    fun resolveResource(resource: ExternalResourceName): LocallyAvailableExternalResource?
 
-import java.net.URI;
-
-public interface ExternalResourceAccessor {
-    @Nullable
-    LocallyAvailableExternalResource resolveResource(ExternalResourceName resource);
-
-    @Nullable
-    LocallyAvailableExternalResource resolveUri(URI resource);
+    fun resolveUri(resource: URI): LocallyAvailableExternalResource?
 }

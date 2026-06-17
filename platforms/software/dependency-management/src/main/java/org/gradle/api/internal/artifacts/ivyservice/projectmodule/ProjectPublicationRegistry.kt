@@ -13,54 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
-
-import org.gradle.api.artifacts.component.BuildIdentifier;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.Path;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.Collection;
+import org.gradle.api.artifacts.component.BuildIdentifier
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.Path
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A build tree scoped service that collects information on the local "publications" of each
  * project within a build tree. A "publication" here means some buildable thing that the project
  * produces that can be consumed outside of the project.
  *
- * The information is gathered from multiple sources ({@code publishing.publications} container, etc.).
+ * The information is gathered from multiple sources (`publishing.publications` container, etc.).
  */
-@ServiceScope(Scope.BuildTree.class)
+@ServiceScope(Scope.BuildTree::class)
 @ThreadSafe
-public interface ProjectPublicationRegistry {
-
+interface ProjectPublicationRegistry {
     /**
      * Register the given publication as produced by the project with the given ID.
      */
-    void registerPublication(ProjectIdentity projectIdentity, ProjectPublication publication);
+    fun registerPublication(projectIdentity: ProjectIdentity, publication: ProjectPublication)
 
     /**
      * Returns the known publications for the given project.
      */
-    <T extends ProjectPublication> Collection<T> getPublicationsForProject(Class<T> type, Path projectIdentityPath);
+    fun <T : ProjectPublication?> getPublicationsForProject(type: Class<T?>, projectIdentityPath: Path): MutableCollection<T?>?
 
     /**
      * Returns all known publications for the given build.
      */
-    <T extends ProjectPublication> Collection<PublicationForProject<T>> getPublicationsForBuild(Class<T> type, BuildIdentifier buildIdentity);
+    fun <T : ProjectPublication?> getPublicationsForBuild(type: Class<T?>, buildIdentity: BuildIdentifier): MutableCollection<PublicationForProject<T?>>?
 
-    interface PublicationForProject<T extends ProjectPublication> {
-
+    interface PublicationForProject<T : ProjectPublication?> {
         /**
          * The publication produced by the project.
          */
-        T getPublication();
+        @JvmField
+        val publication: T?
 
         /**
          * The ID of the project that produced the publication.
          */
-        ProjectIdentity getProducingProjectId();
+        @JvmField
+        val producingProjectId: ProjectIdentity?
     }
 }

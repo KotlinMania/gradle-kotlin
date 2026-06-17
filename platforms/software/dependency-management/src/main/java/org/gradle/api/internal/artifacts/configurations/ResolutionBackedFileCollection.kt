@@ -13,67 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import org.gradle.api.internal.artifacts.ivyservice.ResolvedFileCollectionVisitor
+import org.gradle.api.internal.artifacts.ivyservice.TypedResolveException
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet
+import org.gradle.api.internal.file.AbstractFileCollection
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.FailureCollectingTaskDependencyResolveContext
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.logging.text.TreeFormatter
+import java.util.function.Consumer
 
-import org.gradle.api.internal.artifacts.ivyservice.ResolvedFileCollectionVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet;
-import org.gradle.api.internal.file.AbstractFileCollection;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.FailureCollectingTaskDependencyResolveContext;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.component.resolution.failure.exception.ArtifactSelectionException;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-public class ResolutionBackedFileCollection extends AbstractFileCollection {
-
-    private final SelectedArtifactSet artifacts;
-    private final boolean lenient;
-    private final ResolutionHost resolutionHost;
-
-    public ResolutionBackedFileCollection(
-        SelectedArtifactSet artifacts,
-        boolean lenient,
-        ResolutionHost resolutionHost,
-        TaskDependencyFactory taskDependencyFactory
-    ) {
-        super(taskDependencyFactory);
-        this.artifacts = artifacts;
-        this.lenient = lenient;
-        this.resolutionHost = resolutionHost;
-    }
-
-    public ResolutionHost getResolutionHost() {
-        return resolutionHost;
-    }
-
-    public boolean isLenient() {
-        return lenient;
-    }
-
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        FailureCollectingTaskDependencyResolveContext collectingContext = new FailureCollectingTaskDependencyResolveContext(context);
-        artifacts.visitDependencies(collectingContext);
-        if (!lenient) {
-            resolutionHost.consolidateFailures("dependencies", collectingContext.getFailures()).ifPresent(consolidatedFailure -> {
-                resolutionHost.reportProblems(consolidatedFailure);
-                context.visitFailure(consolidatedFailure);
-            });
+class ResolutionBackedFileCollection(
+    private val artifacts: SelectedArtifactSet,
+    val isLenient: Boolean,
+    val resolutionHost: ResolutionHost,
+    taskDependencyFactory: TaskDependencyFactory
+) : AbstractFileCollection(taskDependencyFactory) {
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        val collectingContext = FailureCollectingTaskDependencyResolveContext(context)
+        artifacts.visitDependencies(collectingContext)
+        if (!this.isLenient) {
+            resolutionHost.consolidateFailures("dependencies", collectingContext.getFailures()).ifPresent(Consumer { consolidatedFailure: TypedResolveException? ->
+                resolutionHost.reportProblems(consolidatedFailure!!)
+                context.visitFailure(consolidatedFailure)
+            })
         }
     }
 
-    @Override
-    public String getDisplayName() {
-        return resolutionHost.displayName("files").getDisplayName();
+    override fun getDisplayName(): String {
+        return resolutionHost.displayName("files").getDisplayName()
     }
 
-    @Override
-    protected void visitContents(FileCollectionStructureVisitor visitor) {
-        ResolvedFileCollectionVisitor collectingVisitor = new ResolvedFileCollectionVisitor(visitor);
-        artifacts.visitFiles(collectingVisitor, lenient);
-        maybeThrowResolutionFailures(collectingVisitor);
+    override fun visitContents(visitor: FileCollectionStructureVisitor) {
+        val collectingVisitor = ResolvedFileCollectionVisitor(visitor)
+        artifacts.visitFiles(collectingVisitor, this.isLenient)
+        maybeThrowResolutionFailures(collectingVisitor)
     }
 
     /**
@@ -81,15 +58,13 @@ public class ResolutionBackedFileCollection extends AbstractFileCollection {
      *
      * @throws ArtifactSelectionException subtypes
      */
-    private void maybeThrowResolutionFailures(ResolvedFileCollectionVisitor collectingVisitor) {
-        if (!lenient) {
-            resolutionHost.rethrowFailuresAndReportProblems("files", collectingVisitor.getFailures());
+    private fun maybeThrowResolutionFailures(collectingVisitor: ResolvedFileCollectionVisitor) {
+        if (!this.isLenient) {
+            resolutionHost.rethrowFailuresAndReportProblems("files", collectingVisitor.failures)
         }
     }
 
-    @Override
-    protected void appendContents(TreeFormatter formatter) {
-        formatter.node("contains: " + getDisplayName());
+    override fun appendContents(formatter: TreeFormatter) {
+        formatter.node("contains: " + getDisplayName())
     }
-
 }

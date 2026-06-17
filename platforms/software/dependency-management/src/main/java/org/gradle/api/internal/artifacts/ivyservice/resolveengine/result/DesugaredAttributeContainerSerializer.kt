@@ -13,76 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot;
-
-import java.io.IOException;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot
+import java.io.IOException
 
 /**
  * A lossy attribute container serializer. It's lossy because it doesn't preserve the attribute
  * types: it will serialize the contents as strings, and read them as strings, only for reporting
  * purposes.
  */
-@ServiceScope(Scope.BuildSession.class)
-public class DesugaredAttributeContainerSerializer extends AbstractSerializer<AttributeContainer> implements AttributeContainerSerializer {
-    private final AttributesFactory attributesFactory;
-    private final NamedObjectInstantiator instantiator;
-    private static final byte STRING_ATTRIBUTE = 1;
-    private static final byte BOOLEAN_ATTRIBUTE = 2;
-    private static final byte INTEGER_ATTRIBUTE = 3;
-
-    public DesugaredAttributeContainerSerializer(AttributesFactory attributesFactory, NamedObjectInstantiator instantiator) {
-        this.attributesFactory = attributesFactory;
-        this.instantiator = instantiator;
-    }
-
-    @Override
-    public ImmutableAttributes read(Decoder decoder) throws IOException {
-        ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
-        int count = decoder.readSmallInt();
-        for (int i = 0; i < count; i++) {
-            String name = decoder.readString();
-            byte type = decoder.readByte();
+@ServiceScope(Scope.BuildSession::class)
+class DesugaredAttributeContainerSerializer(private val attributesFactory: AttributesFactory, private val instantiator: NamedObjectInstantiator) : AbstractSerializer<AttributeContainer?>(),
+    AttributeContainerSerializer {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ImmutableAttributes {
+        var attributes = ImmutableAttributes.EMPTY
+        val count = decoder.readSmallInt()
+        for (i in 0..<count) {
+            val name = decoder.readString()
+            val type = decoder.readByte()
             if (type == BOOLEAN_ATTRIBUTE) {
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, Boolean.class), decoder.readBoolean());
+                attributes = attributesFactory.concat<Boolean>(attributes, Attribute.of<Boolean>(name!!, Boolean::class.java), decoder.readBoolean())
             } else if (type == INTEGER_ATTRIBUTE) {
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, Integer.class), decoder.readInt());
+                attributes = attributesFactory.concat<Int>(attributes, Attribute.of<Int>(name!!, Int::class.java), decoder.readInt())
             } else {
-                String value = decoder.readString();
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, String.class), new CoercingStringValueSnapshot(value, instantiator));
+                val value = decoder.readString()
+                attributes = attributesFactory.concat<String>(attributes, Attribute.of<String>(name!!, String::class.java), CoercingStringValueSnapshot(value!!, instantiator))
             }
         }
-        return attributes;
+        return attributes
     }
 
-    @Override
-    public void write(Encoder encoder, AttributeContainer container) throws IOException {
-        encoder.writeSmallInt(container.keySet().size());
-        for (Attribute<?> attribute : container.keySet()) {
-            encoder.writeString(attribute.getName());
-            Class<?> type = attribute.getType();
-            if (type == Boolean.class) {
-                encoder.writeByte(BOOLEAN_ATTRIBUTE);
-                encoder.writeBoolean((Boolean) container.getAttribute(attribute));
-            } else if (type == Integer.class) {
-                encoder.writeByte(INTEGER_ATTRIBUTE);
-                encoder.writeInt((Integer) container.getAttribute(attribute));
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, container: AttributeContainer) {
+        encoder.writeSmallInt(container.keySet().size)
+        for (attribute in container.keySet()) {
+            encoder.writeString(attribute.getName())
+            val type: Class<*> = attribute.getType()
+            if (type == Boolean::class.java) {
+                encoder.writeByte(BOOLEAN_ATTRIBUTE)
+                encoder.writeBoolean((container.getAttribute(attribute) as kotlin.Boolean?)!!)
+            } else if (type == Int::class.java) {
+                encoder.writeByte(INTEGER_ATTRIBUTE)
+                encoder.writeInt((container.getAttribute(attribute) as kotlin.Int?)!!)
             } else {
-                assert type == String.class : "Unexpected attribute type " + type + " : should be " + String.class.getSimpleName();
-                encoder.writeByte(STRING_ATTRIBUTE);
-                encoder.writeString((String) container.getAttribute(attribute));
+                assert(type == String::class.java) { "Unexpected attribute type " + type + " : should be " + String::class.java.getSimpleName() }
+                encoder.writeByte(STRING_ATTRIBUTE)
+                encoder.writeString(container.getAttribute(attribute) as String?)
             }
         }
+    }
+
+    companion object {
+        private const val STRING_ATTRIBUTE: Byte = 1
+        private const val BOOLEAN_ATTRIBUTE: Byte = 2
+        private const val INTEGER_ATTRIBUTE: Byte = 3
     }
 }

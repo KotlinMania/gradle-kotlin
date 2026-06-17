@@ -13,52 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.internal.hash.HashCode;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.hash.HashCode
+import java.io.File
+import java.nio.file.Path
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-
-public class TwoStageModuleArtifactCache implements ModuleArtifactCache {
-    private final ModuleArtifactCache readOnlyCache;
-    private final ModuleArtifactCache writableCache;
-    private final Path readOnlyCachePath;
-
-    public TwoStageModuleArtifactCache(Path readOnlyCachePath, ModuleArtifactCache readOnlyCache, ModuleArtifactCache writableCache) {
-        this.readOnlyCachePath = readOnlyCachePath;
-        this.readOnlyCache = readOnlyCache;
-        this.writableCache = writableCache;
-    }
-
-    @Override
-    public void store(ArtifactAtRepositoryKey key, File artifactFile, HashCode moduleDescriptorHash) {
+class TwoStageModuleArtifactCache(private val readOnlyCachePath: Path, private val readOnlyCache: ModuleArtifactCache, private val writableCache: ModuleArtifactCache) : ModuleArtifactCache {
+    override fun store(key: ArtifactAtRepositoryKey?, artifactFile: File, moduleDescriptorHash: HashCode?) {
         if (artifactFile.toPath().startsWith(readOnlyCachePath)) {
             // skip writing because the file comes from the RO cache
-            return;
+            return
         }
-        writableCache.store(key, artifactFile,  moduleDescriptorHash);
+        writableCache.store(key, artifactFile, moduleDescriptorHash)
     }
 
-    @Override
-    public void storeMissing(ArtifactAtRepositoryKey key, List<String> attemptedLocations, HashCode descriptorHash) {
-        writableCache.storeMissing(key, attemptedLocations, descriptorHash);
+    override fun storeMissing(key: ArtifactAtRepositoryKey?, attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?) {
+        writableCache.storeMissing(key, attemptedLocations, descriptorHash)
     }
 
-    @Nullable
-    @Override
-    public CachedArtifact lookup(ArtifactAtRepositoryKey key) {
-        CachedArtifact lookup = writableCache.lookup(key);
+    override fun lookup(key: ArtifactAtRepositoryKey?): CachedArtifact? {
+        val lookup = writableCache.lookup(key)
         if (lookup != null) {
-            return lookup;
+            return lookup
         }
-        return readOnlyCache.lookup(key);
+        return readOnlyCache.lookup(key)
     }
 
-    @Override
-    public void clear(ArtifactAtRepositoryKey key) {
-        writableCache.clear(key);
+    override fun clear(key: ArtifactAtRepositoryKey?) {
+        writableCache.clear(key)
     }
 }

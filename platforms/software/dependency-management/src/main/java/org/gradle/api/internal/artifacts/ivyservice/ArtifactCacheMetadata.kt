@@ -13,34 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import java.io.File;
-
-public interface ArtifactCacheMetadata {
+interface ArtifactCacheMetadata {
     /**
      * Returns the root directory for the cache.
      */
-    File getCacheDir();
+    val cacheDir: File?
 
     /**
      * Returns the root directory for the module artifacts file store.
      *
      * @return File store location
      */
-    File getFileStoreDirectory();
+    val fileStoreDirectory: File?
 
     /**
      * Returns the root directory for the external resources file store.
      *
      * @return File store location
      */
-    File getExternalResourcesStoreDirectory();
+    val externalResourcesStoreDirectory: File?
 
     /**
      * Returns the root directory for the meta-data file store.
      *
      * @return Metadata store location
      */
-    File getMetaDataStoreDirectory();
+    val metaDataStoreDirectory: File?
 }

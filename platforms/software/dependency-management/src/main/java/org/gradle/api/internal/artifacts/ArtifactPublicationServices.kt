@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Project.class)
-public interface ArtifactPublicationServices {
-    RepositoryHandler createRepositoryHandler();
+@ServiceScope(Scope.Project::class)
+interface ArtifactPublicationServices {
+    fun createRepositoryHandler(): RepositoryHandler?
 }

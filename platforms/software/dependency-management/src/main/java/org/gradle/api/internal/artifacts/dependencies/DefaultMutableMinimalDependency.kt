@@ -13,36 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import java.io.Serializable
 
-import java.io.Serializable;
-
-public class DefaultMutableMinimalDependency extends DefaultExternalModuleDependency implements MinimalExternalModuleDependencyInternal, Serializable {
-    public DefaultMutableMinimalDependency(ModuleIdentifier module, MutableVersionConstraint versionConstraint, @Nullable String configuration) {
-        super(module, versionConstraint, configuration);
+class DefaultMutableMinimalDependency(module: ModuleIdentifier, versionConstraint: MutableVersionConstraint, configuration: String?) :
+    DefaultExternalModuleDependency(module, versionConstraint, configuration), MinimalExternalModuleDependencyInternal, Serializable {
+    override fun copy(): DefaultMutableMinimalDependency {
+        val dependency = DefaultMutableMinimalDependency(getModule(), DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration())
+        copyTo(dependency)
+        return dependency
     }
 
-    @Override
-    public DefaultMutableMinimalDependency copy() {
-        DefaultMutableMinimalDependency dependency = new DefaultMutableMinimalDependency(getModule(), new DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration());
-        copyTo(dependency);
-        return dependency;
+    override fun copyTo(target: AbstractExternalModuleDependency) {
+        super.copyTo(target)
     }
 
-    @Override
-    public void copyTo(AbstractExternalModuleDependency target) {
-        super.copyTo(target);
-    }
-
-    @Override
-    public String toString() {
-        String versionConstraintAsString = getVersionConstraint().toString();
-        return versionConstraintAsString.isEmpty()
-            ? getModule().toString()
-            : getModule() + ":" + versionConstraintAsString;
+    override fun toString(): String {
+        val versionConstraintAsString = getVersionConstraint().toString()
+        return if (versionConstraintAsString.isEmpty())
+            getModule().toString()
+        else
+            getModule().toString() + ":" + versionConstraintAsString
     }
 }

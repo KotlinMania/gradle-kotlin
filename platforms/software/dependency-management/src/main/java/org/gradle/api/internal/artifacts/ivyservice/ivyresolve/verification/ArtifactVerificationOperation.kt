@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
+import org.gradle.internal.Factory
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import java.io.File
 
-import java.io.File;
+interface ArtifactVerificationOperation {
+    fun onArtifact(kind: ArtifactKind, artifact: ModuleComponentArtifactIdentifier, mainFile: File, signatureFile: Factory<File?>, repositoryName: String, repositoryId: String)
 
-public interface ArtifactVerificationOperation {
-    void onArtifact(ArtifactKind kind, ModuleComponentArtifactIdentifier artifact, File mainFile, Factory<File> signatureFile, String repositoryName, String repositoryId);
-
-    enum ArtifactKind {
+    enum class ArtifactKind {
         METADATA,
         REGULAR
     }

@@ -13,33 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
-
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.provider.Provider;
-import org.jspecify.annotations.Nullable;
-
-public interface ProjectComponentPublication extends ProjectPublication {
+interface ProjectComponentPublication : ProjectPublication {
     /**
      * Returns the coordinates of the publication in the given namespace.
      */
-    @Nullable
-    <T> T getCoordinates(Class<T> type);
+    fun <T> getCoordinates(type: Class<T?>): T?
 
     /**
      * Returns the component that is to be published, if relevant for this publication.
      */
-    Provider<SoftwareComponentInternal> getComponent();
+    @JvmField
+    val component: Provider<SoftwareComponentInternal>?
 
     /**
      * Specifies that this publication is just an alias for another one and should not
      * be considered when converting project dependencies to published metadata.
      */
-    boolean isAlias();
+    val isAlias: Boolean
 
     /**
      * Should this publication be ignored when there are others available?
      */
-    boolean isLegacy();
+    val isLegacy: Boolean
 }

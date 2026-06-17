@@ -13,101 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+import com.google.common.base.Objects
+import org.apache.ivy.plugins.matcher.PatternMatcher
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.PatternMatchers
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.IvyPatternMatcherExcludeRuleSpec
+import org.gradle.internal.component.model.IvyArtifactName
 
-import com.google.common.base.Objects;
-import org.apache.ivy.plugins.matcher.PatternMatcher;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.PatternMatchers;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.IvyPatternMatcherExcludeRuleSpec;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+internal class DefaultIvyPatternMatcherExcludeRuleSpec private constructor(private val moduleId: ModuleIdentifier, private val ivyArtifactName: IvyArtifactName?, matcher: String?) :
+    IvyPatternMatcherExcludeRuleSpec {
+    private val matcher: PatternMatcher
+    private val isArtifactExclude: Boolean
+    private val hashCode: Int
 
-final class DefaultIvyPatternMatcherExcludeRuleSpec implements IvyPatternMatcherExcludeRuleSpec {
-    private final ModuleIdentifier moduleId;
-    private final IvyArtifactName ivyArtifactName;
-    private final PatternMatcher matcher;
-    private final boolean isArtifactExclude;
-    private final int hashCode;
-
-    public static ExcludeSpec of(ModuleIdentifier moduleId, @Nullable IvyArtifactName artifact, String matcher) {
-        return new DefaultIvyPatternMatcherExcludeRuleSpec(moduleId, artifact, matcher);
+    init {
+        this.matcher = PatternMatchers.Companion.getInstance().getMatcher(matcher)
+        this.isArtifactExclude = ivyArtifactName != null
+        this.hashCode = Objects.hashCode(moduleId, ivyArtifactName, matcher, isArtifactExclude)
     }
 
-    private DefaultIvyPatternMatcherExcludeRuleSpec(ModuleIdentifier moduleId, @Nullable IvyArtifactName artifact, String matcher) {
-        this.moduleId = moduleId;
-        this.ivyArtifactName = artifact;
-        this.matcher = PatternMatchers.getInstance().getMatcher(matcher);
-        this.isArtifactExclude = ivyArtifactName != null;
-        this.hashCode = Objects.hashCode(moduleId, ivyArtifactName, matcher, isArtifactExclude);
+    override fun toString(): String {
+        return "{ \"exclude-rule\" : { \"moduleId\": \"" + moduleId + "\", \"artifact\" : \"" + (if (ivyArtifactName != null) ivyArtifactName.displayName else "") + "\", \"matcher\": \"" + matcher.getName() + "\"} }"
     }
 
-    @Override
-    public String toString() {
-        return "{ \"exclude-rule\" : { \"moduleId\": \""  + moduleId + "\", \"artifact\" : \"" + (ivyArtifactName != null ? ivyArtifactName.displayName : "") + "\", \"matcher\": \"" + matcher.getName() + "\"} }";
-    }
-
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
+    override fun excludes(module: ModuleIdentifier): Boolean {
         if (isArtifactExclude) {
-            return false;
+            return false
         }
-        return matches(moduleId.getGroup(), module.getGroup()) && matches(moduleId.getName(), module.getName());
+        return matches(moduleId.getGroup(), module.getGroup()) && matches(moduleId.getName(), module.getName())
     }
 
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifact) {
+    override fun excludesArtifact(module: ModuleIdentifier, artifact: IvyArtifactName): Boolean {
         if (!isArtifactExclude) {
-            return false;
+            return false
         }
         return matches(moduleId.getGroup(), module.getGroup())
-            && matches(moduleId.getName(), module.getName())
-            && matches(ivyArtifactName.name, artifact.name)
-            && matches(ivyArtifactName.extension, artifact.extension)
-            && matches(ivyArtifactName.type, artifact.type);
+                && matches(moduleId.getName(), module.getName())
+                && matches(ivyArtifactName!!.name, artifact.name)
+                && matches(ivyArtifactName.extension, artifact.extension)
+                && matches(ivyArtifactName.type, artifact.type)
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
-        return isArtifactExclude;
+    override fun mayExcludeArtifacts(): Boolean {
+        return isArtifactExclude
     }
 
-    private boolean matches(@Nullable String expression, @Nullable String input) {
+    private fun matches(expression: String?, input: String?): Boolean {
         if (expression == null && input == null) {
-            return true;
+            return true
         }
         if (expression == null || input == null) {
-            return false;
+            return false
         }
-        return matcher.getMatcher(expression).matches(input);
+        return matcher.getMatcher(expression).matches(input)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultIvyPatternMatcherExcludeRuleSpec that = (DefaultIvyPatternMatcherExcludeRuleSpec) o;
-        return hashCode == that.hashCode &&
-            isArtifactExclude == that.isArtifactExclude &&
-            Objects.equal(moduleId, that.moduleId) &&
-            Objects.equal(ivyArtifactName, that.ivyArtifactName) &&
-            Objects.equal(matcher, that.matcher);
+        val that = o as DefaultIvyPatternMatcherExcludeRuleSpec
+        return hashCode == that.hashCode && isArtifactExclude == that.isArtifactExclude &&
+                Objects.equal(moduleId, that.moduleId) &&
+                Objects.equal(ivyArtifactName, that.ivyArtifactName) &&
+                Objects.equal(matcher, that.matcher)
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public IvyArtifactName getArtifact() {
-        return ivyArtifactName;
+    override fun getArtifact(): IvyArtifactName? {
+        return ivyArtifactName
     }
 
+    companion object {
+        fun of(moduleId: ModuleIdentifier, artifact: IvyArtifactName?, matcher: String?): ExcludeSpec {
+            return DefaultIvyPatternMatcherExcludeRuleSpec(moduleId, artifact, matcher)
+        }
+    }
 }

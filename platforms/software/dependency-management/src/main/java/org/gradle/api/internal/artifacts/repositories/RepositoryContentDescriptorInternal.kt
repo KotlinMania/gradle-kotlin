@@ -13,35 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor;
-import org.gradle.api.attributes.Attribute;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
 
-import java.util.Map;
-import java.util.Set;
-
-public interface RepositoryContentDescriptorInternal extends RepositoryContentDescriptor {
-    Action<? super ArtifactResolutionDetails> toContentFilter();
-    RepositoryContentDescriptorInternal asMutableCopy();
+interface RepositoryContentDescriptorInternal : RepositoryContentDescriptor {
+    fun toContentFilter(): Action<in ArtifactResolutionDetails>?
+    fun asMutableCopy(): RepositoryContentDescriptorInternal?
 
     /**
-     * Returns values added by {@link #onlyForConfigurations}.
+     * Returns values added by [.onlyForConfigurations].
      */
-    @Nullable
-    Set<String> getIncludedConfigurations();
+    val includedConfigurations: MutableSet<String>?
 
     /**
-     * Returns values added by {@link #notForConfigurations}
+     * Returns values added by [.notForConfigurations]
      */
-    @Nullable
-    Set<String> getExcludedConfigurations();
+    val excludedConfigurations: MutableSet<String>?
 
     /**
-     * Returns value added by {@link #onlyForAttribute}
+     * Returns value added by [.onlyForAttribute]
      */
-    @Nullable
-    Map<Attribute<Object>, Set<Object>> getRequiredAttributes();
+    val requiredAttributes: MutableMap<Attribute<Any>, MutableSet<Any>>?
 }

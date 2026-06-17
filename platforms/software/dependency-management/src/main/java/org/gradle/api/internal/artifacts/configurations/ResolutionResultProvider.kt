@@ -13,46 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import java.util.function.Function;
+import java.util.function.Function
 
 /**
  * A producer of some value that is calculated as part of dependency resolution, but which may have a partial or different value
  * when the execution graph is calculated.
- * <p>
- * Not actually an extension of {@link org.gradle.api.provider.Provider}, but similar in concept.
+ *
+ *
+ * Not actually an extension of [org.gradle.api.provider.Provider], but similar in concept.
  */
-public interface ResolutionResultProvider<T> {
-
+interface ResolutionResultProvider<T> {
     /**
      * Returns the value available at execution graph calculation time. Note that the value may change between when the execution graph is calculated and
      * when the final value is calculated. For example, only project dependencies may be included in a dependency graph that is used to calculate the task
      * dependencies, and the full dependency graph calculated later at task execution time.
      */
-    T getTaskDependencyValue();
+    val taskDependencyValue: T?
 
     /**
      * Returns the finalized value.
      */
-    T getValue();
+    val value: T?
 
     /**
      * Returns a new provider that applies the given transformer to both the task dependency value
      * and finalized value of this provider.
      */
-    default <E> ResolutionResultProvider<E> map(Function<T, E> transformer) {
-        return new ResolutionResultProvider<E>() {
-            @Override
-            public E getTaskDependencyValue() {
-                return transformer.apply(ResolutionResultProvider.this.getTaskDependencyValue());
+    fun <E> map(transformer: Function<T?, E?>): ResolutionResultProvider<E?> {
+        return object : ResolutionResultProvider<E?> {
+            override fun getTaskDependencyValue(): E? {
+                return transformer.apply(this@ResolutionResultProvider.taskDependencyValue)
             }
 
-            @Override
-            public E getValue() {
-                return transformer.apply(ResolutionResultProvider.this.getValue());
+            override fun getValue(): E? {
+                return transformer.apply(this@ResolutionResultProvider.value)
             }
-        };
+        }
     }
 }

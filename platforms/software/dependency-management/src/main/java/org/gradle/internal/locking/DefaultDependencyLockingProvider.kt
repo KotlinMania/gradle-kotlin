@@ -156,7 +156,7 @@ class DefaultDependencyLockingProvider(
     private fun isSubstitutedInComposite(lockedIdentifier: ModuleComponentIdentifier): Boolean {
         if (dependencySubstitutionRules.rulesMayAddProjectDependency()) {
             val lockingDependencySubstitution = LockingDependencySubstitution(toComponentSelector(lockedIdentifier))
-            dependencySubstitutionRules.getRuleAction().execute(lockingDependencySubstitution)
+            dependencySubstitutionRules.ruleAction.execute(lockingDependencySubstitution)
             return lockingDependencySubstitution.didSubstitute()
         }
         return false

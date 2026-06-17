@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.model.PersistentModuleSource;
-import org.gradle.internal.hash.HashCode;
-
-import java.io.File;
+import org.gradle.internal.component.model.PersistentModuleSource
 
 /**
  * This module source stores information about the metadata file
@@ -30,17 +26,15 @@ import java.io.File;
  * This information is used during dependency verification (either
  * writing or validating).
  */
-public interface MetadataFileSource extends PersistentModuleSource {
-    int CODEC_ID = 1;
+interface MetadataFileSource : PersistentModuleSource {
+    val artifactFile: File?
 
-    File getArtifactFile();
+    val artifactId: ModuleComponentArtifactIdentifier?
 
-    ModuleComponentArtifactIdentifier getArtifactId();
+    val sha1: HashCode?
 
-    HashCode getSha1();
-
-    @Override
-    default int getCodecId() {
-        return CODEC_ID;
+    companion object {
+        val codecId: Int = 1
+            get() = Companion.field
     }
 }

@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import com.google.common.collect.Streams;
+import com.google.common.collect.Streams
+import java.util.stream.Collectors
 
-import java.util.stream.Collectors;
-
-class ExcludeJsonHelper {
-    static String toJson(Iterable<?> objects) {
+internal object ExcludeJsonHelper {
+    fun toJson(objects: Iterable<*>): String {
         return Streams.stream(objects)
-            .map(o -> "\"" + o + "\"")
-            .collect(Collectors.joining(", "));
+            .map<String?> { o: Any? -> "\"" + o + "\"" }
+            .collect(Collectors.joining(", "))
     }
 }

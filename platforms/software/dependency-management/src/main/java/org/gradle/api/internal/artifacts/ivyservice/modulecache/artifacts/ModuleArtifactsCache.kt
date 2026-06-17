@@ -13,18 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.hash.HashCode
 
-import java.util.Collection;
+interface ModuleArtifactsCache {
+    fun cacheArtifacts(
+        repository: ModuleComponentRepository<*>?,
+        componentId: ComponentIdentifier?,
+        context: String?,
+        descriptorHash: HashCode?,
+        artifacts: MutableCollection<out ComponentArtifactMetadata?>?
+    ): CachedArtifacts?
 
-public interface ModuleArtifactsCache {
-    CachedArtifacts cacheArtifacts(ModuleComponentRepository<?> repository, ComponentIdentifier componentId, String context, HashCode descriptorHash, Collection<? extends ComponentArtifactMetadata> artifacts);
-
-    CachedArtifacts getCachedArtifacts(ModuleComponentRepository<?> delegate, ComponentIdentifier componentId, String context);
-
+    fun getCachedArtifacts(delegate: ModuleComponentRepository<*>?, componentId: ComponentIdentifier?, context: String?): CachedArtifacts?
 }

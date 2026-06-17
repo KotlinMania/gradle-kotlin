@@ -13,55 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.type
 
-package org.gradle.api.internal.artifacts.type;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.type.ArtifactTypeContainer
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.reflect.Instantiator
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.type.ArtifactTypeContainer;
-import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.reflect.Instantiator;
-
-import java.util.Set;
-
-public class DefaultArtifactTypeContainer extends AbstractValidatingNamedDomainObjectContainer<ArtifactTypeDefinition> implements ArtifactTypeContainer {
-    private final AttributesFactory attributesFactory;
-
-    public DefaultArtifactTypeContainer(Instantiator instantiator, AttributesFactory attributesFactory, CollectionCallbackActionDecorator callbackActionDecorator) {
-        super(ArtifactTypeDefinition.class, instantiator, callbackActionDecorator);
-        this.attributesFactory = attributesFactory;
+class DefaultArtifactTypeContainer(instantiator: Instantiator, private val attributesFactory: AttributesFactory?, callbackActionDecorator: CollectionCallbackActionDecorator) :
+    AbstractValidatingNamedDomainObjectContainer<ArtifactTypeDefinition?>(
+        ArtifactTypeDefinition::class.java, instantiator, callbackActionDecorator
+    ), ArtifactTypeContainer {
+    override fun doCreate(name: String): ArtifactTypeDefinition {
+        return getInstantiator().newInstance<DefaultArtifactTypeDefinition>(DefaultArtifactTypeDefinition::class.java, name, attributesFactory)
     }
 
-    @Override
-    protected ArtifactTypeDefinition doCreate(final String name) {
-        return getInstantiator().newInstance(DefaultArtifactTypeDefinition.class, name, attributesFactory);
-    }
+    class DefaultArtifactTypeDefinition(private val name: String, attributesFactory: AttributesFactory) : ArtifactTypeDefinition {
+        private val attributes: AttributeContainer
 
-    public static class DefaultArtifactTypeDefinition implements ArtifactTypeDefinition {
-        private final String name;
-        private final AttributeContainer attributes;
-
-        public DefaultArtifactTypeDefinition(String name, AttributesFactory attributesFactory) {
-            this.name = name;
-            attributes = attributesFactory.mutable();
+        init {
+            attributes = attributesFactory.mutable()
         }
 
-        @Override
-        public Set<String> getFileNameExtensions() {
-            return ImmutableSet.of(name);
+        override fun getFileNameExtensions(): MutableSet<String?> {
+            return ImmutableSet.of<String?>(name)
         }
 
-        @Override
-        public String getName() {
-            return name;
+        override fun getName(): String {
+            return name
         }
 
-        @Override
-        public AttributeContainer getAttributes() {
-            return attributes;
+        override fun getAttributes(): AttributeContainer {
+            return attributes
         }
     }
 }

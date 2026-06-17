@@ -13,40 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.util.Path;
-
-import java.io.IOException;
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.util.Path
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link Path}.
+ * A thread-safe and reusable serializer for [Path].
  */
-public class PathSerializer extends AbstractSerializer<Path> {
-
-    @Override
-    public Path read(Decoder decoder) throws IOException {
-        boolean isRoot = decoder.readBoolean();
+class PathSerializer : AbstractSerializer<Path?>() {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): Path {
+        val isRoot = decoder.readBoolean()
 
         if (isRoot) {
-            return Path.ROOT;
+            return Path.ROOT
         } else {
-            return Path.path(decoder.readString());
+            return Path.path(decoder.readString())
         }
     }
 
-    @Override
-    public void write(Encoder encoder, Path value) throws IOException {
-        boolean isRoot = value.equals(Path.ROOT);
-        encoder.writeBoolean(isRoot);
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: Path) {
+        val isRoot = value == Path.ROOT
+        encoder.writeBoolean(isRoot)
 
         if (!isRoot) {
-            encoder.writeString(value.asString());
+            encoder.writeString(value.asString())
         }
     }
-
 }

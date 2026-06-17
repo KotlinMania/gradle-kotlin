@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import java.util.List;
-
-public interface CompositeVersionSelector extends VersionSelector {
-    List<VersionSelector> getSelectors();
+interface CompositeVersionSelector : VersionSelector {
+    val selectors: MutableList<VersionSelector?>?
 }

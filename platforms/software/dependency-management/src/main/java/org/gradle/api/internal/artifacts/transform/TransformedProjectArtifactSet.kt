@@ -13,107 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.Action;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.EndCollection;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.Try;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-
-import java.io.File;
-import java.util.Collection;
+import org.gradle.api.Action
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.EndCollection
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.Describables
+import org.gradle.internal.Try
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
 
 /**
  * An artifact set containing transformed project artifacts.
  */
-public class TransformedProjectArtifactSet implements TransformedArtifactSet, FileCollectionInternal.Source, ResolvedArtifactSet.Artifacts {
-
-    private final VariantIdentifier sourceVariantId;
-    private final ComponentVariantIdentifier targetVariant;
-    private final Collection<TransformStepNode> transformedArtifacts;
-
-    public TransformedProjectArtifactSet(
-        VariantIdentifier sourceVariantId,
-        ComponentVariantIdentifier targetVariant,
-        Collection<TransformStepNode> transformedArtifacts
-    ) {
-        this.sourceVariantId = sourceVariantId;
-        this.targetVariant = targetVariant;
-        this.transformedArtifacts = transformedArtifacts;
-    }
-
-    public VariantIdentifier getSourceVariantId() {
-        return sourceVariantId;
-    }
-
-    public ComponentVariantIdentifier getTargetVariant() {
-        return targetVariant;
-    }
-
-    public Collection<TransformStepNode> getTransformedArtifacts() {
-        return transformedArtifacts;
-    }
-
-    @Override
-    public void visit(Visitor visitor) {
-        FileCollectionStructureVisitor.VisitType visitType = visitor.prepareForVisit(this);
+class TransformedProjectArtifactSet(
+    val sourceVariantId: VariantIdentifier,
+    val targetVariant: ComponentVariantIdentifier,
+    val transformedArtifacts: MutableCollection<TransformStepNode>
+) : TransformedArtifactSet, FileCollectionInternal.Source, ResolvedArtifactSet.Artifacts {
+    override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+        val visitType = visitor.prepareForVisit(this)
         if (visitType == FileCollectionStructureVisitor.VisitType.NoContents) {
-            visitor.visitArtifacts(new EndCollection(this));
+            visitor.visitArtifacts(EndCollection(this))
         } else {
-            visitor.visitArtifacts(this);
+            visitor.visitArtifacts(this)
         }
     }
 
-    @Override
-    public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
+    override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation>, requireFiles: Boolean) {
         // TODO - should add any nodes that have not been executed
     }
 
-    @Override
-    public void visit(ArtifactVisitor visitor) {
-        DisplayName artifactSetName = Describables.of(targetVariant.getComponentId());
-        for (TransformStepNode node : transformedArtifacts) {
-            node.executeIfNotAlready();
-            Try<TransformStepSubject> transformedSubject = node.getTransformedSubject();
+    override fun visit(visitor: ArtifactVisitor) {
+        val artifactSetName = Describables.of(targetVariant.getComponentId())
+        for (node in transformedArtifacts) {
+            node.executeIfNotAlready()
+            val transformedSubject: Try<TransformStepSubject?> = node.getTransformedSubject()
             if (transformedSubject.isSuccessful) {
-                for (File file : transformedSubject.get().getFiles()) {
-                    visitor.visitArtifact(artifactSetName, sourceVariantId, targetVariant.getAttributes(), targetVariant.getCapabilities(), node.getInputArtifact().transformedTo(file));
+                for (file in transformedSubject.get()!!.getFiles()) {
+                    visitor.visitArtifact(artifactSetName, sourceVariantId, targetVariant.getAttributes(), targetVariant.getCapabilities(), node.getInputArtifact().transformedTo(file))
                 }
             } else {
-                Throwable failure = transformedSubject.failure.get();
-                visitor.visitFailure(new TransformException(String.format("Failed to transform %s to match attributes %s.", node.getInputArtifact().getId().getDisplayName(), targetVariant.getAttributes()), failure));
+                val failure = transformedSubject.failure!!.get()
+                visitor.visitFailure(
+                    TransformException(
+                        String.format(
+                            "Failed to transform %s to match attributes %s.",
+                            node.getInputArtifact().getId().getDisplayName(),
+                            targetVariant.getAttributes()
+                        ), failure
+                    )
+                )
             }
         }
-        visitor.endVisitCollection(this);
+        visitor.endVisitCollection(this)
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
         if (!transformedArtifacts.isEmpty()) {
-            context.add(new DefaultTransformNodeDependency(transformedArtifacts));
+            context.add(DefaultTransformNodeDependency(transformedArtifacts))
         }
     }
 
-    @Override
-    public void visitTransformSources(TransformSourceVisitor visitor) {
-        for (TransformStepNode transformStepNode : transformedArtifacts) {
-            visitor.visitTransform(transformStepNode);
+    override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
+        for (transformStepNode in transformedArtifacts) {
+            visitor.visitTransform(transformStepNode)
         }
     }
 
-    @Override
-    public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-        throw new UnsupportedOperationException("Should not be called.");
+    override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
+        throw UnsupportedOperationException("Should not be called.")
     }
 }

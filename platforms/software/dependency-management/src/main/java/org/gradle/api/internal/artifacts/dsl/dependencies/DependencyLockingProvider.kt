@@ -13,26 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.dsl.LockMode;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Set;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.DisplayName
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Provides dependency locking support for dependency resolution.
  */
-@ServiceScope(Scope.Project.class)
-public interface DependencyLockingProvider {
-
+@ServiceScope(Scope.Project::class)
+interface DependencyLockingProvider {
     /**
      * Loads the lock state for the lock with the given ID.
      *
@@ -41,9 +33,9 @@ public interface DependencyLockingProvider {
      *
      * @return the lock state corresponding to the lock with the given ID.
      *
-     * @throws org.gradle.internal.locking.MissingLockStateException If the {@code LockMode} is {@link LockMode#STRICT} but no lock state can be found.
+     * @throws org.gradle.internal.locking.MissingLockStateException If the `LockMode` is [LockMode.STRICT] but no lock state can be found.
      */
-    DependencyLockingState loadLockState(String lockId, DisplayName lockOwner);
+    fun loadLockState(lockId: String, lockOwner: DisplayName): DependencyLockingState?
 
     /**
      * Records the resolution result to the lock with the given ID.
@@ -53,31 +45,31 @@ public interface DependencyLockingProvider {
      * @param resolutionResult the resolution result information necessary for locking
      * @param changingResolvedModules any modules that are resolved and marked as changing which defeats locking purpose
      */
-    void persistResolvedDependencies(String lockId, DisplayName lockOwner, Set<ModuleComponentIdentifier> resolutionResult, Set<ModuleComponentIdentifier> changingResolvedModules);
+    fun persistResolvedDependencies(lockId: String, lockOwner: DisplayName, resolutionResult: MutableSet<ModuleComponentIdentifier>, changingResolvedModules: MutableSet<ModuleComponentIdentifier>)
 
     /**
-     * The current locking mode, exposed in the {@link org.gradle.api.artifacts.dsl.DependencyLockingHandler}.
+     * The current locking mode, exposed in the [org.gradle.api.artifacts.dsl.DependencyLockingHandler].
      *
      * @return the locking mode
      */
-    Property<LockMode> getLockMode();
+    val lockMode: Property<LockMode>?
 
     /**
      * Build finished hook for persisting per project lockfile
      */
-    void buildFinished();
+    fun buildFinished()
 
     /**
-     * The file to be used as the per-project lock file, exposed in the {@link DefaultDependencyHandler}.
+     * The file to be used as the per-project lock file, exposed in the [DefaultDependencyHandler].
      *
      * @return the lock file
      */
-    RegularFileProperty getLockFile();
+    val lockFile: RegularFileProperty?
 
     /**
-     * A list of module identifiers that are to be ignored in the lock state, exposed in the {@link org.gradle.api.artifacts.dsl.DependencyLockingHandler}.
+     * A list of module identifiers that are to be ignored in the lock state, exposed in the [org.gradle.api.artifacts.dsl.DependencyLockingHandler].
      */
-    ListProperty<String> getIgnoredDependencies();
+    val ignoredDependencies: ListProperty<String>?
 
     /**
      * Confirms that the given lock is not locked.
@@ -85,5 +77,5 @@ public interface DependencyLockingProvider {
      *
      * @param lockId the ID of the lock to confirm is not locked
      */
-    void confirmNotLocked(String lockId);
+    fun confirmNotLocked(lockId: String)
 }

@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.cache.FileLockManager;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.IndexedCacheParameters;
-import org.gradle.cache.PersistentCache;
-import org.gradle.cache.UnscopedCacheBuilderFactory;
-import org.gradle.internal.Factory;
-import org.gradle.internal.serialize.Serializer;
-import org.jspecify.annotations.Nullable;
-
-import java.io.Closeable;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.cache.FileLockManager
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.IndexedCacheParameters
+import org.gradle.cache.PersistentCache
+import org.gradle.cache.UnscopedCacheBuilderFactory
+import org.gradle.internal.Factory
+import org.gradle.internal.serialize.Serializer
+import java.io.Closeable
+import java.util.function.Function
+import java.util.function.Supplier
 
 /**
  * An implementation of an artifact cache manager which performs operations in a read-only
@@ -38,147 +36,117 @@ import java.util.function.Supplier;
  * Operations use in-process locking for the read-only cache (even when requesting file locking) and
  * write operations use the regular locking mechanism (file or in-process).
  */
-public class ReadOnlyArtifactCacheLockingAccessCoordinator implements ArtifactCacheLockingAccessCoordinator, Closeable {
-    private final static Logger LOGGER = Logging.getLogger(ReadOnlyArtifactCacheLockingAccessCoordinator.class);
+class ReadOnlyArtifactCacheLockingAccessCoordinator(
+    unscopedCacheBuilderFactory: UnscopedCacheBuilderFactory,
+    cacheMetaData: ArtifactCacheMetadata
+) : ArtifactCacheLockingAccessCoordinator, Closeable {
+    private val cache: PersistentCache
 
-    private final PersistentCache cache;
-
-    public ReadOnlyArtifactCacheLockingAccessCoordinator(
-            UnscopedCacheBuilderFactory unscopedCacheBuilderFactory,
-            ArtifactCacheMetadata cacheMetaData) {
+    init {
         cache = unscopedCacheBuilderFactory
             .cache(cacheMetaData.getCacheDir())
             .withDisplayName("read only artifact cache")
             .withInitialLockMode(FileLockManager.LockMode.None) // Don't need to lock anything, it's read-only
-            .open();
+            .open()
     }
 
-    @Override
-    public void close() {
-        cache.close();
+    override fun close() {
+        cache.close()
     }
 
-    @Override
-    public <T> T withFileLock(Supplier<? extends T> action) {
-        return cache.withFileLock(action);
+    override fun <T> withFileLock(action: Supplier<out T>): T? {
+        return cache.withFileLock(action)
     }
 
-    @Override
-    public void withFileLock(Runnable action) {
-        cache.withFileLock(action);
+    override fun withFileLock(action: Runnable) {
+        cache.withFileLock(action)
     }
 
-    @Override
-    public <T> T useCache(Supplier<? extends T> action) {
-        return cache.useCache(action);
+    override fun <T> useCache(action: Supplier<out T>): T? {
+        return cache.useCache(action)
     }
 
-    @Override
-    public void useCache(Runnable action) {
-        cache.useCache(action);
+    override fun useCache(action: Runnable) {
+        cache.useCache(action)
     }
 
-    @Override
-    public <K, V> IndexedCache<K, V> createCache(String cacheName, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
-        String cacheFileInMetaDataStore = CacheLayout.META_DATA.getKey() + "/" + cacheName;
-        IndexedCacheParameters<K, V> parameters = IndexedCacheParameters.of(cacheFileInMetaDataStore, keySerializer, valueSerializer);
-        if (cache.indexedCacheExists(parameters)) {
-            return new TransparentCacheLockingIndexedCache<>(new FailSafeIndexedCache<>(cache.createIndexedCache(parameters)));
+    override fun <K, V> createCache(cacheName: String, keySerializer: Serializer<K?>, valueSerializer: Serializer<V?>): IndexedCache<K?, V?> {
+        val cacheFileInMetaDataStore = CacheLayout.META_DATA.getKey() + "/" + cacheName
+        val parameters: IndexedCacheParameters<K?, V?> = IndexedCacheParameters.of<K?, V?>(cacheFileInMetaDataStore, keySerializer, valueSerializer)
+        if (cache.indexedCacheExists<K?, V?>(parameters)) {
+            return ReadOnlyArtifactCacheLockingAccessCoordinator.TransparentCacheLockingIndexedCache<K?, V?>(FailSafeIndexedCache<K?, V?>(cache.createIndexedCache<K?, V?>(parameters)))
         }
-        return new EmptyIndexedCache<>();
+        return EmptyIndexedCache<K?, V?>()
     }
 
-    private static class EmptyIndexedCache<K, V> implements IndexedCache<K, V> {
-        @Nullable
-        @Override
-        public V getIfPresent(K key) {
-            return null;
+    private class EmptyIndexedCache<K, V> : IndexedCache<K?, V?> {
+        override fun getIfPresent(key: K?): V? {
+            return null
         }
 
-        @Override
-        public V get(K key, Function<? super K, ? extends V> producer) {
-            return producer.apply(key);
+        override fun get(key: K?, producer: Function<in K?, out V>): V? {
+            return producer.apply(key)
         }
 
-        @Override
-        public void put(K key, V value) {
-            throw new UnsupportedOperationException();
+        override fun put(key: K?, value: V?) {
+            throw UnsupportedOperationException()
         }
 
-        @Override
-        public void remove(K key) {
-            throw new UnsupportedOperationException();
+        override fun remove(key: K?) {
+            throw UnsupportedOperationException()
         }
     }
 
-    private static class FailSafeIndexedCache<K, V> implements IndexedCache<K, V> {
-        private final IndexedCache<K, V> delegate;
-        private boolean failed;
+    private class FailSafeIndexedCache<K, V>(private val delegate: IndexedCache<K?, V?>) : IndexedCache<K?, V?> {
+        private var failed = false
 
-        private FailSafeIndexedCache(IndexedCache<K, V> delegate) {
-            this.delegate = delegate;
+        override fun getIfPresent(key: K?): V? {
+            return failSafe<V?>(org.gradle.internal.Factory { delegate.getIfPresent(key) })
         }
 
-        @Override
-        @Nullable
-        public V getIfPresent(K key) {
-            return failSafe(() -> delegate.getIfPresent(key));
+        override fun get(key: K?, producer: Function<in K?, out V>): V? {
+            return failSafe<V?>(org.gradle.internal.Factory { delegate.get(key, producer) })
         }
 
-        @Override
-        public V get(K key, Function<? super K, ? extends V> producer) {
-            return failSafe(() -> delegate.get(key, producer));
+        override fun put(key: K?, value: V?) {
         }
 
-        @Override
-        public void put(K key, V value) {
+        override fun remove(key: K?) {
         }
 
-        @Override
-        public void remove(K key) {
-        }
-
-        private <T> T failSafe(Factory<T> operation) {
+        fun <T> failSafe(operation: Factory<T?>): T? {
             if (failed) {
-                return null;
+                return null
             }
             try {
-                return operation.create();
-            } catch (Exception ex) {
-                failed = true;
-                LOGGER.debug("Error accessing read-only cache", ex);
+                return operation.create()
+            } catch (ex: Exception) {
+                failed = true
+                LOGGER.debug("Error accessing read-only cache", ex)
             }
-            return null;
+            return null
         }
-
     }
 
-    private class TransparentCacheLockingIndexedCache<K, V> implements IndexedCache<K, V> {
-        private final IndexedCache<K, V> indexedCache;
-
-        public TransparentCacheLockingIndexedCache(IndexedCache<K, V> indexedCache) {
-            this.indexedCache = indexedCache;
+    private inner class TransparentCacheLockingIndexedCache<K, V>(private val indexedCache: IndexedCache<K?, V?>) : IndexedCache<K?, V?> {
+        override fun getIfPresent(key: K?): V? {
+            return cache.useCache<V?>(Supplier { indexedCache.getIfPresent(key) })
         }
 
-        @Nullable
-        @Override
-        public V getIfPresent(final K key) {
-            return cache.useCache(() -> indexedCache.getIfPresent(key));
+        override fun get(key: K?, producer: Function<in K?, out V>): V? {
+            return cache.useCache<V?>(Supplier { indexedCache.get(key, producer) })
         }
 
-        @Override
-        public V get(final K key, final Function<? super K, ? extends V> producer) {
-            return cache.useCache(() -> indexedCache.get(key, producer));
+        override fun put(key: K?, value: V?) {
+            cache.useCache(Runnable { indexedCache.put(key, value) })
         }
 
-        @Override
-        public void put(final K key, final V value) {
-            cache.useCache(() -> indexedCache.put(key, value));
+        override fun remove(key: K?) {
+            cache.useCache(Runnable { indexedCache.remove(key) })
         }
+    }
 
-        @Override
-        public void remove(final K key) {
-            cache.useCache(() -> indexedCache.remove(key));
-        }
+    companion object {
+        private val LOGGER: Logger = getLogger(ReadOnlyArtifactCacheLockingAccessCoordinator::class.java)!!
     }
 }

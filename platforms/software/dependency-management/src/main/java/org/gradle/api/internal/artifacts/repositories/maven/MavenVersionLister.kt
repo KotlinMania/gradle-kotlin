@@ -13,48 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.maven
 
-package org.gradle.api.internal.artifacts.repositories.maven;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resource.ExternalResourceName
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resource.ExternalResourceName;
+class MavenVersionLister(private val mavenMetadataLoader: MavenMetadataLoader) {
+    fun listVersions(module: ModuleIdentifier, patterns: MutableList<ResourcePattern>, result: BuildableModuleVersionListingResolveResult) {
+        val searched: MutableSet<ExternalResourceName?> = HashSet<ExternalResourceName?>()
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-public class MavenVersionLister {
-    private final MavenMetadataLoader mavenMetadataLoader;
-
-    public MavenVersionLister(MavenMetadataLoader mavenMetadataLoader) {
-        this.mavenMetadataLoader = mavenMetadataLoader;
-    }
-
-    public void listVersions(ModuleIdentifier module, List<ResourcePattern> patterns, BuildableModuleVersionListingResolveResult result) {
-        final Set<ExternalResourceName> searched = new HashSet<>();
-
-        List<String> versions = new ArrayList<>();
-        boolean hasResult = false;
-        for (ResourcePattern pattern : patterns) {
-            ExternalResourceName metadataLocation = pattern.toModulePath(module).resolve("maven-metadata.xml");
+        val versions: MutableList<String?> = ArrayList<String?>()
+        var hasResult = false
+        for (pattern in patterns) {
+            val metadataLocation = pattern.toModulePath(module).resolve("maven-metadata.xml")
 
             if (searched.add(metadataLocation)) {
-                result.attempted(metadataLocation);
+                result.attempted(metadataLocation)
                 try {
-                    MavenMetadata mavenMetaData = mavenMetadataLoader.load(metadataLocation);
-                    versions.addAll(mavenMetaData.versions);
-                    hasResult = true;
-                } catch (MissingResourceException e) {
+                    val mavenMetaData = mavenMetadataLoader.load(metadataLocation)
+                    versions.addAll(mavenMetaData.versions)
+                    hasResult = true
+                } catch (e: MissingResourceException) {
                     // Continue
                 }
             }
         }
         if (hasResult) {
-            result.listed(versions);
+            result.listed(versions)
         }
     }
 }

@@ -13,115 +13,111 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Describable;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.NodeExecutionContext;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Deferrable;
-import org.gradle.internal.Try;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Describable
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Deferrable
+import org.gradle.internal.Try
+import org.gradle.internal.execution.InputFingerprinter
+import java.io.File
+import java.util.function.Function
 
 /**
  * A single transform step in a transform chain.
- * <p>
+ *
+ *
  * Transforms a subject by invoking a transform on each of the subjects files.
  *
  * @see TransformChain
  */
-public class TransformStep implements TaskDependencyContainer, Describable {
-    private final Transform transform;
-    private final TransformInvocationFactory transformInvocationFactory;
-    private final ProjectInternal owningProject;
-    private final InputFingerprinter globalInputFingerprinter;
+class TransformStep(
+    val transform: Transform,
+    private val transformInvocationFactory: TransformInvocationFactory,
+    owner: DomainObjectContext,
+    private val globalInputFingerprinter: InputFingerprinter
+) : TaskDependencyContainer, Describable {
+    private val owningProject: ProjectInternal
 
-    public TransformStep(Transform transform, TransformInvocationFactory transformInvocationFactory, DomainObjectContext owner, InputFingerprinter globalInputFingerprinter) {
-        this.transform = transform;
-        this.transformInvocationFactory = transformInvocationFactory;
-        this.globalInputFingerprinter = globalInputFingerprinter;
-        this.owningProject = owner.getProject();
+    init {
+        this.owningProject = owner.getProject()!!
     }
 
-    public Transform getTransform() {
-        return transform;
+    fun getOwningProject(): ProjectInternal? {
+        return owningProject
     }
 
-    @Nullable
-    public ProjectInternal getOwningProject() {
-        return owningProject;
-    }
+    fun createInvocation(subjectToTransform: TransformStepSubject, upstreamDependencies: TransformUpstreamDependencies, context: NodeExecutionContext?): Deferrable<Try<TransformStepSubject>?> {
+        val inputFingerprinter = if (context != null) context.getService<InputFingerprinter>(InputFingerprinter::class.java) else globalInputFingerprinter
 
-    public Deferrable<Try<TransformStepSubject>> createInvocation(TransformStepSubject subjectToTransform, TransformUpstreamDependencies upstreamDependencies, @Nullable NodeExecutionContext context) {
-        InputFingerprinter inputFingerprinter = context != null ? context.getService(InputFingerprinter.class) : globalInputFingerprinter;
-
-        Try<TransformDependencies> resolvedDependencies = upstreamDependencies.computeArtifacts();
+        val resolvedDependencies: Try<TransformDependencies?> = upstreamDependencies.computeArtifacts()
         return resolvedDependencies
-            .map(dependencies -> {
-                ImmutableList<File> inputArtifacts = subjectToTransform.getFiles();
+            .map<Any?>(java.util.function.Function { dependencies: org.gradle.api.internal.artifacts.transform.TransformDependencies? ->
+                val inputArtifacts: com.google.common.collect.ImmutableList<java.io.File> = subjectToTransform.getFiles()
                 if (inputArtifacts.isEmpty()) {
-                    return Deferrable.completed(Try.successful(subjectToTransform.createSubjectFromResult(ImmutableList.of())));
-                } else if (inputArtifacts.size() > 1) {
-                    return Deferrable.deferred(() ->
-                        doTransform(subjectToTransform, inputFingerprinter, dependencies, inputArtifacts)
-                    );
+                    return@map org.gradle.internal.Deferrable.completed(org.gradle.internal.Try.successful(subjectToTransform.createSubjectFromResult(com.google.common.collect.ImmutableList.of<java.io.File>())))
+                } else if (inputArtifacts.size > 1) {
+                    return@map org.gradle.internal.Deferrable.deferred({ doTransform(subjectToTransform, inputFingerprinter, dependencies, inputArtifacts) }
+                    )
                 } else {
-                    File inputArtifact = inputArtifacts.get(0);
-                    return transformInvocationFactory.createInvocation(transform, inputArtifact, dependencies, subjectToTransform, inputFingerprinter)
-                        .map(result -> result.map(subjectToTransform::createSubjectFromResult));
+                    val inputArtifact: java.io.File = inputArtifacts.get(0)
+                    return@map transformInvocationFactory.createInvocation(transform, inputArtifact, dependencies, subjectToTransform, inputFingerprinter)
+                        .map<org.gradle.internal.Try<org.gradle.api.internal.artifacts.transform.TransformStepSubject?>?>(java.util.function.Function { result: org.gradle.internal.Try<com.google.common.collect.ImmutableList<java.io.File?>?>? ->
+                            result.map<org.gradle.api.internal.artifacts.transform.TransformStepSubject?>(
+                                java.util.function.Function { result: com.google.common.collect.ImmutableList<java.io.File?>? -> subjectToTransform.createSubjectFromResult(result) })
+                        })
                 }
-            })
-            .getOrMapFailure(failure -> Deferrable.completed(Try.failure(failure)));
+
+            })!!
+            .getOrMapFailure(Function { failure: Throwable? -> Deferrable.completed(Try.failure<U?>(failure)) })
     }
 
-    private Try<TransformStepSubject> doTransform(TransformStepSubject subjectToTransform, InputFingerprinter inputFingerprinter, TransformDependencies dependencies, ImmutableList<File> inputArtifacts) {
-        ImmutableList.Builder<File> builder = ImmutableList.builder();
-        for (File inputArtifact : inputArtifacts) {
-            Try<ImmutableList<File>> result = transformInvocationFactory
+    private fun doTransform(
+        subjectToTransform: TransformStepSubject,
+        inputFingerprinter: InputFingerprinter,
+        dependencies: TransformDependencies,
+        inputArtifacts: ImmutableList<File>
+    ): Try<TransformStepSubject?> {
+        val builder = ImmutableList.builder<File>()
+        for (inputArtifact in inputArtifacts) {
+            val result: Try<ImmutableList<File>?>? = transformInvocationFactory
                 .createInvocation(transform, inputArtifact, dependencies, subjectToTransform, inputFingerprinter)
-                .completeAndGet();
+                .completeAndGet()
 
-            if (result.failure.isPresent()) {
-                return Cast.uncheckedCast(result);
+            if (result!!.failure!!.isPresent()) {
+                return uncheckedCast<Try<TransformStepSubject?>?>(result)!!
             }
-            builder.addAll(result.get());
+            builder.addAll(result.get()!!)
         }
-        return Try.successful(subjectToTransform.createSubjectFromResult(builder.build()));
+        return Try.successful(subjectToTransform.createSubjectFromResult(builder.build()))
     }
 
-    public void isolateParametersIfNotAlready() {
-        transform.isolateParametersIfNotAlready();
+    fun isolateParametersIfNotAlready() {
+        transform.isolateParametersIfNotAlready()
     }
 
-    public boolean requiresDependencies() {
-        return transform.requiresDependencies();
+    fun requiresDependencies(): Boolean {
+        return transform.requiresDependencies()
     }
 
-    @Override
-    public String getDisplayName() {
-        return transform.getDisplayName();
+    override fun getDisplayName(): String {
+        return transform.getDisplayName()
     }
 
-    public ImmutableAttributes getFromAttributes() {
-        return transform.getFromAttributes();
+    val fromAttributes: ImmutableAttributes
+        get() = transform.getFromAttributes()
+
+    override fun toString(): String {
+        return transform.getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return transform.getDisplayName();
-    }
-
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        transform.visitDependencies(context);
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        transform.visitDependencies(context)
     }
 }

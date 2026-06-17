@@ -13,27 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
 
 /**
- * An implementation of {@link DescriptorParseContext} that is useful for parsing an ivy.xml file without attempting to download
+ * An implementation of [DescriptorParseContext] that is useful for parsing an ivy.xml file without attempting to download
  * other resources from a DependencyResolver.
  */
-public class DisconnectedDescriptorParseContext implements DescriptorParseContext {
-    @Override
-    public LocallyAvailableExternalResource getMetaDataArtifact(ModuleComponentIdentifier moduleComponentIdentifier, ArtifactType artifactType) {
-        throw new UnsupportedOperationException();
+class DisconnectedDescriptorParseContext : DescriptorParseContext {
+    override fun getMetaDataArtifact(moduleComponentIdentifier: ModuleComponentIdentifier?, artifactType: ArtifactType?): LocallyAvailableExternalResource? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public LocallyAvailableExternalResource getMetaDataArtifact(ModuleComponentSelector selector, VersionSelector acceptor, ArtifactType artifactType) {
-        throw new UnsupportedOperationException();
+    override fun getMetaDataArtifact(selector: ModuleComponentSelector?, acceptor: VersionSelector?, artifactType: ArtifactType?): LocallyAvailableExternalResource? {
+        throw UnsupportedOperationException()
     }
 }

@@ -13,229 +13,202 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.ModuleVersionNotFoundException
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.RejectedByAttributesVersion
+import org.gradle.internal.resolve.RejectedByRuleVersion
+import org.gradle.internal.resolve.RejectedBySelectorVersion
+import org.gradle.internal.resolve.RejectedVersion
+import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor
+import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resolve.result.ComponentSelectionContext
+import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableModuleVersionListingResolveResult
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.LinkedList
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.repositories.ArtifactResolutionDetails;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.ModuleVersionNotFoundException;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.RejectedByAttributesVersion;
-import org.gradle.internal.resolve.RejectedByRuleVersion;
-import org.gradle.internal.resolve.RejectedBySelectorVersion;
-import org.gradle.internal.resolve.RejectedVersion;
-import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor;
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.ComponentSelectionContext;
-import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+class DynamicVersionResolver(
+    private val versionedComponentChooser: VersionedComponentChooser,
+    private val versionParser: VersionParser,
+    private val attributesFactory: AttributesFactory,
+    private val componentMetadataProcessor: ComponentMetadataProcessorFactory?,
+    private val componentMetadataSupplierRuleExecutor: ComponentMetadataSupplierRuleExecutor?,
+    private val cacheExpirationControl: CacheExpirationControl?
+) {
+    private val repositories: MutableList<ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>> = ArrayList<ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>>()
+    private val repositoryNames: MutableList<String?> = ArrayList<String?>()
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult.State.Failed;
-import static org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult.State.Resolved;
-
-public class DynamicVersionResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamicVersionResolver.class);
-
-    private final List<ModuleComponentRepository<ExternalModuleComponentGraphResolveState>> repositories = new ArrayList<>();
-    private final List<String> repositoryNames = new ArrayList<>();
-    private final VersionedComponentChooser versionedComponentChooser;
-    private final VersionParser versionParser;
-    private final AttributesFactory attributesFactory;
-    private final ComponentMetadataProcessorFactory componentMetadataProcessor;
-    private final ComponentMetadataSupplierRuleExecutor componentMetadataSupplierRuleExecutor;
-    private final CacheExpirationControl cacheExpirationControl;
-
-    public DynamicVersionResolver(
-        VersionedComponentChooser versionedComponentChooser,
-        VersionParser versionParser,
-        AttributesFactory attributesFactory,
-        ComponentMetadataProcessorFactory componentMetadataProcessor,
-        ComponentMetadataSupplierRuleExecutor componentMetadataSupplierRuleExecutor,
-        CacheExpirationControl cacheExpirationControl
-    ) {
-        this.versionedComponentChooser = versionedComponentChooser;
-        this.versionParser = versionParser;
-        this.attributesFactory = attributesFactory;
-        this.componentMetadataProcessor = componentMetadataProcessor;
-        this.componentMetadataSupplierRuleExecutor = componentMetadataSupplierRuleExecutor;
-        this.cacheExpirationControl = cacheExpirationControl;
+    fun add(repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>) {
+        repositories.add(repository)
+        repositoryNames.add(repository.getName())
     }
 
-    public void add(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository) {
-        repositories.add(repository);
-        repositoryNames.add(repository.getName());
-    }
-
-    public void resolve(
-        ModuleComponentSelector requested,
-        ComponentOverrideMetadata overrideMetadata,
-        VersionSelector versionSelector,
-        @Nullable VersionSelector rejectedVersionSelector,
-        ImmutableAttributes consumerAttributes,
-        BuildableComponentIdResolveResult result
+    fun resolve(
+        requested: ModuleComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata?,
+        versionSelector: VersionSelector,
+        rejectedVersionSelector: VersionSelector?,
+        consumerAttributes: ImmutableAttributes?,
+        result: BuildableComponentIdResolveResult
     ) {
-        LOGGER.debug("Attempting to resolve version for {} using repositories {}", requested, repositoryNames);
-        RepositoryFailureCollector errors = new RepositoryFailureCollector();
+        LOGGER.debug("Attempting to resolve version for {} using repositories {}", requested, repositoryNames)
+        val errors = RepositoryFailureCollector()
 
-        List<RepositoryResolveState> resolveStates = new ArrayList<>(repositories.size());
-        for (ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository : repositories) {
-            resolveStates.add(new RepositoryResolveState(versionedComponentChooser, requested, overrideMetadata, repository, versionSelector, rejectedVersionSelector, versionParser, consumerAttributes, attributesFactory, componentMetadataProcessor, componentMetadataSupplierRuleExecutor, cacheExpirationControl));
+        val resolveStates: MutableList<RepositoryResolveState> = ArrayList<RepositoryResolveState>(repositories.size)
+        for (repository in repositories) {
+            resolveStates.add(
+                DynamicVersionResolver.RepositoryResolveState(
+                    versionedComponentChooser,
+                    requested,
+                    overrideMetadata,
+                    repository,
+                    versionSelector,
+                    rejectedVersionSelector!!,
+                    versionParser,
+                    consumerAttributes,
+                    attributesFactory,
+                    componentMetadataProcessor,
+                    componentMetadataSupplierRuleExecutor,
+                    cacheExpirationControl
+                )
+            )
         }
 
-        final RepositoryChainModuleResolution latestResolved = findLatestModule(resolveStates, errors);
+        val latestResolved = findLatestModule(resolveStates, errors)
         if (latestResolved != null) {
-            LOGGER.debug("Using {} from {}", latestResolved.component.getId(), latestResolved.repository);
-            for (Throwable error : errors.getFailures()) {
-                LOGGER.debug("Discarding resolve failure.", error);
+            LOGGER.debug("Using {} from {}", latestResolved.component.getId(), latestResolved.repository)
+            for (error in errors.failures) {
+                LOGGER.debug("Discarding resolve failure.", error)
             }
 
-            found(result, resolveStates, latestResolved);
-            return;
+            found(result, resolveStates, latestResolved)
+            return
         }
-        if (!errors.getFailures().isEmpty()) {
-            result.failed(new ModuleVersionResolveException(requested, errors.getFailures()));
+        if (!errors.failures.isEmpty()) {
+            result.failed(ModuleVersionResolveException(requested, errors.failures))
         } else {
-            notFound(result, requested, resolveStates);
+            notFound(result, requested, resolveStates)
         }
     }
 
-    private void found(BuildableComponentIdResolveResult result, List<RepositoryResolveState> resolveStates, RepositoryChainModuleResolution latestResolved) {
-        for (RepositoryResolveState resolveState : resolveStates) {
-            resolveState.registerAttempts(result);
+    private fun found(result: BuildableComponentIdResolveResult, resolveStates: MutableList<RepositoryResolveState>, latestResolved: RepositoryChainModuleResolution) {
+        for (resolveState in resolveStates) {
+            resolveState.registerAttempts(result)
         }
-        result.resolved(latestResolved.component, new ModuleComponentGraphSpecificResolveState(latestResolved.repository.getName()));
+        result.resolved(latestResolved.component, ModuleComponentGraphSpecificResolveState(latestResolved.repository.getName()))
     }
 
-    private void notFound(BuildableComponentIdResolveResult result, ModuleComponentSelector requested, List<RepositoryResolveState> resolveStates) {
-        for (RepositoryResolveState resolveState : resolveStates) {
-            resolveState.applyTo(result);
+    private fun notFound(result: BuildableComponentIdResolveResult, requested: ModuleComponentSelector, resolveStates: MutableList<RepositoryResolveState>) {
+        for (resolveState in resolveStates) {
+            resolveState.applyTo(result)
         }
         if (result.isRejected) {
             // We have a matching component id that was rejected. These are handled later in the resolution process
             // (after conflict resolution), so it is not a failure at this stage.
-            return;
+            return
         }
-        result.failed(new ModuleVersionNotFoundException(requested, result.attempted, result.unmatchedVersions, result.rejectedVersions));
+        result.failed(ModuleVersionNotFoundException(requested, result.attempted, result.unmatchedVersions, result.rejectedVersions))
     }
 
-    @Nullable
-    private RepositoryChainModuleResolution findLatestModule(List<RepositoryResolveState> resolveStates, RepositoryFailureCollector failures) {
-        LinkedList<RepositoryResolveState> queue = new LinkedList<>(resolveStates);
+    private fun findLatestModule(resolveStates: MutableList<RepositoryResolveState>, failures: RepositoryFailureCollector): RepositoryChainModuleResolution? {
+        val queue = LinkedList<RepositoryResolveState>(resolveStates)
 
-        LinkedList<RepositoryResolveState> missing = new LinkedList<>();
+        val missing = LinkedList<RepositoryResolveState?>()
 
         // A first pass to do local resolves only
-        RepositoryChainModuleResolution best = findLatestModule(queue, failures, missing);
+        val best = findLatestModule(queue, failures, missing)
         if (failures.hasFatalError()) {
-            return null;
+            return null
         }
         if (best != null) {
-            return best;
+            return best
         }
 
         // Nothing found - do a second pass
-        queue.addAll(missing);
-        missing.clear();
-        return findLatestModule(queue, failures, missing);
+        queue.addAll(missing)
+        missing.clear()
+        return findLatestModule(queue, failures, missing)
     }
 
-    @Nullable
-    @SuppressWarnings("NonApiType") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private RepositoryChainModuleResolution findLatestModule(LinkedList<RepositoryResolveState> queue, RepositoryFailureCollector failures, Collection<RepositoryResolveState> missing) {
-        RepositoryChainModuleResolution best = null;
+    //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+    private fun findLatestModule(
+        queue: LinkedList<RepositoryResolveState>,
+        failures: RepositoryFailureCollector,
+        missing: MutableCollection<RepositoryResolveState?>
+    ): RepositoryChainModuleResolution? {
+        var best: RepositoryChainModuleResolution? = null
         while (!queue.isEmpty()) {
-            RepositoryResolveState request = queue.removeFirst();
+            val request = queue.removeFirst()
             try {
-                request.resolve();
-            } catch (Exception t) {
-                handleFailure(queue, request, failures, t);
-                continue;
+                request.resolve()
+            } catch (t: Exception) {
+                handleFailure(queue, request, failures, t)
+                continue
             }
-            switch (request.resolvedVersionMetadata.state) {
-                case Failed:
-                    ModuleVersionResolveException failure = request.resolvedVersionMetadata.getFailure();
-                    assert failure != null; // Failure cannot be null in Failed state
-                    handleFailure(queue, request, failures, failure);
-                    break;
-                case Missing:
-                case Unknown:
-                    // Queue this up for checking again later
+            when (request.resolvedVersionMetadata.state) {
+                BuildableModuleComponentMetaDataResolveResult.State.Failed -> {
+                    val failure = request.resolvedVersionMetadata.getFailure()
+                    checkNotNull(failure) // Failure cannot be null in Failed state
+                    handleFailure(queue, request, failures, failure)
+                }
+
+                Missing, Unknown ->                     // Queue this up for checking again later
                     // This is done because we're checking what we have locally in cache, and there may be nothing
                     // so we're queuing it back so that the next time we check in remote access.
                     if (request.canMakeFurtherAttempts()) {
-                        missing.add(request);
+                        missing.add(request)
                     }
-                    break;
-                case Resolved:
-                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, request.resolvedVersionMetadata.metaData);
-                    best = chooseBest(best, moduleResolution);
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected state for resolution: " + request.resolvedVersionMetadata.state);
+
+                BuildableModuleComponentMetaDataResolveResult.State.Resolved -> {
+                    val moduleResolution = RepositoryChainModuleResolution(request.repository, request.resolvedVersionMetadata.metaData!!)
+                    best = chooseBest(best, moduleResolution)
+                }
+
+                else -> throw IllegalStateException("Unexpected state for resolution: " + request.resolvedVersionMetadata.state)
             }
         }
 
-        return best;
+        return best
     }
 
-    private static void handleFailure(List<RepositoryResolveState> queue, RepositoryResolveState request, RepositoryFailureCollector failures, Exception t) {
-        failures.addFailure(t);
-        if (request.isRepositoryDisabled() && !request.isContinueOnConnectionFailure()) {
-            // Clear the queue only if repo is now disabled, and we can't continue with it disabled
-            queue.clear();
-            failures.markFatalError();
-        }
-    }
-
-    @Nullable
-    private RepositoryChainModuleResolution chooseBest(@Nullable RepositoryChainModuleResolution one, @Nullable RepositoryChainModuleResolution two) {
+    private fun chooseBest(one: RepositoryChainModuleResolution?, two: RepositoryChainModuleResolution?): RepositoryChainModuleResolution? {
         if (one == null || two == null) {
-            return two == null ? one : two;
+            return if (two == null) one else two
         }
-        return versionedComponentChooser.selectNewestComponent(one.component.getMetadata(), two.component.getMetadata()) == one.component.getMetadata() ? one : two;
+        return if (versionedComponentChooser.selectNewestComponent(one.component.getMetadata()!!, two.component.getMetadata()!!) === one.component.getMetadata()) one else two
     }
 
-    private static class AttemptCollector implements Action<ResourceAwareResolveResult> {
-        private final List<String> attempts = new ArrayList<>();
+    private class AttemptCollector : Action<ResourceAwareResolveResult?> {
+        private val attempts: MutableList<String?> = ArrayList<String?>()
 
-        @Override
-        public void execute(ResourceAwareResolveResult resourceAwareResolveResult) {
-            attempts.addAll(resourceAwareResolveResult.attempted);
+        override fun execute(resourceAwareResolveResult: ResourceAwareResolveResult) {
+            attempts.addAll(resourceAwareResolveResult.attempted!!)
         }
 
-        public void applyTo(ResourceAwareResolveResult result) {
-            for (String url : attempts) {
-                result.attempted(url);
+        fun applyTo(result: ResourceAwareResolveResult) {
+            for (url in attempts) {
+                result.attempted(url)
             }
         }
     }
@@ -247,256 +220,201 @@ public class DynamicVersionResolver {
      * 1. selecting a version, thanks to the versioned component chooser, for a specific version selector
      * 2. once the selection is done, fetch metadata for this component
      */
-    private static class RepositoryResolveState implements ComponentSelectionContext {
-        private final VersionedComponentChooser versionedComponentChooser;
-        private final BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> resolvedVersionMetadata = new DefaultBuildableModuleComponentMetaDataResolveResult<>();
-        private final Map<String, CandidateResult> candidateComponents = new LinkedHashMap<>();
-        private final Set<String> unmatchedVersions = new LinkedHashSet<>();
-        private final Set<RejectedVersion> rejectedVersions = new LinkedHashSet<>();
-        private final VersionListResult versionListingResult;
-        private final ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository;
-        private final AttemptCollector attemptCollector;
-        private final ModuleComponentSelector selector;
-        private final ComponentOverrideMetadata overrideMetadata;
-        private final VersionSelector versionSelector;
-        private final VersionSelector rejectedVersionSelector;
-        private final VersionParser versionParser;
-        private final ImmutableAttributes consumerAttributes;
-        private final ComponentMetadataProcessorFactory componentMetadataProcessorFactory;
-        private final AttributesFactory attributesFactory;
-        private final ComponentMetadataSupplierRuleExecutor metadataSupplierRuleExecutor;
-        private final CacheExpirationControl cacheExpirationControl;
-        private ModuleComponentIdentifier firstRejected = null;
+    private class RepositoryResolveState(
+        private val versionedComponentChooser: VersionedComponentChooser,
+        private val selector: ModuleComponentSelector,
+        private val overrideMetadata: ComponentOverrideMetadata?,
+        private val repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>,
+        private val versionSelector: VersionSelector,
+        private val rejectedVersionSelector: VersionSelector,
+        private val versionParser: VersionParser,
+        consumerAttributes: ImmutableAttributes?,
+        attributesFactory: AttributesFactory,
+        private val componentMetadataProcessorFactory: ComponentMetadataProcessorFactory?,
+        metadataSupplierRuleExecutor: ComponentMetadataSupplierRuleExecutor?,
+        cacheExpirationControl: CacheExpirationControl?
+    ) : ComponentSelectionContext {
+        private val resolvedVersionMetadata: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?> =
+            DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>()
+        private val candidateComponents: MutableMap<String?, CandidateResult> = LinkedHashMap<String?, CandidateResult>()
+        private val unmatchedVersions: MutableSet<String?> = LinkedHashSet<String?>()
+        private val rejectedVersions: MutableSet<RejectedVersion?> = LinkedHashSet<RejectedVersion?>()
+        private val versionListingResult: VersionListResult
+        private val attemptCollector: AttemptCollector
+        private val consumerAttributes: ImmutableAttributes
+        private val attributesFactory: AttributesFactory?
+        private val metadataSupplierRuleExecutor: ComponentMetadataSupplierRuleExecutor?
+        private val cacheExpirationControl: CacheExpirationControl?
+        private var firstRejected: ModuleComponentIdentifier? = null
 
-        public RepositoryResolveState(
-            VersionedComponentChooser versionedComponentChooser,
-            ModuleComponentSelector selector,
-            ComponentOverrideMetadata overrideMetadata,
-            ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository,
-            VersionSelector versionSelector,
-            VersionSelector rejectedVersionSelector,
-            VersionParser versionParser,
-            ImmutableAttributes consumerAttributes,
-            AttributesFactory attributesFactory,
-            ComponentMetadataProcessorFactory componentMetadataProcessorFactory,
-            ComponentMetadataSupplierRuleExecutor metadataSupplierRuleExecutor,
-            CacheExpirationControl cacheExpirationControl
-        ) {
-            this.versionedComponentChooser = versionedComponentChooser;
-            this.overrideMetadata = overrideMetadata;
-            this.selector = selector;
-            this.versionSelector = versionSelector;
-            this.rejectedVersionSelector = rejectedVersionSelector;
-            this.repository = repository;
-            this.versionParser = versionParser;
-            this.componentMetadataProcessorFactory = componentMetadataProcessorFactory;
-            this.attributesFactory = attributesFactory;
-            this.metadataSupplierRuleExecutor = metadataSupplierRuleExecutor;
-            this.cacheExpirationControl = cacheExpirationControl;
-            this.attemptCollector = new AttemptCollector();
-            this.consumerAttributes = buildAttributes(consumerAttributes, attributesFactory);
-            this.versionListingResult = new VersionListResult(selector, overrideMetadata, repository);
+        init {
+            this.attributesFactory = attributesFactory
+            this.metadataSupplierRuleExecutor = metadataSupplierRuleExecutor
+            this.cacheExpirationControl = cacheExpirationControl
+            this.attemptCollector = AttemptCollector()
+            this.consumerAttributes = buildAttributes(consumerAttributes, attributesFactory)
+            this.versionListingResult = VersionListResult(selector, overrideMetadata, repository)
         }
 
-        private ImmutableAttributes buildAttributes(ImmutableAttributes consumerAttributes, AttributesFactory attributesFactory) {
-            ImmutableAttributes dependencyAttributes = ((AttributeContainerInternal) selector.getAttributes()).asImmutable();
-            return attributesFactory.concat(consumerAttributes, dependencyAttributes);
+        fun buildAttributes(consumerAttributes: ImmutableAttributes?, attributesFactory: AttributesFactory): ImmutableAttributes {
+            val dependencyAttributes = (selector.getAttributes() as AttributeContainerInternal).asImmutable()
+            return attributesFactory.concat(consumerAttributes, dependencyAttributes)
         }
 
-        public boolean canMakeFurtherAttempts() {
-            return versionListingResult.canMakeFurtherAttempts();
+        fun canMakeFurtherAttempts(): Boolean {
+            return versionListingResult.canMakeFurtherAttempts()
         }
 
-        void resolve() {
-            versionListingResult.resolve();
-            switch (versionListingResult.result.getState()) {
-                case Failed:
-                    resolvedVersionMetadata.failed(versionListingResult.result.getFailure());
-                    break;
-                case Listed:
-                    selectMatchingVersionAndResolve();
-                    break;
-                case Unknown:
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected state for version list result.");
+        fun resolve() {
+            versionListingResult.resolve()
+            when (versionListingResult.result.getState()) {
+                BuildableModuleVersionListingResolveResult.State.Failed -> resolvedVersionMetadata.failed(versionListingResult.result.getFailure())
+                BuildableModuleVersionListingResolveResult.State.Listed -> selectMatchingVersionAndResolve()
+                BuildableModuleVersionListingResolveResult.State.Unknown -> {}
+                else -> throw IllegalStateException("Unexpected state for version list result.")
             }
         }
 
-        private void selectMatchingVersionAndResolve() {
+        fun selectMatchingVersionAndResolve() {
             // TODO - reuse metaData if it was already fetched to select the component from the version list
-            versionedComponentChooser.selectNewestMatchingComponent(candidates(), this, versionSelector, rejectedVersionSelector, consumerAttributes);
+            versionedComponentChooser.selectNewestMatchingComponent(candidates(), this, versionSelector, rejectedVersionSelector, consumerAttributes)
         }
 
-        @Override
-        public void matches(ModuleComponentIdentifier moduleComponentIdentifier) {
-            String version = moduleComponentIdentifier.getVersion();
-            CandidateResult candidateResult = candidateComponents.get(version);
-            candidateResult.tryResolveMetadata(resolvedVersionMetadata);
+        override fun matches(moduleComponentIdentifier: ModuleComponentIdentifier) {
+            val version = moduleComponentIdentifier.getVersion()
+            val candidateResult: CandidateResult = candidateComponents.get(version)!!
+            candidateResult.tryResolveMetadata(resolvedVersionMetadata)
         }
 
-        @Override
-        public void failed(ModuleVersionResolveException failure) {
-            resolvedVersionMetadata.failed(failure);
+        override fun failed(failure: ModuleVersionResolveException?) {
+            resolvedVersionMetadata.failed(failure)
         }
 
-        @Override
-        public void noMatchFound() {
-            resolvedVersionMetadata.missing();
+        override fun noMatchFound() {
+            resolvedVersionMetadata.missing()
         }
 
-        @Override
-        public void notMatched(ModuleComponentIdentifier id, VersionSelector requestedVersionMatcher) {
-            unmatchedVersions.add(id.getVersion());
+        override fun notMatched(id: ModuleComponentIdentifier, requestedVersionMatcher: VersionSelector?) {
+            unmatchedVersions.add(id.getVersion())
         }
 
-        @Override
-        public void rejectedByRule(RejectedByRuleVersion id) {
-            rejectedVersions.add(id);
+        override fun rejectedByRule(id: RejectedByRuleVersion?) {
+            rejectedVersions.add(id)
         }
 
-        @Override
-        public void doesNotMatchConsumerAttributes(RejectedByAttributesVersion rejectedVersion) {
-            rejectedVersions.add(rejectedVersion);
+        override fun doesNotMatchConsumerAttributes(rejectedVersion: RejectedByAttributesVersion?) {
+            rejectedVersions.add(rejectedVersion)
         }
 
-        @Override
-        public Action<? super ArtifactResolutionDetails> getContentFilter() {
-            if (repository instanceof FilteredModuleComponentRepository) {
-                return ((FilteredModuleComponentRepository) repository).getFilterAction();
-            }
-            return null;
-        }
-
-        @Override
-        public void rejectedBySelector(ModuleComponentIdentifier id, VersionSelector versionSelector) {
-            if (firstRejected == null) {
-                firstRejected = id;
-            }
-            rejectedVersions.add(new RejectedBySelectorVersion(id, versionSelector));
-        }
-
-        private List<CandidateResult> candidates() {
-            List<CandidateResult> candidates = new ArrayList<>();
-            for (String version : versionListingResult.result.getVersions()) {
-                CandidateResult candidateResult = candidateComponents.get(version);
-                if (candidateResult == null) {
-                    candidateResult = new CandidateResult(selector, overrideMetadata, version, repository, attemptCollector, versionParser, componentMetadataProcessorFactory, attributesFactory, metadataSupplierRuleExecutor, cacheExpirationControl);
-                    candidateComponents.put(version, candidateResult);
+        val contentFilter: Action<in ArtifactResolutionDetails?>?
+            get() {
+                if (repository is FilteredModuleComponentRepository) {
+                    return repository.getFilterAction()
                 }
-                candidates.add(candidateResult);
+                return null
             }
-            return candidates;
+
+        override fun rejectedBySelector(id: ModuleComponentIdentifier?, versionSelector: VersionSelector?) {
+            if (firstRejected == null) {
+                firstRejected = id
+            }
+            rejectedVersions.add(RejectedBySelectorVersion(id, versionSelector))
         }
 
-        protected void applyTo(BuildableComponentIdResolveResult target) {
-            registerAttempts(target);
+        fun candidates(): MutableList<CandidateResult?> {
+            val candidates: MutableList<CandidateResult?> = ArrayList<CandidateResult?>()
+            for (version in versionListingResult.result.getVersions()!!) {
+                var candidateResult = candidateComponents.get(version)
+                if (candidateResult == null) {
+                    candidateResult = DynamicVersionResolver.CandidateResult(
+                        selector,
+                        overrideMetadata,
+                        version!!,
+                        repository,
+                        attemptCollector,
+                        versionParser,
+                        componentMetadataProcessorFactory,
+                        attributesFactory,
+                        metadataSupplierRuleExecutor,
+                        cacheExpirationControl
+                    )
+                    candidateComponents.put(version, candidateResult)
+                }
+                candidates.add(candidateResult)
+            }
+            return candidates
+        }
+
+        fun applyTo(target: BuildableComponentIdResolveResult) {
+            registerAttempts(target)
 
             if (firstRejected != null) {
-                target.rejected(firstRejected, DefaultModuleVersionIdentifier.newId(firstRejected));
+                target.rejected(firstRejected, DefaultModuleVersionIdentifier.newId(firstRejected!!))
             }
         }
 
-        private void registerAttempts(BuildableComponentIdResolveResult target) {
-            versionListingResult.applyTo(target);
-            attemptCollector.applyTo(target);
-            target.unmatched(unmatchedVersions);
-            target.rejections(rejectedVersions);
+        fun registerAttempts(target: BuildableComponentIdResolveResult) {
+            versionListingResult.applyTo(target)
+            attemptCollector.applyTo(target)
+            target.unmatched(unmatchedVersions)
+            target.rejections(rejectedVersions)
         }
 
-        public boolean isContinueOnConnectionFailure() {
-            return repository.isContinueOnConnectionFailure();
-        }
+        val isContinueOnConnectionFailure: Boolean
+            get() = repository.isContinueOnConnectionFailure()
 
-        public boolean isRepositoryDisabled() {
-            return repository.isRepositoryDisabled();
-        }
+        val isRepositoryDisabled: Boolean
+            get() = repository.isRepositoryDisabled()
     }
 
-    private static class CandidateResult implements ModuleComponentResolveState {
-        private final ModuleComponentIdentifier identifier;
-        private final ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository;
-        private final AttemptCollector attemptCollector;
-        private final ComponentOverrideMetadata overrideMetadata;
-        private final Version version;
-        private final ComponentMetadataProcessorFactory componentMetadataProcessorFactory;
-        private final AttributesFactory attributesFactory;
-        private final ComponentMetadataSupplierRuleExecutor supplierRuleExecutor;
-        private boolean searchedLocally;
-        private boolean searchedRemotely;
-        private final DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result = new DefaultBuildableModuleComponentMetaDataResolveResult<>();
-        private final CacheExpirationControl cacheExpirationControl;
+    private class CandidateResult(
+        selector: ModuleComponentSelector,
+        private val overrideMetadata: ComponentOverrideMetadata?,
+        version: String,
+        private val repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>,
+        private val attemptCollector: AttemptCollector,
+        versionParser: VersionParser,
+        val componentMetadataProcessorFactory: ComponentMetadataProcessorFactory?,
+        val attributesFactory: AttributesFactory?,
+        val componentMetadataSupplierExecutor: ComponentMetadataSupplierRuleExecutor?,
+        val cacheExpirationControl: CacheExpirationControl?
+    ) : ModuleComponentResolveState {
+        val id: ModuleComponentIdentifier
+        val version: Version?
+        private var searchedLocally = false
+        private var searchedRemotely = false
+        private val result = DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>()
 
-        public CandidateResult(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, String version, ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository, AttemptCollector attemptCollector, VersionParser versionParser, ComponentMetadataProcessorFactory componentMetadataProcessorFactory, AttributesFactory attributesFactory, ComponentMetadataSupplierRuleExecutor supplierRuleExecutor, CacheExpirationControl cacheExpirationControl) {
-            this.overrideMetadata = overrideMetadata;
-            this.componentMetadataProcessorFactory = componentMetadataProcessorFactory;
-            this.attributesFactory = attributesFactory;
-            this.supplierRuleExecutor = supplierRuleExecutor;
-            this.cacheExpirationControl = cacheExpirationControl;
-            this.version = versionParser.transform(version);
-            this.repository = repository;
-            this.attemptCollector = attemptCollector;
-            this.identifier = DefaultModuleComponentIdentifier.newId(selector.getModuleIdentifier(), version);
+        init {
+            this.version = versionParser.transform(version)
+            this.id = newId(selector.getModuleIdentifier(), version)
         }
 
-        @Override
-        public ModuleComponentIdentifier getId() {
-            return identifier;
-        }
-
-        @Override
-        public Version getVersion() {
-            return version;
-        }
-
-        @Override
-        public BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> resolve() {
+        override fun resolve(): BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?> {
             if (!searchedLocally) {
-                searchedLocally = true;
-                process(repository.getLocalAccess());
+                searchedLocally = true
+                process(repository.getLocalAccess())
                 if (result.hasResult() && result.isAuthoritative()) {
                     // Authoritative result means don't do remote search
-                    searchedRemotely = true;
+                    searchedRemotely = true
                 }
             }
-            if (result.getState() == Resolved || result.getState() == Failed) {
-                return result;
+            if (result.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved || result.getState() == BuildableModuleComponentMetaDataResolveResult.State.Failed) {
+                return result
             }
             if (!searchedRemotely) {
-                searchedRemotely = true;
-                process(repository.getRemoteAccess());
+                searchedRemotely = true
+                process(repository.getRemoteAccess())
             }
-            return result;
+            return result
         }
 
-        @Override
-        public ComponentMetadataProcessorFactory getComponentMetadataProcessorFactory() {
-            return componentMetadataProcessorFactory;
-        }
+        val componentMetadataSupplier: InstantiatingAction<ComponentMetadataSupplierDetails?>?
+            get() = repository.getComponentMetadataSupplier()
 
-        @Override
-        public AttributesFactory getAttributesFactory() {
-            return attributesFactory;
-        }
-
-        @Override
-        public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
-            return repository.getComponentMetadataSupplier();
-        }
-
-        @Override
-        public ComponentMetadataSupplierRuleExecutor getComponentMetadataSupplierExecutor() {
-            return supplierRuleExecutor;
-        }
-
-        @Override
-        public CacheExpirationControl getCacheExpirationControl() {
-            return cacheExpirationControl;
-        }
-
-        private void process(ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> access) {
-            access.resolveComponentMetaData(identifier, overrideMetadata, result);
-            attemptCollector.execute(result);
+        fun process(access: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>) {
+            access.resolveComponentMetaData(this.id, overrideMetadata, result)
+            attemptCollector.execute(result)
         }
 
         /**
@@ -505,74 +423,81 @@ public class DynamicVersionResolver {
          *
          * @param target where to put metadata
          */
-        private void tryResolveMetadata(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> target) {
-            BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result = resolve();
-            switch (result.state) {
-                case Resolved:
-                    target.resolved(result.metaData);
-                    return;
-                case Missing:
-                    result.applyTo(target);
-                    target.missing();
-                    return;
-                case Failed:
-                    target.failed(result.getFailure());
-                    return;
-                case Unknown:
-                    return;
-                default:
-                    throw new IllegalStateException();
+        fun tryResolveMetadata(target: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>) {
+            val result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?> = resolve()
+            when (result.state) {
+                BuildableModuleComponentMetaDataResolveResult.State.Resolved -> {
+                    target.resolved(result.metaData)
+                    return
+                }
+
+                Missing -> {
+                    result.applyTo(target)
+                    target.missing()
+                    return
+                }
+
+                BuildableModuleComponentMetaDataResolveResult.State.Failed -> {
+                    target.failed(result.getFailure())
+                    return
+                }
+
+                Unknown -> return
+                else -> throw IllegalStateException()
             }
         }
     }
 
-    private static class VersionListResult {
-        private final DefaultBuildableModuleVersionListingResolveResult result = new DefaultBuildableModuleVersionListingResolveResult();
-        private final ModuleComponentRepository<?> repository;
-        private final ModuleComponentSelector selector;
-        private final ComponentOverrideMetadata overrideMetadata;
+    private class VersionListResult(private val selector: ModuleComponentSelector?, private val overrideMetadata: ComponentOverrideMetadata?, private val repository: ModuleComponentRepository<*>) {
+        private val result = DefaultBuildableModuleVersionListingResolveResult()
 
-        private boolean searchedLocally;
-        private boolean searchedRemotely;
+        private var searchedLocally = false
+        private var searchedRemotely = false
 
-        public VersionListResult(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, ModuleComponentRepository<?> repository) {
-            this.selector = selector;
-            this.overrideMetadata = overrideMetadata;
-            this.repository = repository;
-        }
-
-        void resolve() {
+        fun resolve() {
             if (!searchedLocally) {
-                searchedLocally = true;
-                process(selector, overrideMetadata, repository.getLocalAccess());
+                searchedLocally = true
+                process(selector, overrideMetadata, repository.getLocalAccess())
                 if (result.hasResult()) {
                     if (result.isAuthoritative()) {
                         // Authoritative result - don't need to try remote
-                        searchedRemotely = true;
+                        searchedRemotely = true
                     }
-                    return;
+                    return
                 }
                 // Otherwise, try remotely
             }
             if (!searchedRemotely) {
-                searchedRemotely = true;
-                process(selector, overrideMetadata, repository.getRemoteAccess());
+                searchedRemotely = true
+                process(selector, overrideMetadata, repository.getRemoteAccess())
             }
 
             // Otherwise, just reuse previous result
         }
 
-        public boolean canMakeFurtherAttempts() {
-            return !searchedRemotely;
+        fun canMakeFurtherAttempts(): Boolean {
+            return !searchedRemotely
         }
 
-        public void applyTo(ResourceAwareResolveResult target) {
-            result.applyTo(target);
+        fun applyTo(target: ResourceAwareResolveResult) {
+            result.applyTo(target)
         }
 
-        private void process(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, ModuleComponentRepositoryAccess<?> moduleAccess) {
-            moduleAccess.listModuleVersions(selector, overrideMetadata, result);
+        fun process(selector: ModuleComponentSelector?, overrideMetadata: ComponentOverrideMetadata?, moduleAccess: ModuleComponentRepositoryAccess<*>) {
+            moduleAccess.listModuleVersions(selector, overrideMetadata, result)
         }
     }
 
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DynamicVersionResolver::class.java)
+
+        private fun handleFailure(queue: MutableList<RepositoryResolveState>, request: RepositoryResolveState, failures: RepositoryFailureCollector, t: Exception) {
+            failures.addFailure(t)
+            if (request.isRepositoryDisabled && !request.isContinueOnConnectionFailure) {
+                // Clear the queue only if repo is now disabled, and we can't continue with it disabled
+                queue.clear()
+                failures.markFatalError()
+            }
+        }
+    }
 }

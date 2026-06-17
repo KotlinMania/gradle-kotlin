@@ -13,57 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
+import groovy.lang.Closure
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.internal.metaobject.DynamicInvokeResult
+import org.gradle.internal.metaobject.MethodAccess
+import org.gradle.util.internal.CollectionUtils.flattenCollections
 
-import groovy.lang.Closure;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.internal.metaobject.DynamicInvokeResult;
-import org.gradle.internal.metaobject.MethodAccess;
-import org.gradle.util.internal.CollectionUtils;
-
-import java.util.List;
-
-class DynamicAddDependencyMethods implements MethodAccess {
-    private final ConfigurationContainer configurationContainer;
-    private final DependencyAdder<?> dependencyAdder;
-
-    DynamicAddDependencyMethods(ConfigurationContainer configurationContainer, DependencyAdder<?> dependencyAdder) {
-        this.configurationContainer = configurationContainer;
-        this.dependencyAdder = dependencyAdder;
+internal class DynamicAddDependencyMethods(private val configurationContainer: ConfigurationContainer, private val dependencyAdder: DependencyAdder<*>) : MethodAccess {
+    override fun hasMethod(name: String, vararg arguments: Any): Boolean {
+        return arguments.size != 0 && configurationContainer.findByName(name) != null
     }
 
-    @Override
-    public boolean hasMethod(String name, Object... arguments) {
-        return arguments.length != 0 && configurationContainer.findByName(name) != null;
-    }
-
-    @Override
-    public DynamicInvokeResult tryInvokeMethod(String name, Object... arguments) {
-        if (arguments.length == 0) {
-            return DynamicInvokeResult.notFound();
+    override fun tryInvokeMethod(name: String, vararg arguments: Any): DynamicInvokeResult {
+        if (arguments.size == 0) {
+            return DynamicInvokeResult.notFound()
         }
-        Configuration configuration = configurationContainer.findByName(name);
+        val configuration = configurationContainer.findByName(name)
         if (configuration == null) {
-            return DynamicInvokeResult.notFound();
+            return DynamicInvokeResult.notFound()
         }
 
-        List<?> normalizedArgs = CollectionUtils.flattenCollections(arguments);
-        if (normalizedArgs.size() == 2 && normalizedArgs.get(1) instanceof Closure) {
-            return DynamicInvokeResult.found(dependencyAdder.add(configuration, normalizedArgs.get(0), (Closure) normalizedArgs.get(1)));
-        } else if (normalizedArgs.size() == 1) {
-            return DynamicInvokeResult.found(dependencyAdder.add(configuration, normalizedArgs.get(0), null));
+        val normalizedArgs = flattenCollections(*arguments)
+        if (normalizedArgs.size == 2 && normalizedArgs.get(1) is Closure<*>) {
+            return DynamicInvokeResult.found(dependencyAdder.add(configuration, normalizedArgs.get(0)!!, (normalizedArgs.get(1) as groovy.lang.Closure<*>?)!!))
+        } else if (normalizedArgs.size == 1) {
+            return DynamicInvokeResult.found(dependencyAdder.add(configuration, normalizedArgs.get(0)!!, null))
         } else {
-            for (Object arg : normalizedArgs) {
-                dependencyAdder.add(configuration, arg, null);
+            for (arg in normalizedArgs) {
+                dependencyAdder.add(configuration, arg!!, null)
             }
-            return DynamicInvokeResult.found();
+            return DynamicInvokeResult.found()
         }
     }
 
-    interface DependencyAdder<T> {
-        @SuppressWarnings("rawtypes")
-        T add(Configuration configuration, Object dependencyNotation, Closure configureAction);
+    internal interface DependencyAdder<T> {
+        fun add(configuration: Configuration, dependencyNotation: Any, configureAction: Closure<*>): T?
     }
 }

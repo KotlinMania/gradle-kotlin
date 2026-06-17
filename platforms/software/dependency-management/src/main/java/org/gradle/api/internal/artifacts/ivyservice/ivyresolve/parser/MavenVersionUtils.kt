@@ -13,30 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.Pattern
 
-public abstract class MavenVersionUtils {
-    private static final Pattern TIMESTAMP_PATTERN = Pattern.compile("(.+)-\\d{8}\\.\\d{6}-\\d+");
+object MavenVersionUtils {
+    private val TIMESTAMP_PATTERN: Pattern = Pattern.compile("(.+)-\\d{8}\\.\\d{6}-\\d+")
 
-    public static String inferStatusFromEffectiveVersion(String effectiveVersion) {
-        return effectiveVersion != null && effectiveVersion.endsWith("SNAPSHOT") ? "integration" : "release";
+    fun inferStatusFromEffectiveVersion(effectiveVersion: String?): String {
+        return if (effectiveVersion != null && effectiveVersion.endsWith("SNAPSHOT")) "integration" else "release"
     }
 
-    public static String inferStatusFromVersionNumber(String version) {
-        return inferStatusFromEffectiveVersion(toEffectiveVersion(version));
+    @JvmStatic
+    fun inferStatusFromVersionNumber(version: String?): String {
+        return inferStatusFromEffectiveVersion(toEffectiveVersion(version))
     }
 
-    public static String toEffectiveVersion(String version) {
-        String effectiveVersion = version;
+    fun toEffectiveVersion(version: String?): String? {
+        var effectiveVersion = version
         if (version != null) {
-            Matcher matcher = TIMESTAMP_PATTERN.matcher(version);
+            val matcher = TIMESTAMP_PATTERN.matcher(version)
             if (matcher.matches()) {
-                effectiveVersion = matcher.group(1) + "-SNAPSHOT";
+                effectiveVersion = matcher.group(1) + "-SNAPSHOT"
             }
         }
-        return effectiveVersion;
+        return effectiveVersion
     }
 }

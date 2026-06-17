@@ -13,164 +13,120 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider
+import org.gradle.api.internal.artifacts.publish.ArchivePublishArtifact
+import org.gradle.api.internal.artifacts.publish.DecoratingPublishArtifact
+import org.gradle.api.internal.artifacts.publish.DefaultPublishArtifact
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.internal.Factory
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypedNotationConverter
+import java.io.File
+import javax.inject.Inject
 
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.internal.artifacts.Module;
-import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
-import org.gradle.api.internal.artifacts.publish.ArchivePublishArtifact;
-import org.gradle.api.internal.artifacts.publish.DecoratingPublishArtifact;
-import org.gradle.api.internal.artifacts.publish.DefaultPublishArtifact;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
-import org.gradle.internal.Factory;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypedNotationConverter;
-
-import javax.inject.Inject;
-import java.io.File;
-
-@ServiceScope(Scope.Project.class)
-public class PublishArtifactNotationParserFactory implements Factory<NotationParser<Object, ConfigurablePublishArtifact>> {
-    private final ObjectFactory objectFactory;
-    private final DependencyMetaDataProvider metaDataProvider;
-    private final FileResolver fileResolver;
-    private final TaskDependencyFactory taskDependencyFactory;
-
-    @Inject
-    public PublishArtifactNotationParserFactory(ObjectFactory objectFactory, DependencyMetaDataProvider metaDataProvider, FileResolver fileResolver, TaskDependencyFactory taskDependencyFactory) {
-        this.objectFactory = objectFactory;
-        this.metaDataProvider = metaDataProvider;
-        this.fileResolver = fileResolver;
-        this.taskDependencyFactory = taskDependencyFactory;
-    }
-
-    @Override
-    public NotationParser<Object, ConfigurablePublishArtifact> create() {
-        FileNotationConverter fileConverter = new FileNotationConverter();
+@ServiceScope(Scope.Project::class)
+class PublishArtifactNotationParserFactory @Inject constructor(
+    private val objectFactory: ObjectFactory,
+    private val metaDataProvider: DependencyMetaDataProvider,
+    private val fileResolver: FileResolver,
+    private val taskDependencyFactory: TaskDependencyFactory
+) : Factory<NotationParser<Any, ConfigurablePublishArtifact>?> {
+    override fun create(): NotationParser<Any, ConfigurablePublishArtifact> {
+        val fileConverter: FileNotationConverter = PublishArtifactNotationParserFactory.FileNotationConverter()
         return NotationParserBuilder
-                .toType(ConfigurablePublishArtifact.class)
-                .converter(new DecoratingConverter())
-                .converter(new ArchiveTaskNotationConverter())
-                .converter(new FileProviderNotationConverter())
-                .converter(new FileSystemLocationNotationConverter())
-                .converter(fileConverter)
-                .converter(new FileMapNotationConverter(fileConverter))
-                .toComposite();
+            .toType<ConfigurablePublishArtifact>(ConfigurablePublishArtifact::class.java)
+            .converter(PublishArtifactNotationParserFactory.DecoratingConverter())
+            .converter(PublishArtifactNotationParserFactory.ArchiveTaskNotationConverter())
+            .converter(PublishArtifactNotationParserFactory.FileProviderNotationConverter())
+            .converter(PublishArtifactNotationParserFactory.FileSystemLocationNotationConverter())
+            .converter(fileConverter)
+            .converter(FileMapNotationConverter(fileConverter))
+            .toComposite()
     }
 
-    private class DecoratingConverter extends TypedNotationConverter<PublishArtifact, ConfigurablePublishArtifact> {
-        private DecoratingConverter() {
-            super(PublishArtifact.class);
-        }
-
-        @Override
-        protected ConfigurablePublishArtifact parseType(PublishArtifact notation) {
-            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, notation);
+    private inner class DecoratingConverter : TypedNotationConverter<PublishArtifact, ConfigurablePublishArtifact>(PublishArtifact::class.java) {
+        override fun parseType(notation: PublishArtifact): ConfigurablePublishArtifact {
+            return objectFactory.newInstance<DecoratingPublishArtifact>(DecoratingPublishArtifact::class.java, taskDependencyFactory, notation)
         }
     }
 
-    private class ArchiveTaskNotationConverter extends TypedNotationConverter<AbstractArchiveTask, ConfigurablePublishArtifact> {
-        private ArchiveTaskNotationConverter() {
-            super(AbstractArchiveTask.class);
+    private inner class ArchiveTaskNotationConverter : TypedNotationConverter<AbstractArchiveTask, ConfigurablePublishArtifact>(AbstractArchiveTask::class.java) {
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of AbstractArchiveTask").example("jar")
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of AbstractArchiveTask").example("jar");
-        }
-
-        @Override
-        protected ConfigurablePublishArtifact parseType(AbstractArchiveTask notation) {
-            return objectFactory.newInstance(ArchivePublishArtifact.class, taskDependencyFactory, notation);
+        override fun parseType(notation: AbstractArchiveTask): ConfigurablePublishArtifact {
+            return objectFactory.newInstance<ArchivePublishArtifact>(ArchivePublishArtifact::class.java, taskDependencyFactory, notation)
         }
     }
 
-    private static class FileMapNotationConverter extends MapNotationConverter<ConfigurablePublishArtifact> {
-        private final FileNotationConverter fileConverter;
-
-        private FileMapNotationConverter(FileNotationConverter fileConverter) {
-            this.fileConverter = fileConverter;
+    private class FileMapNotationConverter(private val fileConverter: FileNotationConverter) : MapNotationConverter<ConfigurablePublishArtifact>() {
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Maps with 'file' key")
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Maps with 'file' key");
-        }
-
-        @SuppressWarnings("unused") // reflection
-        protected PublishArtifact parseMap(@MapKey("file") File file) {
-            return fileConverter.parseType(file);
+        @Suppress("unused") // reflection
+        protected fun parseMap(@MapKey("file") file: File): PublishArtifact {
+            return fileConverter.parseType(file)
         }
     }
 
-    private class FileProviderNotationConverter extends TypedNotationConverter<Provider<?>, ConfigurablePublishArtifact> {
-        @SuppressWarnings("unchecked")
-        FileProviderNotationConverter() {
-            super((Class<Provider<?>>) (Class<?>) Provider.class);
+    private inner class FileProviderNotationConverter : TypedNotationConverter<Provider<*>, ConfigurablePublishArtifact>(Provider::class.java as Class<*> as Class<Provider<*>?>) {
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of Provider<RegularFile>.")
+            visitor.candidate("Instances of Provider<Directory>.")
+            visitor.candidate("Instances of Provider<File>.")
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of Provider<RegularFile>.");
-            visitor.candidate("Instances of Provider<Directory>.");
-            visitor.candidate("Instances of Provider<File>.");
-        }
-
-        @Override
-        protected ConfigurablePublishArtifact parseType(Provider<?> notation) {
-            Module module = metaDataProvider.getModule();
-            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new LazyPublishArtifact(notation, module.version, fileResolver, taskDependencyFactory));
+        override fun parseType(notation: Provider<*>): ConfigurablePublishArtifact {
+            val module = metaDataProvider.module
+            return objectFactory.newInstance<DecoratingPublishArtifact>(
+                DecoratingPublishArtifact::class.java,
+                taskDependencyFactory,
+                LazyPublishArtifact(notation, module.version, fileResolver, taskDependencyFactory)
+            )
         }
     }
 
-    private class FileSystemLocationNotationConverter extends TypedNotationConverter<FileSystemLocation, ConfigurablePublishArtifact> {
-        FileSystemLocationNotationConverter() {
-            super(FileSystemLocation.class);
+    private inner class FileSystemLocationNotationConverter : TypedNotationConverter<FileSystemLocation, ConfigurablePublishArtifact>(FileSystemLocation::class.java) {
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of RegularFile.")
+            visitor.candidate("Instances of Directory.")
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of RegularFile.");
-            visitor.candidate("Instances of Directory.");
-        }
-
-        @Override
-        protected ConfigurablePublishArtifact parseType(FileSystemLocation notation) {
-            Module module = metaDataProvider.getModule();
-            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new FileSystemPublishArtifact(notation, module.version));
+        override fun parseType(notation: FileSystemLocation): ConfigurablePublishArtifact {
+            val module = metaDataProvider.module
+            return objectFactory.newInstance<DecoratingPublishArtifact>(DecoratingPublishArtifact::class.java, taskDependencyFactory, FileSystemPublishArtifact(notation, module.version))
         }
     }
 
-    private class FileNotationConverter extends TypedNotationConverter<File, ConfigurablePublishArtifact> {
-        private FileNotationConverter() {
-            super(File.class);
-        }
-
-        @Override
-        protected ConfigurablePublishArtifact parseType(File file) {
-            Module module = metaDataProvider.getModule();
-            ArtifactFile artifactFile = new ArtifactFile(file, module.version);
-            DefaultPublishArtifact defaultPublishArtifact = objectFactory.newInstance(DefaultPublishArtifact.class, taskDependencyFactory);
-            defaultPublishArtifact.setName(artifactFile.getName());
-            defaultPublishArtifact.setExtension(artifactFile.getExtension());
-            defaultPublishArtifact.setType(artifactFile.getExtension());
-            defaultPublishArtifact.setClassifier(artifactFile.getClassifier());
-            defaultPublishArtifact.setDate(null);
-            defaultPublishArtifact.setFile(file);
-            return defaultPublishArtifact;
+    private inner class FileNotationConverter : TypedNotationConverter<File, ConfigurablePublishArtifact>(File::class.java) {
+        public override fun parseType(file: File): ConfigurablePublishArtifact {
+            val module = metaDataProvider.module
+            val artifactFile = ArtifactFile(file, module.version)
+            val defaultPublishArtifact = objectFactory.newInstance<DefaultPublishArtifact>(DefaultPublishArtifact::class.java, taskDependencyFactory)
+            defaultPublishArtifact.setName(artifactFile.getName())
+            defaultPublishArtifact.setExtension(artifactFile.getExtension())
+            defaultPublishArtifact.setType(artifactFile.getExtension())
+            defaultPublishArtifact.setClassifier(artifactFile.getClassifier())
+            defaultPublishArtifact.setDate(null)
+            defaultPublishArtifact.setFile(file)
+            return defaultPublishArtifact
         }
     }
 }

@@ -13,34 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
-import org.gradle.api.artifacts.ComponentMetadataContext;
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
+internal class DefaultComponentMetadataContext(
+    private val details: ComponentMetadataDetails, // We keep this field for access from Groovy scripts, as we currently miss some public API: https://github.com/gradle/gradle/issues/12349
+    private val metadata: ModuleComponentResolveMetadata
+) : ComponentMetadataContext {
+    private val descriptorFactory: MetadataDescriptorFactory
 
-class DefaultComponentMetadataContext implements ComponentMetadataContext {
-
-    private final ComponentMetadataDetails details;
-    // We keep this field for access from Groovy scripts, as we currently miss some public API: https://github.com/gradle/gradle/issues/12349
-    @SuppressWarnings("UnusedVariable")
-    private final ModuleComponentResolveMetadata metadata;
-    private final MetadataDescriptorFactory descriptorFactory;
-
-    DefaultComponentMetadataContext(ComponentMetadataDetails details, ModuleComponentResolveMetadata metadata) {
-        this.metadata = metadata;
-        this.details = details;
-        this.descriptorFactory = new MetadataDescriptorFactory(metadata);
+    init {
+        this.descriptorFactory = MetadataDescriptorFactory(metadata)
     }
 
-    @Override
-    public <T> T getDescriptor(Class<T> descriptorClass) {
-        return descriptorFactory.createDescriptor(descriptorClass);
+    override fun <T> getDescriptor(descriptorClass: Class<T?>): T? {
+        return descriptorFactory.createDescriptor<T?>(descriptorClass)
     }
 
-    @Override
-    public ComponentMetadataDetails getDetails() {
-        return details;
+    override fun getDetails(): ComponentMetadataDetails {
+        return details
     }
 }

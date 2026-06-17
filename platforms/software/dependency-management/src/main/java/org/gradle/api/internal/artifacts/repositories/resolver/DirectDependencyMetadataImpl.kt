@@ -13,41 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.DirectDependencyMetadata
 
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
+class DirectDependencyMetadataImpl(group: String, name: String, version: String) : AbstractDependencyImpl<DirectDependencyMetadata>(group, name, version), DirectDependencyMetadata {
+    private var endorsing = false
 
-import java.util.Collections;
-import java.util.List;
-
-public class DirectDependencyMetadataImpl extends AbstractDependencyImpl<DirectDependencyMetadata> implements DirectDependencyMetadata {
-
-    private boolean endorsing = false;
-
-    public DirectDependencyMetadataImpl(String group, String name, String version) {
-        super(group, name, version);
+    override fun endorseStrictVersions() {
+        endorsing = true
     }
 
-    @Override
-    public void endorseStrictVersions() {
-        endorsing = true;
+    override fun doNotEndorseStrictVersions() {
+        endorsing = false
     }
 
-    @Override
-    public void doNotEndorseStrictVersions() {
-        endorsing = false;
+    override fun isEndorsingStrictVersions(): Boolean {
+        return endorsing
     }
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return endorsing;
+    override fun getArtifactSelectors(): MutableList<DependencyArtifact> {
+        return mutableListOf<DependencyArtifact>()
     }
-
-    @Override
-    public List<DependencyArtifact> getArtifactSelectors() {
-        return Collections.emptyList();
-    }
-
 }

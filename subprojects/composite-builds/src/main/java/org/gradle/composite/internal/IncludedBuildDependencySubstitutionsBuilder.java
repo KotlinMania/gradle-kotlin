@@ -83,7 +83,7 @@ public class IncludedBuildDependencySubstitutionsBuilder implements GlobalDepend
             context.addAvailableModules(build.getAvailableModules());
         } else {
             // Register the defined substitutions for included build
-            context.registerSubstitution(substitutions.getRuleAction());
+            context.registerSubstitution(substitutions.ruleAction);
         }
     }
 

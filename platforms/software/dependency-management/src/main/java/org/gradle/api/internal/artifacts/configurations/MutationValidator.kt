@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
 /**
  * Used to validate mutation of an object and its sub-parts.
  */
-public interface MutationValidator {
-    enum MutationType {
+interface MutationValidator {
+    enum class MutationType(private val displayName: String) {
         /**
          * The mutation of basic state, including transitivity, attributes, capabilities.
          */
@@ -38,14 +37,14 @@ public interface MutationValidator {
 
         /**
          * The mutation of the attributes (other than coordinates) of a dependency.
-         * Theoretically these should be bundled under {@link MutationType#DEPENDENCIES}, but these mutations are not (yet)
+         * Theoretically these should be bundled under [MutationType.DEPENDENCIES], but these mutations are not (yet)
          * prevented on resolved configurations.
          */
         DEPENDENCY_ATTRIBUTES("dependency attributes"),
 
         /**
          * The mutation of the attributes (other than coordinates) of a dependency constraint.
-         * Theoretically these should be bundled under {@link MutationType#DEPENDENCIES}, but these mutations are not (yet)
+         * Theoretically these should be bundled under [MutationType.DEPENDENCIES], but these mutations are not (yet)
          * prevented on resolved configurations.
          */
         DEPENDENCY_CONSTRAINT_ATTRIBUTES("dependency constraint attributes"),
@@ -70,17 +69,9 @@ public interface MutationValidator {
          */
         HIERARCHY("hierarchy");
 
-        private final String displayName;
-
-        MutationType(String displayName) {
-            this.displayName = displayName;
+        override fun toString(): String {
+            return displayName
         }
-
-        @Override
-        public String toString() {
-            return displayName;
-        }
-
     }
 
     /**
@@ -88,8 +79,9 @@ public interface MutationValidator {
      *
      * @param type the type of mutation to validate.
      */
-    void validateMutation(MutationType type);
+    fun validateMutation(type: MutationType)
 
-    MutationValidator IGNORE = type -> {
-    };
+    companion object {
+        val IGNORE: MutationValidator = org.gradle.api.internal.artifacts.configurations.MutationValidator { type: MutationType -> }
+    }
 }

@@ -13,55 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import com.google.common.base.Objects;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.CompositeExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.collect.PersistentSet;
+import com.google.common.base.Objects
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.CompositeExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.collect.PersistentSet
 
-abstract class DefaultCompositeExclude implements CompositeExclude {
-    private final PersistentSet<ExcludeSpec> components;
+internal abstract class DefaultCompositeExclude(private val components: PersistentSet<ExcludeSpec?>) : CompositeExclude {
+    abstract fun mask(): Int
 
-    DefaultCompositeExclude(PersistentSet<ExcludeSpec> components) {
-        this.components = components;
-    }
-
-    abstract int mask();
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultCompositeExclude that = (DefaultCompositeExclude) o;
-        return Objects.equal(components, that.components);
+        val that = o as DefaultCompositeExclude
+        return Objects.equal(components, that.components)
     }
 
-    @Override
-    public int hashCode() {
-        return components.hashCode();
+    override fun hashCode(): Int {
+        return components.hashCode()
     }
 
-    @Override
-    public PersistentSet<ExcludeSpec> getComponents() {
-        return components;
+    override fun getComponents(): PersistentSet<ExcludeSpec?> {
+        return components
     }
 
-    @Override
-    public int size() {
-        return components.size();
+    override fun size(): Int {
+        return components.size()
     }
 
-    @Override
-    public String toString() {
-        return "{\"" + getDisplayName() + "\": " +
-            " " + components +
-            '}';
+    override fun toString(): String {
+        return "{\"" + this.displayName + "\": " +
+                " " + components +
+                '}'
     }
 
-    protected abstract String getDisplayName();
+    protected abstract val displayName: String
 }

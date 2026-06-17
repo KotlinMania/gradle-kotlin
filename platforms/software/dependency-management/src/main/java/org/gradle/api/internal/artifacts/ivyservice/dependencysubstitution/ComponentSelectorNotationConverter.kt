@@ -13,18 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.typeconversion.NotationParser;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.typeconversion.NotationParser
 
 /**
- * Marker type for a converter that can convert an object to a {@link ComponentSelector}, to allow
+ * Marker type for a converter that can convert an object to a [ComponentSelector], to allow
  * for easy injection.
  */
-@ServiceScope(Scope.BuildSession.class)
-public interface ComponentSelectorNotationConverter extends NotationParser<Object, ComponentSelector> {
-}
+@ServiceScope(Scope.BuildSession::class)
+interface ComponentSelectorNotationConverter : NotationParser<Any?, ComponentSelector?>

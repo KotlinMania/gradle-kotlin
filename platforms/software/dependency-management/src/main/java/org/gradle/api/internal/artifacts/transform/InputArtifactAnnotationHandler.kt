@@ -13,25 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.internal.execution.model.annotations.AbstractInputFilePropertyAnnotationHandler
+import org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory
+import org.gradle.internal.instantiation.InjectAnnotationHandler
+import org.gradle.internal.properties.InputFilePropertyType
 
-import org.gradle.api.artifacts.transform.InputArtifact;
-import org.gradle.internal.execution.model.annotations.AbstractInputFilePropertyAnnotationHandler;
-import org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory;
-import org.gradle.internal.instantiation.InjectAnnotationHandler;
-import org.gradle.internal.properties.InputFilePropertyType;
-
-import static org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory.IGNORE_EMPTY_DIRECTORIES;
-import static org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory.INCREMENTAL;
-import static org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory.NORMALIZATION;
-import static org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory.NORMALIZE_LINE_ENDINGS;
-
-public class InputArtifactAnnotationHandler extends AbstractInputFilePropertyAnnotationHandler implements InjectAnnotationHandler {
-    public InputArtifactAnnotationHandler() {
-        super(
-            InputArtifact.class,
-            InputFilePropertyType.FILE,
-            ModifierAnnotationCategory.annotationsOf(INCREMENTAL, NORMALIZATION, IGNORE_EMPTY_DIRECTORIES, NORMALIZE_LINE_ENDINGS));
-    }
-}
+class InputArtifactAnnotationHandler : AbstractInputFilePropertyAnnotationHandler(
+    InputArtifact::class.java,
+    InputFilePropertyType.FILE,
+    ModifierAnnotationCategory.annotationsOf(
+        ModifierAnnotationCategory.INCREMENTAL,
+        ModifierAnnotationCategory.NORMALIZATION,
+        ModifierAnnotationCategory.IGNORE_EMPTY_DIRECTORIES,
+        ModifierAnnotationCategory.NORMALIZE_LINE_ENDINGS
+    )
+), InjectAnnotationHandler

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
 /**
  * This class is used to store state enabling optimizations
@@ -21,24 +21,24 @@ package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
  * clear those are optimizations that can be removed at some
  * point.
  */
-public class ResolveOptimizations {
-    private boolean hasVirtualPlatforms;
-    private boolean hasForcedPlatforms;
+class ResolveOptimizations {
+    private var hasVirtualPlatforms = false
+    private var hasForcedPlatforms = false
 
-    void declareForcedPlatformInUse() {
-        hasForcedPlatforms = true;
+    fun declareForcedPlatformInUse() {
+        hasForcedPlatforms = true
     }
 
-    void declareVirtualPlatformInUse() {
-        hasVirtualPlatforms = true;
+    fun declareVirtualPlatformInUse() {
+        hasVirtualPlatforms = true
     }
 
-    public boolean mayHaveForcedPlatforms() {
-        return hasForcedPlatforms;
+    fun mayHaveForcedPlatforms(): Boolean {
+        return hasForcedPlatforms
     }
 
 
-    public boolean mayHaveVirtualPlatforms() {
-        return hasVirtualPlatforms;
+    fun mayHaveVirtualPlatforms(): Boolean {
+        return hasVirtualPlatforms
     }
 }

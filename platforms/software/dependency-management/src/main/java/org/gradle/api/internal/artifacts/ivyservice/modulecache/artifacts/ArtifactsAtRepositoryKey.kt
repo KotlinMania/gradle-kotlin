@@ -13,39 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
-class ArtifactsAtRepositoryKey {
-    final String repositoryId;
-    final ComponentIdentifier componentId;
-    final String context;
-
-    ArtifactsAtRepositoryKey(String repositoryId, ComponentIdentifier componentId, String context) {
-        this.repositoryId = repositoryId;
-        this.componentId = componentId;
-        this.context = context;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+internal class ArtifactsAtRepositoryKey(val repositoryId: String, val componentId: ComponentIdentifier, val context: String) {
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (!(o instanceof ArtifactsAtRepositoryKey)) {
-            return false;
+        if (o !is ArtifactsAtRepositoryKey) {
+            return false
         }
 
-        ArtifactsAtRepositoryKey that = (ArtifactsAtRepositoryKey) o;
-        return repositoryId.equals(that.repositoryId) && componentId.equals(that.componentId) && context.equals(that.context);
+        val that = o
+        return repositoryId == that.repositoryId && componentId == that.componentId && context == that.context
     }
 
-    @Override
-    public int hashCode() {
-        int result = repositoryId.hashCode();
-        result = 31 * result + componentId.hashCode();
-        result = 31 * result + context.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = repositoryId.hashCode()
+        result = 31 * result + componentId.hashCode()
+        result = 31 * result + context.hashCode()
+        return result
     }
 }

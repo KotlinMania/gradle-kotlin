@@ -47,11 +47,11 @@ public abstract class ArtifactTransformReportModelFactory {
     private ReportArtifactTransform convertArtifactTransform(TransformRegistration transformRegistration) {
         Transform transform = transformRegistration.transformStep.getTransform();
         return new ReportArtifactTransform(
-            transform.getImplementationClass().getSimpleName(),
-            transform.getImplementationClass(),
-            transform.getFromAttributes(),
-            transform.getToAttributes(),
-            transform.isCacheable()
+            transform.implementationClass.getSimpleName(),
+            transform.implementationClass,
+            transform.fromAttributes,
+            transform.toAttributes,
+            transform.isCacheable
         );
     }
 }

@@ -13,158 +13,139 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.Action
+import org.gradle.api.ActionConfiguration
+import org.gradle.api.NamedDomainObjectCollection
+import org.gradle.api.artifacts.ComponentMetadataListerDetails
+import org.gradle.api.artifacts.ComponentMetadataSupplier
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.ComponentMetadataVersionLister
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.MetadataSupplierAware
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
+import org.gradle.api.artifacts.repositories.RepositoryResourceAccessor
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalRepositoryResourceAccessor
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport
+import org.gradle.api.model.ObjectFactory
+import org.gradle.internal.UncheckedException
+import org.gradle.internal.action.ConfigurableRule
+import org.gradle.internal.action.DefaultConfigurableRule
+import org.gradle.internal.action.DefaultConfigurableRules
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.caching.ImplicitInputsCapturingInstantiator
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.service.ServiceLookup
+import org.gradle.internal.service.ServiceLookupException
+import org.gradle.internal.service.UnknownServiceException
+import java.lang.reflect.Type
+import java.net.URI
+import java.util.function.Supplier
 
-import org.gradle.api.Action;
-import org.gradle.api.ActionConfiguration;
-import org.gradle.api.NamedDomainObjectCollection;
-import org.gradle.api.artifacts.ComponentMetadataListerDetails;
-import org.gradle.api.artifacts.ComponentMetadataSupplier;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.ComponentMetadataVersionLister;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.artifacts.repositories.MetadataSupplierAware;
-import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor;
-import org.gradle.api.artifacts.repositories.RepositoryResourceAccessor;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalRepositoryResourceAccessor;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.action.ConfigurableRule;
-import org.gradle.internal.action.DefaultConfigurableRule;
-import org.gradle.internal.action.DefaultConfigurableRules;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.caching.ImplicitInputsCapturingInstantiator;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.service.ServiceLookup;
-import org.gradle.internal.service.ServiceLookupException;
-import org.gradle.internal.service.UnknownServiceException;
-import org.jspecify.annotations.Nullable;
+abstract class AbstractArtifactRepository protected constructor(private val objectFactory: ObjectFactory, versionParser: VersionParser) : ArtifactRepositoryInternal, ContentFilteringRepository,
+    MetadataSupplierAware {
+    private var name: String? = null
+    private var isPartOfContainer = false
+    private var componentMetadataSupplierRuleClass: Class<out ComponentMetadataSupplier>? = null
+    private var componentMetadataListerRuleClass: Class<out ComponentMetadataVersionLister>? = null
+    private var componentMetadataSupplierRuleConfiguration: Action<in ActionConfiguration>? = null
+    private var componentMetadataListerRuleConfiguration: Action<in ActionConfiguration>? = null
+    private val repositoryContentDescriptor: RepositoryContentDescriptorInternal
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
-import java.net.URI;
-import java.util.Map;
-import java.util.Set;
-
-public abstract class AbstractArtifactRepository implements ArtifactRepositoryInternal, ContentFilteringRepository, MetadataSupplierAware {
-    private String name;
-    private boolean isPartOfContainer;
-    private Class<? extends ComponentMetadataSupplier> componentMetadataSupplierRuleClass;
-    private Class<? extends ComponentMetadataVersionLister> componentMetadataListerRuleClass;
-    private Action<? super ActionConfiguration> componentMetadataSupplierRuleConfiguration;
-    private Action<? super ActionConfiguration> componentMetadataListerRuleConfiguration;
-    private final ObjectFactory objectFactory;
-    private final RepositoryContentDescriptorInternal repositoryContentDescriptor;
-
-    protected AbstractArtifactRepository(ObjectFactory objectFactory, VersionParser versionParser) {
-        this.objectFactory = objectFactory;
-        this.repositoryContentDescriptor = createRepositoryDescriptor(versionParser);
+    init {
+        this.repositoryContentDescriptor = createRepositoryDescriptor(versionParser)
     }
 
-    @Override
-    public void onAddToContainer(NamedDomainObjectCollection<ArtifactRepository> container) {
-        isPartOfContainer = true;
+    override fun onAddToContainer(container: NamedDomainObjectCollection<ArtifactRepository>) {
+        isPartOfContainer = true
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name!!
     }
 
-    @Override
-    public void setName(String name) {
-        if (isPartOfContainer) {
-            throw new IllegalStateException("The name of an ArtifactRepository cannot be changed after it has been added to a repository container. You should set the name when creating the repository.");
-        }
-        this.name = name;
+    override fun setName(name: String) {
+        check(!isPartOfContainer) { "The name of an ArtifactRepository cannot be changed after it has been added to a repository container. You should set the name when creating the repository." }
+        this.name = name
     }
 
-    @Override
-    public String getDisplayName() {
-        return getName();
+    override fun getDisplayName(): String {
+        return getName()
     }
 
-    @Override
-    public void setMetadataSupplier(Class<? extends ComponentMetadataSupplier> ruleClass) {
-        this.componentMetadataSupplierRuleClass = ruleClass;
-        this.componentMetadataSupplierRuleConfiguration = null;
+    override fun setMetadataSupplier(ruleClass: Class<out ComponentMetadataSupplier>) {
+        this.componentMetadataSupplierRuleClass = ruleClass
+        this.componentMetadataSupplierRuleConfiguration = null
     }
 
-    @Override
-    public void setMetadataSupplier(Class<? extends ComponentMetadataSupplier> rule, Action<? super ActionConfiguration> configureAction) {
-        this.componentMetadataSupplierRuleClass = rule;
-        this.componentMetadataSupplierRuleConfiguration = configureAction;
+    override fun setMetadataSupplier(rule: Class<out ComponentMetadataSupplier>, configureAction: Action<in ActionConfiguration>) {
+        this.componentMetadataSupplierRuleClass = rule
+        this.componentMetadataSupplierRuleConfiguration = configureAction
     }
 
-    @Override
-    public void setComponentVersionsLister(Class<? extends ComponentMetadataVersionLister> lister) {
-        this.componentMetadataListerRuleClass = lister;
-        this.componentMetadataListerRuleConfiguration = null;
+    override fun setComponentVersionsLister(lister: Class<out ComponentMetadataVersionLister>) {
+        this.componentMetadataListerRuleClass = lister
+        this.componentMetadataListerRuleConfiguration = null
     }
 
-    @Override
-    public void setComponentVersionsLister(Class<? extends ComponentMetadataVersionLister> lister, Action<? super ActionConfiguration> configureAction) {
-        this.componentMetadataListerRuleClass = lister;
-        this.componentMetadataListerRuleConfiguration = configureAction;
+    override fun setComponentVersionsLister(lister: Class<out ComponentMetadataVersionLister>, configureAction: Action<in ActionConfiguration>) {
+        this.componentMetadataListerRuleClass = lister
+        this.componentMetadataListerRuleConfiguration = configureAction
     }
 
-    @Override
-    public RepositoryContentDescriptorInternal createRepositoryDescriptor(VersionParser versionParser) {
-        return new DefaultRepositoryContentDescriptor(this::getDisplayName, versionParser);
+    override fun createRepositoryDescriptor(versionParser: VersionParser): RepositoryContentDescriptorInternal {
+        return DefaultRepositoryContentDescriptor(Supplier { this.getDisplayName() }, versionParser)
     }
 
-    @Override
-    public RepositoryContentDescriptorInternal getRepositoryDescriptorCopy() {
-        return repositoryContentDescriptor.asMutableCopy();
+    override fun getRepositoryDescriptorCopy(): RepositoryContentDescriptorInternal {
+        return repositoryContentDescriptor.asMutableCopy()
     }
 
-    @Override
-    public Action<? super ArtifactResolutionDetails> getContentFilter() {
-        return repositoryContentDescriptor.toContentFilter();
+    override fun getContentFilter(): Action<in ArtifactResolutionDetails> {
+        return repositoryContentDescriptor.toContentFilter()
     }
 
-    @Override
-    public Set<String> getIncludedConfigurations() {
-        return repositoryContentDescriptor.getIncludedConfigurations();
+    override fun getIncludedConfigurations(): MutableSet<String> {
+        return repositoryContentDescriptor.getIncludedConfigurations()!!
     }
 
-    @Override
-    public Set<String> getExcludedConfigurations() {
-        return repositoryContentDescriptor.getExcludedConfigurations();
+    override fun getExcludedConfigurations(): MutableSet<String> {
+        return repositoryContentDescriptor.getExcludedConfigurations()!!
     }
 
-    @Override
-    public Map<Attribute<Object>, Set<Object>> getRequiredAttributes() {
-        return repositoryContentDescriptor.getRequiredAttributes();
+    override fun getRequiredAttributes(): MutableMap<Attribute<Any>, MutableSet<Any>> {
+        return repositoryContentDescriptor.getRequiredAttributes()!!
     }
 
-    @Override
-    public void content(Action<? super RepositoryContentDescriptor> configureAction) {
-        configureAction.execute(repositoryContentDescriptor);
+    override fun content(configureAction: Action<in RepositoryContentDescriptor>) {
+        configureAction.execute(repositoryContentDescriptor)
     }
 
-    @Nullable
-    InstantiatingAction<ComponentMetadataSupplierDetails> createComponentMetadataSupplierFactory(Instantiator instantiator, IsolatableFactory isolatableFactory) {
+    fun createComponentMetadataSupplierFactory(instantiator: Instantiator, isolatableFactory: IsolatableFactory): InstantiatingAction<ComponentMetadataSupplierDetails>? {
         if (componentMetadataSupplierRuleClass != null) {
-            return createRuleAction(instantiator, DefaultConfigurableRule.of(componentMetadataSupplierRuleClass, componentMetadataSupplierRuleConfiguration, isolatableFactory));
+            return createRuleAction<ComponentMetadataSupplierDetails>(
+                instantiator,
+                DefaultConfigurableRule.of<ComponentMetadataSupplierDetails>(componentMetadataSupplierRuleClass, componentMetadataSupplierRuleConfiguration, isolatableFactory)
+            )
         } else {
-            return null;
+            return null
         }
     }
 
-    @Nullable
-    InstantiatingAction<ComponentMetadataListerDetails> createComponentMetadataVersionLister(Instantiator instantiator, IsolatableFactory isolatableFactory) {
+    fun createComponentMetadataVersionLister(instantiator: Instantiator, isolatableFactory: IsolatableFactory): InstantiatingAction<ComponentMetadataListerDetails>? {
         if (componentMetadataListerRuleClass != null) {
-            return createRuleAction(instantiator, DefaultConfigurableRule.of(componentMetadataListerRuleClass, componentMetadataListerRuleConfiguration, isolatableFactory));
+            return createRuleAction<ComponentMetadataListerDetails>(
+                instantiator,
+                DefaultConfigurableRule.of<ComponentMetadataListerDetails>(componentMetadataListerRuleClass, componentMetadataListerRuleConfiguration, isolatableFactory)
+            )
         } else {
-            return null;
+            return null
         }
     }
 
@@ -174,80 +155,80 @@ public abstract class AbstractArtifactRepository implements ArtifactRepositoryIn
      * @param transport the transport used to create the repository accessor
      * @return a dependency injecting instantiator, aware of services we want to expose
      */
-    ImplicitInputsCapturingInstantiator createInjectorForMetadataSuppliers(
-        RepositoryTransport transport,
-        InstantiatorFactory instantiatorFactory,
-        @Nullable URI rootUri,
-        FileStore<String> externalResourcesFileStore
-    ) {
-        RepositoryResourceAccessor repositoryResourceAccessor = createRepositoryAccessor(transport, rootUri, externalResourcesFileStore);
-        ServiceLookup services = new RepositoryRuleServiceLookup(objectFactory, repositoryResourceAccessor);
-        return new ImplicitInputsCapturingInstantiator(services, instantiatorFactory);
+    fun createInjectorForMetadataSuppliers(
+        transport: RepositoryTransport,
+        instantiatorFactory: InstantiatorFactory,
+        rootUri: URI?,
+        externalResourcesFileStore: FileStore<String>
+    ): ImplicitInputsCapturingInstantiator {
+        val repositoryResourceAccessor = createRepositoryAccessor(transport, rootUri, externalResourcesFileStore)
+        val services: ServiceLookup = RepositoryRuleServiceLookup(objectFactory, repositoryResourceAccessor)
+        return ImplicitInputsCapturingInstantiator(services, instantiatorFactory)
     }
 
-    protected @Nullable RepositoryResourceAccessor createRepositoryAccessor(
-        RepositoryTransport transport,
-        @Nullable URI rootUri,
-        FileStore<String> externalResourcesFileStore
-    ) {
+    protected open fun createRepositoryAccessor(
+        transport: RepositoryTransport,
+        rootUri: URI?,
+        externalResourcesFileStore: FileStore<String>
+    ): RepositoryResourceAccessor? {
         if (rootUri == null) {
-            return null;
+            return null
         }
-        return new ExternalRepositoryResourceAccessor(rootUri, transport.getResourceAccessor(), externalResourcesFileStore);
+        return ExternalRepositoryResourceAccessor(rootUri, transport.getResourceAccessor(), externalResourcesFileStore)
     }
 
-    private static class RepositoryRuleServiceLookup implements ServiceLookup {
-
-        private final ObjectFactory objectFactory;
-        private final @Nullable RepositoryResourceAccessor repositoryResourceAccessor;
-
-        public RepositoryRuleServiceLookup(
-            ObjectFactory objectFactory,
-            @Nullable RepositoryResourceAccessor repositoryResourceAccessor
-        ) {
-            this.objectFactory = objectFactory;
-            this.repositoryResourceAccessor = repositoryResourceAccessor;
-        }
-
-        @Override
-        public @Nullable Object find(Type serviceType) throws ServiceLookupException {
-            if (serviceType == RepositoryResourceAccessor.class) {
+    private class RepositoryRuleServiceLookup(
+        private val objectFactory: ObjectFactory,
+        private val repositoryResourceAccessor: RepositoryResourceAccessor?
+    ) : ServiceLookup {
+        @Throws(ServiceLookupException::class)
+        override fun find(serviceType: Type): Any? {
+            if (serviceType === RepositoryResourceAccessor::class.java) {
                 if (repositoryResourceAccessor == null) {
-                    throw new ServiceLookupException("Can not inject RepositoryResourceAccessor since repository has no URL.");
+                    throw ServiceLookupException("Can not inject RepositoryResourceAccessor since repository has no URL.")
                 } else {
-                    return repositoryResourceAccessor;
+                    return repositoryResourceAccessor
                 }
-            } else if (serviceType == ObjectFactory.class) {
-                return objectFactory;
+            } else if (serviceType === ObjectFactory::class.java) {
+                return objectFactory
             }
 
-            return null;
+            return null
         }
 
-        @Override
-        public Object get(Type serviceType) throws UnknownServiceException, ServiceLookupException {
-            Object service = find(serviceType);
+        @Throws(UnknownServiceException::class, ServiceLookupException::class)
+        override fun get(serviceType: Type): Any {
+            val service = find(serviceType)
             if (service != null) {
-                return service;
+                return service
             }
-            throw new UnknownServiceException(serviceType, "Service of type " + serviceType + " is not available for repository metadata rules. Available services: " + availableServicesDescription() + ".");
+            throw UnknownServiceException(
+                serviceType,
+                "Service of type " + serviceType + " is not available for repository metadata rules. Available services: " + availableServicesDescription() + "."
+            )
         }
 
-        @Override
-        public Object get(Type serviceType, Class<? extends Annotation> annotatedWith) throws UnknownServiceException, ServiceLookupException {
-            throw new UnknownServiceException(serviceType, "Service of type " + serviceType + " annotated with @" + annotatedWith.getSimpleName() + " is not available for repository metadata rules. Available services: " + availableServicesDescription() + ".");
+        @Throws(UnknownServiceException::class, ServiceLookupException::class)
+        override fun get(serviceType: Type, annotatedWith: Class<out Annotation>): Any? {
+            throw UnknownServiceException(
+                serviceType,
+                "Service of type " + serviceType + " annotated with @" + annotatedWith.getSimpleName() + " is not available for repository metadata rules. Available services: " + availableServicesDescription() + "."
+            )
         }
 
-        private String availableServicesDescription() {
-            return repositoryResourceAccessor != null
-                ? ObjectFactory.class.getSimpleName() + ", " + RepositoryResourceAccessor.class.getSimpleName()
-                : ObjectFactory.class.getSimpleName();
+        fun availableServicesDescription(): String {
+            return if (repositoryResourceAccessor != null)
+                ObjectFactory::class.java.getSimpleName() + ", " + RepositoryResourceAccessor::class.java.getSimpleName()
+            else
+                ObjectFactory::class.java.getSimpleName()
         }
     }
 
-    private static <T> InstantiatingAction<T> createRuleAction(final Instantiator instantiator, final ConfigurableRule<T> rule) {
-        return new InstantiatingAction<>(DefaultConfigurableRules.of(rule), instantiator, (target, throwable) -> {
-            throw UncheckedException.throwAsUncheckedException(throwable);
-        });
+    companion object {
+        private fun <T> createRuleAction(instantiator: Instantiator, rule: ConfigurableRule<T?>): InstantiatingAction<T?> {
+            return InstantiatingAction<T?>(DefaultConfigurableRules.of<T?>(rule), instantiator, InstantiatingAction.ExceptionHandler { target: T?, throwable: Throwable? ->
+                throw UncheckedException.throwAsUncheckedException(throwable!!)
+            })
+        }
     }
 }

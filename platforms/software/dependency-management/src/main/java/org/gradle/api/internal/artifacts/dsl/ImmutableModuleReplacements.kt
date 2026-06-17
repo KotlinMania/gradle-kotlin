@@ -13,48 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
-
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.dsl.DependencyHandler;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.ModuleIdentifier
 
 /**
  * Immutable user-configured description of which modules replace other
  * modules in a dependency graph.
  *
- * @see DependencyHandler#getModules()
+ * @see DependencyHandler.getModules
  */
-public class ImmutableModuleReplacements {
-
-    private final ImmutableMap<ModuleIdentifier, Replacement> replacements;
-
-    public ImmutableModuleReplacements(ImmutableMap<ModuleIdentifier, Replacement> replacements) {
-        this.replacements = replacements;
+class ImmutableModuleReplacements(private val replacements: ImmutableMap<ModuleIdentifier, Replacement>) {
+    fun getReplacementFor(sourceModule: ModuleIdentifier): Replacement? {
+        return replacements.get(sourceModule)
     }
 
-    @Nullable public Replacement getReplacementFor(ModuleIdentifier sourceModule) {
-        return replacements.get(sourceModule);
-    }
-
-    public static class Replacement {
-        private final ModuleIdentifier target;
-        private final String reason;
-
-        Replacement(ModuleIdentifier target, @Nullable String reason) {
-            this.target = target;
-            this.reason = reason;
-        }
-
-        public ModuleIdentifier getTarget() {
-            return target;
-        }
-
-        @Nullable
-        public String getReason() {
-            return reason;
-        }
-    }
+    class Replacement internal constructor(val target: ModuleIdentifier, val reason: String?)
 }

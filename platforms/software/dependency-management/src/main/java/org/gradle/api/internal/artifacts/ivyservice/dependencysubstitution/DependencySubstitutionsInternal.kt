@@ -13,24 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencySubstitutions
+import org.gradle.api.internal.artifacts.ComponentSelectorConverter
+import org.gradle.api.internal.artifacts.configurations.MutationValidator
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyResolveDetails;
-import org.gradle.api.artifacts.DependencySubstitutions;
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter;
-import org.gradle.api.internal.artifacts.configurations.MutationValidator;
+interface DependencySubstitutionsInternal : DependencySubstitutions, DependencySubstitutionRules {
+    fun allWithDependencyResolveDetails(rule: Action<in DependencyResolveDetails>, componentSelectorConverter: ComponentSelectorConverter): DependencySubstitutions?
 
-public interface DependencySubstitutionsInternal extends DependencySubstitutions, DependencySubstitutionRules {
-    DependencySubstitutions allWithDependencyResolveDetails(Action<? super DependencyResolveDetails> rule, ComponentSelectorConverter componentSelectorConverter);
+    fun setMutationValidator(validator: MutationValidator)
 
-    void setMutationValidator(MutationValidator validator);
-
-    DependencySubstitutionsInternal copy();
+    fun copy(): DependencySubstitutionsInternal?
 
     /**
      * Discard all state held by this container.
      */
-    void discard();
+    fun discard()
 }

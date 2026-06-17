@@ -13,127 +13,118 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-import com.google.common.base.Objects;
-import org.gradle.api.Describable;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons;
+import com.google.common.base.Objects
+import org.gradle.api.Describable
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+class VersionConflictResolutionDetails(candidates: MutableCollection<out ComponentResolutionState>) : Describable {
+    val candidates: MutableCollection<out ComponentResolutionState>
+    private val hashCode: Int
 
-import static org.gradle.api.artifacts.result.ComponentSelectionCause.CONFLICT_RESOLUTION;
-
-public class VersionConflictResolutionDetails implements Describable {
-    private final Collection<? extends ComponentResolutionState> candidates;
-    private final int hashCode;
-
-    public VersionConflictResolutionDetails(Collection<? extends ComponentResolutionState> candidates) {
-        this.candidates = candidates;
-        this.hashCode = candidates.hashCode();
+    init {
+        this.candidates = candidates
+        this.hashCode = candidates.hashCode()
     }
 
-    public Collection<? extends ComponentResolutionState> getCandidates() {
-        return candidates;
-    }
-
-    @Override
-    public String getDisplayName() {
-        StringBuilder sb = new StringBuilder(16 + 16 * candidates.size());
-        sb.append("between versions ");
-        Iterator<? extends ComponentResolutionState> it = candidates.iterator();
-        boolean more = false;
+    override fun getDisplayName(): String {
+        val sb = StringBuilder(16 + 16 * candidates.size)
+        sb.append("between versions ")
+        val it: MutableIterator<out ComponentResolutionState> = candidates.iterator()
+        var more = false
         while (it.hasNext()) {
-            ComponentResolutionState next = it.next();
+            val next = it.next()
             if (more) {
                 if (it.hasNext()) {
-                    sb.append(", ");
+                    sb.append(", ")
                 } else {
-                    sb.append(" and ");
+                    sb.append(" and ")
                 }
             }
-            more = true;
-            sb.append(next.getId().getVersion());
+            more = true
+            sb.append(next.id.getVersion())
         }
-        return sb.toString();
+        return sb.toString()
     }
 
-    @SuppressWarnings("UndefinedEquals") // We're fine with having weak contract of Iterable/Collection.equals.
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        return Objects.equal(candidates, ((VersionConflictResolutionDetails) o).candidates);
+        return Objects.equal(candidates, (o as VersionConflictResolutionDetails).candidates)
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    /**
-     * For a single module, conflict resolution can happen several times. However, we want to keep only one version
-     * conflict resolution cause, listing all modules which participated in resolution. So this method is going to iterate
-     * over all causes, and if it finds that version conflict resolution kicked in several times, will merge all candidates
-     * in order to report it once with all candidates.
-     *
-     * This method tries its best not to create new lists if not required.
-     *
-     * @param descriptors all selection descriptors
-     * @return a filtered descriptors list, with merged conflict version resolution
-     */
-    public static List<ComponentSelectionDescriptorInternal> mergeCauses(List<ComponentSelectionDescriptorInternal> descriptors) {
-        List<VersionConflictResolutionDetails> byVersionConflictResolution = collectVersionConflictCandidates(descriptors);
-        if (byVersionConflictResolution.size() > 1) {
-            Set<ComponentResolutionState> allCandidates = mergeAllCandidates(byVersionConflictResolution);
-            List<ComponentSelectionDescriptorInternal> merged = new ArrayList<>(descriptors.size() - 1);
-            boolean added = false;
-            for (ComponentSelectionDescriptorInternal descriptor : descriptors) {
-                if (isByVersionConflict(descriptor)) {
-                    if (!added) {
-                        merged.add(ComponentSelectionReasons.CONFLICT_RESOLUTION.withDescription(new VersionConflictResolutionDetails(allCandidates)));
+    companion object {
+        /**
+         * For a single module, conflict resolution can happen several times. However, we want to keep only one version
+         * conflict resolution cause, listing all modules which participated in resolution. So this method is going to iterate
+         * over all causes, and if it finds that version conflict resolution kicked in several times, will merge all candidates
+         * in order to report it once with all candidates.
+         *
+         * This method tries its best not to create new lists if not required.
+         *
+         * @param descriptors all selection descriptors
+         * @return a filtered descriptors list, with merged conflict version resolution
+         */
+        fun mergeCauses(descriptors: MutableList<ComponentSelectionDescriptorInternal>): MutableList<ComponentSelectionDescriptorInternal> {
+            val byVersionConflictResolution: MutableList<VersionConflictResolutionDetails> = collectVersionConflictCandidates(descriptors)
+            if (byVersionConflictResolution.size > 1) {
+                val allCandidates: MutableSet<ComponentResolutionState> = mergeAllCandidates(byVersionConflictResolution)
+                val merged: MutableList<ComponentSelectionDescriptorInternal> = ArrayList<ComponentSelectionDescriptorInternal>(descriptors.size - 1)
+                var added = false
+                for (descriptor in descriptors) {
+                    if (isByVersionConflict(descriptor)) {
+                        if (!added) {
+                            merged.add(
+                                ComponentSelectionReasons.CONFLICT_RESOLUTION.withDescription(
+                                    org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.VersionConflictResolutionDetails(
+                                        allCandidates
+                                    )
+                                )!!
+                            )
+                        }
+                        added = true
+                    } else {
+                        merged.add(descriptor)
                     }
-                    added = true;
-                } else {
-                    merged.add(descriptor);
+                }
+                return merged
+            }
+            return descriptors
+        }
+
+        private fun mergeAllCandidates(byVersionConflictResolution: MutableList<VersionConflictResolutionDetails>): MutableSet<ComponentResolutionState> {
+            val allCandidates: MutableSet<ComponentResolutionState> = LinkedHashSet<ComponentResolutionState>()
+            for (versionConflictResolutionDetails in byVersionConflictResolution) {
+                allCandidates.addAll(versionConflictResolutionDetails.candidates)
+            }
+            return allCandidates
+        }
+
+        private fun collectVersionConflictCandidates(descriptors: MutableList<ComponentSelectionDescriptorInternal>): MutableList<VersionConflictResolutionDetails> {
+            val byVersionConflictResolution: MutableList<VersionConflictResolutionDetails> = ArrayList<VersionConflictResolutionDetails>(descriptors.size)
+            for (descriptor in descriptors) {
+                if (isByVersionConflict(descriptor)) {
+                    byVersionConflictResolution.add((descriptor.describable as org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.VersionConflictResolutionDetails?)!!)
                 }
             }
-            return merged;
+            return byVersionConflictResolution
         }
-        return descriptors;
-    }
 
-    private static Set<ComponentResolutionState> mergeAllCandidates(List<VersionConflictResolutionDetails> byVersionConflictResolution) {
-        Set<ComponentResolutionState> allCandidates = new LinkedHashSet<>();
-        for (VersionConflictResolutionDetails versionConflictResolutionDetails : byVersionConflictResolution) {
-            allCandidates.addAll(versionConflictResolutionDetails.getCandidates());
+        private fun isByVersionConflict(descriptor: ComponentSelectionDescriptorInternal): Boolean {
+            return descriptor.getCause() == ComponentSelectionCause.CONFLICT_RESOLUTION
+                    && descriptor.describable is VersionConflictResolutionDetails
         }
-        return allCandidates;
     }
-
-    private static List<VersionConflictResolutionDetails> collectVersionConflictCandidates(List<ComponentSelectionDescriptorInternal> descriptors) {
-        List<VersionConflictResolutionDetails> byVersionConflictResolution = new ArrayList<>(descriptors.size());
-        for (ComponentSelectionDescriptorInternal descriptor : descriptors) {
-            if (isByVersionConflict(descriptor)) {
-                byVersionConflictResolution.add((VersionConflictResolutionDetails) descriptor.getDescribable());
-            }
-        }
-        return byVersionConflictResolution;
-    }
-
-    private static boolean isByVersionConflict(ComponentSelectionDescriptorInternal descriptor) {
-        return descriptor.getCause() == CONFLICT_RESOLUTION
-            && descriptor.getDescribable() instanceof VersionConflictResolutionDetails;
-    }
-
 }

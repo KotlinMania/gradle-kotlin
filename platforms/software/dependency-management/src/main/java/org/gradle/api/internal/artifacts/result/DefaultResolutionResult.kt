@@ -13,129 +13,95 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.artifacts.result.DependencyResult
+import org.gradle.api.artifacts.result.ResolutionResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.resolver.ResolutionAccess
+import org.gradle.api.internal.attributes.AttributeDesugaring
+import org.gradle.api.internal.provider.DefaultProvider
+import org.gradle.api.provider.Provider
+import org.gradle.internal.Actions
+import org.gradle.util.internal.ConfigureUtil
+import java.util.concurrent.Callable
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.result.DependencyResult;
-import org.gradle.api.artifacts.result.ResolutionResult;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.artifacts.resolver.ResolutionAccess;
-import org.gradle.api.internal.attributes.AttributeDesugaring;
-import org.gradle.api.internal.provider.DefaultProvider;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.Actions;
-import org.gradle.util.internal.ConfigureUtil;
-
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Set;
-
-import static org.gradle.api.internal.artifacts.result.DefaultResolvedComponentResult.eachElement;
-
-public class DefaultResolutionResult implements ResolutionResult {
-
-    private final ResolutionAccess resolutionAccess;
-    private final AttributeDesugaring attributeDesugaring;
-
-    public DefaultResolutionResult(
-        ResolutionAccess resolutionAccess,
-        AttributeDesugaring attributeDesugaring
-    ) {
-        this.resolutionAccess = resolutionAccess;
-        this.attributeDesugaring = attributeDesugaring;
+class DefaultResolutionResult(
+    private val resolutionAccess: ResolutionAccess,
+    private val attributeDesugaring: AttributeDesugaring
+) : ResolutionResult {
+    override fun getRoot(): ResolvedComponentResult {
+        return getRootComponent().get()
     }
 
-    @Override
-    public ResolvedComponentResult getRoot() {
-        return getRootComponent().get();
+    override fun getRootComponent(): Provider<ResolvedComponentResult> {
+        return DefaultProvider<ResolvedComponentResult>(Callable {
+            val graph = this.graph
+            val nodes = graph.structure().nodes()
+            graph.getComponent(nodes.owner(nodes.root()))
+        })
     }
 
-    @Override
-    public Provider<ResolvedComponentResult> getRootComponent() {
-        return new DefaultProvider<>(() -> {
-            ResolvedGraphResult graph = getGraph();
-            GraphStructure.Nodes nodes = graph.structure().nodes();
-            return graph.getComponent(nodes.owner(nodes.root()));
-        });
+    override fun getRootVariant(): Provider<ResolvedVariantResult> {
+        return DefaultProvider<ResolvedVariantResult>(Callable {
+            val graph = this.graph
+            graph.getVariant(graph.structure().nodes().root())
+        })
     }
 
-    @Override
-    public Provider<ResolvedVariantResult> getRootVariant() {
-        return new DefaultProvider<>(() -> {
-            ResolvedGraphResult graph = getGraph();
-            return graph.getVariant(graph.structure().nodes().root());
-        });
-    }
+    private val graph: ResolvedGraphResult
+        get() = resolutionAccess.results.getValue().visitedGraph.getResolvedGraphResultSource().get()
 
-    private ResolvedGraphResult getGraph() {
-        return resolutionAccess.getResults().getValue().visitedGraph.getResolvedGraphResultSource().get();
-    }
-
-    @Override
-    public AttributeContainer getRequestedAttributes() {
-        return attributeDesugaring.desugar(resolutionAccess.getAttributes());
+    override fun getRequestedAttributes(): AttributeContainer {
+        return attributeDesugaring.desugar(resolutionAccess.attributes)
     }
 
     // TODO: The below methods should operate directly on a GraphStructure
     // to avoid traversing the graph.
-
-    @Override
-    public Set<? extends DependencyResult> getAllDependencies() {
-        final Set<DependencyResult> out = new LinkedHashSet<>();
-        allDependencies(out::add);
-        return out;
+    override fun getAllDependencies(): MutableSet<out DependencyResult> {
+        val out: MutableSet<DependencyResult> = LinkedHashSet<DependencyResult>()
+        allDependencies(Action { e: DependencyResult -> out.add(e) })
+        return out
     }
 
-    @Override
-    public void allDependencies(Action<? super DependencyResult> action) {
-        eachElement(getRoot(), Actions.doNothing(), action, new HashSet<>());
+    override fun allDependencies(action: Action<in DependencyResult>) {
+        DefaultResolvedComponentResult.Companion.eachElement(getRoot(), Actions.doNothing<ResolvedComponentResult>(), action, HashSet<ResolvedComponentResult>())
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public void allDependencies(final Closure closure) {
-        allDependencies(ConfigureUtil.configureUsing(closure));
+    override fun allDependencies(closure: Closure<*>) {
+        allDependencies(ConfigureUtil.configureUsing<DependencyResult>(closure))
     }
 
-    @Override
-    public Set<ResolvedComponentResult> getAllComponents() {
-        final Set<ResolvedComponentResult> out = new LinkedHashSet<>();
-        eachElement(getRoot(), Actions.doNothing(), Actions.doNothing(), out);
-        return out;
+    override fun getAllComponents(): MutableSet<ResolvedComponentResult> {
+        val out: MutableSet<ResolvedComponentResult> = LinkedHashSet<ResolvedComponentResult>()
+        DefaultResolvedComponentResult.Companion.eachElement(getRoot(), Actions.doNothing<ResolvedComponentResult>(), Actions.doNothing<DependencyResult>(), out)
+        return out
     }
 
-    @Override
-    public void allComponents(final Action<? super ResolvedComponentResult> action) {
-        eachElement(getRoot(), action, Actions.doNothing(), new HashSet<>());
+    override fun allComponents(action: Action<in ResolvedComponentResult>) {
+        DefaultResolvedComponentResult.Companion.eachElement(getRoot(), action, Actions.doNothing<DependencyResult>(), HashSet<ResolvedComponentResult>())
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public void allComponents(final Closure closure) {
-        allComponents(ConfigureUtil.configureUsing(closure));
+    override fun allComponents(closure: Closure<*>) {
+        allComponents(ConfigureUtil.configureUsing<ResolvedComponentResult>(closure))
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultResolutionResult that = (DefaultResolutionResult) o;
-        return Objects.equals(resolutionAccess, that.resolutionAccess);
+        val that = o as DefaultResolutionResult
+        return resolutionAccess == that.resolutionAccess
     }
 
-    @Override
-    public int hashCode() {
-        return resolutionAccess.hashCode();
+    override fun hashCode(): Int {
+        return resolutionAccess.hashCode()
     }
-
 }

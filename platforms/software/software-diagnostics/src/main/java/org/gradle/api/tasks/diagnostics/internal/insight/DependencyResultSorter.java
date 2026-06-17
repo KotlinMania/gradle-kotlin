@@ -146,8 +146,8 @@ public abstract class DependencyResultSorter {
         private int compareVersions(VersionConstraint left, VersionConstraint right) {
             String leftRequiredVersion = left.getRequiredVersion();
             String rightRequiredVersion = right.getRequiredVersion();
-            boolean leftDynamic = versionSelectorScheme.parseSelector(leftRequiredVersion).isDynamic();
-            boolean rightDynamic = versionSelectorScheme.parseSelector(rightRequiredVersion).isDynamic();
+            boolean leftDynamic = versionSelectorScheme.parseSelector(leftRequiredVersion).isDynamic;
+            boolean rightDynamic = versionSelectorScheme.parseSelector(rightRequiredVersion).isDynamic;
 
             // Order dynamic selectors after static selectors
             if (leftDynamic && !rightDynamic) {

@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
 
-public interface ExternalResourceArtifactResolver {
-    @Nullable
-    LocallyAvailableExternalResource resolveArtifact(ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result);
+interface ExternalResourceArtifactResolver {
+    fun resolveArtifact(artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): LocallyAvailableExternalResource?
 
-    boolean artifactExists(ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result);
+    fun artifactExists(artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): Boolean
 }

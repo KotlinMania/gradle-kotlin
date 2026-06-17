@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import java.util.Set;
+internal interface VerificationHighLevelErrors {
+    val isMaybeCompromised: Boolean
 
-interface VerificationHighLevelErrors {
+    fun hasFailedSignatures(): Boolean
 
-    boolean isMaybeCompromised();
+    fun canSuggestWriteMetadata(): Boolean
 
-    boolean hasFailedSignatures();
+    val affectedFiles: MutableSet<String>?
 
-    boolean canSuggestWriteMetadata();
-
-    Set<String> getAffectedFiles();
-
-    boolean isKeyServersDisabled();
+    val isKeyServersDisabled: Boolean
 }

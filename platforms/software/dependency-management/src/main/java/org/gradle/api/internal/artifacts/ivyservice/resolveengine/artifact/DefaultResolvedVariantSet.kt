@@ -13,80 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.transform.ResolvedVariantTransformer;
-import org.gradle.api.internal.artifacts.transform.VariantDefinition;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.Describables;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Describable
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.transform.ResolvedVariantTransformer
+import org.gradle.api.internal.artifacts.transform.VariantDefinition
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.Describables
 
 /**
- * Default implementation of {@link ResolvedVariantSet}.
+ * Default implementation of [ResolvedVariantSet].
  */
-public class DefaultResolvedVariantSet implements ResolvedVariantSet {
-    private final ComponentIdentifier componentIdentifier;
-    private final ImmutableAttributesSchema schema;
-    private final ImmutableAttributes selectionAttributes;
-    private final ImmutableList<ResolvedVariant> variants;
-
-    // Services
-    private final ResolvedVariantTransformer transformer;
-
-    public DefaultResolvedVariantSet(
-        ComponentIdentifier componentIdentifier,
-        ImmutableAttributesSchema schema,
-        ImmutableAttributes selectionAttributes,
-        ImmutableList<ResolvedVariant> variants,
-        ResolvedVariantTransformer transformer
-    ) {
-        this.componentIdentifier = componentIdentifier;
-        this.schema = schema;
-        this.selectionAttributes = selectionAttributes;
-        this.variants = variants;
-
-        this.transformer = transformer;
+class DefaultResolvedVariantSet(
+    val componentIdentifier: ComponentIdentifier,
+    val producerSchema: ImmutableAttributesSchema,
+    val overriddenAttributes: ImmutableAttributes,
+    val candidates: ImmutableList<ResolvedVariant?>?,
+// Services
+    private val transformer: ResolvedVariantTransformer
+) : ResolvedVariantSet {
+    init {
+        this.transformer = transformer
     }
 
-    @Override
-    public ComponentIdentifier getComponentIdentifier() {
-        return componentIdentifier;
+    override fun toString(): String {
+        return asDescribable()!!.getDisplayName()
     }
 
-    @Override
-    public ImmutableAttributes getOverriddenAttributes() {
-        return selectionAttributes;
+    override fun asDescribable(): Describable? {
+        return Describables.of(componentIdentifier)
     }
 
-    @Override
-    public String toString() {
-        return asDescribable().getDisplayName();
-    }
-
-    @Override
-    public Describable asDescribable() {
-        return Describables.of(componentIdentifier);
-    }
-
-    @Override
-    public ImmutableAttributesSchema getProducerSchema() {
-        return schema;
-    }
-
-    @Override
-    public ImmutableList<ResolvedVariant> getCandidates() {
-        return variants;
-    }
-
-    @Override
-    public ResolvedArtifactSet transformCandidate(
-        ResolvedVariant candidate,
-        VariantDefinition variantDefinition
-    ) {
-        return transformer.transform(componentIdentifier, candidate, variantDefinition);
+    override fun transformCandidate(
+        candidate: ResolvedVariant,
+        variantDefinition: VariantDefinition
+    ): ResolvedArtifactSet? {
+        return transformer.transform(componentIdentifier, candidate, variantDefinition)
     }
 }

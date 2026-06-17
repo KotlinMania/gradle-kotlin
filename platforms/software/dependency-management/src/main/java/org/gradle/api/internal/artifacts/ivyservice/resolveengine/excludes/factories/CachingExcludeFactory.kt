@@ -13,93 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.collect.PersistentSet;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.collect.PersistentSet
+import java.util.function.Function
 
 /**
  * This factory is responsible for caching merging queries. It delegates computations
  * to another factory, so if the delegate returns the same instances for the same
  * queries, caching will be faster.
  */
-public class CachingExcludeFactory extends DelegatingExcludeFactory {
-    private final MergeCaches caches;
-
-    public CachingExcludeFactory(ExcludeFactory delegate, MergeCaches caches) {
-        super(delegate);
-        this.caches = caches;
+class CachingExcludeFactory(delegate: ExcludeFactory?, private val caches: MergeCaches) : DelegatingExcludeFactory(delegate) {
+    override fun anyOf(one: ExcludeSpec, two: ExcludeSpec): ExcludeSpec? {
+        return cachedAnyPair(one, two)
     }
 
-    @Override
-    public ExcludeSpec anyOf(ExcludeSpec one, ExcludeSpec two) {
-        return cachedAnyPair(one, two);
+    private fun cachedAnyPair(left: ExcludeSpec, right: ExcludeSpec): ExcludeSpec? {
+        return caches.getAnyPair(ExcludePair.Companion.of(left, right), Function { key: ExcludePair? -> delegate.anyOf(key.left, key.right) })
     }
 
-    private ExcludeSpec cachedAnyPair(ExcludeSpec left, ExcludeSpec right) {
-        return caches.getAnyPair(ExcludePair.of(left, right), key -> delegate.anyOf(key.left, key.right));
+    override fun allOf(one: ExcludeSpec, two: ExcludeSpec): ExcludeSpec? {
+        return caches.getAllPair(ExcludePair.Companion.of(one, two), Function { key: ExcludePair? -> delegate.allOf(key.left, key.right) })
     }
 
-    @Override
-    public ExcludeSpec allOf(ExcludeSpec one, ExcludeSpec two) {
-        return caches.getAllPair(ExcludePair.of(one, two), key -> delegate.allOf(key.left, key.right));
+    override fun anyOf(specs: PersistentSet<ExcludeSpec?>?): ExcludeSpec? {
+        return caches.getAnyOf(specs, Function { specs: PersistentSet<ExcludeSpec?>? -> delegate.anyOf(specs) })
     }
 
-    @Override
-    public ExcludeSpec anyOf(PersistentSet<ExcludeSpec> specs) {
-        return caches.getAnyOf(specs, delegate::anyOf);
-    }
-
-    @Override
-    public ExcludeSpec allOf(PersistentSet<ExcludeSpec> specs) {
-        return caches.getAllOf(specs, delegate::allOf);
+    override fun allOf(specs: PersistentSet<ExcludeSpec?>?): ExcludeSpec? {
+        return caches.getAllOf(specs, Function { specs: PersistentSet<ExcludeSpec?>? -> delegate.allOf(specs) })
     }
 
     /**
      * A special key which recognizes the fact union and intersection
      * are commutative.
      */
-    private final static class ExcludePair {
-        private final ExcludeSpec left;
-        private final ExcludeSpec right;
-        private final int hashCode;
+    private class ExcludePair(private val left: ExcludeSpec, private val right: ExcludeSpec) {
+        private val hashCode: Int
 
-        // Optimizes comparisons by making sure that the 2 elements of
-        // the pair are "sorted" by hashcode ascending
-        private static ExcludePair of(ExcludeSpec left, ExcludeSpec right) {
-            if (left.hashCode() > right.hashCode()) {
-                return new ExcludePair(right, left);
-            }
-            return new ExcludePair(left, right);
+        init {
+            this.hashCode = 31 * left.hashCode() + right.hashCode()
         }
 
-        private ExcludePair(ExcludeSpec left, ExcludeSpec right) {
-            this.left = left;
-            this.right = right;
-            this.hashCode = 31 * left.hashCode() + right.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            ExcludePair that = (ExcludePair) o;
+            val that = o as ExcludePair
 
-            return left.equals(that.left) && right.equals(that.right);
+            return left == that.left && right == that.right
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
+        }
+
+        companion object {
+            // Optimizes comparisons by making sure that the 2 elements of
+            // the pair are "sorted" by hashcode ascending
+            private fun of(left: ExcludeSpec, right: ExcludeSpec): ExcludePair {
+                if (left.hashCode() > right.hashCode()) {
+                    return ExcludePair(right, left)
+                }
+                return ExcludePair(left, right)
+            }
         }
     }
 
@@ -109,45 +91,47 @@ public class CachingExcludeFactory extends DelegatingExcludeFactory {
      * will not allow for recursion, which is the case for us whenever a cache is
      * found at different levels.
      */
-    public static class MergeCaches {
-        private final ConcurrentCache<ExcludePair, ExcludeSpec> allOfPairCache = ConcurrentCache.of();
-        private final ConcurrentCache<ExcludePair, ExcludeSpec> anyOfPairCache = ConcurrentCache.of();
-        private final ConcurrentCache<PersistentSet<ExcludeSpec>, ExcludeSpec> allOfListCache = ConcurrentCache.of();
-        private final ConcurrentCache<PersistentSet<ExcludeSpec>, ExcludeSpec> anyOfListCache = ConcurrentCache.of();
+    class MergeCaches {
+        private val allOfPairCache: ConcurrentCache<ExcludePair?, ExcludeSpec?> = ConcurrentCache.Companion.of<ExcludePair?, ExcludeSpec?>()
+        private val anyOfPairCache: ConcurrentCache<ExcludePair?, ExcludeSpec?> = ConcurrentCache.Companion.of<ExcludePair?, ExcludeSpec?>()
+        private val allOfListCache: ConcurrentCache<PersistentSet<ExcludeSpec?>?, ExcludeSpec?> = ConcurrentCache.Companion.of<PersistentSet<ExcludeSpec?>?, ExcludeSpec?>()
+        private val anyOfListCache: ConcurrentCache<PersistentSet<ExcludeSpec?>?, ExcludeSpec?> = ConcurrentCache.Companion.of<PersistentSet<ExcludeSpec?>?, ExcludeSpec?>()
 
-        ExcludeSpec getAnyPair(ExcludePair pair, Function<ExcludePair, ExcludeSpec> onMiss) {
-            return anyOfPairCache.computeIfAbsent(pair, onMiss);
+        fun getAnyPair(pair: ExcludePair?, onMiss: Function<ExcludePair?, ExcludeSpec?>): ExcludeSpec? {
+            return anyOfPairCache.computeIfAbsent(pair, onMiss)
         }
 
-        ExcludeSpec getAllPair(ExcludePair pair, Function<ExcludePair, ExcludeSpec> onMiss) {
-            return allOfPairCache.computeIfAbsent(pair, onMiss);
+        fun getAllPair(pair: ExcludePair?, onMiss: Function<ExcludePair?, ExcludeSpec?>): ExcludeSpec? {
+            return allOfPairCache.computeIfAbsent(pair, onMiss)
         }
 
-        ExcludeSpec getAnyOf(PersistentSet<ExcludeSpec> list, Function<PersistentSet<ExcludeSpec>, ExcludeSpec> onMiss) {
-            return anyOfListCache.computeIfAbsent(list, onMiss);
+        fun getAnyOf(list: PersistentSet<ExcludeSpec?>?, onMiss: Function<PersistentSet<ExcludeSpec?>?, ExcludeSpec?>): ExcludeSpec? {
+            return anyOfListCache.computeIfAbsent(list, onMiss)
         }
 
-        ExcludeSpec getAllOf(PersistentSet<ExcludeSpec> list, Function<PersistentSet<ExcludeSpec>, ExcludeSpec> onMiss) {
-            return allOfListCache.computeIfAbsent(list, onMiss);
+        fun getAllOf(list: PersistentSet<ExcludeSpec?>?, onMiss: Function<PersistentSet<ExcludeSpec?>?, ExcludeSpec?>): ExcludeSpec? {
+            return allOfListCache.computeIfAbsent(list, onMiss)
         }
     }
 
-    private static class ConcurrentCache<K, V> {
-        private final Map<K, V> backingMap = new HashMap<>();
+    private class ConcurrentCache<K, V> {
+        private val backingMap: MutableMap<K?, V?> = HashMap<K?, V?>()
 
-        static <K, V> ConcurrentCache<K, V> of() {
-            return new ConcurrentCache<>();
+        fun computeIfAbsent(key: K?, producer: Function<K?, V?>): V? {
+            synchronized(backingMap) {
+                var value = backingMap.get(key)
+                if (value != null) {
+                    return value
+                }
+                value = producer.apply(key)
+                backingMap.put(key, value)
+                return value
+            }
         }
 
-        V computeIfAbsent(K key, Function<K, V> producer) {
-            synchronized (backingMap) {
-                V value = backingMap.get(key);
-                if (value != null) {
-                    return value;
-                }
-                value = producer.apply(key);
-                backingMap.put(key, value);
-                return value;
+        companion object {
+            fun <K, V> of(): ConcurrentCache<K?, V?> {
+                return ConcurrentCache<K?, V?>()
             }
         }
     }

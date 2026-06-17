@@ -13,47 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
-import org.gradle.api.artifacts.result.ResolutionResult;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphComponent;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.ResolvedGraphVariant;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructureBuilder;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedDependencyGraph;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import it.unimi.dsi.fastutil.longs.LongSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructureBuilder
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedDependencyGraph
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import java.util.function.Supplier
 
 /**
- * Dependency graph visitor that will build a {@link ResolutionResult} eagerly.
+ * Dependency graph visitor that will build a [ResolutionResult] eagerly.
  * It is designed to be used during resolution for build dependencies.
  */
-public class InMemoryResolutionResultBuilder implements DependencyGraphVisitor {
+class InMemoryResolutionResultBuilder : DependencyGraphVisitor {
+    private val visitedComponents: LongSet = LongOpenHashSet()
+    private val builder = GraphStructureBuilder()
 
-    private final LongSet visitedComponents = new LongOpenHashSet();
-    private final GraphStructureBuilder builder = new GraphStructureBuilder();
+    private var requestAttributes: ImmutableAttributes? = null
 
-    private @Nullable ImmutableAttributes requestAttributes;
-
-    @Override
-    public void start(RootGraphNode root) {
-        this.requestAttributes = root.getResolveState().getAttributes();
-        builder.start(root.getNodeId());
+    override fun start(root: RootGraphNode) {
+        this.requestAttributes = root.getResolveState().attributes
+        builder.start(root.getNodeId())
     }
 
-    @Override
-    public void visitEdges(DependencyGraphNode node) {
-        DependencyGraphComponent component = node.getOwner();
+    override fun visitEdges(node: DependencyGraphNode) {
+        val component = node.getOwner()
         if (visitedComponents.add(component.getResultId())) {
             builder.addComponent(
                 component.getResultId(),
@@ -61,49 +49,47 @@ public class InMemoryResolutionResultBuilder implements DependencyGraphVisitor {
                 component.getRepositoryName(),
                 component.getComponentId(),
                 component.getModuleVersion()
-            );
+            )
         }
 
-        ResolvedGraphVariant externalVariant = node.getExternalVariant();
-        long externalVariantId = externalVariant != null ? externalVariant.getNodeId() : -1;
+        val externalVariant = node.getExternalVariant()
+        val externalVariantId = if (externalVariant != null) externalVariant.getNodeId() else -1
 
         builder.addNode(
             node.getNodeId(),
             component.getResultId(),
-            node.getMetadata().getAttributes(),
-            node.getMetadata().getCapabilities(),
+            node.getMetadata().getAttributes()!!,
+            node.getMetadata().getCapabilities()!!,
             node.getMetadata().getName(),
             externalVariantId
-        );
+        )
 
-        for (DependencyGraphEdge edge : node.getOutgoingEdges()) {
-            ModuleVersionResolveException failure = edge.getFailure();
+        for (edge in node.getOutgoingEdges()) {
+            val failure = edge.getFailure()
             if (failure == null) {
-                List<? extends DependencyGraphNode> targetNodes = edge.getTargetNodes();
-                if (targetNodes.isEmpty()) {
-                    throw new IllegalStateException("Edge " + edge + " has no target nodes.");
-                }
+                val targetNodes = edge.getTargetNodes()
+                check(!targetNodes.isEmpty()) { "Edge " + edge + " has no target nodes." }
                 if (edge.isConstraint()) {
                     // Only write the first target node for constraints, as this is historical
                     // behavior. Eventually, we should model constraints differently in the public
                     // API so they do not report a target node at all, as constraints conceptually
                     // only target components.
-                    DependencyGraphNode firstTargetNode = targetNodes.get(0);
-                    if (!firstTargetNode.getComponent().getModule().isVirtualPlatform()) {
+                    val firstTargetNode: DependencyGraphNode = targetNodes.get(0)
+                    if (!firstTargetNode.getComponent().module.isVirtualPlatform()) {
                         builder.addSuccessfulEdge(
                             edge.getRequested(),
                             true,
                             firstTargetNode.getNodeId()
-                        );
+                        )
                     }
                 } else {
-                    for (DependencyGraphNode targetNode : targetNodes) {
-                        if (!targetNode.getComponent().getModule().isVirtualPlatform()) {
+                    for (targetNode in targetNodes) {
+                        if (!targetNode.getComponent().module.isVirtualPlatform()) {
                             builder.addSuccessfulEdge(
                                 edge.getRequested(),
                                 false,
                                 targetNode.getNodeId()
-                            );
+                            )
                         }
                     }
                 }
@@ -113,22 +99,20 @@ public class InMemoryResolutionResultBuilder implements DependencyGraphVisitor {
                     edge.isConstraint(),
                     edge.getReason(),
                     failure
-                );
+                )
             }
         }
     }
 
-    public ResolvedDependencyGraph getResolvedDependencyGraph() {
-        if (requestAttributes == null) {
-            throw new IllegalStateException("Resolution result not computed yet");
+    val resolvedDependencyGraph: ResolvedDependencyGraph
+        get() {
+            checkNotNull(requestAttributes) { "Resolution result not computed yet" }
+
+            val structure = builder.build()
+            return ResolvedDependencyGraph(
+                requestAttributes!!,
+                Supplier { structure },
+                null
+            )
         }
-
-        GraphStructure structure = builder.build();
-        return new ResolvedDependencyGraph(
-            requestAttributes,
-            () -> structure,
-            null
-        );
-    }
-
 }

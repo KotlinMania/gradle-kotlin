@@ -13,65 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import javax.annotation.concurrent.NotThreadSafe
 
 /**
- * A serializer for {@link ComponentSelector} that deduplicates the values and delegates to
+ * A serializer for [ComponentSelector] that deduplicates the values and delegates to
  * another serializer for the actual serialization.
- * <p>
+ *
+ *
  * This serializer is not thread-safe and should not be reused to serialize multiple graphs.
  */
 @NotThreadSafe
-public class DeduplicatingComponentSelectorSerializer implements Serializer<ComponentSelector> {
+class DeduplicatingComponentSelectorSerializer(private val delegate: ComponentSelectorSerializer) : Serializer<ComponentSelector?> {
+    private val writeIndex: MutableMap<ComponentSelector, Int> = HashMap<ComponentSelector, Int>()
+    private val readIndex: MutableList<ComponentSelector> = ArrayList<ComponentSelector>()
 
-    private final ComponentSelectorSerializer delegate;
-
-    private final Map<ComponentSelector, Integer> writeIndex = new HashMap<>();
-    private final List<ComponentSelector> readIndex = new ArrayList<>();
-
-    public DeduplicatingComponentSelectorSerializer(ComponentSelectorSerializer delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public ComponentSelector read(Decoder decoder) throws Exception {
-        int idx = decoder.readSmallInt();
-        ComponentSelector selector;
-        if (idx == readIndex.size()) {
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ComponentSelector {
+        val idx = decoder.readSmallInt()
+        val selector: ComponentSelector
+        if (idx == readIndex.size) {
             // new entry
-            selector = delegate.read(decoder);
-            readIndex.add(selector);
+            selector = delegate.read(decoder)
+            readIndex.add(selector)
         } else {
-            selector = readIndex.get(idx);
+            selector = readIndex.get(idx)
         }
-        return selector;
+        return selector
     }
 
-    @Override
-    public void write(Encoder encoder, ComponentSelector selector) throws Exception {
-        Integer idx = writeIndex.get(selector);
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, selector: ComponentSelector) {
+        val idx = writeIndex.get(selector)
         if (idx == null) {
             // new value
-            int index = writeIndex.size();
-            encoder.writeSmallInt(index);
-            writeIndex.put(selector, index);
-            delegate.write(encoder, selector);
+            val index = writeIndex.size
+            encoder.writeSmallInt(index)
+            writeIndex.put(selector, index)
+            delegate.write(encoder, selector)
         } else {
             // known value, only write index
-            encoder.writeSmallInt(idx);
+            encoder.writeSmallInt(idx)
         }
     }
-
 }

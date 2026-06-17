@@ -13,129 +13,114 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import com.google.common.collect.Interner;
-import org.gradle.internal.serialize.Decoder;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.Interner
+import org.gradle.internal.serialize.Decoder
+import java.io.Closeable
+import java.io.EOFException
+import java.io.IOException
 
-import java.io.Closeable;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
+internal class StringDeduplicatingDecoder(private val delegate: Decoder, private val stringInterner: Interner<String?>) : Decoder, Closeable {
+    val inputStream: InputStream
+        get() = delegate.inputStream
 
-class StringDeduplicatingDecoder implements Decoder, Closeable {
-    private final Decoder delegate;
-    private final Interner<String> stringInterner;
-
-    StringDeduplicatingDecoder(Decoder delegate, Interner<String> stringInterner) {
-        this.delegate = delegate;
-        this.stringInterner = stringInterner;
+    @Throws(EOFException::class, IOException::class)
+    override fun readLong(): Long {
+        return delegate.readLong()
     }
 
-    @Override
-    public InputStream getInputStream() {
-        return delegate.inputStream;
+    @Throws(EOFException::class, IOException::class)
+    override fun readSmallLong(): Long {
+        return delegate.readSmallLong()
     }
 
-    @Override
-    public long readLong() throws EOFException, IOException {
-        return delegate.readLong();
+    @Throws(EOFException::class, IOException::class)
+    override fun readInt(): Int {
+        return delegate.readInt()
     }
 
-    @Override
-    public long readSmallLong() throws EOFException, IOException {
-        return delegate.readSmallLong();
+    @Throws(EOFException::class, IOException::class)
+    override fun readSmallInt(): Int {
+        return delegate.readSmallInt()
     }
 
-    @Override
-    public int readInt() throws EOFException, IOException {
-        return delegate.readInt();
+    @Throws(IOException::class)
+    override fun readNullableSmallInt(): Int? {
+        return delegate.readNullableSmallInt()
     }
 
-    @Override
-    public int readSmallInt() throws EOFException, IOException {
-        return delegate.readSmallInt();
+    @Throws(EOFException::class, IOException::class)
+    override fun readShort(): Short {
+        return delegate.readShort()
     }
 
-    @Nullable
-    @Override
-    public Integer readNullableSmallInt() throws IOException {
-        return delegate.readNullableSmallInt();
+    @Throws(EOFException::class, IOException::class)
+    override fun readFloat(): Float {
+        return delegate.readFloat()
     }
 
-    @Override
-    public short readShort() throws EOFException, IOException {
-        return delegate.readShort();
+    @Throws(EOFException::class, IOException::class)
+    override fun readDouble(): Double {
+        return delegate.readDouble()
     }
 
-    @Override
-    public float readFloat() throws EOFException, IOException {
-        return delegate.readFloat();
+    @Throws(EOFException::class, IOException::class)
+    override fun readBoolean(): Boolean {
+        return delegate.readBoolean()
     }
 
-    @Override
-    public double readDouble() throws EOFException, IOException {
-        return delegate.readDouble();
+    @Throws(EOFException::class, IOException::class)
+    override fun readString(): String? {
+        return stringInterner.intern(delegate.readString())
     }
 
-    @Override
-    public boolean readBoolean() throws EOFException, IOException {
-        return delegate.readBoolean();
-    }
-
-    @Override
-    public String readString() throws EOFException, IOException {
-        return stringInterner.intern(delegate.readString());
-    }
-
-    @Override
-    @Nullable
-    public String readNullableString() throws EOFException, IOException {
-        String str = delegate.readNullableString();
+    @Throws(EOFException::class, IOException::class)
+    override fun readNullableString(): String? {
+        var str = delegate.readNullableString()
         if (str != null) {
-            str = stringInterner.intern(str);
+            str = stringInterner.intern(str)
         }
-        return str;
+        return str
     }
 
-    @Override
-    public byte readByte() throws EOFException, IOException {
-        return delegate.readByte();
+    @Throws(EOFException::class, IOException::class)
+    override fun readByte(): Byte {
+        return delegate.readByte()
     }
 
-    @Override
-    public void readBytes(byte[] buffer) throws EOFException, IOException {
-        delegate.readBytes(buffer);
+    @Throws(EOFException::class, IOException::class)
+    override fun readBytes(buffer: ByteArray?) {
+        delegate.readBytes(buffer)
     }
 
-    @Override
-    public void readBytes(byte[] buffer, int offset, int count) throws EOFException, IOException {
-        delegate.readBytes(buffer, offset, count);
+    @Throws(EOFException::class, IOException::class)
+    override fun readBytes(buffer: ByteArray?, offset: Int, count: Int) {
+        delegate.readBytes(buffer, offset, count)
     }
 
-    @Override
-    public byte[] readBinary() throws EOFException, IOException {
-        return delegate.readBinary();
+    @Throws(EOFException::class, IOException::class)
+    override fun readBinary(): ByteArray? {
+        return delegate.readBinary()
     }
 
-    @Override
-    public void skipBytes(long count) throws EOFException, IOException {
-        delegate.skipBytes(count);
+    @Throws(EOFException::class, IOException::class)
+    override fun skipBytes(count: Long) {
+        delegate.skipBytes(count)
     }
 
-    @Override
-    public <T> T decodeChunked(DecodeAction<Decoder, T> decodeAction) throws EOFException, Exception {
-        throw new UnsupportedOperationException();
+    @Throws(EOFException::class, Exception::class)
+    override fun <T> decodeChunked(decodeAction: Decoder.DecodeAction<Decoder?, T?>?): T? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void skipChunked() throws EOFException, IOException {
-        throw new UnsupportedOperationException();
+    @Throws(EOFException::class, IOException::class)
+    override fun skipChunked() {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void close() throws IOException {
-        ((Closeable) delegate).close();
+    @Throws(IOException::class)
+    override fun close() {
+        (delegate as Closeable).close()
     }
 }

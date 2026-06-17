@@ -13,61 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.scan.UsedByScanPlugin;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
+import org.gradle.internal.scan.UsedByScanPlugin
 
 /**
  * A component identifier for a Maven unique snapshot module.
  */
 @UsedByScanPlugin("scan")
-public class MavenUniqueSnapshotComponentIdentifier extends DefaultModuleComponentIdentifier {
-    private final String timestamp;
-    private final int hashCode;
+class MavenUniqueSnapshotComponentIdentifier : DefaultModuleComponentIdentifier {
+    @JvmField
+    val timestamp: String
+    private val hashCode: Int
 
-    public MavenUniqueSnapshotComponentIdentifier(ModuleIdentifier module, String version, String timestamp) {
-        super(module, version);
-        this.timestamp = timestamp;
-        this.hashCode = super.hashCode() + timestamp.hashCode();
+    constructor(module: ModuleIdentifier, version: String, timestamp: String) : super(module, version) {
+        this.timestamp = timestamp
+        this.hashCode = super.hashCode() + timestamp.hashCode()
     }
 
-    public MavenUniqueSnapshotComponentIdentifier(ModuleComponentIdentifier baseIdentifier, String timestamp) {
-        super(baseIdentifier.getModuleIdentifier(), baseIdentifier.getVersion());
-        this.timestamp = timestamp;
-        this.hashCode = super.hashCode() + timestamp.hashCode();
+    constructor(baseIdentifier: ModuleComponentIdentifier, timestamp: String) : super(baseIdentifier.getModuleIdentifier(), baseIdentifier.getVersion()) {
+        this.timestamp = timestamp
+        this.hashCode = super.hashCode() + timestamp.hashCode()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        return super.equals(o) && ((MavenUniqueSnapshotComponentIdentifier) o).timestamp.equals(timestamp);
+    public override fun equals(o: Any): Boolean {
+        return super.equals(o) && (o as MavenUniqueSnapshotComponentIdentifier).timestamp == timestamp
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    public override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public String getDisplayName() {
-        return String.format("%s:%s:%s:%s", getGroup(), getModule(), getSnapshotVersion(), timestamp);
+    public override fun getDisplayName(): String {
+        return String.format("%s:%s:%s:%s", getGroup(), getModule(), this.snapshotVersion, timestamp)
     }
 
-    public String getTimestamp() {
-        return timestamp;
-    }
+    val snapshotVersion: String
+        get() = getVersion().replace(timestamp, "SNAPSHOT")
 
-    public String getSnapshotVersion() {
-        return getVersion().replace(timestamp, "SNAPSHOT");
-    }
+    val snapshotComponent: ModuleComponentIdentifier
+        get() = newId(getModuleIdentifier(), this.snapshotVersion)
 
-    public ModuleComponentIdentifier getSnapshotComponent() {
-        return DefaultModuleComponentIdentifier.newId(getModuleIdentifier(), getSnapshotVersion());
-    }
-
-    public String getTimestampedVersion() {
-        return getVersion().replace("SNAPSHOT", timestamp);
-    }
+    val timestampedVersion: String
+        get() = getVersion().replace("SNAPSHOT", timestamp)
 }

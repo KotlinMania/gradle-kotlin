@@ -13,51 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.result.ComponentSelectionReason;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.IOException;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link ComponentSelectionReason} if and only if the passed in
- * {@link ComponentSelectionDescriptorFactory} is thread-safe and reusable.
+ * A thread-safe and reusable serializer for [ComponentSelectionReason] if and only if the passed in
+ * [ComponentSelectionDescriptorFactory] is thread-safe and reusable.
  */
-public class ComponentSelectionReasonSerializer implements Serializer<ComponentSelectionReasonInternal> {
+class ComponentSelectionReasonSerializer(componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory) : Serializer<ComponentSelectionReasonInternal?> {
+    private val componentSelectionDescriptorSerializer: ComponentSelectionDescriptorSerializer
 
-    private final ComponentSelectionDescriptorSerializer componentSelectionDescriptorSerializer;
-
-    public ComponentSelectionReasonSerializer(ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory) {
-        this.componentSelectionDescriptorSerializer = new ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory);
+    init {
+        this.componentSelectionDescriptorSerializer = ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory)
     }
 
-    @Override
-    public ComponentSelectionReasonInternal read(Decoder decoder) throws IOException {
-        ImmutableList<ComponentSelectionDescriptorInternal> descriptions = readDescriptions(decoder);
-        return new ComponentSelectionReasons.DefaultComponentSelectionReason(descriptions);
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ComponentSelectionReasonInternal {
+        val descriptions = readDescriptions(decoder)
+        return ComponentSelectionReasons.DefaultComponentSelectionReason(descriptions)
     }
 
-    private ImmutableList<ComponentSelectionDescriptorInternal> readDescriptions(Decoder decoder) throws IOException {
-        int size = decoder.readSmallInt();
-        ImmutableList.Builder<ComponentSelectionDescriptorInternal> builder = ImmutableList.builderWithExpectedSize(size);
-        for (int i = 0; i < size; i++) {
-            builder.add(componentSelectionDescriptorSerializer.read(decoder));
+    @Throws(IOException::class)
+    private fun readDescriptions(decoder: Decoder): ImmutableList<ComponentSelectionDescriptorInternal> {
+        val size = decoder.readSmallInt()
+        val builder = ImmutableList.builderWithExpectedSize<ComponentSelectionDescriptorInternal>(size)
+        for (i in 0..<size) {
+            builder.add(componentSelectionDescriptorSerializer.read(decoder))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    @Override
-    public void write(Encoder encoder, ComponentSelectionReasonInternal value) throws IOException {
-        List<? extends ComponentSelectionDescriptorInternal> descriptions = value.getDescriptions();
-        encoder.writeSmallInt(descriptions.size());
-        for (ComponentSelectionDescriptorInternal description : descriptions) {
-            componentSelectionDescriptorSerializer.write(encoder, description);
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: ComponentSelectionReasonInternal) {
+        val descriptions = value.getDescriptions()
+        encoder.writeSmallInt(descriptions.size)
+        for (description in descriptions) {
+            componentSelectionDescriptorSerializer.write(encoder, description)
         }
     }
 }

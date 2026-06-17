@@ -13,82 +13,74 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.RejectedByRuleVersion;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
+internal class ComponentMetaDataResolveState(
+    private val componentIdentifier: ModuleComponentIdentifier,
+    private val componentOverrideMetadata: ComponentOverrideMetadata?,
+    val repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>,
+    private val versionedComponentChooser: VersionedComponentChooser
+) {
+    private val resolveResult: DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>
 
-class ComponentMetaDataResolveState {
-    private final DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> resolveResult;
-    private final VersionedComponentChooser versionedComponentChooser;
-    private final ComponentOverrideMetadata componentOverrideMetadata;
-    private final ModuleComponentIdentifier componentIdentifier;
+    private var searchedLocally = false
+    private var searchedRemotely = false
 
-    final ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository;
-
-    private boolean searchedLocally;
-    private boolean searchedRemotely;
-
-    public ComponentMetaDataResolveState(ModuleComponentIdentifier componentIdentifier, ComponentOverrideMetadata componentOverrideMetadata, ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository, VersionedComponentChooser versionedComponentChooser) {
-        this.componentOverrideMetadata = componentOverrideMetadata;
-        this.componentIdentifier = componentIdentifier;
-        this.repository = repository;
-        this.versionedComponentChooser = versionedComponentChooser;
-        this.resolveResult = new DefaultBuildableModuleComponentMetaDataResolveResult<>();
+    init {
+        this.resolveResult = DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>()
     }
 
-    BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> resolve() {
+    fun resolve(): BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?> {
         if (!searchedLocally) {
-            searchedLocally = true;
-            process(repository.getLocalAccess());
+            searchedLocally = true
+            process(repository.getLocalAccess())
             if (resolveResult.hasResult()) {
                 if (resolveResult.isAuthoritative()) {
                     // Don't bother searching remotely
-                    searchedRemotely = true;
+                    searchedRemotely = true
                 }
-                return resolveResult;
+                return resolveResult
             }
             // If unknown, try a remote search
         }
 
         if (!searchedRemotely) {
-            searchedRemotely = true;
-            process(repository.getRemoteAccess());
-            return resolveResult;
+            searchedRemotely = true
+            process(repository.getRemoteAccess())
+            return resolveResult
         }
 
-        throw new IllegalStateException();
+        throw IllegalStateException()
     }
 
-    protected void process(ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> moduleAccess) {
-        moduleAccess.resolveComponentMetaData(componentIdentifier, componentOverrideMetadata, resolveResult);
+    protected fun process(moduleAccess: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>) {
+        moduleAccess.resolveComponentMetaData(componentIdentifier, componentOverrideMetadata, resolveResult)
         if (resolveResult.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved) {
-            RejectedByRuleVersion rejectedComponent = versionedComponentChooser.isRejectedComponent(componentIdentifier, new CachedMetadataProvider(resolveResult));
+            val rejectedComponent = versionedComponentChooser.isRejectedComponent(componentIdentifier, CachedMetadataProvider(resolveResult))
             if (rejectedComponent != null) {
-                resolveResult.missing();
+                resolveResult.missing()
             }
         }
     }
 
-    protected void applyTo(ResourceAwareResolveResult result) {
-        resolveResult.applyTo(result);
+    protected fun applyTo(result: ResourceAwareResolveResult) {
+        resolveResult.applyTo(result)
     }
 
-    public boolean canMakeFurtherAttempts() {
-        return !searchedRemotely;
+    fun canMakeFurtherAttempts(): Boolean {
+        return !searchedRemotely
     }
 
-    boolean isContinueOnConnectionFailure() {
-        return repository.isContinueOnConnectionFailure();
-    }
+    val isContinueOnConnectionFailure: Boolean
+        get() = repository.isContinueOnConnectionFailure()
 
-    public boolean isRepositoryDisabled() {
-        return repository.isRepositoryDisabled();
-    }
+    val isRepositoryDisabled: Boolean
+        get() = repository.isRepositoryDisabled()
 }

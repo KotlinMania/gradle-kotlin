@@ -13,42 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.jspecify.annotations.NullMarked
 
 /**
- * Base implementation of {@link Intersection} that handles testing and intersecting arguments in either order.
+ * Base implementation of [Intersection] that handles testing and intersecting arguments in either order.
  *
  * @param <L> the type of the first (left) exclude spec
  * @param <R> the type of the second (right) exclude spec
- */
+</R></L> */
 @NullMarked
-public abstract class AbstractIntersection<L extends ExcludeSpec, R extends ExcludeSpec> implements Intersection<L, R> {
-    private final Class<L> leftType;
-    private final Class<R> rightType;
-
-    protected AbstractIntersection(Class<L> leftType, Class<R> rightType) {
-        this.leftType = leftType;
-        this.rightType = rightType;
-    }
-
-    @Override
-    public boolean applies(ExcludeSpec left, ExcludeSpec right) {
+abstract class AbstractIntersection<L : ExcludeSpec?, R : ExcludeSpec?> protected constructor(
+    private val leftType: Class<L?>, private val rightType: Class<R?>
+) : Intersection<L?, R?> {
+    override fun applies(left: ExcludeSpec, right: ExcludeSpec): Boolean {
         return (leftType.isInstance(left) && rightType.isInstance(right))
-                || (leftType.isInstance(right) && rightType.isInstance(left));
+                || (leftType.isInstance(right) && rightType.isInstance(left))
     }
 
-    @Override
-    @Nullable
-    public ExcludeSpec intersect(ExcludeSpec left, ExcludeSpec right, ExcludeFactory factory) {
+    override fun intersect(left: ExcludeSpec, right: ExcludeSpec, factory: ExcludeFactory): ExcludeSpec? {
         if (leftType.isInstance(left) && rightType.isInstance(right)) {
-            return doIntersect(leftType.cast(left), rightType.cast(right), factory);
+            return doIntersect(leftType.cast(left), rightType.cast(right), factory)
         } else {
-            return doIntersect(leftType.cast(right), rightType.cast(left), factory);
+            return doIntersect(leftType.cast(right), rightType.cast(left), factory)
         }
     }
 
@@ -61,8 +50,7 @@ public abstract class AbstractIntersection<L extends ExcludeSpec, R extends Excl
      * @param right another exclude spec
      * @param factory the factory that can be used to create a new exclude spec
      *
-     * @return the simplified exclude spec, or {@code null} if the given exclude specs cannot be simplified
+     * @return the simplified exclude spec, or `null` if the given exclude specs cannot be simplified
      */
-    @Nullable
-    abstract ExcludeSpec doIntersect(L left, R right, ExcludeFactory factory);
+    abstract fun doIntersect(left: L?, right: R?, factory: ExcludeFactory): ExcludeSpec?
 }

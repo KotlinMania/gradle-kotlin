@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.cache.ExclusiveCacheAccessCoordinator;
-import org.gradle.cache.IndexedCache;
-import org.gradle.internal.serialize.Serializer;
-
-import javax.annotation.concurrent.ThreadSafe;
+import org.gradle.cache.ExclusiveCacheAccessCoordinator
+import org.gradle.cache.IndexedCache
+import org.gradle.internal.serialize.Serializer
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * Provides synchronized access to the artifact cache.
  */
 @ThreadSafe
-public interface ArtifactCacheLockingAccessCoordinator extends ExclusiveCacheAccessCoordinator {
+interface ArtifactCacheLockingAccessCoordinator : ExclusiveCacheAccessCoordinator {
     /**
      * Creates a cache implementation that is managed by this locking manager. This method may be used at any time.
      *
-     * <p>The returned cache may only be used by an action being run from {@link #useCache(org.gradle.internal.Factory)}.
+     *
+     * The returned cache may only be used by an action being run from [.useCache].
      * In this instance, an exclusive lock will be held on the cache.
      *
      */
-    <K, V> IndexedCache<K, V> createCache(String cacheName, Serializer<K> keySerializer, Serializer<V> valueSerializer);
+    fun <K, V> createCache(cacheName: String?, keySerializer: Serializer<K?>?, valueSerializer: Serializer<V?>?): IndexedCache<K?, V?>?
 }

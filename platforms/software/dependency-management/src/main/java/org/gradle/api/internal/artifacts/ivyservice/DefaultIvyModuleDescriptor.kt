@@ -13,37 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.api.artifacts.ivy.IvyExtraInfo;
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ivy.IvyExtraInfo
+import org.gradle.api.artifacts.ivy.IvyModuleDescriptor
 
-import java.util.Map;
+class DefaultIvyModuleDescriptor(extraInfo: MutableMap<NamespaceId?, String?>?, private val branch: String?, private val ivyStatus: String) : IvyModuleDescriptor {
+    private val extraInfo: IvyExtraInfo
 
-public class DefaultIvyModuleDescriptor implements IvyModuleDescriptor {
-    private final String branch;
-    private final String ivyStatus;
-    private final IvyExtraInfo extraInfo;
-
-    public DefaultIvyModuleDescriptor(Map<NamespaceId, String> extraInfo, @Nullable String branch, String ivyStatus) {
-        this.extraInfo = new DefaultIvyExtraInfo(extraInfo);
-        this.branch = branch;
-        this.ivyStatus = ivyStatus;
+    init {
+        this.extraInfo = DefaultIvyExtraInfo(extraInfo)
     }
 
-    @Override
-    public String getBranch() {
-        return branch;
+    override fun getBranch(): String? {
+        return branch
     }
 
-    @Override
-    public String getIvyStatus() {
-        return ivyStatus;
+    override fun getIvyStatus(): String {
+        return ivyStatus
     }
 
-    @Override
-    public IvyExtraInfo getExtraInfo() {
-        return extraInfo;
+    override fun getExtraInfo(): IvyExtraInfo {
+        return extraInfo
     }
 }

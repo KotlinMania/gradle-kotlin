@@ -13,31 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
-import org.gradle.api.artifacts.result.ComponentSelectionReason;
+import org.gradle.api.artifacts.result.ComponentSelectionReason
 
-import java.util.List;
-
-public interface ComponentSelectionReasonInternal extends ComponentSelectionReason {
-
+interface ComponentSelectionReasonInternal : ComponentSelectionReason {
     /**
-     * Returns true if any of the {@link #getDescriptions() descriptions} contains a custom description instead of the
+     * Returns true if any of the [descriptions][.getDescriptions] contains a custom description instead of the
      * standard ones.
      *
      * @return true if the standard description wasn't used
      */
-    boolean hasCustomDescriptions();
+    fun hasCustomDescriptions(): Boolean
 
     /**
-     * Gets the list of {@link ComponentSelectionDescriptor}s that
+     * Gets the list of [ComponentSelectionDescriptor]s that
      * describe the reasons for the selection of a component.
      *
      * @return the list of descriptors, in the order they were provided
      * to this reasons instance
      */
-    @Override
-    List<ComponentSelectionDescriptorInternal> getDescriptions();
-
+    override fun getDescriptions(): MutableList<ComponentSelectionDescriptorInternal>?
 }

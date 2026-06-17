@@ -13,32 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-public class TwoStageModuleMetadataCache extends AbstractModuleMetadataCache {
-    private final AbstractModuleMetadataCache readOnlyCache;
-    private final AbstractModuleMetadataCache writableCache;
-
-    public TwoStageModuleMetadataCache(BuildCommencedTimeProvider timeProvider, AbstractModuleMetadataCache readOnlyCache, AbstractModuleMetadataCache writableCache) {
-        super(timeProvider);
-        this.readOnlyCache = readOnlyCache;
-        this.writableCache = writableCache;
+class TwoStageModuleMetadataCache(timeProvider: BuildCommencedTimeProvider?, private val readOnlyCache: AbstractModuleMetadataCache, private val writableCache: AbstractModuleMetadataCache) :
+    AbstractModuleMetadataCache(timeProvider) {
+    protected override fun store(key: ModuleComponentAtRepositoryKey?, entry: ModuleMetadataCacheEntry?, cachedMetaData: ModuleMetadataCache.CachedMetadata?): ModuleMetadataCache.CachedMetadata? {
+        writableCache.store(key, entry, cachedMetaData)
+        return cachedMetaData
     }
 
-    @Override
-    protected CachedMetadata store(ModuleComponentAtRepositoryKey key, ModuleMetadataCacheEntry entry, CachedMetadata cachedMetaData) {
-        writableCache.store(key, entry, cachedMetaData);
-        return cachedMetaData;
-    }
-
-    @Override
-    protected CachedMetadata get(ModuleComponentAtRepositoryKey key) {
-        CachedMetadata writeEntry = writableCache.get(key);
+    protected override fun get(key: ModuleComponentAtRepositoryKey?): ModuleMetadataCache.CachedMetadata? {
+        val writeEntry = writableCache.get(key)
         if (writeEntry != null) {
-            return writeEntry;
+            return writeEntry
         }
-        return readOnlyCache.get(key);
+        return readOnlyCache.get(key)
     }
 }

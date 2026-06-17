@@ -13,83 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.Describable;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.PublishArtifactSet;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.DelegatingDomainObjectSet;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.Describables;
+import org.gradle.api.Describable
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.PublishArtifactSet
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.DelegatingDomainObjectSet
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.Describables
+import java.io.File
+import java.util.function.Consumer
 
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+class DefaultPublishArtifactSet(
+    private val displayName: Describable,
+    backingSet: DomainObjectSet<PublishArtifact?>,
+    fileCollectionFactory: FileCollectionFactory,
+    taskDependencyFactory: TaskDependencyFactory
+) : DelegatingDomainObjectSet<PublishArtifact?>(backingSet), PublishArtifactSet {
+    private val builtBy: TaskDependencyInternal
+    private val files: FileCollection
 
-public class DefaultPublishArtifactSet extends DelegatingDomainObjectSet<PublishArtifact> implements PublishArtifactSet {
-    private final TaskDependencyInternal builtBy;
-    private final FileCollection files;
-    private final Describable displayName;
+    constructor(
+        displayName: String,
+        backingSet: DomainObjectSet<PublishArtifact?>,
+        fileCollectionFactory: FileCollectionFactory,
+        taskDependencyFactory: TaskDependencyFactory
+    ) : this(Describables.of(displayName), backingSet, fileCollectionFactory, taskDependencyFactory)
 
-    public DefaultPublishArtifactSet(
-        String displayName,
-        DomainObjectSet<PublishArtifact> backingSet,
-        FileCollectionFactory fileCollectionFactory,
-        TaskDependencyFactory taskDependencyFactory
-    ) {
-        this(Describables.of(displayName), backingSet, fileCollectionFactory, taskDependencyFactory);
-    }
-
-    public DefaultPublishArtifactSet(
-        Describable displayName,
-        DomainObjectSet<PublishArtifact> backingSet,
-        FileCollectionFactory fileCollectionFactory,
-        TaskDependencyFactory taskDependencyFactory
-    ) {
-        super(backingSet);
-        this.displayName = displayName;
-        this.builtBy = taskDependencyFactory.visitingDependencies(context -> {
-            for (PublishArtifact publishArtifact : DefaultPublishArtifactSet.this) {
-                context.add(publishArtifact);
+    init {
+        this.builtBy = taskDependencyFactory.visitingDependencies(Consumer { context: TaskDependencyResolveContext? ->
+            for (publishArtifact in this@DefaultPublishArtifactSet) {
+                context!!.add(publishArtifact)
             }
-        });
-        this.files = fileCollectionFactory.create(builtBy, new ArtifactsFileCollection());
+        })
+        this.files = fileCollectionFactory.create(builtBy, DefaultPublishArtifactSet.ArtifactsFileCollection())
     }
 
-    @Override
-    public String toString() {
-        return displayName.getDisplayName();
+    override fun toString(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public FileCollection getFiles() {
-        return files;
+    override fun getFiles(): FileCollection {
+        return files
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return builtBy;
+    override fun getBuildDependencies(): TaskDependency {
+        return builtBy
     }
 
-    private class ArtifactsFileCollection implements MinimalFileSet {
-        @Override
-        public String getDisplayName() {
-            return displayName.getDisplayName();
+    private inner class ArtifactsFileCollection : MinimalFileSet {
+        override fun getDisplayName(): String {
+            return displayName.getDisplayName()
         }
 
-        @Override
-        public Set<File> getFiles() {
-            Set<File> files = new LinkedHashSet<>();
-            for (PublishArtifact artifact : DefaultPublishArtifactSet.this) {
-                files.add(artifact.getFile());
+        override fun getFiles(): MutableSet<File?> {
+            val files: MutableSet<File?> = LinkedHashSet<File?>()
+            for (artifact in this@DefaultPublishArtifactSet) {
+                files.add(artifact.getFile())
             }
-            return files;
+            return files
         }
     }
 }

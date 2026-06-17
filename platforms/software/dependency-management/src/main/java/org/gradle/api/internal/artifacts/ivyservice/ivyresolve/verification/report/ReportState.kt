@@ -13,65 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeSet
 
-class ReportState implements VerificationHighLevelErrors {
-    private final Set<String> affectedFiles = new TreeSet<>();
-    private boolean maybeCompromised;
-    private boolean hasMissing;
-    private boolean failedSignatures;
-    private boolean hasUntrustedKeys;
-    private boolean keyServersDisabled;
+internal class ReportState : VerificationHighLevelErrors {
+    private val affectedFiles: MutableSet<String> = TreeSet<String>()
+    private var maybeCompromised = false
+    private var hasMissing = false
+    private var failedSignatures = false
+    private var hasUntrustedKeys = false
+    private var keyServersDisabled = false
 
-    public void maybeCompromised() {
-        maybeCompromised = true;
+    fun maybeCompromised() {
+        maybeCompromised = true
     }
 
-    public void hasMissing() {
-        hasMissing = true;
+    fun hasMissing() {
+        hasMissing = true
     }
 
-    public void failedSignatures() {
-        failedSignatures = true;
+    fun failedSignatures() {
+        failedSignatures = true
     }
 
-    public void hasUntrustedKeys() {
-        hasUntrustedKeys = true;
+    fun hasUntrustedKeys() {
+        hasUntrustedKeys = true
     }
 
-    public void keyServersAreDisabled() {
-        keyServersDisabled = true;
+    fun keyServersAreDisabled() {
+        keyServersDisabled = true
     }
 
-    @Override
-    public boolean isMaybeCompromised() {
-        return maybeCompromised;
+    override fun isMaybeCompromised(): Boolean {
+        return maybeCompromised
     }
 
-    @Override
-    public boolean hasFailedSignatures() {
-        return failedSignatures;
+    override fun hasFailedSignatures(): Boolean {
+        return failedSignatures
     }
 
-    @Override
-    public boolean canSuggestWriteMetadata() {
-        return (hasMissing || hasUntrustedKeys) && !maybeCompromised;
+    override fun canSuggestWriteMetadata(): Boolean {
+        return (hasMissing || hasUntrustedKeys) && !maybeCompromised
     }
 
-    @Override
-    public Set<String> getAffectedFiles() {
-        return affectedFiles;
+    override fun getAffectedFiles(): MutableSet<String> {
+        return affectedFiles
     }
 
-    public void addAffectedFile(String file) {
-        affectedFiles.add(file);
+    fun addAffectedFile(file: String) {
+        affectedFiles.add(file)
     }
 
-    @Override
-    public boolean isKeyServersDisabled() {
-        return keyServersDisabled;
+    override fun isKeyServersDisabled(): Boolean {
+        return keyServersDisabled
     }
 }

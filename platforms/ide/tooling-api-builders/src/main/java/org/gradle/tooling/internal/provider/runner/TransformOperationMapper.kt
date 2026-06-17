@@ -61,10 +61,10 @@ internal class TransformOperationMapper(private val operationDependenciesResolve
         val displayName = buildOperation.getDisplayName()
         val transformerName = details.transformerName
         val subjectName = details.subjectName
-        val dependencies = operationDependenciesResolver.resolveDependencies(details.getTransformStepNode())
+        val dependencies = operationDependenciesResolver.resolveDependencies(details.transformStepNode)
         val descriptor = DefaultTransformDescriptor(id, displayName, parent, transformerName, subjectName, dependencies)
         val descriptorWithoutDependencies = DefaultTransformDescriptor(id, displayName, parent, transformerName, subjectName, mutableSetOf<InternalOperationDescriptor?>())
-        descriptors.put(details.getTransformStepNode(), descriptorWithoutDependencies)
+        descriptors.put(details.transformStepNode, descriptorWithoutDependencies)
         return descriptor
     }
 

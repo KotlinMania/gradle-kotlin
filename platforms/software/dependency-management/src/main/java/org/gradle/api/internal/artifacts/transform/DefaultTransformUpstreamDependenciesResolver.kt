@@ -13,282 +13,205 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import it.unimi.dsi.fastutil.ints.IntSet
+import it.unimi.dsi.fastutil.ints.IntStack
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ResolverResults
+import org.gradle.api.internal.artifacts.configurations.ResolutionBackedFileCollection
+import org.gradle.api.internal.artifacts.configurations.ResolutionHost
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.internal.tasks.WorkNodeAction
+import org.gradle.api.specs.Spec
+import org.gradle.execution.plan.PostExecutionNodeAwareActionNode
+import org.gradle.execution.plan.TaskNode
+import org.gradle.execution.plan.TaskNodeFactory
+import org.gradle.internal.Describables
+import org.gradle.internal.Try
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueContainer
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.model.ValueCalculator
+import org.gradle.operations.dependencies.configurations.ConfigurationIdentity
+import java.util.Optional
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.ints.IntStack;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ResolverResults;
-import org.gradle.api.internal.artifacts.configurations.ResolutionBackedFileCollection;
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.NodeExecutionContext;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.api.internal.tasks.WorkNodeAction;
-import org.gradle.api.specs.Spec;
-import org.gradle.execution.plan.PostExecutionNodeAwareActionNode;
-import org.gradle.execution.plan.TaskNode;
-import org.gradle.execution.plan.TaskNodeFactory;
-import org.gradle.internal.Describables;
-import org.gradle.internal.Try;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueContainer;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.model.ValueCalculator;
-import org.gradle.operations.dependencies.configurations.ConfigurationIdentity;
-import org.jspecify.annotations.Nullable;
+class DefaultTransformUpstreamDependenciesResolver : TransformUpstreamDependenciesResolver {
+    private val resolutionHost: ResolutionHost
+    private val configurationIdentity: ConfigurationIdentity?
+    private val requestAttributes: ImmutableAttributes
+    private val artifactDependencySortOrder: ResolutionStrategy.SortOrder
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-public class DefaultTransformUpstreamDependenciesResolver implements TransformUpstreamDependenciesResolver {
-    public static final TransformDependencies NO_RESULT = new TransformDependencies() {
-        @Override
-        public Optional<FileCollection> getFiles() {
-            return Optional.of(FileCollectionFactory.empty());
-        }
-    };
-    public static final TransformUpstreamDependencies NO_DEPENDENCIES = new TransformUpstreamDependencies() {
-
-        @Nullable
-        @Override
-        public ConfigurationIdentity getConfigurationIdentity() {
-            return null;
-        }
-
-        @Override
-        public FileCollection selectedArtifacts() {
-            return FileCollectionFactory.empty();
-        }
-
-        @Override
-        public void finalizeIfNotAlready() {
-        }
-
-        @Override
-        public Try<TransformDependencies> computeArtifacts() {
-            return Try.successful(NO_RESULT);
-        }
-
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-        }
-    };
-
-    private final ResolutionHost resolutionHost;
-    private final ConfigurationIdentity configurationIdentity;
-    private final ImmutableAttributes requestAttributes;
-    private final ResolutionStrategy.SortOrder artifactDependencySortOrder;
-
-    private final VisitedGraphResults initialVisitedGraph;
-    private final VisitedArtifactSet initialVisitedArtifacts;
-    private final CalculatedValue<VisitedGraphResults> completeGraphResults;
-    private final CalculatedValue<VisitedArtifactSet> completeArtifactResults;
+    private val initialVisitedGraph: VisitedGraphResults
+    private val initialVisitedArtifacts: VisitedArtifactSet
+    private val completeGraphResults: CalculatedValue<VisitedGraphResults>
+    private val completeArtifactResults: CalculatedValue<VisitedArtifactSet>
 
     // Services
-    private final DomainObjectContext owner;
-    private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-    private final AttributesFactory attributesFactory;
-    private final TaskDependencyFactory taskDependencyFactory;
+    private val owner: DomainObjectContext
+    private val calculatedValueContainerFactory: CalculatedValueContainerFactory
+    private val attributesFactory: AttributesFactory
+    private val taskDependencyFactory: TaskDependencyFactory
 
     /**
      * Construct a resolver used to resolve build dependencies of upstream dependencies for an artifact transform.
-     * <p>
-     * The {@code fullGraphResults} are required to calculate the true build dependencies of transforms
+     *
+     *
+     * The `fullGraphResults` are required to calculate the true build dependencies of transforms
      * with dependencies, as the incomplete graph used to initially determine upstream transforms does
      * not represent the final dependency graph.
-     * <p>
-     * See {@link org.gradle.integtests.resolve.transform.ArtifactTransformWithDependenciesParallelIntegrationTest}
+     *
+     *
+     * See [org.gradle.integtests.resolve.transform.ArtifactTransformWithDependenciesParallelIntegrationTest]
      * for the test that exercises the scenario that necessitates this behavior.
      */
-    public DefaultTransformUpstreamDependenciesResolver(
-        ResolutionHost resolutionHost,
-        @Nullable ConfigurationIdentity configurationIdentity,
-        ImmutableAttributes requestAttributes,
-        ResolutionStrategy.SortOrder artifactDependencySortOrder,
+    constructor(
+        resolutionHost: ResolutionHost,
+        configurationIdentity: ConfigurationIdentity?,
+        requestAttributes: ImmutableAttributes,
+        artifactDependencySortOrder: ResolutionStrategy.SortOrder,
 
-        VisitedGraphResults partialVisitedGraph,
-        VisitedArtifactSet partialVisitedArtifacts,
-        CalculatedValue<ResolverResults> fullGraphResults,
+        partialVisitedGraph: VisitedGraphResults,
+        partialVisitedArtifacts: VisitedArtifactSet,
+        fullGraphResults: CalculatedValue<ResolverResults>,  // Services
 
-        // Services
-        DomainObjectContext owner,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        AttributesFactory attributesFactory,
-        TaskDependencyFactory taskDependencyFactory
+        owner: DomainObjectContext,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory,
+        attributesFactory: AttributesFactory,
+        taskDependencyFactory: TaskDependencyFactory
     ) {
-        this.resolutionHost = resolutionHost;
-        this.configurationIdentity = configurationIdentity;
-        this.requestAttributes = requestAttributes;
-        this.artifactDependencySortOrder = artifactDependencySortOrder;
+        this.resolutionHost = resolutionHost
+        this.configurationIdentity = configurationIdentity
+        this.requestAttributes = requestAttributes
+        this.artifactDependencySortOrder = artifactDependencySortOrder
 
-        this.initialVisitedArtifacts = partialVisitedArtifacts;
-        this.initialVisitedGraph = partialVisitedGraph;
-        this.completeGraphResults = calculatedValueContainerFactory.create(Describables.of("complete graph results for", resolutionHost.getDisplayName()), context -> {
-            // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
-            fullGraphResults.finalizeIfNotAlready();
-            return fullGraphResults.get().visitedGraph;
-        });
-        this.completeArtifactResults = calculatedValueContainerFactory.create(Describables.of("complete artifact results for", resolutionHost.getDisplayName()), context -> {
-            // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
-            fullGraphResults.finalizeIfNotAlready();
-            return fullGraphResults.get().visitedArtifacts;
-        });
+        this.initialVisitedArtifacts = partialVisitedArtifacts
+        this.initialVisitedGraph = partialVisitedGraph
+        this.completeGraphResults = calculatedValueContainerFactory.create<VisitedGraphResults, ValueCalculator<out VisitedGraphResults>>(
+            Describables.of("complete graph results for", resolutionHost.getDisplayName()),
+            ValueCalculator { context: NodeExecutionContext? ->
+                // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
+                fullGraphResults.finalizeIfNotAlready()
+                fullGraphResults.get().visitedGraph
+            })
+        this.completeArtifactResults = calculatedValueContainerFactory.create<VisitedArtifactSet, ValueCalculator<out VisitedArtifactSet>>(
+            Describables.of("complete artifact results for", resolutionHost.getDisplayName()),
+            ValueCalculator { context: NodeExecutionContext? ->
+                // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
+                fullGraphResults.finalizeIfNotAlready()
+                fullGraphResults.get().visitedArtifacts
+            })
 
-        this.owner = owner;
-        this.attributesFactory = attributesFactory;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.taskDependencyFactory = taskDependencyFactory;
+        this.owner = owner
+        this.attributesFactory = attributesFactory
+        this.calculatedValueContainerFactory = calculatedValueContainerFactory
+        this.taskDependencyFactory = taskDependencyFactory
     }
 
     /**
      * Construct a resolver used to resolve the complete set of upstream dependencies for an artifact transform.
      */
-    public DefaultTransformUpstreamDependenciesResolver(
-        ResolutionHost resolutionHost,
-        @Nullable ConfigurationIdentity configurationIdentity,
-        ImmutableAttributes requestAttributes,
-        ResolutionStrategy.SortOrder artifactDependencySortOrder,
+    constructor(
+        resolutionHost: ResolutionHost,
+        configurationIdentity: ConfigurationIdentity?,
+        requestAttributes: ImmutableAttributes,
+        artifactDependencySortOrder: ResolutionStrategy.SortOrder,
 
-        VisitedGraphResults visitedGraph,
-        VisitedArtifactSet visitedArtifacts,
+        visitedGraph: VisitedGraphResults,
+        visitedArtifacts: VisitedArtifactSet,  // Services
 
-        // Services
-        DomainObjectContext owner,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        AttributesFactory attributesFactory,
-        TaskDependencyFactory taskDependencyFactory
+        owner: DomainObjectContext,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory,
+        attributesFactory: AttributesFactory,
+        taskDependencyFactory: TaskDependencyFactory
     ) {
-        this.resolutionHost = resolutionHost;
-        this.configurationIdentity = configurationIdentity;
-        this.requestAttributes = requestAttributes;
-        this.artifactDependencySortOrder = artifactDependencySortOrder;
+        this.resolutionHost = resolutionHost
+        this.configurationIdentity = configurationIdentity
+        this.requestAttributes = requestAttributes
+        this.artifactDependencySortOrder = artifactDependencySortOrder
 
-        this.initialVisitedGraph = visitedGraph;
-        this.initialVisitedArtifacts = visitedArtifacts;
-        this.completeGraphResults = calculatedValueContainerFactory.create(Describables.of("complete graph results for", resolutionHost.getDisplayName()), context -> visitedGraph);
-        this.completeArtifactResults = calculatedValueContainerFactory.create(Describables.of("complete artifact results for", resolutionHost.getDisplayName()), context -> visitedArtifacts);
+        this.initialVisitedGraph = visitedGraph
+        this.initialVisitedArtifacts = visitedArtifacts
+        this.completeGraphResults = calculatedValueContainerFactory.create<VisitedGraphResults, ValueCalculator<out VisitedGraphResults>>(
+            Describables.of("complete graph results for", resolutionHost.getDisplayName()),
+            ValueCalculator { context: NodeExecutionContext? -> visitedGraph })
+        this.completeArtifactResults = calculatedValueContainerFactory.create<VisitedArtifactSet, ValueCalculator<out VisitedArtifactSet>>(
+            Describables.of("complete artifact results for", resolutionHost.getDisplayName()),
+            ValueCalculator { context: NodeExecutionContext? -> visitedArtifacts })
 
-        this.owner = owner;
-        this.attributesFactory = attributesFactory;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.taskDependencyFactory = taskDependencyFactory;
+        this.owner = owner
+        this.attributesFactory = attributesFactory
+        this.calculatedValueContainerFactory = calculatedValueContainerFactory
+        this.taskDependencyFactory = taskDependencyFactory
     }
 
-    @Override
-    public TransformUpstreamDependencies dependenciesFor(ComponentIdentifier componentId, TransformStep transformStep) {
+    override fun dependenciesFor(componentId: ComponentIdentifier, transformStep: TransformStep): TransformUpstreamDependencies {
         if (!transformStep.requiresDependencies()) {
-            return NO_DEPENDENCIES;
+            return NO_DEPENDENCIES
         }
-        return new TransformUpstreamDependenciesImpl(componentId, configurationIdentity, transformStep, calculatedValueContainerFactory, initialVisitedGraph, initialVisitedArtifacts);
+        return DefaultTransformUpstreamDependenciesResolver.TransformUpstreamDependenciesImpl(
+            componentId,
+            configurationIdentity,
+            transformStep,
+            calculatedValueContainerFactory,
+            initialVisitedGraph,
+            initialVisitedArtifacts
+        )
     }
 
-    private FileCollectionInternal getCompleteTransformDependencies(ComponentIdentifier componentId, ImmutableAttributes fromAttributes) {
-        completeGraphResults.finalizeIfNotAlready();
-        completeArtifactResults.finalizeIfNotAlready();
+    private fun getCompleteTransformDependencies(componentId: ComponentIdentifier, fromAttributes: ImmutableAttributes): FileCollectionInternal {
+        completeGraphResults.finalizeIfNotAlready()
+        completeArtifactResults.finalizeIfNotAlready()
 
-        SelectedArtifactSet selectedArtifacts = selectDependencyArtifacts(
+        val selectedArtifacts = selectDependencyArtifacts(
             componentId,
             fromAttributes,
             completeGraphResults.get(),
             completeArtifactResults.get()
-        );
+        )
 
-        return new ResolutionBackedFileCollection(
+        return ResolutionBackedFileCollection(
             selectedArtifacts,
             false,
             resolutionHost,
             taskDependencyFactory
-        );
+        )
     }
 
-    private SelectedArtifactSet selectDependencyArtifacts(
-        ComponentIdentifier componentId,
-        ImmutableAttributes fromAttributes,
-        VisitedGraphResults visitedGraph,
-        VisitedArtifactSet visitedArtifacts
-    ) {
-        Set<ComponentIdentifier> dependencyComponents = computeDependencies(componentId, visitedGraph);
-        Spec<ComponentIdentifier> filter = SerializableLambdas.spec(dependencyComponents::contains);
+    private fun selectDependencyArtifacts(
+        componentId: ComponentIdentifier,
+        fromAttributes: ImmutableAttributes,
+        visitedGraph: VisitedGraphResults,
+        visitedArtifacts: VisitedArtifactSet
+    ): SelectedArtifactSet {
+        val dependencyComponents: MutableSet<ComponentIdentifier> = computeDependencies(componentId, visitedGraph)
+        val filter: Spec<ComponentIdentifier?> = SerializableLambdas.spec<ComponentIdentifier>(SerializableLambdas.SerializableSpec { o: Any? -> dependencyComponents.contains(o) })
 
-        ImmutableAttributes fullAttributes = attributesFactory.concat(requestAttributes, fromAttributes);
-        return visitedArtifacts.select(new ArtifactSelectionSpec(
-            fullAttributes, filter, false, false, artifactDependencySortOrder
-        ));
-    }
-
-    private static Set<ComponentIdentifier> computeDependencies(ComponentIdentifier componentId, VisitedGraphResults visitedGraph) {
-        GraphStructure graph = visitedGraph.getGraphStructureSource().get();
-        GraphStructure.Edges edges = graph.edges();
-        GraphStructure.Components components = graph.components();
-        GraphStructure.Nodes nodes = graph.nodes();
-
-        IntSet seen = new IntOpenHashSet();
-        IntStack queue = new IntArrayList();
-
-        // Search through all components to find the target component.
-        int targetComponent = -1;
-        for (int i = 0; i < components.count(); i++) {
-            if (components.id(i).equals(componentId)) {
-                targetComponent = i;
-                break;
-            }
-        }
-
-        if (targetComponent == -1) {
-            throw new AssertionError("Could not find component " + componentId + " in provided results.");
-        }
-
-        // TODO: This is not quite desired behavior. The purpose of this class is to resolve all
-        //  dependencies of an artifact transform. An artifact transform is derived from the artifacts
-        //  of a _node_ of the graph. We are only given `componentId`, the owning component of the node
-        //  we're interested in. So, we traverse starting from all nodes of that component since we do
-        //  not have enough information to find the node of interest.
-        for (int i = 0; i < nodes.count(); i++) {
-            if (nodes.owner(i) == targetComponent) {
-                queue.push(i);
-                seen.add(i);
-            }
-        }
-
-        Set<ComponentIdentifier> buildDependencies = new HashSet<>();
-        while (!queue.isEmpty()) {
-            int node = queue.popInt();
-            for (int i = edges.start(node); i < edges.end(node); i++) {
-                boolean constraint = edges.constraint(i);
-                int targetNodeIndex = edges.targetNode(i);
-                // Only visit hard, non-failing edges
-                if (!constraint && targetNodeIndex != -1 && seen.add(targetNodeIndex)) {
-                    int owner = nodes.owner(targetNodeIndex);
-                    buildDependencies.add(components.id(owner));
-                    queue.push(targetNodeIndex);
-                }
-            }
-        }
-        return buildDependencies;
+        val fullAttributes = attributesFactory.concat(requestAttributes, fromAttributes)
+        return visitedArtifacts.select(
+            ArtifactSelectionSpec(
+                fullAttributes, filter, false, false, artifactDependencySortOrder
+            )
+        )
     }
 
     /**
@@ -296,15 +219,14 @@ public class DefaultTransformUpstreamDependenciesResolver implements TransformUp
      * This is a separate node so that this work can access project state to do the resolution and to discover additional dependencies for the transform
      * during resolution of upstream dependencies. It also allows the work of resolution to be attributed separately to the work of the transform.
      */
-    public static abstract class FinalizeTransformDependencies implements ValueCalculator<TransformDependencies> {
-        public abstract FileCollection selectedArtifacts();
+    abstract class FinalizeTransformDependencies : ValueCalculator<TransformDependencies> {
+        abstract fun selectedArtifacts(): FileCollection
 
-        @Override
-        public TransformDependencies calculateValue(NodeExecutionContext context) {
-            FileCollection files = selectedArtifacts();
+        override fun calculateValue(context: NodeExecutionContext): TransformDependencies {
+            val files = selectedArtifacts()
             // Trigger resolution, including any failures
-            files.getFiles();
-            return new DefaultTransformDependencies(files);
+            files.getFiles()
+            return DefaultTransformDependencies(files)
         }
     }
 
@@ -312,43 +234,25 @@ public class DefaultTransformUpstreamDependenciesResolver implements TransformUp
      * A work node used in builds where the upstream dependencies must be resolved. This implementation is not used when the work graph is loaded from the configuration cache,
      * as the dependencies have already been resolved in that case.
      */
-    public class FinalizeTransformDependenciesFromSelectedArtifacts extends FinalizeTransformDependencies {
-        private final ComponentIdentifier componentId;
-        private final ImmutableAttributes fromAttributes;
-
-        private final VisitedGraphResults initialVisitedGraph;
-        private final VisitedArtifactSet initialVisitedArtifacts;
-
-        public FinalizeTransformDependenciesFromSelectedArtifacts(
-            ComponentIdentifier componentId,
-            ImmutableAttributes fromAttributes,
-            VisitedGraphResults initialVisitedGraph,
-            VisitedArtifactSet initialVisitedArtifacts
-        ) {
-            this.componentId = componentId;
-            this.fromAttributes = fromAttributes;
-            this.initialVisitedGraph = initialVisitedGraph;
-            this.initialVisitedArtifacts = initialVisitedArtifacts;
+    inner class FinalizeTransformDependenciesFromSelectedArtifacts(
+        private val componentId: ComponentIdentifier,
+        private val fromAttributes: ImmutableAttributes,
+        private val initialVisitedGraph: VisitedGraphResults,
+        private val initialVisitedArtifacts: VisitedArtifactSet
+    ) : FinalizeTransformDependencies() {
+        override fun selectedArtifacts(): FileCollectionInternal {
+            return getCompleteTransformDependencies(componentId, fromAttributes)
         }
 
-        @Override
-        public FileCollectionInternal selectedArtifacts() {
-            return getCompleteTransformDependencies(componentId, fromAttributes);
+        override fun usesMutableProjectState(): Boolean {
+            return owner.getProject() != null
         }
 
-        @Override
-        public boolean usesMutableProjectState() {
-            return owner.getProject() != null;
+        override fun getOwningProject(): ProjectInternal {
+            return owner.getProject()!!
         }
 
-        @Override
-        public ProjectInternal getOwningProject() {
-            return owner.getProject();
-        }
-
-        @Nullable
-        @Override
-        public WorkNodeAction getPreExecutionAction() {
+        override fun getPreExecutionAction(): WorkNodeAction? {
             // TODO: If the initial visited graph/artifacts are from a complete resolution,
             // we do not need to finalize the transform dependencies here, as our dependencies are
             // already derived from a complete graph.
@@ -356,138 +260,199 @@ public class DefaultTransformUpstreamDependenciesResolver implements TransformUp
             // Before resolving, need to determine the full set of upstream dependencies that need to be built.
             // The full set is usually known when the work graph is built. However, in certain cases where a project dependency conflicts with an external dependency, this is not known
             // until the full graph resolution, which can happen at execution time.
-            return new CalculateFinalDependencies();
+
+            return FinalizeTransformDependenciesFromSelectedArtifacts.CalculateFinalDependencies()
         }
 
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
             // If the initial visited graph/artifacts are derived from a partial graph resolution,
             // these dependencies will only represent an approximate set of build dependencies.
-            context.add(selectDependencyArtifacts(
-                componentId,
-                fromAttributes,
-                initialVisitedGraph,
-                initialVisitedArtifacts
-            ));
+            context.add(
+                selectDependencyArtifacts(
+                    componentId,
+                    fromAttributes,
+                    initialVisitedGraph,
+                    initialVisitedArtifacts
+                )
+            )
         }
 
-        public class CalculateFinalDependencies implements PostExecutionNodeAwareActionNode {
-            final List<TaskNode> tasks = new ArrayList<>();
+        inner class CalculateFinalDependencies : PostExecutionNodeAwareActionNode {
+            val tasks: MutableList<TaskNode> = ArrayList<TaskNode>()
 
-            @Override
-            public boolean usesMutableProjectState() {
-                return FinalizeTransformDependenciesFromSelectedArtifacts.this.usesMutableProjectState();
+            override fun usesMutableProjectState(): Boolean {
+                return this@FinalizeTransformDependenciesFromSelectedArtifacts.usesMutableProjectState()
             }
 
-            @Nullable
-            @Override
-            public Project getOwningProject() {
-                return FinalizeTransformDependenciesFromSelectedArtifacts.this.getOwningProject();
+            override fun getOwningProject(): Project? {
+                return this@FinalizeTransformDependenciesFromSelectedArtifacts.getOwningProject()
             }
 
-            @Override
-            public void run(NodeExecutionContext context) {
-                TaskNodeFactory taskNodeFactory = context.getService(TaskNodeFactory.class);
-                selectedArtifacts().visitDependencies(new CollectingTaskDependencyResolveContext(tasks, taskNodeFactory));
+            override fun run(context: NodeExecutionContext) {
+                val taskNodeFactory = context.getService<TaskNodeFactory>(TaskNodeFactory::class.java)
+                selectedArtifacts().visitDependencies(CollectingTaskDependencyResolveContext(tasks, taskNodeFactory))
             }
 
-            @Override
-            public List<TaskNode> getPostExecutionNodes() {
-                return tasks;
+            override fun getPostExecutionNodes(): MutableList<TaskNode> {
+                return tasks
             }
         }
     }
 
-    private static class CollectingTaskDependencyResolveContext implements TaskDependencyResolveContext {
-        private final TaskNodeFactory taskNodeFactory;
-        private final Collection<TaskNode> tasks;
-
-        public CollectingTaskDependencyResolveContext(Collection<TaskNode> tasks, TaskNodeFactory taskNodeFactory) {
-            this.tasks = tasks;
-            this.taskNodeFactory = taskNodeFactory;
-        }
-
-        @Override
-        public void add(Object dependency) {
-            if (dependency instanceof Task) {
-                tasks.add(taskNodeFactory.getNode((Task) dependency));
+    private class CollectingTaskDependencyResolveContext(private val tasks: MutableCollection<TaskNode>, private val taskNodeFactory: TaskNodeFactory) : TaskDependencyResolveContext {
+        override fun add(dependency: Any) {
+            if (dependency is Task) {
+                tasks.add(taskNodeFactory.getNode(dependency)!!)
             }
         }
 
-        @Override
-        public void visitFailure(Throwable failure) {
+        override fun visitFailure(failure: Throwable) {
         }
 
-        @Nullable
-        @Override
-        public Task getTask() {
-            return null;
+        override fun getTask(): Task? {
+            return null
         }
     }
 
-    private class TransformUpstreamDependenciesImpl implements TransformUpstreamDependencies {
-        private final ComponentIdentifier componentId;
-        private final ConfigurationIdentity configurationIdentity;
-        private final CalculatedValueContainer<TransformDependencies, FinalizeTransformDependencies> transformDependencies;
-        private final ImmutableAttributes fromAttributes;
+    private inner class TransformUpstreamDependenciesImpl(
+        private val componentId: ComponentIdentifier,
+        private val configurationIdentity: ConfigurationIdentity?,
+        transformStep: TransformStep,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory,
+        initialVisitedGraph: VisitedGraphResults,
+        initialVisitedArtifacts: VisitedArtifactSet
+    ) : TransformUpstreamDependencies {
+        private val transformDependencies: CalculatedValueContainer<TransformDependencies, FinalizeTransformDependencies>
+        private val fromAttributes: ImmutableAttributes
 
-        public TransformUpstreamDependenciesImpl(
-            ComponentIdentifier componentId,
-            @Nullable ConfigurationIdentity configurationIdentity,
-            TransformStep transformStep,
-            CalculatedValueContainerFactory calculatedValueContainerFactory,
-            VisitedGraphResults initialVisitedGraph,
-            VisitedArtifactSet initialVisitedArtifacts
-        ) {
-            this.componentId = componentId;
-            this.configurationIdentity = configurationIdentity;
-            this.fromAttributes = transformStep.getFromAttributes();
-            this.transformDependencies = calculatedValueContainerFactory.create(Describables.of("dependencies for", componentId, fromAttributes),
-                new FinalizeTransformDependenciesFromSelectedArtifacts(componentId, transformStep.getFromAttributes(), initialVisitedGraph, initialVisitedArtifacts));
+        init {
+            this.fromAttributes = transformStep.getFromAttributes()
+            this.transformDependencies = calculatedValueContainerFactory.create<TransformDependencies, FinalizeTransformDependencies>(
+                Describables.of(
+                    "dependencies for",
+                    componentId, fromAttributes
+                ),
+                DefaultTransformUpstreamDependenciesResolver.FinalizeTransformDependenciesFromSelectedArtifacts(
+                    componentId,
+                    transformStep.getFromAttributes(),
+                    initialVisitedGraph,
+                    initialVisitedArtifacts
+                )
+            )
         }
 
-        @Nullable
-        @Override
-        public ConfigurationIdentity getConfigurationIdentity() {
-            return configurationIdentity;
+        override fun getConfigurationIdentity(): ConfigurationIdentity? {
+            return configurationIdentity
         }
 
-        @Override
-        public FileCollection selectedArtifacts() {
-            return getCompleteTransformDependencies(componentId, fromAttributes);
+        override fun selectedArtifacts(): FileCollection {
+            return getCompleteTransformDependencies(componentId, fromAttributes)
         }
 
-        @Override
-        public Try<TransformDependencies> computeArtifacts() {
-            return transformDependencies.getValue();
+        override fun computeArtifacts(): Try<TransformDependencies?> {
+            return transformDependencies.getValue()
         }
 
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-            context.add(transformDependencies);
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
+            context.add(transformDependencies)
         }
 
-        @Override
-        public void finalizeIfNotAlready() {
-            transformDependencies.finalizeIfNotAlready();
+        override fun finalizeIfNotAlready() {
+            transformDependencies.finalizeIfNotAlready()
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultTransformUpstreamDependenciesResolver that = (DefaultTransformUpstreamDependenciesResolver) o;
-        return resolutionHost.equals(that.resolutionHost);
+        val that = o as DefaultTransformUpstreamDependenciesResolver
+        return resolutionHost == that.resolutionHost
     }
 
-    @Override
-    public int hashCode() {
-        return resolutionHost.hashCode();
+    override fun hashCode(): Int {
+        return resolutionHost.hashCode()
+    }
+
+    companion object {
+        val NO_RESULT: TransformDependencies = object : TransformDependencies {
+            override fun getFiles(): Optional<FileCollection> {
+                return Optional.of<FileCollection>(FileCollectionFactory.empty())
+            }
+        }
+        val NO_DEPENDENCIES: TransformUpstreamDependencies = object : TransformUpstreamDependencies {
+            override fun getConfigurationIdentity(): ConfigurationIdentity? {
+                return null
+            }
+
+            override fun selectedArtifacts(): FileCollection {
+                return FileCollectionFactory.empty()
+            }
+
+            override fun finalizeIfNotAlready() {
+            }
+
+            override fun computeArtifacts(): Try<TransformDependencies?> {
+                return Try.successful(NO_RESULT)
+            }
+
+            override fun visitDependencies(context: TaskDependencyResolveContext) {
+            }
+        }
+
+        private fun computeDependencies(componentId: ComponentIdentifier, visitedGraph: VisitedGraphResults): MutableSet<ComponentIdentifier> {
+            val graph = visitedGraph.getGraphStructureSource().get()
+            val edges = graph.edges()
+            val components = graph.components()
+            val nodes = graph.nodes()
+
+            val seen: IntSet = IntOpenHashSet()
+            val queue: IntStack = IntArrayList()
+
+            // Search through all components to find the target component.
+            var targetComponent = -1
+            for (i in 0..<components.count()) {
+                if (components.id(i) == componentId) {
+                    targetComponent = i
+                    break
+                }
+            }
+
+            if (targetComponent == -1) {
+                throw AssertionError("Could not find component " + componentId + " in provided results.")
+            }
+
+            // TODO: This is not quite desired behavior. The purpose of this class is to resolve all
+            //  dependencies of an artifact transform. An artifact transform is derived from the artifacts
+            //  of a _node_ of the graph. We are only given `componentId`, the owning component of the node
+            //  we're interested in. So, we traverse starting from all nodes of that component since we do
+            //  not have enough information to find the node of interest.
+            for (i in 0..<nodes.count()) {
+                if (nodes.owner(i) == targetComponent) {
+                    queue.push(i)
+                    seen.add(i)
+                }
+            }
+
+            val buildDependencies: MutableSet<ComponentIdentifier> = HashSet<ComponentIdentifier>()
+            while (!queue.isEmpty()) {
+                val node = queue.popInt()
+                for (i in edges.start(node)..<edges.end(node)) {
+                    val constraint = edges.constraint(i)
+                    val targetNodeIndex = edges.targetNode(i)
+                    // Only visit hard, non-failing edges
+                    if (!constraint && targetNodeIndex != -1 && seen.add(targetNodeIndex)) {
+                        val owner = nodes.owner(targetNodeIndex)
+                        buildDependencies.add(components.id(owner))
+                        queue.push(targetNodeIndex)
+                    }
+                }
+            }
+            return buildDependencies
+        }
     }
 }

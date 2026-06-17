@@ -13,20 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.internal.component.model.ModuleSource;
+import org.gradle.internal.component.model.ModuleSource
 
-class MavenUniqueSnapshotModuleSource implements ModuleSource {
-
-    private final String timestamp;
-
-    MavenUniqueSnapshotModuleSource(String timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public String getTimestamp() {
-        return timestamp;
-    }
-
-}
+internal class MavenUniqueSnapshotModuleSource(val timestamp: String) : ModuleSource

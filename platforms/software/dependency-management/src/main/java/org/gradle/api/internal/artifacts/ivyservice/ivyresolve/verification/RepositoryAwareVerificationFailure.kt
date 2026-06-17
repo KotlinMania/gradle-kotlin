@@ -13,32 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-import org.gradle.api.internal.artifacts.verification.verifier.VerificationFailure;
+import org.gradle.api.internal.artifacts.verification.verifier.VerificationFailure
 
-public class RepositoryAwareVerificationFailure {
-    private final VerificationFailure failure;
-    private final String repositoryName;
-
-    public RepositoryAwareVerificationFailure(VerificationFailure failure, String repositoryName) {
-        this.failure = failure;
-        this.repositoryName = repositoryName;
-    }
-
-    public VerificationFailure getFailure() {
-        return failure;
-    }
-
-    public String getRepositoryName() {
-        return repositoryName;
-    }
-
-    @Override
-    public String toString() {
+class RepositoryAwareVerificationFailure(@JvmField val failure: VerificationFailure, @JvmField val repositoryName: String) {
+    override fun toString(): String {
         return "RepositoryAwareVerificationFailure{" +
-            "failure=" + failure +
-            ", repositoryName='" + repositoryName + '\'' +
-            '}';
+                "failure=" + failure +
+                ", repositoryName='" + repositoryName + '\'' +
+                '}'
     }
 }

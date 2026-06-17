@@ -13,160 +13,134 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.artifacts.ComponentSelection
+import org.gradle.api.artifacts.ComponentSelectionRules
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.configurations.MutationValidator
+import org.gradle.api.internal.notations.ModuleIdentifierNotationConverter
+import org.gradle.api.specs.Spec
+import org.gradle.api.specs.Specs
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
+import org.gradle.internal.rules.DefaultRuleActionAdapter
+import org.gradle.internal.rules.DefaultRuleActionValidator
+import org.gradle.internal.rules.RuleAction
+import org.gradle.internal.rules.RuleActionAdapter
+import org.gradle.internal.rules.RuleActionValidator
+import org.gradle.internal.rules.SpecRuleAction
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.UnsupportedNotationException
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.artifacts.ComponentSelection;
-import org.gradle.api.artifacts.ComponentSelectionRules;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.configurations.MutationValidator;
-import org.gradle.api.internal.notations.ModuleIdentifierNotationConverter;
-import org.gradle.api.specs.Spec;
-import org.gradle.api.specs.Specs;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.rules.DefaultRuleActionAdapter;
-import org.gradle.internal.rules.DefaultRuleActionValidator;
-import org.gradle.internal.rules.RuleAction;
-import org.gradle.internal.rules.RuleActionAdapter;
-import org.gradle.internal.rules.RuleActionValidator;
-import org.gradle.internal.rules.SpecRuleAction;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.UnsupportedNotationException;
+class DefaultComponentSelectionRules protected constructor(moduleIdentifierFactory: ImmutableModuleIdentifierFactory, private val ruleActionAdapter: RuleActionAdapter) :
+    ComponentSelectionRulesInternal {
+    private var mutationValidator = MutationValidator.IGNORE
+    private var rules: MutableSet<SpecRuleAction<in ComponentSelection>>? = null
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+    private val moduleIdentifierNotationParser: NotationParser<Any, ModuleIdentifier>
 
-import static org.gradle.api.internal.artifacts.configurations.MutationValidator.MutationType.STRATEGY;
+    constructor(moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : this(moduleIdentifierFactory, createAdapter())
 
-public class DefaultComponentSelectionRules implements ComponentSelectionRulesInternal {
-    @SuppressWarnings("InlineFormatString")
-    private static final String INVALID_SPEC_ERROR = "Could not add a component selection rule for module '%s'.";
-
-    private MutationValidator mutationValidator = MutationValidator.IGNORE;
-    private Set<SpecRuleAction<? super ComponentSelection>> rules;
-
-    private final RuleActionAdapter ruleActionAdapter;
-    private final NotationParser<Object, ModuleIdentifier> moduleIdentifierNotationParser;
-
-    public DefaultComponentSelectionRules(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        this(moduleIdentifierFactory, createAdapter());
-    }
-
-    protected DefaultComponentSelectionRules(ImmutableModuleIdentifierFactory moduleIdentifierFactory, RuleActionAdapter ruleActionAdapter) {
-        this.ruleActionAdapter = ruleActionAdapter;
+    init {
         this.moduleIdentifierNotationParser = NotationParserBuilder
-            .toType(ModuleIdentifier.class)
-            .fromCharSequence(new ModuleIdentifierNotationConverter(moduleIdentifierFactory))
-            .toComposite();
+            .toType<ModuleIdentifier>(ModuleIdentifier::class.java)
+            .fromCharSequence(ModuleIdentifierNotationConverter(moduleIdentifierFactory))
+            .toComposite()
     }
 
     /**
      * Sets the validator to invoke prior to each mutation.
      */
-    public void setMutationValidator(MutationValidator mutationValidator) {
-        this.mutationValidator = mutationValidator;
+    fun setMutationValidator(mutationValidator: MutationValidator) {
+        this.mutationValidator = mutationValidator
     }
 
-    private static RuleActionAdapter createAdapter() {
-        RuleActionValidator ruleActionValidator = new DefaultRuleActionValidator();
-        return new DefaultRuleActionAdapter(ruleActionValidator, "ComponentSelectionRules");
+    override fun getRules(): MutableCollection<SpecRuleAction<in ComponentSelection>> {
+        return if (rules != null) rules else mutableSetOf<SpecRuleAction<in ComponentSelection?>>()
     }
 
-    @Override
-    public Collection<SpecRuleAction<? super ComponentSelection>> getRules() {
-        return rules != null ? rules : Collections.emptySet();
+    override fun all(selectionAction: Action<in ComponentSelection>): ComponentSelectionRules {
+        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromAction<ComponentSelection?>(selectionAction)!!))
     }
 
-    @Override
-    public ComponentSelectionRules all(Action<? super ComponentSelection> selectionAction) {
-        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromAction(selectionAction)));
+    override fun all(closure: Closure<*>): ComponentSelectionRules {
+        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromClosure<ComponentSelection?>(ComponentSelection::class.java, closure)!!))
     }
 
-    @Override
-    public ComponentSelectionRules all(Closure<?> closure) {
-        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromClosure(ComponentSelection.class, closure)));
-    }
-
-    @Override
-    @Deprecated
-    public ComponentSelectionRules all(Object ruleSource) {
-        DeprecationLogger.deprecateMethod(ComponentSelectionRules.class, "all(Object)")
+    @Deprecated("")
+    override fun all(ruleSource: Any): ComponentSelectionRules {
+        deprecateMethod(ComponentSelectionRules::class.java, "all(Object)")
             .willBeRemovedInGradle10()
-            .withUpgradeGuideSection(9, "dependency_management_rules")
-            .nagUser();
-        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromRuleSource(ComponentSelection.class, ruleSource)));
+            .withUpgradeGuideSection(9, "dependency_management_rules")!!
+            .nagUser()
+        return addRule(createAllSpecRulesAction(ruleActionAdapter.createFromRuleSource<ComponentSelection?>(ComponentSelection::class.java, ruleSource)!!))
     }
 
-    @Override
-    public ComponentSelectionRules withModule(Object id, Action<? super ComponentSelection> selectionAction) {
-        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromAction(selectionAction)));
+    override fun withModule(id: Any, selectionAction: Action<in ComponentSelection>): ComponentSelectionRules {
+        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromAction<ComponentSelection?>(selectionAction)!!))
     }
 
-    @Override
-    public ComponentSelectionRules withModule(Object id, Closure<?> closure) {
-        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromClosure(ComponentSelection.class, closure)));
+    override fun withModule(id: Any, closure: Closure<*>): ComponentSelectionRules {
+        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromClosure<ComponentSelection?>(ComponentSelection::class.java, closure)!!))
     }
 
-    @Override
-    @Deprecated
-    public ComponentSelectionRules withModule(Object id, Object ruleSource) {
-        DeprecationLogger.deprecateMethod(ComponentSelectionRules.class, "withModule(Object,Object)")
+    @Deprecated("")
+    override fun withModule(id: Any, ruleSource: Any): ComponentSelectionRules {
+        deprecateMethod(ComponentSelectionRules::class.java, "withModule(Object,Object)")
             .willBeRemovedInGradle10()
-            .withUpgradeGuideSection(9, "dependency_management_rules")
-            .nagUser();
-        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromRuleSource(ComponentSelection.class, ruleSource)));
+            .withUpgradeGuideSection(9, "dependency_management_rules")!!
+            .nagUser()
+        return addRule(createSpecRuleActionFromId(id, ruleActionAdapter.createFromRuleSource<ComponentSelection?>(ComponentSelection::class.java, ruleSource)!!))
     }
 
-    @Override
-    public ComponentSelectionRules addRule(SpecRuleAction<? super ComponentSelection> specRuleAction) {
-        mutationValidator.validateMutation(STRATEGY);
+    override fun addRule(specRuleAction: SpecRuleAction<in ComponentSelection?>): ComponentSelectionRules {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
         if (rules == null) {
-            rules = new LinkedHashSet<>();
+            rules = LinkedHashSet<SpecRuleAction<in ComponentSelection>>()
         }
-        rules.add(specRuleAction);
-        return this;
+        rules!!.add(specRuleAction)
+        return this
     }
 
-    @Override
-    public ComponentSelectionRules addRule(RuleAction<? super ComponentSelection> specRuleAction) {
-        return addRule(createAllSpecRulesAction(specRuleAction));
+    override fun addRule(specRuleAction: RuleAction<in ComponentSelection?>): ComponentSelectionRules {
+        return addRule(createAllSpecRulesAction(specRuleAction))
     }
 
-    private SpecRuleAction<? super ComponentSelection> createSpecRuleActionFromId(Object id, RuleAction<? super ComponentSelection> ruleAction) {
-        final ModuleIdentifier moduleIdentifier;
+    private fun createSpecRuleActionFromId(id: Any, ruleAction: RuleAction<in ComponentSelection?>): SpecRuleAction<in ComponentSelection?> {
+        val moduleIdentifier: ModuleIdentifier
 
         try {
-            moduleIdentifier = moduleIdentifierNotationParser.parseNotation(id);
-        } catch (UnsupportedNotationException e) {
-            throw new InvalidUserCodeException(String.format(INVALID_SPEC_ERROR, id == null ? "null" : id.toString()), e);
+            moduleIdentifier = moduleIdentifierNotationParser.parseNotation(id)
+        } catch (e: UnsupportedNotationException) {
+            throw InvalidUserCodeException(String.format(INVALID_SPEC_ERROR, if (id == null) "null" else id.toString()), e)
         }
 
-        Spec<ComponentSelection> spec = new ComponentSelectionMatchingSpec(moduleIdentifier);
-        return new SpecRuleAction<>(ruleAction, spec);
+        val spec: Spec<ComponentSelection?> = DefaultComponentSelectionRules.ComponentSelectionMatchingSpec(moduleIdentifier)
+        return SpecRuleAction<ComponentSelection?>(ruleAction, spec)
     }
 
-    private SpecRuleAction<? super ComponentSelection> createAllSpecRulesAction(RuleAction<? super ComponentSelection> ruleAction) {
-        return new SpecRuleAction<>(ruleAction, Specs.satisfyAll());
+    private fun createAllSpecRulesAction(ruleAction: RuleAction<in ComponentSelection?>): SpecRuleAction<in ComponentSelection?> {
+        return SpecRuleAction<ComponentSelection?>(ruleAction, Specs.satisfyAll<ComponentSelection>())
     }
 
-    static class ComponentSelectionMatchingSpec implements Spec<ComponentSelection> {
-        final ModuleIdentifier target;
-
-        private ComponentSelectionMatchingSpec(ModuleIdentifier target) {
-            this.target = target;
+    internal class ComponentSelectionMatchingSpec private constructor(val target: ModuleIdentifier) : Spec<ComponentSelection?> {
+        override fun isSatisfiedBy(selection: ComponentSelection): Boolean {
+            return selection.getCandidate().getGroup() == target.getGroup() && selection.getCandidate().getModule() == target.getName()
         }
+    }
 
-        @Override
-        public boolean isSatisfiedBy(ComponentSelection selection) {
-            return selection.getCandidate().getGroup().equals(target.getGroup()) && selection.getCandidate().getModule().equals(target.getName());
+    companion object {
+        private const val INVALID_SPEC_ERROR = "Could not add a component selection rule for module '%s'."
+
+        private fun createAdapter(): RuleActionAdapter {
+            val ruleActionValidator: RuleActionValidator = DefaultRuleActionValidator()
+            return DefaultRuleActionAdapter(ruleActionValidator, "ComponentSelectionRules")
         }
     }
 }

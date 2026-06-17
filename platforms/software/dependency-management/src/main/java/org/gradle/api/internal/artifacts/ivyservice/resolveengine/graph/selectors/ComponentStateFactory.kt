@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
 
-public interface ComponentStateFactory<T extends ComponentResolutionState> {
-    T getRevision(ComponentIdentifier componentIdentifier, ModuleVersionIdentifier id, @Nullable ComponentGraphResolveState state, @Nullable ComponentGraphSpecificResolveState graphState);
+interface ComponentStateFactory<T : ComponentResolutionState?> {
+    fun getRevision(componentIdentifier: ComponentIdentifier?, id: ModuleVersionIdentifier?, state: ComponentGraphResolveState?, graphState: ComponentGraphSpecificResolveState?): T?
 }

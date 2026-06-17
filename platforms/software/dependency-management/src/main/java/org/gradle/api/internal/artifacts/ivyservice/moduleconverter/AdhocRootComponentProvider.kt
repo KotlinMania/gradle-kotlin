@@ -13,60 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.AnonymousModule;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.Module;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.artifacts.AnonymousModule
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.Module
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Creates an adhoc root components, which is intended to own the root variant of a dependency graph.
- * <p>
+ *
+ *
  * Adhoc root components are not cacheable, have no unique identity, and contain no variants.
  * They are purely meant to own the root variant of a dependency graph.
  */
-@ServiceScope(Scope.Project.class)
-public class AdhocRootComponentProvider implements RootComponentProvider {
+@ServiceScope(Scope.Project::class)
+class AdhocRootComponentProvider(
+    private val schema: AttributesSchemaInternal,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val attributesSchemaFactory: ImmutableAttributesSchemaFactory,
+    private val localResolveStateFactory: LocalComponentGraphResolveStateFactory
+) : RootComponentProvider {
+    override fun getRootComponent(detached: Boolean): LocalComponentGraphResolveState {
+        val module: Module = AnonymousModule()
 
-    private final AttributesSchemaInternal schema;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final ImmutableAttributesSchemaFactory attributesSchemaFactory;
-    private final LocalComponentGraphResolveStateFactory localResolveStateFactory;
+        val status: String = module.status!!
+        val moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group!!, module.name!!, module.version!!)
 
-    public AdhocRootComponentProvider(
-        AttributesSchemaInternal schema,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        ImmutableAttributesSchemaFactory attributesSchemaFactory,
-        LocalComponentGraphResolveStateFactory localResolveStateFactory
-    ) {
-        this.schema = schema;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.attributesSchemaFactory = attributesSchemaFactory;
-        this.localResolveStateFactory = localResolveStateFactory;
-    }
-
-    @Override
-    public LocalComponentGraphResolveState getRootComponent(boolean detached) {
-        Module module = new AnonymousModule();
-
-        String status = module.status;
-        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group, module.name, module.version);
-
-        ImmutableAttributesSchema immutableSchema = attributesSchemaFactory.create(schema);
+        val immutableSchema = attributesSchemaFactory.create(schema)
 
         return localResolveStateFactory.adhocRootComponentState(
             status,
-            moduleVersionId,
+            moduleVersionId!!,
             immutableSchema
-        );
+        )
     }
-
 }

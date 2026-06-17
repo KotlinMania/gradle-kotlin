@@ -13,71 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.verification.signatures
 
-package org.gradle.api.internal.artifacts.verification.signatures;
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration
+import org.gradle.security.internal.KeyringFilePublicKeyService
+import org.gradle.security.internal.PublicKeyService
+import org.gradle.security.internal.PublicKeyServiceChain.Companion.of
+import java.io.File
 
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration;
-import org.gradle.security.internal.KeyringFilePublicKeyService;
-import org.gradle.security.internal.PublicKeyService;
-import org.gradle.security.internal.PublicKeyServiceChain;
-import org.jspecify.annotations.Nullable;
+class BuildTreeDefinedKeys(
+    private val keyringsRoot: File?,
+    effectiveFormat: DependencyVerificationConfiguration.KeyringFormat?
+) {
+    private val keyService: KeyringFilePublicKeyService?
 
-import java.io.File;
+    val effectiveKeyringsFile: File?
 
-public class BuildTreeDefinedKeys {
-    private static final String VERIFICATION_KEYRING_GPG = "verification-keyring.gpg";
-    private static final String VERIFICATION_KEYRING_ASCII = "verification-keyring.keys";
-
-    private final KeyringFilePublicKeyService keyService;
-    private final File keyringsRoot;
-
-    private final File effectiveKeyringsFile;
-
-    public BuildTreeDefinedKeys(
-        File keyringsRoot,
-        DependencyVerificationConfiguration.@Nullable KeyringFormat effectiveFormat
-    ) {
-        this.keyringsRoot = keyringsRoot;
-
-        File effectiveFile;
+    init {
+        var effectiveFile: File
         if (effectiveFormat == DependencyVerificationConfiguration.KeyringFormat.ARMORED) {
-            effectiveFile = getAsciiKeyringsFile();
+            effectiveFile = this.asciiKeyringsFile
         } else if (effectiveFormat == DependencyVerificationConfiguration.KeyringFormat.BINARY) {
-            effectiveFile = getBinaryKeyringsFile();
+            effectiveFile = this.binaryKeyringsFile
         } else if (effectiveFormat == null) {
-            effectiveFile = getBinaryKeyringsFile();
+            effectiveFile = this.binaryKeyringsFile
             if (!effectiveFile.exists()) {
-                effectiveFile = getAsciiKeyringsFile();
+                effectiveFile = this.asciiKeyringsFile
             }
         } else {
-            throw new IllegalArgumentException("Unknown keyring format: " + effectiveFormat);
+            throw IllegalArgumentException("Unknown keyring format: " + effectiveFormat)
         }
 
-        this.effectiveKeyringsFile = effectiveFile;
+        this.effectiveKeyringsFile = effectiveFile
         if (effectiveFile.exists()) {
-            this.keyService = new KeyringFilePublicKeyService(effectiveKeyringsFile);
+            this.keyService = KeyringFilePublicKeyService(effectiveKeyringsFile)
         } else {
-            this.keyService = null;
+            this.keyService = null
         }
     }
 
-    public File getBinaryKeyringsFile() {
-        return new File(keyringsRoot, VERIFICATION_KEYRING_GPG);
-    }
+    val binaryKeyringsFile: File
+        get() = File(keyringsRoot, VERIFICATION_KEYRING_GPG)
 
-    public File getAsciiKeyringsFile() {
-        return new File(keyringsRoot, VERIFICATION_KEYRING_ASCII);
-    }
+    val asciiKeyringsFile: File
+        get() = File(keyringsRoot, VERIFICATION_KEYRING_ASCII)
 
-    public File getEffectiveKeyringsFile() {
-        return effectiveKeyringsFile;
-    }
-
-    public PublicKeyService applyTo(PublicKeyService original) {
+    fun applyTo(original: PublicKeyService?): PublicKeyService? {
         if (keyService != null) {
-            return PublicKeyServiceChain.of(keyService, original);
+            return of(keyService, original)
         } else {
-            return original;
+            return original
         }
+    }
+
+    companion object {
+        private const val VERIFICATION_KEYRING_GPG = "verification-keyring.gpg"
+        private const val VERIFICATION_KEYRING_ASCII = "verification-keyring.keys"
     }
 }

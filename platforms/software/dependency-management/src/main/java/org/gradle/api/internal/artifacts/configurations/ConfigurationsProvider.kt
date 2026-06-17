@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import java.util.function.Consumer;
+import java.util.function.Consumer
 
 /**
  * Provides access to all configurations that should be included as variants
  * within a local project component.
  */
-public interface ConfigurationsProvider {
-
+interface ConfigurationsProvider {
     /**
      * Visit all consumable configurations provided by this configurations provider,
      * realizing them if necessary. Lazily registered configurations which are known
      * to be non-consumable are not realized.
      */
-    void visitConsumable(Consumer<ConfigurationInternal> visitor);
-
+    fun visitConsumable(visitor: Consumer<ConfigurationInternal>)
 }

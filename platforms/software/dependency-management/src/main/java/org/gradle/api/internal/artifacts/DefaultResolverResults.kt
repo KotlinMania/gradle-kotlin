@@ -13,122 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.ResolvedConfiguration;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ResolvedConfiguration
+import org.gradle.api.internal.artifacts.ResolverResults.LegacyResolverResults
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
 
 /**
- * Default implementation of {@link ResolverResults}.
+ * Default implementation of [ResolverResults].
  */
-public class DefaultResolverResults implements ResolverResults {
-
-    private final VisitedGraphResults graphResults;
-    private final VisitedArtifactSet visitedArtifacts;
-    private final LegacyResolverResults legacyResolverResults;
-    private final boolean fullyResolved;
-
-    public DefaultResolverResults(
-        VisitedGraphResults graphResults,
-        VisitedArtifactSet visitedArtifacts,
-        LegacyResolverResults legacyResolverResults,
-        boolean fullyResolved
-    ) {
-        this.graphResults = graphResults;
-        this.visitedArtifacts = visitedArtifacts;
-        this.legacyResolverResults = legacyResolverResults;
-        this.fullyResolved = fullyResolved;
-    }
-
-    @Override
-    public LegacyResolverResults getLegacyResults() {
-        return legacyResolverResults;
-    }
-
-    @Override
-    public VisitedGraphResults getVisitedGraph() {
-        return graphResults;
-    }
-
-    @Override
-    public VisitedArtifactSet getVisitedArtifacts() {
-        return visitedArtifacts;
-    }
-
-    @Override
-    public boolean isFullyResolved() {
-        return fullyResolved;
-    }
-
+class DefaultResolverResults(
+    val visitedGraph: VisitedGraphResults?,
+    val visitedArtifacts: VisitedArtifactSet?,
+    val legacyResults: ResolverResults.LegacyResolverResults?,
+    val isFullyResolved: Boolean
+) : ResolverResults {
     /**
-     * Create a new result representing the result of resolving build dependencies.
+     * Default implementation of [LegacyResolverResults].
      */
-    public static ResolverResults buildDependenciesResolved(
-        VisitedGraphResults graphResults,
-        VisitedArtifactSet visitedArtifacts,
-        LegacyResolverResults legacyResolverResults
-    ) {
-        return new DefaultResolverResults(
-            graphResults,
-            visitedArtifacts,
-            legacyResolverResults,
-            false
-        );
-    }
+    class DefaultLegacyResolverResults private constructor(private val configuration: ResolvedConfiguration?) : ResolverResults.LegacyResolverResults {
+        val resolvedConfiguration: ResolvedConfiguration
+            get() {
+                checkNotNull(configuration) { "Cannot get resolved configuration when only build dependencies are resolved." }
 
-    /**
-     * Create a new result representing the result of resolving the dependency graph.
-     */
-    public static ResolverResults graphResolved(
-        VisitedGraphResults graphResults,
-        VisitedArtifactSet visitedArtifacts,
-        LegacyResolverResults legacyResolverResults
-    ) {
-        return new DefaultResolverResults(
-            graphResults,
-            visitedArtifacts,
-            legacyResolverResults,
-            true
-        );
-    }
-
-    /**
-     * Default implementation of {@link LegacyResolverResults}.
-     */
-    public static class DefaultLegacyResolverResults implements LegacyResolverResults {
-
-        private final @Nullable ResolvedConfiguration configuration;
-
-        private DefaultLegacyResolverResults(@Nullable ResolvedConfiguration configuration) {
-            this.configuration = configuration;
-        }
-
-        @Override
-        public ResolvedConfiguration getResolvedConfiguration() {
-            if (configuration == null) {
-                throw new IllegalStateException("Cannot get resolved configuration when only build dependencies are resolved.");
+                return configuration
             }
 
-            return configuration;
-        }
+        companion object {
+            /**
+             * Create a new legacy result representing the result of resolving build dependencies.
+             */
+            fun buildDependenciesResolved(): ResolverResults.LegacyResolverResults {
+                return DefaultLegacyResolverResults(null)
+            }
 
-        /**
-         * Create a new legacy result representing the result of resolving build dependencies.
-         */
-        public static LegacyResolverResults buildDependenciesResolved() {
-            return new DefaultLegacyResolverResults(null);
+            /**
+             * Create a new legacy result representing the result of resolving the dependency graph.
+             */
+            fun graphResolved(configuration: ResolvedConfiguration?): ResolverResults.LegacyResolverResults {
+                return DefaultLegacyResolverResults(configuration)
+            }
         }
-
-        /**
-         * Create a new legacy result representing the result of resolving the dependency graph.
-         */
-        public static LegacyResolverResults graphResolved(ResolvedConfiguration configuration) {
-            return new DefaultLegacyResolverResults(configuration);
-        }
-
     }
 
+    companion object {
+        /**
+         * Create a new result representing the result of resolving build dependencies.
+         */
+        fun buildDependenciesResolved(
+            graphResults: VisitedGraphResults?,
+            visitedArtifacts: VisitedArtifactSet?,
+            legacyResolverResults: ResolverResults.LegacyResolverResults?
+        ): ResolverResults {
+            return DefaultResolverResults(
+                graphResults,
+                visitedArtifacts,
+                legacyResolverResults,
+                false
+            )
+        }
+
+        /**
+         * Create a new result representing the result of resolving the dependency graph.
+         */
+        fun graphResolved(
+            graphResults: VisitedGraphResults?,
+            visitedArtifacts: VisitedArtifactSet?,
+            legacyResolverResults: ResolverResults.LegacyResolverResults?
+        ): ResolverResults {
+            return DefaultResolverResults(
+                graphResults,
+                visitedArtifacts,
+                legacyResolverResults,
+                true
+            )
+        }
+    }
 }

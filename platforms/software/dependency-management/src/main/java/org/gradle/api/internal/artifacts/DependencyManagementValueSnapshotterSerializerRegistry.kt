@@ -13,143 +13,144 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.result.ComponentSelectionDescriptor
+import org.gradle.api.artifacts.result.ComponentSelectionReason
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.CapabilitySerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedComponentResultSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedVariantResultSerializer
+import org.gradle.api.internal.artifacts.metadata.ComponentArtifactIdentifierSerializer
+import org.gradle.api.internal.artifacts.metadata.ComponentFileArtifactIdentifierSerializer
+import org.gradle.api.internal.artifacts.metadata.ModuleComponentFileArtifactIdentifierSerializer
+import org.gradle.api.internal.artifacts.metadata.PublishArtifactLocalArtifactMetadataSerializer
+import org.gradle.api.internal.artifacts.metadata.TransformedComponentFileArtifactIdentifierSerializer
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier
+import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier
+import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier
+import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata
+import org.gradle.internal.component.local.model.TransformedComponentFileArtifactIdentifier
+import org.gradle.internal.resolve.caching.DesugaringAttributeContainerSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.DefaultSerializerRegistry
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.snapshot.impl.ValueSnapshotterSerializerRegistry
+import java.io.File
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
-import org.gradle.api.artifacts.result.ComponentSelectionReason;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.CapabilitySerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedComponentResultSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ResolvedVariantResultSerializer;
-import org.gradle.api.internal.artifacts.metadata.ComponentArtifactIdentifierSerializer;
-import org.gradle.api.internal.artifacts.metadata.ComponentFileArtifactIdentifierSerializer;
-import org.gradle.api.internal.artifacts.metadata.ModuleComponentFileArtifactIdentifierSerializer;
-import org.gradle.api.internal.artifacts.metadata.PublishArtifactLocalArtifactMetadataSerializer;
-import org.gradle.api.internal.artifacts.metadata.TransformedComponentFileArtifactIdentifierSerializer;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.Cast;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier;
-import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier;
-import org.gradle.internal.component.local.model.OpaqueComponentArtifactIdentifier;
-import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata;
-import org.gradle.internal.component.local.model.TransformedComponentFileArtifactIdentifier;
-import org.gradle.internal.resolve.caching.DesugaringAttributeContainerSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.DefaultSerializerRegistry;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.snapshot.impl.ValueSnapshotterSerializerRegistry;
+class DependencyManagementValueSnapshotterSerializerRegistry(
+    moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    attributesFactory: AttributesFactory,
+    namedObjectInstantiator: NamedObjectInstantiator?,
+    componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory
+) : DefaultSerializerRegistry(true), ValueSnapshotterSerializerRegistry {
+    init {
+        val capabilitySelectorSerializer = CapabilitySelectorSerializer()
+        val componentIdentifierSerializer = ComponentIdentifierSerializer()
+        val attributeContainerSerializer: AttributeContainerSerializer = DesugaringAttributeContainerSerializer(attributesFactory, namedObjectInstantiator)
+        val moduleVersionIdentifierSerializer = ModuleVersionIdentifierSerializer(moduleIdentifierFactory)
+        val componentSelectorSerializer: Serializer<ComponentSelector?> = ComponentSelectorSerializer(attributeContainerSerializer, capabilitySelectorSerializer)
 
-import java.io.File;
-import java.util.List;
-
-public class DependencyManagementValueSnapshotterSerializerRegistry extends DefaultSerializerRegistry implements ValueSnapshotterSerializerRegistry {
-
-    private static final List<Class<?>> SUPPORTED_TYPES = ImmutableList.<Class<?>>of(
-        Capability.class,
-        ModuleVersionIdentifier.class,
-        PublishArtifactLocalArtifactMetadata.class,
-        OpaqueComponentArtifactIdentifier.class,
-        DefaultModuleComponentArtifactIdentifier.class,
-        ModuleComponentFileArtifactIdentifier.class,
-        ComponentFileArtifactIdentifier.class,
-        ComponentIdentifier.class,
-        AttributeContainer.class,
-        ResolvedVariantResult.class,
-        ComponentSelectionDescriptor.class,
-        ComponentSelectionReason.class,
-        ComponentSelector.class,
-        ResolvedComponentResult.class
-    );
-
-    public DependencyManagementValueSnapshotterSerializerRegistry(
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        AttributesFactory attributesFactory,
-        NamedObjectInstantiator namedObjectInstantiator,
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory
-    ) {
-        super(true);
-
-        CapabilitySelectorSerializer capabilitySelectorSerializer = new CapabilitySelectorSerializer();
-        ComponentIdentifierSerializer componentIdentifierSerializer = new ComponentIdentifierSerializer();
-        AttributeContainerSerializer attributeContainerSerializer = new DesugaringAttributeContainerSerializer(attributesFactory, namedObjectInstantiator);
-        ModuleVersionIdentifierSerializer moduleVersionIdentifierSerializer = new ModuleVersionIdentifierSerializer(moduleIdentifierFactory);
-        Serializer<ComponentSelector> componentSelectorSerializer = new ComponentSelectorSerializer(attributeContainerSerializer, capabilitySelectorSerializer);
-
-        <Capability>register(Capability.class, new CapabilitySerializer());
-        <ModuleVersionIdentifier>register(ModuleVersionIdentifier.class, moduleVersionIdentifierSerializer);
-        <PublishArtifactLocalArtifactMetadata>register(PublishArtifactLocalArtifactMetadata.class, new PublishArtifactLocalArtifactMetadataSerializer(componentIdentifierSerializer));
-        <OpaqueComponentArtifactIdentifier>register(OpaqueComponentArtifactIdentifier.class, new OpaqueComponentArtifactIdentifierSerializer());
-        <DefaultModuleComponentArtifactIdentifier>register(DefaultModuleComponentArtifactIdentifier.class, new ComponentArtifactIdentifierSerializer());
-        <ModuleComponentFileArtifactIdentifier>register(ModuleComponentFileArtifactIdentifier.class, new ModuleComponentFileArtifactIdentifierSerializer());
-        <ComponentFileArtifactIdentifier>register(ComponentFileArtifactIdentifier.class, new ComponentFileArtifactIdentifierSerializer());
-        <TransformedComponentFileArtifactIdentifier>register(TransformedComponentFileArtifactIdentifier.class, new TransformedComponentFileArtifactIdentifierSerializer());
-        <DefaultModuleComponentIdentifier>register(DefaultModuleComponentIdentifier.class, Cast.<@org.jetbrains.annotations.Nullable Serializer<DefaultModuleComponentIdentifier>>uncheckedCast(componentIdentifierSerializer));
-        <DefaultProjectComponentIdentifier>register(DefaultProjectComponentIdentifier.class, Cast.<@org.jetbrains.annotations.Nullable Serializer<DefaultProjectComponentIdentifier>>uncheckedCast(componentIdentifierSerializer));
-        <AttributeContainer>register(AttributeContainer.class, attributeContainerSerializer);
-        <ResolvedVariantResult>registerWithFactory(ResolvedVariantResult.class, () -> new ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer));
-        <ComponentSelectionDescriptorInternal>register(ComponentSelectionDescriptorInternal.class, new ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory));
-        ComponentSelectionReasonSerializer componentSelectionReasonSerializer = new ComponentSelectionReasonSerializer(componentSelectionDescriptorFactory);
-        <ComponentSelectionReasonInternal>register(ComponentSelectionReasonInternal.class, componentSelectionReasonSerializer);
-        <ComponentSelector>register(ComponentSelector.class, componentSelectorSerializer);
-        <ResolvedComponentResult>registerWithFactory(ResolvedComponentResult.class, () -> {
-            ResolvedVariantResultSerializer resolvedVariantResultSerializer = new ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer);
-            return new ResolvedComponentResultSerializer(moduleVersionIdentifierSerializer, componentIdentifierSerializer, componentSelectorSerializer, resolvedVariantResultSerializer, componentSelectionReasonSerializer);
-        });
+        register<Capability?>(Capability::class.java, CapabilitySerializer())
+        register<ModuleVersionIdentifier?>(ModuleVersionIdentifier::class.java, moduleVersionIdentifierSerializer)
+        register<PublishArtifactLocalArtifactMetadata?>(PublishArtifactLocalArtifactMetadata::class.java, PublishArtifactLocalArtifactMetadataSerializer(componentIdentifierSerializer))
+        register<OpaqueComponentArtifactIdentifier?>(OpaqueComponentArtifactIdentifier::class.java, OpaqueComponentArtifactIdentifierSerializer())
+        register<DefaultModuleComponentArtifactIdentifier?>(DefaultModuleComponentArtifactIdentifier::class.java, ComponentArtifactIdentifierSerializer())
+        register<ModuleComponentFileArtifactIdentifier?>(ModuleComponentFileArtifactIdentifier::class.java, ModuleComponentFileArtifactIdentifierSerializer())
+        register<ComponentFileArtifactIdentifier?>(ComponentFileArtifactIdentifier::class.java, ComponentFileArtifactIdentifierSerializer())
+        register<TransformedComponentFileArtifactIdentifier?>(TransformedComponentFileArtifactIdentifier::class.java, TransformedComponentFileArtifactIdentifierSerializer())
+        register<DefaultModuleComponentIdentifier?>(DefaultModuleComponentIdentifier::class.java, uncheckedCast<Serializer<DefaultModuleComponentIdentifier?>?>(componentIdentifierSerializer))
+        register<DefaultProjectComponentIdentifier?>(DefaultProjectComponentIdentifier::class.java, uncheckedCast<Serializer<DefaultProjectComponentIdentifier?>?>(componentIdentifierSerializer))
+        register<AttributeContainer?>(AttributeContainer::class.java, attributeContainerSerializer)
+        registerWithFactory<ResolvedVariantResult?>(
+            ResolvedVariantResult::class.java,
+            DefaultSerializerRegistry.SerializerFactory { ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer) })
+        register<ComponentSelectionDescriptorInternal?>(ComponentSelectionDescriptorInternal::class.java, ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory))
+        val componentSelectionReasonSerializer = ComponentSelectionReasonSerializer(componentSelectionDescriptorFactory)
+        register<ComponentSelectionReasonInternal?>(ComponentSelectionReasonInternal::class.java, componentSelectionReasonSerializer)
+        register<ComponentSelector?>(ComponentSelector::class.java, componentSelectorSerializer)
+        registerWithFactory<ResolvedComponentResult?>(ResolvedComponentResult::class.java, DefaultSerializerRegistry.SerializerFactory {
+            val resolvedVariantResultSerializer = ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer)
+            ResolvedComponentResultSerializer(
+                moduleVersionIdentifierSerializer,
+                componentIdentifierSerializer,
+                componentSelectorSerializer,
+                resolvedVariantResultSerializer,
+                componentSelectionReasonSerializer
+            )
+        })
     }
 
-    @Override
-    public boolean canSerialize(Class<?> baseType) {
-        return super.canSerialize(baseTypeOf(baseType));
+    override fun canSerialize(baseType: Class<*>): Boolean {
+        return super.canSerialize(baseTypeOf(baseType))
     }
 
-    @Override
-    public <T> Serializer<T> build(Class<T> baseType) {
-        return super.<T>build(Cast.<@org.jetbrains.annotations.NotNull Class<T>>uncheckedCast(baseTypeOf(baseType)));
-    }
-
-    private static Class<?> baseTypeOf(Class<?> type) {
-        for (Class<?> supportedType : SUPPORTED_TYPES) {
-            if (supportedType.isAssignableFrom(type)) {
-                return supportedType;
-            }
-        }
-        return type;
+    override fun <T> build(baseType: Class<T?>): Serializer<T?>? {
+        return super.build<T?>(uncheckedCast<Class<T?>>(baseTypeOf(baseType)))
     }
 
     /**
-     * A thread-safe and reusable serializer for {@link OpaqueComponentArtifactIdentifier}.
+     * A thread-safe and reusable serializer for [OpaqueComponentArtifactIdentifier].
      */
-    private static class OpaqueComponentArtifactIdentifierSerializer implements Serializer<OpaqueComponentArtifactIdentifier> {
-
-        @Override
-        public OpaqueComponentArtifactIdentifier read(Decoder decoder) throws Exception {
-            return new OpaqueComponentArtifactIdentifier(new File(decoder.readString()));
+    private class OpaqueComponentArtifactIdentifierSerializer : Serializer<OpaqueComponentArtifactIdentifier?> {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): OpaqueComponentArtifactIdentifier {
+            return OpaqueComponentArtifactIdentifier(File(decoder.readString()))
         }
 
-        @Override
-        public void write(Encoder encoder, OpaqueComponentArtifactIdentifier value) throws Exception {
-            encoder.writeString(value.getFile().getCanonicalPath());
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: OpaqueComponentArtifactIdentifier) {
+            encoder.writeString(value.file.getCanonicalPath())
+        }
+    }
+
+    companion object {
+        private val SUPPORTED_TYPES: MutableList<Class<*>> = ImmutableList.of<Class<*>?>(
+            Capability::class.java,
+            ModuleVersionIdentifier::class.java,
+            PublishArtifactLocalArtifactMetadata::class.java,
+            OpaqueComponentArtifactIdentifier::class.java,
+            DefaultModuleComponentArtifactIdentifier::class.java,
+            ModuleComponentFileArtifactIdentifier::class.java,
+            ComponentFileArtifactIdentifier::class.java,
+            ComponentIdentifier::class.java,
+            AttributeContainer::class.java,
+            ResolvedVariantResult::class.java,
+            ComponentSelectionDescriptor::class.java,
+            ComponentSelectionReason::class.java,
+            ComponentSelector::class.java,
+            ResolvedComponentResult::class.java
+        )
+
+        private fun baseTypeOf(type: Class<*>): Class<*> {
+            for (supportedType in SUPPORTED_TYPES) {
+                if (supportedType.isAssignableFrom(type)) {
+                    return supportedType
+                }
+            }
+            return type
         }
     }
 }

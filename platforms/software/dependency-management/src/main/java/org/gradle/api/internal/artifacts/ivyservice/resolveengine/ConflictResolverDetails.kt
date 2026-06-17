@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-import org.jspecify.annotations.Nullable;
+interface ConflictResolverDetails<T> {
+    val candidates: MutableCollection<out T>?
 
-import java.util.Collection;
+    fun select(candidate: T?)
 
-public interface ConflictResolverDetails<T> {
-    Collection<? extends T> getCandidates();
+    fun fail(error: Throwable)
 
-    void select(T candidate);
+    @JvmField
+    val selected: T?
 
-    void fail(Throwable error);
+    @JvmField
+    val failure: Throwable?
 
-    @Nullable
-    T getSelected();
+    fun hasFailure(): Boolean
 
-    @Nullable
-    Throwable getFailure();
-
-    boolean hasFailure();
-
-    boolean hasSelected();
+    fun hasSelected(): Boolean
 }

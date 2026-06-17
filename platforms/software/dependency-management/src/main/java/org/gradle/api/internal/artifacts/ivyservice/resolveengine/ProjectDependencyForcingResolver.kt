@@ -13,58 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.DefaultConflictResolverDetails
+import org.gradle.internal.Cast.uncheckedCast
 
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.DefaultConflictResolverDetails;
-import org.gradle.internal.Cast;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-public class ProjectDependencyForcingResolver<T extends ComponentResolutionState> implements ModuleConflictResolver<T> {
-    private final ModuleConflictResolver<T> delegate;
-
-    public ProjectDependencyForcingResolver(ModuleConflictResolver<T> delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public void select(ConflictResolverDetails<T> details) {
+class ProjectDependencyForcingResolver<T : ComponentResolutionState?>(private val delegate: ModuleConflictResolver<T?>) : ModuleConflictResolver<T?> {
+    override fun select(details: ConflictResolverDetails<T?>) {
         // the collection will only be initialized if more than one project candidate is found
-        Collection<T> projectCandidates = null;
-        T foundProjectCandidate = null;
+        var projectCandidates: MutableCollection<T?>? = null
+        var foundProjectCandidate: T? = null
         // fine one or more project dependencies among conflicting modules
-        for (T candidate : details.getCandidates()) {
-            if (candidate.getComponentId() instanceof ProjectComponentIdentifier) {
+        for (candidate in details.getCandidates()) {
+            if (candidate!!.getComponentId() is ProjectComponentIdentifier) {
                 if (foundProjectCandidate == null) {
                     // found the first project dependency
-                    foundProjectCandidate = candidate;
+                    foundProjectCandidate = candidate
                 } else {
                     // found more than one
                     if (projectCandidates == null) {
-                        projectCandidates = new ArrayList<>();
-                        projectCandidates.add(foundProjectCandidate);
+                        projectCandidates = ArrayList<T?>()
+                        projectCandidates.add(foundProjectCandidate)
                     }
-                    projectCandidates.add(candidate);
+                    projectCandidates.add(candidate)
                 }
             }
         }
         // if more than one conflicting project dependencies
         // let the delegate resolver select among them
         if (projectCandidates != null) {
-            ConflictResolverDetails<T> projectDetails = new DefaultConflictResolverDetails<>(Cast.<List<T>>uncheckedCast(projectCandidates));
-            delegate.select(projectDetails);
-            details.select(projectDetails.getSelected());
-            return;
+            val projectDetails: ConflictResolverDetails<T?> = DefaultConflictResolverDetails<T?>(uncheckedCast<MutableList<T?>?>(projectCandidates))
+            delegate.select(projectDetails)
+            details.select(projectDetails.getSelected())
+            return
         }
         // if found only one project dependency - return it, otherwise call the next resolver
         if (foundProjectCandidate != null) {
-            details.select(foundProjectCandidate);
+            details.select(foundProjectCandidate)
         } else {
-            delegate.select(details);
+            delegate.select(details)
         }
     }
 }

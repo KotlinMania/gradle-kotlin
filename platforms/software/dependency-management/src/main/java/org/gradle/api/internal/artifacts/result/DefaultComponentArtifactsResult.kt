@@ -13,45 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.result;
+package org.gradle.api.internal.artifacts.result
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.ArtifactResult;
-import org.gradle.api.component.Artifact;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.result.ArtifactResult
+import org.gradle.api.component.Artifact
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+class DefaultComponentArtifactsResult(private val componentIdentifier: ComponentIdentifier) : ComponentArtifactsResultInternal {
+    private val artifactResults: MutableSet<ArtifactResult> = LinkedHashSet<ArtifactResult>()
 
-public class DefaultComponentArtifactsResult implements ComponentArtifactsResultInternal {
-    private final ComponentIdentifier componentIdentifier;
-    private final Set<ArtifactResult> artifactResults = new LinkedHashSet<>();
-
-    public DefaultComponentArtifactsResult(ComponentIdentifier componentIdentifier) {
-        this.componentIdentifier = componentIdentifier;
+    override fun getId(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        return componentIdentifier;
-    }
-
-    @Override
-    public Set<ArtifactResult> getArtifacts(Class<? extends Artifact> type) {
-        Set<ArtifactResult> matching = new LinkedHashSet<>();
-        for (ArtifactResult artifactResult : artifactResults) {
+    override fun getArtifacts(type: Class<out Artifact>): MutableSet<ArtifactResult> {
+        val matching: MutableSet<ArtifactResult> = LinkedHashSet<ArtifactResult>()
+        for (artifactResult in artifactResults) {
             if (type.isAssignableFrom(artifactResult.getType())) {
-                matching.add(artifactResult);
+                matching.add(artifactResult)
             }
         }
-        return matching;
+        return matching
     }
 
-    @Override
-    public Set<ArtifactResult> getAllArtifacts() {
-        return artifactResults;
+    override fun getAllArtifacts(): MutableSet<ArtifactResult> {
+        return artifactResults
     }
 
-    public void addArtifact(ArtifactResult artifact) {
-        artifactResults.add(artifact);
+    fun addArtifact(artifact: ArtifactResult) {
+        artifactResults.add(artifact)
     }
 }

@@ -13,55 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ConflictResolverDetails;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ConflictResolverDetails
 
-import java.util.Collection;
+class DefaultConflictResolverDetails<T>(participants: MutableCollection<out T>) : ConflictResolverDetails<T?> {
+    val candidates: MutableCollection<out T>
+    var selected: T? = null
+        private set
+    var failure: Throwable? = null
+        private set
 
-public class DefaultConflictResolverDetails<T> implements ConflictResolverDetails<T> {
-    private final Collection<? extends T> participants;
-    private T selected;
-    private Throwable failure;
-
-    public DefaultConflictResolverDetails(Collection<? extends T> participants) {
-        this.participants = participants;
+    init {
+        this.candidates = participants
     }
 
-    @Override
-    public Collection<? extends T> getCandidates() {
-        return participants;
+    override fun select(candidate: T?) {
+        selected = candidate
     }
 
-    @Override
-    public void select(T candidate) {
-        selected = candidate;
+    override fun fail(error: Throwable) {
+        failure = error
     }
 
-    @Override
-    public void fail(Throwable error) {
-        failure = error;
+    override fun hasFailure(): Boolean {
+        return failure != null
     }
 
-    @Override
-    public T getSelected() {
-        return selected;
-    }
-
-    @Nullable
-    @Override
-    public Throwable getFailure() {
-        return failure;
-    }
-
-    @Override
-    public boolean hasFailure() {
-        return failure != null;
-    }
-
-    @Override
-    public boolean hasSelected() {
-        return selected != null;
+    override fun hasSelected(): Boolean {
+        return selected != null
     }
 }

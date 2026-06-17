@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
-
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
+import org.gradle.util.Path
 
 /**
  * Given project coordinates, and optionally the name of a variant in that project,
@@ -26,22 +24,21 @@ import org.jspecify.annotations.Nullable;
  *
  * TODO: This data should instead be exposed by dependency-management via a ResolutionResult.
  */
-public interface ProjectDependencyPublicationResolver {
+interface ProjectDependencyPublicationResolver {
     /**
      * Determines the coordinates of the given type for the root component of the
-     * project identified by {@code identityPath}.
+     * project identified by `identityPath`.
      *
      * @throws UnsupportedOperationException if the project cannot be resolved.
      */
-    <T> T resolveComponent(Class<T> coordsType, Path identityPath);
+    fun <T> resolveComponent(coordsType: Class<T?>, identityPath: Path): T?
 
     /**
      * Determines the coordinates of the given type that should be used to reference the
-     * variant with name {@code variantName}, contained in the root component of the
-     * project identified by {@code identityPath}.
+     * variant with name `variantName`, contained in the root component of the
+     * project identified by `identityPath`.
      *
-     * @return null if the {@code variantName} does not exist in the target project.
+     * @return null if the `variantName` does not exist in the target project.
      */
-    @Nullable
-    <T> T resolveVariant(Class<T> coordsType, Path identityPath, String variantName);
+    fun <T> resolveVariant(coordsType: Class<T?>, identityPath: Path, variantName: String): T?
 }

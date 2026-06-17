@@ -13,176 +13,129 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.repositories.ArtifactResolutionDetails;
-import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.Factory;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.repositories.ArtifactResolutionDetails
+import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.Factory
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
 
-import java.util.Collections;
-import java.util.Map;
-
-public class FilteredModuleComponentRepository implements ModuleComponentRepository<ExternalModuleComponentGraphResolveState> {
-    private final ModuleComponentRepository<ExternalModuleComponentGraphResolveState> delegate;
-    private final Action<? super ArtifactResolutionDetails> filterAction;
-
-    public FilteredModuleComponentRepository(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> delegate, Action<? super ArtifactResolutionDetails> filterAction) {
-        this.delegate = delegate;
-        this.filterAction = filterAction;
+class FilteredModuleComponentRepository(private val delegate: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>, val filterAction: Action<in ArtifactResolutionDetails?>) :
+    ModuleComponentRepository<ExternalModuleComponentGraphResolveState?> {
+    override fun getId(): String? {
+        return delegate.getId()
     }
 
-    public Action<? super ArtifactResolutionDetails> getFilterAction() {
-        return filterAction;
+    override fun getName(): String? {
+        return delegate.getName()
     }
 
-    @Override
-    public String getId() {
-        return delegate.getId();
+    override fun getLocalAccess(): ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        return FilteredModuleComponentRepository.FilteringAccess(delegate.getLocalAccess())
     }
 
-    @Override
-    public String getName() {
-        return delegate.getName();
+    override fun getRemoteAccess(): ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        return FilteredModuleComponentRepository.FilteringAccess(delegate.getRemoteAccess())
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> getLocalAccess() {
-        return new FilteringAccess(delegate.getLocalAccess());
+    override fun getArtifactCache(): MutableMap<ComponentArtifactIdentifier?, ResolvableArtifact?>? {
+        return delegate.getArtifactCache()
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> getRemoteAccess() {
-        return new FilteringAccess(delegate.getRemoteAccess());
+    override fun getComponentMetadataSupplier(): InstantiatingAction<ComponentMetadataSupplierDetails?>? {
+        return delegate.getComponentMetadataSupplier()
     }
 
-    @Override
-    public Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() {
-        return delegate.getArtifactCache();
+    override fun isContinueOnConnectionFailure(): Boolean {
+        return delegate.isContinueOnConnectionFailure()
     }
 
-    @Nullable
-    @Override
-    public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
-        return delegate.getComponentMetadataSupplier();
+    override fun isRepositoryDisabled(): Boolean {
+        return delegate.isRepositoryDisabled()
     }
 
-    @Override
-    public boolean isContinueOnConnectionFailure() {
-        return delegate.isContinueOnConnectionFailure();
-    }
-
-    @Override
-    public boolean isRepositoryDisabled() {
-        return delegate.isRepositoryDisabled();
-    }
-
-    private class FilteringAccess implements ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> {
-        private final ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> delegate;
-
-        private FilteringAccess(ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> delegate) {
-            this.delegate = delegate;
+    private inner class FilteringAccess(private val delegate: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>) :
+        ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        override fun listModuleVersions(selector: ModuleComponentSelector, overrideMetadata: ComponentOverrideMetadata?, result: BuildableModuleVersionListingResolveResult) {
+            val identifier = selector.getModuleIdentifier()
+            whenModulePresent(
+                identifier, null,
+                Runnable { delegate.listModuleVersions(selector, overrideMetadata, result) },
+                Runnable { result.listed(mutableListOf<String?>()) })
         }
 
-        @Override
-        public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-            ModuleIdentifier identifier = selector.getModuleIdentifier();
-            whenModulePresent(identifier, null,
-                    () -> delegate.listModuleVersions(selector, overrideMetadata, result),
-                    () -> result.listed(Collections.emptyList()));
+        override fun resolveComponentMetaData(
+            moduleComponentIdentifier: ModuleComponentIdentifier,
+            requestMetaData: ComponentOverrideMetadata?,
+            result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>
+        ) {
+            whenModulePresent(
+                moduleComponentIdentifier.getModuleIdentifier(), moduleComponentIdentifier,
+                Runnable { delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result) },
+                Runnable { result.missing() })
         }
 
-        @Override
-        public void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-            whenModulePresent(moduleComponentIdentifier.getModuleIdentifier(), moduleComponentIdentifier,
-                    () -> delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result),
-                result::missing);
+        override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata?, artifactType: ArtifactType?, result: BuildableArtifactSetResolveResult?) {
+            delegate.resolveArtifactsWithType(component, artifactType, result)
         }
 
-        @Override
-        public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-            delegate.resolveArtifactsWithType(component, artifactType, result);
+        override fun resolveArtifact(artifact: ComponentArtifactMetadata?, moduleSources: ModuleSources?, result: BuildableArtifactFileResolveResult?) {
+            delegate.resolveArtifact(artifact, moduleSources, result)
         }
 
-        @Override
-        public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
-            delegate.resolveArtifact(artifact, moduleSources, result);
+        override fun estimateMetadataFetchingCost(moduleComponentIdentifier: ModuleComponentIdentifier): MetadataFetchingCost {
+            return
+            MetadataFetchingCost > whenModulePresent<MetadataFetchingCost?>(
+                moduleComponentIdentifier.getModuleIdentifier(), moduleComponentIdentifier,
+                org.gradle.internal.Factory { delegate.estimateMetadataFetchingCost(moduleComponentIdentifier) },
+                org.gradle.internal.Factory { MetadataFetchingCost.CHEAP })
         }
 
-        @Override
-        public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
-            return whenModulePresent(moduleComponentIdentifier.getModuleIdentifier(), moduleComponentIdentifier,
-                    () -> delegate.estimateMetadataFetchingCost(moduleComponentIdentifier),
-                    () -> MetadataFetchingCost.CHEAP);
-        }
-
-        private void whenModulePresent(ModuleIdentifier id, @Nullable ModuleComponentIdentifier moduleComponentIdentifier, Runnable present, Runnable absent) {
-            DefaultArtifactResolutionDetails details = new DefaultArtifactResolutionDetails(id, moduleComponentIdentifier);
-            filterAction.execute(details);
+        fun whenModulePresent(id: ModuleIdentifier, moduleComponentIdentifier: ModuleComponentIdentifier?, present: Runnable, absent: Runnable) {
+            val details = DefaultArtifactResolutionDetails(id, moduleComponentIdentifier)
+            filterAction.execute(details)
             if (details.notFound) {
-                absent.run();
+                absent.run()
             } else {
-                present.run();
+                present.run()
             }
         }
 
-        private <T> T whenModulePresent(ModuleIdentifier id, ModuleComponentIdentifier moduleComponentIdentifier, Factory<T> present, Factory<T> absent) {
-            DefaultArtifactResolutionDetails details = new DefaultArtifactResolutionDetails(id, moduleComponentIdentifier);
-            filterAction.execute(details);
+        fun <T> whenModulePresent(id: ModuleIdentifier, moduleComponentIdentifier: ModuleComponentIdentifier?, present: Factory<T?>, absent: Factory<T?>): T? {
+            val details = DefaultArtifactResolutionDetails(id, moduleComponentIdentifier)
+            filterAction.execute(details)
             if (details.notFound) {
-                return absent.create();
+                return absent.create()
             }
-            return present.create();
+            return present.create()
         }
     }
 
-    private static class DefaultArtifactResolutionDetails implements ArtifactResolutionDetails {
-        private final ModuleIdentifier moduleIdentifier;
-        private final ModuleComponentIdentifier moduleComponentIdentifier;
-        private boolean notFound;
+    private class DefaultArtifactResolutionDetails(val moduleId: ModuleIdentifier, val componentId: ModuleComponentIdentifier?) : ArtifactResolutionDetails {
+        private var notFound = false
 
-        private DefaultArtifactResolutionDetails(ModuleIdentifier moduleIdentifier, @Nullable ModuleComponentIdentifier componentId) {
-            this.moduleIdentifier = moduleIdentifier;
-            this.moduleComponentIdentifier = componentId;
-        }
+        val isVersionListing: Boolean
+            get() = this.componentId == null
 
-        @Override
-        public ModuleIdentifier getModuleId() {
-            return moduleIdentifier;
-        }
-
-        @Override
-        @Nullable
-        public ModuleComponentIdentifier getComponentId() {
-            return moduleComponentIdentifier;
-        }
-
-        @Override
-        public boolean isVersionListing() {
-            return moduleComponentIdentifier == null;
-        }
-
-        @Override
-        public void notFound() {
-            notFound = true;
+        override fun notFound() {
+            notFound = true
         }
     }
 }

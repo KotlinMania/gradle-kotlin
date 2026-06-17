@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.jspecify.annotations.NullMarked
 
 /**
  * Represents an attempt to simplify two exclude specs into a single exclude spec.
@@ -27,20 +25,20 @@ import org.jspecify.annotations.Nullable;
  * @param <R> the type of the second (right) exclude spec
  *
  * @implSpec Remember that the order of the exclude specs must not be significant.
- */
+</R></L> */
 @NullMarked
-public interface Intersection<L extends ExcludeSpec, R extends ExcludeSpec> {
+interface Intersection<L : ExcludeSpec?, R : ExcludeSpec?> {
     /**
      * Tests if this intersection applies to 2 given exclude specs (in any order).
      *
      * An intersection should apply if the given exclude specs are of the expected generic types on this interface,
-     * in either order: that is, if {@code left instanceof L && right instanceof R} or {@code left instanceof R && right instanceof L}.
+     * in either order: that is, if `left instanceof L && right instanceof R` or `left instanceof R && right instanceof L`.
      *
      * @param left an exclude spec
      * @param right another exclude spec
-     * @return {@code true} if this intersection applies to the given exclude specs (in any order); {@code false} otherwise
+     * @return `true` if this intersection applies to the given exclude specs (in any order); `false` otherwise
      */
-    boolean applies(ExcludeSpec left, ExcludeSpec right);
+    fun applies(left: ExcludeSpec, right: ExcludeSpec): Boolean
 
     /**
      * Simplifies 2 given exclude specs (an any order) into a single exclude spec.
@@ -48,8 +46,7 @@ public interface Intersection<L extends ExcludeSpec, R extends ExcludeSpec> {
      * @param left an exclude spec
      * @param right another exclude spec
      * @param factory the factory that can be used to create a new exclude spec
-     * @return the simplified exclude spec, or {@code null} if the given exclude specs cannot be simplified
+     * @return the simplified exclude spec, or `null` if the given exclude specs cannot be simplified
      */
-    @Nullable
-    ExcludeSpec intersect(ExcludeSpec left, ExcludeSpec right, ExcludeFactory factory);
+    fun intersect(left: ExcludeSpec, right: ExcludeSpec, factory: ExcludeFactory): ExcludeSpec?
 }

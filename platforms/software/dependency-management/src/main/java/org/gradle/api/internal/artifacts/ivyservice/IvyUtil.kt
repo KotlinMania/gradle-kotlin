@@ -13,46 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.apache.ivy.core.module.id.ModuleId;
-import org.apache.ivy.core.module.id.ModuleRevisionId;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.util.internal.GUtil;
+import org.apache.ivy.core.module.id.ModuleId
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.util.internal.GUtil
 
-import java.util.Map;
+object IvyUtil {
+    private val MODULE_ID_LOCK = Any() //see GRADLE-3027
 
-import static java.util.Collections.emptyMap;
-
-public class IvyUtil {
-
-    private static final Object MODULE_ID_LOCK = new Object(); //see GRADLE-3027
-
-    public static ModuleRevisionId createModuleRevisionId(String group, String name, String version) {
-        return createModuleRevisionId(emptyStringIfNull(group), name, null, emptyStringIfNull(version), emptyMap());
+    fun createModuleRevisionId(group: String?, name: String, version: String?): ModuleRevisionId? {
+        return createModuleRevisionId(emptyStringIfNull(group), name, null, emptyStringIfNull(version), mutableMapOf<String?, String?>())
     }
 
-    public static ModuleRevisionId createModuleRevisionId(ModuleComponentIdentifier id) {
-        return createModuleRevisionId(id.getGroup(), id.getModule(), id.getVersion());
+    fun createModuleRevisionId(id: ModuleComponentIdentifier): ModuleRevisionId? {
+        return createModuleRevisionId(id.getGroup(), id.getModule(), id.getVersion())
     }
 
-    private static String emptyStringIfNull(String value) {
-        return GUtil.elvis(value, "");
+    private fun emptyStringIfNull(value: String?): String? {
+        return GUtil.elvis<String?>(value, "")
     }
 
-    public static ModuleRevisionId createModuleRevisionId(String org, String name, String branch, String rev, Map<String, String> extraAttributes) {
-        return createModuleRevisionId(org, name, branch, rev, extraAttributes, true);
+    fun createModuleRevisionId(org: String?, name: String, branch: String?, rev: String?, extraAttributes: MutableMap<String?, String?>?): ModuleRevisionId? {
+        return org.gradle.api.internal.artifacts.ivyservice.IvyUtil.createModuleRevisionId(org, name, branch, rev, extraAttributes, true)
     }
 
-    public static ModuleRevisionId createModuleRevisionId(String org, String name, String branch, String revConstraint, Map<String, String> extraAttributes, boolean replaceNullBranchWithDefault) {
-        synchronized (MODULE_ID_LOCK) {
-            return ModuleRevisionId.newInstance(org, name, branch, revConstraint, extraAttributes, replaceNullBranchWithDefault);
+    fun createModuleRevisionId(
+        org: String?,
+        name: String,
+        branch: String?,
+        revConstraint: String?,
+        extraAttributes: MutableMap<String?, String?>?,
+        replaceNullBranchWithDefault: Boolean
+    ): ModuleRevisionId? {
+        synchronized(org.gradle.api.internal.artifacts.ivyservice.IvyUtil.MODULE_ID_LOCK) {
+            return org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(org, name, branch, revConstraint, extraAttributes, replaceNullBranchWithDefault)
         }
     }
 
-    public static ModuleId createModuleId(String org, String name) {
-        synchronized (MODULE_ID_LOCK) {
-            return ModuleId.newInstance(org, name);
+    fun createModuleId(org: String?, name: String): ModuleId? {
+        synchronized(org.gradle.api.internal.artifacts.ivyservice.IvyUtil.MODULE_ID_LOCK) {
+            return org.apache.ivy.core.module.id.ModuleId.newInstance(org, name)
         }
     }
 }

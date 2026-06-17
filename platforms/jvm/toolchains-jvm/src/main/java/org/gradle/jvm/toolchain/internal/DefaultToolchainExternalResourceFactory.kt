@@ -26,6 +26,6 @@ class DefaultToolchainExternalResourceFactory(private val repositoryTransportFac
     ExternalResourceFactory {
     override fun createExternalResource(source: URI, authentications: MutableCollection<Authentication>): ExternalResourceRepository {
         val redirectVerifier = httpRedirectVerifierFactory.createVerifier(source)
-        return repositoryTransportFactory.createTransport("https", "jdk toolchains", authentications, redirectVerifier).getRepository()
+        return repositoryTransportFactory.createTransport("https", "jdk toolchains", authentications, redirectVerifier).repository
     }
 }

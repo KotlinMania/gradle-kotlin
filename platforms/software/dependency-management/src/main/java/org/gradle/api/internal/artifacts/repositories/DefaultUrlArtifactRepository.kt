@@ -13,136 +13,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.repositories.UrlArtifactRepository
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.internal.deprecation.Documentation
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import org.gradle.internal.verifier.HttpRedirectVerifierFactory
+import java.net.URI
+import java.util.function.Consumer
+import java.util.function.Supplier
+import javax.inject.Inject
 
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.repositories.UrlArtifactRepository;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.internal.deprecation.Documentation;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.verifier.HttpRedirectVerifier;
-import org.gradle.internal.verifier.HttpRedirectVerifierFactory;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
+class DefaultUrlArtifactRepository internal constructor(
+    private val fileResolver: FileResolver,
+    private val repositoryType: String,
+    private val displayNameSupplier: Supplier<String>
+) {
+    private var url: Any? = null
+    private var resolvedUrl: URI? = null
+    var isAllowInsecureProtocol: Boolean = false
 
-import javax.inject.Inject;
-import java.net.URI;
-import java.util.function.Supplier;
-
-public class DefaultUrlArtifactRepository {
-
-    private @Nullable Object url;
-    private @Nullable URI resolvedUrl;
-    private boolean allowInsecureProtocol;
-    private final FileResolver fileResolver;
-    private final String repositoryType;
-    private final Supplier<String> displayNameSupplier;
-
-    DefaultUrlArtifactRepository(
-        FileResolver fileResolver,
-        final String repositoryType,
-        final Supplier<String> displayNameSupplier
-    ) {
-        this.fileResolver = fileResolver;
-        this.repositoryType = repositoryType;
-        this.displayNameSupplier = displayNameSupplier;
-    }
-
-    public URI getUrl() {
+    fun getUrl(): URI {
         if (url == null) {
-            return null;
+            return null
         }
 
         // We must always resolve the URL in case the backing Object is live/mutable
         // However, we always try to return the same URI instance if the backing object hasn't changed
-        URI latestUrl = fileResolver.resolveUri(url);
-        if (!latestUrl.equals(resolvedUrl)) {
-            resolvedUrl = latestUrl;
+        val latestUrl = fileResolver.resolveUri(url!!)
+        if (latestUrl != resolvedUrl) {
+            resolvedUrl = latestUrl
         }
 
-        return resolvedUrl;
+        return resolvedUrl!!
     }
 
-    public void setUrl(URI url) {
-        this.url = url;
+    fun setUrl(url: URI) {
+        this.url = url
     }
 
-    public void setUrl(Object url) {
-        this.url = url;
+    fun setUrl(url: Any) {
+        this.url = url
     }
 
-    public void setAllowInsecureProtocol(boolean allowInsecureProtocol) {
-        this.allowInsecureProtocol = allowInsecureProtocol;
-    }
-
-    public boolean isAllowInsecureProtocol() {
-        return allowInsecureProtocol;
-    }
-
-    @NonNull
-    public URI validateUrl() {
-        URI rootUri = getUrl();
+    fun validateUrl(): URI {
+        val rootUri = getUrl()
         if (rootUri == null) {
-            throw new InvalidUserDataException(String.format(
-                "You must specify a URL for a %s repository.",
-                repositoryType
-            ));
+            throw InvalidUserDataException(
+                String.format(
+                    "You must specify a URL for a %s repository.",
+                    repositoryType
+                )
+            )
         }
-        return rootUri;
+        return rootUri
     }
 
-    private void throwExceptionDueToInsecureProtocol() throws InvalidUserCodeException {
-        throw new InsecureProtocolException(
+    @Throws(InvalidUserCodeException::class)
+    private fun throwExceptionDueToInsecureProtocol() {
+        throw InsecureProtocolException(
             "Using insecure protocols with repositories, without explicit opt-in, is unsupported.",
             String.format("Switch %s repository '%s' to redirect to a secure protocol (like HTTPS) or allow insecure protocols.", repositoryType, displayNameSupplier.get()),
-            Documentation.dslReference(UrlArtifactRepository.class, "allowInsecureProtocol").getConsultDocumentationMessage()
-        );
+            Documentation.dslReference(UrlArtifactRepository::class.java, "allowInsecureProtocol").getConsultDocumentationMessage()
+        )
     }
 
-    private void throwExceptionDueToInsecureRedirect(@Nullable URI redirectFrom, URI redirectLocation) throws InvalidUserCodeException {
-        final String contextualAdvice;
+    @Throws(InvalidUserCodeException::class)
+    private fun throwExceptionDueToInsecureRedirect(redirectFrom: URI?, redirectLocation: URI) {
+        val contextualAdvice: String
         if (redirectFrom != null) {
             contextualAdvice = String.format(
                 " '%s' is redirecting to '%s'. ",
                 redirectFrom,
                 redirectLocation
-            );
+            )
         } else {
-            contextualAdvice = "";
+            contextualAdvice = ""
         }
-        throw new InsecureProtocolException(
+        throw InsecureProtocolException(
             "Redirecting from secure protocol to insecure protocol, without explicit opt-in, is unsupported." + contextualAdvice,
             String.format("Switch %s repository '%s' to redirect to a secure protocol (like HTTPS) or allow insecure protocols. ", repositoryType, displayNameSupplier.get()),
-            Documentation.dslReference(UrlArtifactRepository.class, "allowInsecureProtocol").getConsultDocumentationMessage()
-        );
+            Documentation.dslReference(UrlArtifactRepository::class.java, "allowInsecureProtocol").getConsultDocumentationMessage()
+        )
     }
 
-    HttpRedirectVerifier createRedirectVerifier() {
-        @Nullable
-        URI uri = getUrl();
+    fun createRedirectVerifier(): HttpRedirectVerifier {
+        val uri: URI? = getUrl()
         return HttpRedirectVerifierFactory
             .create(
                 uri,
-                allowInsecureProtocol,
-                this::throwExceptionDueToInsecureProtocol,
-                redirection -> throwExceptionDueToInsecureRedirect(uri, redirection)
-            );
+                this.isAllowInsecureProtocol,
+                Runnable { this.throwExceptionDueToInsecureProtocol() },
+                Consumer { redirection: URI? -> throwExceptionDueToInsecureRedirect(uri, redirection!!) }
+            )
     }
 
-    @ServiceScope(Scope.Project.class)
-    public static class Factory {
-        private final FileResolver fileResolver;
-
-        @Inject
-        public Factory(FileResolver fileResolver) {
-            this.fileResolver = fileResolver;
-        }
-
-        DefaultUrlArtifactRepository create(String repositoryType, Supplier<String> displayNameSupplier) {
-            return new DefaultUrlArtifactRepository(fileResolver, repositoryType, displayNameSupplier);
+    @ServiceScope(Scope.Project::class)
+    class Factory @Inject constructor(private val fileResolver: FileResolver) {
+        fun create(repositoryType: String, displayNameSupplier: Supplier<String>): DefaultUrlArtifactRepository {
+            return DefaultUrlArtifactRepository(fileResolver, repositoryType, displayNameSupplier)
         }
     }
 }

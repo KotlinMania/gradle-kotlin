@@ -13,30 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
-public interface ComponentMetadataProcessor {
-    ComponentMetadataProcessor NO_OP = new ComponentMetadataProcessor() {
-        @Override
-        public ModuleComponentResolveMetadata processMetadata(ModuleComponentResolveMetadata metadata) {
-            return metadata;
-        }
-
-        @Override
-        public ComponentMetadata processMetadata(ComponentMetadata metadata) {
-            return metadata;
-        }
-
-        @Override
-        public int getRulesHash() {
-            return 0;
-        };
-    };
-
-    ModuleComponentResolveMetadata processMetadata(ModuleComponentResolveMetadata metadata);
+interface ComponentMetadataProcessor {
+    fun processMetadata(metadata: ModuleComponentResolveMetadata?): ModuleComponentResolveMetadata?
 
     /**
      * Processes "shallow" metadata, only for selecting a version. This metadata is typically
@@ -44,7 +27,23 @@ public interface ComponentMetadataProcessor {
      * @param metadata the metadata to be processed
      * @return updated metadata, if any component metadata rule applies.
      */
-    ComponentMetadata processMetadata(ComponentMetadata metadata);
+    fun processMetadata(metadata: ComponentMetadata?): ComponentMetadata?
 
-    int getRulesHash();
+    val rulesHash: Int
+
+    companion object {
+        val NO_OP: ComponentMetadataProcessor = object : ComponentMetadataProcessor {
+            override fun processMetadata(metadata: ModuleComponentResolveMetadata?): ModuleComponentResolveMetadata? {
+                return metadata
+            }
+
+            override fun processMetadata(metadata: ComponentMetadata?): ComponentMetadata? {
+                return metadata
+            }
+
+            override fun getRulesHash(): Int {
+                return 0
+            }
+        }
+    }
 }

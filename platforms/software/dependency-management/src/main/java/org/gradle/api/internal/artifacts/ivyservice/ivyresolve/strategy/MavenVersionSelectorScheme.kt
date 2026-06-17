@@ -13,67 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-public class MavenVersionSelectorScheme implements VersionSelectorScheme {
-
-    public static final String LATEST = "LATEST";
-    public static final String RELEASE = "RELEASE";
-    private static final String LATEST_INTEGRATION = "latest.integration";
-    private static final String LATEST_RELEASE = "latest.release";
-
-    public static boolean isSubstituableLatest(String version) {
-        if (version.equals(LATEST_INTEGRATION) || version.equals(LATEST_RELEASE)) {
-            return true;
-        }
-        if (!version.contains("latest")) {
-            throw new IllegalArgumentException("The provided version does not contain 'latest'");
-        }
-        return false;
-    }
-
-    private final VersionSelectorScheme defaultVersionSelectorScheme;
-
-    public MavenVersionSelectorScheme(VersionSelectorScheme defaultVersionSelectorScheme) {
-        this.defaultVersionSelectorScheme = defaultVersionSelectorScheme;
-    }
-
-    @Override
-    public VersionSelector parseSelector(String selectorString) {
-        if (selectorString.equals(RELEASE)) {
-            return new LatestVersionSelector(LATEST_RELEASE);
-        } else if (selectorString.equals(LATEST)) {
-            return new LatestVersionSelector(LATEST_INTEGRATION);
+class MavenVersionSelectorScheme(private val defaultVersionSelectorScheme: VersionSelectorScheme) : VersionSelectorScheme {
+    override fun parseSelector(selectorString: String): VersionSelector? {
+        if (selectorString == RELEASE) {
+            return LatestVersionSelector(LATEST_RELEASE)
+        } else if (selectorString == LATEST) {
+            return LatestVersionSelector(LATEST_INTEGRATION)
         } else {
-            return defaultVersionSelectorScheme.parseSelector(selectorString);
+            return defaultVersionSelectorScheme.parseSelector(selectorString)
         }
     }
 
-    @Override
-    public String renderSelector(VersionSelector selector) {
-        return toMavenSyntax(defaultVersionSelectorScheme.renderSelector(selector));
+    override fun renderSelector(selector: VersionSelector?): String {
+        return toMavenSyntax(defaultVersionSelectorScheme.renderSelector(selector))
     }
 
-    @Override
-    public VersionSelector complementForRejection(VersionSelector selector) {
-        return defaultVersionSelectorScheme.complementForRejection(selector);
+    override fun complementForRejection(selector: VersionSelector?): VersionSelector? {
+        return defaultVersionSelectorScheme.complementForRejection(selector)
     }
 
     // TODO: VersionSelector should be more descriptive, so it can be directly translated
-    private String toMavenSyntax(String version) {
-        if (version.equals(LATEST_INTEGRATION)) {
-            return LATEST;
+    private fun toMavenSyntax(version: String): String {
+        var version = version
+        if (version == LATEST_INTEGRATION) {
+            return LATEST
         }
-        if (version.equals(LATEST_RELEASE)) {
-            return RELEASE;
+        if (version == LATEST_RELEASE) {
+            return RELEASE
         }
         if (version.startsWith("]")) {
-            version = '(' + version.substring(1);
+            version = '('.toString() + version.substring(1)
         }
         if (version.endsWith("[")) {
-            version = version.substring(0, version.length() - 1) + ')';
+            version = version.substring(0, version.length - 1) + ')'
         }
-        return version;
+        return version
+    }
+
+    companion object {
+        const val LATEST: String = "LATEST"
+        const val RELEASE: String = "RELEASE"
+        private const val LATEST_INTEGRATION = "latest.integration"
+        private const val LATEST_RELEASE = "latest.release"
+
+        @JvmStatic
+        fun isSubstituableLatest(version: String): Boolean {
+            if (version == LATEST_INTEGRATION || version == LATEST_RELEASE) {
+                return true
+            }
+            require(version.contains("latest")) { "The provided version does not contain 'latest'" }
+            return false
+        }
     }
 }

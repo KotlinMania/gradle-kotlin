@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
 /**
  * Represents an artifact that failed to resolve, for instance, no variant matched the requested attributes or
  * multiple variants matched the selected artifacts.
  */
-public class BrokenResolvedArtifactSet extends AbstractFailedResolvedArtifactSet {
-
-    public BrokenResolvedArtifactSet(Throwable failure) {
-        super(failure);
-    }
-}
+class BrokenResolvedArtifactSet(failure: Throwable?) : AbstractFailedResolvedArtifactSet(failure)

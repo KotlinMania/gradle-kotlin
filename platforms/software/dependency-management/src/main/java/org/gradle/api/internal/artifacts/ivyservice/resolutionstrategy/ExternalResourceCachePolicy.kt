@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-public interface ExternalResourceCachePolicy {
-    boolean mustRefreshExternalResource(long ageMillis);
+interface ExternalResourceCachePolicy {
+    fun mustRefreshExternalResource(ageMillis: Long): Boolean
 }

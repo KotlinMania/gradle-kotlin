@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.mvnsettings;
+package org.gradle.api.internal.artifacts.mvnsettings
 
-import org.apache.maven.settings.Settings;
-import org.apache.maven.settings.building.SettingsBuildingException;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.apache.maven.settings.Settings
+import org.apache.maven.settings.building.SettingsBuildingException
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Build.class)
-public interface MavenSettingsProvider {
-    Settings buildSettings() throws SettingsBuildingException;
-    String getLocalRepository();
+@ServiceScope(Scope.Build::class)
+interface MavenSettingsProvider {
+    @Throws(SettingsBuildingException::class)
+    fun buildSettings(): Settings?
+    val localRepository: String?
 }

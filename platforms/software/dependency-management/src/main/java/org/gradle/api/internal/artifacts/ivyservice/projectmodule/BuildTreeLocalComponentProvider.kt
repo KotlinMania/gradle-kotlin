@@ -13,32 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.Path;
-
-import javax.annotation.concurrent.ThreadSafe;
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.Path
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A provider of dependency resolution state for local components produced by any build in the build tree.
- * <p>
- * In general, you should be using {@link LocalComponentRegistry} instead of this type, as it
+ *
+ *
+ * In general, you should be using [LocalComponentRegistry] instead of this type, as it
  * triggers additional side effects that this provider does not.
  */
-@ServiceScope(Scope.BuildTree.class)
+@ServiceScope(Scope.BuildTree::class)
 @ThreadSafe
-public interface BuildTreeLocalComponentProvider {
-
+interface BuildTreeLocalComponentProvider {
     /**
      * Get the local component for the target project.
      *
      * @param targetProjectId the project to get the local component for
      * @param sourceBuild the build that is requesting the local component
      */
-    LocalComponentGraphResolveState getComponent(ProjectIdentity targetProjectId, Path sourceBuild);
-
+    fun getComponent(targetProjectId: ProjectIdentity, sourceBuild: Path): LocalComponentGraphResolveState?
 }

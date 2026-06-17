@@ -13,39 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
 
-class ModuleMetadataCacheEntry {
-    static final byte TYPE_MISSING = 0;
-    static final byte TYPE_PRESENT = 1;
+internal open class ModuleMetadataCacheEntry(val type: Byte, val isChanging: Boolean, val createTimestamp: Long) {
+    val isMissing: Boolean
+        get() = type == TYPE_MISSING
 
-    final byte type;
-    final boolean isChanging;
-    final long createTimestamp;
-
-    ModuleMetadataCacheEntry(byte type, boolean isChanging, long createTimestamp) {
-        this.type = type;
-        this.isChanging = isChanging;
-        this.createTimestamp = createTimestamp;
+    fun configure(input: MutableModuleComponentResolveMetadata): ModuleComponentResolveMetadata? {
+        input.isChanging = isChanging
+        return input.asImmutable()
     }
 
-    public static ModuleMetadataCacheEntry forMissingModule(long createTimestamp) {
-        return new MissingModuleCacheEntry(createTimestamp);
-    }
+    companion object {
+        const val TYPE_MISSING: Byte = 0
+        const val TYPE_PRESENT: Byte = 1
 
-    public static ModuleMetadataCacheEntry forMetaData(ModuleComponentResolveMetadata metaData, long createTimestamp) {
-        return new ModuleMetadataCacheEntry(TYPE_PRESENT, metaData.isChanging, createTimestamp);
-    }
+        fun forMissingModule(createTimestamp: Long): ModuleMetadataCacheEntry {
+            return MissingModuleCacheEntry(createTimestamp)
+        }
 
-    public boolean isMissing() {
-        return type == TYPE_MISSING;
-    }
-
-    protected ModuleComponentResolveMetadata configure(MutableModuleComponentResolveMetadata input) {
-        input.setChanging(isChanging);
-        return input.asImmutable();
+        fun forMetaData(metaData: ModuleComponentResolveMetadata, createTimestamp: Long): ModuleMetadataCacheEntry {
+            return ModuleMetadataCacheEntry(TYPE_PRESENT, metaData.isChanging, createTimestamp)
+        }
     }
 }

@@ -13,160 +13,145 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.UrlBackedArtifactMetadata;
-import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.local.LocallyAvailableResourceCandidates;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor.DefaultResourceFileStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.UrlBackedArtifactMetadata
+import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import java.util.List;
-
-class DefaultExternalResourceArtifactResolver implements ExternalResourceArtifactResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultExternalResourceArtifactResolver.class);
-
-    private final ExternalResourceRepository repository;
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final List<ResourcePattern> ivyPatterns;
-    private final List<ResourcePattern> artifactPatterns;
-    private final FileStore<ModuleComponentArtifactIdentifier> fileStore;
-    private final CacheAwareExternalResourceAccessor resourceAccessor;
-
-    public DefaultExternalResourceArtifactResolver(ExternalResourceRepository repository, LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder, List<ResourcePattern> ivyPatterns, List<ResourcePattern> artifactPatterns, FileStore<ModuleComponentArtifactIdentifier> fileStore, CacheAwareExternalResourceAccessor resourceAccessor) {
-        this.repository = repository;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.ivyPatterns = ivyPatterns;
-        this.artifactPatterns = artifactPatterns;
-        this.fileStore = fileStore;
-        this.resourceAccessor = resourceAccessor;
-    }
-
-    @Override
-    public LocallyAvailableExternalResource resolveArtifact(ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        if (artifact instanceof ModuleDescriptorArtifactMetadata) {
-            return downloadStaticResource(ivyPatterns, artifact, result);
+internal class DefaultExternalResourceArtifactResolver(
+    private val repository: ExternalResourceRepository,
+    private val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    private val ivyPatterns: MutableList<ResourcePattern>,
+    private val artifactPatterns: MutableList<ResourcePattern>,
+    private val fileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    private val resourceAccessor: CacheAwareExternalResourceAccessor
+) : ExternalResourceArtifactResolver {
+    override fun resolveArtifact(artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): LocallyAvailableExternalResource {
+        if (artifact is ModuleDescriptorArtifactMetadata) {
+            return downloadStaticResource(ivyPatterns, artifact, result)
         }
-        return downloadStaticResource(artifactPatterns, artifact, result);
+        return downloadStaticResource(artifactPatterns, artifact, result)
     }
 
-    @Override
-    public boolean artifactExists(ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        return staticResourceExists(artifactPatterns, artifact, result);
+    override fun artifactExists(artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): Boolean {
+        return staticResourceExists(artifactPatterns, artifact, result)
     }
 
-    private boolean staticResourceExists(List<ResourcePattern> patternList, ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        for (ResourcePattern resourcePattern : patternList) {
+    private fun staticResourceExists(patternList: MutableList<ResourcePattern>, artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): Boolean {
+        for (resourcePattern in patternList) {
             if (isIncomplete(resourcePattern, artifact)) {
-                continue;
+                continue
             }
-            ExternalResourceName location = resourcePattern.getLocation(artifact);
-            result.attempted(location);
-            LOGGER.debug("Loading {}", location);
+            val location = resourcePattern.getLocation(artifact)
+            result.attempted(location)
+            LOGGER.debug("Loading {}", location)
             try {
                 if (repository.resource(location, true).getMetaData() != null) {
-                    return true;
+                    return true
                 }
-            } catch (Exception e) {
-                throw ResourceExceptions.getFailed(location.getUri(), e);
+            } catch (e: Exception) {
+                throw ResourceExceptions.getFailed(location.getUri(), e)
             }
         }
-        return false;
+        return false
     }
 
-    private LocallyAvailableExternalResource downloadStaticResource(List<ResourcePattern> patternList, final ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        if (artifact instanceof UrlBackedArtifactMetadata) {
-            UrlBackedArtifactMetadata urlArtifact = (UrlBackedArtifactMetadata) artifact;
-            return downloadByUrl(patternList, urlArtifact, result);
+    private fun downloadStaticResource(patternList: MutableList<ResourcePattern>, artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): LocallyAvailableExternalResource {
+        if (artifact is UrlBackedArtifactMetadata) {
+            val urlArtifact = artifact
+            return downloadByUrl(patternList, urlArtifact, result)
         } else {
-            return downloadByCoords(patternList, artifact, result);
+            return downloadByCoords(patternList, artifact, result)
         }
     }
 
-    private LocallyAvailableExternalResource downloadByUrl(List<ResourcePattern> patternList, final UrlBackedArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        for (ResourcePattern resourcePattern : patternList) {
+    private fun downloadByUrl(patternList: MutableList<ResourcePattern>, artifact: UrlBackedArtifactMetadata, result: ResourceAwareResolveResult): LocallyAvailableExternalResource {
+        for (resourcePattern in patternList) {
             if (isIncomplete(resourcePattern, artifact)) {
-                continue;
+                continue
             }
-            ExternalResourceName moduleDir = resourcePattern.toModuleVersionPath(normalizeComponentId(artifact));
-            ExternalResourceName location = moduleDir.resolve(normalizeRelativeUrl(artifact));
-            result.attempted(location);
-            LOGGER.debug("Loading {}", location);
-            LocallyAvailableResourceCandidates localCandidates = locallyAvailableResourceFinder.findCandidates(artifact);
+            val moduleDir = resourcePattern.toModuleVersionPath(normalizeComponentId(artifact))
+            val location = moduleDir.resolve(normalizeRelativeUrl(artifact))
+            result.attempted(location)
+            LOGGER.debug("Loading {}", location)
+            val localCandidates = locallyAvailableResourceFinder.findCandidates(artifact)
             try {
-                LocallyAvailableExternalResource resource = resourceAccessor.getResource(location, artifact.getId().fileName, getFileStore(artifact), localCandidates);
+                val resource = resourceAccessor.getResource(location, artifact.getId().fileName, getFileStore(artifact), localCandidates)
                 if (resource != null) {
-                    return resource;
+                    return resource
                 }
-            } catch (Exception e) {
-                throw ResourceExceptions.getFailed(location.getUri(), e);
+            } catch (e: Exception) {
+                throw ResourceExceptions.getFailed(location.getUri(), e)
             }
         }
-        return null;
+        return null
     }
 
-    private String normalizeRelativeUrl(UrlBackedArtifactMetadata artifact) {
-        ModuleComponentIdentifier componentId = artifact.getComponentId();
-        if (componentId instanceof MavenUniqueSnapshotComponentIdentifier) {
+    private fun normalizeRelativeUrl(artifact: UrlBackedArtifactMetadata): String {
+        val componentId = artifact.getComponentId()
+        if (componentId is MavenUniqueSnapshotComponentIdentifier) {
             // We need to replace the `-SNAPSHOT` in the relative URL but only for the version part
-            MavenUniqueSnapshotComponentIdentifier snapshotComponentId = (MavenUniqueSnapshotComponentIdentifier) componentId;
-            return artifact.getRelativeUrl().replace("-" + snapshotComponentId.getSnapshotVersion(), "-" + snapshotComponentId.getTimestampedVersion());
+            val snapshotComponentId = componentId
+            return artifact.relativeUrl.replace("-" + snapshotComponentId.getSnapshotVersion(), "-" + snapshotComponentId.getTimestampedVersion())
         }
-        return artifact.getRelativeUrl();
+        return artifact.relativeUrl
     }
 
-    private ModuleComponentIdentifier normalizeComponentId(UrlBackedArtifactMetadata artifact) {
-        ModuleComponentIdentifier rawId = artifact.getComponentId();
-        if (rawId instanceof MavenUniqueSnapshotComponentIdentifier) {
+    private fun normalizeComponentId(artifact: UrlBackedArtifactMetadata): ModuleComponentIdentifier {
+        val rawId = artifact.getComponentId()
+        if (rawId is MavenUniqueSnapshotComponentIdentifier) {
             // We cannot use a Maven unique snapshot id for the path part
-            return ((MavenUniqueSnapshotComponentIdentifier) rawId).getSnapshotComponent();
+            return rawId.getSnapshotComponent()
         }
-        return rawId;
+        return rawId
     }
 
-    private LocallyAvailableExternalResource downloadByCoords(List<ResourcePattern> patternList, final ModuleComponentArtifactMetadata artifact, ResourceAwareResolveResult result) {
-        for (ResourcePattern resourcePattern : patternList) {
+    private fun downloadByCoords(patternList: MutableList<ResourcePattern>, artifact: ModuleComponentArtifactMetadata, result: ResourceAwareResolveResult): LocallyAvailableExternalResource {
+        for (resourcePattern in patternList) {
             if (isIncomplete(resourcePattern, artifact)) {
-                continue;
+                continue
             }
-            ExternalResourceName location = resourcePattern.getLocation(artifact);
-            result.attempted(location);
-            LOGGER.debug("Loading {}", location);
-            LocallyAvailableResourceCandidates localCandidates = locallyAvailableResourceFinder.findCandidates(artifact);
+            val location = resourcePattern.getLocation(artifact)
+            result.attempted(location)
+            LOGGER.debug("Loading {}", location)
+            val localCandidates = locallyAvailableResourceFinder.findCandidates(artifact)
             try {
-                LocallyAvailableExternalResource resource = resourceAccessor.getResource(location, null, getFileStore(artifact), localCandidates);
+                val resource = resourceAccessor.getResource(location, null, getFileStore(artifact), localCandidates)
                 if (resource != null) {
-                    return resource;
+                    return resource
                 }
-            } catch (Exception e) {
-                throw ResourceExceptions.getFailed(location.getUri(), e);
+            } catch (e: Exception) {
+                throw ResourceExceptions.getFailed(location.getUri(), e)
             }
         }
-        return null;
+        return null
     }
 
-    private CacheAwareExternalResourceAccessor.ResourceFileStore getFileStore(final ModuleComponentArtifactMetadata artifact) {
-        return new DefaultResourceFileStore<ModuleComponentArtifactIdentifier>(fileStore) {
-            @Override
-            protected ModuleComponentArtifactIdentifier computeKey() {
-                return artifact.getId();
+    private fun getFileStore(artifact: ModuleComponentArtifactMetadata): CacheAwareExternalResourceAccessor.ResourceFileStore {
+        return object : CacheAwareExternalResourceAccessor.DefaultResourceFileStore<ModuleComponentArtifactIdentifier?>(fileStore) {
+            override fun computeKey(): ModuleComponentArtifactIdentifier {
+                return artifact.getId()!!
             }
-        };
+        }
     }
 
-    private boolean isIncomplete(ResourcePattern resourcePattern, ModuleComponentArtifactMetadata artifact) {
-        return !resourcePattern.isComplete(artifact);
+    private fun isIncomplete(resourcePattern: ResourcePattern, artifact: ModuleComponentArtifactMetadata): Boolean {
+        return !resourcePattern.isComplete(artifact)
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultExternalResourceArtifactResolver::class.java)
     }
 }

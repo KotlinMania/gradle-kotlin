@@ -13,68 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.capability
 
-package org.gradle.api.internal.artifacts.capability;
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.IOException
 
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.IOException;
-
-@ServiceScope(Scope.BuildTree.class)
-public class CapabilitySelectorSerializer implements Serializer<CapabilitySelector> {
-
-    private static final int SPECIFIC_CAPABILITY_SELECTOR = 1;
-    private static final int FEATURE_CAPABILITY_SELECTOR = 2;
-
-    @Override
-    public CapabilitySelector read(Decoder decoder) throws IOException {
-        int type = decoder.readSmallInt();
-        switch (type) {
-            case SPECIFIC_CAPABILITY_SELECTOR: return readSpecificCapabilitySelector(decoder);
-            case FEATURE_CAPABILITY_SELECTOR: return readFeatureCapabilitySelector(decoder);
-            default: throw new IllegalArgumentException("Unknown capability selector type: " + type);
+@ServiceScope(Scope.BuildTree::class)
+class CapabilitySelectorSerializer : Serializer<CapabilitySelector?> {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): CapabilitySelector {
+        val type = decoder.readSmallInt()
+        when (type) {
+            SPECIFIC_CAPABILITY_SELECTOR -> return readSpecificCapabilitySelector(decoder)
+            FEATURE_CAPABILITY_SELECTOR -> return readFeatureCapabilitySelector(decoder)
+            else -> throw IllegalArgumentException("Unknown capability selector type: " + type)
         }
     }
 
-    private static CapabilitySelector readSpecificCapabilitySelector(Decoder decoder) throws IOException {
-        String group = decoder.readString();
-        String name = decoder.readString();
-        String version = decoder.readNullableString();
-        return new DefaultSpecificCapabilitySelector(new DefaultImmutableCapability(group, name, version));
-    }
-
-    private static CapabilitySelector readFeatureCapabilitySelector(Decoder decoder) throws IOException {
-        String feature = decoder.readString();
-        return new DefaultFeatureCapabilitySelector(feature);
-    }
-
-    @Override
-    public void write(Encoder encoder, CapabilitySelector value) throws IOException {
-        if (value instanceof SpecificCapabilitySelector) {
-            encoder.writeSmallInt(SPECIFIC_CAPABILITY_SELECTOR);
-            writeSpecificCapabilitySelector(encoder, (DefaultSpecificCapabilitySelector) value);
-        } else if (value instanceof FeatureCapabilitySelector) {
-            encoder.writeSmallInt(FEATURE_CAPABILITY_SELECTOR);
-            writeFeatureCapabilitySelector(encoder, (FeatureCapabilitySelector) value);
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: CapabilitySelector) {
+        if (value is SpecificCapabilitySelector) {
+            encoder.writeSmallInt(SPECIFIC_CAPABILITY_SELECTOR)
+            writeSpecificCapabilitySelector(encoder, value as DefaultSpecificCapabilitySelector)
+        } else if (value is FeatureCapabilitySelector) {
+            encoder.writeSmallInt(FEATURE_CAPABILITY_SELECTOR)
+            writeFeatureCapabilitySelector(encoder, value)
         } else {
-            throw new IllegalArgumentException("Unknown capability selector type: " + value.getClass());
+            throw IllegalArgumentException("Unknown capability selector type: " + value.javaClass)
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private static void writeSpecificCapabilitySelector(Encoder encoder, DefaultSpecificCapabilitySelector value) throws IOException {
-        encoder.writeString(value.getGroup());
-        encoder.writeString(value.getName());
-        encoder.writeNullableString(value.getBackingCapability().getVersion());
-    }
+    companion object {
+        private const val SPECIFIC_CAPABILITY_SELECTOR = 1
+        private const val FEATURE_CAPABILITY_SELECTOR = 2
 
-    private static void writeFeatureCapabilitySelector(Encoder encoder, FeatureCapabilitySelector value) throws IOException {
-        encoder.writeString(value.getFeatureName());
+        @Throws(IOException::class)
+        private fun readSpecificCapabilitySelector(decoder: Decoder): CapabilitySelector {
+            val group = decoder.readString()
+            val name = decoder.readString()
+            val version = decoder.readNullableString()
+            return DefaultSpecificCapabilitySelector(DefaultImmutableCapability(group!!, name!!, version))
+        }
+
+        @Throws(IOException::class)
+        private fun readFeatureCapabilitySelector(decoder: Decoder): CapabilitySelector {
+            val feature = decoder.readString()
+            return DefaultFeatureCapabilitySelector(feature)
+        }
+
+        @Suppress("deprecation")
+        @Throws(IOException::class)
+        private fun writeSpecificCapabilitySelector(encoder: Encoder, value: DefaultSpecificCapabilitySelector) {
+            encoder.writeString(value.getGroup())
+            encoder.writeString(value.getName())
+            encoder.writeNullableString(value.getBackingCapability().getVersion())
+        }
+
+        @Throws(IOException::class)
+        private fun writeFeatureCapabilitySelector(encoder: Encoder, value: FeatureCapabilitySelector) {
+            encoder.writeString(value.getFeatureName())
+        }
     }
 }

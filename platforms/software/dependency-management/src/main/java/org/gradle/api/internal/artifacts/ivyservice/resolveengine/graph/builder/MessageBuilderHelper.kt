@@ -13,67 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-public final class MessageBuilderHelper {
-
-    private MessageBuilderHelper() { /* not instantiable */ }
-
-    public static List<String> formattedPathsTo(DependencyGraphEdge edge) {
-        return findPathsTo(edge).stream().map(path -> {
-            String header = Iterables.getLast(path).getDependencyMetadata().isConstraint ? "Constraint" : "Dependency";
-            String formattedPath = streamNodeNames(path)
-                .collect(Collectors.joining(" --> "));
-
-            return header + " path: " + formattedPath;
-        }).collect(Collectors.toList());
+object MessageBuilderHelper {
+    fun formattedPathsTo(edge: DependencyGraphEdge): MutableList<String> {
+        return findPathsTo(edge).stream().map<String> { path: MutableList<DependencyGraphEdge>? ->
+            val header = if (Iterables.getLast<DependencyGraphEdge>(path!!).getDependencyMetadata().isConstraint) "Constraint" else "Dependency"
+            val formattedPath = MessageBuilderHelper.streamNodeNames(path)
+                .collect(Collectors.joining(" --> "))
+            header + " path: " + formattedPath
+        }.collect(Collectors.toList())
     }
 
-    public static ImmutableList<ImmutableList<String>> findPathNamesTo(DependencyGraphEdge edge) {
+    fun findPathNamesTo(edge: DependencyGraphEdge): ImmutableList<ImmutableList<String>> {
         return findPathsTo(edge).stream()
-            .map(p -> streamNodeNames(p).collect(ImmutableList.toImmutableList()))
-            .collect(ImmutableList.toImmutableList());
+            .map<ImmutableList<String>> { p: MutableList<DependencyGraphEdge>? -> MessageBuilderHelper.streamNodeNames(p!!).collect(ImmutableList.toImmutableList<String>()) }
+            .collect(ImmutableList.toImmutableList<ImmutableList<String>>())
     }
 
-    public static List<List<DependencyGraphEdge>> findPathsTo(DependencyGraphEdge edge) {
-        List<List<DependencyGraphEdge>> acc = new ArrayList<>(1);
-        pathTo(edge, new ArrayList<>(), acc, new HashSet<>());
-        return acc;
+    fun findPathsTo(edge: DependencyGraphEdge): MutableList<MutableList<DependencyGraphEdge>> {
+        val acc: MutableList<MutableList<DependencyGraphEdge>> = ArrayList<MutableList<DependencyGraphEdge>>(1)
+        pathTo(edge, ArrayList<DependencyGraphEdge>(), acc, HashSet<DependencyGraphNode>())
+        return acc
     }
 
-    private static void pathTo(DependencyGraphEdge edge, List<DependencyGraphEdge> currentPath, List<List<DependencyGraphEdge>> accumulator, Set<DependencyGraphNode> alreadySeen) {
-        DependencyGraphNode from = edge.getFrom();
+    private fun pathTo(
+        edge: DependencyGraphEdge,
+        currentPath: MutableList<DependencyGraphEdge>,
+        accumulator: MutableList<MutableList<DependencyGraphEdge>>,
+        alreadySeen: MutableSet<DependencyGraphNode>
+    ) {
+        val from = edge.getFrom()
         if (alreadySeen.add(from)) {
-            currentPath.add(edge);
+            currentPath.add(edge)
 
-            Collection<? extends DependencyGraphEdge> incomingEdges = from.getIncomingEdges();
+            val incomingEdges = from.getIncomingEdges()
             if (!incomingEdges.isEmpty()) {
-                for (DependencyGraphEdge dependent : incomingEdges) {
-                    List<DependencyGraphEdge> otherPath = new ArrayList<>(currentPath);
-                    pathTo(dependent, otherPath, accumulator, alreadySeen);
+                for (dependent in incomingEdges) {
+                    val otherPath: MutableList<DependencyGraphEdge> = ArrayList<DependencyGraphEdge>(currentPath)
+                    pathTo(dependent, otherPath, accumulator, alreadySeen)
                 }
             } else {
                 // We've hit the root of the path
-                accumulator.add(Lists.reverse(currentPath));
+                accumulator.add(Lists.reverse<DependencyGraphEdge>(currentPath))
             }
         }
     }
 
-    private static Stream<String> streamNodeNames(List<DependencyGraphEdge> path) {
-        return path.stream().map(edge -> edge.getFrom().getDisplayName());
+    private fun streamNodeNames(path: MutableList<DependencyGraphEdge>): Stream<String> {
+        return path.stream().map<String> { edge: DependencyGraphEdge? -> edge!!.getFrom().getDisplayName() }
     }
 }

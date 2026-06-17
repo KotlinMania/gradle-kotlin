@@ -13,66 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-public class DefaultVersionSelectorScheme implements VersionSelectorScheme {
-    private final VersionComparator versionComparator;
-    private final VersionParser versionParser;
-
-    public DefaultVersionSelectorScheme(VersionComparator versionComparator, VersionParser versionParser) {
-        this.versionComparator = versionComparator;
-        this.versionParser = versionParser;
-    }
-
-    @Override
-    public VersionSelector parseSelector(String selectorString) {
-        if (VersionRangeSelector.ALL_RANGE.matcher(selectorString).matches()) {
-            return maybeCreateRangeSelector(selectorString);
+class DefaultVersionSelectorScheme(private val versionComparator: VersionComparator, private val versionParser: VersionParser?) : VersionSelectorScheme {
+    override fun parseSelector(selectorString: String): VersionSelector {
+        if (VersionRangeSelector.Companion.ALL_RANGE.matcher(selectorString).matches()) {
+            return maybeCreateRangeSelector(selectorString)
         }
 
         if (isSubVersion(selectorString)) {
-            return new SubVersionSelector(selectorString);
+            return SubVersionSelector(selectorString)
         }
 
         if (isLatestVersion(selectorString)) {
-            return new LatestVersionSelector(selectorString);
+            return LatestVersionSelector(selectorString)
         }
 
-        return new ExactVersionSelector(selectorString);
+        return ExactVersionSelector(selectorString)
     }
 
-    private VersionSelector maybeCreateRangeSelector(String selectorString) {
-        VersionRangeSelector rangeSelector = new VersionRangeSelector(selectorString, versionComparator.asVersionComparator(), versionParser);
+    private fun maybeCreateRangeSelector(selectorString: String?): VersionSelector {
+        val rangeSelector = VersionRangeSelector(selectorString, versionComparator.asVersionComparator(), versionParser)
         if (isSingleVersionRange(rangeSelector)) {
             // it's a single version range, like [1.0] or [1.0, 1.0]
-            return new ExactVersionSelector(rangeSelector.getUpperBound());
+            return ExactVersionSelector(rangeSelector.getUpperBound())
         }
-        return rangeSelector;
+        return rangeSelector
     }
 
-    private static boolean isSingleVersionRange(VersionRangeSelector rangeSelector) {
-        String lowerBound = rangeSelector.getLowerBound();
-        return lowerBound != null &&
-            lowerBound.equals(rangeSelector.getUpperBound()) &&
-            rangeSelector.isLowerInclusive() && rangeSelector.isUpperInclusive();
+    override fun renderSelector(selector: VersionSelector): String? {
+        return selector.getSelector()
     }
 
-    @Override
-    public String renderSelector(VersionSelector selector) {
-        return selector.getSelector();
+    override fun complementForRejection(selector: VersionSelector?): VersionSelector {
+        return InverseVersionSelector(selector)
     }
 
-    @Override
-    public VersionSelector complementForRejection(VersionSelector selector) {
-        return new InverseVersionSelector(selector);
-    }
+    companion object {
+        private fun isSingleVersionRange(rangeSelector: VersionRangeSelector): Boolean {
+            val lowerBound = rangeSelector.getLowerBound()
+            return lowerBound != null &&
+                    lowerBound == rangeSelector.getUpperBound() &&
+                    rangeSelector.isLowerInclusive() && rangeSelector.isUpperInclusive()
+        }
 
-    public static boolean isSubVersion(String selectorString) {
-        return selectorString.endsWith("+");
-    }
+        @JvmStatic
+        fun isSubVersion(selectorString: String): Boolean {
+            return selectorString.endsWith("+")
+        }
 
-    public static boolean isLatestVersion(String selectorString) {
-        return selectorString.startsWith("latest.");
+        @JvmStatic
+        fun isLatestVersion(selectorString: String): Boolean {
+            return selectorString.startsWith("latest.")
+        }
     }
 }

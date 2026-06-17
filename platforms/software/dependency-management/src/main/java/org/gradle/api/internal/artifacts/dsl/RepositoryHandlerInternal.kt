@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.dsl.RepositoryHandler
 
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-
-public interface RepositoryHandlerInternal extends RepositoryHandler {
-
-    boolean isExclusiveContentInUse();
+interface RepositoryHandlerInternal : RepositoryHandler {
+    val isExclusiveContentInUse: Boolean
 }

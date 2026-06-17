@@ -13,75 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.transport
 
-package org.gradle.api.internal.artifacts.repositories.transport;
+import org.apache.http.ConnectionClosedException
+import org.apache.http.HttpStatus
+import org.apache.http.NoHttpResponseException
+import org.gradle.internal.exceptions.DefaultMultiCauseException
+import org.gradle.internal.resource.transport.http.HttpErrorStatusCodeException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 
-import org.apache.http.ConnectionClosedException;
-import org.apache.http.HttpStatus;
-import org.apache.http.NoHttpResponseException;
-import org.gradle.internal.exceptions.DefaultMultiCauseException;
-import org.gradle.internal.resource.transport.http.HttpErrorStatusCodeException;
-
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.util.List;
-
-public class NetworkingIssueVerifier {
-
+object NetworkingIssueVerifier {
     // Too many requests (not available through HttpStatus.XXX)
-    private static final int SC_TOO_MANY_REQUESTS = 429;
+    private const val SC_TOO_MANY_REQUESTS = 429
 
     /**
      * Determines if an error should cause a retry. We will currently retry:
-     * <ul>
-     * <li>on a network timeout</li>
-     * <li>on a server error (return code 5xx)</li>
-     * <li>on rate limiting</li>
-     * </ul>
+     *
+     *  * on a network timeout
+     *  * on a server error (return code 5xx)
+     *  * on rate limiting
+     *
      */
-    public static <E extends Throwable> boolean isLikelyTransientNetworkingIssue(E failure) {
-        if (failure instanceof SocketException || failure instanceof SocketTimeoutException || failure instanceof NoHttpResponseException || failure instanceof ConnectionClosedException) {
-            return true;
+    fun <E : Throwable?> isLikelyTransientNetworkingIssue(failure: E?): Boolean {
+        if (failure is SocketException || failure is SocketTimeoutException || failure is NoHttpResponseException || failure is ConnectionClosedException) {
+            return true
         }
-        if (failure instanceof DefaultMultiCauseException) {
-            List<? extends Throwable> causes = ((DefaultMultiCauseException) failure).getCauses();
-            for (Throwable cause : causes) {
-                if (isLikelyTransientNetworkingIssue(cause)) {
-                    return true;
+        if (failure is DefaultMultiCauseException) {
+            val causes: MutableList<out Throwable?> = (failure as DefaultMultiCauseException).getCauses()
+            for (cause in causes) {
+                if (isLikelyTransientNetworkingIssue<Throwable?>(cause)) {
+                    return true
                 }
             }
         }
-        if (failure instanceof HttpErrorStatusCodeException) {
-            HttpErrorStatusCodeException httpError = (HttpErrorStatusCodeException) failure;
-            return httpError.isServerError() || isTransientClientError(httpError.getStatusCode());
+        if (failure is HttpErrorStatusCodeException) {
+            val httpError = failure as HttpErrorStatusCodeException
+            return httpError.isServerError() || isTransientClientError(httpError.getStatusCode())
         }
-        Throwable cause = failure.getCause();
-        if (cause != null && cause != failure) {
-            return isLikelyTransientNetworkingIssue(cause);
+        val cause = failure!!.cause
+        if (cause != null && cause !== failure) {
+            return isLikelyTransientNetworkingIssue<Throwable?>(cause)
         }
-        return false;
+        return false
     }
 
-    private static boolean isTransientClientError(int statusCode) {
-        return statusCode == HttpStatus.SC_REQUEST_TIMEOUT || statusCode == SC_TOO_MANY_REQUESTS;
+    private fun isTransientClientError(statusCode: Int): Boolean {
+        return statusCode == HttpStatus.SC_REQUEST_TIMEOUT || statusCode == SC_TOO_MANY_REQUESTS
     }
 
-    public static <E extends Throwable> boolean isLikelyPermanentNetworkIssue(E failure) {
-        if (failure instanceof HttpErrorStatusCodeException) {
-            return isClientAuthenticationError(((HttpErrorStatusCodeException) failure).getStatusCode());
+    fun <E : Throwable?> isLikelyPermanentNetworkIssue(failure: E?): Boolean {
+        if (failure is HttpErrorStatusCodeException) {
+            return isClientAuthenticationError((failure as HttpErrorStatusCodeException).getStatusCode())
         }
-        if (failure instanceof DefaultMultiCauseException) {
-            List<? extends Throwable> causes = ((DefaultMultiCauseException) failure).getCauses();
-            for (Throwable cause : causes) {
-                if (isLikelyPermanentNetworkIssue(cause)) {
-                    return true;
+        if (failure is DefaultMultiCauseException) {
+            val causes: MutableList<out Throwable?> = (failure as DefaultMultiCauseException).getCauses()
+            for (cause in causes) {
+                if (isLikelyPermanentNetworkIssue<Throwable?>(cause)) {
+                    return true
                 }
             }
         }
-        return false;
+        return false
     }
 
-    private static boolean isClientAuthenticationError(int statusCode) {
-        return statusCode == HttpStatus.SC_UNAUTHORIZED || statusCode == HttpStatus.SC_FORBIDDEN;
+    private fun isClientAuthenticationError(statusCode: Int): Boolean {
+        return statusCode == HttpStatus.SC_UNAUTHORIZED || statusCode == HttpStatus.SC_FORBIDDEN
     }
 }

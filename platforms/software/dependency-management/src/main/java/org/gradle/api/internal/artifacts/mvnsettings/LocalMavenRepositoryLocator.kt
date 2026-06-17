@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.mvnsettings;
+package org.gradle.api.internal.artifacts.mvnsettings
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import java.io.File;
-
-@ServiceScope(Scope.Build.class)
-public interface LocalMavenRepositoryLocator {
-    File getLocalMavenRepository();
+@ServiceScope(Scope.Build::class)
+interface LocalMavenRepositoryLocator {
+    @JvmField
+    val localMavenRepository: File?
 }

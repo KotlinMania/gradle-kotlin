@@ -13,39 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import com.google.common.collect.ImmutableList
 
-import com.google.common.collect.ImmutableList;
-
-public class CompositeArtifactSet implements ArtifactSet {
-
-    private final ImmutableList<ArtifactSet> artifactSets;
-
-    private CompositeArtifactSet(ImmutableList<ArtifactSet> artifactSets) {
-        this.artifactSets = artifactSets;
+class CompositeArtifactSet private constructor(private val artifactSets: ImmutableList<ArtifactSet>) : ArtifactSet {
+    override fun select(
+        consumerServices: ArtifactSelectionServices?,
+        spec: ArtifactSelectionSpec?
+    ): ResolvedArtifactSet? {
+        val builder = ImmutableList.builder<ResolvedArtifactSet?>()
+        for (artifactSet in artifactSets) {
+            builder.add(artifactSet.select(consumerServices, spec))
+        }
+        return CompositeResolvedArtifactSet.Companion.of(builder.build())
     }
 
-    public static ArtifactSet of(ImmutableList<ArtifactSet> sets) {
-        if (sets.isEmpty()) {
-            return EMPTY;
+    companion object {
+        fun of(sets: ImmutableList<ArtifactSet>): ArtifactSet {
+            if (sets.isEmpty()) {
+                return ArtifactSet.Companion.EMPTY
+            }
+            if (sets.size == 1) {
+                return sets.get(0)
+            }
+            return CompositeArtifactSet(sets)
         }
-        if (sets.size() == 1) {
-            return sets.get(0);
-        }
-        return new CompositeArtifactSet(sets);
     }
-
-    @Override
-    public ResolvedArtifactSet select(
-        ArtifactSelectionServices consumerServices,
-        ArtifactSelectionSpec spec
-    ) {
-        ImmutableList.Builder<ResolvedArtifactSet> builder = ImmutableList.builder();
-        for (ArtifactSet artifactSet : artifactSets) {
-            builder.add(artifactSet.select(consumerServices, spec));
-        }
-        return CompositeResolvedArtifactSet.of(builder.build());
-    }
-
 }

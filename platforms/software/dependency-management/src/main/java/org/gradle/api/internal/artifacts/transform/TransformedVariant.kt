@@ -13,55 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate
 
 /**
  * Represents a variant which is produced as the result of applying an artifact transform chain
  * to a root producer variant.
  */
-public class TransformedVariant implements AttributeMatchingCandidate {
-
-    private final ResolvedVariant root;
-    private final VariantDefinition chain;
-
-    public TransformedVariant(ResolvedVariant root, VariantDefinition chain) {
-        this.root = root;
-        this.chain = chain;
-    }
-
-    /**
-     * @return The transformed variant which results from applying the transform chain to the root variant.
-     */
-    public VariantDefinition getTransformedVariantDefinition() {
-        return chain;
-    }
-
-    /**
-     * @return The transform chain to apply to the root producer variant.
-     */
-    public TransformChain getTransformChain() {
-        return chain.getTransformChain();
-    }
-
+class TransformedVariant(
     /**
      * @return The root producer variant which the transform chain is applied to.
      */
-    public ResolvedVariant getRoot() {
-        return root;
-    }
+    val root: ResolvedVariant,
+    /**
+     * @return The transformed variant which results from applying the transform chain to the root variant.
+     */
+    val transformedVariantDefinition: VariantDefinition
+) : AttributeMatchingCandidate {
+    val transformChain: TransformChain
+        /**
+         * @return The transform chain to apply to the root producer variant.
+         */
+        get() = transformedVariantDefinition.getTransformChain()
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return chain.getTargetAttributes();
-    }
+    val attributes: ImmutableAttributes
+        get() = transformedVariantDefinition.getTargetAttributes()
 
-    @Override
-    public String toString() {
-        return root.asDescribable().getDisplayName() + " <- " + chain + " = " + getAttributes();
+    override fun toString(): String {
+        return root.asDescribable().getDisplayName() + " <- " + this.transformedVariantDefinition + " = " + attributes
     }
 }

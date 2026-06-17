@@ -13,180 +13,140 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository
+import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor
+import org.gradle.internal.operations.trace.CustomOperationTraceSerialization
+import org.gradle.util.internal.CollectionUtils.collect
+import java.io.File
+import java.net.URI
+import java.util.function.Function
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.internal.artifacts.configurations.ResolveConfigurationDependenciesBuildOperationType.Repository;
-import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository;
-import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor;
-import org.gradle.internal.operations.trace.CustomOperationTraceSerialization;
-import org.gradle.util.internal.CollectionUtils;
-import org.jspecify.annotations.Nullable;
+internal class ResolveConfigurationResolutionBuildOperationDetails(
+    private val configurationName: String,
+    private val isScriptConfiguration: Boolean,
+    private val configurationDescription: String?,
+    private val buildPath: String,
+    private val projectPath: String?,
+    private val isConfigurationVisible: Boolean,
+    private val isConfigurationTransitive: Boolean,
+    repositories: MutableList<ResolutionAwareRepository>
+) : ResolveConfigurationDependenciesBuildOperationType.Details, CustomOperationTraceSerialization {
+    private val repositories: MutableList<ResolveConfigurationDependenciesBuildOperationType.Repository>
 
-import java.io.File;
-import java.net.URI;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-class ResolveConfigurationResolutionBuildOperationDetails implements ResolveConfigurationDependenciesBuildOperationType.Details, CustomOperationTraceSerialization {
-
-    private final String configurationName;
-    private final boolean isScriptConfiguration;
-    private final String configurationDescription;
-    private final String buildPath;
-    private final String projectPath;
-    private final boolean isConfigurationVisible;
-    private final boolean isConfigurationTransitive;
-    private final List<Repository> repositories;
-
-    ResolveConfigurationResolutionBuildOperationDetails(
-        String configurationName,
-        boolean isScriptConfiguration,
-        @Nullable String configurationDescription,
-        String buildPath,
-        @Nullable String projectPath,
-        boolean isConfigurationVisible,
-        boolean isConfigurationTransitive,
-        List<ResolutionAwareRepository> repositories
-    ) {
-        this.configurationName = configurationName;
-        this.isScriptConfiguration = isScriptConfiguration;
-        this.configurationDescription = configurationDescription;
-        this.buildPath = buildPath;
-        this.projectPath = projectPath;
-        this.isConfigurationVisible = isConfigurationVisible;
-        this.isConfigurationTransitive = isConfigurationTransitive;
-        this.repositories = RepositoryImpl.transform(repositories);
+    init {
+        this.repositories = RepositoryImpl.Companion.transform(repositories)
     }
 
-    @Override
-    public String getConfigurationName() {
-        return configurationName;
+    override fun getConfigurationName(): String {
+        return configurationName
     }
 
-    @Nullable
-    @Override
-    public String getProjectPath() {
-        return projectPath;
+    override fun getProjectPath(): String? {
+        return projectPath
     }
 
-    @Override
-    public boolean isScriptConfiguration() {
-        return isScriptConfiguration;
+    override fun isScriptConfiguration(): Boolean {
+        return isScriptConfiguration
     }
 
-    @Override
-    public String getConfigurationDescription() {
-        return configurationDescription;
+    override fun getConfigurationDescription(): String {
+        return configurationDescription!!
     }
 
-    @Override
-    public String getBuildPath() {
-        return buildPath;
+    override fun getBuildPath(): String {
+        return buildPath
     }
 
-    @Override
-    public boolean isConfigurationVisible() {
-        return isConfigurationVisible;
+    override fun isConfigurationVisible(): Boolean {
+        return isConfigurationVisible
     }
 
-    @Override
-    public boolean isConfigurationTransitive() {
-        return isConfigurationTransitive;
+    override fun isConfigurationTransitive(): Boolean {
+        return isConfigurationTransitive
     }
 
-    @Override
-    public List<Repository> getRepositories() {
-        return repositories;
+    override fun getRepositories(): MutableList<ResolveConfigurationDependenciesBuildOperationType.Repository> {
+        return repositories
     }
 
-    @Override
-    public Object getCustomOperationTraceSerializableModel() {
-        Map<String, Object> model = new HashMap<>();
-        model.put("configurationName", configurationName);
-        model.put("scriptConfiguration", isScriptConfiguration);
-        model.put("configurationDescription", configurationDescription);
-        model.put("buildPath", buildPath);
-        model.put("projectPath", projectPath);
-        model.put("configurationVisible", isConfigurationVisible);
-        model.put("configurationTransitive", isConfigurationTransitive);
-        ImmutableList.Builder<Object> repoBuilder = new ImmutableList.Builder<>();
-        for (Repository repository : repositories) {
-            ImmutableMap.Builder<String, Object> repoMapBuilder = new ImmutableMap.Builder<>();
-            repoMapBuilder.put("id", repository.getId());
-            repoMapBuilder.put("name", repository.getName());
-            repoMapBuilder.put("type", repository.getType());
-            ImmutableMap.Builder<String, Object> propertiesMapBuilder = new ImmutableMap.Builder<>();
-            for (Map.Entry<String, ?> property : repository.getProperties().entrySet()) {
-                Object propertyValue;
-                if (property.getValue() instanceof Collection) {
-                    ImmutableList.Builder<Object> listBuilder = new ImmutableList.Builder<>();
-                    for (Object inner : (Collection<?>) property.getValue()) {
-                        doSerialize(inner, listBuilder);
+    override fun getCustomOperationTraceSerializableModel(): Any {
+        val model: MutableMap<String, Any> = HashMap<String, Any>()
+        model.put("configurationName", configurationName)
+        model.put("scriptConfiguration", isScriptConfiguration)
+        model.put("configurationDescription", configurationDescription!!)
+        model.put("buildPath", buildPath)
+        model.put("projectPath", projectPath!!)
+        model.put("configurationVisible", isConfigurationVisible)
+        model.put("configurationTransitive", isConfigurationTransitive)
+        val repoBuilder = ImmutableList.Builder<Any>()
+        for (repository in repositories) {
+            val repoMapBuilder = ImmutableMap.Builder<String, Any>()
+            repoMapBuilder.put("id", repository.getId())
+            repoMapBuilder.put("name", repository.getName())
+            repoMapBuilder.put("type", repository.getType())
+            val propertiesMapBuilder = ImmutableMap.Builder<String, Any>()
+            for (property in repository.getProperties().entries) {
+                val propertyValue: Any
+                if (property.value is MutableCollection<*>) {
+                    val listBuilder = ImmutableList.Builder<Any>()
+                    for (inner in property.value as MutableCollection<*>) {
+                        doSerialize(inner!!, listBuilder)
                     }
-                    propertyValue = listBuilder.build();
-                } else if (property.getValue() instanceof File) {
-                    propertyValue = ((File) property.getValue()).getAbsolutePath();
-                } else if (property.getValue() instanceof URI) {
-                    propertyValue = ((URI) property.getValue()).toASCIIString();
+                    propertyValue = listBuilder.build()
+                } else if (property.value is File) {
+                    propertyValue = (property.value as File).getAbsolutePath()
+                } else if (property.value is URI) {
+                    propertyValue = (property.value as URI).toASCIIString()
                 } else {
-                    propertyValue = property.getValue();
+                    propertyValue = property.value!!
                 }
 
-                propertiesMapBuilder.put(property.getKey(), propertyValue);
+                propertiesMapBuilder.put(property.key, propertyValue)
             }
-            repoMapBuilder.put("properties", propertiesMapBuilder.build());
-            repoBuilder.add(repoMapBuilder.build());
+            repoMapBuilder.put("properties", propertiesMapBuilder.build())
+            repoBuilder.add(repoMapBuilder.build())
         }
-        model.put("repositories", repoBuilder.build());
-        return model;
+        model.put("repositories", repoBuilder.build())
+        return model
     }
 
-    private void doSerialize(Object value, ImmutableList.Builder<Object> listBuilder) {
-        if (value instanceof File) {
-            listBuilder.add(((File) value).getAbsolutePath());
-        } else if (value instanceof URI) {
-            listBuilder.add(((URI) value).toASCIIString());
+    private fun doSerialize(value: Any, listBuilder: ImmutableList.Builder<Any>) {
+        if (value is File) {
+            listBuilder.add(value.getAbsolutePath())
+        } else if (value is URI) {
+            listBuilder.add(value.toASCIIString())
         } else {
-            listBuilder.add(value);
+            listBuilder.add(value)
         }
     }
 
-    private static class RepositoryImpl implements Repository {
-
-        private final RepositoryDescriptor descriptor;
-
-        private static List<Repository> transform(List<ResolutionAwareRepository> repositories) {
-            return CollectionUtils.collect(repositories, repository -> new RepositoryImpl(repository.getDescriptor()));
+    private class RepositoryImpl(private val descriptor: RepositoryDescriptor) : ResolveConfigurationDependenciesBuildOperationType.Repository {
+        override fun getId(): String {
+            return descriptor.name!!
         }
 
-        private RepositoryImpl(RepositoryDescriptor descriptor) {
-            this.descriptor = descriptor;
+        override fun getType(): String {
+            return descriptor.type.name()
         }
 
-        @Override
-        public String getId() {
-            return descriptor.getName();
+        override fun getName(): String {
+            return descriptor.name!!
         }
 
-        @Override
-        public String getType() {
-            return descriptor.getType().name();
+        override fun getProperties(): MutableMap<String, *> {
+            return descriptor.properties
         }
 
-        @Override
-        public String getName() {
-            return descriptor.getName();
-        }
-
-        @Override
-        public Map<String, ?> getProperties() {
-            return descriptor.getProperties();
+        companion object {
+            private fun transform(repositories: MutableList<ResolutionAwareRepository>): MutableList<ResolveConfigurationDependenciesBuildOperationType.Repository> {
+                return collect<ResolveConfigurationDependenciesBuildOperationType.Repository?, ResolutionAwareRepository?>(
+                    repositories,
+                    Function { repository: ResolutionAwareRepository? -> RepositoryImpl(repository!!.descriptor) })
+            }
         }
     }
-
 }

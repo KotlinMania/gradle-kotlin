@@ -13,29 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * A factory for {@link ComponentMetadataProcessor}.
- * <p>
- * In a build, {@link org.gradle.api.artifacts.ComponentMetadataRule component metadata rules} can be added to transform dependencies metadata.
- * These are registered with the {@link org.gradle.api.artifacts.dsl.ComponentMetadataHandler ComponentMetadataHandler} which does not have contextual information,
+ * A factory for [ComponentMetadataProcessor].
+ *
+ *
+ * In a build, [component metadata rules][org.gradle.api.artifacts.ComponentMetadataRule] can be added to transform dependencies metadata.
+ * These are registered with the [ComponentMetadataHandler][org.gradle.api.artifacts.dsl.ComponentMetadataHandler] which does not have contextual information,
  * such as the repository from which the dependency comes from.
- * <p>
- * The {@link MetadataResolutionContext} enables a {@link ComponentMetadataProcessor} to execute with the proper context.
+ *
+ *
+ * The [MetadataResolutionContext] enables a [ComponentMetadataProcessor] to execute with the proper context.
  */
-@ServiceScope(Scope.Project.class)
-public interface ComponentMetadataProcessorFactory {
-
+@ServiceScope(Scope.Project::class)
+interface ComponentMetadataProcessorFactory {
     /**
-     * Creates a contextual {@link ComponentMetadataProcessor}
+     * Creates a contextual [ComponentMetadataProcessor]
      *
      * @param resolutionContext the provided context
-     * @return a {@code ComponentMetadataProcessor}
+     * @return a `ComponentMetadataProcessor`
      */
-    ComponentMetadataProcessor createComponentMetadataProcessor(MetadataResolutionContext resolutionContext);
+    fun createComponentMetadataProcessor(resolutionContext: MetadataResolutionContext?): ComponentMetadataProcessor?
 }

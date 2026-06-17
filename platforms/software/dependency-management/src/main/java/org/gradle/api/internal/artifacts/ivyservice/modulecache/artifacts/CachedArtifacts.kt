@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
+interface CachedArtifacts {
+    @JvmField
+    val artifacts: MutableSet<ComponentArtifactMetadata?>?
 
-import java.util.Set;
+    @JvmField
+    val descriptorHash: HashCode?
 
-public interface CachedArtifacts {
-    Set<ComponentArtifactMetadata> getArtifacts();
-
-    HashCode getDescriptorHash();
-
-    long getAgeMillis();
+    @JvmField
+    val ageMillis: Long
 }

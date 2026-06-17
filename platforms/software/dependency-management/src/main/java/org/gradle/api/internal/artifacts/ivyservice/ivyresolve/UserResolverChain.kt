@@ -13,71 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.attributes.AttributeSchemaServices
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.model.CalculatedValueFactory
+import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor
+import org.gradle.internal.resolve.resolver.ArtifactResolver
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver
 
-import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory;
-import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionComparator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.attributes.AttributeSchemaServices;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.model.CalculatedValueFactory;
-import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor;
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
+class UserResolverChain(
+    versionComparator: VersionComparator,
+    val componentSelectionRules: ComponentSelectionRulesInternal,
+    versionParser: VersionParser,
+    consumerSchema: ImmutableAttributesSchema,
+    attributesFactory: AttributesFactory,
+    attributeSchemaServices: AttributeSchemaServices,
+    componentMetadataProcessor: ComponentMetadataProcessorFactory,
+    componentMetadataSupplierRuleExecutor: ComponentMetadataSupplierRuleExecutor,
+    calculatedValueFactory: CalculatedValueFactory,
+    cacheExpirationControl: CacheExpirationControl
+) : ComponentResolvers {
+    private val componentIdResolver: RepositoryChainDependencyToComponentIdResolver
+    private val componentResolver: RepositoryChainComponentMetaDataResolver
+    private val artifactResolver: RepositoryChainArtifactResolver
 
-public class UserResolverChain implements ComponentResolvers {
-    private final RepositoryChainDependencyToComponentIdResolver componentIdResolver;
-    private final RepositoryChainComponentMetaDataResolver componentResolver;
-    private final RepositoryChainArtifactResolver artifactResolver;
-    private final ComponentSelectionRulesInternal componentSelectionRules;
-
-    public UserResolverChain(
-        VersionComparator versionComparator,
-        ComponentSelectionRulesInternal componentSelectionRules,
-        VersionParser versionParser,
-        ImmutableAttributesSchema consumerSchema,
-        AttributesFactory attributesFactory,
-        AttributeSchemaServices attributeSchemaServices,
-        ComponentMetadataProcessorFactory componentMetadataProcessor,
-        ComponentMetadataSupplierRuleExecutor componentMetadataSupplierRuleExecutor,
-        CalculatedValueFactory calculatedValueFactory,
-        CacheExpirationControl cacheExpirationControl
-    ) {
-        this.componentSelectionRules = componentSelectionRules;
-        VersionedComponentChooser componentChooser = new DefaultVersionedComponentChooser(versionComparator, versionParser, attributeSchemaServices, componentSelectionRules, consumerSchema);
-        componentIdResolver = new RepositoryChainDependencyToComponentIdResolver(componentChooser, versionParser, attributesFactory, componentMetadataProcessor, componentMetadataSupplierRuleExecutor, cacheExpirationControl);
-        componentResolver = new RepositoryChainComponentMetaDataResolver(componentChooser, calculatedValueFactory);
-        artifactResolver = new RepositoryChainArtifactResolver(calculatedValueFactory);
+    init {
+        val componentChooser: VersionedComponentChooser = DefaultVersionedComponentChooser(
+            versionComparator, versionParser, attributeSchemaServices,
+            componentSelectionRules, consumerSchema
+        )
+        componentIdResolver = RepositoryChainDependencyToComponentIdResolver(
+            componentChooser,
+            versionParser,
+            attributesFactory,
+            componentMetadataProcessor,
+            componentMetadataSupplierRuleExecutor,
+            cacheExpirationControl
+        )
+        componentResolver = RepositoryChainComponentMetaDataResolver(componentChooser, calculatedValueFactory)
+        artifactResolver = RepositoryChainArtifactResolver(calculatedValueFactory)
     }
 
-    @Override
-    public DependencyToComponentIdResolver getComponentIdResolver() {
-        return componentIdResolver;
+    override fun getComponentIdResolver(): DependencyToComponentIdResolver {
+        return componentIdResolver
     }
 
-    @Override
-    public ComponentMetaDataResolver getComponentResolver() {
-        return componentResolver;
+    override fun getComponentResolver(): ComponentMetaDataResolver {
+        return componentResolver
     }
 
-    @Override
-    public ArtifactResolver getArtifactResolver() {
-        return artifactResolver;
+    override fun getArtifactResolver(): ArtifactResolver {
+        return artifactResolver
     }
 
-    public ComponentSelectionRulesInternal getComponentSelectionRules() {
-        return componentSelectionRules;
-    }
-
-    public void add(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository) {
-        componentIdResolver.add(repository);
-        componentResolver.add(repository);
-        artifactResolver.add(repository);
+    fun add(repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState>) {
+        componentIdResolver.add(repository)
+        componentResolver.add(repository)
+        artifactResolver.add(repository)
     }
 }

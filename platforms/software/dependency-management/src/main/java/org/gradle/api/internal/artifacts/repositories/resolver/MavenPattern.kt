@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
-
-public class MavenPattern {
-    public static final String M2_PER_MODULE_VERSION_PATTERN = "[artifact]-[revision](-[classifier])(.[ext])";
-    public static final String M2_PER_MODULE_PATTERN = "[revision]/" + M2_PER_MODULE_VERSION_PATTERN;
-    public static final String M2_PATTERN = "[organisation]/[module]/" + M2_PER_MODULE_PATTERN;
+object MavenPattern {
+    const val M2_PER_MODULE_VERSION_PATTERN: String = "[artifact]-[revision](-[classifier])(.[ext])"
+    val M2_PER_MODULE_PATTERN: String = "[revision]/" + M2_PER_MODULE_VERSION_PATTERN
+    val M2_PATTERN: String = "[organisation]/[module]/" + M2_PER_MODULE_PATTERN
 }

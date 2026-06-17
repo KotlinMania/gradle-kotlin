@@ -13,71 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import java.nio.file.Path;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.logging.text.TreeFormatter
+import java.nio.file.Path
 
 /**
- * A text report renderer, which is <i>not</i> cumulative and is used to report failures in
+ * A text report renderer, which is *not* cumulative and is used to report failures in
  * a concise way on the console.
  */
-class SimpleTextDependencyVerificationReportRenderer extends AbstractTextDependencyVerificationReportRenderer {
-    private final Set<String> artifacts = new LinkedHashSet<>();
+internal class SimpleTextDependencyVerificationReportRenderer(gradleUserHome: Path, documentationRegistry: DocumentationRegistry) :
+    AbstractTextDependencyVerificationReportRenderer(gradleUserHome, documentationRegistry) {
+    private val artifacts: MutableSet<String> = LinkedHashSet<String>()
 
-    private ModuleComponentArtifactIdentifier artifact;
+    private var artifact: ModuleComponentArtifactIdentifier? = null
 
-    public SimpleTextDependencyVerificationReportRenderer(Path gradleUserHome, DocumentationRegistry documentationRegistry) {
-        super(gradleUserHome, documentationRegistry);
+    override fun startNewSection(title: String) {
+        formatter = TreeFormatter()
+        formatter.node("Dependency verification failed for " + title)
     }
 
-    @Override
-    public void startNewSection(String title) {
-        formatter = new TreeFormatter();
-        formatter.node("Dependency verification failed for " + title);
+    override fun startArtifactErrors(action: Runnable) {
+        action.run()
     }
 
-    @Override
-    public void startArtifactErrors(Runnable action) {
-        action.run();
+    override fun startNewArtifact(key: ModuleComponentArtifactIdentifier, action: Runnable) {
+        artifact = key
+        action.run()
     }
 
-    @Override
-    public void startNewArtifact(ModuleComponentArtifactIdentifier key, Runnable action) {
-        artifact = key;
-        action.run();
+    override fun reportFailure(failure: RepositoryAwareVerificationFailure) {
+        artifacts.add(artifact!!.getDisplayName() + " from repository " + failure.repositoryName)
     }
 
-    @Override
-    public void reportFailure(RepositoryAwareVerificationFailure failure) {
-        artifacts.add(artifact.getDisplayName() + " from repository " + failure.getRepositoryName());
-    }
-
-    @Override
-    public void finish(VerificationHighLevelErrors highLevelErrors) {
-        int size = artifacts.size();
+    override fun finish(highLevelErrors: VerificationHighLevelErrors) {
+        val size = artifacts.size
         if (size == 1) {
-            formatter.node("One artifact failed verification: " + artifacts.iterator().next());
+            formatter.node("One artifact failed verification: " + artifacts.iterator().next())
         } else {
-            formatter.node(artifacts.size() + " artifacts failed verification");
-            formatter.startChildren();
-            for (String artifact : artifacts) {
-                formatter.node(artifact);
+            formatter.node(artifacts.size.toString() + " artifacts failed verification")
+            formatter.startChildren()
+            for (artifact in artifacts) {
+                formatter.node(artifact)
             }
-            formatter.endChildren();
+            formatter.endChildren()
         }
-        super.finish(highLevelErrors);
+        super.finish(highLevelErrors)
     }
 
-    @Override
-    public void reportAsMultipleErrors(Runnable action) {
-        action.run();
+    override fun reportAsMultipleErrors(action: Runnable) {
+        action.run()
     }
-
 }

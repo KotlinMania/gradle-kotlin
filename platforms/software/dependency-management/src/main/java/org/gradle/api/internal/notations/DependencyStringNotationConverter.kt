@@ -53,7 +53,7 @@ class DependencyStringNotationConverter<T>(private val instantiator: Instantiato
         val moduleDependency = instantiator.newInstance<T?>(wantedType, intern(parsedNotation.getGroup()), intern(parsedNotation.getName()), intern(version.require))
         maybeEnrichVersion(version, moduleDependency)
         if (moduleDependency is ExternalDependency) {
-            ModuleFactoryHelper.addExplicitArtifactsIfDefined(moduleDependency as ExternalDependency, parsedNotation.getArtifactType(), parsedNotation.getClassifier())
+            ModuleFactoryHelper.addExplicitArtifactsIfDefined(moduleDependency as ExternalDependency, parsedNotation.artifactType, parsedNotation.getClassifier())
         }
 
         return moduleDependency

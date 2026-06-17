@@ -13,64 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.Describable;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.GradleException;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.DependencyConstraintSet;
-import org.gradle.api.internal.DelegatingDomainObjectSet;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.MutationValidator;
-import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal;
+import org.gradle.api.Action
+import org.gradle.api.Describable
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.GradleException
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.DependencyConstraintSet
+import org.gradle.api.internal.DelegatingDomainObjectSet
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.MutationValidator
+import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal
 
-import java.util.Collection;
-
-public class DefaultDependencyConstraintSet extends DelegatingDomainObjectSet<DependencyConstraint> implements DependencyConstraintSet {
-    private final Describable displayName;
-    private final ConfigurationInternal clientConfiguration;
-
-    public DefaultDependencyConstraintSet(Describable displayName, ConfigurationInternal clientConfiguration, DomainObjectSet<DependencyConstraint> backingSet) {
-        super(backingSet);
-        this.displayName = displayName;
-        this.clientConfiguration = clientConfiguration;
+class DefaultDependencyConstraintSet(private val displayName: Describable, private val clientConfiguration: ConfigurationInternal, backingSet: DomainObjectSet<DependencyConstraint?>) :
+    DelegatingDomainObjectSet<DependencyConstraint?>(backingSet), DependencyConstraintSet {
+    override fun toString(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return displayName.getDisplayName();
-    }
-
-    @Override
-    public boolean add(final DependencyConstraint dependencyConstraint) {
-        assertConfigurationIsDeclarable();
-        clientConfiguration.maybeEmitDeclarationDeprecation();
-        if (dependencyConstraint instanceof DependencyConstraintInternal) {
-            ((DependencyConstraintInternal) dependencyConstraint).addMutationValidator(constraint ->
-                ((MutationValidator) clientConfiguration).validateMutation(MutationValidator.MutationType.DEPENDENCY_CONSTRAINT_ATTRIBUTES)
-            );
+    override fun add(dependencyConstraint: DependencyConstraint): Boolean {
+        assertConfigurationIsDeclarable()
+        clientConfiguration.maybeEmitDeclarationDeprecation()
+        if (dependencyConstraint is DependencyConstraintInternal) {
+            dependencyConstraint.addMutationValidator(Action { constraint: DependencyConstraint? -> (clientConfiguration as MutationValidator).validateMutation(MutationValidator.MutationType.DEPENDENCY_CONSTRAINT_ATTRIBUTES) }
+            )
         }
-        return addInternalDependencyConstraint(dependencyConstraint);
+        return addInternalDependencyConstraint(dependencyConstraint)
     }
 
     // For internal use only, allows adding a dependency constraint without issuing a deprecation warning
-    public boolean addInternalDependencyConstraint(DependencyConstraint dependencyConstraint) {
-        return super.add(dependencyConstraint);
+    fun addInternalDependencyConstraint(dependencyConstraint: DependencyConstraint): Boolean {
+        return super.add(dependencyConstraint)
     }
 
-    private void assertConfigurationIsDeclarable() {
+    private fun assertConfigurationIsDeclarable() {
         if (!clientConfiguration.isCanBeDeclared()) {
-            throw new GradleException("Dependency constraints can not be declared against the `" + clientConfiguration.getName() + "` configuration.");
+            throw GradleException("Dependency constraints can not be declared against the `" + clientConfiguration.getName() + "` configuration.")
         }
     }
 
-    @Override
-    public boolean addAll(Collection<? extends DependencyConstraint> dependencyConstraints) {
-        boolean added = false;
-        for (DependencyConstraint dependencyConstraint : dependencyConstraints) {
-            added |= add(dependencyConstraint);
+    override fun addAll(dependencyConstraints: MutableCollection<out DependencyConstraint>): Boolean {
+        var added = false
+        for (dependencyConstraint in dependencyConstraints) {
+            added = added or add(dependencyConstraint)
         }
-        return added;
+        return added
     }
 }

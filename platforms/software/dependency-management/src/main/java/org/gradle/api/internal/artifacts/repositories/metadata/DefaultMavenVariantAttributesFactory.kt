@@ -13,99 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.attributes.Bundling;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.DocsType;
-import org.gradle.api.attributes.LibraryElements;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot;
-
-import javax.inject.Inject;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.DocsType
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
 
 /**
- * Default implementation of {@link MavenVariantAttributesFactory}, which caches results per input attribute set.
+ * Default implementation of [MavenVariantAttributesFactory], which caches results per input attribute set.
  */
-public class DefaultMavenVariantAttributesFactory implements MavenVariantAttributesFactory {
+class DefaultMavenVariantAttributesFactory @Inject constructor(private val attributesFactory: AttributesFactory, private val objectInstantiator: NamedObjectInstantiator) :
+    MavenVariantAttributesFactory {
+    private val concatCache: MutableMap<MutableList<Any>, ImmutableAttributes> = ConcurrentHashMap<MutableList<Any>, ImmutableAttributes>()
 
-    private final AttributesFactory attributesFactory;
-    private final NamedObjectInstantiator objectInstantiator;
-    private final Map<List<Object>, ImmutableAttributes> concatCache = new ConcurrentHashMap<>();
-
-    @Inject
-    public DefaultMavenVariantAttributesFactory(AttributesFactory attributesFactory, NamedObjectInstantiator objectInstantiator) {
-        this.attributesFactory = attributesFactory;
-        this.objectInstantiator = objectInstantiator;
+    override fun compileScope(original: ImmutableAttributes): ImmutableAttributes {
+        val key: MutableList<Any> = ImmutableList.of<Any>(original, Usage.JAVA_API)
+        return concatCache.computeIfAbsent(key) { k: MutableList<Any?>? ->
+            var result: ImmutableAttributes? = original
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.USAGE_ATTRIBUTE, CoercingStringValueSnapshot(Usage.JAVA_API, objectInstantiator))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.FORMAT_ATTRIBUTE, CoercingStringValueSnapshot(LibraryElements.JAR, objectInstantiator))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(Category.LIBRARY, objectInstantiator))
+            result
+        }
     }
 
-    @Override
-    public ImmutableAttributes compileScope(ImmutableAttributes original) {
-        List<Object> key = ImmutableList.of(original, Usage.JAVA_API);
-        return concatCache.computeIfAbsent(key, k -> {
-            ImmutableAttributes result = original;
-            result = attributesFactory.concat(result, USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(Usage.JAVA_API, objectInstantiator));
-            result = attributesFactory.concat(result, FORMAT_ATTRIBUTE, new CoercingStringValueSnapshot(LibraryElements.JAR, objectInstantiator));
-            result = attributesFactory.concat(result, CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(Category.LIBRARY, objectInstantiator));
-            return result;
-        });
+    override fun runtimeScope(original: ImmutableAttributes): ImmutableAttributes {
+        val key: MutableList<Any> = ImmutableList.of<Any>(original, Usage.JAVA_RUNTIME)
+        return concatCache.computeIfAbsent(key) { k: MutableList<Any?>? ->
+            var result: ImmutableAttributes? = original
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.USAGE_ATTRIBUTE, CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.FORMAT_ATTRIBUTE, CoercingStringValueSnapshot(LibraryElements.JAR, objectInstantiator))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(Category.LIBRARY, objectInstantiator))
+            result
+        }
     }
 
-    @Override
-    public ImmutableAttributes runtimeScope(ImmutableAttributes original) {
-        List<Object> key = ImmutableList.of(original, Usage.JAVA_RUNTIME);
-        return concatCache.computeIfAbsent(key, k -> {
-            ImmutableAttributes result = original;
-            result = attributesFactory.concat(result, USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator));
-            result = attributesFactory.concat(result, FORMAT_ATTRIBUTE, new CoercingStringValueSnapshot(LibraryElements.JAR, objectInstantiator));
-            result = attributesFactory.concat(result, CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(Category.LIBRARY, objectInstantiator));
-            return result;
-        });
+    override fun platformWithUsage(original: ImmutableAttributes, usage: String, enforced: Boolean): ImmutableAttributes {
+        val componentType = if (enforced) Category.ENFORCED_PLATFORM else Category.REGULAR_PLATFORM
+        val key: MutableList<Any> = ImmutableList.of<Any>(original, componentType, usage)
+        return concatCache.computeIfAbsent(key) { k: MutableList<Any?>? ->
+            var result: ImmutableAttributes? = original
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.USAGE_ATTRIBUTE, CoercingStringValueSnapshot(usage, objectInstantiator))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(componentType, objectInstantiator))
+            result
+        }
     }
 
-    @Override
-    public ImmutableAttributes platformWithUsage(ImmutableAttributes original, String usage, boolean enforced) {
-        String componentType = enforced ? Category.ENFORCED_PLATFORM : Category.REGULAR_PLATFORM;
-        List<Object> key = ImmutableList.of(original, componentType, usage);
-        return concatCache.computeIfAbsent(key, k -> {
-            ImmutableAttributes result = original;
-            result = attributesFactory.concat(result, USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(usage, objectInstantiator));
-            result = attributesFactory.concat(result, CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(componentType, objectInstantiator));
-            return result;
-        });
+    override fun sourcesVariant(original: ImmutableAttributes): ImmutableAttributes {
+        val key: MutableList<Any> = ImmutableList.of<Any>(original, Category.DOCUMENTATION, Usage.JAVA_RUNTIME, DocsType.SOURCES)
+        return concatCache.computeIfAbsent(key) { k: MutableList<Any?>? ->
+            var result: ImmutableAttributes? = original
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(Category.DOCUMENTATION, objectInstantiator))
+            result = attributesFactory.concat<Bundling>(result, Bundling.BUNDLING_ATTRIBUTE, objectInstantiator.named<Bundling>(Bundling::class.java, Bundling.EXTERNAL))
+            result = attributesFactory.concat<DocsType>(result, DocsType.DOCS_TYPE_ATTRIBUTE, objectInstantiator.named<DocsType>(DocsType::class.java, DocsType.SOURCES))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.USAGE_ATTRIBUTE, CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator))
+            result
+        }
     }
 
-    @Override
-    public ImmutableAttributes sourcesVariant(ImmutableAttributes original) {
-        List<Object> key = ImmutableList.of(original, Category.DOCUMENTATION, Usage.JAVA_RUNTIME, DocsType.SOURCES);
-        return concatCache.computeIfAbsent(key, k -> {
-            ImmutableAttributes result = original;
-            result = attributesFactory.concat(result, CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(Category.DOCUMENTATION, objectInstantiator));
-            result = attributesFactory.concat(result, Bundling.BUNDLING_ATTRIBUTE, objectInstantiator.named(Bundling.class, Bundling.EXTERNAL));
-            result = attributesFactory.concat(result, DocsType.DOCS_TYPE_ATTRIBUTE, objectInstantiator.named(DocsType.class, DocsType.SOURCES));
-            result = attributesFactory.concat(result, USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator));
-            return result;
-        });
+    override fun javadocVariant(original: ImmutableAttributes): ImmutableAttributes {
+        val key: MutableList<Any> = ImmutableList.of<Any>(original, Category.DOCUMENTATION, Usage.JAVA_RUNTIME, DocsType.JAVADOC)
+        return concatCache.computeIfAbsent(key) { k: MutableList<Any?>? ->
+            var result: ImmutableAttributes? = original
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(Category.DOCUMENTATION, objectInstantiator))
+            result = attributesFactory.concat<Bundling>(result, Bundling.BUNDLING_ATTRIBUTE, objectInstantiator.named<Bundling>(Bundling::class.java, Bundling.EXTERNAL))
+            result = attributesFactory.concat<DocsType>(result, DocsType.DOCS_TYPE_ATTRIBUTE, objectInstantiator.named<DocsType>(DocsType::class.java, DocsType.JAVADOC))
+            result = attributesFactory.concat<String>(result, MavenVariantAttributesFactory.Companion.USAGE_ATTRIBUTE, CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator))
+            result
+        }
     }
-
-    @Override
-    public ImmutableAttributes javadocVariant(ImmutableAttributes original) {
-        List<Object> key = ImmutableList.of(original, Category.DOCUMENTATION, Usage.JAVA_RUNTIME, DocsType.JAVADOC);
-        return concatCache.computeIfAbsent(key, k -> {
-            ImmutableAttributes result = original;
-            result = attributesFactory.concat(result, CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(Category.DOCUMENTATION, objectInstantiator));
-            result = attributesFactory.concat(result, Bundling.BUNDLING_ATTRIBUTE, objectInstantiator.named(Bundling.class, Bundling.EXTERNAL));
-            result = attributesFactory.concat(result, DocsType.DOCS_TYPE_ATTRIBUTE, objectInstantiator.named(DocsType.class, DocsType.JAVADOC));
-            result = attributesFactory.concat(result, USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(Usage.JAVA_RUNTIME, objectInstantiator));
-            return result;
-        });
-    }
-
 }

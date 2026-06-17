@@ -13,110 +13,95 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ComponentMetadata;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ComponentMetadata
 
 /**
  * A version selector which is the union of other selectors. This is used by the
  * "rejects" clauses of version constraints, where each reject is turned into a
  * version selector, then the whole selector is the union of all of them.
  */
-public class UnionVersionSelector implements CompositeVersionSelector {
-    private final List<VersionSelector> selectors;
-
-    public static UnionVersionSelector of(List<String> selectors, VersionSelectorScheme scheme) {
-        ImmutableList.Builder<VersionSelector> builder = new ImmutableList.Builder<>();
-        for (String selector : selectors) {
-            builder.add(scheme.parseSelector(selector));
-        }
-        return new UnionVersionSelector(builder.build());
-    }
-
-    public UnionVersionSelector(List<VersionSelector> selectors) {
-        this.selectors = selectors;
-    }
-
-    @Override
-    public boolean isDynamic() {
-        for (VersionSelector selector : selectors) {
+class UnionVersionSelector(private val selectors: MutableList<VersionSelector>) : CompositeVersionSelector {
+    override fun isDynamic(): Boolean {
+        for (selector in selectors) {
             if (selector.isDynamic()) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @Override
-    public boolean requiresMetadata() {
-        for (VersionSelector selector : selectors) {
+    override fun requiresMetadata(): Boolean {
+        for (selector in selectors) {
             if (selector.requiresMetadata()) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @Override
-    public boolean matchesUniqueVersion() {
-        for (VersionSelector selector : selectors) {
+    override fun matchesUniqueVersion(): Boolean {
+        for (selector in selectors) {
             if (!selector.matchesUniqueVersion()) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
-    @Override
-    public boolean accept(String candidate) {
-        for (VersionSelector selector : selectors) {
+    override fun accept(candidate: String?): Boolean {
+        for (selector in selectors) {
             if (selector.accept(candidate)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @Override
-    public boolean accept(Version candidate) {
-        for (VersionSelector selector : selectors) {
+    override fun accept(candidate: Version?): Boolean {
+        for (selector in selectors) {
             if (selector.accept(candidate)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @Override
-    public boolean accept(ComponentMetadata candidate) {
-        for (VersionSelector selector : selectors) {
+    override fun accept(candidate: ComponentMetadata?): Boolean {
+        for (selector in selectors) {
             if (selector.accept(candidate)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    @Override
-    public boolean canShortCircuitWhenVersionAlreadyPreselected() {
-        for (VersionSelector selector : selectors) {
+    override fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean {
+        for (selector in selectors) {
             if (!selector.canShortCircuitWhenVersionAlreadyPreselected()) {
-                return false;
+                return false
             }
         }
-        return true;
+        return true
     }
 
-    @Override
-    public String getSelector() {
-        throw new UnsupportedOperationException("Union selectors should only be used internally and don't provide a public string representation");
+    override fun getSelector(): String? {
+        throw UnsupportedOperationException("Union selectors should only be used internally and don't provide a public string representation")
     }
 
-    @Override
-    public List<VersionSelector> getSelectors() {
-        return selectors;
+    override fun getSelectors(): MutableList<VersionSelector> {
+        return selectors
+    }
+
+    companion object {
+        fun of(selectors: MutableList<String?>, scheme: VersionSelectorScheme): UnionVersionSelector {
+            val builder = ImmutableList.Builder<VersionSelector?>()
+            for (selector in selectors) {
+                builder.add(scheme.parseSelector(selector))
+            }
+            return UnionVersionSelector(builder.build())
+        }
     }
 }

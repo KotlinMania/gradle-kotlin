@@ -13,368 +13,298 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import org.gradle.api.Action;
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ComponentMetadataListerDetails;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.descriptor.MavenRepositoryDescriptor;
-import org.gradle.api.internal.artifacts.repositories.maven.MavenMetadataLoader;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultGradleModuleMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMavenPomMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMetadataArtifactProvider;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.RedirectingGradleMetadataModuleMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.internal.Cast;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
-import org.jspecify.annotations.NonNull;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Lists
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.repositories.AuthenticationContainer
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor
+import org.gradle.api.artifacts.repositories.RepositoryContentDescriptor
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.descriptor.MavenRepositoryDescriptor
+import org.gradle.api.internal.artifacts.repositories.maven.MavenMetadataLoader
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultGradleModuleMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMavenPomMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMetadataArtifactProvider
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.RedirectingGradleMetadataModuleMetadataSource
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
+import java.net.URI
+import java.util.function.Supplier
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+abstract class DefaultMavenArtifactRepository @Inject constructor(
+    private val describer: Transformer<String, MavenArtifactRepository>,
+    private val fileResolver: FileResolver,
+    private val transportFactory: RepositoryTransportFactory,
+    protected val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    instantiatorFactory: InstantiatorFactory,
+    val artifactFileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    val pomParser: MetaDataParser<MutableMavenModuleResolveMetadata>,
+    private val metadataParser: GradleModuleMetadataParser,
+    authenticationContainer: AuthenticationContainer,
+    val resourcesFileStore: FileStore<String>,
+    private val fileResourceRepository: FileResourceRepository,
+    private val metadataFactory: MavenMutableModuleMetadataFactory,
+    private val isolatableFactory: IsolatableFactory,
+    objectFactory: ObjectFactory,
+    urlArtifactRepositoryFactory: DefaultUrlArtifactRepository.Factory,
+    private val checksumService: ChecksumService,
+    providerFactory: ProviderFactory,
+    versionParser: VersionParser
+) : AbstractAuthenticationSupportedRepository<MavenRepositoryDescriptor>(instantiatorFactory.decorateLenient(), authenticationContainer, objectFactory, providerFactory, versionParser),
+    MavenArtifactRepository, ResolutionAwareRepository {
+    private val urlArtifactRepository: DefaultUrlArtifactRepository
+    private var additionalUrls: MutableList<Any> = ArrayList<Any>()
+    private val metadataSources: MavenMetadataSources = DefaultMavenArtifactRepository.MavenMetadataSources()
+    protected val instantiatorFactory: InstantiatorFactory
 
-public abstract class DefaultMavenArtifactRepository extends AbstractAuthenticationSupportedRepository<MavenRepositoryDescriptor> implements MavenArtifactRepository, ResolutionAwareRepository {
-    private static final DefaultMavenPomMetadataSource.MavenMetadataValidator NO_OP_VALIDATION_SERVICES = (repoName, metadata, artifactResolver) -> true;
-
-    private final Transformer<String, MavenArtifactRepository> describer;
-    private final FileResolver fileResolver;
-    private final RepositoryTransportFactory transportFactory;
-    private final DefaultUrlArtifactRepository urlArtifactRepository;
-    private List<Object> additionalUrls = new ArrayList<>();
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
-    private final MetaDataParser<MutableMavenModuleResolveMetadata> pomParser;
-    private final GradleModuleMetadataParser metadataParser;
-    private final FileStore<String> resourcesFileStore;
-    private final FileResourceRepository fileResourceRepository;
-    private final MavenMutableModuleMetadataFactory metadataFactory;
-    private final IsolatableFactory isolatableFactory;
-    private final ChecksumService checksumService;
-    private final MavenMetadataSources metadataSources = new MavenMetadataSources();
-    private final InstantiatorFactory instantiatorFactory;
-
-    @Inject
-    public DefaultMavenArtifactRepository(Transformer<String, MavenArtifactRepository> describer,
-                                          FileResolver fileResolver,
-                                          RepositoryTransportFactory transportFactory,
-                                          LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-                                          InstantiatorFactory instantiatorFactory,
-                                          FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
-                                          MetaDataParser<MutableMavenModuleResolveMetadata> pomParser,
-                                          GradleModuleMetadataParser metadataParser,
-                                          AuthenticationContainer authenticationContainer,
-                                          FileStore<String> resourcesFileStore,
-                                          FileResourceRepository fileResourceRepository,
-                                          MavenMutableModuleMetadataFactory metadataFactory,
-                                          IsolatableFactory isolatableFactory,
-                                          ObjectFactory objectFactory,
-                                          DefaultUrlArtifactRepository.Factory urlArtifactRepositoryFactory,
-                                          ChecksumService checksumService,
-                                          ProviderFactory providerFactory,
-                                          VersionParser versionParser
-    ) {
-        super(instantiatorFactory.decorateLenient(), authenticationContainer, objectFactory, providerFactory, versionParser);
-        this.describer = describer;
-        this.fileResolver = fileResolver;
-        this.urlArtifactRepository = urlArtifactRepositoryFactory.create("Maven", this::getDisplayName);
-        this.transportFactory = transportFactory;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.artifactFileStore = artifactFileStore;
-        this.pomParser = pomParser;
-        this.metadataParser = metadataParser;
-        this.resourcesFileStore = resourcesFileStore;
-        this.fileResourceRepository = fileResourceRepository;
-        this.metadataFactory = metadataFactory;
-        this.isolatableFactory = isolatableFactory;
-        this.checksumService = checksumService;
-        this.metadataSources.setDefaults();
-        this.instantiatorFactory = instantiatorFactory;
+    init {
+        this.urlArtifactRepository = urlArtifactRepositoryFactory.create("Maven", Supplier { this.getDisplayName() })
+        this.metadataSources.setDefaults()
+        this.instantiatorFactory = instantiatorFactory
     }
 
-    @Override
-    public String getDisplayName() {
-        return describer.transform(this);
+    override fun getDisplayName(): String {
+        return describer.transform(this)
     }
 
-    @Override
-    public URI getUrl() {
-        return urlArtifactRepository.getUrl();
+    override fun getUrl(): URI {
+        return urlArtifactRepository.getUrl()
     }
 
-    @Override
-    public void setUrl(URI url) {
-        invalidateDescriptor();
-        urlArtifactRepository.setUrl(url);
+    override fun setUrl(url: URI) {
+        invalidateDescriptor()
+        urlArtifactRepository.setUrl(url)
     }
 
-    @Override
-    public void setUrl(Object url) {
-        invalidateDescriptor();
-        urlArtifactRepository.setUrl(url);
+    override fun setUrl(url: Any) {
+        invalidateDescriptor()
+        urlArtifactRepository.setUrl(url)
     }
 
-    @Override
-    public void setAllowInsecureProtocol(boolean allowInsecureProtocol) {
-        invalidateDescriptor();
-        urlArtifactRepository.setAllowInsecureProtocol(allowInsecureProtocol);
+    override fun setAllowInsecureProtocol(allowInsecureProtocol: Boolean) {
+        invalidateDescriptor()
+        urlArtifactRepository.setAllowInsecureProtocol(allowInsecureProtocol)
     }
 
-    @Override
-    public boolean isAllowInsecureProtocol() {
-        return urlArtifactRepository.isAllowInsecureProtocol();
+    override fun isAllowInsecureProtocol(): Boolean {
+        return urlArtifactRepository.isAllowInsecureProtocol()
     }
 
-    @Override
-    @Deprecated
-    public Set<URI> getArtifactUrls() {
-        nagAboutArtifactUrlsDeprecation("getArtifactUrls()");
-        return getArtifactUrlsInternal();
+    @Deprecated("")
+    override fun getArtifactUrls(): MutableSet<URI> {
+        nagAboutArtifactUrlsDeprecation("getArtifactUrls()")
+        return this.artifactUrlsInternal
     }
 
-    private Set<URI> getArtifactUrlsInternal() {
-        Set<URI> result = new LinkedHashSet<>();
-        for (Object additionalUrl : additionalUrls) {
-            result.add(fileResolver.resolveUri(additionalUrl));
+    private var artifactUrlsInternal: MutableSet<URI>
+        get() {
+            val result: MutableSet<URI> = LinkedHashSet<URI>()
+            for (additionalUrl in additionalUrls) {
+                result.add(fileResolver.resolveUri(additionalUrl))
+            }
+            return result
         }
-        return result;
+        private set(urls) {
+            additionalUrls = Lists.newArrayList<Any>(urls)
+        }
+
+    @Deprecated("")
+    override fun artifactUrls(vararg urls: Any) {
+        nagAboutArtifactUrlsDeprecation("artifactUrls(Object...)")
+        invalidateDescriptor()
+        additionalUrls.addAll(ImmutableList.copyOf<Any>(urls))
     }
 
-    @Override
-    @Deprecated
-    public void artifactUrls(Object... urls) {
-        nagAboutArtifactUrlsDeprecation("artifactUrls(Object...)");
-        invalidateDescriptor();
-        additionalUrls.addAll(ImmutableList.copyOf(urls));
+    @Deprecated("")
+    override fun setArtifactUrls(urls: MutableSet<URI>) {
+        nagAboutArtifactUrlsDeprecation("setArtifactUrls(Set)")
+        invalidateDescriptor()
+        this.artifactUrlsInternal = urls
     }
 
-    @Override
-    @Deprecated
-    public void setArtifactUrls(Set<URI> urls) {
-        nagAboutArtifactUrlsDeprecation("setArtifactUrls(Set)");
-        invalidateDescriptor();
-        setArtifactUrlsInternal(urls);
+    @Deprecated("")
+    override fun setArtifactUrls(urls: Iterable<*>) {
+        nagAboutArtifactUrlsDeprecation("setArtifactUrls(Iterable)")
+        invalidateDescriptor()
+        this.artifactUrlsInternal = urls
     }
 
-    @Override
-    @Deprecated
-    public void setArtifactUrls(Iterable<?> urls) {
-        nagAboutArtifactUrlsDeprecation("setArtifactUrls(Iterable)");
-        invalidateDescriptor();
-        setArtifactUrlsInternal(urls);
-    }
-
-    private void setArtifactUrlsInternal(Iterable<?> urls) {
-        additionalUrls = Lists.newArrayList(urls);
-    }
-
-    private static void nagAboutArtifactUrlsDeprecation(String methodWithParams) {
-        DeprecationLogger.deprecateMethod(MavenArtifactRepository.class, methodWithParams)
-            .willBeRemovedInGradle10()
-            .withUpgradeGuideSection(9, "deprecated_maven_artifact_urls")
-            .nagUser();
-    }
-
-    @Override
-    protected MavenRepositoryDescriptor createDescriptor() {
-        URI rootUri = validateUrl();
-        return new MavenRepositoryDescriptor.Builder(getName(), rootUri)
+    override fun createDescriptor(): MavenRepositoryDescriptor {
+        val rootUri = validateUrl()
+        return MavenRepositoryDescriptor.Builder(getName(), rootUri)
             .setAuthenticated(usesCredentials())
             .setAuthenticationSchemes(getAuthenticationSchemes())
             .setMetadataSources(metadataSources.asList())
-            .setArtifactUrls(Sets.newHashSet(getArtifactUrlsInternal()))
-            .create();
+            .setArtifactUrls(Sets.newHashSet<URI>(this.artifactUrlsInternal))
+            .create()
     }
 
-    @Override
-    protected Collection<URI> getRepositoryUrls() {
+    override fun getRepositoryUrls(): MutableCollection<URI> {
         // In a similar way to Ivy, Maven may use other hosts for additional artifacts, but not POMs
-        ImmutableList.Builder<URI> builder = ImmutableList.builder();
-        URI root = getUrl();
+        val builder = ImmutableList.builder<URI>()
+        val root = getUrl()
         if (root != null) {
-            builder.add(root);
+            builder.add(root)
         }
-        builder.addAll(getArtifactUrlsInternal());
-        return builder.build();
+        builder.addAll(this.artifactUrlsInternal)
+        return builder.build()
     }
 
-    @NonNull
-    protected URI validateUrl() {
-        return urlArtifactRepository.validateUrl();
+    protected fun validateUrl(): URI {
+        return urlArtifactRepository.validateUrl()
     }
 
-    @Override
-    public ConfiguredModuleComponentRepository createResolver() {
-        URI rootUrl = validateUrl();
-        return createResolver(rootUrl);
+    override fun createResolver(): ConfiguredModuleComponentRepository {
+        val rootUrl = validateUrl()
+        return createResolver(rootUrl)
     }
 
-    private MavenResolver createResolver(URI rootUri) {
-        RepositoryTransport transport = getTransport(rootUri.getScheme());
-        MavenMetadataLoader mavenMetadataLoader = new MavenMetadataLoader(transport.getResourceAccessor(), resourcesFileStore);
-        ImmutableMetadataSources metadataSources = createMetadataSources(mavenMetadataLoader);
-        Instantiator injector = createInjectorForMetadataSuppliers(transport, instantiatorFactory, getUrl(), resourcesFileStore);
-        InstantiatingAction<ComponentMetadataSupplierDetails> supplier = createComponentMetadataSupplierFactory(injector, isolatableFactory);
-        InstantiatingAction<ComponentMetadataListerDetails> lister = createComponentMetadataVersionLister(injector, isolatableFactory);
-        return new MavenResolver(getDescriptor(), rootUri, transport, locallyAvailableResourceFinder, artifactFileStore, metadataSources, MavenMetadataArtifactProvider.INSTANCE, mavenMetadataLoader, supplier, lister, injector, checksumService, getAllowInsecureContinueWhenDisabled().get());
+    private fun createResolver(rootUri: URI): MavenResolver {
+        val transport = getTransport(rootUri.getScheme())
+        val mavenMetadataLoader = MavenMetadataLoader(transport.getResourceAccessor(), resourcesFileStore)
+        val metadataSources = createMetadataSources(mavenMetadataLoader)
+        val injector: Instantiator = createInjectorForMetadataSuppliers(transport, instantiatorFactory, getUrl(), resourcesFileStore)
+        val supplier = createComponentMetadataSupplierFactory(injector, isolatableFactory)
+        val lister = createComponentMetadataVersionLister(injector, isolatableFactory)
+        return MavenResolver(
+            getDescriptor(),
+            rootUri,
+            transport,
+            locallyAvailableResourceFinder,
+            artifactFileStore,
+            metadataSources,
+            MavenMetadataArtifactProvider.Companion.INSTANCE,
+            mavenMetadataLoader,
+            supplier,
+            lister,
+            injector,
+            checksumService,
+            getAllowInsecureContinueWhenDisabled().get()
+        )
     }
 
-    @Override
-    public void metadataSources(Action<? super MetadataSources> configureAction) {
-        invalidateDescriptor();
-        metadataSources.reset();
-        configureAction.execute(metadataSources);
+    override fun metadataSources(configureAction: Action<in MavenArtifactRepository.MetadataSources>) {
+        invalidateDescriptor()
+        metadataSources.reset()
+        configureAction.execute(metadataSources)
     }
 
-    @Override
-    public MetadataSources getMetadataSources() {
-        return metadataSources;
+    override fun getMetadataSources(): MavenArtifactRepository.MetadataSources {
+        return metadataSources
     }
 
-    @Override
-    public void mavenContent(Action<? super MavenRepositoryContentDescriptor> configureAction) {
-        content(Cast.uncheckedCast(configureAction));
+    override fun mavenContent(configureAction: Action<in MavenRepositoryContentDescriptor>) {
+        content(uncheckedCast<Action<in RepositoryContentDescriptor>?>(configureAction)!!)
     }
 
-    ImmutableMetadataSources createMetadataSources(MavenMetadataLoader mavenMetadataLoader) {
-        ImmutableList.Builder<MetadataSource<?>> sources = ImmutableList.builder();
+    fun createMetadataSources(mavenMetadataLoader: MavenMetadataLoader): ImmutableMetadataSources {
+        val sources = ImmutableList.builder<MetadataSource<*>>()
         // Don't list versions for gradleMetadata if maven-metadata.xml will be checked.
-        boolean listVersionsForGradleMetadata = !metadataSources.mavenPom;
-        MetadataSource<MutableModuleComponentResolveMetadata> gradleModuleMetadataSource =
-            new MavenSnapshotDecoratingSource(
-                new DefaultGradleModuleMetadataSource(getMetadataParser(), metadataFactory, listVersionsForGradleMetadata, checksumService)
-            );
+        val listVersionsForGradleMetadata: Boolean = !metadataSources.mavenPom
+        val gradleModuleMetadataSource: MetadataSource<MutableModuleComponentResolveMetadata> =
+            MavenSnapshotDecoratingSource(
+                DefaultGradleModuleMetadataSource(this.metadataParser, metadataFactory, listVersionsForGradleMetadata, checksumService)
+            )
         if (metadataSources.gradleMetadata) {
-            sources.add(gradleModuleMetadataSource);
+            sources.add(gradleModuleMetadataSource)
         }
         if (metadataSources.mavenPom) {
-            DefaultMavenPomMetadataSource pomMetadataSource = createPomMetadataSource(mavenMetadataLoader, fileResourceRepository);
+            val pomMetadataSource = createPomMetadataSource(mavenMetadataLoader, fileResourceRepository)
             if (metadataSources.ignoreGradleMetadataRedirection) {
-                sources.add(pomMetadataSource);
+                sources.add(pomMetadataSource)
             } else {
-                sources.add(new RedirectingGradleMetadataModuleMetadataSource(pomMetadataSource, gradleModuleMetadataSource));
+                sources.add(RedirectingGradleMetadataModuleMetadataSource(pomMetadataSource, gradleModuleMetadataSource))
             }
         }
         if (metadataSources.artifact) {
-            sources.add(new DefaultArtifactMetadataSource(metadataFactory));
+            sources.add(DefaultArtifactMetadataSource(metadataFactory))
         }
-        return new DefaultImmutableMetadataSources(sources.build());
+        return DefaultImmutableMetadataSources(sources.build())
     }
 
-    protected DefaultMavenPomMetadataSource createPomMetadataSource(MavenMetadataLoader mavenMetadataLoader, FileResourceRepository fileResourceRepository) {
-        return new DefaultMavenPomMetadataSource(MavenMetadataArtifactProvider.INSTANCE, getPomParser(), fileResourceRepository, getMetadataValidationServices(), mavenMetadataLoader, checksumService);
+    protected open fun createPomMetadataSource(mavenMetadataLoader: MavenMetadataLoader, fileResourceRepository: FileResourceRepository): DefaultMavenPomMetadataSource {
+        return DefaultMavenPomMetadataSource(
+            MavenMetadataArtifactProvider.Companion.INSTANCE,
+            this.pomParser, fileResourceRepository,
+            this.metadataValidationServices, mavenMetadataLoader, checksumService
+        )
     }
 
-    protected DefaultMavenPomMetadataSource.MavenMetadataValidator getMetadataValidationServices() {
-        return NO_OP_VALIDATION_SERVICES;
+    fun getTransport(scheme: String): RepositoryTransport {
+        return transportFactory.createTransport(scheme, getName(), getConfiguredAuthentication(), urlArtifactRepository.createRedirectVerifier())
     }
 
-    MetaDataParser<MutableMavenModuleResolveMetadata> getPomParser() {
-        return pomParser;
+    override fun createRepositoryDescriptor(versionParser: VersionParser): RepositoryContentDescriptorInternal {
+        return DefaultMavenRepositoryContentDescriptor(Supplier { this.getDisplayName() }, versionParser)
     }
 
-    private GradleModuleMetadataParser getMetadataParser() {
-        return metadataParser;
-    }
-
-    FileStore<ModuleComponentArtifactIdentifier> getArtifactFileStore() {
-        return artifactFileStore;
-    }
-
-    FileStore<String> getResourcesFileStore() {
-        return resourcesFileStore;
-    }
-
-    public RepositoryTransport getTransport(String scheme) {
-        return transportFactory.createTransport(scheme, getName(), getConfiguredAuthentication(), urlArtifactRepository.createRedirectVerifier());
-    }
-
-    protected LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> getLocallyAvailableResourceFinder() {
-        return locallyAvailableResourceFinder;
-    }
-
-    protected InstantiatorFactory getInstantiatorFactory() {
-        return instantiatorFactory;
-    }
-
-    @Override
-    public RepositoryContentDescriptorInternal createRepositoryDescriptor(VersionParser versionParser) {
-        return new DefaultMavenRepositoryContentDescriptor(this::getDisplayName, versionParser);
-    }
-
-    static class DefaultDescriber implements Transformer<String, MavenArtifactRepository> {
-        @Override
-        public String transform(MavenArtifactRepository repository) {
-            URI url = repository.getUrl();
+    internal class DefaultDescriber : Transformer<String, MavenArtifactRepository> {
+        override fun transform(repository: MavenArtifactRepository): String {
+            val url = repository.getUrl()
             if (url == null) {
-                return repository.getName();
+                return repository.getName()
             }
-            return repository.getName() + '(' + url + ')';
+            return repository.getName() + '(' + url + ')'
         }
     }
 
-    private class MavenMetadataSources implements MetadataSources {
-        boolean gradleMetadata;
-        boolean mavenPom;
-        boolean artifact;
-        boolean ignoreGradleMetadataRedirection;
+    private inner class MavenMetadataSources : MavenArtifactRepository.MetadataSources {
+        var gradleMetadata: Boolean = false
+        var mavenPom: Boolean = false
+        var artifact: Boolean = false
+        var ignoreGradleMetadataRedirection: Boolean = false
 
-        void setDefaults() {
-            mavenPom();
-            ignoreGradleMetadataRedirection = false;
+        fun setDefaults() {
+            mavenPom()
+            ignoreGradleMetadataRedirection = false
         }
 
-        void reset() {
-            gradleMetadata = false;
-            mavenPom = false;
-            artifact = false;
-            ignoreGradleMetadataRedirection = false;
+        fun reset() {
+            gradleMetadata = false
+            mavenPom = false
+            artifact = false
+            ignoreGradleMetadataRedirection = false
         }
 
         /**
@@ -383,87 +313,98 @@ public abstract class DefaultMavenArtifactRepository extends AbstractAuthenticat
          *
          * @return a list of implemented metadata sources, as strings.
          */
-        List<String> asList() {
-            List<String> list = new ArrayList<>();
+        fun asList(): MutableList<String> {
+            val list: MutableList<String> = ArrayList<String>()
             if (gradleMetadata) {
-                list.add("gradleMetadata");
+                list.add("gradleMetadata")
             }
             if (mavenPom) {
-                list.add("mavenPom");
+                list.add("mavenPom")
             }
             if (artifact) {
-                list.add("artifact");
+                list.add("artifact")
             }
             if (ignoreGradleMetadataRedirection) {
-                list.add("ignoreGradleMetadataRedirection");
+                list.add("ignoreGradleMetadataRedirection")
             }
-            return list;
+            return list
         }
 
-        @Override
-        public void gradleMetadata() {
-            invalidateDescriptor();
-            gradleMetadata = true;
+        override fun gradleMetadata() {
+            invalidateDescriptor()
+            gradleMetadata = true
         }
 
-        @Override
-        public void mavenPom() {
-            invalidateDescriptor();
-            mavenPom = true;
+        override fun mavenPom() {
+            invalidateDescriptor()
+            mavenPom = true
         }
 
-        @Override
-        public void artifact() {
-            invalidateDescriptor();
-            artifact = true;
+        override fun artifact() {
+            invalidateDescriptor()
+            artifact = true
         }
 
-        @Override
-        public void ignoreGradleMetadataRedirection() {
-            invalidateDescriptor();
-            ignoreGradleMetadataRedirection = true;
+        override fun ignoreGradleMetadataRedirection() {
+            invalidateDescriptor()
+            ignoreGradleMetadataRedirection = true
         }
 
-        @Override
-        public boolean isGradleMetadataEnabled() {
-            return gradleMetadata;
+        override fun isGradleMetadataEnabled(): Boolean {
+            return gradleMetadata
         }
 
-        @Override
-        public boolean isMavenPomEnabled() {
-            return mavenPom;
+        override fun isMavenPomEnabled(): Boolean {
+            return mavenPom
         }
 
-        @Override
-        public boolean isArtifactEnabled() {
-            return artifact;
+        override fun isArtifactEnabled(): Boolean {
+            return artifact
         }
 
-        @Override
-        public boolean isIgnoreGradleMetadataRedirectionEnabled() {
-            return ignoreGradleMetadataRedirection;
+        override fun isIgnoreGradleMetadataRedirectionEnabled(): Boolean {
+            return ignoreGradleMetadataRedirection
         }
     }
 
-    private static class MavenSnapshotDecoratingSource implements MetadataSource<MutableModuleComponentResolveMetadata> {
-        private final MetadataSource<MutableModuleComponentResolveMetadata> delegate;
-
-        private MavenSnapshotDecoratingSource(MetadataSource<MutableModuleComponentResolveMetadata> delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public MutableModuleComponentResolveMetadata create(String repositoryName, ComponentResolvers componentResolvers, ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata prescribedMetaData, ExternalResourceArtifactResolver artifactResolver, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result) {
-            MutableModuleComponentResolveMetadata metadata = delegate.create(repositoryName, componentResolvers, moduleComponentIdentifier, prescribedMetaData, artifactResolver, result);
+    private class MavenSnapshotDecoratingSource(private val delegate: MetadataSource<MutableModuleComponentResolveMetadata>) : MetadataSource<MutableModuleComponentResolveMetadata> {
+        override fun create(
+            repositoryName: String,
+            componentResolvers: ComponentResolvers,
+            moduleComponentIdentifier: ModuleComponentIdentifier,
+            prescribedMetaData: ComponentOverrideMetadata,
+            artifactResolver: ExternalResourceArtifactResolver,
+            result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+        ): MutableModuleComponentResolveMetadata {
+            val metadata = delegate.create(repositoryName, componentResolvers, moduleComponentIdentifier, prescribedMetaData, artifactResolver, result)
             if (metadata != null) {
-                return MavenResolver.processMetaData((MutableMavenModuleResolveMetadata) metadata);
+                return MavenResolver.Companion.processMetaData(metadata as MutableMavenModuleResolveMetadata)
             }
-            return null;
+            return null
         }
 
-        @Override
-        public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, List<ResourcePattern> ivyPatterns, List<ResourcePattern> artifactPatterns, VersionLister versionLister, BuildableModuleVersionListingResolveResult result) {
-            delegate.listModuleVersions(selector, overrideMetadata, ivyPatterns, artifactPatterns, versionLister, result);
+        override fun listModuleVersions(
+            selector: ModuleComponentSelector,
+            overrideMetadata: ComponentOverrideMetadata,
+            ivyPatterns: MutableList<ResourcePattern>,
+            artifactPatterns: MutableList<ResourcePattern>,
+            versionLister: VersionLister,
+            result: BuildableModuleVersionListingResolveResult
+        ) {
+            delegate.listModuleVersions(selector, overrideMetadata, ivyPatterns, artifactPatterns, versionLister, result)
+        }
+    }
+
+    companion object {
+        protected open val metadataValidationServices: DefaultMavenPomMetadataSource.MavenMetadataValidator =
+            DefaultMavenPomMetadataSource.MavenMetadataValidator { repoName: String?, metadata: MutableMavenModuleResolveMetadata?, artifactResolver: ExternalResourceArtifactResolver? -> true }
+            get() = Companion.field
+
+        private fun nagAboutArtifactUrlsDeprecation(methodWithParams: String) {
+            deprecateMethod(MavenArtifactRepository::class.java, methodWithParams)
+                .willBeRemovedInGradle10()
+                .withUpgradeGuideSection(9, "deprecated_maven_artifact_urls")!!
+                .nagUser()
         }
     }
 }

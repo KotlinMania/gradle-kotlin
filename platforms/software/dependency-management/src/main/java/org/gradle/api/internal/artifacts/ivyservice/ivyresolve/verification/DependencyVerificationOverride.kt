@@ -13,29 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.internal.GradleInternal;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.internal.GradleInternal
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
 
-import java.io.File;
+@ServiceScope(Scope.Build::class)
+interface DependencyVerificationOverride {
+    fun overrideDependencyVerification(original: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>): ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>?
 
-@ServiceScope(Scope.Build.class)
-public interface DependencyVerificationOverride {
-    DependencyVerificationOverride NO_VERIFICATION = original -> original;
-    String VERIFICATION_METADATA_XML = "verification-metadata.xml";
-
-    static File dependencyVerificationsFile(File gradleDirectory) {
-        return new File(gradleDirectory, VERIFICATION_METADATA_XML);
-    }
-
-    ModuleComponentRepository<ExternalModuleComponentGraphResolveState> overrideDependencyVerification(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> original);
-
-    default void buildFinished(GradleInternal model) {
+    fun buildFinished(model: GradleInternal) {
     }
 
     /**
@@ -43,11 +35,20 @@ public interface DependencyVerificationOverride {
      * and that something is actually trying to get the files of an artifact set
      * @param displayName the name of what accessed the artifact
      */
-    default void artifactsAccessed(String displayName) {
-
+    fun artifactsAccessed(displayName: String) {
     }
 
-    default ResolvedArtifactResult verifiedArtifact(ResolvedArtifactResult artifact) {
-        return artifact;
+    fun verifiedArtifact(artifact: ResolvedArtifactResult): ResolvedArtifactResult {
+        return artifact
+    }
+
+    companion object {
+        fun dependencyVerificationsFile(gradleDirectory: File): File {
+            return File(gradleDirectory, VERIFICATION_METADATA_XML)
+        }
+
+        val NO_VERIFICATION: DependencyVerificationOverride =
+            org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DependencyVerificationOverride { original: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?> -> original }
+        const val VERIFICATION_METADATA_XML: String = "verification-metadata.xml"
     }
 }

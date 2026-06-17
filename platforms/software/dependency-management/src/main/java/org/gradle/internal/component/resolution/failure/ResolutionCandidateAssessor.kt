@@ -54,7 +54,7 @@ class ResolutionCandidateAssessor(requestedAttributes: AttributeContainerInterna
             .map<AssessedCandidate> { variant: ResolvedVariant ->
                 assessCandidate(
                     variant.asDescribable().getCapitalizedDisplayName(),
-                    variant.getCapabilities(),
+                    variant.capabilities,
                     variant.getAttributes().asImmutable()
                 )
             }

@@ -13,87 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.result.DefaultResolvedVariantResult;
-import org.gradle.internal.Describables;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.ListSerializer;
-import org.gradle.internal.serialize.Serializer;
-
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.result.DefaultResolvedVariantResult
+import org.gradle.internal.Describables
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.ListSerializer
+import org.gradle.internal.serialize.Serializer
+import javax.annotation.concurrent.NotThreadSafe
 
 /**
- * A serializer for {@link ResolvedVariantResult} that is not thread safe and not reusable.
+ * A serializer for [ResolvedVariantResult] that is not thread safe and not reusable.
  */
 @NotThreadSafe
-public class ResolvedVariantResultSerializer implements Serializer<ResolvedVariantResult> {
-    private final Map<ResolvedVariantResult, Integer> written = new HashMap<>();
-    private final List<ResolvedVariantResult> read = new ArrayList<>();
+class ResolvedVariantResultSerializer(private val componentIdentifierSerializer: ComponentIdentifierSerializer, private val attributeContainerSerializer: AttributeContainerSerializer) :
+    Serializer<ResolvedVariantResult?> {
+    private val written: MutableMap<ResolvedVariantResult, Int> = HashMap<ResolvedVariantResult, Int>()
+    private val read: MutableList<ResolvedVariantResult> = ArrayList<ResolvedVariantResult>()
 
-    private final ComponentIdentifierSerializer componentIdentifierSerializer;
-    private final AttributeContainerSerializer attributeContainerSerializer;
-    private final ListSerializer<Capability> capabilitySerializer;
+    private val capabilitySerializer: ListSerializer<Capability?>
 
-    public ResolvedVariantResultSerializer(ComponentIdentifierSerializer componentIdentifierSerializer, AttributeContainerSerializer attributeContainerSerializer) {
-        this.componentIdentifierSerializer = componentIdentifierSerializer;
-        this.attributeContainerSerializer = attributeContainerSerializer;
-        this.capabilitySerializer = new ListSerializer<>(new CapabilitySerializer());
+    init {
+        this.capabilitySerializer = ListSerializer<Capability?>(CapabilitySerializer())
     }
 
-    @Override
-    public ResolvedVariantResult read(Decoder decoder) throws Exception {
-        int index = decoder.readSmallInt();
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ResolvedVariantResult {
+        val index = decoder.readSmallInt()
         if (index == -1) {
-            return null;
+            return null
         }
-        if (index == read.size()) {
-            ComponentIdentifier owner = componentIdentifierSerializer.read(decoder);
-            String variantName = decoder.readString();
-            AttributeContainer attributes = attributeContainerSerializer.read(decoder);
-            ImmutableList<Capability> capabilities = capabilitySerializer.read(decoder);
-            read.add(null);
-            ResolvedVariantResult externalVariant = read(decoder);
-            DefaultResolvedVariantResult result = new DefaultResolvedVariantResult(owner, Describables.of(variantName), attributes, capabilities, externalVariant);
-            this.read.set(index, result);
-            return result;
+        if (index == read.size) {
+            val owner = componentIdentifierSerializer.read(decoder)
+            val variantName = decoder.readString()
+            val attributes: AttributeContainer = attributeContainerSerializer.read(decoder)
+            val capabilities: ImmutableList<Capability> = capabilitySerializer.read(decoder)
+            read.add(null)
+            val externalVariant = read(decoder)
+            val result = DefaultResolvedVariantResult(owner, Describables.of(variantName!!), attributes, capabilities, externalVariant)
+            this.read.set(index, result)
+            return result
         }
-        return read.get(index);
+        return read.get(index)
     }
 
-    @Override
-    public void write(Encoder encoder, ResolvedVariantResult variant) throws Exception {
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, variant: ResolvedVariantResult) {
         if (variant == null) {
-            encoder.writeSmallInt(-1);
-            return;
+            encoder.writeSmallInt(-1)
+            return
         }
-        Integer index = written.get(variant);
+        var index = written.get(variant)
         if (index == null) {
-            index = written.size();
-            written.put(variant, index);
-            encoder.writeSmallInt(index);
-            componentIdentifierSerializer.write(encoder, variant.getOwner());
-            encoder.writeString(variant.getDisplayName());
-            attributeContainerSerializer.write(encoder, variant.getAttributes());
-            capabilitySerializer.write(encoder, variant.getCapabilities());
-            write(encoder, variant.getExternalVariant().orElse(null));
+            index = written.size
+            written.put(variant, index)
+            encoder.writeSmallInt(index)
+            componentIdentifierSerializer.write(encoder, variant.getOwner())
+            encoder.writeString(variant.getDisplayName())
+            attributeContainerSerializer.write(encoder, variant.getAttributes())
+            capabilitySerializer.write(encoder, variant.getCapabilities())
+            write(encoder, variant.getExternalVariant().orElse(null))
         } else {
-            encoder.writeSmallInt(index);
+            encoder.writeSmallInt(index)
         }
     }
 
-    void reset() {
-        written.clear();
-        read.clear();
+    fun reset() {
+        written.clear()
+        read.clear()
     }
 }

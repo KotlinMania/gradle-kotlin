@@ -150,9 +150,9 @@ public class CompositeBuildPluginResolverContributor implements PluginResolverCo
                 publicationRegistry.getPublicationsForBuild(PluginPublication.class, buildIdentity);
 
             for (ProjectPublicationRegistry.PublicationForProject<PluginPublication> publication : publicationsForBuild) {
-                PluginId pluginId = publication.getPublication().getPluginId();
+                PluginId pluginId = publication.publication.getPluginId();
                 if (pluginId.equals(requestedPluginId)) {
-                    return new LocalPluginResolution(pluginId, publication.getProducingProjectId().getBuildTreePath(), projectDependencyFactory);
+                    return new LocalPluginResolution(pluginId, publication.producingProjectId.getBuildTreePath(), projectDependencyFactory);
                 }
             }
 

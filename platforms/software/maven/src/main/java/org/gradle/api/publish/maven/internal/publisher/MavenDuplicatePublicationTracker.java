@@ -44,6 +44,6 @@ public class MavenDuplicatePublicationTracker {
     }
 
     public void checkCanPublishToMavenLocal(MavenNormalizedPublication publication) {
-        checkCanPublish(publication, mavenRepositoryLocator.getLocalMavenRepository().toURI(), "mavenLocal");
+        checkCanPublish(publication, mavenRepositoryLocator.localMavenRepository.toURI(), "mavenLocal");
     }
 }

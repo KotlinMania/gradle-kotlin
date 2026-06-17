@@ -13,35 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
-
-import org.gradle.api.Action;
-import org.gradle.api.attributes.Attribute;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
-import java.util.Set;
-
-public interface ContentFilteringRepository {
-
-    Action<? super ArtifactResolutionDetails> getContentFilter();
+interface ContentFilteringRepository {
+    @JvmField
+    val contentFilter: Action<in ArtifactResolutionDetails>?
 
     /**
-     * @see RepositoryContentDescriptorInternal#getIncludedConfigurations()
+     * @see RepositoryContentDescriptorInternal.getIncludedConfigurations
      */
-    @Nullable
-    Set<String> getIncludedConfigurations();
+    @JvmField
+    val includedConfigurations: MutableSet<String>?
 
     /**
-     * @see RepositoryContentDescriptorInternal#getExcludedConfigurations()
+     * @see RepositoryContentDescriptorInternal.getExcludedConfigurations
      */
-    @Nullable
-    Set<String> getExcludedConfigurations();
+    @JvmField
+    val excludedConfigurations: MutableSet<String>?
 
     /**
-     * @see RepositoryContentDescriptorInternal#getRequiredAttributes()
+     * @see RepositoryContentDescriptorInternal.getRequiredAttributes
      */
-    @Nullable
-    Map<Attribute<Object>, Set<Object>> getRequiredAttributes();
+    @JvmField
+    val requiredAttributes: MutableMap<Attribute<Any>, MutableSet<Any>>?
 }

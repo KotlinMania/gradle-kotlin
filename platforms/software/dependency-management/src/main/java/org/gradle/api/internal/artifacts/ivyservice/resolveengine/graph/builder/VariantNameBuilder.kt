@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.jspecify.annotations.Nullable;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.apache.commons.lang3.StringUtils
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
 
 /**
  * A memory-efficient builder for variant names.
@@ -31,55 +26,48 @@ import java.util.Map;
  * from the names of the configurations. The set of names for these configurations is relatively limited, so we cache
  * the generated names to avoid recreating multiple times.
  */
-public class VariantNameBuilder {
-    private final Map<List<String>, DisplayName> names = new HashMap<>();
+class VariantNameBuilder {
+    private val names: MutableMap<MutableList<String>, DisplayName> = HashMap<MutableList<String>, DisplayName>()
 
-    @Nullable
-    public DisplayName getVariantName(@Nullable List<String> parts) {
+    fun getVariantName(parts: MutableList<String>?): DisplayName? {
         if (parts == null) {
-            return null;
+            return null
         }
 
-        DisplayName displayName = names.get(parts);
+        var displayName = names.get(parts)
         if (displayName == null) {
-            displayName = variantName(parts);
-            names.put(parts, displayName);
+            displayName = variantName(parts)
+            names.put(parts, displayName)
         }
 
-        return displayName;
+        return displayName
     }
 
-    private static DisplayName variantName(List<String> parts) {
-        if (parts.size() == 1) {
-            return Describables.of(parts.get(0));
-        }
-        return new MultipleVariantName(parts);
-    }
-
-    private static class MultipleVariantName implements DisplayName {
-        private final List<String> parts;
-
-        private MultipleVariantName(List<String> parts) {
-            this.parts = parts;
+    private class MultipleVariantName(private val parts: MutableList<String>) : DisplayName {
+        override fun getCapitalizedDisplayName(): String {
+            return StringUtils.capitalize(getDisplayName())
         }
 
-        @Override
-        public String getCapitalizedDisplayName() {
-            return StringUtils.capitalize(getDisplayName());
-        }
-
-        @Override
-        public String getDisplayName() {
-            StringBuilder sb = new StringBuilder(16 * parts.size());
-            boolean appendPlus = false;
-            for (String part : parts) {
+        override fun getDisplayName(): String {
+            val sb = StringBuilder(16 * parts.size)
+            var appendPlus = false
+            for (part in parts) {
                 if (appendPlus) {
-                    sb.append("+");
+                    sb.append("+")
                 }
-                sb.append(part);
-                appendPlus = true;
+                sb.append(part)
+                appendPlus = true
             }
-            return sb.toString();
+            return sb.toString()
+        }
+    }
+
+    companion object {
+        private fun variantName(parts: MutableList<String>): DisplayName {
+            if (parts.size == 1) {
+                return Describables.of(parts.get(0))
+            }
+            return MultipleVariantName(parts)
         }
     }
 }

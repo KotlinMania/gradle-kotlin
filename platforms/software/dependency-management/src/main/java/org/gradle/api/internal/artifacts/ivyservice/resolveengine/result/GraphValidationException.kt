@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-public class GraphValidationException extends RuntimeException {
-    public GraphValidationException(String message) {
-        super(message);
-    }
-}
+open class GraphValidationException(message: String) : RuntimeException(message)

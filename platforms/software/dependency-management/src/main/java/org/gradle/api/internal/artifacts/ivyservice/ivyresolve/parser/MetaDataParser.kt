@@ -13,73 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import java.io.File
 
-import java.io.File;
-import java.util.List;
+interface MetaDataParser<T : MutableModuleComponentResolveMetadata?> {
+    @Throws(MetaDataParseException::class)
+    fun parseMetaData(context: DescriptorParseContext?, resource: LocallyAvailableExternalResource?): ParseResult<T?>?
 
-public interface MetaDataParser<T extends MutableModuleComponentResolveMetadata> {
-    /**
-     * If the following marker is found in a `pom` file, Gradle (version 5.3 or higher)
-     * will look for a `module` file to use it instead of the `pom` file.
-     */
-    String GRADLE_METADATA_MARKER = "do-not-remove: published-with-gradle-metadata";
-    /**
-     * If the following marker is found in a `pom` file, Gradle (version 6.0 or higher)
-     * will look for a `module` file to use it instead of the `pom` file.
-     * This marker was introduced to allow library authors to publish Gradle Module Metadata
-     * for Gradle 6+ consumers only. Wider adoption of the format only starts with Gradle 6.
-     * There were some semantic changes and fixes with 6.0 in `module` metadata interpretation.
-     * These can break certain 5.x users in unexpected ways when consuming a library that
-     * moved from publishing `pom` only to also publish `module` files.
-     */
-    String GRADLE_6_METADATA_MARKER = "do_not_remove: published-with-gradle-metadata";
-    List<String> GRADLE_METADATA_MARKER_COMMENT_LINES = ImmutableList.of(
-        "This module was also published with a richer model, Gradle metadata, ",
-        "which should be used instead. Do not delete the following line which ",
-        "is to indicate to Gradle or any Gradle module metadata file consumer ",
-        "that they should prefer consuming it instead."
-    );
+    @Throws(MetaDataParseException::class)
+    fun parseMetaData(context: DescriptorParseContext?, descriptorFile: File?): ParseResult<T?>?
 
-    ParseResult<T> parseMetaData(DescriptorParseContext context, LocallyAvailableExternalResource resource) throws MetaDataParseException;
-
-    ParseResult<T> parseMetaData(DescriptorParseContext context, File descriptorFile) throws MetaDataParseException;
-
-    ParseResult<T> parseMetaData(DescriptorParseContext context, File descriptorFile, boolean validate) throws MetaDataParseException;
+    @Throws(MetaDataParseException::class)
+    fun parseMetaData(context: DescriptorParseContext?, descriptorFile: File?, validate: Boolean): ParseResult<T?>?
 
     interface ParseResult<T> {
-        boolean hasGradleMetadataRedirectionMarker();
-        T getResult();
+        fun hasGradleMetadataRedirectionMarker(): Boolean
+        @JvmField
+        val result: T?
 
-        static <T> ParseResult<T> of(T parsed, boolean hasGradleMetadataRedirect) {
-            return new DefaultParseResult<>(parsed, hasGradleMetadataRedirect);
+        companion object {
+            fun <T> of(parsed: T?, hasGradleMetadataRedirect: Boolean): ParseResult<T?> {
+                return DefaultParseResult<T?>(parsed, hasGradleMetadataRedirect)
+            }
         }
-
     }
 
+    companion object {
+        /**
+         * If the following marker is found in a `pom` file, Gradle (version 5.3 or higher)
+         * will look for a `module` file to use it instead of the `pom` file.
+         */
+        const val GRADLE_METADATA_MARKER: String = "do-not-remove: published-with-gradle-metadata"
+
+        /**
+         * If the following marker is found in a `pom` file, Gradle (version 6.0 or higher)
+         * will look for a `module` file to use it instead of the `pom` file.
+         * This marker was introduced to allow library authors to publish Gradle Module Metadata
+         * for Gradle 6+ consumers only. Wider adoption of the format only starts with Gradle 6.
+         * There were some semantic changes and fixes with 6.0 in `module` metadata interpretation.
+         * These can break certain 5.x users in unexpected ways when consuming a library that
+         * moved from publishing `pom` only to also publish `module` files.
+         */
+        const val GRADLE_6_METADATA_MARKER: String = "do_not_remove: published-with-gradle-metadata"
+        @JvmField
+        val GRADLE_METADATA_MARKER_COMMENT_LINES: MutableList<String?> = ImmutableList.of<String?>(
+            "This module was also published with a richer model, Gradle metadata, ",
+            "which should be used instead. Do not delete the following line which ",
+            "is to indicate to Gradle or any Gradle module metadata file consumer ",
+            "that they should prefer consuming it instead."
+        )
+    }
 }
 
-class DefaultParseResult<T> implements MetaDataParser.ParseResult<T> {
-
-    private final T result;
-    private final boolean redirect;
-
-    DefaultParseResult(T result, boolean redirect) {
-        this.result = result;
-        this.redirect = redirect;
+internal class DefaultParseResult<T>(private val result: T?, private val redirect: Boolean) : MetaDataParser.ParseResult<T?> {
+    override fun hasGradleMetadataRedirectionMarker(): Boolean {
+        return redirect
     }
 
-    @Override
-    public boolean hasGradleMetadataRedirectionMarker() {
-        return redirect;
-    }
-
-    @Override
-    public T getResult() {
-        return result;
+    override fun getResult(): T? {
+        return result
     }
 }

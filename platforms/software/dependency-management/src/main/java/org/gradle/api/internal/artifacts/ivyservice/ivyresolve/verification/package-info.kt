@@ -13,8 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-@NullMarked
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlReader.readFromXml
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier.suggestedWriteFlags
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier.configuration
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration.isUseKeyServers
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration.keyringFormat
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationServiceFactory.create
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration.keyServers
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier.verify
+import org.gradle.internal.Factory.create
+import org.gradle.api.internal.artifacts.verification.verifier.VerificationFailure.isFatal
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration.isVerifySignatures
+import org.gradle.internal.logging.ConsoleRenderer.asClickableFileUrl
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier.getComponentIdentifier
 
-import org.jspecify.annotations.NullMarked;

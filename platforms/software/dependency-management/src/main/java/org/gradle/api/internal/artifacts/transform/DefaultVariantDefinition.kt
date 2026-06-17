@@ -13,59 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
- * Default implementation of {@link VariantDefinition}.
+ * Default implementation of [VariantDefinition].
  */
-public class DefaultVariantDefinition implements VariantDefinition {
-    private final DefaultVariantDefinition previous;
-    private final ImmutableAttributes attributes;
-    private final TransformChain transformChain;
-    private final TransformStep transformStep;
+class DefaultVariantDefinition(private val previous: DefaultVariantDefinition?, private val attributes: ImmutableAttributes, private val transformStep: TransformStep) : VariantDefinition {
+    private val transformChain: TransformChain
 
-    public DefaultVariantDefinition(@Nullable DefaultVariantDefinition previous, ImmutableAttributes attributes, TransformStep transformStep) {
-        this.previous = previous;
-        this.attributes = attributes;
-        this.transformChain = new TransformChain(previous == null ? null : previous.getTransformChain(), transformStep);
-        this.transformStep = transformStep;
+    init {
+        this.transformChain = TransformChain(if (previous == null) null else previous.getTransformChain(), transformStep)
     }
 
-    @Override
-    public ImmutableAttributes getTargetAttributes() {
-        return attributes;
+    override fun getTargetAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    public TransformChain getTransformChain() {
-        return transformChain;
+    override fun getTransformChain(): TransformChain {
+        return transformChain
     }
 
-    @Override
-    public TransformStep getTransformStep() {
-        return transformStep;
+    override fun getTransformStep(): TransformStep {
+        return transformStep
     }
 
-    @Nullable
-    @Override
-    public VariantDefinition getPrevious() {
-        return previous;
+    override fun getPrevious(): VariantDefinition? {
+        return previous
     }
 
-    private int getDepth() {
-        return previous == null ? 1 : previous.getDepth() + 1;
-    }
+    private val depth: Int
+        get() = if (previous == null) 1 else previous.getDepth() + 1
 
-    @Override
-    public String toString() {
+    override fun toString(): String {
         if (previous != null) {
-            return previous + " <- (" + getDepth() + ") " + transformStep;
+            return previous.toString() + " <- (" + this.depth + ") " + transformStep
         } else {
-            return "(" + getDepth() + ") " + transformStep;
+            return "(" + this.depth + ") " + transformStep
         }
     }
 }

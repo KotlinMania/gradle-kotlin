@@ -13,44 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata;
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata
 
-import java.util.List;
-
-public class ComponentMetadataAdapter implements ComponentMetadata {
-    private final ExternalComponentResolveMetadata metadata;
-
-    public ComponentMetadataAdapter(ExternalComponentResolveMetadata metadata) {
-        this.metadata = metadata;
+class ComponentMetadataAdapter(private val metadata: ExternalComponentResolveMetadata) : ComponentMetadata {
+    override fun getId(): ModuleVersionIdentifier {
+        return metadata.moduleVersionId
     }
 
-    @Override
-    public ModuleVersionIdentifier getId() {
-        return metadata.moduleVersionId;
+    override fun isChanging(): Boolean {
+        return metadata.isChanging
     }
 
-    @Override
-    public boolean isChanging() {
-        return metadata.isChanging;
+    override fun getStatus(): String {
+        return metadata.status!!
     }
 
-    @Override
-    public String getStatus() {
-        return metadata.status;
+    override fun getStatusScheme(): MutableList<String> {
+        return metadata.statusScheme
     }
 
-    @Override
-    public List<String> getStatusScheme() {
-        return metadata.statusScheme;
-    }
-
-    @Override
-    public AttributeContainer getAttributes() {
-        return metadata.attributes;
+    override fun getAttributes(): AttributeContainer {
+        return metadata.attributes
     }
 }

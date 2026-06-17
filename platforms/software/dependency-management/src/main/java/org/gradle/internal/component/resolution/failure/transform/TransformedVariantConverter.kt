@@ -41,7 +41,7 @@ class TransformedVariantConverter {
     fun convert(transformedVariant: TransformedVariant): TransformationChainData {
         val visitor = TransformDataRecordingVisitor()
         transformedVariant.getTransformChain().visitTransformSteps(visitor)
-        val source = SourceVariantData(transformedVariant.getRoot().asDescribable().getDisplayName(), transformedVariant.getRoot().getAttributes())
+        val source = SourceVariantData(transformedVariant.root.asDescribable().getDisplayName(), transformedVariant.root.getAttributes())
         return TransformationChainData(source, visitor.getSteps(), transformedVariant.getAttributes())
     }
 
@@ -58,8 +58,8 @@ class TransformedVariantConverter {
         }
 
         fun convert(step: TransformStep): TransformData {
-            val transform = step.getTransform()
-            return TransformData(transform.getImplementationClass(), transform.getDisplayName(), transform.getFromAttributes(), transform.getToAttributes())
+            val transform = step.transform
+            return TransformData(transform.implementationClass, transform.getDisplayName(), transform.fromAttributes, transform.toAttributes)
         }
     }
 }

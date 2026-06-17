@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
 
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
+class EndCollection(source: FileCollectionInternal.Source?) : ResolvedArtifactSet.Artifacts {
+    private val source: FileCollectionInternal.Source?
 
-public class EndCollection implements ResolvedArtifactSet.Artifacts {
-    private final FileCollectionInternal.Source source;
-
-    public EndCollection(FileCollectionInternal.Source source) {
-        this.source = source;
+    init {
+        this.source = source
     }
 
-    @Override
-    public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
+    override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation?>?, requireFiles: Boolean) {
     }
 
-    @Override
-    public void visit(ArtifactVisitor visitor) {
-        visitor.endVisitCollection(source);
+    override fun visit(visitor: ArtifactVisitor) {
+        visitor.endVisitCollection(source)
     }
 }

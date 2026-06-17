@@ -13,38 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.BuildTree.class)
-public class ModuleRepositoryCacheProvider {
-    private final ModuleRepositoryCaches caches;
-    private final ModuleRepositoryCaches inMemoryCaches;
-    private final ResolvedArtifactCaches resolvedArtifactCaches = new ResolvedArtifactCaches();
-
-    public ModuleRepositoryCacheProvider(ModuleRepositoryCaches caches, ModuleRepositoryCaches inMemoryCaches) {
-        this.caches = caches;
-        this.inMemoryCaches = inMemoryCaches;
-    }
-
+@ServiceScope(Scope.BuildTree::class)
+class ModuleRepositoryCacheProvider(
     /**
      * Returns caches which will also be persisted to disk. They will also have an in-memory
      * front-end, but eventually all results are persisted.
      */
-    public ModuleRepositoryCaches getPersistentCaches() {
-        return caches;
-    }
-
+    val persistentCaches: ModuleRepositoryCaches?,
     /**
      * Returns caches which are *only* in memory: they will never write anything to disk.
      */
-    public ModuleRepositoryCaches getInMemoryOnlyCaches() {
-        return inMemoryCaches;
-    }
-
-    public ResolvedArtifactCaches getResolvedArtifactCaches() {
-        return resolvedArtifactCaches;
-    }
+    val inMemoryOnlyCaches: ModuleRepositoryCaches?
+) {
+    val resolvedArtifactCaches: ResolvedArtifactCaches = ResolvedArtifactCaches()
 }

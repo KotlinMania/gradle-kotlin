@@ -13,415 +13,371 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.gradle.api.internal.cache.StringInterner;
-import org.gradle.cache.FileLockManager;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.IndexedCacheParameters;
-import org.gradle.cache.PersistentCache;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.scopes.BuildScopedCacheBuilderFactory;
-import org.gradle.internal.hash.FileHasher;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.HashCodeSerializer;
-import org.gradle.internal.serialize.InterningStringSerializer;
-import org.gradle.internal.serialize.SetSerializer;
-import org.gradle.security.internal.PublicKeyService;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.gradle.api.internal.cache.StringInterner
+import org.gradle.cache.FileLockManager
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.IndexedCacheParameters
+import org.gradle.cache.PersistentCache
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.scopes.BuildScopedCacheBuilderFactory
+import org.gradle.internal.hash.FileHasher
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.HashCodeSerializer
+import org.gradle.internal.serialize.InterningStringSerializer
+import org.gradle.internal.serialize.SetSerializer
+import org.gradle.security.internal.PublicKeyService
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
+import java.lang.Boolean
+import kotlin.Any
+import kotlin.Exception
+import kotlin.Int
+import kotlin.Long
+import kotlin.String
+import kotlin.Throws
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+class CrossBuildSignatureVerificationService(
+    private val delegate: SignatureVerificationService,
+    private val fileHasher: FileHasher,
+    cacheBuilderFactory: BuildScopedCacheBuilderFactory,
+    inMemoryCacheDecoratorFactory: InMemoryCacheDecoratorFactory,
+    private val timeProvider: BuildCommencedTimeProvider,
+    private val refreshKeys: Boolean,
+    private val useKeyServers: Boolean,
+    private val keyringFileHash: HashCode
+) : SignatureVerificationService {
+    private val store: PersistentCache
+    private val cache: IndexedCache<CacheKey?, CacheEntry?>
 
-import static org.gradle.api.internal.artifacts.verification.signatures.CrossBuildCachingKeyService.MISSING_KEY_TIMEOUT;
-
-public class CrossBuildSignatureVerificationService implements SignatureVerificationService {
-    private final SignatureVerificationService delegate;
-    private final FileHasher fileHasher;
-    private final BuildCommencedTimeProvider timeProvider;
-    private final boolean refreshKeys;
-    private final PersistentCache store;
-    private final IndexedCache<CacheKey, CacheEntry> cache;
-    private final boolean useKeyServers;
-    private final HashCode keyringFileHash;
-
-    public CrossBuildSignatureVerificationService(SignatureVerificationService delegate,
-                                                  FileHasher fileHasher,
-                                                  BuildScopedCacheBuilderFactory cacheBuilderFactory,
-                                                  InMemoryCacheDecoratorFactory inMemoryCacheDecoratorFactory,
-                                                  BuildCommencedTimeProvider timeProvider,
-                                                  boolean refreshKeys,
-                                                  boolean useKeyServers,
-                                                  HashCode keyringFileHash) {
-        this.delegate = delegate;
-        this.fileHasher = fileHasher;
-        this.timeProvider = timeProvider;
-        this.refreshKeys = refreshKeys;
-        this.useKeyServers = useKeyServers;
-        this.keyringFileHash = keyringFileHash;
+    init {
         store = cacheBuilderFactory.createCacheBuilder("signature-verification")
             .withDisplayName("Signature verification cache")
             .withInitialLockMode(FileLockManager.LockMode.OnDemand)
-            .open();
-        InterningStringSerializer stringSerializer = new InterningStringSerializer(new StringInterner());
-        cache = store.createIndexedCache(
-            IndexedCacheParameters.of(
+            .open()
+        val stringSerializer = InterningStringSerializer(StringInterner())
+        cache = store.createIndexedCache<CacheKey?, CacheEntry?>(
+            IndexedCacheParameters.of<CacheKey?, CacheEntry?>(
                 "signature-verification",
-                new CacheKeySerializer(stringSerializer, new SetSerializer<>(stringSerializer)),
-                new CacheEntrySerializer(stringSerializer)
-            ).withCacheDecorator(inMemoryCacheDecoratorFactory.decorator(500, true)));
+                CacheKeySerializer(stringSerializer, SetSerializer<String?>(stringSerializer)),
+                CacheEntrySerializer(stringSerializer)
+            ).withCacheDecorator(inMemoryCacheDecoratorFactory.decorator(500, true))
+        )
     }
 
-    @Override
-    public void verify(File origin, File signature, Set<String> trustedKeys, Set<String> ignoredKeys, SignatureVerificationResultBuilder builder) {
-        CacheKey cacheKey = new CacheKey(origin.getAbsolutePath(), signature.getAbsolutePath(), trustedKeys, ignoredKeys, useKeyServers, keyringFileHash);
-        HashCode originHash = fileHasher.hash(origin);
-        HashCode signatureHash = fileHasher.hash(signature);
-        CacheEntry entry = cache.getIfPresent(cacheKey);
+    override fun verify(origin: File, signature: File, trustedKeys: MutableSet<String?>, ignoredKeys: MutableSet<String?>, builder: SignatureVerificationResultBuilder) {
+        val cacheKey = CacheKey(origin.getAbsolutePath(), signature.getAbsolutePath(), trustedKeys, ignoredKeys, useKeyServers, keyringFileHash)
+        val originHash = fileHasher.hash(origin)
+        val signatureHash = fileHasher.hash(signature)
+        var entry = cache.getIfPresent(cacheKey)
         if (entry == null || entry.updated(originHash, signatureHash) || hasExpired(entry)) {
-            entry = performActualVerification(origin, signature, trustedKeys, ignoredKeys, originHash, signatureHash);
-            cache.put(cacheKey, entry);
+            entry = performActualVerification(origin, signature, trustedKeys, ignoredKeys, originHash, signatureHash)
+            cache.put(cacheKey, entry)
         }
-        entry.applyTo(builder);
+        entry.applyTo(builder)
     }
 
-    private boolean hasExpired(CacheEntry entry) {
-        List<String> missingKeys = entry.missingKeys;
+    private fun hasExpired(entry: CacheEntry): Boolean {
+        val missingKeys = entry.missingKeys
         if (missingKeys == null || missingKeys.isEmpty()) {
-            return false;
+            return false
         }
-        long elapsed = timeProvider.getCurrentTime() - entry.timestamp;
-        return refreshKeys || elapsed > MISSING_KEY_TIMEOUT;
+        val elapsed = timeProvider.getCurrentTime() - entry.timestamp
+        return refreshKeys || elapsed > CrossBuildCachingKeyService.Companion.MISSING_KEY_TIMEOUT
     }
 
-    @Override
-    public PublicKeyService getPublicKeyService() {
-        return delegate.getPublicKeyService();
+    override fun getPublicKeyService(): PublicKeyService? {
+        return delegate.getPublicKeyService()
     }
 
-    private CacheEntry performActualVerification(File origin, File signature, Set<String> trustedKeys, Set<String> ignoredKeys, HashCode originHash, HashCode signatureHash) {
-        CacheEntryBuilder result = new CacheEntryBuilder(timeProvider.getCurrentTime(), originHash, signatureHash);
-        delegate.verify(origin, signature, trustedKeys, ignoredKeys, result);
-        return result.build();
+    private fun performActualVerification(
+        origin: File?,
+        signature: File?,
+        trustedKeys: MutableSet<String?>?,
+        ignoredKeys: MutableSet<String?>?,
+        originHash: HashCode,
+        signatureHash: HashCode
+    ): CacheEntry {
+        val result = CacheEntryBuilder(timeProvider.getCurrentTime(), originHash, signatureHash)
+        delegate.verify(origin, signature, trustedKeys, ignoredKeys, result)
+        return result.build()
     }
 
-    @Override
-    public void stop() {
-        delegate.stop();
-        store.close();
+    override fun stop() {
+        delegate.stop()
+        store.close()
     }
 
-    private static class CacheKey {
-        private final String filePath;
-        private final String signaturePath;
-        private final Set<String> trustedKeys;
-        private final Set<String> ignoredKeys;
-        private final boolean useKeyServers;
-        private final HashCode keyringFileHash;
-
-        private CacheKey(String filePath, String signaturePath, Set<String> trustedKeys, Set<String> ignoredKeys, boolean useKeyServers, HashCode keyringFileHash) {
-            this.filePath = filePath;
-            this.signaturePath = signaturePath;
-            this.trustedKeys = trustedKeys;
-            this.ignoredKeys = ignoredKeys;
-            this.useKeyServers = useKeyServers;
-            this.keyringFileHash = keyringFileHash;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+    private class CacheKey(
+        private val filePath: String,
+        private val signaturePath: String,
+        private val trustedKeys: MutableSet<String?>,
+        private val ignoredKeys: MutableSet<String?>,
+        private val useKeyServers: Boolean,
+        private val keyringFileHash: HashCode
+    ) {
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            CacheKey cacheKey = (CacheKey) o;
+            val cacheKey = o as CacheKey
 
-            if (!filePath.equals(cacheKey.filePath)) {
-                return false;
+            if (filePath != cacheKey.filePath) {
+                return false
             }
-            if (!signaturePath.equals(cacheKey.signaturePath)) {
-                return false;
+            if (signaturePath != cacheKey.signaturePath) {
+                return false
             }
-            if (!trustedKeys.equals(cacheKey.trustedKeys)) {
-                return false;
+            if (trustedKeys != cacheKey.trustedKeys) {
+                return false
             }
-            if (!ignoredKeys.equals(cacheKey.ignoredKeys)) {
-                return false;
+            if (ignoredKeys != cacheKey.ignoredKeys) {
+                return false
             }
             if (useKeyServers != cacheKey.useKeyServers) {
-                return false;
+                return false
             }
-            return keyringFileHash.equals(cacheKey.keyringFileHash);
+            return keyringFileHash == cacheKey.keyringFileHash
         }
 
-        @Override
-        public int hashCode() {
-            int result = filePath.hashCode();
-            result = 31 * result + signaturePath.hashCode();
-            result = 31 * result + trustedKeys.hashCode();
-            result = 31 * result + ignoredKeys.hashCode();
-            result = 31 * result + Boolean.hashCode(useKeyServers);
-            result = 31 * result + keyringFileHash.hashCode();
-            return result;
-        }
-    }
-
-    private static class CacheKeySerializer extends AbstractSerializer<CacheKey> {
-        private final InterningStringSerializer delegate;
-        private final SetSerializer<String> setSerializer;
-        private final HashCodeSerializer hashCodeSerializer;
-
-        private CacheKeySerializer(InterningStringSerializer stringSerializer, SetSerializer<String> setSerializer) {
-            this.delegate = stringSerializer;
-            this.setSerializer = setSerializer;
-            this.hashCodeSerializer = new HashCodeSerializer();
-        }
-
-        @Override
-        public CacheKey read(Decoder decoder) throws Exception {
-            return new CacheKey(delegate.read(decoder), delegate.read(decoder), setSerializer.read(decoder), setSerializer.read(decoder), decoder.readBoolean(), hashCodeSerializer.read(decoder));
-        }
-
-        @Override
-        public void write(Encoder encoder, CacheKey value) throws Exception {
-            delegate.write(encoder, value.filePath);
-            delegate.write(encoder, value.signaturePath);
-            setSerializer.write(encoder, value.trustedKeys);
-            setSerializer.write(encoder, value.ignoredKeys);
-            encoder.writeBoolean(value.useKeyServers);
-            hashCodeSerializer.write(encoder, value.keyringFileHash);
+        override fun hashCode(): Int {
+            var result = filePath.hashCode()
+            result = 31 * result + signaturePath.hashCode()
+            result = 31 * result + trustedKeys.hashCode()
+            result = 31 * result + ignoredKeys.hashCode()
+            result = 31 * result + Boolean.hashCode(useKeyServers)
+            result = 31 * result + keyringFileHash.hashCode()
+            return result
         }
     }
 
-    private static class CacheEntryBuilder implements SignatureVerificationResultBuilder {
-        private final long timestamp;
-        private final HashCode originHash;
-        private final HashCode signatureHash;
+    private class CacheKeySerializer(private val delegate: InterningStringSerializer, private val setSerializer: SetSerializer<String?>) : AbstractSerializer<CacheKey?>() {
+        private val hashCodeSerializer: HashCodeSerializer
 
-        private List<String> missingKeys = null;
-        private List<PGPPublicKey> trustedKeys = null;
-        private List<PGPPublicKey> validKeys = null;
-        private List<PGPPublicKey> failedKeys = null;
-        private List<String> ignoredKeys = null;
-        private boolean hasNoSignatures = false;
-        private String corruptionError = null;
-
-        private CacheEntryBuilder(long timestamp, HashCode originHash, HashCode signatureHash) {
-            this.timestamp = timestamp;
-            this.originHash = originHash;
-            this.signatureHash = signatureHash;
+        init {
+            this.hashCodeSerializer = HashCodeSerializer()
         }
 
-        @Override
-        public void missingKey(String keyId) {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): CacheKey {
+            return CrossBuildSignatureVerificationService.CacheKey(
+                delegate.read(decoder),
+                delegate.read(decoder),
+                setSerializer.read(decoder)!!,
+                setSerializer.read(decoder)!!,
+                decoder.readBoolean(),
+                hashCodeSerializer.read(decoder)
+            )
+        }
+
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CacheKey) {
+            delegate.write(encoder, value.filePath)
+            delegate.write(encoder, value.signaturePath)
+            setSerializer.write(encoder, value.trustedKeys)
+            setSerializer.write(encoder, value.ignoredKeys)
+            encoder.writeBoolean(value.useKeyServers)
+            hashCodeSerializer.write(encoder, value.keyringFileHash)
+        }
+    }
+
+    private class CacheEntryBuilder(private val timestamp: Long, private val originHash: HashCode, private val signatureHash: HashCode) : SignatureVerificationResultBuilder {
+        private var missingKeys: MutableList<String?>? = null
+        private var trustedKeys: MutableList<PGPPublicKey>? = null
+        private var validKeys: MutableList<PGPPublicKey>? = null
+        private var failedKeys: MutableList<PGPPublicKey>? = null
+        private var ignoredKeys: MutableList<String?>? = null
+        private var hasNoSignatures = false
+        private var corruptionError: String? = null
+
+        override fun missingKey(keyId: String?) {
             if (missingKeys == null) {
-                missingKeys = new ArrayList<>();
+                missingKeys = ArrayList<String?>()
             }
-            missingKeys.add(keyId);
+            missingKeys!!.add(keyId)
         }
 
-        @Override
-        public void verified(PGPPublicKey key, boolean trusted) {
+        override fun verified(key: PGPPublicKey?, trusted: kotlin.Boolean) {
             if (trusted) {
                 if (trustedKeys == null) {
-                    trustedKeys = new ArrayList<>();
+                    trustedKeys = ArrayList<PGPPublicKey>()
                 }
-                trustedKeys.add(key);
+                trustedKeys!!.add(key!!)
             } else {
                 if (validKeys == null) {
-                    validKeys = new ArrayList<>();
+                    validKeys = ArrayList<PGPPublicKey>()
                 }
-                validKeys.add(key);
+                validKeys!!.add(key!!)
             }
         }
 
-        @Override
-        public void failed(PGPPublicKey pgpPublicKey) {
+        override fun failed(pgpPublicKey: PGPPublicKey?) {
             if (failedKeys == null) {
-                failedKeys = new ArrayList<>();
+                failedKeys = ArrayList<PGPPublicKey>()
             }
-            failedKeys.add(pgpPublicKey);
+            failedKeys!!.add(pgpPublicKey!!)
         }
 
-        @Override
-        public void ignored(String keyId) {
+        override fun ignored(keyId: String?) {
             if (ignoredKeys == null) {
-                ignoredKeys = new ArrayList<>();
+                ignoredKeys = ArrayList<String?>()
             }
-            ignoredKeys.add(keyId);
+            ignoredKeys!!.add(keyId)
         }
 
-        @Override
-        public void noSignatures() {
-            hasNoSignatures = true;
+        override fun noSignatures() {
+            hasNoSignatures = true
         }
 
-        @Override
-        public void failedToReadSignatureFile(String causeDescription) {
-            corruptionError = causeDescription;
+        override fun failedToReadSignatureFile(causeDescription: String?) {
+            corruptionError = causeDescription
         }
 
-        CacheEntry build() {
-            return new CacheEntry(timestamp, originHash, signatureHash, missingKeys, trustedKeys, validKeys, failedKeys, ignoredKeys, hasNoSignatures, corruptionError);
+        fun build(): CacheEntry {
+            return CacheEntry(timestamp, originHash, signatureHash, missingKeys, trustedKeys, validKeys, failedKeys, ignoredKeys, hasNoSignatures, corruptionError)
         }
     }
 
-    private static class CacheEntry {
-        private final long timestamp;
-        private final HashCode originHash;
-        private final HashCode signatureHash;
-        private final List<String> missingKeys;
-        private final List<PGPPublicKey> trustedKeys;
-        private final List<PGPPublicKey> validKeys;
-        private final List<PGPPublicKey> failedKeys;
-        private final List<String> ignoredKeys;
-        private final boolean hasNoSignatures;
-        private final String corruptionError;
-
-        public CacheEntry(long timestamp, HashCode originHash, HashCode signatureHash, List<String> missingKeys, List<PGPPublicKey> trustedKeys, List<PGPPublicKey> validKeys, List<PGPPublicKey> failedKeys, List<String> ignoredKeys, boolean hasNoSignatures, String corruptionError) {
-            this.timestamp = timestamp;
-            this.originHash = originHash;
-            this.signatureHash = signatureHash;
-            this.missingKeys = missingKeys;
-            this.trustedKeys = trustedKeys;
-            this.validKeys = validKeys;
-            this.failedKeys = failedKeys;
-            this.ignoredKeys = ignoredKeys;
-            this.hasNoSignatures = hasNoSignatures;
-            this.corruptionError = corruptionError;
-        }
-
-        void applyTo(SignatureVerificationResultBuilder builder) {
+    private class CacheEntry(
+        private val timestamp: Long,
+        private val originHash: HashCode,
+        private val signatureHash: HashCode,
+        private val missingKeys: MutableList<String?>?,
+        private val trustedKeys: MutableList<PGPPublicKey>?,
+        private val validKeys: MutableList<PGPPublicKey>?,
+        private val failedKeys: MutableList<PGPPublicKey>?,
+        private val ignoredKeys: MutableList<String?>?,
+        private val hasNoSignatures: kotlin.Boolean,
+        private val corruptionError: String?
+    ) {
+        fun applyTo(builder: SignatureVerificationResultBuilder) {
             if (missingKeys != null) {
-                for (String missingKey : missingKeys) {
-                    builder.missingKey(missingKey);
+                for (missingKey in missingKeys) {
+                    builder.missingKey(missingKey)
                 }
             }
             if (trustedKeys != null) {
-                for (PGPPublicKey trustedKey : trustedKeys) {
-                    builder.verified(trustedKey, true);
+                for (trustedKey in trustedKeys) {
+                    builder.verified(trustedKey, true)
                 }
             }
             if (validKeys != null) {
-                for (PGPPublicKey validKey : validKeys) {
-                    builder.verified(validKey, false);
+                for (validKey in validKeys) {
+                    builder.verified(validKey, false)
                 }
             }
             if (failedKeys != null) {
-                for (PGPPublicKey failedKey : failedKeys) {
-                    builder.failed(failedKey);
+                for (failedKey in failedKeys) {
+                    builder.failed(failedKey)
                 }
             }
             if (ignoredKeys != null) {
-                for (String ignoredKey : ignoredKeys) {
-                    builder.ignored(ignoredKey);
+                for (ignoredKey in ignoredKeys) {
+                    builder.ignored(ignoredKey)
                 }
             }
             if (hasNoSignatures) {
-                builder.noSignatures();
+                builder.noSignatures()
             }
             if (corruptionError != null) {
-                builder.failedToReadSignatureFile(corruptionError);
+                builder.failedToReadSignatureFile(corruptionError)
             }
         }
 
-        public boolean updated(HashCode originHash, HashCode signatureHash) {
-            return !this.originHash.equals(originHash) ||
-                !this.signatureHash.equals(signatureHash);
+        fun updated(originHash: HashCode?, signatureHash: HashCode?): kotlin.Boolean {
+            return this.originHash != originHash || this.signatureHash != signatureHash
         }
     }
 
-    private static class CacheEntrySerializer extends AbstractSerializer<CacheEntry> {
-        private final InterningStringSerializer stringSerializer;
-        private final PublicKeySerializer publicKeySerializer = new PublicKeySerializer();
+    private class CacheEntrySerializer(private val stringSerializer: InterningStringSerializer) : AbstractSerializer<CacheEntry?>() {
+        private val publicKeySerializer = PublicKeySerializer()
 
-        private CacheEntrySerializer(InterningStringSerializer stringSerializer) {
-            this.stringSerializer = stringSerializer;
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): CacheEntry {
+            val timestamp = decoder.readLong()
+            val originHash = HashCode.fromBytes(decoder.readBinary()!!)
+            val signatureHash = HashCode.fromBytes(decoder.readBinary()!!)
+            val missingKeys = readStringKeys(decoder)
+            val trustedKeys = readKeys(decoder)
+            val validKeys = readKeys(decoder)
+            val failedKeys = readKeys(decoder)
+            val ignoredKeys = readStringKeys(decoder)
+            val hasNoSignatures = decoder.readBoolean()
+            val corruptionError = decoder.readNullableString()
+            return CacheEntry(timestamp, originHash, signatureHash, missingKeys, trustedKeys, validKeys, failedKeys, ignoredKeys, hasNoSignatures, corruptionError)
         }
 
-        @Override
-        public CacheEntry read(Decoder decoder) throws Exception {
-            long timestamp = decoder.readLong();
-            HashCode originHash = HashCode.fromBytes(decoder.readBinary());
-            HashCode signatureHash = HashCode.fromBytes(decoder.readBinary());
-            List<String> missingKeys = readStringKeys(decoder);
-            List<PGPPublicKey> trustedKeys = readKeys(decoder);
-            List<PGPPublicKey> validKeys = readKeys(decoder);
-            List<PGPPublicKey> failedKeys = readKeys(decoder);
-            List<String> ignoredKeys = readStringKeys(decoder);
-            boolean hasNoSignatures = decoder.readBoolean();
-            String corruptionError = decoder.readNullableString();
-            return new CacheEntry(timestamp, originHash, signatureHash, missingKeys, trustedKeys, validKeys, failedKeys, ignoredKeys, hasNoSignatures, corruptionError);
-        }
-
-        private List<String> readStringKeys(Decoder decoder) throws Exception {
-            int missingKeysLen = decoder.readSmallInt();
-            List<String> missingKeys = null;
+        @Throws(Exception::class)
+        fun readStringKeys(decoder: Decoder): MutableList<String?>? {
+            val missingKeysLen = decoder.readSmallInt()
+            var missingKeys: MutableList<String?>? = null
             if (missingKeysLen > 0) {
-                missingKeys = new ArrayList<>(missingKeysLen);
-                for (int i = 0; i < missingKeysLen; i++) {
-                    missingKeys.add(stringSerializer.read(decoder));
+                missingKeys = ArrayList<String?>(missingKeysLen)
+                for (i in 0..<missingKeysLen) {
+                    missingKeys.add(stringSerializer.read(decoder))
                 }
             }
-            return missingKeys;
+            return missingKeys
         }
 
-        private List<PGPPublicKey> readKeys(Decoder decoder) throws Exception {
-            int len = decoder.readSmallInt();
-            List<PGPPublicKey> keys = null;
+        @Throws(Exception::class)
+        fun readKeys(decoder: Decoder): MutableList<PGPPublicKey>? {
+            val len = decoder.readSmallInt()
+            var keys: MutableList<PGPPublicKey>? = null
             if (len > 0) {
-                keys = new ArrayList<>(len);
-                for (int i = 0; i < len; i++) {
-                    keys.add(publicKeySerializer.read(decoder));
+                keys = ArrayList<PGPPublicKey>(len)
+                for (i in 0..<len) {
+                    keys.add(publicKeySerializer.read(decoder)!!)
                 }
             }
-            return keys;
+            return keys
         }
 
-        @Override
-        public void write(Encoder encoder, CacheEntry value) throws Exception {
-            encoder.writeLong(value.timestamp);
-            encoder.writeBinary(value.originHash.toByteArray());
-            encoder.writeBinary(value.signatureHash.toByteArray());
-            writeStringKeys(encoder, value.missingKeys);
-            writeKeys(encoder, value.trustedKeys);
-            writeKeys(encoder, value.validKeys);
-            writeKeys(encoder, value.failedKeys);
-            writeStringKeys(encoder, value.ignoredKeys);
-            encoder.writeBoolean(value.hasNoSignatures);
-            encoder.writeNullableString(value.corruptionError);
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CacheEntry) {
+            encoder.writeLong(value.timestamp)
+            encoder.writeBinary(value.originHash.toByteArray())
+            encoder.writeBinary(value.signatureHash.toByteArray())
+            writeStringKeys(encoder, value.missingKeys)
+            writeKeys(encoder, value.trustedKeys)
+            writeKeys(encoder, value.validKeys)
+            writeKeys(encoder, value.failedKeys)
+            writeStringKeys(encoder, value.ignoredKeys)
+            encoder.writeBoolean(value.hasNoSignatures)
+            encoder.writeNullableString(value.corruptionError)
         }
 
-        private void writeStringKeys(Encoder encoder, List<String> keys) throws Exception {
+        @Throws(Exception::class)
+        fun writeStringKeys(encoder: Encoder, keys: MutableList<String?>?) {
             if (keys == null) {
-                encoder.writeSmallInt(0);
+                encoder.writeSmallInt(0)
             } else {
-                encoder.writeSmallInt(keys.size());
-                for (String key : keys) {
-                    stringSerializer.write(encoder, key);
+                encoder.writeSmallInt(keys.size)
+                for (key in keys) {
+                    stringSerializer.write(encoder, key)
                 }
             }
         }
 
-        private void writeKeys(Encoder encoder, List<PGPPublicKey> keys) throws Exception {
+        @Throws(Exception::class)
+        fun writeKeys(encoder: Encoder, keys: MutableList<PGPPublicKey>?) {
             if (keys == null) {
-                encoder.writeSmallInt(0);
+                encoder.writeSmallInt(0)
             } else {
-                encoder.writeSmallInt(keys.size());
-                for (PGPPublicKey key : keys) {
-                    publicKeySerializer.write(encoder, key);
+                encoder.writeSmallInt(keys.size)
+                for (key in keys) {
+                    publicKeySerializer.write(encoder, key)
                 }
             }
         }
     }
-
 }

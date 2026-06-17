@@ -13,133 +13,137 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.api.internal.cache.CacheConfigurationsInternal;
-import org.gradle.api.internal.filestore.DefaultArtifactIdentifierFileStore;
-import org.gradle.cache.CacheCleanupStrategyFactory;
-import org.gradle.cache.CleanupAction;
-import org.gradle.cache.FileLockManager;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.IndexedCacheParameters;
-import org.gradle.cache.PersistentCache;
-import org.gradle.cache.UnscopedCacheBuilderFactory;
-import org.gradle.cache.internal.CompositeCleanupAction;
-import org.gradle.cache.internal.LeastRecentlyUsedCacheCleanup;
-import org.gradle.cache.internal.SingleDepthFilesFinder;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.resource.cached.DefaultExternalResourceFileStore;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.time.TimestampSuppliers;
-import org.gradle.internal.versionedcache.UnusedVersionsCacheCleanup;
-import org.gradle.internal.versionedcache.UsedGradleVersions;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.cache.CacheConfigurationsInternal
+import org.gradle.api.internal.filestore.DefaultArtifactIdentifierFileStore
+import org.gradle.cache.CacheCleanupStrategyFactory
+import org.gradle.cache.CleanupAction
+import org.gradle.cache.FileLockManager
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.IndexedCacheParameters
+import org.gradle.cache.PersistentCache
+import org.gradle.cache.UnscopedCacheBuilderFactory
+import org.gradle.cache.internal.CompositeCleanupAction
+import org.gradle.cache.internal.LeastRecentlyUsedCacheCleanup
+import org.gradle.cache.internal.SingleDepthFilesFinder
+import org.gradle.internal.file.FileAccessTimeJournal
+import org.gradle.internal.resource.cached.DefaultExternalResourceFileStore
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.time.TimestampSuppliers.daysAgo
+import org.gradle.internal.versionedcache.UnusedVersionsCacheCleanup.Companion.create
+import org.gradle.internal.versionedcache.UsedGradleVersions
+import java.io.Closeable
+import java.util.function.Function
+import java.util.function.Supplier
 
-import java.io.Closeable;
-import java.util.function.Function;
-import java.util.function.Supplier;
+class WritableArtifactCacheLockingAccessCoordinator(
+    unscopedCacheBuilderFactory: UnscopedCacheBuilderFactory,
+    cacheMetaData: ArtifactCacheMetadata,
+    fileAccessTimeJournal: FileAccessTimeJournal,
+    usedGradleVersions: UsedGradleVersions,
+    cacheConfigurations: CacheConfigurationsInternal,
+    cacheCleanupStrategyFactory: CacheCleanupStrategyFactory
+) : ArtifactCacheLockingAccessCoordinator, Closeable {
+    private val cache: PersistentCache
 
-public class WritableArtifactCacheLockingAccessCoordinator implements ArtifactCacheLockingAccessCoordinator, Closeable {
-    private final PersistentCache cache;
-
-    public WritableArtifactCacheLockingAccessCoordinator(
-            UnscopedCacheBuilderFactory unscopedCacheBuilderFactory,
-            ArtifactCacheMetadata cacheMetaData,
-            FileAccessTimeJournal fileAccessTimeJournal,
-            UsedGradleVersions usedGradleVersions,
-            CacheConfigurationsInternal cacheConfigurations,
-            CacheCleanupStrategyFactory cacheCleanupStrategyFactory) {
+    init {
         cache = unscopedCacheBuilderFactory
-                .cache(cacheMetaData.getCacheDir())
-                .withDisplayName("artifact cache")
-                .withInitialLockMode(FileLockManager.LockMode.OnDemand) // Don't need to lock anything until we use the caches
-                .withCleanupStrategy(cacheCleanupStrategyFactory.create(createCleanupAction(cacheMetaData, fileAccessTimeJournal, usedGradleVersions, cacheConfigurations), cacheConfigurations.getCleanupFrequency()::get))
-                .open();
+            .cache(cacheMetaData.getCacheDir())
+            .withDisplayName("artifact cache")
+            .withInitialLockMode(FileLockManager.LockMode.OnDemand) // Don't need to lock anything until we use the caches
+            .withCleanupStrategy(
+                cacheCleanupStrategyFactory.create(
+                    createCleanupAction(cacheMetaData, fileAccessTimeJournal, usedGradleVersions, cacheConfigurations),
+                    Supplier { cacheConfigurations.getCleanupFrequency().get() })
+            )
+            .open()
     }
 
-    private CleanupAction createCleanupAction(ArtifactCacheMetadata cacheMetaData, FileAccessTimeJournal fileAccessTimeJournal, UsedGradleVersions usedGradleVersions, CacheConfigurationsInternal cacheConfigurations) {
+    private fun createCleanupAction(
+        cacheMetaData: ArtifactCacheMetadata,
+        fileAccessTimeJournal: FileAccessTimeJournal,
+        usedGradleVersions: UsedGradleVersions,
+        cacheConfigurations: CacheConfigurationsInternal
+    ): CleanupAction {
         return CompositeCleanupAction.builder()
-                .add(UnusedVersionsCacheCleanup.create(CacheLayout.MODULES.getName(), CacheLayout.MODULES.getVersionMapping(), usedGradleVersions))
-                .add(cacheMetaData.getExternalResourcesStoreDirectory(),
-                    UnusedVersionsCacheCleanup.create(CacheLayout.RESOURCES.getName(), CacheLayout.RESOURCES.getVersionMapping(), usedGradleVersions),
-                    new LeastRecentlyUsedCacheCleanup(new SingleDepthFilesFinder(DefaultExternalResourceFileStore.FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP), fileAccessTimeJournal, getMaxAgeTimestamp(cacheConfigurations)))
-                .add(cacheMetaData.getFileStoreDirectory(),
-                    UnusedVersionsCacheCleanup.create(CacheLayout.FILE_STORE.getName(), CacheLayout.FILE_STORE.getVersionMapping(), usedGradleVersions),
-                    new LeastRecentlyUsedCacheCleanup(new SingleDepthFilesFinder(DefaultArtifactIdentifierFileStore.FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP), fileAccessTimeJournal, getMaxAgeTimestamp(cacheConfigurations)))
-                .add(cacheMetaData.getMetaDataStoreDirectory().getParentFile(),
-                    UnusedVersionsCacheCleanup.create(CacheLayout.META_DATA.getName(), CacheLayout.META_DATA.getVersionMapping(), usedGradleVersions))
-                // Cleanup old unused 'transforms-X' directories too. Transforms are now cached in 'caches/<gradle-version>/transforms'.
-                .add(UnusedVersionsCacheCleanup.create(CacheLayout.TRANSFORMS.getName(), CacheLayout.TRANSFORMS.getVersionMapping(), usedGradleVersions))
-                .build();
+            .add(create(CacheLayout.MODULES.getName(), CacheLayout.MODULES.getVersionMapping(), usedGradleVersions))
+            .add(
+                cacheMetaData.getExternalResourcesStoreDirectory(),
+                create(CacheLayout.RESOURCES.getName(), CacheLayout.RESOURCES.getVersionMapping(), usedGradleVersions),
+                LeastRecentlyUsedCacheCleanup(
+                    SingleDepthFilesFinder(DefaultExternalResourceFileStore.FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP),
+                    fileAccessTimeJournal,
+                    getMaxAgeTimestamp(cacheConfigurations)
+                )
+            )
+            .add(
+                cacheMetaData.getFileStoreDirectory(),
+                create(CacheLayout.FILE_STORE.getName(), CacheLayout.FILE_STORE.getVersionMapping(), usedGradleVersions),
+                LeastRecentlyUsedCacheCleanup(
+                    SingleDepthFilesFinder(DefaultArtifactIdentifierFileStore.FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP),
+                    fileAccessTimeJournal,
+                    getMaxAgeTimestamp(cacheConfigurations)
+                )
+            )
+            .add(
+                cacheMetaData.getMetaDataStoreDirectory().getParentFile(),
+                create(CacheLayout.META_DATA.getName(), CacheLayout.META_DATA.getVersionMapping(), usedGradleVersions)
+            ) // Cleanup old unused 'transforms-X' directories too. Transforms are now cached in 'caches/<gradle-version>/transforms'.
+            .add(create(CacheLayout.TRANSFORMS.getName(), CacheLayout.TRANSFORMS.getVersionMapping(), usedGradleVersions))
+            .build()
     }
 
-    private Supplier<Long> getMaxAgeTimestamp(CacheConfigurationsInternal cacheConfigurations) {
-        Integer maxAgeProperty = Integer.getInteger("org.gradle.internal.cleanup.external.max.age");
+    private fun getMaxAgeTimestamp(cacheConfigurations: CacheConfigurationsInternal): Supplier<Long> {
+        val maxAgeProperty = Integer.getInteger("org.gradle.internal.cleanup.external.max.age")
         if (maxAgeProperty == null) {
-            return cacheConfigurations.getDownloadedResources().getEntryRetentionTimestampSupplier();
+            return cacheConfigurations.getDownloadedResources().getEntryRetentionTimestampSupplier()
         } else {
-            return TimestampSuppliers.daysAgo(maxAgeProperty);
+            return daysAgo(maxAgeProperty)
         }
     }
 
-    @Override
-    public void close() {
-        cache.close();
+    override fun close() {
+        cache.close()
     }
 
-    @Override
-    public <T> T withFileLock(Supplier<? extends T> action) {
-        return cache.withFileLock(action);
+    override fun <T> withFileLock(action: Supplier<out T>): T? {
+        return cache.withFileLock(action)
     }
 
-    @Override
-    public void withFileLock(Runnable action) {
-        cache.withFileLock(action);
+    override fun withFileLock(action: Runnable) {
+        cache.withFileLock(action)
     }
 
-    @Override
-    public <T> T useCache(Supplier<? extends T> action) {
-        return cache.useCache(action);
+    override fun <T> useCache(action: Supplier<out T>): T? {
+        return cache.useCache(action)
     }
 
-    @Override
-    public void useCache(Runnable action) {
-        cache.useCache(action);
+    override fun useCache(action: Runnable) {
+        cache.useCache(action)
     }
 
-    @Override
-    public <K, V> IndexedCache<K, V> createCache(String cacheName, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
-        String cacheFileInMetaDataStore = CacheLayout.META_DATA.getKey() + "/" + cacheName;
-        final IndexedCache<K, V> indexedCache = cache.createIndexedCache(IndexedCacheParameters.of(cacheFileInMetaDataStore, keySerializer, valueSerializer));
-        return new CacheLockingIndexedCache<>(indexedCache);
+    override fun <K, V> createCache(cacheName: String, keySerializer: Serializer<K?>, valueSerializer: Serializer<V?>): IndexedCache<K?, V?> {
+        val cacheFileInMetaDataStore = CacheLayout.META_DATA.getKey() + "/" + cacheName
+        val indexedCache = cache.createIndexedCache<K?, V?>(IndexedCacheParameters.of<K?, V?>(cacheFileInMetaDataStore, keySerializer, valueSerializer))
+        return WritableArtifactCacheLockingAccessCoordinator.CacheLockingIndexedCache<K?, V?>(indexedCache)
     }
 
-    private class CacheLockingIndexedCache<K, V> implements IndexedCache<K, V> {
-        private final IndexedCache<K, V> indexedCache;
-
-        public CacheLockingIndexedCache(IndexedCache<K, V> indexedCache) {
-            this.indexedCache = indexedCache;
+    private inner class CacheLockingIndexedCache<K, V>(private val indexedCache: IndexedCache<K?, V?>) : IndexedCache<K?, V?> {
+        override fun getIfPresent(key: K?): V? {
+            return cache.useCache<V?>(Supplier { indexedCache.getIfPresent(key) })
         }
 
-        @Nullable
-        @Override
-        public V getIfPresent(final K key) {
-            return cache.useCache(() -> indexedCache.getIfPresent(key));
+        override fun get(key: K?, producer: Function<in K?, out V>): V? {
+            return cache.useCache<V?>(Supplier { indexedCache.get(key, producer) })
         }
 
-        @Override
-        public V get(final K key, final Function<? super K, ? extends V> producer) {
-            return cache.useCache(() -> indexedCache.get(key, producer));
+        override fun put(key: K?, value: V?) {
+            cache.useCache(Runnable { indexedCache.put(key, value) })
         }
 
-        @Override
-        public void put(final K key, final V value) {
-            cache.useCache(() -> indexedCache.put(key, value));
-        }
-
-        @Override
-        public void remove(final K key) {
-            cache.useCache(() -> indexedCache.remove(key));
+        override fun remove(key: K?) {
+            cache.useCache(Runnable { indexedCache.remove(key) })
         }
     }
 }

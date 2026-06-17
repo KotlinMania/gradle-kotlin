@@ -37,7 +37,7 @@ internal class PluginArtifactRepository(delegate: ArtifactRepository) : Artifact
     init {
         this.delegate = delegate as ArtifactRepositoryInternal
         this.resolutionAwareDelegate = delegate as ResolutionAwareRepository
-        this.repositoryContentDescriptor = this.delegate.getRepositoryDescriptorCopy()
+        this.repositoryContentDescriptor = this.delegate.repositoryDescriptorCopy
     }
 
     override fun getName(): String {
@@ -57,15 +57,15 @@ internal class PluginArtifactRepository(delegate: ArtifactRepository) : Artifact
     }
 
     override fun getIncludedConfigurations(): MutableSet<String>? {
-        return repositoryContentDescriptor.getIncludedConfigurations()
+        return repositoryContentDescriptor.includedConfigurations
     }
 
     override fun getExcludedConfigurations(): MutableSet<String>? {
-        return repositoryContentDescriptor.getExcludedConfigurations()
+        return repositoryContentDescriptor.excludedConfigurations
     }
 
     override fun getRequiredAttributes(): MutableMap<Attribute<Any>, MutableSet<Any>>? {
-        return repositoryContentDescriptor.getRequiredAttributes()
+        return repositoryContentDescriptor.requiredAttributes
     }
 
     override fun getDisplayName(): String {
@@ -77,7 +77,7 @@ internal class PluginArtifactRepository(delegate: ArtifactRepository) : Artifact
     }
 
     override fun getDescriptor(): RepositoryDescriptor {
-        return resolutionAwareDelegate.getDescriptor()
+        return resolutionAwareDelegate.descriptor
     }
 
     override fun onAddToContainer(container: NamedDomainObjectCollection<ArtifactRepository>) {

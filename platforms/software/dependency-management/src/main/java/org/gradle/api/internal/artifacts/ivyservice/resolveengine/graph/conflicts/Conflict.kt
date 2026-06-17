@@ -13,68 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.ComponentSelectionReason;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.result.ComponentSelectionReason
 
 /**
  * Describes a version conflict between two or more versions of a module in a dependency graph.
  */
-public class Conflict {
+class Conflict(
+    participants: ImmutableList<Participant>,
+    moduleId: ModuleIdentifier,
+    selectionReason: ComponentSelectionReason
+) {
+    val participants: MutableList<Participant>
+    val moduleId: ModuleIdentifier
+    val selectionReason: ComponentSelectionReason
 
-    private final List<Participant> participants;
-    private final ModuleIdentifier moduleId;
-    private final ComponentSelectionReason selectionReason;
-
-    public Conflict(
-        ImmutableList<Participant> participants,
-        ModuleIdentifier moduleId,
-        ComponentSelectionReason selectionReason
-    ) {
-        this.participants = participants;
-        this.moduleId = moduleId;
-        this.selectionReason = selectionReason;
-    }
-
-    public ComponentSelectionReason getSelectionReason() {
-        return selectionReason;
-    }
-
-    public ModuleIdentifier getModuleId() {
-        return moduleId;
-    }
-
-    public List<Participant> getParticipants() {
-        return participants;
+    init {
+        this.participants = participants
+        this.moduleId = moduleId
+        this.selectionReason = selectionReason
     }
 
     /**
      * A component that was involved in the conflict.
      */
-    public static class Participant {
+    class Participant(version: String, id: ComponentIdentifier) {
+        val version: String
+        val id: ComponentIdentifier
 
-        private final String version;
-        private final ComponentIdentifier id;
-
-        public Participant(String version, ComponentIdentifier id) {
-            this.version = version;
-            this.id = id;
+        init {
+            this.version = version
+            this.id = id
         }
-
-        public String getVersion() {
-            return version;
-        }
-
-        public ComponentIdentifier getId() {
-            return id;
-        }
-
     }
-
 }

@@ -13,25 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedModuleVersion
 
-public class DefaultResolvedModuleVersion implements ResolvedModuleVersion {
-    private final ModuleVersionIdentifier identifier;
-
-    public DefaultResolvedModuleVersion(ModuleVersionIdentifier identifier) {
-        this.identifier = identifier;
+class DefaultResolvedModuleVersion(private val identifier: ModuleVersionIdentifier) : ResolvedModuleVersion {
+    override fun toString(): String {
+        return identifier.toString()
     }
 
-    @Override
-    public String toString() {
-        return identifier.toString();
-    }
-
-    @Override
-    public ModuleVersionIdentifier getId() {
-        return identifier;
+    override fun getId(): ModuleVersionIdentifier {
+        return identifier
     }
 }

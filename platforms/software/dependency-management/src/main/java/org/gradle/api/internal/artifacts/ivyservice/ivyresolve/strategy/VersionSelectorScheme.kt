@@ -13,30 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Compares version selectors against candidate versions, indicating whether they match or not.
  *
  */
-@ServiceScope(Scope.Build.class)
-public interface VersionSelectorScheme {
+@ServiceScope(Scope.Build::class)
+interface VersionSelectorScheme {
     /**
-     * Returns an appropriate {@link VersionSelector} for the given selector string.
+     * Returns an appropriate [VersionSelector] for the given selector string.
      *
      * @param selectorString - the string representation of the selector
-     * @return the {@link VersionSelector}
+     * @return the [VersionSelector]
      */
-    VersionSelector parseSelector(String selectorString);
+    fun parseSelector(selectorString: String?): VersionSelector?
 
     /**
-     * Renders a {@link VersionSelector} to a selector string.
+     * Renders a [VersionSelector] to a selector string.
      */
-    String renderSelector(VersionSelector selector);
+    fun renderSelector(selector: VersionSelector?): String?
 
     /**
      * Creates another version selector which complements the provided one, but also makes sense to use
@@ -45,5 +44,5 @@ public interface VersionSelectorScheme {
      * @param selector the selector to create a complement for
      * @return a selector that complements the provided one and can be used in a reject rule
      */
-    VersionSelector complementForRejection(VersionSelector selector);
+    fun complementForRejection(selector: VersionSelector?): VersionSelector?
 }

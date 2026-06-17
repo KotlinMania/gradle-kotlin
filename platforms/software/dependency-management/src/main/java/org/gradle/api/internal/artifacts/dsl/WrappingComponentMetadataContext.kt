@@ -13,78 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataDetailsAdapter
+import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataImpl
+import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataImpl
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.VariantDerivationStrategy
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
 
-import org.gradle.api.artifacts.ComponentMetadataContext;
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataDetailsAdapter;
-import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataImpl;
-import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataImpl;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.VariantDerivationStrategy;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
+internal class WrappingComponentMetadataContext(
+    private val metadata: ModuleComponentResolveMetadata, private val instantiator: Instantiator,
+    private val dependencyMetadataNotationParser: NotationParser<Any, DirectDependencyMetadataImpl>,
+    private val dependencyConstraintMetadataNotationParser: NotationParser<Any, DependencyConstraintMetadataImpl>,
+    private val componentIdentifierParser: NotationParser<Any, ComponentIdentifier>,
+    private val platformSupport: PlatformSupport
+) : ComponentMetadataContext {
+    private val descriptorFactory: MetadataDescriptorFactory
 
-class WrappingComponentMetadataContext implements ComponentMetadataContext {
+    private var mutableMetadata: MutableModuleComponentResolveMetadata? = null
+    private var details: ComponentMetadataDetails? = null
 
-
-    private final ModuleComponentResolveMetadata metadata;
-    private final Instantiator instantiator;
-    private final NotationParser<Object, DirectDependencyMetadataImpl> dependencyMetadataNotationParser;
-    private final NotationParser<Object, DependencyConstraintMetadataImpl> dependencyConstraintMetadataNotationParser;
-    private final NotationParser<Object, ComponentIdentifier> componentIdentifierParser;
-    private final PlatformSupport platformSupport;
-    private final MetadataDescriptorFactory descriptorFactory;
-
-    private MutableModuleComponentResolveMetadata mutableMetadata;
-    private ComponentMetadataDetails details;
-
-    public WrappingComponentMetadataContext(ModuleComponentResolveMetadata metadata, Instantiator instantiator,
-                                            NotationParser<Object, DirectDependencyMetadataImpl> dependencyMetadataNotationParser,
-                                            NotationParser<Object, DependencyConstraintMetadataImpl> dependencyConstraintMetadataNotationParser,
-                                            NotationParser<Object, ComponentIdentifier> componentIdentifierParser,
-                                            PlatformSupport platformSupport) {
-        this.metadata = metadata;
-        this.instantiator = instantiator;
-        this.dependencyMetadataNotationParser = dependencyMetadataNotationParser;
-        this.dependencyConstraintMetadataNotationParser = dependencyConstraintMetadataNotationParser;
-        this.componentIdentifierParser = componentIdentifierParser;
-        this.platformSupport = platformSupport;
-        this.descriptorFactory = new MetadataDescriptorFactory(metadata);
+    init {
+        this.descriptorFactory = MetadataDescriptorFactory(metadata)
     }
 
-    @Override
-    public <T> T getDescriptor(Class<T> descriptorClass) {
-        return descriptorFactory.createDescriptor(descriptorClass);
+    override fun <T> getDescriptor(descriptorClass: Class<T?>): T? {
+        return descriptorFactory.createDescriptor<T?>(descriptorClass)
     }
 
-    @Override
-    public ComponentMetadataDetails getDetails() {
-        createMutableMetadataIfNeeded();
+    override fun getDetails(): ComponentMetadataDetails {
+        createMutableMetadataIfNeeded()
         if (details == null) {
-            details = instantiator.newInstance(ComponentMetadataDetailsAdapter.class, mutableMetadata, instantiator, dependencyMetadataNotationParser, dependencyConstraintMetadataNotationParser, componentIdentifierParser, platformSupport);
+            details = instantiator.newInstance<ComponentMetadataDetailsAdapter>(
+                ComponentMetadataDetailsAdapter::class.java,
+                mutableMetadata,
+                instantiator,
+                dependencyMetadataNotationParser,
+                dependencyConstraintMetadataNotationParser,
+                componentIdentifierParser,
+                platformSupport
+            )
         }
-        return details;
+        return details!!
     }
 
-    VariantDerivationStrategy getVariantDerivationStrategy() {
-        return metadata.getVariantDerivationStrategy();
-    }
+    val variantDerivationStrategy: VariantDerivationStrategy
+        get() = metadata.variantDerivationStrategy
 
-    ModuleComponentResolveMetadata getImmutableMetadataWithDerivationStrategy(VariantDerivationStrategy variantDerivationStrategy) {
+    fun getImmutableMetadataWithDerivationStrategy(variantDerivationStrategy: VariantDerivationStrategy): ModuleComponentResolveMetadata {
         // We need to create a copy or the rules will be added to the wrong container
-        return createMutableMetadataIfNeeded().asImmutable()
-            .withDerivationStrategy(variantDerivationStrategy);
+        return createMutableMetadataIfNeeded().asImmutable()!!
+            .withDerivationStrategy(variantDerivationStrategy)!!
     }
 
-    private MutableModuleComponentResolveMetadata createMutableMetadataIfNeeded() {
+    private fun createMutableMetadataIfNeeded(): MutableModuleComponentResolveMetadata {
         if (mutableMetadata == null) {
-            mutableMetadata = metadata.asMutable();
+            mutableMetadata = metadata.asMutable()
         }
-        return mutableMetadata;
+        return mutableMetadata!!
     }
 }

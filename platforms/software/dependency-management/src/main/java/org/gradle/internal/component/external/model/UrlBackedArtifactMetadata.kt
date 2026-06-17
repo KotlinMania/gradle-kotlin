@@ -58,7 +58,7 @@ class UrlBackedArtifactMetadata(private val componentIdentifier: ModuleComponent
     override fun getName(): IvyArtifactName {
         if (ivyArtifactName == null) {
             val names = ArtifactFile(relativeUrl, uniqueVersion())
-            ivyArtifactName = DefaultIvyArtifactName(names.getName(), names.getExtension(), names.getExtension(), names.getClassifier())
+            ivyArtifactName = DefaultIvyArtifactName(names.name, names.getExtension(), names.getExtension(), names.getClassifier())
         }
         return ivyArtifactName!!
     }

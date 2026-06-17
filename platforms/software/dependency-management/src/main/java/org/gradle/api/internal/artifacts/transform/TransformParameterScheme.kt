@@ -13,25 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.internal.tasks.properties.AbstractTypeScheme
+import org.gradle.api.internal.tasks.properties.InspectionScheme
+import org.gradle.internal.instantiation.InstantiationScheme
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.artifacts.transform.TransformParameters;
-import org.gradle.api.internal.tasks.properties.AbstractTypeScheme;
-import org.gradle.api.internal.tasks.properties.InspectionScheme;
-import org.gradle.internal.instantiation.InstantiationScheme;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-@ServiceScope(Scope.Global.class)
-public class TransformParameterScheme extends AbstractTypeScheme {
-
-    public TransformParameterScheme(InstantiationScheme instantiationScheme, InspectionScheme inspectionScheme) {
-        super(instantiationScheme, inspectionScheme);
-    }
-
-    @Override
-    public boolean appliesTo(Class<?> type) {
-        return TransformParameters.class.isAssignableFrom(type);
+@ServiceScope(Scope.Global::class)
+class TransformParameterScheme(instantiationScheme: InstantiationScheme, inspectionScheme: InspectionScheme) : AbstractTypeScheme(instantiationScheme, inspectionScheme) {
+    override fun appliesTo(type: Class<*>): Boolean {
+        return TransformParameters::class.java.isAssignableFrom(type)
     }
 }

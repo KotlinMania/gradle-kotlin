@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.verification.verifier
 
-/**
- * Classes for controlling dependency resolution caching.
- */
-@NullMarked
-package org.gradle.api.internal.artifacts.cache;
+import org.gradle.internal.logging.text.TreeFormatter
+import java.io.File
 
-import org.jspecify.annotations.NullMarked;
+class MissingSignature(file: File?) : AbstractVerificationFailure(file) {
+    override fun isFatal(): Boolean {
+        return false
+    }
+
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("artifact is not signed")
+    }
+}

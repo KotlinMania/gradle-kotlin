@@ -13,31 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.cache.GlobalCache;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.cache.GlobalCache
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.Closeable
+import java.util.Optional
+import java.util.function.BiFunction
+import java.util.function.Function
 
-import java.io.Closeable;
-import java.util.Optional;
-import java.util.function.BiFunction;
+@ServiceScope(Scope.UserHome::class)
+interface ArtifactCachesProvider : Closeable, GlobalCache {
+    val writableCacheMetadata: ArtifactCacheMetadata?
+    val readOnlyCacheMetadata: Optional<ArtifactCacheMetadata?>?
 
-@ServiceScope(Scope.UserHome.class)
-public interface ArtifactCachesProvider extends Closeable, GlobalCache {
-    String READONLY_CACHE_ENV_VAR = "GRADLE_RO_DEP_CACHE";
+    val writableCacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator?
+    val readOnlyCacheAccessCoordinator: Optional<ArtifactCacheLockingAccessCoordinator?>?
 
-    ArtifactCacheMetadata getWritableCacheMetadata();
-    Optional<ArtifactCacheMetadata> getReadOnlyCacheMetadata();
-
-    ArtifactCacheLockingAccessCoordinator getWritableCacheAccessCoordinator();
-    Optional<ArtifactCacheLockingAccessCoordinator> getReadOnlyCacheAccessCoordinator();
-
-    default <T> T withWritableCache(BiFunction<? super ArtifactCacheMetadata, ? super ArtifactCacheLockingAccessCoordinator, T> function) {
-        return function.apply(getWritableCacheMetadata(), getWritableCacheAccessCoordinator());
+    fun <T> withWritableCache(function: BiFunction<in ArtifactCacheMetadata?, in ArtifactCacheLockingAccessCoordinator?, T?>): T? {
+        return function.apply(this.writableCacheMetadata, this.writableCacheAccessCoordinator)
     }
 
-    default <T> Optional<T> withReadOnlyCache(BiFunction<? super ArtifactCacheMetadata, ? super ArtifactCacheLockingAccessCoordinator, T> function) {
-        return getReadOnlyCacheMetadata().map(artifactCacheMetadata -> function.apply(artifactCacheMetadata, getReadOnlyCacheAccessCoordinator().get()));
+    fun <T> withReadOnlyCache(function: BiFunction<in ArtifactCacheMetadata?, in ArtifactCacheLockingAccessCoordinator?, T?>): Optional<T?> {
+        return this.readOnlyCacheMetadata.map<T?>(Function { artifactCacheMetadata: ArtifactCacheMetadata? -> function.apply(artifactCacheMetadata, this.readOnlyCacheAccessCoordinator.get()) })
+    }
+
+    companion object {
+        const val READONLY_CACHE_ENV_VAR: String = "GRADLE_RO_DEP_CACHE"
     }
 }

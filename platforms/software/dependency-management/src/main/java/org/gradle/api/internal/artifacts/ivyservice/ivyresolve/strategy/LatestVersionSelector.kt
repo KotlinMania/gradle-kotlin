@@ -13,52 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import org.gradle.api.artifacts.ComponentMetadata;
+import org.gradle.api.artifacts.ComponentMetadata
 
-public class LatestVersionSelector extends AbstractStringVersionSelector {
-    private final String selectorStatus;
+class LatestVersionSelector(selector: String) : AbstractStringVersionSelector(selector) {
+    @JvmField
+    val selectorStatus: String
 
-    public LatestVersionSelector(String selector) {
-        super(selector);
-        selectorStatus = selector.substring("latest.".length());
+    init {
+        selectorStatus = selector.substring("latest.".length)
     }
 
-    public String getSelectorStatus() {
-        return selectorStatus;
+    override fun isDynamic(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isDynamic() {
-        return true;
+    override fun requiresMetadata(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean requiresMetadata() {
-        return true;
+    override fun matchesUniqueVersion(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean matchesUniqueVersion() {
-        return true;
-    }
-
-    @Override
-    public boolean accept(String candidate) {
+    override fun accept(candidate: String?): Boolean {
         // the ONLY case where this is called for this selector is from InverseVersionSelector, used to reject candidates
-        return true;
+        return true
     }
 
-    @Override
-    public boolean accept(ComponentMetadata candidate) {
-        int selectorStatusIndex = candidate.getStatusScheme().indexOf(selectorStatus);
-        int candidateStatusIndex = candidate.getStatusScheme().indexOf(candidate.getStatus());
-        return selectorStatusIndex >=0 && selectorStatusIndex <= candidateStatusIndex;
+    override fun accept(candidate: ComponentMetadata): Boolean {
+        val selectorStatusIndex = candidate.getStatusScheme().indexOf(selectorStatus)
+        val candidateStatusIndex = candidate.getStatusScheme().indexOf(candidate.getStatus())
+        return selectorStatusIndex >= 0 && selectorStatusIndex <= candidateStatusIndex
     }
 
-    @Override
-    public boolean canShortCircuitWhenVersionAlreadyPreselected() {
-        return false;
+    override fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean {
+        return false
     }
 }

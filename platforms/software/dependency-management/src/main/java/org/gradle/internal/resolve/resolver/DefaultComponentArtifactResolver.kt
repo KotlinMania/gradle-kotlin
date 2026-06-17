@@ -33,7 +33,7 @@ class DefaultComponentArtifactResolver(private val component: ComponentArtifactR
             if (artifact.isOptionalArtifact()) {
                 try {
                     // probe if the artifact exists
-                    result.getResult()!!.getFile()
+                    result.getResult()!!.file
                 } catch (e: Exception) {
                     // Optional artifact is not available
                     continue

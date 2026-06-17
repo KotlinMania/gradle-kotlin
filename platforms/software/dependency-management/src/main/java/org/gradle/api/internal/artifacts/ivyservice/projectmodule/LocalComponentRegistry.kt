@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.annotation.concurrent.ThreadSafe;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A registry of all dependency resolution state for locally produced components.
  * These components may be produced within the same project, another project in the same multi-project build,
  * or in another build within a composite.
  */
-@ServiceScope(Scope.Project.class)
+@ServiceScope(Scope.Project::class)
 @ThreadSafe
-public interface LocalComponentRegistry {
+interface LocalComponentRegistry {
     /**
      * @return The component metadata for the supplied identifier.
      */
-    LocalComponentGraphResolveState getComponent(ProjectComponentIdentifier projectIdentifier);
+    fun getComponent(projectIdentifier: ProjectComponentIdentifier): LocalComponentGraphResolveState?
 }

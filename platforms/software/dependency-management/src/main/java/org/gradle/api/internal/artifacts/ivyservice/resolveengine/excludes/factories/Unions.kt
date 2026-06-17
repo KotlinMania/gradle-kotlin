@@ -13,150 +13,144 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude;
-import org.gradle.internal.collect.PersistentSet;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude
+import org.gradle.internal.collect.PersistentSet
+import java.util.function.Predicate
 
-class Unions {
-    private final ExcludeFactory factory;
-
-    public Unions(ExcludeFactory factory) {
-        this.factory = factory;
-    }
-
+internal class Unions(private val factory: ExcludeFactory) {
     /**
      * Tries to compute an union of 2 specs.
      * The result MUST be a simplification, otherwise this method returns null.
      */
-    ExcludeSpec tryUnion(ExcludeSpec left, ExcludeSpec right) {
-        if (left.equals(right)) {
-            return left;
+    fun tryUnion(left: ExcludeSpec, right: ExcludeSpec?): ExcludeSpec? {
+        if (left == right) {
+            return left
         }
-        if (left instanceof ModuleExclude) {
-            return tryModuleUnion((ModuleExclude) left, right);
-        } else if (right instanceof ModuleExclude) {
-            return tryModuleUnion((ModuleExclude) right, left);
+        if (left is ModuleExclude) {
+            return tryModuleUnion(left, right)
+        } else if (right is ModuleExclude) {
+            return tryModuleUnion(right, left)
         }
-        if (left instanceof GroupExclude) {
-            return tryGroupUnion((GroupExclude) left, right);
-        } else if (right instanceof GroupExclude) {
-            return tryGroupUnion((GroupExclude) right, left);
+        if (left is GroupExclude) {
+            return tryGroupUnion(left, right)
+        } else if (right is GroupExclude) {
+            return tryGroupUnion(right, left)
         }
-        if (left instanceof ModuleSetExclude) {
-            return tryModuleSetUnion((ModuleSetExclude) left, right);
-        } else if (right instanceof ModuleSetExclude) {
-            return tryModuleSetUnion((ModuleSetExclude) right, left);
+        if (left is ModuleSetExclude) {
+            return tryModuleSetUnion(left, right)
+        } else if (right is ModuleSetExclude) {
+            return tryModuleSetUnion(right, left)
         }
-        if (left instanceof GroupSetExclude) {
-            return tryGroupSetUnion((GroupSetExclude) left, right);
-        } else if (right instanceof GroupSetExclude) {
-            return tryGroupSetUnion((GroupSetExclude) right, left);
+        if (left is GroupSetExclude) {
+            return tryGroupSetUnion(left, right)
+        } else if (right is GroupSetExclude) {
+            return tryGroupSetUnion(right, left)
         }
-        return null;
+        return null
     }
 
-    private ExcludeSpec tryModuleUnion(ModuleExclude left, ExcludeSpec right) {
-        String leftModule = left.getModule();
-        if (right instanceof ModuleIdExclude) {
-            ModuleIdExclude mie = (ModuleIdExclude) right;
-            if (mie.getModuleId().getName().equals(leftModule)) {
-                return left;
+    private fun tryModuleUnion(left: ModuleExclude, right: ExcludeSpec?): ExcludeSpec? {
+        val leftModule = left.getModule()
+        if (right is ModuleIdExclude) {
+            val mie = right
+            if (mie.getModuleId().getName() == leftModule) {
+                return left
             }
         }
-        if (right instanceof ModuleIdSetExclude) {
-            ModuleIdSetExclude ids = (ModuleIdSetExclude) right;
-            PersistentSet<ModuleIdentifier> items = ids.getModuleIds().filter(id -> !id.getName().equals(leftModule));
+        if (right is ModuleIdSetExclude) {
+            val ids = right
+            val items: PersistentSet<ModuleIdentifier?> = ids.getModuleIds().filter(Predicate { id: ModuleIdentifier? -> id!!.getName() != leftModule })
             if (items.size() == 1) {
-                return factory.anyOf(left, factory.moduleId(items.iterator().next()));
+                return factory.anyOf(left, factory.moduleId(items.iterator().next()))
             }
             if (items.isEmpty()) {
-                return left;
+                return left
             }
             if (items.size() != ids.getModuleIds().size()) {
-                return factory.anyOf(left, factory.moduleIdSet(items));
+                return factory.anyOf(left, factory.moduleIdSet(items))
             }
         }
-        return null;
+        return null
     }
 
-    private ExcludeSpec tryGroupUnion(GroupExclude left, ExcludeSpec right) {
-        String leftGroup = left.getGroup();
-        if (right instanceof ModuleIdExclude) {
-            ModuleIdExclude mie = (ModuleIdExclude) right;
-            if (mie.getModuleId().getGroup().equals(leftGroup)) {
-                return left;
+    private fun tryGroupUnion(left: GroupExclude, right: ExcludeSpec?): ExcludeSpec? {
+        val leftGroup = left.getGroup()
+        if (right is ModuleIdExclude) {
+            val mie = right
+            if (mie.getModuleId().getGroup() == leftGroup) {
+                return left
             }
         }
-        if (right instanceof ModuleIdSetExclude) {
-            ModuleIdSetExclude ids = (ModuleIdSetExclude) right;
-            PersistentSet<ModuleIdentifier> items = ids.getModuleIds().filter(id -> !id.getGroup().equals(leftGroup));
+        if (right is ModuleIdSetExclude) {
+            val ids = right
+            val items: PersistentSet<ModuleIdentifier?> = ids.getModuleIds().filter(Predicate { id: ModuleIdentifier? -> id!!.getGroup() != leftGroup })
             if (items.size() == 1) {
-                return factory.anyOf(left, factory.moduleId(items.iterator().next()));
+                return factory.anyOf(left, factory.moduleId(items.iterator().next()))
             }
             if (items.isEmpty()) {
-                return left;
+                return left
             }
             if (items.size() != ids.getModuleIds().size()) {
-                return factory.anyOf(left, factory.moduleIdSet(items));
+                return factory.anyOf(left, factory.moduleIdSet(items))
             }
         }
-        return null;
+        return null
     }
 
-    private ExcludeSpec tryModuleSetUnion(ModuleSetExclude left, ExcludeSpec right) {
-        PersistentSet<String> leftModules = left.getModules();
-        if (right instanceof ModuleIdExclude) {
-            ModuleIdExclude mie = (ModuleIdExclude) right;
+    private fun tryModuleSetUnion(left: ModuleSetExclude, right: ExcludeSpec?): ExcludeSpec? {
+        val leftModules: PersistentSet<String?> = left.getModules()
+        if (right is ModuleIdExclude) {
+            val mie = right
             if (leftModules.contains(mie.getModuleId().getName())) {
-                return left;
+                return left
             }
         }
-        if (right instanceof ModuleIdSetExclude) {
-            ModuleIdSetExclude ids = (ModuleIdSetExclude) right;
-            PersistentSet<ModuleIdentifier> items = ids.getModuleIds().filter(id -> !leftModules.contains(id.getName()));
+        if (right is ModuleIdSetExclude) {
+            val ids = right
+            val items: PersistentSet<ModuleIdentifier?> = ids.getModuleIds().filter(Predicate { id: ModuleIdentifier? -> !leftModules.contains(id!!.getName()) })
             if (items.size() == 1) {
-                return factory.anyOf(left, factory.moduleId(items.iterator().next()));
+                return factory.anyOf(left, factory.moduleId(items.iterator().next()))
             }
             if (items.isEmpty()) {
-                return left;
+                return left
             }
             if (items.size() != ids.getModuleIds().size()) {
-                return factory.anyOf(left, factory.moduleIdSet(items));
+                return factory.anyOf(left, factory.moduleIdSet(items))
             }
         }
-        return null;
+        return null
     }
 
-    private ExcludeSpec tryGroupSetUnion(GroupSetExclude left, ExcludeSpec right) {
-        PersistentSet<String> leftGroups = left.getGroups();
-        if (right instanceof ModuleIdExclude) {
-            ModuleIdExclude mie = (ModuleIdExclude) right;
+    private fun tryGroupSetUnion(left: GroupSetExclude, right: ExcludeSpec?): ExcludeSpec? {
+        val leftGroups: PersistentSet<String?> = left.getGroups()
+        if (right is ModuleIdExclude) {
+            val mie = right
             if (leftGroups.contains(mie.getModuleId().getGroup())) {
-                return left;
+                return left
             }
         }
-        if (right instanceof ModuleIdSetExclude) {
-            ModuleIdSetExclude ids = (ModuleIdSetExclude) right;
-            PersistentSet<ModuleIdentifier> items = ids.getModuleIds().filter(id -> !leftGroups.contains(id.getGroup()));
+        if (right is ModuleIdSetExclude) {
+            val ids = right
+            val items: PersistentSet<ModuleIdentifier?> = ids.getModuleIds().filter(Predicate { id: ModuleIdentifier? -> !leftGroups.contains(id!!.getGroup()) })
             if (items.size() == 1) {
-                return factory.anyOf(left, factory.moduleId(items.iterator().next()));
+                return factory.anyOf(left, factory.moduleId(items.iterator().next()))
             }
             if (items.isEmpty()) {
-                return left;
+                return left
             }
             if (items.size() != ids.getModuleIds().size()) {
-                return factory.anyOf(left, factory.moduleIdSet(items));
+                return factory.anyOf(left, factory.moduleIdSet(items))
             }
         }
-        return null;
+        return null
     }
-
 }

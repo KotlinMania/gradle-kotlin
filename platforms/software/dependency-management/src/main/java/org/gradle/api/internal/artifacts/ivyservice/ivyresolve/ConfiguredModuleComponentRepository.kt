@@ -13,29 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
-
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.reflect.Instantiator;
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
 /**
  * A ModuleComponentRepository providing some user-configuration values.
  */
-public interface ConfiguredModuleComponentRepository extends ModuleComponentRepository<ModuleComponentResolveMetadata> {
-
+interface ConfiguredModuleComponentRepository : ModuleComponentRepository<ModuleComponentResolveMetadata?> {
     /**
      * Should the 'dynamic resolve mode' be used for this (Ivy) repository, where the 'revConstraint'
      * attribute is used for versions instead of the 'rev' attribute.
      */
-    boolean isDynamicResolveMode();
+    val isDynamicResolveMode: Boolean
 
     /**
      * True for a repository that only accesses the local filesystem, and does not require any remote/network access.
      */
-    boolean isLocal();
+    val isLocal: Boolean
 
-    void setComponentResolvers(ComponentResolvers resolver);
+    fun setComponentResolvers(resolver: ComponentResolvers?)
 
-    Instantiator getComponentMetadataInstantiator();
+    val componentMetadataInstantiator: Instantiator?
 }

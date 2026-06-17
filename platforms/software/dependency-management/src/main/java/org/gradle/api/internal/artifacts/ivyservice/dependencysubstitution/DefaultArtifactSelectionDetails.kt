@@ -13,59 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.gradle.api.artifacts.DependencyArtifactSelector;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Function
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Lists
+import org.gradle.api.artifacts.DependencyArtifactSelector
+import org.gradle.internal.component.model.IvyArtifactName
 
-import java.util.ArrayList;
-import java.util.List;
+class DefaultArtifactSelectionDetails(private val requestedArtifacts: ImmutableList<IvyArtifactName>) : ArtifactSelectionDetailsInternal {
+    private var targetSelectors: MutableList<DependencyArtifactSelector>? = null
 
-public class DefaultArtifactSelectionDetails implements ArtifactSelectionDetailsInternal {
-
-    private final ImmutableList<IvyArtifactName> requestedArtifacts;
-    private @Nullable List<DependencyArtifactSelector> targetSelectors;
-
-    public DefaultArtifactSelectionDetails(ImmutableList<IvyArtifactName> requestedArtifacts) {
-        this.requestedArtifacts = requestedArtifacts;
+    override fun hasSelectors(): Boolean {
+        return !requestedArtifacts.isEmpty()
     }
 
-    @Override
-    public boolean hasSelectors() {
-        return !requestedArtifacts.isEmpty();
+    override fun getRequestedSelectors(): MutableList<DependencyArtifactSelector> {
+        return Lists.transform<IvyArtifactName, DependencyArtifactSelector>(
+            requestedArtifacts,
+            Function { artifact: IvyArtifactName -> DefaultDependencyArtifactSelector(artifact.type!!, artifact.extension, artifact.classifier) }
+        )
     }
 
-    @Override
-    public List<DependencyArtifactSelector> getRequestedSelectors() {
-        return Lists.transform(requestedArtifacts, artifact ->
-            new DefaultDependencyArtifactSelector(artifact.type, artifact.extension, artifact.classifier)
-        );
+    override fun withoutArtifactSelectors() {
+        targetSelectors = ArrayList<DependencyArtifactSelector>()
     }
 
-    @Override
-    public void withoutArtifactSelectors() {
-        targetSelectors = new ArrayList<>();
+    override fun selectArtifact(type: String, extension: String?, classifier: String?) {
+        selectArtifact(DefaultDependencyArtifactSelector(type, extension, classifier))
     }
 
-    @Override
-    public void selectArtifact(String type, @Nullable String extension, @Nullable String classifier) {
-        selectArtifact(new DefaultDependencyArtifactSelector(type, extension, classifier));
-    }
-
-    @Override
-    public void selectArtifact(DependencyArtifactSelector selector) {
+    override fun selectArtifact(selector: DependencyArtifactSelector) {
         if (targetSelectors == null) {
-            targetSelectors = new ArrayList<>();
+            targetSelectors = ArrayList<DependencyArtifactSelector>()
         }
-        targetSelectors.add(selector);
+        targetSelectors!!.add(selector)
     }
 
-    @Override
-    public @Nullable ImmutableList<DependencyArtifactSelector> getConfiguredSelectors() {
-        return targetSelectors != null ? ImmutableList.copyOf(targetSelectors) : null;
+    override fun getConfiguredSelectors(): ImmutableList<DependencyArtifactSelector>? {
+        return if (targetSelectors != null) ImmutableList.copyOf<DependencyArtifactSelector>(targetSelectors) else null
     }
-
 }

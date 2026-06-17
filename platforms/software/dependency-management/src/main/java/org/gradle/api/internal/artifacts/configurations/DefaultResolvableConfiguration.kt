@@ -13,56 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.DependencyResolutionListener;
-import org.gradle.api.artifacts.ResolvableConfiguration;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.ConfigurationServicesBundle;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ConfigurationResolver;
-import org.gradle.internal.Factory;
-import org.gradle.internal.code.UserCodeApplicationContext;
-import org.gradle.internal.event.ListenerBroadcast;
-import org.gradle.internal.typeconversion.NotationParser;
-
-import javax.inject.Inject;
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.DependencyResolutionListener
+import org.gradle.api.artifacts.ResolvableConfiguration
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.ConfigurationServicesBundle
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ConfigurationResolver
+import org.gradle.internal.Factory
+import org.gradle.internal.code.UserCodeApplicationContext
+import org.gradle.internal.event.ListenerBroadcast
+import org.gradle.internal.typeconversion.NotationParser
+import javax.inject.Inject
 
 /**
- * A concrete resolvable {@link DefaultConfiguration} that cannot change roles.
+ * A concrete resolvable [DefaultConfiguration] that cannot change roles.
  */
-public class DefaultResolvableConfiguration extends DefaultConfiguration implements ResolvableConfiguration {
-
-    @Inject
-    public DefaultResolvableConfiguration(
-        ConfigurationServicesBundle configurationServices,
-        DomainObjectContext domainObjectContext,
-        String name,
-        ConfigurationResolver resolver,
-        ListenerBroadcast<DependencyResolutionListener> dependencyResolutionListeners,
-        Factory<ResolutionStrategyInternal> resolutionStrategyFactory,
-        NotationParser<Object, ConfigurablePublishArtifact> artifactNotationParser,
-        NotationParser<Object, Capability> capabilityNotationParser,
-        UserCodeApplicationContext userCodeApplicationContext,
-        DefaultConfigurationFactory defaultConfigurationFactory
-    ) {
-        super(
-            configurationServices,
-            domainObjectContext,
-            name,
-            false,
-            resolver,
-            dependencyResolutionListeners,
-            resolutionStrategyFactory,
-            artifactNotationParser,
-            capabilityNotationParser,
-            userCodeApplicationContext,
-            defaultConfigurationFactory,
-            ConfigurationRoles.RESOLVABLE,
-            true
-        );
-    }
-
-}
+class DefaultResolvableConfiguration @Inject constructor(
+    configurationServices: ConfigurationServicesBundle,
+    domainObjectContext: DomainObjectContext,
+    name: String,
+    resolver: ConfigurationResolver,
+    dependencyResolutionListeners: ListenerBroadcast<DependencyResolutionListener?>,
+    resolutionStrategyFactory: Factory<ResolutionStrategyInternal?>,
+    artifactNotationParser: NotationParser<Any, ConfigurablePublishArtifact>,
+    capabilityNotationParser: NotationParser<Any, Capability>,
+    userCodeApplicationContext: UserCodeApplicationContext,
+    defaultConfigurationFactory: DefaultConfigurationFactory
+) : DefaultConfiguration(
+    configurationServices,
+    domainObjectContext,
+    name,
+    false,
+    resolver,
+    dependencyResolutionListeners,
+    resolutionStrategyFactory,
+    artifactNotationParser,
+    capabilityNotationParser,
+    userCodeApplicationContext,
+    defaultConfigurationFactory,
+    ConfigurationRoles.RESOLVABLE,
+    true
+), ResolvableConfiguration

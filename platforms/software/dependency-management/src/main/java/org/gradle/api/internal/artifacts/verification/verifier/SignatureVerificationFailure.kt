@@ -13,133 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.gradle.security.internal.PGPUtils;
-import org.gradle.security.internal.PublicKeyResultBuilder;
-import org.gradle.security.internal.PublicKeyService;
-import org.jspecify.annotations.Nullable;
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.gradle.internal.logging.text.TreeFormatter
+import org.gradle.security.internal.PGPUtils.getUserIDs
+import org.gradle.security.internal.PublicKeyResultBuilder
+import org.gradle.security.internal.PublicKeyService
+import java.io.File
+import java.lang.String
+import java.util.Map
+import java.util.TreeSet
+import java.util.function.Consumer
 
-import java.io.File;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
-public class SignatureVerificationFailure extends AbstractVerificationFailure {
-    private final Map<String, SignatureError> errors;
-    private final PublicKeyService keyService;
-    private final File signatureFile;
-
-    public SignatureVerificationFailure(File affectedFile, File signatureFile, Map<String, SignatureError> errors, PublicKeyService keyService) {
-        super(affectedFile);
-        this.errors = errors;
-        this.keyService = keyService;
-        this.signatureFile = signatureFile;
+class SignatureVerificationFailure(affectedFile: File?, private val signatureFile: File?, val errors: MutableMap<String?, SignatureError?>, private val keyService: PublicKeyService) :
+    AbstractVerificationFailure(affectedFile) {
+    override fun getSignatureFile(): File? {
+        return signatureFile
     }
 
-    @Override
-    public File getSignatureFile() {
-        return signatureFile;
-    }
-
-    public Map<String, SignatureError> getErrors() {
-        return errors;
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        if (errors.size() == 1) {
-            Map.Entry<String, SignatureError> entry = errors.entrySet().iterator().next();
-            formatter.append(toMessage(entry.getKey(), entry.getValue()));
-            return;
+    override fun explainTo(formatter: TreeFormatter) {
+        if (errors.size == 1) {
+            val entry = errors.entries.iterator().next()
+            formatter.append(toMessage(entry.key, entry.value!!))
+            return
         }
-        formatter.append("Multiple signature verification errors found");
-        formatter.startChildren();
-        errors.entrySet()
+        formatter.append("Multiple signature verification errors found")
+        formatter.startChildren()
+        errors.entries
             .stream()
-            .sorted(Map.Entry.comparingByKey())
-            .forEachOrdered(entry -> formatter.node(toMessage(entry.getKey(), entry.getValue())));
-        formatter.endChildren();
+            .sorted(Map.Entry.comparingByKey<String?, SignatureError?>())
+            .forEachOrdered { entry: MutableMap.MutableEntry<String?, SignatureError?>? -> formatter.node(toMessage(entry!!.key, entry.value!!)) }
+        formatter.endChildren()
     }
 
-    private String toMessage(String key, SignatureError value) {
-        StringBuilder sb = new StringBuilder();
-        appendError(key, value, sb);
-        return sb.toString();
+    private fun toMessage(key: String?, value: SignatureError): String {
+        val sb = StringBuilder()
+        appendError(key, value, sb)
+        return sb.toString()
     }
 
-    private void appendError(String keyId, SignatureError error, StringBuilder sb) {
-        sb.append("Artifact was signed with key '").append(keyId).append("' ");
-        PGPPublicKey publicKey = error.publicKey;
-        switch (error.kind) {
-            case PASSED_NOT_TRUSTED:
-                appendKeyDetails(sb, publicKey);
-                sb.append("and passed verification but the key isn't in your trusted keys list.");
-                break;
-            case FAILED:
-                appendKeyDetails(sb, publicKey);
-                sb.append("but signature didn't match");
-                break;
-            case MISSING_KEY:
-                sb.append("but it wasn't found in any key server so it couldn't be verified");
-                break;
-            default:
-                break;
+    private fun appendError(keyId: String?, error: SignatureError, sb: StringBuilder) {
+        sb.append("Artifact was signed with key '").append(keyId).append("' ")
+        val publicKey = error.publicKey
+        when (error.kind) {
+            FailureKind.PASSED_NOT_TRUSTED -> {
+                appendKeyDetails(sb, publicKey!!)
+                sb.append("and passed verification but the key isn't in your trusted keys list.")
+            }
+
+            FailureKind.FAILED -> {
+                appendKeyDetails(sb, publicKey!!)
+                sb.append("but signature didn't match")
+            }
+
+            FailureKind.MISSING_KEY -> sb.append("but it wasn't found in any key server so it couldn't be verified")
+            else -> {}
         }
     }
 
-    public enum FailureKind {
+    enum class FailureKind {
         PASSED_NOT_TRUSTED,
         FAILED,
         IGNORED_KEY,
         MISSING_KEY
     }
 
-    public void appendKeyDetails(StringBuilder sb, PGPPublicKey key) {
-        keyService.findByFingerprint(key.getFingerprint(), new PublicKeyResultBuilder() {
-            @Override
-            public void keyRing(PGPPublicKeyRing keyring) {
-                Set<String> userIds = new TreeSet<>();
-                collectUserIds(userIds, key);
-                keyring.getPublicKeys().forEachRemaining(userkey -> collectUserIds(userIds, userkey));
+    fun appendKeyDetails(sb: StringBuilder, key: PGPPublicKey) {
+        keyService.findByFingerprint(key.getFingerprint(), object : PublicKeyResultBuilder {
+            override fun keyRing(keyring: PGPPublicKeyRing) {
+                val userIds: MutableSet<String?> = TreeSet<String?>()
+                collectUserIds(userIds, key)
+                keyring.getPublicKeys().forEachRemaining(Consumer { userkey: PGPPublicKey? -> collectUserIds(userIds, userkey!!) })
                 if (!userIds.isEmpty()) {
-                    sb.append("(");
+                    sb.append("(")
                 }
-                sb.append(String.join(", ", userIds));
+                sb.append(String.join(", ", userIds))
                 if (!userIds.isEmpty()) {
-                    sb.append(") ");
+                    sb.append(") ")
                 }
             }
 
-            @Override
-            public void publicKey(PGPPublicKey publicKey) {
-
+            override fun publicKey(publicKey: PGPPublicKey?) {
             }
-        });
+        })
     }
 
-    private void collectUserIds(Set<String> userIds, PGPPublicKey userkey) {
-        userIds.addAll(PGPUtils.getUserIDs(userkey));
+    private fun collectUserIds(userIds: MutableSet<kotlin.String?>, userkey: PGPPublicKey) {
+        userIds.addAll(getUserIDs(userkey))
     }
 
-    public static class SignatureError {
-        private final PGPPublicKey publicKey;
-        private final FailureKind kind;
-
-        public SignatureError(@Nullable PGPPublicKey key, FailureKind kind) {
-            this.publicKey = key;
-            this.kind = kind;
-        }
-
-        public FailureKind getKind() {
-            return kind;
-        }
-
-        public PGPPublicKey getPublicKey() {
-            return publicKey;
-        }
-    }
+    class SignatureError(val publicKey: PGPPublicKey?, val kind: FailureKind)
 }

@@ -13,99 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.LegacyResolutionParameters;
-import org.gradle.api.internal.artifacts.configurations.ConflictResolution;
-import org.gradle.api.internal.artifacts.dsl.ImmutableModuleReplacements;
-import org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DefaultDependencySubstitutionApplicator;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionApplicator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionComparator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ComponentState;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.DependencyGraphBuilder;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory;
-import org.gradle.api.specs.Spec;
-import org.gradle.internal.ImmutableActionSet;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveState;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-import java.util.List;
-
-import static org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionApplicator.NO_OP;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.artifacts.ComponentSelectorConverter
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal
+import org.gradle.api.internal.artifacts.configurations.ConflictResolution
+import org.gradle.api.internal.artifacts.dsl.ImmutableModuleReplacements
+import org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DefaultDependencySubstitutionApplicator
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionApplicator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ComponentState
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.DependencyGraphBuilder
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory
+import org.gradle.api.specs.Spec
+import org.gradle.internal.ImmutableActionSet
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveState
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
 /**
- * Resolves a dependency graph and visits it. Essentially, this class is a {@link DependencyGraphBuilder} executor.
+ * Resolves a dependency graph and visits it. Essentially, this class is a [DependencyGraphBuilder] executor.
  */
-@ServiceScope(Scope.Project.class)
-public class DependencyGraphResolver {
-
-    private final VersionComparator versionComparator;
-    private final VersionParser versionParser;
-    private final InstantiatorFactory instantiatorFactory;
-    private final ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory;
-    private final DependencyGraphBuilder dependencyGraphBuilder;
-    private final InMemoryCacheFactory cacheFactory;
-
-    @Inject
-    public DependencyGraphResolver(
-        VersionComparator versionComparator,
-        VersionParser versionParser,
-        InstantiatorFactory instantiatorFactory,
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory,
-        DependencyGraphBuilder dependencyGraphBuilder,
-        InMemoryCacheFactory cacheFactory
-    ) {
-        this.versionComparator = versionComparator;
-        this.versionParser = versionParser;
-        this.instantiatorFactory = instantiatorFactory;
-        this.componentSelectionDescriptorFactory = componentSelectionDescriptorFactory;
-        this.dependencyGraphBuilder = dependencyGraphBuilder;
-        this.cacheFactory = cacheFactory;
-    }
-
+@ServiceScope(Scope.Project::class)
+class DependencyGraphResolver @Inject constructor(
+    private val versionComparator: VersionComparator,
+    private val versionParser: VersionParser,
+    private val instantiatorFactory: InstantiatorFactory,
+    private val componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory,
+    private val dependencyGraphBuilder: DependencyGraphBuilder,
+    private val cacheFactory: InMemoryCacheFactory
+) {
     /**
      * Perform a graph resolution, visiting the resolved graph with the provided visitor.
      *
-     * <p>We should keep this class independent of
-     * {@link LegacyResolutionParameters} and
-     * {@link org.gradle.api.artifacts.ResolutionStrategy}</p>, as those are tightly
+     *
+     * We should keep this class independent of
+     * [LegacyResolutionParameters] and
+     * [org.gradle.api.artifacts.ResolutionStrategy], as those are tightly
      * coupled to a Configuration, and this resolver should be able to resolve non-Configuration types.
      */
-    public void resolve(
-        LocalComponentGraphResolveState rootComponent,
-        LocalVariantGraphResolveState rootVariant,
-        List<? extends DependencyMetadata> syntheticDependencies,
-        Spec<? super DependencyMetadata> edgeFilter,
-        ComponentSelectorConverter componentSelectorConverter,
-        DependencyToComponentIdResolver componentIdResolver,
-        ComponentMetaDataResolver componentMetaDataResolver,
-        ImmutableModuleReplacements moduleReplacements,
-        ImmutableActionSet<DependencySubstitutionInternal> dependencySubstitutionRule,
-        ConflictResolution conflictResolution,
-        ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule> capabilityResolutionRules,
-        boolean failingOnDynamicVersions,
-        boolean failingOnChangingVersions,
-        ResolutionParameters.FailureResolutions failureResolutions,
-        DependencyGraphVisitor modelVisitor
+    fun resolve(
+        rootComponent: LocalComponentGraphResolveState,
+        rootVariant: LocalVariantGraphResolveState,
+        syntheticDependencies: MutableList<out DependencyMetadata>,
+        edgeFilter: Spec<in DependencyMetadata?>,
+        componentSelectorConverter: ComponentSelectorConverter,
+        componentIdResolver: DependencyToComponentIdResolver,
+        componentMetaDataResolver: ComponentMetaDataResolver,
+        moduleReplacements: ImmutableModuleReplacements,
+        dependencySubstitutionRule: ImmutableActionSet<DependencySubstitutionInternal>,
+        conflictResolution: ConflictResolution,
+        capabilityResolutionRules: ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule>,
+        failingOnDynamicVersions: Boolean,
+        failingOnChangingVersions: Boolean,
+        failureResolutions: ResolutionParameters.FailureResolutions,
+        modelVisitor: DependencyGraphVisitor
     ) {
-        DependencySubstitutionApplicator substitutionApplicator = createDependencySubstitutionApplicator(dependencySubstitutionRule);
-        ModuleConflictResolver<ComponentState> moduleConflictResolver = createModuleConflictResolver(conflictResolution);
+        val substitutionApplicator = createDependencySubstitutionApplicator(dependencySubstitutionRule)
+        val moduleConflictResolver = createModuleConflictResolver(conflictResolution)
 
         dependencyGraphBuilder.resolve(
             rootComponent,
@@ -124,28 +101,27 @@ public class DependencyGraphResolver {
             failingOnChangingVersions,
             failureResolutions,
             modelVisitor
-        );
+        )
     }
 
-    private DependencySubstitutionApplicator createDependencySubstitutionApplicator(ImmutableActionSet<DependencySubstitutionInternal> dependencySubstitutionRule) {
+    private fun createDependencySubstitutionApplicator(dependencySubstitutionRule: ImmutableActionSet<DependencySubstitutionInternal>): DependencySubstitutionApplicator {
         if (dependencySubstitutionRule.isEmpty()) {
-            return NO_OP;
+            return DependencySubstitutionApplicator.NO_OP
         }
 
-        return new DefaultDependencySubstitutionApplicator(
+        return DefaultDependencySubstitutionApplicator(
             componentSelectionDescriptorFactory,
             dependencySubstitutionRule,
             instantiatorFactory,
             cacheFactory
-        );
+        )
     }
 
-    private ModuleConflictResolver<ComponentState> createModuleConflictResolver(ConflictResolution conflictResolution) {
-        ModuleConflictResolver<ComponentState> moduleConflictResolver = new LatestModuleConflictResolver<>(versionComparator, versionParser);
+    private fun createModuleConflictResolver(conflictResolution: ConflictResolution): ModuleConflictResolver<ComponentState> {
+        val moduleConflictResolver: ModuleConflictResolver<ComponentState> = LatestModuleConflictResolver<ComponentState>(versionComparator, versionParser)
         if (conflictResolution != ConflictResolution.preferProjectModules) {
-            return moduleConflictResolver;
+            return moduleConflictResolver
         }
-        return new ProjectDependencyForcingResolver<>(moduleConflictResolver);
+        return ProjectDependencyForcingResolver<ComponentState>(moduleConflictResolver)
     }
-
 }

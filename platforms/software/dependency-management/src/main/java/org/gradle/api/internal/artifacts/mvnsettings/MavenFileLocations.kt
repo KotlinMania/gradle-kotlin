@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.mvnsettings
 
-package org.gradle.api.internal.artifacts.mvnsettings;
-
-import java.io.File;
-
-public interface MavenFileLocations {
-    File getUserMavenDir();
-    File getGlobalMavenDir();
-    File getUserSettingsFile();
-    File getGlobalSettingsFile();
+interface MavenFileLocations {
+    val userMavenDir: File?
+    val globalMavenDir: File?
+    val userSettingsFile: File?
+    val globalSettingsFile: File?
 }

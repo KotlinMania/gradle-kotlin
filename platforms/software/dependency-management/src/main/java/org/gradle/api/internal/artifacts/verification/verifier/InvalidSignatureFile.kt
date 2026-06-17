@@ -13,44 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.jspecify.annotations.NullMarked;
-
-import java.io.File;
+import org.gradle.internal.logging.text.TreeFormatter
+import org.jspecify.annotations.NullMarked
+import java.io.File
 
 /**
  * Verification failure raised when the signature file (.asc) cannot be parsed
  * (e.g. it has invalid ASCII armor or otherwise corrupt PGP packets).
  */
 @NullMarked
-public class InvalidSignatureFile extends AbstractVerificationFailure {
-    private final File signatureFile;
-    private final String causeDescription;
-
-    public InvalidSignatureFile(File affectedFile, File signatureFile, String causeDescription) {
-        super(affectedFile);
-        this.signatureFile = signatureFile;
-        this.causeDescription = causeDescription;
+class InvalidSignatureFile(affectedFile: File, private val signatureFile: File, val causeDescription: String) : AbstractVerificationFailure(affectedFile) {
+    override fun getSignatureFile(): File {
+        return signatureFile
     }
 
-    @Override
-    public File getSignatureFile() {
-        return signatureFile;
+    override fun isFatal(): Boolean {
+        return true
     }
 
-    public String getCauseDescription() {
-        return causeDescription;
-    }
-
-    @Override
-    public boolean isFatal() {
-        return true;
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        formatter.append("signature file is corrupt (").append(causeDescription).append(")");
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("signature file is corrupt (").append(causeDescription).append(")")
     }
 }

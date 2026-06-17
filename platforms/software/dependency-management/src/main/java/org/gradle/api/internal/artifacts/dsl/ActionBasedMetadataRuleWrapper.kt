@@ -13,45 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.rules.SpecRuleAction
 
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.rules.SpecRuleAction;
-
-import java.util.Collection;
-
-class ActionBasedMetadataRuleWrapper implements MetadataRuleWrapper {
-    private final SpecRuleAction<? super ComponentMetadataDetails> ruleAction;
-
-    ActionBasedMetadataRuleWrapper(SpecRuleAction<? super ComponentMetadataDetails> ruleAction) {
-        this.ruleAction = ruleAction;
+internal class ActionBasedMetadataRuleWrapper(private val ruleAction: SpecRuleAction<in ComponentMetadataDetails?>) : MetadataRuleWrapper {
+    override fun getDisplayName(): DisplayName {
+        return Describables.of("opaque inline rule")
     }
 
-    @Override
-    public DisplayName getDisplayName() {
-        return Describables.of("opaque inline rule");
+    override fun isClassBased(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isClassBased() {
-        return false;
+    override fun getClassRules(): MutableCollection<SpecConfigurableRule>? {
+        throw UnsupportedOperationException("This operation is not supported by this implementation")
     }
 
-    @Override
-    public Collection<SpecConfigurableRule> getClassRules() {
-        throw new UnsupportedOperationException("This operation is not supported by this implementation");
+    override fun addClassRule(ruleAction: SpecConfigurableRule) {
+        throw UnsupportedOperationException("This operation is not supported by this implementation")
     }
 
-    @Override
-    public void addClassRule(SpecConfigurableRule ruleAction) {
-        throw new UnsupportedOperationException("This operation is not supported by this implementation");
-    }
-
-    @Override
-    public SpecRuleAction<? super ComponentMetadataDetails> getRule() {
-        return ruleAction;
+    override fun getRule(): SpecRuleAction<in ComponentMetadataDetails?> {
+        return ruleAction
     }
 }

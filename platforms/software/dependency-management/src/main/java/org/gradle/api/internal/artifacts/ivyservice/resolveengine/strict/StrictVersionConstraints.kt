@@ -13,137 +13,116 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.strict
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.strict;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.internal.collect.PersistentSet;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.internal.collect.PersistentSet
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-@SuppressWarnings("ReferenceEquality") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-public class StrictVersionConstraints {
+//TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+open class StrictVersionConstraints private constructor(val modules: PersistentSet<ModuleIdentifier>) {
+    open val isEmpty: Boolean
+        get() = this === EMPTY
 
-    public static final StrictVersionConstraints EMPTY = new StrictVersionConstraints(PersistentSet.of()) {
-        @Override
-        public StrictVersionConstraints union(StrictVersionConstraints other) {
-            return other;
-        }
-
-        @Override
-        public StrictVersionConstraints intersect(StrictVersionConstraints other) {
-            return EMPTY;
-        }
-
-        @Override
-        public StrictVersionConstraints minus(StrictVersionConstraints other) {
-            return EMPTY;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return true;
-        }
-
-        @Override
-        public boolean contains(ModuleIdentifier module) {
-            return false;
-        }
-
-        @Override
-        public String toString() {
-            return "no modules";
-        }
-    };
-
-    private final PersistentSet<ModuleIdentifier> modules;
-
-    private StrictVersionConstraints(PersistentSet<ModuleIdentifier> modules) {
-        this.modules = modules;
+    open fun contains(module: ModuleIdentifier): Boolean {
+        return modules.contains(module)
     }
 
-    public static StrictVersionConstraints of(PersistentSet<ModuleIdentifier> modules) {
-        if (modules.isEmpty()) {
-            return EMPTY;
+    open fun union(other: StrictVersionConstraints): StrictVersionConstraints {
+        if (other === EMPTY) {
+            return this
         }
-        return new StrictVersionConstraints(modules);
-    }
-
-    public PersistentSet<ModuleIdentifier> getModules() {
-        return modules;
-    }
-
-    public boolean isEmpty() {
-        return this == EMPTY;
-    }
-
-    public boolean contains(ModuleIdentifier module) {
-        return modules.contains(module);
-    }
-
-    public StrictVersionConstraints union(StrictVersionConstraints other) {
-        if (other == EMPTY) {
-            return this;
-        }
-        if (this == other) {
+        if (this === other) {
             // this happens quite a lot!
-            return this;
+            return this
         }
-        PersistentSet<ModuleIdentifier> union = this.modules.union(other.modules);
-        if (union == this.modules) {
-            return this;
+        val union = this.modules.union<ModuleIdentifier>(other.modules)
+        if (union === this.modules) {
+            return this
         }
-        return of(union);
+        return of(union)
     }
 
-    public StrictVersionConstraints intersect(StrictVersionConstraints other) {
-        if (other == EMPTY) {
-            return EMPTY;
+    open fun intersect(other: StrictVersionConstraints): StrictVersionConstraints {
+        if (other === EMPTY) {
+            return EMPTY
         }
-        if (this == other) {
-            return this;
+        if (this === other) {
+            return this
         }
-        PersistentSet<ModuleIdentifier> intersect = this.modules.intersect(other.modules);
-        if (intersect == this.modules) {
-            return this;
+        val intersect = this.modules.intersect(other.modules)
+        if (intersect === this.modules) {
+            return this
         }
-        return of(intersect);
+        return of(intersect)
     }
 
-    @Override
-    public String toString() {
-        return "modules=" + modules;
+    override fun toString(): String {
+        return "modules=" + modules
     }
 
-    public StrictVersionConstraints minus(StrictVersionConstraints other) {
-        if (other == EMPTY) {
-            return this;
+    open fun minus(other: StrictVersionConstraints): StrictVersionConstraints {
+        if (other === EMPTY) {
+            return this
         }
-        if (this == other) {
-            return EMPTY;
+        if (this === other) {
+            return EMPTY
         }
-        PersistentSet<ModuleIdentifier> diff = this.modules.except(other.modules);
-        if (diff == this.modules) {
-            return this;
+        val diff = this.modules.except(other.modules)
+        if (diff === this.modules) {
+            return this
         }
-        return of(diff);
+        return of(diff)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        StrictVersionConstraints that = (StrictVersionConstraints) o;
-        return modules.equals(that.modules);
+        val that = o as StrictVersionConstraints
+        return modules == that.modules
     }
 
-    @Override
-    public int hashCode() {
-        return modules.hashCode();
+    override fun hashCode(): Int {
+        return modules.hashCode()
     }
 
+    companion object {
+        val EMPTY: StrictVersionConstraints = object : StrictVersionConstraints(PersistentSet.of<ModuleIdentifier>()) {
+            override fun union(other: StrictVersionConstraints): StrictVersionConstraints {
+                return other
+            }
+
+            override fun intersect(other: StrictVersionConstraints): StrictVersionConstraints {
+                return EMPTY
+            }
+
+            override fun minus(other: StrictVersionConstraints): StrictVersionConstraints {
+                return EMPTY
+            }
+
+            override fun isEmpty(): Boolean {
+                return true
+            }
+
+            override fun contains(module: ModuleIdentifier): Boolean {
+                return false
+            }
+
+            override fun toString(): String {
+                return "no modules"
+            }
+        }
+
+        fun of(modules: PersistentSet<ModuleIdentifier>): StrictVersionConstraints {
+            if (modules.isEmpty()) {
+                return EMPTY
+            }
+            return StrictVersionConstraints(modules)
+        }
+    }
 }

@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.specs.Spec
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.specs.Spec;
-
-public interface LockEntryFilter extends Spec<ModuleComponentIdentifier> {
-}
+interface LockEntryFilter : Spec<ModuleComponentIdentifier?>

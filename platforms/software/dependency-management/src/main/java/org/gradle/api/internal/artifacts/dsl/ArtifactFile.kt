@@ -13,71 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
-
-import org.apache.commons.lang3.Strings;
-import org.apache.commons.lang3.StringUtils;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
+import org.apache.commons.lang3.StringUtils
+import org.apache.commons.lang3.Strings
+import java.io.File
 
 /**
  * Given a Module and a File that is to be an artifact, attempts to determine the appropriate name+classifier+extension from the file name.
  */
-public class ArtifactFile {
-    private String name;
-    private String classifier;
-    private String extension;
+class ArtifactFile(var name: String, version: String?) {
+    var classifier: String = ""
+        private set
+    var extension: String = ""
+        private set
 
-    public ArtifactFile(File file, @Nullable String version) {
-        this(file.getName(), version);
-    }
+    constructor(file: File, version: String?) : this(file.getName(), version)
 
-    public ArtifactFile(String fileBaseName, @Nullable String version) {
-        name = fileBaseName;
-        extension = "";
-        classifier = "";
-        boolean done = false;
+    init {
+        var done = false
 
         if (version != null) {
-            int startVersion = Strings.CS.lastIndexOf(name, "-" + version);
+            val startVersion = Strings.CS.lastIndexOf(name, "-" + version)
             if (startVersion >= 0) {
-                int endVersion = startVersion + version.length() + 1;
-                if (endVersion == name.length()) {
-                    name = name.substring(0, startVersion);
-                    done = true;
-                } else if (endVersion < name.length() && name.charAt(endVersion) == '-') {
-                    String tail = name.substring(endVersion + 1);
-                    name = name.substring(0, startVersion);
-                    classifier = StringUtils.substringBeforeLast(tail, ".");
-                    extension = StringUtils.substringAfterLast(tail, ".");
-                    done = true;
-                } else if (endVersion < name.length() && Strings.CS.lastIndexOf(name, ".") == endVersion) {
-                    extension = name.substring(endVersion + 1);
-                    name = name.substring(0, startVersion);
-                    done = true;
+                val endVersion = startVersion + version.length + 1
+                if (endVersion == name.length) {
+                    name = name.substring(0, startVersion)
+                    done = true
+                } else if (endVersion < name.length && name.get(endVersion) == '-') {
+                    val tail = name.substring(endVersion + 1)
+                    name = name.substring(0, startVersion)
+                    classifier = StringUtils.substringBeforeLast(tail, ".")
+                    extension = StringUtils.substringAfterLast(tail, ".")
+                    done = true
+                } else if (endVersion < name.length && Strings.CS.lastIndexOf(name, ".") == endVersion) {
+                    extension = name.substring(endVersion + 1)
+                    name = name.substring(0, startVersion)
+                    done = true
                 }
             }
         }
         if (!done) {
-            extension = StringUtils.substringAfterLast(name, ".");
-            name = StringUtils.substringBeforeLast(name, ".");
+            extension = StringUtils.substringAfterLast(name, ".")
+            name = StringUtils.substringBeforeLast(name, ".")
         }
-        if (classifier.length() == 0) {
-            classifier = null;
+        if (classifier.length == 0) {
+            classifier = null
         }
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getClassifier() {
-        return classifier;
-    }
-
-    public String getExtension() {
-        return extension;
     }
 }

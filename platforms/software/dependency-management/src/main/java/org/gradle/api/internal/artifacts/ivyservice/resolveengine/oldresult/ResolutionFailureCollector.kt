@@ -13,99 +13,83 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.oldresult
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.oldresult;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ComponentSelectorConverter
+import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.DefaultUnresolvedDependency
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphPathResolver
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ModuleVersionSelector;
-import org.gradle.api.artifacts.UnresolvedDependency;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultUnresolvedDependency;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphNode;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphPathResolver;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
+class ResolutionFailureCollector(
+    componentSelectorConverter: ComponentSelectorConverter,
+    owner: DomainObjectContext
+) : DependencyGraphVisitor {
+    private val componentSelectorConverter: ComponentSelectorConverter
+    private val owner: DomainObjectContext
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+    private val failuresByRevisionId: MutableMap<ComponentSelector, BrokenDependency> = LinkedHashMap<ComponentSelector, BrokenDependency>()
+    private var root: RootGraphNode? = null
 
-public class ResolutionFailureCollector implements DependencyGraphVisitor {
-
-    private final ComponentSelectorConverter componentSelectorConverter;
-    private final DomainObjectContext owner;
-
-    private final Map<ComponentSelector, BrokenDependency> failuresByRevisionId = new LinkedHashMap<>();
-    private @Nullable RootGraphNode root;
-
-    public ResolutionFailureCollector(
-        ComponentSelectorConverter componentSelectorConverter,
-        DomainObjectContext owner
-    ) {
-        this.componentSelectorConverter = componentSelectorConverter;
-        this.owner = owner;
+    init {
+        this.componentSelectorConverter = componentSelectorConverter
+        this.owner = owner
     }
 
-    @Override
-    public void start(RootGraphNode root) {
-        this.root = root;
+    override fun start(root: RootGraphNode) {
+        this.root = root
     }
 
-    @Override
-    public void visitNode(DependencyGraphNode node) {
-        for (DependencyGraphEdge dependency : node.getOutgoingEdges()) {
-            ModuleVersionResolveException failure = dependency.getFailure();
+    override fun visitNode(node: DependencyGraphNode) {
+        for (dependency in node.getOutgoingEdges()) {
+            val failure = dependency.getFailure()
             if (failure != null) {
-                addUnresolvedDependency(dependency, dependency.getRequested(), failure);
+                addUnresolvedDependency(dependency, dependency.getRequested(), failure)
             }
         }
     }
 
-    public Set<UnresolvedDependency> complete(Set<UnresolvedDependency> extraFailures) {
+    fun complete(extraFailures: MutableSet<UnresolvedDependency>): MutableSet<UnresolvedDependency> {
         if (extraFailures.isEmpty() && failuresByRevisionId.isEmpty()) {
-            return ImmutableSet.of();
+            return ImmutableSet.of<UnresolvedDependency>()
         }
 
-        ImmutableSet.Builder<UnresolvedDependency> builder = ImmutableSet.builder();
-        builder.addAll(extraFailures);
-        for (Map.Entry<ComponentSelector, BrokenDependency> entry : failuresByRevisionId.entrySet()) {
-            Collection<List<Describable>> paths = DependencyGraphPathResolver.calculatePaths(entry.getValue().requiredBy, root, owner);
+        val builder = ImmutableSet.builder<UnresolvedDependency>()
+        builder.addAll(extraFailures)
+        for (entry in failuresByRevisionId.entries) {
+            val paths = DependencyGraphPathResolver.calculatePaths(entry.value.requiredBy, root!!, owner)
 
-            ComponentSelector key = entry.getKey();
-            ModuleVersionIdentifier moduleVersionId = componentSelectorConverter.getModuleVersionId(key);
-            ModuleVersionSelector selector = DefaultModuleVersionSelector.newSelector(moduleVersionId);
-            builder.add(new DefaultUnresolvedDependency(selector, entry.getValue().failure.withIncomingPaths(paths)));
+            val key = entry.key
+            val moduleVersionId = componentSelectorConverter.getModuleVersionId(key)
+            val selector = DefaultModuleVersionSelector.newSelector(moduleVersionId)
+            builder.add(DefaultUnresolvedDependency(selector, entry.value.failure.withIncomingPaths(paths)))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private void addUnresolvedDependency(DependencyGraphEdge dependency, ComponentSelector selector, ModuleVersionResolveException failure) {
-        BrokenDependency breakage = failuresByRevisionId.get(selector);
+    private fun addUnresolvedDependency(dependency: DependencyGraphEdge, selector: ComponentSelector, failure: ModuleVersionResolveException) {
+        var breakage = failuresByRevisionId.get(selector)
         if (breakage == null) {
-            breakage = new BrokenDependency(failure);
-            failuresByRevisionId.put(selector, breakage);
+            breakage = BrokenDependency(failure)
+            failuresByRevisionId.put(selector, breakage)
         }
-        breakage.requiredBy.add(dependency.getFrom());
+        breakage.requiredBy.add(dependency.getFrom())
     }
 
-    private static class BrokenDependency {
-        final ModuleVersionResolveException failure;
-        final List<DependencyGraphNode> requiredBy = new ArrayList<>();
+    private class BrokenDependency(failure: ModuleVersionResolveException) {
+        val failure: ModuleVersionResolveException
+        val requiredBy: MutableList<DependencyGraphNode> = ArrayList<DependencyGraphNode>()
 
-        private BrokenDependency(ModuleVersionResolveException failure) {
-            this.failure = failure;
+        init {
+            this.failure = failure
         }
     }
-
 }

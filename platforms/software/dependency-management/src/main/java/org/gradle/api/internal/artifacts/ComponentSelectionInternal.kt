@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.artifacts.ComponentSelection
 
-import org.gradle.api.artifacts.ComponentSelection;
-import org.jspecify.annotations.Nullable;
+interface ComponentSelectionInternal : ComponentSelection {
+    val isRejected: Boolean
 
-public interface ComponentSelectionInternal extends ComponentSelection {
-    boolean isRejected();
-
-    @Nullable
-    String getRejectionReason();
+    val rejectionReason: String?
 }

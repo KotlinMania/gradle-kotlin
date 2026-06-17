@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-public interface ArtifactVerificationResultBuilder {
-    void failWith(VerificationFailure failure);
+interface ArtifactVerificationResultBuilder {
+    fun failWith(failure: VerificationFailure?)
 }

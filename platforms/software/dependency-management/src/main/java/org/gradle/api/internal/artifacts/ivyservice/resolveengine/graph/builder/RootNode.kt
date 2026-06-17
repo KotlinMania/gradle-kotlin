@@ -13,80 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode
+import org.gradle.internal.component.local.model.LocalFileDependencyMetadata
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveState
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.VariantGraphResolveState
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.RootGraphNode;
-import org.gradle.internal.component.local.model.LocalFileDependencyMetadata;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveState;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.VariantGraphResolveState;
+internal class RootNode(
+    resultId: Long,
+    moduleRevision: ComponentState,
+    resolveState: ResolveState,
+    private val syntheticDependencies: MutableList<out DependencyMetadata>,
+    root: VariantGraphResolveState
+) : NodeState(resultId, moduleRevision, resolveState, root, false), RootGraphNode {
+    private val resolveOptimizations: ResolveOptimizations
 
-import java.util.List;
-import java.util.Set;
-
-class RootNode extends NodeState implements RootGraphNode {
-    private final ResolveOptimizations resolveOptimizations;
-    private final List<? extends DependencyMetadata> syntheticDependencies;
-
-    RootNode(long resultId, ComponentState moduleRevision, ResolveState resolveState, List<? extends DependencyMetadata> syntheticDependencies, VariantGraphResolveState root) {
-        super(resultId, moduleRevision, resolveState, root, false);
-        this.resolveOptimizations = resolveState.getResolveOptimizations();
-        this.syntheticDependencies = syntheticDependencies;
+    init {
+        this.resolveOptimizations = resolveState.getResolveOptimizations()
     }
 
-    @Override
-    public boolean isRoot() {
-        return true;
+    override fun isRoot(): Boolean {
+        return true
     }
 
-    @Override
-    public Set<? extends LocalFileDependencyMetadata> getOutgoingFileEdges() {
-        return getResolveState().getFiles();
+    override fun getOutgoingFileEdges(): MutableSet<out LocalFileDependencyMetadata> {
+        return getResolveState().files!!
     }
 
-    @Override
-    void addIncomingEdge(EdgeState dependencyEdge) {
-        throw new InvalidUserCodeException(
+    override fun addIncomingEdge(dependencyEdge: EdgeState) {
+        throw InvalidUserCodeException(
             "Cannot select root node '" + getMetadata().getDisplayName() + "' as a variant. " +
-                "Configurations should not act as both a resolution root and a variant simultaneously. " +
-                "Be sure to mark configurations meant for resolution as canBeConsumed=false or use the 'resolvable(String)' configuration factory method to create them."
-        );
+                    "Configurations should not act as both a resolution root and a variant simultaneously. " +
+                    "Be sure to mark configurations meant for resolution as canBeConsumed=false or use the 'resolvable(String)' configuration factory method to create them."
+        )
     }
 
-    @Override
-    public boolean isSelected() {
-        return true;
+    override fun isSelected(): Boolean {
+        return true
     }
 
-    @Override
-    public LocalVariantGraphResolveState getResolveState() {
-        return (LocalVariantGraphResolveState) super.getResolveState();
+    override fun getResolveState(): LocalVariantGraphResolveState {
+        return super.getResolveState() as LocalVariantGraphResolveState
     }
 
-    @Override
-    public LocalVariantGraphResolveMetadata getMetadata() {
-        return (LocalVariantGraphResolveMetadata) super.getMetadata();
+    override fun getMetadata(): LocalVariantGraphResolveMetadata {
+        return super.getMetadata() as LocalVariantGraphResolveMetadata
     }
 
-    @Override
-    public ResolveOptimizations getResolveOptimizations() {
-        return resolveOptimizations;
+    override fun getResolveOptimizations(): ResolveOptimizations {
+        return resolveOptimizations
     }
 
-    @Override
-    protected List<? extends DependencyMetadata> getAllDependencies() {
-        List<? extends DependencyMetadata> superDependencies = super.getAllDependencies();
+    override fun getAllDependencies(): MutableList<out DependencyMetadata> {
+        val superDependencies = super.getAllDependencies()
         if (syntheticDependencies.isEmpty()) {
-            return superDependencies;
+            return superDependencies
         }
-        int expectedSize = superDependencies.size() + syntheticDependencies.size();
-        ImmutableList.Builder<DependencyMetadata> allDependencies = ImmutableList.builderWithExpectedSize(expectedSize);
-        allDependencies.addAll(superDependencies);
-        allDependencies.addAll(syntheticDependencies);
-        return allDependencies.build();
+        val expectedSize = superDependencies.size + syntheticDependencies.size
+        val allDependencies = ImmutableList.builderWithExpectedSize<DependencyMetadata>(expectedSize)
+        allDependencies.addAll(superDependencies)
+        allDependencies.addAll(syntheticDependencies)
+        return allDependencies.build()
     }
 }

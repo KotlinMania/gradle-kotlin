@@ -13,33 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.metadata;
+package org.gradle.api.internal.artifacts.metadata
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
 
 /**
- * A thread-safe and reusable serializer for {@link DefaultModuleComponentArtifactIdentifier}.
+ * A thread-safe and reusable serializer for [DefaultModuleComponentArtifactIdentifier].
  */
-public class ComponentArtifactIdentifierSerializer implements Serializer<DefaultModuleComponentArtifactIdentifier> {
-    private final ComponentIdentifierSerializer componentIdentifierSerializer = new ComponentIdentifierSerializer();
+class ComponentArtifactIdentifierSerializer : Serializer<DefaultModuleComponentArtifactIdentifier?> {
+    private val componentIdentifierSerializer = ComponentIdentifierSerializer()
 
-    @Override
-    public void write(Encoder encoder, DefaultModuleComponentArtifactIdentifier value) throws Exception {
-        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier());
-        IvyArtifactNameSerializer.INSTANCE.write(encoder, value.name);
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: DefaultModuleComponentArtifactIdentifier) {
+        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier())
+        IvyArtifactNameSerializer.INSTANCE.write(encoder, value.name)
     }
 
-    @Override
-    public DefaultModuleComponentArtifactIdentifier read(Decoder decoder) throws Exception {
-        ModuleComponentIdentifier componentIdentifier = (ModuleComponentIdentifier) componentIdentifierSerializer.read(decoder);
-        IvyArtifactName name = IvyArtifactNameSerializer.INSTANCE.read(decoder);
-        return new DefaultModuleComponentArtifactIdentifier(componentIdentifier, name);
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): DefaultModuleComponentArtifactIdentifier {
+        val componentIdentifier = componentIdentifierSerializer.read(decoder) as ModuleComponentIdentifier
+        val name = IvyArtifactNameSerializer.INSTANCE.read(decoder)
+        return DefaultModuleComponentArtifactIdentifier(componentIdentifier, name)
     }
 }

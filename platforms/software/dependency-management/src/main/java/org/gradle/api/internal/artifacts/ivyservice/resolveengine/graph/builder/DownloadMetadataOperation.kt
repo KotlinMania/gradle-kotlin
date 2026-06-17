@@ -13,26 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.operations.BuildOperationDescriptor;
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.RunnableBuildOperation
 
-class DownloadMetadataOperation implements RunnableBuildOperation {
-    private final ComponentState state;
-
-    DownloadMetadataOperation(ComponentState state) {
-        this.state = state;
+internal class DownloadMetadataOperation(private val state: ComponentState) : RunnableBuildOperation {
+    override fun run(context: BuildOperationContext) {
+        state.metadataOrNull
     }
 
-    @Override
-    public void run(BuildOperationContext context) {
-        state.getMetadataOrNull();
-    }
-
-    @Override
-    public BuildOperationDescriptor.Builder description() {
-        return BuildOperationDescriptor.displayName("Resolve " + state);
+    override fun description(): BuildOperationDescriptor.Builder {
+        return BuildOperationDescriptor.displayName("Resolve " + state)
     }
 }

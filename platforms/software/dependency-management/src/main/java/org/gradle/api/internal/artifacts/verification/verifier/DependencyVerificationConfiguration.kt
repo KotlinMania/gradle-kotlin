@@ -13,234 +13,138 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.verification.exceptions.InvalidGpgKeyIdsException;
-import org.gradle.api.internal.artifacts.verification.model.IgnoredKey;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.artifacts.verification.exceptions.InvalidGpgKeyIdsException
+import org.gradle.api.internal.artifacts.verification.model.IgnoredKey
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.jspecify.annotations.NullMarked
+import java.lang.Boolean
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import kotlin.Any
+import kotlin.Comparable
+import kotlin.Int
+import kotlin.String
 
 @NullMarked
-public class DependencyVerificationConfiguration {
-    private final boolean verifyMetadata;
-    private final boolean verifySignatures;
-    private final List<TrustedArtifact> trustedArtifacts;
-    private final boolean useKeyServers;
-    private final List<URI> keyServers;
-    private final Set<IgnoredKey> ignoredKeys;
-    private final List<TrustedKey> trustedKeys;
-    private final KeyringFormat keyringFormat;
+class DependencyVerificationConfiguration(
+    val isVerifyMetadata: Boolean,
+    val isVerifySignatures: Boolean,
+    trustedArtifacts: MutableList<TrustedArtifact>,
+    val isUseKeyServers: Boolean,
+    val keyServers: MutableList<URI>,
+    val ignoredKeys: MutableSet<IgnoredKey>,
+    val trustedKeys: MutableList<TrustedKey>,
+    val keyringFormat: KeyringFormat?
+) {
+    val trustedArtifacts: MutableList<TrustedArtifact>
 
-    public DependencyVerificationConfiguration(
-        boolean verifyMetadata,
-        boolean verifySignatures,
-        List<TrustedArtifact> trustedArtifacts,
-        boolean useKeyServers,
-        List<URI> keyServers,
-        Set<IgnoredKey> ignoredKeys,
-        List<TrustedKey> trustedKeys,
-        @Nullable KeyringFormat keyringFormat
-    ) {
-        this.verifyMetadata = verifyMetadata;
-        this.verifySignatures = verifySignatures;
-        this.trustedArtifacts = ImmutableList.copyOf(trustedArtifacts);
-        this.useKeyServers = useKeyServers;
-        this.keyServers = keyServers;
-        this.ignoredKeys = ignoredKeys;
-        this.trustedKeys = trustedKeys;
-        this.keyringFormat = keyringFormat;
+    init {
+        this.trustedArtifacts = ImmutableList.copyOf<TrustedArtifact>(trustedArtifacts)
     }
 
-    @Nullable
-    public KeyringFormat getKeyringFormat() {
-        return keyringFormat;
-    }
-
-    public boolean isVerifySignatures() {
-        return verifySignatures;
-    }
-
-    public boolean isVerifyMetadata() {
-        return verifyMetadata;
-    }
-
-    public List<TrustedArtifact> getTrustedArtifacts() {
-        return trustedArtifacts;
-    }
-
-    public List<URI> getKeyServers() {
-        return keyServers;
-    }
-
-    public Set<IgnoredKey> getIgnoredKeys() {
-        return ignoredKeys;
-    }
-
-    public List<TrustedKey> getTrustedKeys() {
-        return trustedKeys;
-    }
-
-    public boolean isUseKeyServers() {
-        return useKeyServers;
-    }
-
-    public abstract static class TrustCoordinates {
-        private final String group;
-        private final String name;
-        private final String version;
-        private final String fileName;
-        private final boolean regex;
-        private final String reason;
-
-        TrustCoordinates(@Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex, @Nullable String reason) {
-            this.group = group;
-            this.name = name;
-            this.version = version;
-            this.fileName = fileName;
-            this.regex = regex;
-            this.reason = reason;
-        }
-
-        @Nullable
-        public String getGroup() {
-            return group;
-        }
-
-        @Nullable
-        public String getName() {
-            return name;
-        }
-
-        @Nullable
-        public String getVersion() {
-            return version;
-        }
-
-        @Nullable
-        public String getFileName() {
-            return fileName;
-        }
-
-        public boolean isRegex() {
-            return regex;
-        }
-
-        @Nullable
-        public String getReason() {
-            return reason;
-        }
-
-        public boolean matches(ModuleComponentArtifactIdentifier id) {
-            ModuleComponentIdentifier moduleComponentIdentifier = id.getComponentIdentifier();
+    abstract class TrustCoordinates internal constructor(val group: String?, val name: String?, val version: String?, val fileName: String?, val isRegex: Boolean, val reason: String?) {
+        fun matches(id: ModuleComponentArtifactIdentifier): Boolean {
+            val moduleComponentIdentifier = id.getComponentIdentifier()
             return matches(group, moduleComponentIdentifier.getGroup())
-                && matches(name, moduleComponentIdentifier.getModule())
-                && matches(version, moduleComponentIdentifier.getVersion())
-                && matches(fileName, id.fileName);
+                    && matches(name, moduleComponentIdentifier.getModule())
+                    && matches(version, moduleComponentIdentifier.getVersion())
+                    && matches(fileName, id.fileName!!)
         }
 
-        private boolean matches(@Nullable String value, String expr) {
+        private fun matches(value: String?, expr: String): Boolean {
             if (value == null) {
-                return true;
+                return true
             }
-            if (!regex) {
-                return expr.equals(value);
+            if (!this.isRegex) {
+                return expr == value
             }
-            return expr.matches(value);
+            return expr.matches(value.toRegex())
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            TrustCoordinates that = (TrustCoordinates) o;
+            val that = o as TrustCoordinates
 
-            if (regex != that.regex) {
-                return false;
+            if (this.isRegex != that.isRegex) {
+                return false
             }
-            if (!Objects.equals(group, that.group)) {
-                return false;
+            if (group != that.group) {
+                return false
             }
-            if (!Objects.equals(name, that.name)) {
-                return false;
+            if (name != that.name) {
+                return false
             }
-            if (!Objects.equals(version, that.version)) {
-                return false;
+            if (version != that.version) {
+                return false
             }
-            if (!Objects.equals(fileName, that.fileName)) {
-                return false;
+            if (fileName != that.fileName) {
+                return false
             }
-            return Objects.equals(reason, that.reason);
+            return reason == that.reason
         }
 
-        @Override
-        public int hashCode() {
-            int result = group != null ? group.hashCode() : 0;
-            result = 31 * result + (name != null ? name.hashCode() : 0);
-            result = 31 * result + (version != null ? version.hashCode() : 0);
-            result = 31 * result + (fileName != null ? fileName.hashCode() : 0);
-            result = 31 * result + (regex ? 1 : 0);
-            result = 31 * result + (reason != null ? reason.hashCode() : 0);
-            return result;
+        override fun hashCode(): Int {
+            var result = if (group != null) group.hashCode() else 0
+            result = 31 * result + (if (name != null) name.hashCode() else 0)
+            result = 31 * result + (if (version != null) version.hashCode() else 0)
+            result = 31 * result + (if (fileName != null) fileName.hashCode() else 0)
+            result = 31 * result + (if (this.isRegex) 1 else 0)
+            result = 31 * result + (if (reason != null) reason.hashCode() else 0)
+            return result
         }
 
-        public int internalCompareTo(TrustCoordinates other) {
-            int regexComparison = Boolean.compare(isRegex(), other.isRegex());
+        fun internalCompareTo(other: TrustCoordinates): Int {
+            val regexComparison = Boolean.compare(this.isRegex, other.isRegex)
             if (regexComparison != 0) {
-                return regexComparison;
+                return regexComparison
             }
-            int groupComparison = compareNullableStrings(getGroup(), other.getGroup());
+            val groupComparison: Int = compareNullableStrings(this.group, other.group)
             if (groupComparison != 0) {
-                return groupComparison;
+                return groupComparison
             }
-            int nameComparison = compareNullableStrings(getName(), other.getName());
+            val nameComparison: Int = compareNullableStrings(this.name, other.name)
             if (nameComparison != 0) {
-                return nameComparison;
+                return nameComparison
             }
-            int versionComparison = compareNullableStrings(getVersion(), other.getVersion());
+            val versionComparison: Int = compareNullableStrings(
+                this.version,
+                other.version
+            )
             if (versionComparison != 0) {
-                return versionComparison;
+                return versionComparison
             }
-            int fileNameComparison = compareNullableStrings(getFileName(), other.getFileName());
+            val fileNameComparison: Int = compareNullableStrings(
+                this.fileName,
+                other.fileName
+            )
             if (fileNameComparison != 0) {
-                return fileNameComparison;
+                return fileNameComparison
             }
-            return compareNullableStrings(getReason(), other.getReason());
+            return compareNullableStrings(this.reason, other.reason)
         }
     }
 
-    public static class TrustedArtifact extends TrustCoordinates implements Comparable<TrustedArtifact> {
-        TrustedArtifact(@Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex, @Nullable String reason) {
-            super(group, name, version, fileName, regex, reason);
-        }
-
-        @Override
-        public int compareTo(DependencyVerificationConfiguration.TrustedArtifact other) {
-            return internalCompareTo(other);
+    class TrustedArtifact internal constructor(group: String?, name: String?, version: String?, fileName: String?, regex: kotlin.Boolean, reason: String?) :
+        TrustCoordinates(group, name, version, fileName, regex, reason), Comparable<TrustedArtifact> {
+        override fun compareTo(other: TrustedArtifact): Int {
+            return internalCompareTo(other)
         }
     }
 
-    public static class TrustedKey extends TrustCoordinates implements Comparable<TrustedKey> {
-        private final String keyId;
+    class TrustedKey internal constructor(keyId: String, group: String?, name: String?, version: String?, fileName: String?, regex: kotlin.Boolean) :
+        TrustCoordinates(group, name, version, fileName, regex, null), Comparable<TrustedKey> {
+        val keyId: String
 
-        TrustedKey(String keyId, @Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex) {
-            super(group, name, version, fileName, regex, null);
-
+        init {
             // The key is 160 bits long, encoded in base32 (case-insensitive characters).
             //
             // Base32 gives us 4 bits per character, so the whole fingerprint will be:
@@ -248,67 +152,61 @@ public class DependencyVerificationConfiguration {
             //
             // By getting ASCII bytes (aka. strictly 1 byte per character, no variable-length magic)
             // we can safely check if the fingerprint is of the correct length.
-            if (keyId.getBytes(StandardCharsets.US_ASCII).length < 40) {
-                throw new InvalidGpgKeyIdsException(Collections.singletonList(keyId));
+            if (keyId.toByteArray(StandardCharsets.US_ASCII).size < 40) {
+                throw InvalidGpgKeyIdsException(mutableListOf<String>(keyId))
             } else {
-                this.keyId = keyId.toUpperCase(Locale.ROOT);
+                this.keyId = keyId.uppercase()
             }
         }
 
-        public String getKeyId() {
-            return keyId;
-        }
-
-        @Override
-        public boolean equals(@Nullable Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any?): kotlin.Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
             if (!super.equals(o)) {
-                return false;
+                return false
             }
 
-            TrustedKey that = (TrustedKey) o;
+            val that = o as TrustedKey
 
-            return keyId.equals(that.keyId);
+            return keyId == that.keyId
         }
 
-        @Override
-        public int hashCode() {
-            int result = super.hashCode();
-            result = 31 * result + keyId.hashCode();
-            return result;
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + keyId.hashCode()
+            return result
         }
 
-        @Override
-        public int compareTo(DependencyVerificationConfiguration.TrustedKey other) {
-            int keyIdComparison = getKeyId().compareTo(other.getKeyId());
+        override fun compareTo(other: TrustedKey): Int {
+            val keyIdComparison = this.keyId.compareTo(other.keyId)
             if (keyIdComparison != 0) {
-                return keyIdComparison;
+                return keyIdComparison
             }
-            return internalCompareTo(other);
+            return internalCompareTo(other)
         }
-
     }
 
-    public enum KeyringFormat {
+    enum class KeyringFormat {
         ARMORED,
         BINARY
     }
 
-    private static int compareNullableStrings(@Nullable String first, @Nullable String second) {
-        if (first == null) {
-            if (second == null) {
-                return 0;
-            } else {
-                return -1;
+    companion object {
+        private fun compareNullableStrings(first: String?, second: String?): Int {
+            if (first == null) {
+                if (second == null) {
+                    return 0
+                } else {
+                    return -1
+                }
+            } else if (second == null) {
+                return 1
             }
-        } else if (second == null) {
-            return 1;
+            return first.compareTo(second)
         }
-        return first.compareTo(second);
     }
 }

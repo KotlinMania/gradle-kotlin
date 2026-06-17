@@ -13,72 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.resource.ExternalResourceName
+import java.net.URI
 
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resource.ExternalResourceName;
+class IvyResourcePattern : AbstractResourcePattern, ResourcePattern {
+    constructor(pattern: String) : super(pattern)
 
-import java.net.URI;
-import java.util.Map;
+    constructor(baseUri: URI, pattern: String) : super(baseUri, pattern)
 
-public class IvyResourcePattern extends AbstractResourcePattern implements ResourcePattern {
-
-    public IvyResourcePattern(String pattern) {
-        super(pattern);
+    override fun toString(): String {
+        return "Ivy pattern '" + getPattern() + "'"
     }
 
-    public IvyResourcePattern(URI baseUri, String pattern) {
-        super(baseUri, pattern);
+    override fun getLocation(artifact: ModuleComponentArtifactMetadata): ExternalResourceName {
+        val attributes = toAttributes(artifact)
+        return getBase().getRoot().resolve(substituteTokens(getBase().getPath(), attributes))
     }
 
-    @Override
-    public String toString() {
-        return "Ivy pattern '" + getPattern() + "'";
+    override fun toVersionListPattern(module: ModuleIdentifier, artifact: IvyArtifactName): ExternalResourceName {
+        val attributes = toAttributes(module, artifact)
+        return getBase().getRoot().resolve(substituteTokens(getBase().getPath(), attributes))
     }
 
-    @Override
-    public ExternalResourceName getLocation(ModuleComponentArtifactMetadata artifact) {
-        Map<String, String> attributes = toAttributes(artifact);
-        return getBase().getRoot().resolve(substituteTokens(getBase().getPath(), attributes));
+    override fun toModulePath(module: ModuleIdentifier): ExternalResourceName? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public ExternalResourceName toVersionListPattern(ModuleIdentifier module, IvyArtifactName artifact) {
-        Map<String, String> attributes = toAttributes(module, artifact);
-        return getBase().getRoot().resolve(substituteTokens(getBase().getPath(), attributes));
-    }
-
-    @Override
-    public ExternalResourceName toModulePath(ModuleIdentifier module) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ExternalResourceName toModuleVersionPath(ModuleComponentIdentifier componentIdentifier) {
-        ImmutableMap<String, String> attributes = ImmutableMap.of(
+    override fun toModuleVersionPath(componentIdentifier: ModuleComponentIdentifier): ExternalResourceName {
+        val attributes = ImmutableMap.of<String, String>(
             "organisation", componentIdentifier.getGroup(),
             "module", componentIdentifier.getModule(),
             "artifact", componentIdentifier.getModule(),
             "revision", componentIdentifier.getVersion()
-        );
-        ExternalResourceName resolve = getBase().getRoot().resolve(substituteTokens(getPathWithoutArtifactPart(), attributes));
-        return resolve;
+        )
+        val resolve = getBase().getRoot().resolve(substituteTokens(this.pathWithoutArtifactPart, attributes))
+        return resolve
     }
 
-    protected String getPathWithoutArtifactPart() {
-        String path = getBase().getPath();
-        int i = path.lastIndexOf('/');
-        if (i>0) {
-            i = path.indexOf("/[artifact]", i);
+    protected val pathWithoutArtifactPart: String
+        get() {
+            val path = getBase().getPath()
+            var i = path.lastIndexOf('/')
+            if (i > 0) {
+                i = path.indexOf("/[artifact]", i)
+            }
+            if (i < 0) {
+                throw UnsupportedOperationException("Cannot locate module version for non standard Ivy layout.")
+            }
+            return path.substring(0, i)
         }
-        if (i<0) {
-            throw new UnsupportedOperationException("Cannot locate module version for non standard Ivy layout.");
-        }
-        return path.substring(0, i);
-    }
 }

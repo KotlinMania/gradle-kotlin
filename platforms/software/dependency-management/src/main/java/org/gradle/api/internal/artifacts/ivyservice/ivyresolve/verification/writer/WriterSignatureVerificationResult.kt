@@ -13,53 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder;
-import org.gradle.security.internal.Fingerprint;
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder
+import org.gradle.security.internal.Fingerprint.Companion.of
 
-import java.util.Set;
-
-class WriterSignatureVerificationResult implements SignatureVerificationResultBuilder {
-    private final Set<String> ignoredKeys;
-    private final PgpEntry entry;
-
-    public WriterSignatureVerificationResult(Set<String> ignoredKeys, PgpEntry entry) {
-        this.ignoredKeys = ignoredKeys;
-        this.entry = entry;
+internal class WriterSignatureVerificationResult(private val ignoredKeys: MutableSet<String>, private val entry: PgpEntry) : SignatureVerificationResultBuilder {
+    override fun missingKey(keyId: String) {
+        ignoredKeys.add(keyId)
+        entry.missing()
     }
 
-    @Override
-    public void missingKey(String keyId) {
-        ignoredKeys.add(keyId);
-        entry.missing();
+    override fun verified(key: PGPPublicKey, trusted: Boolean) {
+        val keyId = of(key).toString()
+        entry.addVerifiedKey(keyId)
     }
 
-    @Override
-    public void verified(PGPPublicKey key, boolean trusted) {
-        String keyId = Fingerprint.of(key).toString();
-        entry.addVerifiedKey(keyId);
+    override fun failed(key: PGPPublicKey) {
+        val keyId = of(key).toString()
+        entry.fail(keyId)
     }
 
-    @Override
-    public void failed(PGPPublicKey key) {
-        String keyId = Fingerprint.of(key).toString();
-        entry.fail(keyId);
+    override fun ignored(keyId: String) {
+        ignoredKeys.add(keyId)
     }
 
-    @Override
-    public void ignored(String keyId) {
-        ignoredKeys.add(keyId);
+    override fun noSignatures() {
+        entry.noSignatures()
     }
 
-    @Override
-    public void noSignatures() {
-        entry.noSignatures();
-    }
-
-    @Override
-    public void failedToReadSignatureFile(String causeDescription) {
-        entry.noSignatures();
+    override fun failedToReadSignatureFile(causeDescription: String) {
+        entry.noSignatures()
     }
 }

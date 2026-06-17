@@ -13,331 +13,298 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.verification.exceptions.ComponentVerificationException;
-import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException;
-import org.gradle.api.internal.artifacts.verification.exceptions.InvalidGpgKeyIdsException;
-import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.Checksum;
-import org.gradle.api.internal.artifacts.verification.model.ChecksumKind;
-import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.IgnoredKey;
-import org.gradle.api.internal.artifacts.verification.model.ImmutableArtifactVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.ImmutableComponentVerificationMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Maps
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.verification.exceptions.ComponentVerificationException
+import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException
+import org.gradle.api.internal.artifacts.verification.exceptions.InvalidGpgKeyIdsException
+import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.Checksum
+import org.gradle.api.internal.artifacts.verification.model.ChecksumKind
+import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.IgnoredKey
+import org.gradle.api.internal.artifacts.verification.model.ImmutableArtifactVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.ImmutableComponentVerificationMetadata
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.logging.text.TreeFormatter
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.util.Map
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.stream.Collectors
 
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+class DependencyVerifierBuilder {
+    private val byComponent: MutableMap<ModuleComponentIdentifier?, ComponentVerificationsBuilder?> = HashMap<ModuleComponentIdentifier?, ComponentVerificationsBuilder?>()
+    val trustedArtifacts: MutableList<DependencyVerificationConfiguration.TrustedArtifact?> = ArrayList<DependencyVerificationConfiguration.TrustedArtifact?>()
+    val trustedKeys: MutableSet<DependencyVerificationConfiguration.TrustedKey?> = LinkedHashSet<DependencyVerificationConfiguration.TrustedKey?>()
+    val keyServers: MutableList<URI?> = ArrayList<URI?>()
+    private val ignoredKeys: MutableSet<IgnoredKey?> = LinkedHashSet<IgnoredKey?>()
+    var isVerifyMetadata: Boolean = true
+    var isVerifySignatures: Boolean = false
+    var isUseKeyServers: Boolean = true
+    private val topLevelComments: MutableList<String?> = ArrayList<String?>()
+    var keyringFormat: DependencyVerificationConfiguration.KeyringFormat? = null
+        private set
 
-public class DependencyVerifierBuilder {
-    private static final Comparator<ModuleComponentIdentifier> MODULE_COMPONENT_IDENTIFIER_COMPARATOR = Comparator.comparing(ModuleComponentIdentifier::getGroup)
-        .thenComparing(ModuleComponentIdentifier::getModule)
-        .thenComparing(ModuleComponentIdentifier::getVersion);
-    private final Map<ModuleComponentIdentifier, ComponentVerificationsBuilder> byComponent = new HashMap<>();
-    private final List<DependencyVerificationConfiguration.TrustedArtifact> trustedArtifacts = new ArrayList<>();
-    private final Set<DependencyVerificationConfiguration.TrustedKey> trustedKeys = new LinkedHashSet<>();
-    private final List<URI> keyServers = new ArrayList<>();
-    private final Set<IgnoredKey> ignoredKeys = new LinkedHashSet<>();
-    private boolean isVerifyMetadata = true;
-    private boolean isVerifySignatures = false;
-    private boolean useKeyServers = true;
-    private final List<String> topLevelComments = new ArrayList<>();
-    private DependencyVerificationConfiguration.KeyringFormat keyringFormat = null;
-
-    public void setKeyringFormat(String newKeyringFormat) {
-        this.keyringFormat = parseKeyringFormat(newKeyringFormat);
+    fun setKeyringFormat(newKeyringFormat: String?) {
+        this.keyringFormat = parseKeyringFormat(newKeyringFormat)
     }
 
-    private DependencyVerificationConfiguration.KeyringFormat parseKeyringFormat(String keyringFormat) {
+    private fun parseKeyringFormat(keyringFormat: String?): DependencyVerificationConfiguration.KeyringFormat? {
         if (keyringFormat == null) {
-            return null;
+            return null
         }
         try {
-            return DependencyVerificationConfiguration.KeyringFormat.valueOf(keyringFormat.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw new DependencyVerificationException("Invalid keyring format: " + keyringFormat + ". The keyring format should be either 'armored' or 'binary', which determines how keys are stored. Please choose a valid format or leave it unset to generate both.");
+            return DependencyVerificationConfiguration.KeyringFormat.valueOf(keyringFormat.uppercase())
+        } catch (e: IllegalArgumentException) {
+            throw DependencyVerificationException("Invalid keyring format: " + keyringFormat + ". The keyring format should be either 'armored' or 'binary', which determines how keys are stored. Please choose a valid format or leave it unset to generate both.")
         }
     }
 
-    public DependencyVerificationConfiguration.KeyringFormat getKeyringFormat() {
-        return keyringFormat;
+    fun addTopLevelComment(comment: String?) {
+        topLevelComments.add(comment)
     }
 
-    public void addTopLevelComment(String comment) {
-        topLevelComments.add(comment);
+    fun addChecksum(artifact: ModuleComponentArtifactIdentifier, kind: ChecksumKind?, value: String?, origin: String?, reason: String?) {
+        val componentIdentifier = artifact.getComponentIdentifier()
+        byComponent.computeIfAbsent(componentIdentifier) { component: org.gradle.api.artifacts.component.ModuleComponentIdentifier? -> ComponentVerificationsBuilder(component) }!!
+            .addChecksum(artifact, kind, value, origin, reason)
     }
 
-    public void addChecksum(ModuleComponentArtifactIdentifier artifact, ChecksumKind kind, String value, @Nullable String origin, @Nullable String reason) {
-        ModuleComponentIdentifier componentIdentifier = artifact.getComponentIdentifier();
-        byComponent.computeIfAbsent(componentIdentifier, ComponentVerificationsBuilder::new)
-            .addChecksum(artifact, kind, value, origin, reason);
+    fun addTrustedKey(artifact: ModuleComponentArtifactIdentifier, key: String) {
+        val componentIdentifier = artifact.getComponentIdentifier()
+        byComponent.computeIfAbsent(componentIdentifier) { component: org.gradle.api.artifacts.component.ModuleComponentIdentifier? -> ComponentVerificationsBuilder(component) }!!
+            .addTrustedKey(artifact, key)
     }
 
-    public void addTrustedKey(ModuleComponentArtifactIdentifier artifact, String key) {
-        ModuleComponentIdentifier componentIdentifier = artifact.getComponentIdentifier();
-        byComponent.computeIfAbsent(componentIdentifier, ComponentVerificationsBuilder::new)
-            .addTrustedKey(artifact, key);
+    fun addIgnoredKey(artifact: ModuleComponentArtifactIdentifier, key: IgnoredKey?) {
+        val componentIdentifier = artifact.getComponentIdentifier()
+        byComponent.computeIfAbsent(componentIdentifier) { component: org.gradle.api.artifacts.component.ModuleComponentIdentifier? -> ComponentVerificationsBuilder(component) }!!
+            .addIgnoredKey(artifact, key)
     }
 
-    public void addIgnoredKey(ModuleComponentArtifactIdentifier artifact, IgnoredKey key) {
-        ModuleComponentIdentifier componentIdentifier = artifact.getComponentIdentifier();
-        byComponent.computeIfAbsent(componentIdentifier, ComponentVerificationsBuilder::new)
-            .addIgnoredKey(artifact, key);
+    @JvmOverloads
+    fun addTrustedArtifact(group: String?, name: String?, version: String?, fileName: String?, regex: Boolean, reason: String? = null) {
+        validateUserInput(group, name, version, fileName)
+        trustedArtifacts.add(DependencyVerificationConfiguration.TrustedArtifact(group, name, version, fileName, regex, reason))
     }
 
-    public void setVerifyMetadata(boolean verifyMetadata) {
-        isVerifyMetadata = verifyMetadata;
+    fun addIgnoredKey(keyId: IgnoredKey?) {
+        ignoredKeys.add(keyId)
     }
 
-    public boolean isVerifyMetadata() {
-        return isVerifyMetadata;
+    fun addTrustedKey(keyId: String, group: String?, name: String?, version: String?, fileName: String?, regex: Boolean) {
+        validateUserInput(group, name, version, fileName)
+        trustedKeys.add(DependencyVerificationConfiguration.TrustedKey(keyId, group, name, version, fileName, regex))
     }
 
-    public boolean isVerifySignatures() {
-        return isVerifySignatures;
-    }
-
-    public void setVerifySignatures(boolean verifySignatures) {
-        isVerifySignatures = verifySignatures;
-    }
-
-    public boolean isUseKeyServers() {
-        return useKeyServers;
-    }
-
-    public void setUseKeyServers(boolean useKeyServers) {
-        this.useKeyServers = useKeyServers;
-    }
-
-    public List<URI> getKeyServers() {
-        return keyServers;
-    }
-
-    public Set<DependencyVerificationConfiguration.TrustedKey> getTrustedKeys() {
-        return trustedKeys;
-    }
-
-    public void addTrustedArtifact(@Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex) {
-        addTrustedArtifact(group, name, version, fileName, regex, null);
-    }
-
-    public void addTrustedArtifact(@Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex, @Nullable String reason) {
-        validateUserInput(group, name, version, fileName);
-        trustedArtifacts.add(new DependencyVerificationConfiguration.TrustedArtifact(group, name, version, fileName, regex, reason));
-    }
-
-    public void addIgnoredKey(IgnoredKey keyId) {
-        ignoredKeys.add(keyId);
-    }
-
-    public void addTrustedKey(String keyId, @Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName, boolean regex) {
-        validateUserInput(group, name, version, fileName);
-        trustedKeys.add(new DependencyVerificationConfiguration.TrustedKey(keyId, group, name, version, fileName, regex));
-    }
-
-    private void validateUserInput(@Nullable String group, @Nullable String name, @Nullable String version, @Nullable String fileName) {
+    private fun validateUserInput(group: String?, name: String?, version: String?, fileName: String?) {
         // because this can be called from parsing XML, we need to perform additional verification
         if (group == null && name == null && version == null && fileName == null) {
-            throw new DependencyVerificationException("A trusted artifact must have at least one of group, name, version or file name not null");
+            throw DependencyVerificationException("A trusted artifact must have at least one of group, name, version or file name not null")
         }
     }
 
-    public DependencyVerifier build() {
-        ImmutableMap.Builder<ModuleComponentIdentifier, ComponentVerificationMetadata> builder = ImmutableMap.builderWithExpectedSize(byComponent.size());
-        byComponent.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey(MODULE_COMPONENT_IDENTIFIER_COMPARATOR))
-            .forEachOrdered(entry -> builder.put(entry.getKey(), entry.getValue().build()));
-        return new DependencyVerifier(builder.build(), new DependencyVerificationConfiguration(isVerifyMetadata, isVerifySignatures, trustedArtifacts, useKeyServers, ImmutableList.copyOf(keyServers), ImmutableSet.copyOf(ignoredKeys), ImmutableList.copyOf(trustedKeys), keyringFormat), topLevelComments);
+    fun build(): DependencyVerifier {
+        val builder = ImmutableMap.builderWithExpectedSize<ModuleComponentIdentifier?, ComponentVerificationMetadata?>(byComponent.size)
+        byComponent.entries.stream()
+            .sorted(Map.Entry.comparingByKey<ModuleComponentIdentifier?, ComponentVerificationsBuilder?>(MODULE_COMPONENT_IDENTIFIER_COMPARATOR))
+            .forEachOrdered { entry: MutableMap.MutableEntry<ModuleComponentIdentifier?, ComponentVerificationsBuilder?>? -> builder.put(entry!!.key, entry.value!!.build()) }
+        return DependencyVerifier(
+            builder.build(), DependencyVerificationConfiguration(
+                isVerifyMetadata,
+                isVerifySignatures,
+                trustedArtifacts,
+                this.isUseKeyServers,
+                ImmutableList.copyOf<URI?>(keyServers),
+                ImmutableSet.copyOf<IgnoredKey?>(ignoredKeys),
+                ImmutableList.copyOf<DependencyVerificationConfiguration.TrustedKey?>(trustedKeys),
+                keyringFormat
+            ), topLevelComments
+        )
     }
 
-    public List<DependencyVerificationConfiguration.TrustedArtifact> getTrustedArtifacts() {
-        return trustedArtifacts;
+    fun addKeyServer(uri: URI?) {
+        keyServers.add(uri)
     }
 
-    public void addKeyServer(URI uri) {
-        keyServers.add(uri);
-    }
+    protected class ComponentVerificationsBuilder(private val component: ModuleComponentIdentifier?) {
+        private val byArtifact: MutableMap<String?, ArtifactVerificationBuilder?> = HashMap<String?, ArtifactVerificationBuilder?>()
 
-    protected static class ComponentVerificationsBuilder {
-        private final ModuleComponentIdentifier component;
-        private final Map<String, ArtifactVerificationBuilder> byArtifact = new HashMap<>();
-
-        protected ComponentVerificationsBuilder(ModuleComponentIdentifier component) {
-            this.component = component;
+        fun addChecksum(artifact: ModuleComponentArtifactIdentifier, kind: ChecksumKind?, value: String?, origin: String?, reason: String?) {
+            byArtifact.computeIfAbsent(artifact.fileName) { id: kotlin.String? -> org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifierBuilder.ArtifactVerificationBuilder() }!!
+                .addChecksum(kind, value, origin, reason)
         }
 
-        void addChecksum(ModuleComponentArtifactIdentifier artifact, ChecksumKind kind, String value, @Nullable String origin, @Nullable String reason) {
-            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addChecksum(kind, value, origin, reason);
+        fun addTrustedKey(artifact: ModuleComponentArtifactIdentifier, key: String) {
+            byArtifact.computeIfAbsent(artifact.fileName) { id: kotlin.String? -> org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifierBuilder.ArtifactVerificationBuilder() }!!
+                .addTrustedKey(key)
         }
 
-        void addTrustedKey(ModuleComponentArtifactIdentifier artifact, String key) {
-            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addTrustedKey(key);
+        fun addIgnoredKey(artifact: ModuleComponentArtifactIdentifier, key: IgnoredKey?) {
+            byArtifact.computeIfAbsent(artifact.fileName) { id: kotlin.String? -> org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifierBuilder.ArtifactVerificationBuilder() }!!
+                .addIgnoredKey(key)
         }
 
-        void addIgnoredKey(ModuleComponentArtifactIdentifier artifact, IgnoredKey key) {
-            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addIgnoredKey(key);
-        }
-
-        private static ArtifactVerificationMetadata toArtifactVerification(Map.Entry<String, ArtifactVerificationBuilder> entry) throws InvalidGpgKeyIdsException {
-            String key = entry.getKey();
-            ArtifactVerificationBuilder value = entry.getValue();
-            return new ImmutableArtifactVerificationMetadata(
-                key,
-                value.buildChecksums(),
-                value.buildTrustedPgpKeys(),
-                value.buildIgnoredPgpKeys());
-        }
-
-        ComponentVerificationMetadata build() {
+        fun build(): ComponentVerificationMetadata {
             try {
-                return new ImmutableComponentVerificationMetadata(component,
-                    byArtifact.entrySet()
+                return ImmutableComponentVerificationMetadata(
+                    component,
+                    byArtifact.entries
                         .stream()
-                        .map(ComponentVerificationsBuilder::toArtifactVerification)
-                        .sorted(Comparator.comparing(ArtifactVerificationMetadata::getArtifactName))
+                        .map<ArtifactVerificationMetadata?> { entry: MutableMap.MutableEntry<String?, ArtifactVerificationBuilder?>? -> Companion.toArtifactVerification(entry) }
+                        .sorted(Comparator.comparing<ArtifactVerificationMetadata?, String?>(Function { obj: ArtifactVerificationMetadata? -> obj!!.artifactName }))
                         .collect(Collectors.toList())
-                );
-            } catch (InvalidGpgKeyIdsException ex) {
-                throw new ComponentVerificationException(component, ex::formatMessage);
+                )
+            } catch (ex: InvalidGpgKeyIdsException) {
+                throw ComponentVerificationException(component, Consumer { formatter: TreeFormatter? -> ex.formatMessage(formatter) })
+            }
+        }
+
+        companion object {
+            @Throws(InvalidGpgKeyIdsException::class)
+            private fun toArtifactVerification(entry: MutableMap.MutableEntry<String?, ArtifactVerificationBuilder>): ArtifactVerificationMetadata {
+                val key = entry.key
+                val value = entry.value
+                return ImmutableArtifactVerificationMetadata(
+                    key,
+                    value.buildChecksums(),
+                    value.buildTrustedPgpKeys(),
+                    value.buildIgnoredPgpKeys()
+                )
             }
         }
     }
 
-    protected static class ArtifactVerificationBuilder {
-        private final Map<ChecksumKind, ChecksumBuilder> builder = Maps.newEnumMap(ChecksumKind.class);
-        private final Set<String> pgpKeys = new LinkedHashSet<>();
-        private final Set<IgnoredKey> ignoredPgpKeys = new LinkedHashSet<>();
+    protected class ArtifactVerificationBuilder {
+        private val builder: MutableMap<ChecksumKind?, ChecksumBuilder> = Maps.newEnumMap<ChecksumKind?, ChecksumBuilder?>(ChecksumKind::class.java)
+        private val pgpKeys: MutableSet<String?> = LinkedHashSet<String?>()
+        private val ignoredPgpKeys: MutableSet<IgnoredKey?> = LinkedHashSet<IgnoredKey?>()
 
-        void addChecksum(ChecksumKind kind, String value, @Nullable String origin, @Nullable String reason) {
-            ChecksumBuilder builder = this.builder.computeIfAbsent(kind, ChecksumBuilder::new);
-            builder.addChecksum(value);
+        fun addChecksum(kind: ChecksumKind?, value: String?, origin: String?, reason: String?) {
+            val builder = this.builder.computeIfAbsent(kind) { kind: ChecksumKind? -> ChecksumBuilder(kind) }
+            builder.addChecksum(value)
             if (origin != null) {
-                builder.withOrigin(origin);
+                builder.withOrigin(origin)
             }
             if (reason != null) {
-                builder.withReason(reason);
+                builder.withReason(reason)
             }
         }
 
-        List<Checksum> buildChecksums() {
-            return builder.values()
+        fun buildChecksums(): MutableList<Checksum?> {
+            return builder.values
                 .stream()
-                .map(ChecksumBuilder::build)
-                .sorted(Comparator.comparing(Checksum::getKind))
-                .collect(Collectors.toList());
+                .map<Checksum?> { obj: ChecksumBuilder? -> obj!!.build() }
+                .sorted(Comparator.comparing<Checksum?, ChecksumKind?>(Function { obj: Checksum? -> obj!!.kind }))
+                .collect(Collectors.toList())
         }
 
-        public void addTrustedKey(String key) {
-            pgpKeys.add(key.toUpperCase(Locale.ROOT));
+        fun addTrustedKey(key: String) {
+            pgpKeys.add(key.uppercase())
         }
 
-        public void addIgnoredKey(IgnoredKey key) {
-            ignoredPgpKeys.add(key);
+        fun addIgnoredKey(key: IgnoredKey?) {
+            ignoredPgpKeys.add(key)
         }
 
         /**
          * Builds the list of trusted GPG keys.
-         * <p>
+         *
+         *
          * This method will verify if all the trusted keys are in 160-bit fingerprint format.
          * We do not accept either short or long formats, as they can be vulnerable to collision attacks.
          *
-         * <p>
+         *
+         *
          * Note: the fingerprints' formatting is not verified (i.e. if it's true base32 or not) at this stage.
-         * It will happen when these fingerprints will be converted to {@link org.gradle.security.internal.Fingerprint}.
+         * It will happen when these fingerprints will be converted to [org.gradle.security.internal.Fingerprint].
          *
          * @return a set of trusted GPG keys
          * @throws InvalidGpgKeyIdsException if keys not fitting the requirements were found
          */
-        public Set<String> buildTrustedPgpKeys() throws InvalidGpgKeyIdsException {
-            final List<String> wrongPgpKeys = pgpKeys
-                .stream()
-                // The key is 160 bits long, encoded in base32 (case-insensitive characters).
+        @Throws(InvalidGpgKeyIdsException::class)
+        fun buildTrustedPgpKeys(): MutableSet<String?> {
+            val wrongPgpKeys = pgpKeys
+                .stream() // The key is 160 bits long, encoded in base32 (case-insensitive characters).
                 //
                 // Base32 gives us 4 bits per character, so the whole fingerprint will be:
                 // (160 bits) / (4 bits / character) = 40 characters
                 //
                 // By getting ASCII bytes (aka. strictly 1 byte per character, no variable-length magic)
                 // we can safely check if the fingerprint is of the correct length.
-                .filter(key -> key.getBytes(StandardCharsets.US_ASCII).length < 40)
-                .collect(Collectors.toList());
+                .filter { key: String? -> key!!.toByteArray(StandardCharsets.US_ASCII).size < 40 }
+                .collect(Collectors.toList())
 
             if (wrongPgpKeys.isEmpty()) {
-                return pgpKeys;
+                return pgpKeys
             } else {
-                throw new InvalidGpgKeyIdsException(wrongPgpKeys);
+                throw InvalidGpgKeyIdsException(wrongPgpKeys)
             }
         }
 
-        public Set<IgnoredKey> buildIgnoredPgpKeys() {
-            return ignoredPgpKeys;
+        fun buildIgnoredPgpKeys(): MutableSet<IgnoredKey?> {
+            return ignoredPgpKeys
         }
     }
 
-    private static class ChecksumBuilder {
-        private final ChecksumKind kind;
-        private String value;
-        private String origin;
-        private String reason;
-        private Set<String> alternatives;
-
-        private ChecksumBuilder(ChecksumKind kind) {
-            this.kind = kind;
-        }
+    private class ChecksumBuilder(private val kind: ChecksumKind?) {
+        private var value: String? = null
+        private var origin: String? = null
+        private var reason: String? = null
+        private var alternatives: MutableSet<String?>? = null
 
         /**
          * Sets the origin, if not set already. This is
          * mostly used for automatic generation of checksums
          */
-        void withOrigin(String origin) {
+        fun withOrigin(origin: String?) {
             if (this.origin == null) {
-                this.origin = origin;
+                this.origin = origin
             }
         }
 
         /**
          * Sets the reason, if not set already.
          */
-        void withReason(String reason) {
+        fun withReason(reason: String?) {
             if (this.reason == null) {
-                this.reason = reason;
+                this.reason = reason
             }
         }
 
-        void addChecksum(String checksum) {
+        fun addChecksum(checksum: String?) {
             if (value == null) {
-                value = checksum;
-            } else if (!value.equals(checksum)) {
+                value = checksum
+            } else if (value != checksum) {
                 if (alternatives == null) {
-                    alternatives = new LinkedHashSet<>();
+                    alternatives = LinkedHashSet<String?>()
                 }
-                alternatives.add(checksum);
+                alternatives!!.add(checksum)
             }
         }
 
-        Checksum build() {
-            return new Checksum(
+        fun build(): Checksum {
+            return Checksum(
                 kind,
                 value,
                 alternatives,
                 origin,
                 reason
-            );
+            )
         }
+    }
+
+    companion object {
+        private val MODULE_COMPONENT_IDENTIFIER_COMPARATOR: Comparator<ModuleComponentIdentifier?> =
+            Comparator.comparing<ModuleComponentIdentifier?, String?>(Function { obj: ModuleComponentIdentifier? -> obj!!.getGroup() })
+                .thenComparing<String?>(Function { obj: ModuleComponentIdentifier? -> obj!!.getModule() })
+                .thenComparing<String?>(Function { obj: ModuleComponentIdentifier? -> obj!!.getVersion() })
     }
 }

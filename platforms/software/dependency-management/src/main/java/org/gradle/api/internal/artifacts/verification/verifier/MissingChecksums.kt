@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import org.gradle.internal.logging.text.TreeFormatter;
+import org.gradle.internal.logging.text.TreeFormatter
+import java.io.File
 
-import java.io.File;
-
-public class MissingChecksums extends AbstractVerificationFailure {
-    public MissingChecksums(File file) {
-        super(file);
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        formatter.append("checksum is missing from verification metadata.");
+class MissingChecksums(file: File?) : AbstractVerificationFailure(file) {
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("checksum is missing from verification metadata.")
     }
 }

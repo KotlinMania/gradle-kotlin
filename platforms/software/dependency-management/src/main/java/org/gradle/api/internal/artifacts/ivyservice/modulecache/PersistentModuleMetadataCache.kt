@@ -13,129 +13,125 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Interner;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory;
-import org.gradle.cache.IndexedCache;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resource.local.DefaultPathKeyFileStore;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.base.Objects
+import com.google.common.collect.Interner
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory
+import org.gradle.cache.IndexedCache
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resource.local.DefaultPathKeyFileStore
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.util.function.Supplier
 
-public class PersistentModuleMetadataCache extends AbstractModuleMetadataCache {
-
-    private IndexedCache<ModuleComponentAtRepositoryKey, ModuleMetadataCacheEntry> cache;
-    private final ModuleMetadataStore moduleMetadataStore;
-    private final ArtifactCacheLockingAccessCoordinator artifactCacheLockingManager;
-
-    public PersistentModuleMetadataCache(
-        BuildCommencedTimeProvider timeProvider,
-        ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator,
-        ArtifactCacheMetadata artifactCacheMetadata,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        AttributeContainerSerializer attributeContainerSerializer,
-        CapabilitySelectorSerializer capabilitySelectorSerializer,
-        MavenMutableModuleMetadataFactory mavenMetadataFactory,
-        IvyMutableModuleMetadataFactory ivyMetadataFactory,
-        Interner<String> stringInterner,
-        ModuleSourcesSerializer moduleSourcesSerializer,
-        ChecksumService checksumService
-    ) {
-        super(timeProvider);
-        moduleMetadataStore = new ModuleMetadataStore(new DefaultPathKeyFileStore(checksumService, artifactCacheMetadata.getMetaDataStoreDirectory()), new ModuleMetadataSerializer(attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, moduleSourcesSerializer), moduleIdentifierFactory, stringInterner);
-        this.artifactCacheLockingManager = cacheAccessCoordinator;
-    }
-
-    private IndexedCache<ModuleComponentAtRepositoryKey, ModuleMetadataCacheEntry> getCache() {
-        if (cache == null) {
-            cache = initCache();
+open class PersistentModuleMetadataCache(
+    timeProvider: BuildCommencedTimeProvider?,
+    private val artifactCacheLockingManager: ArtifactCacheLockingAccessCoordinator,
+    artifactCacheMetadata: ArtifactCacheMetadata,
+    moduleIdentifierFactory: ImmutableModuleIdentifierFactory?,
+    attributeContainerSerializer: AttributeContainerSerializer?,
+    capabilitySelectorSerializer: CapabilitySelectorSerializer?,
+    mavenMetadataFactory: MavenMutableModuleMetadataFactory?,
+    ivyMetadataFactory: IvyMutableModuleMetadataFactory?,
+    stringInterner: Interner<String?>?,
+    moduleSourcesSerializer: ModuleSourcesSerializer?,
+    checksumService: ChecksumService
+) : AbstractModuleMetadataCache(timeProvider) {
+    private var cache: IndexedCache<ModuleComponentAtRepositoryKey?, ModuleMetadataCacheEntry?>? = null
+        get() {
+            if (field == null) {
+                field = initCache()
+            }
+            return field
         }
-        return cache;
+    private val moduleMetadataStore: ModuleMetadataStore
+
+    init {
+        moduleMetadataStore = ModuleMetadataStore(
+            DefaultPathKeyFileStore(checksumService, artifactCacheMetadata.metaDataStoreDirectory),
+            ModuleMetadataSerializer(attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, moduleSourcesSerializer),
+            moduleIdentifierFactory,
+            stringInterner
+        )
     }
 
-    private IndexedCache<ModuleComponentAtRepositoryKey, ModuleMetadataCacheEntry> initCache() {
-        return artifactCacheLockingManager.createCache("module-metadata", new RevisionKeySerializer(), new ModuleMetadataCacheEntrySerializer());
+    private fun initCache(): IndexedCache<ModuleComponentAtRepositoryKey?, ModuleMetadataCacheEntry?>? {
+        return artifactCacheLockingManager.createCache<ModuleComponentAtRepositoryKey?, ModuleMetadataCacheEntry?>("module-metadata", RevisionKeySerializer(), ModuleMetadataCacheEntrySerializer())
     }
 
-    @Override
-    protected CachedMetadata get(ModuleComponentAtRepositoryKey key) {
-        final IndexedCache<ModuleComponentAtRepositoryKey, ModuleMetadataCacheEntry> cache = getCache();
-        return artifactCacheLockingManager.useCache(() -> {
-            ModuleMetadataCacheEntry entry = cache.getIfPresent(key);
+    protected override fun get(key: ModuleComponentAtRepositoryKey): ModuleMetadataCache.CachedMetadata {
+        val cache: IndexedCache<ModuleComponentAtRepositoryKey?, ModuleMetadataCacheEntry?> =
+            this.cache!!
+        return artifactCacheLockingManager.useCache<DefaultCachedMetadata>(Supplier {
+            val entry = cache.getIfPresent(key)
             if (entry == null) {
-                return null;
+                return@useCache null
             }
             if (entry.isMissing()) {
-                return new DefaultCachedMetadata(entry, null, timeProvider);
+                return@useCache DefaultCachedMetadata(entry, null, timeProvider)
             }
-            MutableModuleComponentResolveMetadata metadata = moduleMetadataStore.getModuleDescriptor(key);
+            val metadata = moduleMetadataStore.getModuleDescriptor(key)
             if (metadata == null) {
                 // Descriptor file has been deleted - ignore the entry
-                cache.remove(key);
-                return null;
+                cache.remove(key)
+                return@useCache null
             }
-            return new DefaultCachedMetadata(entry, entry.configure(metadata), timeProvider);
-        });
+            DefaultCachedMetadata(entry, entry.configure(metadata), timeProvider)
+        })
     }
 
-    @Override
-    protected CachedMetadata store(final ModuleComponentAtRepositoryKey key, final ModuleMetadataCacheEntry entry, final CachedMetadata cachedMetadata) {
+    protected override fun store(key: ModuleComponentAtRepositoryKey, entry: ModuleMetadataCacheEntry, cachedMetadata: ModuleMetadataCache.CachedMetadata): ModuleMetadataCache.CachedMetadata {
         if (entry.isMissing()) {
-            getCache().put(key, entry);
+            this.cache!!.put(key, entry)
         } else {
             // Need to lock the cache in order to write to the module metadata store
-            artifactCacheLockingManager.useCache(() -> {
-                final ModuleComponentResolveMetadata metadata = cachedMetadata.getMetadata();
-                moduleMetadataStore.putModuleDescriptor(key, metadata);
-                getCache().put(key, entry);
-            });
+            artifactCacheLockingManager.useCache(Runnable {
+                val metadata = cachedMetadata.getMetadata()
+                moduleMetadataStore.putModuleDescriptor(key, metadata)
+                this.cache!!.put(key, entry)
+            })
         }
-        return cachedMetadata;
+        return cachedMetadata
     }
 
-    private static class RevisionKeySerializer extends AbstractSerializer<ModuleComponentAtRepositoryKey> {
-        private final ComponentIdentifierSerializer componentIdSerializer = new ComponentIdentifierSerializer();
+    private class RevisionKeySerializer : AbstractSerializer<ModuleComponentAtRepositoryKey?>() {
+        private val componentIdSerializer = ComponentIdentifierSerializer()
 
-        @Override
-        public void write(Encoder encoder, ModuleComponentAtRepositoryKey value) throws Exception {
-            encoder.writeString(value.getRepositoryId());
-            componentIdSerializer.write(encoder, value.getComponentId());
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ModuleComponentAtRepositoryKey) {
+            encoder.writeString(value.getRepositoryId())
+            componentIdSerializer.write(encoder, value.getComponentId())
         }
 
-        @Override
-        public ModuleComponentAtRepositoryKey read(Decoder decoder) throws Exception {
-            String resolverId = decoder.readString();
-            ModuleComponentIdentifier identifier = (ModuleComponentIdentifier) componentIdSerializer.read(decoder);
-            return new ModuleComponentAtRepositoryKey(resolverId, identifier);
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ModuleComponentAtRepositoryKey {
+            val resolverId = decoder.readString()
+            val identifier = componentIdSerializer.read(decoder) as ModuleComponentIdentifier
+            return ModuleComponentAtRepositoryKey(resolverId, identifier)
         }
 
-        @Override
-        public boolean equals(Object obj) {
+        public override fun equals(obj: Any?): Boolean {
             if (!super.equals(obj)) {
-                return false;
+                return false
             }
 
-            RevisionKeySerializer rhs = (RevisionKeySerializer) obj;
-            return Objects.equal(componentIdSerializer, rhs.componentIdSerializer);
+            val rhs = obj as RevisionKeySerializer
+            return Objects.equal(componentIdSerializer, rhs.componentIdSerializer)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(super.hashCode(), componentIdSerializer);
+        public override fun hashCode(): Int {
+            return Objects.hashCode(super.hashCode(), componentIdSerializer)
         }
     }
 }

@@ -13,29 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.Path;
-
-import java.util.function.Function;
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.Path
+import java.util.function.Function
 
 /**
- * A cache for {@link LocalComponentGraphResolveState} instances.
+ * A cache for [LocalComponentGraphResolveState] instances.
  */
-@ServiceScope(Scope.BuildTree.class)
-public interface LocalComponentCache {
-
-    /**
-     * A cache that does not perform caching and always executes the provided factory.
-     */
-    LocalComponentCache NO_CACHE = (path, factory) -> factory.apply(path);
-
+@ServiceScope(Scope.BuildTree::class)
+interface LocalComponentCache {
     /**
      * Loads cached dependency resolution metadata for the given project, if available,
      * or else runs the given function to create it and then writes the result to the cache.
      */
-    LocalComponentGraphResolveState computeIfAbsent(Path projectIdentityPath, Function<Path, LocalComponentGraphResolveState> factory);
+    fun computeIfAbsent(projectIdentityPath: Path, factory: Function<Path, LocalComponentGraphResolveState>): LocalComponentGraphResolveState?
+
+    companion object {
+        /**
+         * A cache that does not perform caching and always executes the provided factory.
+         */
+        val NO_CACHE: LocalComponentCache =
+            org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentCache { path: Path, factory: Function<Path, LocalComponentGraphResolveState> -> factory.apply(path) }
+    }
 }

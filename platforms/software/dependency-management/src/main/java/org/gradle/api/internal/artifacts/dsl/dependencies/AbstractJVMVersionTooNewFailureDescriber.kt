@@ -13,93 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-import org.gradle.api.JavaVersion;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.java.TargetJvmVersion;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber;
-import org.gradle.internal.component.resolution.failure.describer.ResolutionFailureDescriber;
-import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import org.gradle.api.JavaVersion
+import org.gradle.api.JavaVersion.Companion.toVersion
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.java.TargetJvmVersion
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
+import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber
+import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure
+import java.util.Objects
+import java.util.Optional
+import java.util.function.Supplier
+import java.util.stream.Collectors
 
 /**
- * Abstract base class for building {@link ResolutionFailureDescriber}s that describe {@link ResolutionFailure}s caused by
+ * Abstract base class for building [ResolutionFailureDescriber]s that describe [ResolutionFailure]s caused by
  * incompatibilities related to a dependency requiring a higher JVM version.
  */
-public abstract class AbstractJVMVersionTooNewFailureDescriber extends AbstractResolutionFailureDescriber<NoCompatibleVariantsFailure> {
+abstract class AbstractJVMVersionTooNewFailureDescriber : AbstractResolutionFailureDescriber<NoCompatibleVariantsFailure?>() {
     /**
      * Returns the JVM version used in the comparison against the library that is causing the failure.
      *
      * @param failure the failure
      * @return the JVM version that is incompatible
      */
-    protected abstract JavaVersion getJVMVersion(NoCompatibleVariantsFailure failure);
+    protected abstract fun getJVMVersion(failure: NoCompatibleVariantsFailure): JavaVersion?
 
-    protected final boolean isDueToJVMVersionTooNew(NoCompatibleVariantsFailure failure) {
+    protected fun isDueToJVMVersionTooNew(failure: NoCompatibleVariantsFailure): Boolean {
         if (allLibraryCandidatesIncompatibleDueToJVMVersionTooLow(failure)) {
-            JavaVersion minJVMVersionSupported = findMinJVMSupported(failure.candidates).orElseThrow(IllegalStateException::new);
-            return minJVMVersionSupported.compareTo(getJVMVersion(failure)) > 0;
+            val minJVMVersionSupported = findMinJVMSupported(failure.candidates).orElseThrow<java.lang.IllegalStateException>(Supplier { IllegalStateException() })
+            return minJVMVersionSupported.compareTo(getJVMVersion(failure)!!) > 0
         } else {
-            return false;
+            return false
         }
     }
 
-    private boolean allLibraryCandidatesIncompatibleDueToJVMVersionTooLow(NoCompatibleVariantsFailure failure) {
-        List<ResolutionCandidateAssessor.AssessedCandidate> libraryCandidates = failure.candidates.stream()
-            .filter(this::isLibraryCandidate)
-            .collect(Collectors.toList());
+    private fun allLibraryCandidatesIncompatibleDueToJVMVersionTooLow(failure: NoCompatibleVariantsFailure): Boolean {
+        val libraryCandidates = failure.candidates.stream()
+            .filter { candidate: ResolutionCandidateAssessor.AssessedCandidate? -> this.isLibraryCandidate(candidate!!) }
+            .collect(Collectors.toList())
         if (!libraryCandidates.isEmpty()) {
-            boolean requestingJDKVersion = failure.getRequestedAttributes().contains(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE);
-            boolean allIncompatibleDueToJDKVersion = libraryCandidates.stream().allMatch(this::isJVMVersionAttributeIncompatible);
-            return requestingJDKVersion && allIncompatibleDueToJDKVersion;
+            val requestingJDKVersion = failure.getRequestedAttributes().contains(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)
+            val allIncompatibleDueToJDKVersion =
+                libraryCandidates.stream().allMatch { candidate: ResolutionCandidateAssessor.AssessedCandidate? -> this.isJVMVersionAttributeIncompatible(candidate!!) }
+            return requestingJDKVersion && allIncompatibleDueToJDKVersion
         } else {
-            return false;
+            return false
         }
     }
 
-    protected final Optional<JavaVersion> findMinJVMSupported(List<ResolutionCandidateAssessor.AssessedCandidate> candidates) {
+    protected fun findMinJVMSupported(candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>): Optional<JavaVersion> {
         return candidates.stream()
-            .filter(this::isLibraryCandidate)
-            .map(this::findMinJVMSupported)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .min(Comparator.comparing(JavaVersion::getMajorVersion));
+            .filter { candidate: ResolutionCandidateAssessor.AssessedCandidate? -> this.isLibraryCandidate(candidate!!) }
+            .map<Optional<JavaVersion>> { candidate: ResolutionCandidateAssessor.AssessedCandidate? -> this.findMinJVMSupported(candidate!!) }
+            .filter { obj: Optional<JavaVersion?>? -> obj!!.isPresent() }
+            .map<JavaVersion> { obj: Optional<JavaVersion?>? -> obj!!.get() }
+            .min(Comparator.comparing<JavaVersion, String>(JavaVersion::majorVersion))
     }
 
-    private Optional<JavaVersion> findMinJVMSupported(ResolutionCandidateAssessor.AssessedCandidate candidate) {
+    private fun findMinJVMSupported(candidate: ResolutionCandidateAssessor.AssessedCandidate): Optional<JavaVersion> {
         return candidate.incompatibleAttributes.stream()
-            .filter(this::isJVMVersionAttribute)
-            .map(jvmVersionAttribute -> JavaVersion.toVersion(Objects.requireNonNull(jvmVersionAttribute.provided)))
-            .min(Comparator.comparing(JavaVersion::getMajorVersion));
+            .filter({ attribute: ResolutionCandidateAssessor.AssessedAttribute<*> -> this.isJVMVersionAttribute(attribute) })
+            .map({ jvmVersionAttribute -> toVersion(Objects.requireNonNull<Any>(jvmVersionAttribute.provided)) })
+            .min(Comparator.comparing<T, U>(JavaVersion::majorVersion))
     }
 
-    private boolean isLibraryCandidate(ResolutionCandidateAssessor.AssessedCandidate candidate) {
-        AttributeContainer candidateAttributes = candidate.allCandidateAttributes.getAttributes();
-        for (Attribute<?> attribute : candidateAttributes.keySet()) {
-            if (Objects.equals(attribute.getName(), Category.CATEGORY_ATTRIBUTE.getName())) {
-                String category = String.valueOf(candidateAttributes.getAttribute(attribute));
-                return Objects.equals(category, Category.LIBRARY);
+    private fun isLibraryCandidate(candidate: ResolutionCandidateAssessor.AssessedCandidate): Boolean {
+        val candidateAttributes: AttributeContainer = candidate.allCandidateAttributes.getAttributes()
+        for (attribute in candidateAttributes.keySet()) {
+            if (attribute.getName() == Category.CATEGORY_ATTRIBUTE.getName()) {
+                val category: String? = candidateAttributes.getAttribute(attribute).toString()
+                return category == Category.LIBRARY
             }
         }
-        return false;
+        return false
     }
 
-    private boolean isJVMVersionAttributeIncompatible(ResolutionCandidateAssessor.AssessedCandidate candidate) {
-        return candidate.incompatibleAttributes.stream().anyMatch(this::isJVMVersionAttribute);
+    private fun isJVMVersionAttributeIncompatible(candidate: ResolutionCandidateAssessor.AssessedCandidate): Boolean {
+        return candidate.incompatibleAttributes.stream().anyMatch({ attribute: ResolutionCandidateAssessor.AssessedAttribute<*> -> this.isJVMVersionAttribute(attribute) })
     }
 
-    private boolean isJVMVersionAttribute(ResolutionCandidateAssessor.AssessedAttribute<?> attribute) {
-        return attribute.attribute.getName().equals(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE.getName());
+    private fun isJVMVersionAttribute(attribute: ResolutionCandidateAssessor.AssessedAttribute<*>): Boolean {
+        return attribute.attribute.getName() == TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE.getName()
     }
 }

@@ -13,37 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap
 
-public class CachingVersionSelectorScheme implements VersionSelectorScheme {
-    private final Map<String, VersionSelector> cachedSelectors = new ConcurrentHashMap<>();
-    private final VersionSelectorScheme delegate;
+class CachingVersionSelectorScheme(private val delegate: VersionSelectorScheme) : VersionSelectorScheme {
+    private val cachedSelectors: MutableMap<String?, VersionSelector?> = ConcurrentHashMap<String?, VersionSelector?>()
 
-    public CachingVersionSelectorScheme(VersionSelectorScheme delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public VersionSelector parseSelector(String selectorString) {
-        VersionSelector versionSelector = cachedSelectors.get(selectorString);
+    override fun parseSelector(selectorString: String?): VersionSelector? {
+        var versionSelector = cachedSelectors.get(selectorString)
         if (versionSelector == null) {
-            versionSelector = delegate.parseSelector(selectorString);
-            cachedSelectors.put(selectorString, versionSelector);
+            versionSelector = delegate.parseSelector(selectorString)
+            cachedSelectors.put(selectorString, versionSelector)
         }
-        return versionSelector;
+        return versionSelector
     }
 
-    @Override
-    public String renderSelector(VersionSelector selector) {
-        return delegate.renderSelector(selector);
+    override fun renderSelector(selector: VersionSelector?): String? {
+        return delegate.renderSelector(selector)
     }
 
-    @Override
-    public VersionSelector complementForRejection(VersionSelector selector) {
-        return delegate.complementForRejection(selector);
+    override fun complementForRejection(selector: VersionSelector?): VersionSelector? {
+        return delegate.complementForRejection(selector)
     }
-
 }

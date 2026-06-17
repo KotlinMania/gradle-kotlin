@@ -13,187 +13,146 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.descriptor
 
-package org.gradle.api.internal.artifacts.repositories.descriptor;
+import com.google.common.base.Preconditions
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSortedMap
+import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.IvyResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.M2ResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.internal.hash.Hasher
+import org.gradle.internal.scan.UsedByScanPlugin
+import org.jspecify.annotations.NullMarked
+import java.net.URI
+import java.util.function.Consumer
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.IvyResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.M2ResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.internal.scan.UsedByScanPlugin;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-
-public final class IvyRepositoryDescriptor extends UrlRepositoryDescriptor {
-
+class IvyRepositoryDescriptor private constructor(
+    id: String?,
+    name: String?,
+    url: URI?,
+    metadataSources: ImmutableList<String?>?,
+    authenticated: Boolean,
+    authenticationSchemes: ImmutableList<String?>?,
+    private val ivyPatterns: ImmutableList<String?>,
+    private val ivyResources: ImmutableList<ResourcePattern?>?,
+    private val artifactPatterns: ImmutableList<String?>,
+    private val artifactResources: ImmutableList<ResourcePattern?>?,
+    private val layoutType: String,
+    val isM2Compatible: Boolean
+) : UrlRepositoryDescriptor(id, name, url, metadataSources, authenticated, authenticationSchemes) {
     @UsedByScanPlugin("doesn't link against this type, but expects these values - See ResolveConfigurationDependenciesBuildOperationType")
-    private enum Property {
+    private enum class Property {
         IVY_PATTERNS,
         ARTIFACT_PATTERNS,
         LAYOUT_TYPE,
         M2_COMPATIBLE
     }
 
-    private final ImmutableList<String> ivyPatterns;
-    private final ImmutableList<ResourcePattern> ivyResources;
-    private final ImmutableList<String> artifactPatterns;
-    private final ImmutableList<ResourcePattern> artifactResources;
-    private final String layoutType;
-    private final boolean m2Compatible;
-
-    private IvyRepositoryDescriptor(
-        String id,
-        String name,
-        URI url,
-        ImmutableList<String> metadataSources,
-        boolean authenticated,
-        ImmutableList<String> authenticationSchemes,
-        ImmutableList<String> ivyPatterns,
-        ImmutableList<ResourcePattern> ivyResources,
-        ImmutableList<String> artifactPatterns,
-        ImmutableList<ResourcePattern> artifactResources,
-        String layoutType,
-        boolean m2Compatible
-    ) {
-        super(id, name, url, metadataSources, authenticated, authenticationSchemes);
-        this.ivyPatterns = ivyPatterns;
-        this.ivyResources = ivyResources;
-        this.artifactPatterns = artifactPatterns;
-        this.artifactResources = artifactResources;
-        this.layoutType = layoutType;
-        this.m2Compatible = m2Compatible;
+    override fun getMetadataResources(): ImmutableList<ResourcePattern?>? {
+        return ivyResources
     }
 
-    @Override
-    public ImmutableList<ResourcePattern> getMetadataResources() {
-        return ivyResources;
+    override fun getArtifactResources(): ImmutableList<ResourcePattern?>? {
+        return artifactResources
     }
 
-    @Override
-    public ImmutableList<ResourcePattern> getArtifactResources() {
-        return artifactResources;
+    override fun getType(): Type {
+        return Type.IVY
     }
 
-    @Override
-    public Type getType() {
-        return Type.IVY;
+    fun getArtifactPatterns(): MutableList<String?> {
+        return artifactPatterns
     }
 
-    public List<String> getArtifactPatterns() {
-        return artifactPatterns;
-    }
-
-    public boolean isM2Compatible() {
-        return m2Compatible;
-    }
-
-    @Override
-    protected void addProperties(ImmutableSortedMap.Builder<String, Object> builder) {
-        super.addProperties(builder);
-        builder.put(Property.IVY_PATTERNS.name(), ivyPatterns);
-        builder.put(Property.ARTIFACT_PATTERNS.name(), artifactPatterns);
-        builder.put(Property.LAYOUT_TYPE.name(), layoutType);
-        builder.put(Property.M2_COMPATIBLE.name(), m2Compatible);
+    override fun addProperties(builder: ImmutableSortedMap.Builder<String?, Any?>) {
+        super.addProperties(builder)
+        builder.put(Property.IVY_PATTERNS.name, ivyPatterns)
+        builder.put(Property.ARTIFACT_PATTERNS.name, artifactPatterns)
+        builder.put(Property.LAYOUT_TYPE.name, layoutType)
+        builder.put(Property.M2_COMPATIBLE.name, this.isM2Compatible)
     }
 
     @NullMarked
-    private static class Resource {
-        final URI baseUri;
-        final String pattern;
+    private class Resource(val baseUri: URI, val pattern: String)
 
-        public Resource(URI baseUri, String pattern) {
-            this.baseUri = baseUri;
-            this.pattern = pattern;
-        }
-    }
+    class Builder(name: String?, url: URI?) : UrlRepositoryDescriptor.Builder<Builder?>(name, url) {
+        private val ivyPatterns: MutableList<String?> = ArrayList<String?>()
+        private val artifactPatterns: MutableList<String?> = ArrayList<String?>()
+        private var layoutType: String? = null
+        private var m2Compatible: Boolean? = null
 
-    public static class Builder extends UrlRepositoryDescriptor.Builder<Builder> {
-        private final List<String> ivyPatterns = new ArrayList<>();
-        private final List<String> artifactPatterns = new ArrayList<>();
-        private String layoutType;
-        private Boolean m2Compatible;
         // Artifact resources derived from other configuration
-        private final List<Resource> ivyResources = new ArrayList<>();
-        private final List<Resource> artifactResources = new ArrayList<>();
+        private val ivyResources: MutableList<Resource> = ArrayList<Resource>()
+        private val artifactResources: MutableList<Resource> = ArrayList<Resource>()
 
-        public Builder(String name, URI url) {
-            super(name, url);
+        fun addIvyPattern(declaredPattern: String?) {
+            ivyPatterns.add(declaredPattern)
         }
 
-        public void addIvyPattern(String declaredPattern) {
-            ivyPatterns.add(declaredPattern);
-        }
-
-        public void addIvyResource(@Nullable URI baseUri, String pattern) {
+        fun addIvyResource(baseUri: URI?, pattern: String) {
             if (baseUri != null) {
-                ivyResources.add(new Resource(baseUri, pattern));
+                ivyResources.add(Resource(baseUri, pattern))
             }
         }
 
-        public void addArtifactPattern(String declaredPattern) {
-            artifactPatterns.add(declaredPattern);
+        fun addArtifactPattern(declaredPattern: String?) {
+            artifactPatterns.add(declaredPattern)
         }
 
-        public void addArtifactResource(@Nullable URI rootUri, String pattern) {
+        fun addArtifactResource(rootUri: URI?, pattern: String) {
             if (rootUri != null) {
-                artifactResources.add(new Resource(rootUri, pattern));
+                artifactResources.add(Resource(rootUri, pattern))
             }
         }
 
-        public Builder setLayoutType(String layoutType) {
-            this.layoutType = layoutType;
-            return this;
+        fun setLayoutType(layoutType: String?): Builder {
+            this.layoutType = layoutType
+            return this
         }
 
-        public Builder setM2Compatible(boolean m2Compatible) {
-            this.m2Compatible = m2Compatible;
-            return this;
+        fun setM2Compatible(m2Compatible: Boolean): Builder {
+            this.m2Compatible = m2Compatible
+            return this
         }
 
-        public IvyRepositoryDescriptor create() {
-            checkNotNull(m2Compatible);
-            checkNotNull(metadataSources);
+        fun create(): IvyRepositoryDescriptor {
+            Preconditions.checkNotNull<Boolean?>(m2Compatible)
+            Preconditions.checkNotNull<ImmutableList<String?>?>(metadataSources)
 
-            ImmutableList.Builder<ResourcePattern> ivyResourcesBuilder = ImmutableList.builderWithExpectedSize(ivyPatterns.size());
-            for (Resource resource : ivyResources) {
-                ivyResourcesBuilder.add(toResourcePattern(resource.baseUri, resource.pattern));
+            val ivyResourcesBuilder = ImmutableList.builderWithExpectedSize<ResourcePattern?>(ivyPatterns.size)
+            for (resource in ivyResources) {
+                ivyResourcesBuilder.add(toResourcePattern(resource.baseUri, resource.pattern))
             }
-            ImmutableList.Builder<ResourcePattern> artifactResourcesBuilder = ImmutableList.builderWithExpectedSize(artifactPatterns.size() + artifactResources.size());
-            for (Resource resource : artifactResources) {
-                artifactResourcesBuilder.add(toResourcePattern(resource.baseUri, resource.pattern));
+            val artifactResourcesBuilder = ImmutableList.builderWithExpectedSize<ResourcePattern?>(artifactPatterns.size + artifactResources.size)
+            for (resource in artifactResources) {
+                artifactResourcesBuilder.add(toResourcePattern(resource.baseUri, resource.pattern))
             }
 
-            ImmutableList<ResourcePattern> effectiveIvyResources = ivyResourcesBuilder.build();
-            ImmutableList<ResourcePattern> effectiveArtifactResources = artifactResourcesBuilder.build();
+            val effectiveIvyResources = ivyResourcesBuilder.build()
+            val effectiveArtifactResources = artifactResourcesBuilder.build()
 
-            String id = calculateId(IvyResolver.class, effectiveIvyResources, effectiveArtifactResources, metadataSources, hasher -> hasher.putBoolean(m2Compatible));
+            val id = calculateId(IvyResolver::class.java, effectiveIvyResources, effectiveArtifactResources, metadataSources, Consumer { hasher: Hasher? -> hasher!!.putBoolean(m2Compatible!!) })
 
-            return new IvyRepositoryDescriptor(
+            return IvyRepositoryDescriptor(
                 id,
-                checkNotNull(name),
+                Preconditions.checkNotNull<String?>(name),
                 url,
                 metadataSources,
-                checkNotNull(authenticated),
-                checkNotNull(authenticationSchemes),
-                ImmutableList.copyOf(ivyPatterns),
+                Preconditions.checkNotNull<Boolean?>(authenticated)!!,
+                Preconditions.checkNotNull<ImmutableList<String?>?>(authenticationSchemes),
+                ImmutableList.copyOf<String?>(ivyPatterns),
                 effectiveIvyResources,
-                ImmutableList.copyOf(artifactPatterns),
+                ImmutableList.copyOf<String?>(artifactPatterns),
                 effectiveArtifactResources,
-                checkNotNull(layoutType),
-                m2Compatible
-            );
+                Preconditions.checkNotNull<String?>(layoutType)!!,
+                m2Compatible!!
+            )
         }
 
-        private ResourcePattern toResourcePattern(URI baseUri, String pattern) {
-            return m2Compatible ? new M2ResourcePattern(baseUri, pattern) : new IvyResourcePattern(baseUri, pattern);
+        private fun toResourcePattern(baseUri: URI, pattern: String): ResourcePattern {
+            return if (m2Compatible) M2ResourcePattern(baseUri, pattern) else IvyResourcePattern(baseUri, pattern)
         }
     }
 }

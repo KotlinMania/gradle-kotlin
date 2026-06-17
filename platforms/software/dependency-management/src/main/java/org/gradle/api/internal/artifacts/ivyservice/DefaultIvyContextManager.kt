@@ -13,104 +13,104 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
+import org.apache.ivy.Ivy
+import org.apache.ivy.core.IvyContext
+import org.apache.ivy.core.settings.IvySettings
+import org.apache.ivy.util.Message
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.internal.SystemProperties
+import org.gradle.internal.Transformers
+import java.util.LinkedList
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
-import org.apache.ivy.Ivy;
-import org.apache.ivy.core.IvyContext;
-import org.apache.ivy.core.settings.IvySettings;
-import org.apache.ivy.util.Message;
-import org.gradle.api.Action;
-import org.gradle.api.Transformer;
-import org.gradle.internal.SystemProperties;
-import org.gradle.internal.Transformers;
+class DefaultIvyContextManager : IvyContextManager {
+    private val lock: Lock = ReentrantLock()
+    private var messageAdapterAttached = false
+    private val cached = LinkedList<Ivy>()
+    private val depth = ThreadLocal<Int?>()
 
-import java.util.LinkedList;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-public class DefaultIvyContextManager implements IvyContextManager {
-    private static final int MAX_CACHED_IVY_INSTANCES = 4;
-    private final Lock lock = new ReentrantLock();
-    private boolean messageAdapterAttached;
-    private final LinkedList<Ivy> cached = new LinkedList<>();
-    private final ThreadLocal<Integer> depth = new ThreadLocal<>();
-
-    @Override
-    public void withIvy(final Action<? super Ivy> action) {
-        withIvy(Transformers.toTransformer(action));
+    override fun withIvy(action: Action<in Ivy?>?) {
+        withIvy<Any?>(Transformers.toTransformer<Any?, Ivy?>(action))
     }
 
-    @Override
-    public <T> T withIvy(Transformer<? extends T, ? super Ivy> action) {
-        Integer currentDepth = depth.get();
+    override fun <T> withIvy(action: Transformer<out T?, in Ivy?>): T? {
+        val currentDepth = depth.get()
 
         if (currentDepth != null) {
-            depth.set(currentDepth + 1);
+            depth.set(currentDepth + 1)
             try {
-                return action.transform(IvyContext.getContext().getIvy());
+                return action.transform(IvyContext.getContext().getIvy())
             } finally {
-                depth.set(currentDepth);
+                depth.set(currentDepth)
             }
         }
 
-        IvyContext.pushNewContext();
+        IvyContext.pushNewContext()
         try {
-            depth.set(1);
+            depth.set(1)
             try {
-                Ivy ivy = getIvy();
+                val ivy = this.ivy
                 try {
-                    IvyContext.getContext().setIvy(ivy);
-                    return action.transform(ivy);
+                    IvyContext.getContext().setIvy(ivy)
+                    return action.transform(ivy)
                 } finally {
-                    releaseIvy(ivy);
+                    releaseIvy(ivy)
                 }
             } finally {
-                depth.remove();
+                depth.remove()
             }
         } finally {
-            IvyContext.popContext();
+            IvyContext.popContext()
         }
     }
 
-    private Ivy getIvy() {
-        lock.lock();
-        try {
-            if (!cached.isEmpty()) {
-                return cached.removeFirst();
+    private val ivy: Ivy
+        get() {
+            lock.lock()
+            try {
+                if (!cached.isEmpty()) {
+                    return cached.removeFirst()
+                }
+                if (!messageAdapterAttached) {
+                    Message.setDefaultLogger(IvyLoggingAdaper())
+                    messageAdapterAttached = true
+                }
+            } finally {
+                lock.unlock()
             }
-            if (!messageAdapterAttached) {
-                Message.setDefaultLogger(new IvyLoggingAdaper());
-                messageAdapterAttached = true;
-            }
-        } finally {
-            lock.unlock();
+            return createNewIvyInstance()
         }
-        return createNewIvyInstance();
-    }
 
     /*
-     * Synchronizes on the system properties, because IvySettings iterates
-     * over them without taking a defensive copy. This can fail if another
-     * process sets a system property at that moment.
-     */
-    private Ivy createNewIvyInstance() {
-        return SystemProperties.getInstance().withSystemProperties(() -> Ivy.newInstance(new IvySettings()));
+    * Synchronizes on the system properties, because IvySettings iterates
+    * over them without taking a defensive copy. This can fail if another
+    * process sets a system property at that moment.
+    */
+    private fun createNewIvyInstance(): Ivy {
+        return SystemProperties.getInstance().withSystemProperties<Ivy>(org.gradle.internal.Factory { Ivy.newInstance(IvySettings()) })
     }
 
-    private void releaseIvy(Ivy ivy) {
+    private fun releaseIvy(ivy: Ivy) {
         // cleanup
-        ivy.getSettings().getResolvers().clear();
-        ivy.getSettings().setDefaultResolver(null);
+        ivy.getSettings().getResolvers().clear()
+        ivy.getSettings().setDefaultResolver(null)
 
-        lock.lock();
+        lock.lock()
         try {
-            if (cached.size() < MAX_CACHED_IVY_INSTANCES) {
-                cached.add(ivy);
+            if (cached.size < MAX_CACHED_IVY_INSTANCES) {
+                cached.add(ivy)
             }
             // else, throw it away
         } finally {
-            lock.unlock();
+            lock.unlock()
         }
+    }
+
+    companion object {
+        private const val MAX_CACHED_IVY_INSTANCES = 4
     }
 }

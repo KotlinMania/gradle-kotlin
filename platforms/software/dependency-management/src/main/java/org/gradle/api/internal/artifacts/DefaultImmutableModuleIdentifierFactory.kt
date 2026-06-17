@@ -13,49 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import java.util.concurrent.ConcurrentHashMap
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+class DefaultImmutableModuleIdentifierFactory : ImmutableModuleIdentifierFactory {
+    private val groupIdToModules: MutableMap<String?, MutableMap<String?, ModuleIdentifier?>?> = ConcurrentHashMap<String?, MutableMap<String?, ModuleIdentifier?>?>()
+    private val idToVersions: MutableMap<ModuleIdentifier?, MutableMap<String?, ModuleVersionIdentifier?>?> = ConcurrentHashMap<ModuleIdentifier?, MutableMap<String?, ModuleVersionIdentifier?>?>()
 
-public class DefaultImmutableModuleIdentifierFactory implements ImmutableModuleIdentifierFactory {
-    private final Map<String, Map<String, ModuleIdentifier>> groupIdToModules = new ConcurrentHashMap<>();
-    private final Map<ModuleIdentifier, Map<String, ModuleVersionIdentifier>> idToVersions = new ConcurrentHashMap<>();
-
-    @Override
-    public ModuleIdentifier module(String group, String name) {
-        Map<String, ModuleIdentifier> byName = groupIdToModules.get(group);
+    override fun module(group: String?, name: String?): ModuleIdentifier? {
+        var byName = groupIdToModules.get(group)
         if (byName == null) {
-            byName = groupIdToModules.computeIfAbsent(group, k -> new ConcurrentHashMap<>());
+            byName = groupIdToModules.computeIfAbsent(group) { k: String? -> ConcurrentHashMap<String?, ModuleIdentifier?>() }
         }
-        ModuleIdentifier moduleIdentifier = byName.get(name);
+        var moduleIdentifier = byName!!.get(name)
         if (moduleIdentifier == null) {
-            moduleIdentifier = DefaultModuleIdentifier.newId(group, name);
-            byName.put(name, moduleIdentifier);
+            moduleIdentifier = DefaultModuleIdentifier.Companion.newId(group, name)
+            byName.put(name, moduleIdentifier)
         }
-        return moduleIdentifier;
+        return moduleIdentifier
     }
 
-    @Override
-    public ModuleVersionIdentifier moduleWithVersion(String group, String name, String version) {
-        ModuleIdentifier mi = module(group, name);
-        return moduleWithVersion(mi, version);
+    override fun moduleWithVersion(group: String?, name: String?, version: String?): ModuleVersionIdentifier? {
+        val mi = module(group, name)
+        return moduleWithVersion(mi, version)
     }
 
-    @Override
-    public ModuleVersionIdentifier moduleWithVersion(ModuleIdentifier mi, String version) {
-        Map<String, ModuleVersionIdentifier> byVersion = idToVersions.get(mi);
+    override fun moduleWithVersion(mi: ModuleIdentifier?, version: String?): ModuleVersionIdentifier? {
+        var byVersion = idToVersions.get(mi)
         if (byVersion == null) {
-            byVersion = idToVersions.computeIfAbsent(mi, k -> new ConcurrentHashMap<>());
+            byVersion = idToVersions.computeIfAbsent(mi) { k: ModuleIdentifier? -> ConcurrentHashMap<String?, ModuleVersionIdentifier?>() }
         }
-        ModuleVersionIdentifier identifier = byVersion.get(version);
+        var identifier = byVersion!!.get(version)
         if (identifier == null) {
-            identifier =  DefaultModuleVersionIdentifier.newId(mi, version);
-            byVersion.put(version, identifier);
+            identifier = DefaultModuleVersionIdentifier.Companion.newId(mi, version)
+            byVersion.put(version, identifier)
         }
-        return identifier;
+        return identifier
     }
 }

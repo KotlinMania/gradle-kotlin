@@ -64,5 +64,5 @@ internal class DefaultPluginArtifactRepositories(factory: Factory<DependencyReso
     }
 
     private val isExclusiveContentInUse: Boolean
-        get() = sharedRepositories.isExclusiveContentInUse()
+        get() = sharedRepositories.isExclusiveContentInUse
 }

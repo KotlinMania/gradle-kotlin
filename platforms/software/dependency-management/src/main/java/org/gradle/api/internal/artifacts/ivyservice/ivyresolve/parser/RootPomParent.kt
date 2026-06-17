@@ -13,38 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomReader.PomDependencyData;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt;
+class RootPomParent : PomParent {
+    private val properties = mutableMapOf<String?, String?>()
+    private val dependencies = mutableMapOf<MavenDependencyKey?, PomReader.PomDependencyData?>()
+    private val dependencyMgts = mutableMapOf<MavenDependencyKey?, PomDependencyMgt?>()
 
-import java.util.Collections;
-import java.util.Map;
-
-public class RootPomParent implements PomParent {
-    private final Map<String, String> properties = Collections.emptyMap();
-    private final Map<MavenDependencyKey, PomReader.PomDependencyData> dependencies = Collections.emptyMap();
-    private final Map<MavenDependencyKey, PomDependencyMgt> dependencyMgts = Collections.emptyMap();
-
-    @Override
-    public Map<String, String> getProperties() {
-        return properties;
+    override fun getProperties(): MutableMap<String?, String?> {
+        return properties
     }
 
-    @Override
-    public Map<MavenDependencyKey, PomDependencyData> getDependencies() {
-        return dependencies;
+    override fun getDependencies(): MutableMap<MavenDependencyKey?, PomReader.PomDependencyData?> {
+        return dependencies
     }
 
-    @Override
-    public Map<MavenDependencyKey, PomDependencyMgt> getDependencyMgt() {
-        return dependencyMgts;
+    override fun getDependencyMgt(): MutableMap<MavenDependencyKey?, PomDependencyMgt?> {
+        return dependencyMgts
     }
 
-    @Override
-    public PomDependencyMgt findDependencyDefaults(MavenDependencyKey dependencyKey) {
-        return null;
+    override fun findDependencyDefaults(dependencyKey: MavenDependencyKey?): PomDependencyMgt? {
+        return null
     }
 }

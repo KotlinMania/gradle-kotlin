@@ -13,38 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.dsl.DependencyCollector;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyCollector;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.instantiation.managed.ManagedObjectCreator;
-import org.gradle.internal.instantiation.managed.ManagedObjectProvider;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.dsl.DependencyCollector
+import org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyCollector
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.instantiation.managed.ManagedObjectCreator
+import org.gradle.internal.instantiation.managed.ManagedObjectProvider
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * A factory for dependency management types that can be instantiated by Gradle managed objects.
  */
 @ManagedObjectProvider
-@ServiceScope({Scope.Build.class, Scope.Project.class})
-public class DependencyManagementManagedTypesFactory {
+@ServiceScope([Scope.Build::class, Scope.Project::class])
+class DependencyManagementManagedTypesFactory(
+    instantiatorFactory: InstantiatorFactory,
+    serviceRegistry: ServiceRegistry
+) {
+    private val instantiator: Instantiator
 
-    private final Instantiator instantiator;
-
-    public DependencyManagementManagedTypesFactory(
-        InstantiatorFactory instantiatorFactory,
-        ServiceRegistry serviceRegistry
-    ) {
-        this.instantiator = instantiatorFactory.decorate(serviceRegistry);
+    init {
+        this.instantiator = instantiatorFactory.decorate(serviceRegistry)
     }
 
     @ManagedObjectCreator
-    public DependencyCollector dependencyCollector() {
-        return instantiator.<DefaultDependencyCollector>newInstance(DefaultDependencyCollector.class);
+    fun dependencyCollector(): DependencyCollector {
+        return instantiator.newInstance<DefaultDependencyCollector>(DefaultDependencyCollector::class.java)
     }
-
 }

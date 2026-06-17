@@ -13,96 +13,84 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.execution.InputVisitor
+import org.gradle.internal.execution.MutableUnitOfWork
+import org.gradle.internal.execution.history.ExecutionHistoryStore
+import org.gradle.internal.execution.workspace.MutableWorkspaceProvider
+import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint
+import org.gradle.internal.operations.BuildOperationProgressEventEmitter
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.snapshot.ValueSnapshot
+import java.io.File
+import java.util.Optional
 
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.execution.InputVisitor;
-import org.gradle.internal.execution.MutableUnitOfWork;
-import org.gradle.internal.execution.history.ExecutionHistoryStore;
-import org.gradle.internal.execution.workspace.MutableWorkspaceProvider;
-import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint;
-import org.gradle.internal.operations.BuildOperationProgressEventEmitter;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.snapshot.ValueSnapshot;
+internal class MutableTransformExecution(
+    transform: Transform,
+    inputArtifact: File,
+    dependencies: TransformDependencies,
+    subject: TransformStepSubject,
+    producerProject: ProjectInternal,
 
-import java.io.File;
-import java.util.Map;
-import java.util.Optional;
+    transformExecutionListener: TransformExecutionListener,
+    buildOperationRunner: BuildOperationRunner,
+    progressEventEmitter: BuildOperationProgressEventEmitter,
+    fileCollectionFactory: FileCollectionFactory,
+    inputFingerprinter: InputFingerprinter,
+    private val workspaceProvider: MutableWorkspaceProvider,
+    private val history: ExecutionHistoryStore,
 
-class MutableTransformExecution extends AbstractTransformExecution implements MutableUnitOfWork {
-    private final String rootProjectLocation;
-    private final String producerBuildTreePath;
-    private final MutableWorkspaceProvider workspaceProvider;
-    private final ExecutionHistoryStore history;
+    disableCachingByProperty: Boolean
+) : AbstractTransformExecution(
+    transform, inputArtifact, dependencies, subject,
+    transformExecutionListener, buildOperationRunner, progressEventEmitter, fileCollectionFactory, inputFingerprinter,
+    disableCachingByProperty
+), MutableUnitOfWork {
+    private val rootProjectLocation: String
+    private val producerBuildTreePath: String
 
-    public MutableTransformExecution(
-        Transform transform,
-        File inputArtifact,
-        TransformDependencies dependencies,
-        TransformStepSubject subject,
-        ProjectInternal producerProject,
-
-        TransformExecutionListener transformExecutionListener,
-        BuildOperationRunner buildOperationRunner,
-        BuildOperationProgressEventEmitter progressEventEmitter,
-        FileCollectionFactory fileCollectionFactory,
-        InputFingerprinter inputFingerprinter,
-        MutableWorkspaceProvider workspaceProvider,
-        ExecutionHistoryStore history,
-
-        boolean disableCachingByProperty
-    ) {
-        super(
-            transform, inputArtifact, dependencies, subject,
-            transformExecutionListener, buildOperationRunner, progressEventEmitter, fileCollectionFactory, inputFingerprinter,
-            disableCachingByProperty
-        );
-        this.rootProjectLocation = producerProject.getRootDir().getAbsolutePath() + File.separator;
-        this.producerBuildTreePath = producerProject.getBuildTreePath();
-        this.workspaceProvider = workspaceProvider;
-        this.history = history;
+    init {
+        this.rootProjectLocation = producerProject.getRootDir().getAbsolutePath() + File.separator
+        this.producerBuildTreePath = producerProject.getBuildTreePath()
     }
 
-    @Override
-    public MutableWorkspaceProvider getWorkspaceProvider() {
-        return workspaceProvider;
+    override fun getWorkspaceProvider(): MutableWorkspaceProvider {
+        return workspaceProvider
     }
 
-    @Override
-    public Optional<ExecutionHistoryStore> getHistory() {
-        return Optional.of(history);
+    override fun getHistory(): Optional<ExecutionHistoryStore> {
+        return Optional.of<ExecutionHistoryStore>(history)
     }
 
-    @Override
-    protected TransformWorkspaceIdentity createIdentity(Map<String, ValueSnapshot> scalarInputs, Map<String, CurrentFileCollectionFingerprint> fileInputs) {
-        return TransformWorkspaceIdentity.createMutable(
+    override fun createIdentity(scalarInputs: MutableMap<String, ValueSnapshot>, fileInputs: MutableMap<String, CurrentFileCollectionFingerprint>): TransformWorkspaceIdentity {
+        return TransformWorkspaceIdentity.Companion.createMutable(
             normalizeAbsolutePath(inputArtifact.getAbsolutePath()),
             producerBuildTreePath,
-            scalarInputs.get(AbstractTransformExecution.SECONDARY_INPUTS_HASH_PROPERTY_NAME),
-            fileInputs.get(AbstractTransformExecution.DEPENDENCIES_PROPERTY_NAME).getHash()
-        );
+            scalarInputs.get(AbstractTransformExecution.Companion.SECONDARY_INPUTS_HASH_PROPERTY_NAME),
+            fileInputs.get(AbstractTransformExecution.Companion.DEPENDENCIES_PROPERTY_NAME)!!.getHash()
+        )
     }
 
-    @Override
-    public void visitMutableInputs(InputVisitor visitor) {
-        visitInputArtifact(visitor);
+    override fun visitMutableInputs(visitor: InputVisitor) {
+        visitInputArtifact(visitor)
     }
 
-    private String normalizeAbsolutePath(String path) {
+    private fun normalizeAbsolutePath(path: String): String {
         // We try to normalize the absolute path, so the workspace id is stable between machines for cacheable transforms.
         if (path.startsWith(rootProjectLocation)) {
-            return path.substring(rootProjectLocation.length());
+            return path.substring(rootProjectLocation.length)
         }
-        return path;
+        return path
     }
 
-    @Override
-    public ExecutionBehavior getExecutionBehavior() {
-        return transform.requiresInputChanges()
-            ? ExecutionBehavior.INCREMENTAL
-            : ExecutionBehavior.NON_INCREMENTAL;
+    override fun getExecutionBehavior(): MutableUnitOfWork.ExecutionBehavior {
+        return if (transform.requiresInputChanges())
+            MutableUnitOfWork.ExecutionBehavior.INCREMENTAL
+        else
+            MutableUnitOfWork.ExecutionBehavior.NON_INCREMENTAL
     }
 }

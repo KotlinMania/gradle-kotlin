@@ -13,80 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
+import org.gradle.api.artifacts.ModuleIdentifier
 
 /**
  * Tracks hard (non-constraint) dependencies targeting a given module. A module should end up in a graph if it has
  * hard dependencies. Also tracks all constraints that have been observed for a module. These constraints should be
  * activated when the hard edge count becomes positive.
  */
-public class PendingDependencies {
-    private final ModuleIdentifier moduleIdentifier;
-    private final Set<NodeState> constraintProvidingNodes;
-    private int hardEdges;
+class PendingDependencies internal constructor(private val moduleIdentifier: ModuleIdentifier) {
+    private val constraintProvidingNodes: MutableSet<NodeState>
+    private var hardEdges = 0
 
-    PendingDependencies(ModuleIdentifier moduleIdentifier) {
-        this.moduleIdentifier = moduleIdentifier;
-        this.constraintProvidingNodes = new LinkedHashSet<>();
-        this.hardEdges = 0;
+    init {
+        this.constraintProvidingNodes = LinkedHashSet<NodeState>()
     }
 
-    boolean addIncomingHardEdge() {
-        increaseHardEdgeCount();
+    fun addIncomingHardEdge(): Boolean {
+        increaseHardEdgeCount()
         if (!hasConstraintProviders()) {
-            return false;
+            return false
         }
 
-        assert hardEdges == 1;
+        assert(hardEdges == 1)
 
-        for (NodeState node : constraintProvidingNodes) {
-            node.prepareForConstraintNoLongerPending(moduleIdentifier);
+        for (node in constraintProvidingNodes) {
+            node.prepareForConstraintNoLongerPending(moduleIdentifier)
         }
-        constraintProvidingNodes.clear();
+        constraintProvidingNodes.clear()
 
-        return true;
+        return true
     }
 
-    void registerConstraintProvider(NodeState nodeState) {
-        if (hardEdges != 0) {
-            throw new IllegalStateException("Cannot add a pending node for a dependency which is not pending");
-        }
-        constraintProvidingNodes.add(nodeState);
+    fun registerConstraintProvider(nodeState: NodeState) {
+        check(hardEdges == 0) { "Cannot add a pending node for a dependency which is not pending" }
+        constraintProvidingNodes.add(nodeState)
     }
 
-    public void unregisterConstraintProvider(NodeState nodeState) {
-        if (hardEdges != 0) {
-            throw new IllegalStateException("Cannot remove a pending node for a dependency which is not pending");
-        }
-        constraintProvidingNodes.remove(nodeState);
+    fun unregisterConstraintProvider(nodeState: NodeState) {
+        check(hardEdges == 0) { "Cannot remove a pending node for a dependency which is not pending" }
+        constraintProvidingNodes.remove(nodeState)
     }
 
-    /**
-     * Return true iff all nodes in this module have no non-constraint edges
-     */
-    public boolean isPending() {
-        return hardEdges == 0;
+    val isPending: Boolean
+        /**
+         * Return true iff all nodes in this module have no non-constraint edges
+         */
+        get() = hardEdges == 0
+
+    fun hasConstraintProviders(): Boolean {
+        return !constraintProvidingNodes.isEmpty()
     }
 
-    boolean hasConstraintProviders() {
-        return !constraintProvidingNodes.isEmpty();
+    fun increaseHardEdgeCount() {
+        hardEdges++
     }
 
-    void increaseHardEdgeCount() {
-        hardEdges++;
+    fun decreaseHardEdgeCount() {
+        assert(hardEdges > 0) { "Cannot remove a hard edge when none recorded" }
+        hardEdges--
     }
 
-    void decreaseHardEdgeCount() {
-        assert hardEdges > 0 : "Cannot remove a hard edge when none recorded";
-        hardEdges--;
-    }
-
-    public void retarget(PendingDependencies pendingDependencies) {
-        hardEdges += pendingDependencies.hardEdges;
+    fun retarget(pendingDependencies: PendingDependencies) {
+        hardEdges += pendingDependencies.hardEdges
     }
 }

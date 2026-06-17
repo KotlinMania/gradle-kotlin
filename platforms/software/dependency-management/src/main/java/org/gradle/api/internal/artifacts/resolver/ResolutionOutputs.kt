@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.resolver
 
-package org.gradle.api.internal.artifacts.resolver;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ArtifactCollection;
-import org.gradle.api.artifacts.ArtifactView;
-import org.gradle.api.artifacts.result.ResolutionResult;
-import org.gradle.api.file.FileCollection;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * The outputs of a graph resolution. All results on this type are lazy. Resolution is only performed
@@ -30,31 +26,30 @@ import org.gradle.internal.HasInternalProtocol;
  * TODO: This type is intended to be made public in future Gradle versions, in some form.
  */
 @HasInternalProtocol
-public interface ResolutionOutputs {
-
+interface ResolutionOutputs {
     /**
      * Get a representation of the resolved dependency graph without resolving
      * any artifacts.
      */
-    ResolutionResult getResolutionResult();
+    @JvmField
+    val resolutionResult: ResolutionResult?
 
     /**
-     * A {@link FileCollection} containing all resolved files. The returned collection
+     * A [FileCollection] containing all resolved files. The returned collection
      * carries all task dependencies required to build the resolved files, and when used
      * as a task input the files will be built before the task executes.
      */
-    FileCollection getFiles();
+    val files: FileCollection?
 
     /**
      * A set of resolved artifacts corresponding to the resolved files.
      */
-    ArtifactCollection getArtifacts();
+    val artifacts: ArtifactCollection?
 
     /**
      * Creates a view of the resolved graph that can be used to filter the resolved artifacts,
      * perform transformations on the resolved artifacts, or reselect the variants of the resolved
      * graph to adjacent artifacts.
      */
-    ArtifactView artifactView(Action<? super ArtifactView.ViewConfiguration> action);
-
+    fun artifactView(action: Action<in ArtifactView.ViewConfiguration>): ArtifactView?
 }

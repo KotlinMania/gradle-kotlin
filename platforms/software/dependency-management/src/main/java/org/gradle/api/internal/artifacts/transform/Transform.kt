@@ -13,73 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.fingerprint.DirectorySensitivity;
-import org.gradle.internal.fingerprint.FileNormalizer;
-import org.gradle.internal.fingerprint.LineEndingSensitivity;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.work.InputChanges;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
+import org.gradle.api.Describable
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.provider.Provider
+import org.gradle.work.InputChanges
+import java.io.File
 
 /**
  * The actual code which needs to be executed to transform a file.
  *
- * This encapsulates the public interface {@link org.gradle.api.artifacts.transform.TransformAction} into an internal type.
+ * This encapsulates the public interface [org.gradle.api.artifacts.transform.TransformAction] into an internal type.
  */
-public interface Transform extends Describable, TaskDependencyContainer {
-    Class<? extends TransformAction<?>> getImplementationClass();
+interface Transform : Describable, TaskDependencyContainer {
+    @JvmField
+    val implementationClass: Class<out TransformAction<*>>?
 
-    ImmutableAttributes getFromAttributes();
+    @JvmField
+    val fromAttributes: ImmutableAttributes?
 
-    ImmutableAttributes getToAttributes();
+    @JvmField
+    val toAttributes: ImmutableAttributes?
 
     /**
      * Whether the transformer requires dependencies of the transformed artifact to be injected.
      */
-    boolean requiresDependencies();
+    fun requiresDependencies(): Boolean
 
     /**
-     * Whether the transformer requires {@link InputChanges} to be injected.
+     * Whether the transformer requires [InputChanges] to be injected.
      */
-    boolean requiresInputChanges();
+    fun requiresInputChanges(): Boolean
 
     /**
      * Whether the transformer is cacheable.
      */
-    boolean isCacheable();
+    @JvmField
+    val isCacheable: Boolean
 
-    TransformExecutionResult transform(Provider<FileSystemLocation> inputArtifactProvider, File outputDir, TransformDependencies dependencies, @Nullable InputChanges inputChanges);
+    fun transform(inputArtifactProvider: Provider<FileSystemLocation>, outputDir: File, dependencies: TransformDependencies, inputChanges: InputChanges?): TransformExecutionResult?
 
     /**
      * The hash of the secondary inputs of the transformer.
      *
      * This includes the parameters and the implementation.
      */
-    HashCode getSecondaryInputHash();
+    val secondaryInputHash: HashCode?
 
-    void isolateParametersIfNotAlready();
+    fun isolateParametersIfNotAlready()
 
-    FileNormalizer getInputArtifactNormalizer();
+    val inputArtifactNormalizer: FileNormalizer?
 
-    FileNormalizer getInputArtifactDependenciesNormalizer();
+    val inputArtifactDependenciesNormalizer: FileNormalizer?
 
-    boolean isIsolated();
+    val isIsolated: Boolean
 
-    DirectorySensitivity getInputArtifactDirectorySensitivity();
+    val inputArtifactDirectorySensitivity: DirectorySensitivity?
 
-    DirectorySensitivity getInputArtifactDependenciesDirectorySensitivity();
+    val inputArtifactDependenciesDirectorySensitivity: DirectorySensitivity?
 
-    LineEndingSensitivity getInputArtifactLineEndingNormalization();
+    val inputArtifactLineEndingNormalization: LineEndingSensitivity?
 
-    LineEndingSensitivity getInputArtifactDependenciesLineEndingNormalization();
+    val inputArtifactDependenciesLineEndingNormalization: LineEndingSensitivity?
 }

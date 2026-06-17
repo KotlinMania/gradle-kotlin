@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
 
-public interface DescriptorParseContext {
-    LocallyAvailableExternalResource getMetaDataArtifact(ModuleComponentIdentifier componentIdentifier, ArtifactType artifactType);
+interface DescriptorParseContext {
+    fun getMetaDataArtifact(componentIdentifier: ModuleComponentIdentifier?, artifactType: ArtifactType?): LocallyAvailableExternalResource?
 
-    LocallyAvailableExternalResource getMetaDataArtifact(ModuleComponentSelector selector, VersionSelector acceptor, ArtifactType artifactType);
+    fun getMetaDataArtifact(selector: ModuleComponentSelector?, acceptor: VersionSelector?, artifactType: ArtifactType?): LocallyAvailableExternalResource?
 }

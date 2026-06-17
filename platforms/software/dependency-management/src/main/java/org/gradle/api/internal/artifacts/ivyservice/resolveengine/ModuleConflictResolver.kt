@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-public interface ModuleConflictResolver<T> {
+interface ModuleConflictResolver<T> {
     /**
      * Selects matching candidate. Returns null if this implementation of the resolver is not able to select a candidate.
      *
      * @param details the conflict resolution details
      */
-    void select(ConflictResolverDetails<T> details);
+    fun select(details: ConflictResolverDetails<T?>)
 }

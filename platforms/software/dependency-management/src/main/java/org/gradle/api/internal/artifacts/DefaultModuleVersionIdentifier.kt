@@ -13,96 +13,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
-public class DefaultModuleVersionIdentifier implements ModuleVersionIdentifier {
+class DefaultModuleVersionIdentifier : ModuleVersionIdentifier {
+    private val id: ModuleIdentifier
+    private val version: String
+    private val hashCode: Int
 
-    private final ModuleIdentifier id;
-    private final String version;
-    private final int hashCode;
-
-    private DefaultModuleVersionIdentifier(String group, String name, String version) {
-        assert group != null : "group cannot be null";
-        assert name != null : "name cannot be null";
-        assert version != null : "version cannot be null";
-        this.id = DefaultModuleIdentifier.newId(group, name);
-        this.version = version;
-        this.hashCode = 31 * id.hashCode() ^ version.hashCode();
+    private constructor(group: String, name: String, version: String) {
+        checkNotNull(group) { "group cannot be null" }
+        checkNotNull(name) { "name cannot be null" }
+        checkNotNull(version) { "version cannot be null" }
+        this.id = DefaultModuleIdentifier.Companion.newId(group, name)
+        this.version = version
+        this.hashCode = 31 * id.hashCode() xor version.hashCode()
     }
 
-    private DefaultModuleVersionIdentifier(ModuleIdentifier id, String version) {
-        assert version != null : "version cannot be null";
-        this.id = id;
-        this.version = version;
+    private constructor(id: ModuleIdentifier, version: String) {
+        checkNotNull(version) { "version cannot be null" }
+        this.id = id
+        this.version = version
         // pre-compute the hashcode as it's going to be used anyway, and this object
         // is used as a key in several hash maps
-        this.hashCode = 31 * id.hashCode() ^ version.hashCode();
+        this.hashCode = 31 * id.hashCode() xor version.hashCode()
     }
 
-    @Override
-    public String getGroup() {
-        return id.getGroup();
+    override fun getGroup(): String {
+        return id.getGroup()
     }
 
-    @Override
-    public String getName() {
-        return id.getName();
+    override fun getName(): String {
+        return id.getName()
     }
 
-    @Override
-    public String getVersion() {
-        return version;
+    override fun getVersion(): String {
+        return version
     }
 
-    @Override
-    public String toString() {
-        String group = id.getGroup();
-        String module = id.getName();
-        return group + ":" + module + ":" + version;
+    override fun toString(): String {
+        val group = id.getGroup()
+        val module = id.getName()
+        return group + ":" + module + ":" + version
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any?): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        DefaultModuleVersionIdentifier other = (DefaultModuleVersionIdentifier) obj;
-        if (!id.equals(other.id)) {
-            return false;
+        val other = obj as DefaultModuleVersionIdentifier
+        if (id != other.id) {
+            return false
         }
-        return version.equals(other.version);
+        return version == other.version
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public ModuleIdentifier getModule() {
-        return id;
+    override fun getModule(): ModuleIdentifier {
+        return id
     }
 
-    public static ModuleVersionIdentifier newId(Module module) {
-        return new DefaultModuleVersionIdentifier(module.group, module.name, module.version);
-    }
+    companion object {
+        fun newId(module: Module): ModuleVersionIdentifier {
+            return DefaultModuleVersionIdentifier(module.group!!, module.name!!, module.version!!)
+        }
 
-    public static ModuleVersionIdentifier newId(ModuleIdentifier id, String version) {
-        return new DefaultModuleVersionIdentifier(id, version);
-    }
+        fun newId(id: ModuleIdentifier, version: String): ModuleVersionIdentifier {
+            return DefaultModuleVersionIdentifier(id, version)
+        }
 
-    public static ModuleVersionIdentifier newId(String group, String name, String version) {
-        return new DefaultModuleVersionIdentifier(group, name, version);
-    }
+        fun newId(group: String, name: String, version: String): ModuleVersionIdentifier {
+            return DefaultModuleVersionIdentifier(group, name, version)
+        }
 
-    public static ModuleVersionIdentifier newId(ModuleComponentIdentifier componentId) {
-        return new DefaultModuleVersionIdentifier(componentId.getGroup(), componentId.getModule(), componentId.getVersion());
+        fun newId(componentId: ModuleComponentIdentifier): ModuleVersionIdentifier {
+            return DefaultModuleVersionIdentifier(componentId.getGroup(), componentId.getModule(), componentId.getVersion())
+        }
     }
 }

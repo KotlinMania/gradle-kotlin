@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-public abstract class AbstractStringVersionSelector extends AbstractVersionSelector {
-    protected AbstractStringVersionSelector(String selector) {
-        super(selector);
-    }
-
-    @Override
-    public boolean accept(Version candidate) {
-        return accept(candidate.getSource());
+abstract class AbstractStringVersionSelector protected constructor(selector: String?) : AbstractVersionSelector(selector) {
+    override fun accept(candidate: Version): Boolean {
+        return accept(candidate.getSource())
     }
 }

@@ -13,46 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-
-import java.io.File;
-import java.time.Duration;
-import java.util.Set;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import java.io.File
+import java.time.Duration
 
 /**
  * Determines whether cached external artifacts and metadata should be considered expired.
  */
-public interface CacheExpirationControl {
+interface CacheExpirationControl {
+    fun versionListExpiry(moduleIdentifier: ModuleIdentifier?, moduleVersions: MutableSet<ModuleVersionIdentifier?>?, age: Duration?): Expiry?
 
-    Expiry versionListExpiry(ModuleIdentifier moduleIdentifier, Set<ModuleVersionIdentifier> moduleVersions, Duration age);
+    fun missingModuleExpiry(component: ModuleComponentIdentifier?, age: Duration?): Expiry?
 
-    Expiry missingModuleExpiry(ModuleComponentIdentifier component, Duration age);
+    fun moduleExpiry(component: ModuleComponentIdentifier?, resolvedModuleVersion: ResolvedModuleVersion?, age: Duration?): Expiry?
 
-    Expiry moduleExpiry(ModuleComponentIdentifier component, ResolvedModuleVersion resolvedModuleVersion, Duration age);
+    fun moduleExpiry(resolvedModuleVersion: ResolvedModuleVersion?, age: Duration?, changing: Boolean): Expiry?
 
-    Expiry moduleExpiry(ResolvedModuleVersion resolvedModuleVersion, Duration age, boolean changing);
+    fun moduleArtifactsExpiry(
+        moduleVersionId: ModuleVersionIdentifier?, artifacts: MutableSet<ModuleComponentArtifactMetadata?>?,
+        age: Duration?, belongsToChangingModule: Boolean, moduleDescriptorInSync: Boolean
+    ): Expiry?
 
-    Expiry moduleArtifactsExpiry(
-        ModuleVersionIdentifier moduleVersionId, Set<ModuleComponentArtifactMetadata> artifacts,
-        Duration age, boolean belongsToChangingModule, boolean moduleDescriptorInSync
-    );
+    fun artifactExpiry(artifactMetadata: ModuleComponentArtifactMetadata?, cachedArtifactFile: File?, age: Duration?, belongsToChangingModule: Boolean, moduleDescriptorInSync: Boolean): Expiry?
 
-    Expiry artifactExpiry(ModuleComponentArtifactMetadata artifactMetadata, File cachedArtifactFile, Duration age, boolean belongsToChangingModule, boolean moduleDescriptorInSync);
-
-    Expiry changingModuleExpiry(ModuleComponentIdentifier component, ResolvedModuleVersion resolvedModuleVersion, Duration age);
+    fun changingModuleExpiry(component: ModuleComponentIdentifier?, resolvedModuleVersion: ResolvedModuleVersion?, age: Duration?): Expiry?
 
     interface Expiry {
+        val isMustCheck: Boolean
 
-        boolean isMustCheck();
-
-        Duration getKeepFor();
-
+        val keepFor: Duration?
     }
 }

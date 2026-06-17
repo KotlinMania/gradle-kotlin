@@ -13,24 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import java.io.File;
+import java.io.File
 
-public class VerificationReport {
-    private final String summary;
-    private final File htmlReport;
-
-    public VerificationReport(String summary, File htmlReport) {
-        this.summary = summary;
-        this.htmlReport = htmlReport;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public File getHtmlReport() {
-        return htmlReport;
-    }
-}
+class VerificationReport(val summary: String, val htmlReport: File)

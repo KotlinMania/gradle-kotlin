@@ -13,30 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencySubstitution;
-import org.gradle.internal.Actions;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencySubstitution
+import org.gradle.internal.Actions
 
 /**
  * A service that injects dependency substitution rules into the build.
  */
-public interface DependencySubstitutionRules {
-    DependencySubstitutionRules NO_OP = new DependencySubstitutionRules() {
-        @Override
-        public Action<DependencySubstitution> getRuleAction() {
-            return Actions.doNothing();
+interface DependencySubstitutionRules {
+    @JvmField
+    val ruleAction: Action<DependencySubstitution>?
+
+    fun rulesMayAddProjectDependency(): Boolean
+
+    companion object {
+        val NO_OP: DependencySubstitutionRules = object : DependencySubstitutionRules {
+            override fun getRuleAction(): Action<DependencySubstitution> {
+                return Actions.doNothing<DependencySubstitution>()
+            }
+
+            override fun rulesMayAddProjectDependency(): Boolean {
+                return false
+            }
         }
-
-        @Override
-        public boolean rulesMayAddProjectDependency() {
-            return false;
-        }
-    };
-
-    Action<DependencySubstitution> getRuleAction();
-
-    boolean rulesMayAddProjectDependency();
+    }
 }

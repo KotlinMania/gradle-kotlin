@@ -13,213 +13,214 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import com.google.common.collect.Lists
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.repositories.PatternHelper
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.ResourceExceptions
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.function.Function
+import java.util.regex.Pattern
+import java.util.stream.Collectors
 
-import com.google.common.collect.Lists;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.repositories.PatternHelper;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+class ResourceVersionLister(private val repository: ExternalResourceRepository) : VersionLister {
+    private val fileSeparator = "/"
+    private val directoriesToList: MutableMap<ExternalResourceName, MutableList<String>> = HashMap<ExternalResourceName, MutableList<String>>()
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-public class ResourceVersionLister implements VersionLister {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceVersionLister.class);
-    private static final String REVISION_TOKEN = PatternHelper.getTokenString(PatternHelper.REVISION_KEY);
-    public static final int REV_TOKEN_LENGTH = REVISION_TOKEN.length();
-
-    private final ExternalResourceRepository repository;
-    private final String fileSeparator = "/";
-    private final Map<ExternalResourceName, List<String>> directoriesToList = new HashMap<>();
-
-    public ResourceVersionLister(ExternalResourceRepository repository) {
-        this.repository = repository;
-    }
-
-    @Override
-    public void listVersions(ModuleIdentifier module, IvyArtifactName artifact, List<ResourcePattern> patterns, BuildableModuleVersionListingResolveResult result) {
-        List<String> collector = new ArrayList<>();
-        List<ResourcePattern> filteredPatterns = filterDuplicates(patterns);
-        Map<ResourcePattern, ExternalResourceName> versionListPatterns = filteredPatterns.stream().collect(Collectors.toMap(pattern -> pattern, pattern -> pattern.toVersionListPattern(module, artifact)));
-        for (ResourcePattern pattern : filteredPatterns) {
-            visit(pattern, versionListPatterns, collector, result);
+    override fun listVersions(module: ModuleIdentifier, artifact: IvyArtifactName, patterns: MutableList<ResourcePattern>, result: BuildableModuleVersionListingResolveResult) {
+        val collector: MutableList<String> = ArrayList<String>()
+        val filteredPatterns = filterDuplicates(patterns)
+        val versionListPatterns: MutableMap<ResourcePattern, ExternalResourceName> = filteredPatterns.stream()
+            .collect(Collectors.toMap(Function { pattern: ResourcePattern? -> pattern }, Function { pattern: ResourcePattern? -> pattern!!.toVersionListPattern(module, artifact) }))
+        for (pattern in filteredPatterns) {
+            visit(pattern, versionListPatterns, collector, result)
         }
         if (!collector.isEmpty()) {
-            result.listed(collector);
+            result.listed(collector)
         }
     }
 
-    private List<ResourcePattern> filterDuplicates(List<ResourcePattern> patterns) {
-        if (patterns.size() <= 1) {
-            return patterns;
+    private fun filterDuplicates(patterns: MutableList<ResourcePattern>): MutableList<ResourcePattern> {
+        if (patterns.size <= 1) {
+            return patterns
         }
-        List<ResourcePattern> toRemove = new ArrayList<>(patterns.size());
-        for (int i = 0; i < patterns.size() - 1; i++) {
-            ResourcePattern first = patterns.get(i);
+        val toRemove: MutableList<ResourcePattern> = ArrayList<ResourcePattern>(patterns.size)
+        for (i in 0..<patterns.size - 1) {
+            val first = patterns.get(i)
             if (toRemove.contains(first)) {
-                continue;
+                continue
             }
-            for (int j = i + 1; j < patterns.size(); j++) {
-                ResourcePattern second = patterns.get(j);
+            for (j in i + 1..<patterns.size) {
+                val second = patterns.get(j)
                 if (first.getPattern().startsWith(second.getPattern())) {
-                    toRemove.add(second);
+                    toRemove.add(second)
                 } else if (second.getPattern().startsWith(first.getPattern())) {
-                    toRemove.add(first);
-                    break;
+                    toRemove.add(first)
+                    break
                 }
             }
         }
         if (toRemove.isEmpty()) {
-            return patterns;
+            return patterns
         } else {
-            ArrayList<ResourcePattern> result = new ArrayList<>(patterns);
-            result.removeAll(toRemove);
-            return result;
+            val result = ArrayList<ResourcePattern>(patterns)
+            result.removeAll(toRemove)
+            return result
         }
     }
 
-    private void visit(ResourcePattern pattern, Map<ResourcePattern, ExternalResourceName> versionListPatterns, List<String> collector, BuildableModuleVersionListingResolveResult result) {
-        ExternalResourceName versionListPattern = versionListPatterns.get(pattern);
-        LOGGER.debug("Listing all in {}", versionListPattern);
+    private fun visit(
+        pattern: ResourcePattern,
+        versionListPatterns: MutableMap<ResourcePattern, ExternalResourceName>,
+        collector: MutableList<String>,
+        result: BuildableModuleVersionListingResolveResult
+    ) {
+        val versionListPattern: ExternalResourceName = versionListPatterns.get(pattern)!!
+        LOGGER.debug("Listing all in {}", versionListPattern)
         try {
-            collector.addAll(listRevisionToken(versionListPattern, result, versionListPatterns));
-        } catch (Exception e) {
-            throw ResourceExceptions.failure(versionListPattern.getUri(), String.format("Could not list versions using %s.", pattern), e);
+            collector.addAll(listRevisionToken(versionListPattern, result, versionListPatterns))
+        } catch (e: Exception) {
+            throw ResourceExceptions.failure(versionListPattern.getUri(), String.format("Could not list versions using %s.", pattern), e)
         }
     }
 
     // lists all the values a revision token listed by a given url lister
-    private List<String> listRevisionToken(ExternalResourceName versionListPattern, BuildableModuleVersionListingResolveResult result, Map<ResourcePattern, ExternalResourceName> versionListPatterns) {
-        String pattern = versionListPattern.getPath();
+    private fun listRevisionToken(
+        versionListPattern: ExternalResourceName,
+        result: BuildableModuleVersionListingResolveResult,
+        versionListPatterns: MutableMap<ResourcePattern, ExternalResourceName>
+    ): MutableList<String> {
+        val pattern = versionListPattern.getPath()
         if (!pattern.contains(REVISION_TOKEN)) {
-            LOGGER.debug("revision token not defined in pattern {}.", pattern);
-            return Collections.emptyList();
+            LOGGER.debug("revision token not defined in pattern {}.", pattern)
+            return mutableListOf<String>()
         }
-        String prefix = pattern.substring(0, pattern.indexOf(REVISION_TOKEN));
-        List<String> listedVersions;
+        val prefix = pattern.substring(0, pattern.indexOf(REVISION_TOKEN))
+        val listedVersions: MutableList<String>
         if (revisionMatchesDirectoryName(pattern)) {
-            ExternalResourceName parent = versionListPattern.getRoot().resolve(prefix);
-            listedVersions = listAll(parent, result);
+            val parent = versionListPattern.getRoot().resolve(prefix)
+            listedVersions = listAll(parent, result)
         } else {
-            int parentFolderSlashIndex = prefix.lastIndexOf(fileSeparator);
-            String revisionParentFolder = parentFolderSlashIndex == -1 ? "" : prefix.substring(0, parentFolderSlashIndex + 1);
-            ExternalResourceName parent = versionListPattern.getRoot().resolve(revisionParentFolder);
-            LOGGER.debug("using {} to list all in {} ", repository, revisionParentFolder);
-            result.attempted(parent);
-            List<String> all = listWithCache(parent);
+            val parentFolderSlashIndex = prefix.lastIndexOf(fileSeparator)
+            val revisionParentFolder = if (parentFolderSlashIndex == -1) "" else prefix.substring(0, parentFolderSlashIndex + 1)
+            val parent = versionListPattern.getRoot().resolve(revisionParentFolder)
+            LOGGER.debug("using {} to list all in {} ", repository, revisionParentFolder)
+            result.attempted(parent)
+            val all = listWithCache(parent)
             if (all == null) {
-                return Collections.emptyList();
+                return mutableListOf<String>()
             }
-            LOGGER.debug("found {} urls", all.size());
-            Pattern regexPattern = createRegexPattern(pattern, parentFolderSlashIndex);
-            listedVersions = filterMatchedValues(all, regexPattern);
-            LOGGER.debug("{} matched {}", listedVersions.size(), pattern);
+            LOGGER.debug("found {} urls", all.size)
+            val regexPattern = createRegexPattern(pattern, parentFolderSlashIndex)
+            listedVersions = filterMatchedValues(all, regexPattern)
+            LOGGER.debug("{} matched {}", listedVersions.size, pattern)
         }
-        if (versionListPatterns.size() > 1) {
+        if (versionListPatterns.size > 1) {
             // Verify that none of the listed "versions" do match another pattern
-            return filterOutMatchesWithOverlappingPatterns(listedVersions, versionListPattern, versionListPatterns.values());
+            return filterOutMatchesWithOverlappingPatterns(listedVersions, versionListPattern, versionListPatterns.values)
         }
-        return listedVersions;
+        return listedVersions
     }
 
-    @SuppressWarnings("ReferenceEquality") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private List<String> filterOutMatchesWithOverlappingPatterns(List<String> listedVersions, ExternalResourceName currentVersionListPattern, Collection<ExternalResourceName> versionListPatterns) {
-        List<String> remaining = Lists.newArrayList(listedVersions);
-        for (ExternalResourceName otherVersionListPattern : versionListPatterns) {
-            if (otherVersionListPattern != currentVersionListPattern) {
-                String patternPath = otherVersionListPattern.getPath();
-                Pattern regexPattern = toControlRegexPattern(patternPath);
-                List<String> matching = listedVersions.stream()
-                    .filter(version -> regexPattern.matcher(currentVersionListPattern.getPath().replace(REVISION_TOKEN, version)).matches())
-                    .collect(Collectors.toList());
+    //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+    private fun filterOutMatchesWithOverlappingPatterns(
+        listedVersions: MutableList<String>,
+        currentVersionListPattern: ExternalResourceName,
+        versionListPatterns: MutableCollection<ExternalResourceName>
+    ): MutableList<String> {
+        val remaining: MutableList<String> = Lists.newArrayList<String>(listedVersions)
+        for (otherVersionListPattern in versionListPatterns) {
+            if (otherVersionListPattern !== currentVersionListPattern) {
+                val patternPath = otherVersionListPattern.getPath()
+                val regexPattern = toControlRegexPattern(patternPath)
+                val matching = listedVersions.stream()
+                    .filter { version: String? -> regexPattern.matcher(currentVersionListPattern.getPath().replace(REVISION_TOKEN, version!!)).matches() }
+                    .collect(Collectors.toList())
                 if (!matching.isEmpty()) {
-                    LOGGER.debug("Filtered out {} from results for overlapping match with {}", matching, otherVersionListPattern);
-                    remaining.removeAll(matching);
+                    LOGGER.debug("Filtered out {} from results for overlapping match with {}", matching, otherVersionListPattern)
+                    remaining.removeAll(matching)
                 }
             }
         }
-        return remaining;
+        return remaining
     }
 
-    private List<String> filterMatchedValues(List<String> all, final Pattern p) {
-        List<String> ret = new ArrayList<>(all.size());
-        for (String path : all) {
-            Matcher m = p.matcher(path);
+    private fun filterMatchedValues(all: MutableList<String>, p: Pattern): MutableList<String> {
+        val ret: MutableList<String> = ArrayList<String>(all.size)
+        for (path in all) {
+            val m = p.matcher(path)
             if (m.matches()) {
-                String value = m.group(1);
-                ret.add(value);
+                val value = m.group(1)
+                ret.add(value!!)
             }
         }
-        return ret;
+        return ret
     }
 
-    private Pattern createRegexPattern(String pattern, int prefixLastSlashIndex) {
-        int endNameIndex = pattern.indexOf(fileSeparator, prefixLastSlashIndex + 1);
-        String namePattern;
+    private fun createRegexPattern(pattern: String, prefixLastSlashIndex: Int): Pattern {
+        val endNameIndex = pattern.indexOf(fileSeparator, prefixLastSlashIndex + 1)
+        var namePattern: String?
         if (endNameIndex != -1) {
-            namePattern = pattern.substring(prefixLastSlashIndex + 1, endNameIndex);
+            namePattern = pattern.substring(prefixLastSlashIndex + 1, endNameIndex)
         } else {
-            namePattern = pattern.substring(prefixLastSlashIndex + 1);
+            namePattern = pattern.substring(prefixLastSlashIndex + 1)
         }
-        namePattern = namePattern.replaceAll("\\.", "\\\\.");
-        String acceptNamePattern = namePattern.replaceAll("\\[revision]", "(.+)");
-        return Pattern.compile(acceptNamePattern);
+        namePattern = namePattern.replace("\\.".toRegex(), "\\\\.")
+        val acceptNamePattern = namePattern.replace("\\[revision]".toRegex(), "(.+)")
+        return Pattern.compile(acceptNamePattern)
     }
 
-    private Pattern toControlRegexPattern(String pattern) {
-        pattern = pattern.replaceAll("\\.", "\\\\.");
+    private fun toControlRegexPattern(pattern: String): Pattern {
+        var pattern = pattern
+        pattern = pattern.replace("\\.".toRegex(), "\\\\.")
 
         // Creates a control regexp pattern where extra revision tokens _must_ have the same value as the original one
-        String acceptNamePattern = pattern.replaceFirst("\\[revision]", "(.+)")
-            .replaceAll("\\[revision]", "\1");
-        return Pattern.compile(acceptNamePattern);
+        val acceptNamePattern = pattern.replaceFirst("\\[revision]".toRegex(), "(.+)")
+            .replace("\\[revision]".toRegex(), "\u0001")
+        return Pattern.compile(acceptNamePattern)
     }
 
-    private boolean revisionMatchesDirectoryName(String pattern) {
-        int startToken = pattern.indexOf(REVISION_TOKEN);
+    private fun revisionMatchesDirectoryName(pattern: String): Boolean {
+        val startToken: Int = pattern.indexOf(REVISION_TOKEN)
         if (startToken > 0 && !pattern.startsWith(fileSeparator, startToken - 1)) {
             // previous character is not a separator
-            return false;
+            return false
         }
-        int endToken = startToken + REV_TOKEN_LENGTH;
+        val endToken: Int = startToken + REV_TOKEN_LENGTH
         // next character is not a separator
-        return endToken >= pattern.length() || pattern.startsWith(fileSeparator, endToken);
+        return endToken >= pattern.length || pattern.startsWith(fileSeparator, endToken)
     }
 
-    private List<String> listAll(ExternalResourceName parent, BuildableModuleVersionListingResolveResult result) {
-        LOGGER.debug("using {} to list all in {}", repository, parent);
-        result.attempted(parent.toString());
-        List<String> paths = listWithCache(parent);
+    private fun listAll(parent: ExternalResourceName, result: BuildableModuleVersionListingResolveResult): MutableList<String> {
+        LOGGER.debug("using {} to list all in {}", repository, parent)
+        result.attempted(parent.toString())
+        val paths = listWithCache(parent)
         if (paths == null) {
-            return Collections.emptyList();
+            return mutableListOf<String>()
         }
-        LOGGER.debug("found {} resources", paths.size());
-        return paths;
+        LOGGER.debug("found {} resources", paths.size)
+        return paths
     }
 
-    @Nullable
-    private List<String> listWithCache(ExternalResourceName parent) {
+    private fun listWithCache(parent: ExternalResourceName): MutableList<String>? {
         if (directoriesToList.containsKey(parent)) {
-            return directoriesToList.get(parent);
+            return directoriesToList.get(parent)
         } else {
-            List<String> result = repository.resource(parent).list();
-            directoriesToList.put(parent, result);
-            return result;
+            val result = repository.resource(parent).list()
+            directoriesToList.put(parent, result!!)
+            return result
         }
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(ResourceVersionLister::class.java)
+        private val REVISION_TOKEN = PatternHelper.getTokenString(PatternHelper.REVISION_KEY)
+        val REV_TOKEN_LENGTH: Int = REVISION_TOKEN.length
     }
 }

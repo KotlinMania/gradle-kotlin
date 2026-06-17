@@ -13,69 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude;
-import org.gradle.internal.collect.PersistentSet;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude
+import org.gradle.internal.collect.PersistentSet
+import org.gradle.internal.component.model.IvyArtifactName
 
-final class DefaultModuleIdSetExclude implements ModuleIdSetExclude {
-    private final PersistentSet<ModuleIdentifier> moduleIds;
-    private final int hashCode;
+internal class DefaultModuleIdSetExclude private constructor(private val moduleIds: PersistentSet<ModuleIdentifier?>) : ModuleIdSetExclude {
+    private val hashCode: Int
 
-    static ModuleIdSetExclude of(PersistentSet<ModuleIdentifier> ids) {
-        return new DefaultModuleIdSetExclude(ids);
+    init {
+        this.hashCode = moduleIds.hashCode()
     }
 
-    private DefaultModuleIdSetExclude(PersistentSet<ModuleIdentifier> moduleIds) {
-        this.moduleIds = moduleIds;
-        this.hashCode = moduleIds.hashCode();
+    override fun getModuleIds(): PersistentSet<ModuleIdentifier?> {
+        return moduleIds
     }
 
-    @Override
-    public PersistentSet<ModuleIdentifier> getModuleIds() {
-        return moduleIds;
+    override fun excludes(module: ModuleIdentifier): Boolean {
+        return moduleIds.contains(module)
     }
 
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
-        return moduleIds.contains(module);
+    override fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean {
+        return false
     }
 
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName) {
-        return false;
+    override fun mayExcludeArtifacts(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
-        return false;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultModuleIdSetExclude that = (DefaultModuleIdSetExclude) o;
+        val that = o as DefaultModuleIdSetExclude
 
-        return moduleIds.equals(that.moduleIds);
-
+        return moduleIds == that.moduleIds
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public String toString() {
-        return "{ \"module ids\" : [" + ExcludeJsonHelper.toJson(moduleIds) + "]}";
+    override fun toString(): String {
+        return "{ \"module ids\" : [" + ExcludeJsonHelper.toJson(moduleIds) + "]}"
     }
 
+    companion object {
+        fun of(ids: PersistentSet<ModuleIdentifier?>): ModuleIdSetExclude {
+            return DefaultModuleIdSetExclude(ids)
+        }
+    }
 }

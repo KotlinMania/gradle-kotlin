@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+interface ComponentVerificationMetadata {
+    val componentId: ModuleComponentIdentifier?
 
-import java.util.List;
-
-public interface ComponentVerificationMetadata {
-    ModuleComponentIdentifier getComponentId();
-
-    List<ArtifactVerificationMetadata> getArtifactVerifications();
+    @JvmField
+    val artifactVerifications: MutableList<ArtifactVerificationMetadata?>?
 }

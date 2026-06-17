@@ -13,108 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.result.ComponentSelectionReason
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import java.lang.Boolean
+import kotlin.Any
+import kotlin.Int
+import kotlin.String
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.result.ComponentSelectionReason;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.UnresolvedDependencyResult;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
+class DefaultUnresolvedDependencyResult(
+    private val requested: ComponentSelector,
+    private val from: ResolvedComponentResult,
+    private val constraint: Boolean,
+    private val failure: ModuleVersionResolveException,
+    private val reason: ComponentSelectionReason
+) : UnresolvedDependencyResult {
+    private val hashCode: Int
 
-public class DefaultUnresolvedDependencyResult implements UnresolvedDependencyResult {
-
-    private final ComponentSelector requested;
-    private final ResolvedComponentResult from;
-    private final boolean constraint;
-    private final ModuleVersionResolveException failure;
-    private final ComponentSelectionReason reason;
-
-    private final int hashCode;
-
-    public DefaultUnresolvedDependencyResult(
-        ComponentSelector requested,
-        ResolvedComponentResult from,
-        boolean constraint,
-        ModuleVersionResolveException failure,
-        ComponentSelectionReason reason
-    ) {
-        this.requested = requested;
-        this.from = from;
-        this.constraint = constraint;
-        this.failure = failure;
-        this.reason = reason;
-        this.hashCode = computeHashCode(requested, from, constraint, failure, reason);
+    init {
+        this.hashCode = computeHashCode(requested, from, constraint, failure, reason)
     }
 
-    @Override
-    public ComponentSelector getRequested() {
-        return requested;
+    override fun getRequested(): ComponentSelector {
+        return requested
     }
 
-    @Override
-    public ResolvedComponentResult getFrom() {
-        return from;
+    override fun getFrom(): ResolvedComponentResult {
+        return from
     }
 
-    @Override
-    public boolean isConstraint() {
-        return constraint;
+    override fun isConstraint(): Boolean {
+        return constraint
     }
 
-    @Override
-    public ModuleVersionResolveException getFailure() {
-        return failure;
+    override fun getFailure(): ModuleVersionResolveException {
+        return failure
     }
 
-    @Override
-    public ComponentSelector getAttempted() {
-        return failure.selector;
+    override fun getAttempted(): ComponentSelector {
+        return failure.selector!!
     }
 
-    @Override
-    public ComponentSelectionReason getAttemptedReason() {
-        return reason;
+    override fun getAttemptedReason(): ComponentSelectionReason {
+        return reason
     }
 
-    @Override
-    public String toString() {
-        return getRequested() + " -> " + getAttempted() + " - " + failure.getMessage();
+    override fun toString(): String {
+        return getRequested().toString() + " -> " + getAttempted() + " - " + failure.getMessage()
     }
 
-    @Override
-    public boolean equals(@Nullable Object o) {
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+    override fun equals(o: Any?): Boolean {
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultUnresolvedDependencyResult that = (DefaultUnresolvedDependencyResult) o;
-        return requested.equals(that.requested) &&
-            from.equals(that.from) &&
-            constraint == that.constraint &&
-            failure.equals(that.failure) &&
-            reason.equals(that.reason);
+        val that = o as DefaultUnresolvedDependencyResult
+        return requested == that.requested &&
+                from == that.from && constraint == that.constraint &&
+                failure == that.failure &&
+                reason == that.reason
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private static int computeHashCode(
-        ComponentSelector requested,
-        ResolvedComponentResult from,
-        boolean constraint,
-        ModuleVersionResolveException failure,
-        ComponentSelectionReason reason
-    ) {
-        int result = requested.hashCode();
-        result = 31 * result + from.hashCode();
-        result = 31 * result + Boolean.hashCode(constraint);
-        result = 31 * result + failure.hashCode();
-        result = 31 * result + reason.hashCode();
-        return result;
+    companion object {
+        private fun computeHashCode(
+            requested: ComponentSelector,
+            from: ResolvedComponentResult,
+            constraint: Boolean,
+            failure: ModuleVersionResolveException,
+            reason: ComponentSelectionReason
+        ): Int {
+            var result = requested.hashCode()
+            result = 31 * result + from.hashCode()
+            result = 31 * result + Boolean.hashCode(constraint)
+            result = 31 * result + failure.hashCode()
+            result = 31 * result + reason.hashCode()
+            return result
+        }
     }
-
 }

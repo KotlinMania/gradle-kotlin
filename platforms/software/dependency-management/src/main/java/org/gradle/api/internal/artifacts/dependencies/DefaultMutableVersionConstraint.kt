@@ -13,161 +13,147 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.VersionConstraintInternal;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Strings
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.VersionConstraintInternal
+import java.util.Collections
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+class DefaultMutableVersionConstraint private constructor(
+    preferredVersion: String?,
+    requiredVersion: String,
+    strictVersion: String?,
+    rejects: MutableList<String> = mutableListOf<String>(),
+    branch: String? = null
+) : AbstractVersionConstraint(), VersionConstraintInternal {
+    private var requiredVersion: String? = null
+    private var preferredVersion: String? = null
+    private var strictVersion: String? = null
+    private var branch: String? = null
+    private val rejectedVersions: MutableList<String> = ArrayList<String>(1)
 
-import static com.google.common.base.Strings.nullToEmpty;
+    constructor(versionConstraint: VersionConstraint) : this(
+        versionConstraint.getPreferredVersion(),
+        versionConstraint.getRequiredVersion(),
+        versionConstraint.getStrictVersion(),
+        versionConstraint.getRejectedVersions(),
+        versionConstraint.getBranch()
+    )
 
-public class DefaultMutableVersionConstraint extends AbstractVersionConstraint implements VersionConstraintInternal {
-    private String requiredVersion;
-    private String preferredVersion;
-    private String strictVersion;
-    private String branch;
-    private final List<String> rejectedVersions = new ArrayList<>(1);
+    constructor(version: String) : this(null, version, null)
 
-    public DefaultMutableVersionConstraint(VersionConstraint versionConstraint) {
-        this(versionConstraint.getPreferredVersion(), versionConstraint.getRequiredVersion(), versionConstraint.getStrictVersion(), versionConstraint.getRejectedVersions(), versionConstraint.getBranch());
-    }
-
-    public DefaultMutableVersionConstraint(String version) {
-        this(null, version, null);
-    }
-
-    private DefaultMutableVersionConstraint(@Nullable String preferredVersion, String requiredVersion, @Nullable String strictVersion) {
-        this(preferredVersion, requiredVersion, strictVersion, Collections.emptyList(), null);
-    }
-
-    private DefaultMutableVersionConstraint(@Nullable String preferredVersion, String requiredVersion, @Nullable String strictVersion, List<String> rejects, @Nullable String branch) {
-        updateVersions(preferredVersion, requiredVersion, strictVersion);
-        for (String reject : rejects) {
-            this.rejectedVersions.add(nullToEmpty(reject));
+    init {
+        updateVersions(preferredVersion, requiredVersion, strictVersion)
+        for (reject in rejects) {
+            this.rejectedVersions.add(Strings.nullToEmpty(reject))
         }
-        this.branch = branch;
+        this.branch = branch
     }
 
-    private void updateVersions(@Nullable String preferredVersion, @Nullable String requiredVersion, @Nullable String strictVersion) {
-        this.preferredVersion = nullToEmpty(preferredVersion);
-        this.requiredVersion = nullToEmpty(requiredVersion);
-        this.strictVersion = nullToEmpty(strictVersion);
-        this.rejectedVersions.clear();
+    private fun updateVersions(preferredVersion: String?, requiredVersion: String?, strictVersion: String?) {
+        this.preferredVersion = Strings.nullToEmpty(preferredVersion)
+        this.requiredVersion = Strings.nullToEmpty(requiredVersion)
+        this.strictVersion = Strings.nullToEmpty(strictVersion)
+        this.rejectedVersions.clear()
     }
 
-    public static DefaultMutableVersionConstraint withVersion(String version) {
-        return new DefaultMutableVersionConstraint(version);
+    override fun asImmutable(): ImmutableVersionConstraint {
+        return DefaultImmutableVersionConstraint(preferredVersion!!, requiredVersion!!, strictVersion!!, rejectedVersions, branch)
     }
 
-    public static DefaultMutableVersionConstraint withStrictVersion(String version) {
-        return new DefaultMutableVersionConstraint(null, version, version);
+    override fun getBranch(): String? {
+        return branch
     }
 
-    @Override
-    public ImmutableVersionConstraint asImmutable() {
-        return new DefaultImmutableVersionConstraint(preferredVersion, requiredVersion, strictVersion, rejectedVersions, branch);
+    override fun setBranch(branch: String?) {
+        this.branch = branch
     }
 
-    @Nullable
-    @Override
-    public String getBranch() {
-        return branch;
+    override fun getRequiredVersion(): String {
+        return requiredVersion!!
     }
 
-    @Override
-    public void setBranch(@Nullable String branch) {
-        this.branch = branch;
+    override fun require(version: String) {
+        updateVersions(preferredVersion, version, null)
     }
 
-    @Override
-    public String getRequiredVersion() {
-        return requiredVersion;
+    override fun getPreferredVersion(): String {
+        return preferredVersion!!
     }
 
-    @Override
-    public void require(String version) {
-        updateVersions(preferredVersion, version, null);
+    override fun prefer(version: String) {
+        updateVersions(version, requiredVersion, strictVersion)
     }
 
-    @Override
-    public String getPreferredVersion() {
-        return preferredVersion;
+    override fun getStrictVersion(): String {
+        return strictVersion!!
     }
 
-    @Override
-    public void prefer(String version) {
-        updateVersions(version, requiredVersion, strictVersion);
+    override fun strictly(version: String) {
+        updateVersions(preferredVersion, version, version)
     }
 
-    @Override
-    public String getStrictVersion() {
-        return strictVersion;
+    override fun reject(vararg versions: String) {
+        this.rejectedVersions.clear()
+        Collections.addAll<String>(rejectedVersions, *versions)
     }
 
-    @Override
-    public void strictly(String version) {
-        updateVersions(preferredVersion, version, version);
+    override fun rejectAll() {
+        updateVersions(null, null, null)
+        this.rejectedVersions.add("+")
     }
 
-    @Override
-    public void reject(String... versions) {
-        this.rejectedVersions.clear();
-        Collections.addAll(rejectedVersions, versions);
+    override fun getRejectedVersions(): MutableList<String> {
+        return rejectedVersions
     }
 
-    @Override
-    public void rejectAll() {
-        updateVersions(null, null, null);
-        this.rejectedVersions.add("+");
-    }
-
-    @Override
-    public List<String> getRejectedVersions() {
-       return rejectedVersions;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
         if (!super.equals(o)) {
-            return false;
+            return false
         }
 
-        DefaultMutableVersionConstraint that = (DefaultMutableVersionConstraint) o;
+        val that = o as DefaultMutableVersionConstraint
 
-        if (requiredVersion != null ? !requiredVersion.equals(that.requiredVersion) : that.requiredVersion != null) {
-            return false;
+        if (if (requiredVersion != null) (requiredVersion != that.requiredVersion) else that.requiredVersion != null) {
+            return false
         }
-        if (preferredVersion != null ? !preferredVersion.equals(that.preferredVersion) : that.preferredVersion != null) {
-            return false;
+        if (if (preferredVersion != null) (preferredVersion != that.preferredVersion) else that.preferredVersion != null) {
+            return false
         }
-        if (strictVersion != null ? !strictVersion.equals(that.strictVersion) : that.strictVersion != null) {
-            return false;
+        if (if (strictVersion != null) (strictVersion != that.strictVersion) else that.strictVersion != null) {
+            return false
         }
-        if (branch != null ? !branch.equals(that.branch) : that.branch != null) {
-            return false;
+        if (if (branch != null) (branch != that.branch) else that.branch != null) {
+            return false
         }
-        return rejectedVersions.equals(that.rejectedVersions);
+        return rejectedVersions == that.rejectedVersions
     }
 
-    @Override
-    public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (requiredVersion != null ? requiredVersion.hashCode() : 0);
-        result = 31 * result + (preferredVersion != null ? preferredVersion.hashCode() : 0);
-        result = 31 * result + (strictVersion != null ? strictVersion.hashCode() : 0);
-        result = 31 * result + (branch != null ? branch.hashCode() : 0);
-        result = 31 * result + rejectedVersions.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + (if (requiredVersion != null) requiredVersion.hashCode() else 0)
+        result = 31 * result + (if (preferredVersion != null) preferredVersion.hashCode() else 0)
+        result = 31 * result + (if (strictVersion != null) strictVersion.hashCode() else 0)
+        result = 31 * result + (if (branch != null) branch.hashCode() else 0)
+        result = 31 * result + rejectedVersions.hashCode()
+        return result
+    }
+
+    companion object {
+        fun withVersion(version: String): DefaultMutableVersionConstraint {
+            return DefaultMutableVersionConstraint(version)
+        }
+
+        fun withStrictVersion(version: String): DefaultMutableVersionConstraint {
+            return DefaultMutableVersionConstraint(null, version, version)
+        }
     }
 }

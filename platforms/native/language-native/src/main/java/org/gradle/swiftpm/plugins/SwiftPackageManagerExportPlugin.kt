@@ -208,7 +208,7 @@ abstract class SwiftPackageManagerExportPlugin @Inject constructor(
             val versionSelector = versionSelectorScheme.parseSelector(versionSelectorString)
             if (versionSelector is LatestVersionSelector) {
                 val latestVersionSelector = versionSelector
-                if (latestVersionSelector.getSelectorStatus() == "integration") {
+                if (latestVersionSelector.selectorStatus == "integration") {
                     return BranchDependency(gitSpec.getUrl(), "master")
                 }
             } else if (versionSelector is ExactVersionSelector) {
@@ -216,22 +216,22 @@ abstract class SwiftPackageManagerExportPlugin @Inject constructor(
             } else if (versionSelector is VersionRangeSelector) {
                 val versionRangeSelector = versionSelector
                 if (versionRangeSelector.isLowerInclusive()) {
-                    return VersionDependency(gitSpec.getUrl(), versionRangeSelector.getLowerBound(), versionRangeSelector.getUpperBound(), versionRangeSelector.isUpperInclusive())
+                    return VersionDependency(gitSpec.getUrl(), versionRangeSelector.lowerBound, versionRangeSelector.upperBound, versionRangeSelector.isUpperInclusive())
                 }
             } else if (versionSelector is SubVersionSelector) {
                 val subVersionSelector = versionSelector
-                val prefix = subVersionSelector.getPrefix()
+                val prefix = subVersionSelector.prefix
                 // TODO - take care of this in the selector parser
                 if (prefix.endsWith(".")) {
                     val versionString = prefix.substring(0, prefix.length - 1)
                     val version = versionParser.transform(versionString)
-                    if (version!!.getNumericParts().size == 1) {
-                        val part1 = version.getNumericParts()[0]
+                    if (version!!.numericParts.size == 1) {
+                        val part1 = version.numericParts[0]
                         return VersionDependency(gitSpec.getUrl(), part1.toString() + ".0.0")
                     }
-                    if (version.getNumericParts().size == 2) {
-                        val part1 = version.getNumericParts()[0]
-                        val part2 = version.getNumericParts()[1]
+                    if (version.numericParts.size == 2) {
+                        val part1 = version.numericParts[0]
+                        val part2 = version.numericParts[1]
                         return VersionDependency(gitSpec.getUrl(), part1.toString() + "." + part2 + ".0", part1.toString() + "." + (part2 + 1) + ".0", false)
                     }
                 }

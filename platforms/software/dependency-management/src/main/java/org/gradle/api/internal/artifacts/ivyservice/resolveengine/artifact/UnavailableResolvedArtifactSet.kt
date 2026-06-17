@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
 /**
  * Represents artifacts that are successfully resolved, but unavailable for some reason when the artifact was requested.
  */
-public class UnavailableResolvedArtifactSet extends AbstractFailedResolvedArtifactSet {
-    public UnavailableResolvedArtifactSet(Throwable failure) {
-        super(failure);
-    }
-}
+class UnavailableResolvedArtifactSet(failure: Throwable) : AbstractFailedResolvedArtifactSet(failure)

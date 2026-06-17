@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.Project::class)
+interface TransformedVariantFactory {
+    fun transformedExternalArtifacts(
+        componentIdentifier: ComponentIdentifier,
+        sourceVariant: ResolvedVariant,
+        variantDefinition: VariantDefinition,
+        dependenciesResolver: TransformUpstreamDependenciesResolver
+    ): ResolvedArtifactSet?
 
-@ServiceScope(Scope.Project.class)
-public interface TransformedVariantFactory {
-    ResolvedArtifactSet transformedExternalArtifacts(
-        ComponentIdentifier componentIdentifier,
-        ResolvedVariant sourceVariant,
-        VariantDefinition variantDefinition,
-        TransformUpstreamDependenciesResolver dependenciesResolver
-    );
-
-    ResolvedArtifactSet transformedProjectArtifacts(
-        ComponentIdentifier componentIdentifier,
-        ResolvedVariant sourceVariant,
-        VariantDefinition variantDefinition,
-        TransformUpstreamDependenciesResolver dependenciesResolver
-    );
+    fun transformedProjectArtifacts(
+        componentIdentifier: ComponentIdentifier,
+        sourceVariant: ResolvedVariant,
+        variantDefinition: VariantDefinition,
+        dependenciesResolver: TransformUpstreamDependenciesResolver
+    ): ResolvedArtifactSet?
 }

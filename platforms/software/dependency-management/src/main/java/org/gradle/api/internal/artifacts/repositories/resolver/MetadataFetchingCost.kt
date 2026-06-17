@@ -13,30 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-public enum MetadataFetchingCost {
+enum class MetadataFetchingCost {
     /**
-     * Can return metadata immediately. It must <b>not</b> be used in case the metadata is missing,
-     * even if it's cheap to tell it's missing. Use {@link #CHEAP} in that case.
+     * Can return metadata immediately. It must **not** be used in case the metadata is missing,
+     * even if it's cheap to tell it's missing. Use [.CHEAP] in that case.
      */
     FAST,
+
     /**
      * Can return metadata in a cheap way, or tell that it's missing in a cheap way. The difference with
-     * {@link #FAST} is that we can use it for missing metadata.
+     * [.FAST] is that we can use it for missing metadata.
      */
     CHEAP,
+
     /**
      * Cannot return metadata without an expensive call, typically involving parsing a descriptor
      * or accessing the network
      */
     EXPENSIVE;
 
-    public boolean isFast() {
-        return this == FAST;
-    }
+    val isFast: Boolean
+        get() = this == MetadataFetchingCost.FAST
 
-    public boolean isExpensive() {
-        return this == EXPENSIVE;
-    }
+    val isExpensive: Boolean
+        get() = this == MetadataFetchingCost.EXPENSIVE
 }

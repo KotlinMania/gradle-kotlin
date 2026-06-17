@@ -13,26 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.internal.service.scopes.EventScope;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.StatefulListener;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.service.scopes.EventScope
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.StatefulListener
+import org.gradle.util.Path
 
 /**
  * A listener that is notified when one project observes the local component metadata of another.
  */
 @StatefulListener
-@EventScope(Scope.Build.class)
-public interface ProjectComponentObservationListener {
+@EventScope(Scope.Build::class)
+interface ProjectComponentObservationListener {
     /**
      * Called when one project observes the local component metadata of another project.
      *
      * @param consumingProjectPath The path of the project performing the observation. Null if the consuming resolution is not a project.
      * @param targetProjectPath The path of the project that is being observed.
      */
-    void projectObserved(@Nullable Path consumingProjectPath, Path targetProjectPath);
+    fun projectObserved(consumingProjectPath: Path?, targetProjectPath: Path)
 }

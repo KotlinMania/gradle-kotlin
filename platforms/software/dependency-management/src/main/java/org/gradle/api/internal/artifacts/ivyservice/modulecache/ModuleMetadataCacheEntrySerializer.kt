@@ -13,60 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
 
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
+internal class ModuleMetadataCacheEntrySerializer : AbstractSerializer<ModuleMetadataCacheEntry?>() {
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ModuleMetadataCacheEntry) {
+        encoder.writeByte(value.type)
+        when (value.type) {
+            ModuleMetadataCacheEntry.Companion.TYPE_MISSING -> encoder.writeLong(value.createTimestamp)
+            ModuleMetadataCacheEntry.Companion.TYPE_PRESENT -> {
+                encoder.writeBoolean(value.isChanging)
+                encoder.writeLong(value.createTimestamp)
+            }
 
-class ModuleMetadataCacheEntrySerializer extends AbstractSerializer<ModuleMetadataCacheEntry> {
-
-    @Override
-    public void write(Encoder encoder, ModuleMetadataCacheEntry value) throws Exception {
-        encoder.writeByte(value.type);
-        switch (value.type) {
-            case ModuleMetadataCacheEntry.TYPE_MISSING:
-                encoder.writeLong(value.createTimestamp);
-                break;
-            case ModuleMetadataCacheEntry.TYPE_PRESENT:
-                encoder.writeBoolean(value.isChanging);
-                encoder.writeLong(value.createTimestamp);
-                break;
-            default:
-                throw new IllegalArgumentException("Don't know how to serialize meta-data entry: " + value);
+            else -> throw IllegalArgumentException("Don't know how to serialize meta-data entry: " + value)
         }
     }
 
-    @Override
-    public ModuleMetadataCacheEntry read(Decoder decoder) throws Exception {
-        byte type = decoder.readByte();
-        switch (type) {
-            case ModuleMetadataCacheEntry.TYPE_MISSING:
-                long createTimestamp = decoder.readLong();
-                return new MissingModuleCacheEntry(createTimestamp);
-            case ModuleMetadataCacheEntry.TYPE_PRESENT:
-                boolean isChanging = decoder.readBoolean();
-                createTimestamp = decoder.readLong();
-                return new ModuleMetadataCacheEntry(ModuleMetadataCacheEntry.TYPE_PRESENT, isChanging, createTimestamp);
-            default:
-                throw new IllegalArgumentException("Don't know how to deserialize meta-data entry of type " + type);
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ModuleMetadataCacheEntry? {
+        val type = decoder.readByte()
+        when (type) {
+            ModuleMetadataCacheEntry.Companion.TYPE_MISSING -> {
+                val createTimestamp = decoder.readLong()
+                return MissingModuleCacheEntry(createTimestamp)
+            }
+
+            ModuleMetadataCacheEntry.Companion.TYPE_PRESENT -> {
+                val isChanging = decoder.readBoolean()
+                createTimestamp = decoder.readLong()
+                return ModuleMetadataCacheEntry(ModuleMetadataCacheEntry.Companion.TYPE_PRESENT, isChanging, createTimestamp)
+            }
+
+            else -> throw IllegalArgumentException("Don't know how to deserialize meta-data entry of type " + type)
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    public override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        return super.equals(o);
+        return super.equals(o)
     }
 
-    @Override
-    public int hashCode() {
-        return super.hashCode();
+    public override fun hashCode(): Int {
+        return super.hashCode()
     }
 }

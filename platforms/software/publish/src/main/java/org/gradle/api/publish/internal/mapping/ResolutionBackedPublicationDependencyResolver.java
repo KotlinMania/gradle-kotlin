@@ -346,7 +346,7 @@ public class ResolutionBackedPublicationDependencyResolver implements VariantDep
 
     @Override
     public ResolvedCoordinates resolveComponentCoordinates(DefaultProjectDependencyConstraint dependency) {
-        return resolveComponentCoordinates(dependency.getProjectDependency());
+        return resolveComponentCoordinates(dependency.projectDependency);
     }
 
 

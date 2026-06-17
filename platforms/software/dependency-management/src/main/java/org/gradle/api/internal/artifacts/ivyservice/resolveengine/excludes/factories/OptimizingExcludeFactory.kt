@@ -13,52 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.collect.PersistentSet;
-
-import java.util.Iterator;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.collect.PersistentSet
+import java.util.function.BiFunction
+import java.util.function.Function
 
 /**
  * This factory is responsible for optimizing in special cases: null parameters,
  * list with 2 elements, ... and should be at the top of the delegation chain.
  */
-public class OptimizingExcludeFactory extends DelegatingExcludeFactory {
-    public OptimizingExcludeFactory(ExcludeFactory delegate) {
-        super(delegate);
+class OptimizingExcludeFactory(delegate: ExcludeFactory?) : DelegatingExcludeFactory(delegate) {
+    override fun anyOf(one: ExcludeSpec?, two: ExcludeSpec?): ExcludeSpec? {
+        return Optimizations.optimizeAnyOf(one, two, BiFunction { one: ExcludeSpec?, two: ExcludeSpec? -> super.anyOf(one, two) })
     }
 
-    @Override
-    public ExcludeSpec anyOf(ExcludeSpec one, ExcludeSpec two) {
-        return Optimizations.optimizeAnyOf(one, two, super::anyOf);
+    override fun allOf(one: ExcludeSpec?, two: ExcludeSpec?): ExcludeSpec? {
+        return Optimizations.optimizeAllOf(this, one, two, BiFunction { one: ExcludeSpec?, two: ExcludeSpec? -> super.allOf(one, two) })
     }
 
-    @Override
-    public ExcludeSpec allOf(ExcludeSpec one, ExcludeSpec two) {
-        return Optimizations.optimizeAllOf(this, one, two, super::allOf);
-    }
-
-    @Override
-    public ExcludeSpec anyOf(PersistentSet<ExcludeSpec> specs) {
-        return Optimizations.optimizeCollection(this, specs, set -> {
-            if (set.size() == 2) {
-                Iterator<ExcludeSpec> it = set.iterator();
+    override fun anyOf(specs: PersistentSet<ExcludeSpec?>): ExcludeSpec? {
+        return Optimizations.optimizeCollection<PersistentSet<ExcludeSpec?>?>(this, specs, Function { set: PersistentSet<ExcludeSpec?>? ->
+            if (set!!.size() == 2) {
+                val it = set.iterator()
                 // TODO: Return anyOf(set) to preserve the original set when it fails to optimize
-                return delegate.anyOf(it.next(), it.next());
+                return@optimizeCollection delegate.anyOf(it.next(), it.next())
             }
-            return delegate.anyOf(set);
-        });
+            delegate.anyOf(set)
+        })
     }
 
-    @Override
-    public ExcludeSpec allOf(PersistentSet<ExcludeSpec> specs) {
-        return Optimizations.optimizeCollection(this, specs, list -> {
-            if (list.size() == 2) {
-                Iterator<ExcludeSpec> it = list.iterator();
-                return delegate.allOf(it.next(), it.next());
+    override fun allOf(specs: PersistentSet<ExcludeSpec?>): ExcludeSpec? {
+        return Optimizations.optimizeCollection<PersistentSet<ExcludeSpec?>?>(this, specs, Function { list: PersistentSet<ExcludeSpec?>? ->
+            if (list!!.size() == 2) {
+                val it = list.iterator()
+                return@optimizeCollection delegate.allOf(it.next(), it.next())
             }
-            return delegate.allOf(list);
-        });
+            delegate.allOf(list)
+        })
     }
 }

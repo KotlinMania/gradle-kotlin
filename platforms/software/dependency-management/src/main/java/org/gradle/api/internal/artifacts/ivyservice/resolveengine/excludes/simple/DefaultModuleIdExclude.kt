@@ -13,70 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude
+import org.gradle.internal.component.model.IvyArtifactName
 
-final class DefaultModuleIdExclude implements ModuleIdExclude {
-    private final ModuleIdentifier moduleId;
-    private final int hashCode;
+internal class DefaultModuleIdExclude private constructor(private val moduleId: ModuleIdentifier) : ModuleIdExclude {
+    private val hashCode: Int
 
-    static ModuleIdExclude of(ModuleIdentifier id) {
-        return new DefaultModuleIdExclude(id);
+    init {
+        this.hashCode = moduleId.hashCode()
     }
 
-    private DefaultModuleIdExclude(ModuleIdentifier moduleId) {
-        this.moduleId = moduleId;
-        this.hashCode = moduleId.hashCode();
+    override fun getModuleId(): ModuleIdentifier {
+        return moduleId
     }
 
-    @Override
-    public ModuleIdentifier getModuleId() {
-        return moduleId;
+    override fun excludes(module: ModuleIdentifier?): Boolean {
+        return moduleId == module
     }
 
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
-        return moduleId.equals(module);
+    override fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean {
+        return false
     }
 
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName) {
-        return false;
+    override fun mayExcludeArtifacts(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
-        return false;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultModuleIdExclude that = (DefaultModuleIdExclude) o;
+        val that = o as DefaultModuleIdExclude
 
         if (hashCode != that.hashCode) {
-            return false;
+            return false
         }
-        return moduleId.equals(that.moduleId);
-
+        return moduleId == that.moduleId
     }
 
-    @Override
-    public int hashCode() {
-        return moduleId.hashCode();
+    override fun hashCode(): Int {
+        return moduleId.hashCode()
     }
 
-    @Override
-    public String toString() {
-        return "{\"exclude module id\" : \"" + moduleId + "\"}";
+    override fun toString(): String {
+        return "{\"exclude module id\" : \"" + moduleId + "\"}"
+    }
+
+    companion object {
+        fun of(id: ModuleIdentifier): ModuleIdExclude {
+            return DefaultModuleIdExclude(id)
+        }
     }
 }

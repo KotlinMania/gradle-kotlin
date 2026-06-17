@@ -13,48 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedFileVisitor
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import java.io.File
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedFileVisitor;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
+class ResolvedFileCollectionVisitor(private val visitor: FileCollectionStructureVisitor) : ResolvedFileVisitor {
+    private val files: MutableSet<File> = LinkedHashSet<File>()
+    @JvmField
+    val failures: MutableSet<Throwable> = LinkedHashSet<Throwable>()
 
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class ResolvedFileCollectionVisitor implements ResolvedFileVisitor {
-    private final FileCollectionStructureVisitor visitor;
-    private final Set<File> files = new LinkedHashSet<>();
-    private final Set<Throwable> failures = new LinkedHashSet<>();
-
-    public ResolvedFileCollectionVisitor(FileCollectionStructureVisitor visitor) {
-        this.visitor = visitor;
+    override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+        return visitor.prepareForVisit(source)
     }
 
-    public Set<Throwable> getFailures() {
-        return failures;
+    override fun visitFile(file: File) {
+        files.add(file)
     }
 
-    @Override
-    public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-        return visitor.prepareForVisit(source);
+    override fun visitFailure(failure: Throwable) {
+        failures.add(failure)
     }
 
-    @Override
-    public void visitFile(File file) {
-        files.add(file);
-    }
-
-    @Override
-    public void visitFailure(Throwable failure) {
-        failures.add(failure);
-    }
-
-    @Override
-    public void endVisitCollection(FileCollectionInternal.Source source) {
-        visitor.visitCollection(source, files);
-        files.clear();
+    override fun endVisitCollection(source: FileCollectionInternal.Source) {
+        visitor.visitCollection(source, files)
+        files.clear()
     }
 }

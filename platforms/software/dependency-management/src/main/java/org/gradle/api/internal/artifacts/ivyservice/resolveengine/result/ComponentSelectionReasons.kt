@@ -13,137 +13,114 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.api.artifacts.result.ComponentSelectionDescriptor
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
+object ComponentSelectionReasons {
+    val REQUESTED: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.REQUESTED)
+    val ROOT: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.ROOT)
+    val FORCED: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.FORCED)
+    val CONFLICT_RESOLUTION: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.CONFLICT_RESOLUTION)
+    val SELECTED_BY_RULE: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.SELECTED_BY_RULE)
+    val COMPOSITE_BUILD: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.COMPOSITE_BUILD)
+    val CONSTRAINT: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.CONSTRAINT)
+    val REJECTION: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.REJECTION)
+    val BY_ANCESTOR: ComponentSelectionDescriptorInternal = DefaultComponentSelectionDescriptor(ComponentSelectionCause.BY_ANCESTOR)
 
-import java.util.List;
-
-public class ComponentSelectionReasons {
-    public static final ComponentSelectionDescriptorInternal REQUESTED = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.REQUESTED);
-    public static final ComponentSelectionDescriptorInternal ROOT = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.ROOT);
-    public static final ComponentSelectionDescriptorInternal FORCED = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.FORCED);
-    public static final ComponentSelectionDescriptorInternal CONFLICT_RESOLUTION = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.CONFLICT_RESOLUTION);
-    public static final ComponentSelectionDescriptorInternal SELECTED_BY_RULE = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.SELECTED_BY_RULE);
-    public static final ComponentSelectionDescriptorInternal COMPOSITE_BUILD = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.COMPOSITE_BUILD);
-    public static final ComponentSelectionDescriptorInternal CONSTRAINT = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.CONSTRAINT);
-    public static final ComponentSelectionDescriptorInternal REJECTION = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.REJECTION);
-    public static final ComponentSelectionDescriptorInternal BY_ANCESTOR = new DefaultComponentSelectionDescriptor(ComponentSelectionCause.BY_ANCESTOR);
-
-    public static ComponentSelectionReasonInternal requested() {
-        return of(REQUESTED);
+    fun requested(): ComponentSelectionReasonInternal {
+        return of(REQUESTED)
     }
 
-    public static ComponentSelectionReasonInternal root() {
-        return of(ROOT);
+    fun root(): ComponentSelectionReasonInternal {
+        return of(ROOT)
     }
 
-    public static ComponentSelectionReasonInternal of(ComponentSelectionDescriptorInternal descriptions) {
-        return new DefaultComponentSelectionReason(ImmutableList.of(descriptions));
+    fun of(descriptions: ComponentSelectionDescriptorInternal): ComponentSelectionReasonInternal {
+        return DefaultComponentSelectionReason(ImmutableList.of<ComponentSelectionDescriptorInternal>(descriptions))
     }
 
-    public static ComponentSelectionReasonInternal of(ImmutableSet<ComponentSelectionDescriptorInternal> dependencyReasons) {
-        assert !dependencyReasons.isEmpty();
-        return new DefaultComponentSelectionReason(dependencyReasons.asList());
+    fun of(dependencyReasons: ImmutableSet<ComponentSelectionDescriptorInternal>): ComponentSelectionReasonInternal {
+        assert(!dependencyReasons.isEmpty())
+        return DefaultComponentSelectionReason(dependencyReasons.asList())
     }
 
-    public static boolean isCauseExpected(ComponentSelectionDescriptor descriptor) {
-        return descriptor.getCause() == ComponentSelectionCause.REQUESTED || descriptor.getCause() == ComponentSelectionCause.ROOT;
+    fun isCauseExpected(descriptor: ComponentSelectionDescriptor): Boolean {
+        return descriptor.getCause() == ComponentSelectionCause.REQUESTED || descriptor.getCause() == ComponentSelectionCause.ROOT
     }
 
-    static class DefaultComponentSelectionReason implements ComponentSelectionReasonInternal {
-
-        private final ImmutableList<ComponentSelectionDescriptorInternal> descriptions;
-
-        // Package private since static factories enforce non-empty and no duplicates,
-        // but the serializer can skip the set creation.
-        DefaultComponentSelectionReason(ImmutableList<ComponentSelectionDescriptorInternal> descriptions) {
-            this.descriptions = descriptions;
+    internal class DefaultComponentSelectionReason // Package private since static factories enforce non-empty and no duplicates,
+    // but the serializer can skip the set creation.
+        (private val descriptions: ImmutableList<ComponentSelectionDescriptorInternal>) : ComponentSelectionReasonInternal {
+        override fun isForced(): Boolean {
+            return hasCause(ComponentSelectionCause.FORCED)
         }
 
-        @Override
-        public boolean isForced() {
-            return hasCause(ComponentSelectionCause.FORCED);
-        }
-
-        private boolean hasCause(ComponentSelectionCause cause) {
-            for (ComponentSelectionDescriptor description : descriptions) {
+        private fun hasCause(cause: ComponentSelectionCause): Boolean {
+            for (description in descriptions) {
                 if (description.getCause() == cause) {
-                    return true;
+                    return true
                 }
             }
-            return false;
+            return false
         }
 
-        @Override
-        public boolean isConflictResolution() {
-            return hasCause(ComponentSelectionCause.CONFLICT_RESOLUTION);
+        override fun isConflictResolution(): Boolean {
+            return hasCause(ComponentSelectionCause.CONFLICT_RESOLUTION)
         }
 
-        @Override
-        public boolean isSelectedByRule() {
-            return hasCause(ComponentSelectionCause.SELECTED_BY_RULE);
+        override fun isSelectedByRule(): Boolean {
+            return hasCause(ComponentSelectionCause.SELECTED_BY_RULE)
         }
 
-        @Override
-        public boolean isExpected() {
-            return descriptions.size() == 1 && isCauseExpected(getLast());
+        override fun isExpected(): Boolean {
+            return descriptions.size == 1 && isCauseExpected(this.last)
         }
 
-        @Override
-        public boolean isCompositeSubstitution() {
-            return hasCause(ComponentSelectionCause.COMPOSITE_BUILD);
+        override fun isCompositeSubstitution(): Boolean {
+            return hasCause(ComponentSelectionCause.COMPOSITE_BUILD)
         }
 
-        @Override
-        public String toString() {
-            return getLast().toString();
+        override fun toString(): String {
+            return this.last.toString()
         }
 
-        @Override
-        public List<ComponentSelectionDescriptorInternal> getDescriptions() {
-            return descriptions;
+        override fun getDescriptions(): MutableList<ComponentSelectionDescriptorInternal> {
+            return descriptions
         }
 
-        @Override
-        public boolean isConstrained() {
-            return hasCause(ComponentSelectionCause.CONSTRAINT);
+        override fun isConstrained(): Boolean {
+            return hasCause(ComponentSelectionCause.CONSTRAINT)
         }
 
-        @Override
-        public boolean hasCustomDescriptions() {
-            for (ComponentSelectionDescriptorInternal description : descriptions) {
+        override fun hasCustomDescriptions(): Boolean {
+            for (description in descriptions) {
                 if (description.hasCustomDescription()) {
-                    return true;
+                    return true
                 }
             }
-            return false;
+            return false
         }
 
-        private ComponentSelectionDescriptorInternal getLast() {
-            return descriptions.get(descriptions.size() - 1);
-        }
+        private val last: ComponentSelectionDescriptorInternal
+            get() = descriptions.get(descriptions.size - 1)
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            DefaultComponentSelectionReason that = (DefaultComponentSelectionReason) o;
-            return descriptions.equals(that.descriptions);
+            val that = o as DefaultComponentSelectionReason
+            return descriptions == that.descriptions
         }
 
-        @Override
-        public int hashCode() {
-            return descriptions.hashCode();
+        override fun hashCode(): Int {
+            return descriptions.hashCode()
         }
-
     }
 }

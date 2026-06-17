@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+import org.gradle.internal.resource.cached.CachedItem
 
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.resource.cached.CachedItem;
+interface CachedArtifact : CachedItem {
+    @JvmField
+    val descriptorHash: HashCode?
 
-import java.util.List;
-
-public interface CachedArtifact extends CachedItem {
-    HashCode getDescriptorHash();
-
-    List<String> attemptedLocations();
+    fun attemptedLocations(): MutableList<String?>?
 }

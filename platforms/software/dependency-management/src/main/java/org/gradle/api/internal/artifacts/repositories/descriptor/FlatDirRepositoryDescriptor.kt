@@ -13,47 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.descriptor
 
-package org.gradle.api.internal.artifacts.repositories.descriptor;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSortedMap
+import org.gradle.internal.scan.UsedByScanPlugin
+import java.io.File
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.internal.scan.UsedByScanPlugin;
-
-import java.io.File;
-import java.util.Collection;
-
-public final class FlatDirRepositoryDescriptor extends RepositoryDescriptor {
-
+class FlatDirRepositoryDescriptor(name: String?, dirs: MutableCollection<File?>, val backingDescriptor: IvyRepositoryDescriptor) : RepositoryDescriptor(
+    backingDescriptor.getId(), name
+) {
     @UsedByScanPlugin("doesn't link against this type, but expects these values - See ResolveConfigurationDependenciesBuildOperationType")
-    private enum Property {
+    private enum class Property {
         DIRS,
     }
 
-    private final ImmutableList<File> dirs;
-    private final IvyRepositoryDescriptor backingDescriptor;
+    val dirs: ImmutableList<File?>
 
-    public FlatDirRepositoryDescriptor(String name, Collection<File> dirs, IvyRepositoryDescriptor backingDescriptor) {
-        super(backingDescriptor.getId(), name);
-        this.dirs = ImmutableList.copyOf(dirs);
-        this.backingDescriptor = backingDescriptor;
+    init {
+        this.dirs = ImmutableList.copyOf<File?>(dirs)
     }
 
-    @Override
-    public Type getType() {
-        return Type.FLAT_DIR;
+    override fun getType(): Type {
+        return Type.FLAT_DIR
     }
 
-    public ImmutableList<File> getDirs() {
-        return dirs;
-    }
-
-    public IvyRepositoryDescriptor getBackingDescriptor() {
-        return backingDescriptor;
-    }
-
-    @Override
-    protected void addProperties(ImmutableSortedMap.Builder<String, Object> builder) {
-        builder.put(Property.DIRS.name(), dirs);
+    override fun addProperties(builder: ImmutableSortedMap.Builder<String?, Any?>) {
+        builder.put(Property.DIRS.name, dirs)
     }
 }

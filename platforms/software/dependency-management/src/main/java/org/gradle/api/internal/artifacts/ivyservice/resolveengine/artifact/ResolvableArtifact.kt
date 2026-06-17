@@ -13,41 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.model.CalculatedValue;
-
-import java.io.File;
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import java.io.File
 
 /**
- * Represents an artifact that can be resolved. Call {@link #getFile()} or {@link ResolvedArtifact#getFile()} to resolve.
+ * Represents an artifact that can be resolved. Call [.getFile] or [ResolvedArtifact.getFile] to resolve.
  */
-public interface ResolvableArtifact extends TaskDependencyContainer {
-    ComponentArtifactIdentifier getId();
+interface ResolvableArtifact : TaskDependencyContainer {
+    @JvmField
+    val id: ComponentArtifactIdentifier?
 
     /**
-     * Should this artifact be resolved synchronously? For example, is the result of {@link #getFile()} available in memory or can it be calculated quickly without IO calls?
+     * Should this artifact be resolved synchronously? For example, is the result of [.getFile] available in memory or can it be calculated quickly without IO calls?
      */
-    boolean isResolveSynchronously();
+    @JvmField
+    val isResolveSynchronously: Boolean
 
-    IvyArtifactName getArtifactName();
+    val artifactName: IvyArtifactName?
 
     /**
      * Resolves the file, if not already, blocking until complete.
      */
-    File getFile();
+    @JvmField
+    val file: File?
 
     /**
      * Returns the artifact file as a lazy type. Does not resolve the file, but the returned value can be used to do so.
      */
-    CalculatedValue<File> getFileSource();
+    @JvmField
+    val fileSource: CalculatedValue<File>?
 
-    ResolvableArtifact transformedTo(File file);
+    fun transformedTo(file: File): ResolvableArtifact?
 
-    ResolvedArtifact toPublicView();
+    fun toPublicView(): ResolvedArtifact?
 }

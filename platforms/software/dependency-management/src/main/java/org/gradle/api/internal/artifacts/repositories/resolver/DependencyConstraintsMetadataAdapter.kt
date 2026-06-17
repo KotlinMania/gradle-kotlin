@@ -13,43 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DependencyConstraintMetadata
+import org.gradle.api.artifacts.DependencyConstraintsMetadata
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
 
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-import org.gradle.api.artifacts.DependencyConstraintsMetadata;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-
-public class DependencyConstraintsMetadataAdapter extends AbstractDependenciesMetadataAdapter<DependencyConstraintMetadata, DependencyConstraintMetadataAdapter> implements DependencyConstraintsMetadata {
-
-    public DependencyConstraintsMetadataAdapter(
-        AttributesFactory attributesFactory,
-        Instantiator instantiator,
-        NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintsNotationParser) {
-        super(attributesFactory, instantiator, dependencyConstraintsNotationParser);
+class DependencyConstraintsMetadataAdapter(
+    attributesFactory: AttributesFactory,
+    instantiator: Instantiator,
+    dependencyConstraintsNotationParser: NotationParser<Any, DependencyConstraintMetadata>
+) : AbstractDependenciesMetadataAdapter<DependencyConstraintMetadata?, DependencyConstraintMetadataAdapter?>(attributesFactory, instantiator, dependencyConstraintsNotationParser),
+    DependencyConstraintsMetadata {
+    override fun adapterImplementationType(): Class<DependencyConstraintMetadataAdapter> {
+        return DependencyConstraintMetadataAdapter::class.java
     }
 
-    @Override
-    protected Class<DependencyConstraintMetadataAdapter> adapterImplementationType() {
-        return DependencyConstraintMetadataAdapter.class;
+    override fun getAdapterMetadata(adapter: DependencyConstraintMetadataAdapter): ModuleDependencyMetadata {
+        return adapter.getMetadata()
     }
 
-    @Override
-    protected ModuleDependencyMetadata getAdapterMetadata(DependencyConstraintMetadataAdapter adapter) {
-        return adapter.getMetadata();
+    override fun isConstraint(): Boolean {
+        return true
     }
 
-    @Override
-    protected boolean isConstraint() {
-        return true;
+    override fun isEndorsingStrictVersions(details: DependencyConstraintMetadata): Boolean {
+        return false
     }
-
-    @Override
-    protected boolean isEndorsingStrictVersions(DependencyConstraintMetadata details) {
-        return false;
-    }
-
 }

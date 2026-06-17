@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.artifacts.maven.PomModuleDescriptor
+import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata
 
-import org.gradle.api.artifacts.maven.PomModuleDescriptor;
-import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata;
+class DefaultPomModuleDescriptor(mavenMetadata: MavenModuleResolveMetadata) : PomModuleDescriptor {
+    private val packaging: String
 
-public class DefaultPomModuleDescriptor implements PomModuleDescriptor {
-
-    private final String packaging;
-
-    public DefaultPomModuleDescriptor(MavenModuleResolveMetadata mavenMetadata) {
-        this.packaging = mavenMetadata.packaging;
+    init {
+        this.packaging = mavenMetadata.packaging
     }
 
-    @Override
-    public String getPackaging() {
-        return packaging;
+    override fun getPackaging(): String {
+        return packaging
     }
-
 }

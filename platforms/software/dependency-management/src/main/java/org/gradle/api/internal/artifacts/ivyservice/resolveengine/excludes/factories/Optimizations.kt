@@ -13,76 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.collect.PersistentSet;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.collect.PersistentSet
+import java.util.function.BiFunction
+import java.util.function.Function
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-public abstract class Optimizations {
-    public static ExcludeSpec optimizeAnyOf(ExcludeSpec one, ExcludeSpec two, BiFunction<ExcludeSpec, ExcludeSpec, ExcludeSpec> onMiss) {
+object Optimizations {
+    fun optimizeAnyOf(one: ExcludeSpec?, two: ExcludeSpec?, onMiss: BiFunction<ExcludeSpec?, ExcludeSpec?, ExcludeSpec?>): ExcludeSpec? {
         // fast path for two
         if (one == null) {
-            return two;
+            return two
         }
         if (two == null) {
-            return one;
+            return one
         }
-        if (one.equals(two)) {
-            return one;
+        if (one == two) {
+            return one
         }
-        if (one instanceof ExcludeEverything) {
-            return one;
+        if (one is ExcludeEverything) {
+            return one
         }
-        if (one instanceof ExcludeNothing) {
-            return two;
+        if (one is ExcludeNothing) {
+            return two
         }
-        if (two instanceof ExcludeEverything) {
-            return two;
+        if (two is ExcludeEverything) {
+            return two
         }
-        if (two instanceof ExcludeNothing) {
-            return one;
+        if (two is ExcludeNothing) {
+            return one
         }
-        return onMiss.apply(one, two);
+        return onMiss.apply(one, two)
     }
 
-    public static ExcludeSpec optimizeAllOf(ExcludeFactory factory, ExcludeSpec one, ExcludeSpec two, BiFunction<ExcludeSpec, ExcludeSpec, ExcludeSpec> onMiss) {
+    fun optimizeAllOf(factory: ExcludeFactory, one: ExcludeSpec?, two: ExcludeSpec?, onMiss: BiFunction<ExcludeSpec?, ExcludeSpec?, ExcludeSpec?>): ExcludeSpec? {
         // fast path for two
         if (one == null) {
-            return two;
+            return two
         }
         if (two == null) {
-            return one;
+            return one
         }
-        if (one.equals(two)) {
-            return one;
+        if (one == two) {
+            return one
         }
-        if (one instanceof ExcludeEverything) {
-            return two;
+        if (one is ExcludeEverything) {
+            return two
         }
-        if (one instanceof ExcludeNothing) {
-            return factory.nothing();
+        if (one is ExcludeNothing) {
+            return factory.nothing()
         }
-        if (two instanceof ExcludeEverything) {
-            return one;
+        if (two is ExcludeEverything) {
+            return one
         }
-        if (two instanceof ExcludeNothing) {
-            return factory.nothing();
+        if (two is ExcludeNothing) {
+            return factory.nothing()
         }
-        return onMiss.apply(one, two);
+        return onMiss.apply(one, two)
     }
 
-    public static <T extends PersistentSet<ExcludeSpec>> ExcludeSpec optimizeCollection(ExcludeFactory factory, T specs, Function<T, ExcludeSpec> onMiss) {
-        if (specs.isEmpty()) {
-            return factory.nothing();
+    fun <T : PersistentSet<ExcludeSpec?>?> optimizeCollection(factory: ExcludeFactory, specs: T?, onMiss: Function<T?, ExcludeSpec?>): ExcludeSpec? {
+        if (specs!!.isEmpty()) {
+            return factory.nothing()
         }
         if (specs.size() == 1) {
-            return specs.iterator().next();
+            return specs.iterator().next()
         }
-        return onMiss.apply(specs);
+        return onMiss.apply(specs)
     }
 }

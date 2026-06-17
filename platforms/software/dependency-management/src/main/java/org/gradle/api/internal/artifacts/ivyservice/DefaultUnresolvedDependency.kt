@@ -13,32 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.api.artifacts.ModuleVersionSelector;
-import org.gradle.api.artifacts.UnresolvedDependency;
+import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.UnresolvedDependency
 
-public class DefaultUnresolvedDependency implements UnresolvedDependency {
-    private final Throwable problem;
-    private final ModuleVersionSelector selector;
-
-    public DefaultUnresolvedDependency(ModuleVersionSelector selector, Throwable problem) {
-        this.selector = selector;
-        this.problem = problem;
+class DefaultUnresolvedDependency(private val selector: ModuleVersionSelector, private val problem: Throwable) : UnresolvedDependency {
+    override fun getSelector(): ModuleVersionSelector {
+        return selector
     }
 
-    @Override
-    public ModuleVersionSelector getSelector() {
-        return selector;
+    override fun getProblem(): Throwable {
+        return problem
     }
 
-    @Override
-    public Throwable getProblem() {
-        return problem;
-    }
-
-    @Override
-    public String toString() {
-        return selector.getGroup() + ":" + selector.getName() + ":" + selector.getVersion();
+    override fun toString(): String {
+        return selector.getGroup() + ":" + selector.getName() + ":" + selector.getVersion()
     }
 }

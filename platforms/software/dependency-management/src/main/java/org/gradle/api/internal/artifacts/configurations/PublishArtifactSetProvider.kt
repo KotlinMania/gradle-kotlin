@@ -13,11 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.artifacts.PublishArtifactSet;
-
-interface PublishArtifactSetProvider {
-    PublishArtifactSet getPublishArtifactSet();
+internal interface PublishArtifactSetProvider {
+    val publishArtifactSet: PublishArtifactSet?
 }

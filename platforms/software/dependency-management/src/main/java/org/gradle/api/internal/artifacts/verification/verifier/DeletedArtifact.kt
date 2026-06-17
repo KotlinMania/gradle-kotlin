@@ -13,20 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import org.gradle.internal.logging.text.TreeFormatter;
+import org.gradle.internal.logging.text.TreeFormatter
+import java.io.File
 
-import java.io.File;
-
-public class DeletedArtifact extends AbstractVerificationFailure {
-    public DeletedArtifact(File file) {
-        super(file);
-
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        formatter.append("artifact file has been deleted from local cache so verification cannot be performed");
+class DeletedArtifact(file: File?) : AbstractVerificationFailure(file) {
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("artifact file has been deleted from local cache so verification cannot be performed")
     }
 }

@@ -13,59 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+import org.gradle.api.artifacts.ComponentMetadata
 
-import org.gradle.api.artifacts.ComponentMetadata;
-
-public class InverseVersionSelector implements VersionSelector {
-    private final VersionSelector versionSelector;
-
-    public InverseVersionSelector(VersionSelector versionSelector) {
-        this.versionSelector = versionSelector;
+class InverseVersionSelector(val inverseSelector: VersionSelector) : VersionSelector {
+    override fun getSelector(): String {
+        return "!(" + inverseSelector.getSelector() + ")"
     }
 
-    public VersionSelector getInverseSelector() {
-        return versionSelector;
+    override fun isDynamic(): Boolean {
+        return inverseSelector.isDynamic()
     }
 
-    @Override
-    public String getSelector() {
-        return "!(" + versionSelector.getSelector() + ")";
+    override fun requiresMetadata(): Boolean {
+        return inverseSelector.requiresMetadata()
     }
 
-    @Override
-    public boolean isDynamic() {
-        return versionSelector.isDynamic();
+    override fun accept(candidate: String?): Boolean {
+        return !inverseSelector.accept(candidate)
     }
 
-    @Override
-    public boolean requiresMetadata() {
-        return versionSelector.requiresMetadata();
+    override fun accept(candidate: Version?): Boolean {
+        return !inverseSelector.accept(candidate)
     }
 
-    @Override
-    public boolean accept(String candidate) {
-        return !versionSelector.accept(candidate);
+    override fun accept(candidate: ComponentMetadata?): Boolean {
+        return !inverseSelector.accept(candidate)
     }
 
-    @Override
-    public boolean accept(Version candidate) {
-        return !versionSelector.accept(candidate);
+    override fun matchesUniqueVersion(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean accept(ComponentMetadata candidate) {
-        return !versionSelector.accept(candidate);
-    }
-
-    @Override
-    public boolean matchesUniqueVersion() {
-        return false;
-    }
-
-    @Override
-    public boolean canShortCircuitWhenVersionAlreadyPreselected() {
-        return false;
+    override fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean {
+        return false
     }
 }

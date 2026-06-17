@@ -13,46 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+class ModuleComponentAtRepositoryKey internal constructor(val repositoryId: String, val componentId: ModuleComponentIdentifier) {
+    private val hashCode: Int
 
-public class ModuleComponentAtRepositoryKey {
-    private final String repositoryId;
-    private final ModuleComponentIdentifier componentId;
-    private final int hashCode;
-
-    ModuleComponentAtRepositoryKey(String repositoryId, ModuleComponentIdentifier componentId) {
-        this.repositoryId = repositoryId;
-        this.componentId = componentId;
-        this.hashCode = 31 * repositoryId.hashCode() + componentId.hashCode();
+    init {
+        this.hashCode = 31 * repositoryId.hashCode() + componentId.hashCode()
     }
 
-    @Override
-    public String toString() {
-        return repositoryId + "," + componentId;
+    override fun toString(): String {
+        return repositoryId + "," + componentId
     }
 
-    public ModuleComponentIdentifier getComponentId() {
-        return componentId;
-    }
-
-    public String getRepositoryId() {
-        return repositoryId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof ModuleComponentAtRepositoryKey)) {
-            return false;
+    override fun equals(o: Any?): Boolean {
+        if (o !is ModuleComponentAtRepositoryKey) {
+            return false
         }
-        ModuleComponentAtRepositoryKey other = (ModuleComponentAtRepositoryKey) o;
-        return hashCode == other.hashCode && repositoryId.equals(other.repositoryId) && componentId.equals(other.componentId);
+        val other = o
+        return hashCode == other.hashCode && repositoryId == other.repositoryId && componentId == other.componentId
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 }

@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.internal.component.model.IvyArtifactName
 
 /**
  * Represents the canonical metadata artifact for a repository: Ivy descriptor or Maven POM.
  */
-public interface MetadataArtifactProvider {
-    IvyArtifactName getMetaDataArtifactName(String module);
+interface MetadataArtifactProvider {
+    fun getMetaDataArtifactName(module: String): IvyArtifactName?
 }

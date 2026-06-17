@@ -13,73 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.hash.HashCode;
-
-import java.io.File;
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.hash.HashCode
+import java.io.File
 
 /**
  * This module source stores information about the original
  * descriptor.
  */
-public class DefaultMetadataFileSource implements MetadataFileSource {
-    private final ModuleComponentArtifactIdentifier artifactId;
-    private final File artifactFile;
-    private final HashCode sha1;
-
-    public DefaultMetadataFileSource(ModuleComponentArtifactIdentifier artifactId, File artifactFile, HashCode sha1) {
-        this.artifactId = artifactId;
-        this.artifactFile = artifactFile;
-        this.sha1 = sha1;
+class DefaultMetadataFileSource(private val artifactId: ModuleComponentArtifactIdentifier, private val artifactFile: File, private val sha1: HashCode) : MetadataFileSource {
+    override fun getArtifactFile(): File {
+        return artifactFile
     }
 
-    @Override
-    public File getArtifactFile() {
-        return artifactFile;
+    override fun getArtifactId(): ModuleComponentArtifactIdentifier {
+        return artifactId
     }
 
-    @Override
-    public ModuleComponentArtifactIdentifier getArtifactId() {
-        return artifactId;
+    override fun getSha1(): HashCode {
+        return sha1
     }
 
-    @Override
-    public HashCode getSha1() {
-        return sha1;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultMetadataFileSource that = (DefaultMetadataFileSource) o;
+        val that = o as DefaultMetadataFileSource
 
-        if (!artifactId.equals(that.artifactId)) {
-            return false;
+        if (artifactId != that.artifactId) {
+            return false
         }
-        return sha1.equals(that.sha1);
+        return sha1 == that.sha1
     }
 
-    @Override
-    public int hashCode() {
-        int result = artifactId.hashCode();
-        result = 31 * result + sha1.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = artifactId.hashCode()
+        result = 31 * result + sha1.hashCode()
+        return result
     }
 
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "MetadataFileSource{" +
-            "artifactId=" + artifactId +
-            ", artifactFile=" + artifactFile +
-            ", sha1=" + sha1 +
-            '}';
+                "artifactId=" + artifactId +
+                ", artifactFile=" + artifactFile +
+                ", sha1=" + sha1 +
+                '}'
     }
 }

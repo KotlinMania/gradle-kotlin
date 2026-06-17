@@ -13,87 +13,101 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-import org.gradle.api.attributes.plugin.GradlePluginApiVersion;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor.AssessedAttribute;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor.AssessedCandidate;
-import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber;
-import org.gradle.internal.component.resolution.failure.describer.ResolutionFailureDescriber;
-import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException;
-import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
-import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure;
-import org.gradle.util.GradleVersion;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import org.gradle.api.attributes.plugin.GradlePluginApiVersion
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
+import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber
+import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException
+import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException
+import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure
+import org.gradle.util.GradleVersion
+import java.lang.String
+import java.util.Optional
+import java.util.function.Function
+import java.util.function.Supplier
+import kotlin.Boolean
+import kotlin.Comparator
+import kotlin.IllegalStateException
+import kotlin.collections.MutableList
+import kotlin.collections.filter
+import kotlin.collections.map
+import kotlin.collections.min
+import kotlin.map
+import kotlin.sequences.filter
+import kotlin.sequences.map
+import kotlin.sequences.min
+import kotlin.text.format
+import kotlin.text.map
+import kotlin.text.min
 
 /**
- * A {@link ResolutionFailureDescriber} that describes a {@link ResolutionFailure} caused by a plugin requiring
+ * A [ResolutionFailureDescriber] that describes a [ResolutionFailure] caused by a plugin requiring
  * a newer Gradle version than the one currently running the build.
  *
- * This is determined by assessing the incompatibility of the {@link GradlePluginApiVersion#GRADLE_PLUGIN_API_VERSION_ATTRIBUTE} attribute.
+ * This is determined by assessing the incompatibility of the [GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE] attribute.
  */
-public abstract class NewerGradleNeededByPluginFailureDescriber extends AbstractResolutionFailureDescriber<NoCompatibleVariantsFailure> {
-    @SuppressWarnings("InlineFormatString")
-    private static final String GRADLE_VERSION_TOO_OLD_TEMPLATE = "Plugin %s requires at least Gradle %s. This build uses %s.";
-    private static final String NEEDS_NEWER_GRADLE_SECTION = "sub:updating-gradle";
+abstract class NewerGradleNeededByPluginFailureDescriber : AbstractResolutionFailureDescriber<NoCompatibleVariantsFailure?>() {
+    private val currentGradleVersion: GradleVersion = GradleVersion.current()
 
-    private final GradleVersion currentGradleVersion = GradleVersion.current();
-
-    @Override
-    public boolean canDescribeFailure(NoCompatibleVariantsFailure failure) {
-        return !failure.candidates.isEmpty() && allCandidatesIncompatibleDueToGradleVersionTooLow(failure);
+    override fun canDescribeFailure(failure: NoCompatibleVariantsFailure): Boolean {
+        return !failure.candidates.isEmpty() && allCandidatesIncompatibleDueToGradleVersionTooLow(failure)
     }
 
-    @Override
-    public AbstractResolutionFailureException describeFailure(NoCompatibleVariantsFailure failure) {
-        GradleVersion minGradleApiVersionSupportedByPlugin = findMinGradleVersionSupportedByPlugin(failure.candidates);
-        String message = buildPluginNeedsNewerGradleVersionFailureMsg(failure.describeRequestTarget(), minGradleApiVersionSupportedByPlugin);
-        List<String> resolutions = buildResolutions(suggestUpdateGradle(minGradleApiVersionSupportedByPlugin), suggestDowngradePlugin(failure.describeRequestTarget()));
-        return new VariantSelectionByAttributesException(message, failure, resolutions);
+    override fun describeFailure(failure: NoCompatibleVariantsFailure): AbstractResolutionFailureException {
+        val minGradleApiVersionSupportedByPlugin = findMinGradleVersionSupportedByPlugin(failure.candidates)
+        val message = buildPluginNeedsNewerGradleVersionFailureMsg(failure.describeRequestTarget(), minGradleApiVersionSupportedByPlugin)
+        val resolutions = buildResolutions(suggestUpdateGradle(minGradleApiVersionSupportedByPlugin), suggestDowngradePlugin(failure.describeRequestTarget()))
+        return VariantSelectionByAttributesException(message, failure, resolutions)
     }
 
-    private boolean allCandidatesIncompatibleDueToGradleVersionTooLow(NoCompatibleVariantsFailure failure) {
-        boolean requestingPluginApi = failure.getRequestedAttributes().contains(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE);
-        boolean allIncompatibleDueToGradleVersion = failure.candidates.stream()
-            .allMatch(candidate -> candidate.incompatibleAttributes.stream()
-                .anyMatch(this::isGradlePluginApiAttribute));
-        return requestingPluginApi && allIncompatibleDueToGradleVersion;
+    private fun allCandidatesIncompatibleDueToGradleVersionTooLow(failure: NoCompatibleVariantsFailure): Boolean {
+        val requestingPluginApi = failure.getRequestedAttributes().contains(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)
+        val allIncompatibleDueToGradleVersion = failure.candidates.stream()
+            .allMatch { candidate: ResolutionCandidateAssessor.AssessedCandidate? ->
+                candidate.incompatibleAttributes.stream()
+                    .anyMatch({ attribute: ResolutionCandidateAssessor.AssessedAttribute<*> -> this.isGradlePluginApiAttribute(attribute) })
+            }
+        return requestingPluginApi && allIncompatibleDueToGradleVersion
     }
 
-    private GradleVersion findMinGradleVersionSupportedByPlugin(List<AssessedCandidate> candidates) {
+    private fun findMinGradleVersionSupportedByPlugin(candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>): GradleVersion {
         return candidates.stream()
-            .map(this::findMinGradleVersionSupportedByPlugin)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .min(Comparator.comparing(GradleVersion::getVersion))
-            .orElseThrow(IllegalStateException::new);
+            .map<Optional<GradleVersion>> { candidate: ResolutionCandidateAssessor.AssessedCandidate? -> this.findMinGradleVersionSupportedByPlugin(candidate!!) }
+            .filter { obj: Optional<GradleVersion?>? -> obj!!.isPresent() }
+            .map<GradleVersion> { obj: Optional<GradleVersion?>? -> obj!!.get() }
+            .min(Comparator.comparing<GradleVersion, String>(Function { obj: GradleVersion -> obj.getVersion() }))
+            .orElseThrow<java.lang.IllegalStateException>(Supplier { IllegalStateException() })
     }
 
-    private Optional<GradleVersion> findMinGradleVersionSupportedByPlugin(AssessedCandidate candidate) {
+    private fun findMinGradleVersionSupportedByPlugin(candidate: ResolutionCandidateAssessor.AssessedCandidate): Optional<GradleVersion> {
         return candidate.incompatibleAttributes.stream()
-            .filter(this::isGradlePluginApiAttribute)
-            .map(apiVersionAttribute -> GradleVersion.version(String.valueOf(apiVersionAttribute.provided)))
-            .min(Comparator.comparing(GradleVersion::getVersion));
+            .filter({ attribute: ResolutionCandidateAssessor.AssessedAttribute<*> -> this.isGradlePluginApiAttribute(attribute) })
+            .map({ apiVersionAttribute -> GradleVersion.version(String.valueOf(apiVersionAttribute.provided)) })
+            .min(Comparator.comparing<T, U>(Function { obj: T -> obj.getVersion() }))
     }
 
-    private boolean isGradlePluginApiAttribute(AssessedAttribute<?> attribute) {
-        return attribute.attribute.getName().equals(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE.getName());
+    private fun isGradlePluginApiAttribute(attribute: ResolutionCandidateAssessor.AssessedAttribute<*>): Boolean {
+        return attribute.attribute.getName() == GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE.getName()
     }
 
-    private String buildPluginNeedsNewerGradleVersionFailureMsg(String pluginId, GradleVersion minRequiredGradleVersion) {
-        return String.format(GRADLE_VERSION_TOO_OLD_TEMPLATE, pluginId, minRequiredGradleVersion.getVersion(), currentGradleVersion);
+    private fun buildPluginNeedsNewerGradleVersionFailureMsg(pluginId: kotlin.String, minRequiredGradleVersion: GradleVersion): kotlin.String {
+        return kotlin.String.format(GRADLE_VERSION_TOO_OLD_TEMPLATE, pluginId, minRequiredGradleVersion.getVersion(), currentGradleVersion)
     }
 
-    private String suggestUpdateGradle(GradleVersion minRequiredGradleVersion) {
-        return "Upgrade to at least Gradle " + minRequiredGradleVersion.getVersion() + ". See the instructions at " + getDocumentationRegistry().getDocumentationFor("upgrading_version_8", NEEDS_NEWER_GRADLE_SECTION + ".");
+    private fun suggestUpdateGradle(minRequiredGradleVersion: GradleVersion): kotlin.String {
+        return "Upgrade to at least Gradle " + minRequiredGradleVersion.getVersion() + ". See the instructions at " + getDocumentationRegistry()!!.getDocumentationFor(
+            "upgrading_version_8",
+            NEEDS_NEWER_GRADLE_SECTION + "."
+        )
     }
 
-    private String suggestDowngradePlugin(String pluginId) {
-        return "Downgrade plugin " + pluginId + " to an older version compatible with " + currentGradleVersion + ".";
+    private fun suggestDowngradePlugin(pluginId: kotlin.String): kotlin.String {
+        return "Downgrade plugin " + pluginId + " to an older version compatible with " + currentGradleVersion + "."
+    }
+
+    companion object {
+        private const val GRADLE_VERSION_TOO_OLD_TEMPLATE = "Plugin %s requires at least Gradle %s. This build uses %s."
+        private const val NEEDS_NEWER_GRADLE_SECTION = "sub:updating-gradle"
     }
 }

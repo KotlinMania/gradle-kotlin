@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.artifacts.ComponentSelection
+import org.gradle.api.artifacts.ComponentSelectionRules
+import org.gradle.internal.rules.RuleAction
+import org.gradle.internal.rules.SpecRuleAction
 
-import org.gradle.api.artifacts.ComponentSelection;
-import org.gradle.api.artifacts.ComponentSelectionRules;
-import org.gradle.internal.rules.RuleAction;
-import org.gradle.internal.rules.SpecRuleAction;
-
-import java.util.Collection;
-
-public interface ComponentSelectionRulesInternal extends ComponentSelectionRules {
-    Collection<SpecRuleAction<? super ComponentSelection>> getRules();
-    ComponentSelectionRules addRule(SpecRuleAction<? super ComponentSelection> specRuleAction);
-    ComponentSelectionRules addRule(RuleAction<? super ComponentSelection> specRuleAction);
+interface ComponentSelectionRulesInternal : ComponentSelectionRules {
+    val rules: MutableCollection<SpecRuleAction<in ComponentSelection?>?>?
+    fun addRule(specRuleAction: SpecRuleAction<in ComponentSelection?>?): ComponentSelectionRules?
+    fun addRule(specRuleAction: RuleAction<in ComponentSelection?>?): ComponentSelectionRules?
 }

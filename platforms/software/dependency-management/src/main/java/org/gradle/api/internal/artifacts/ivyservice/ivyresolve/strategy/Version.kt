@@ -13,40 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-import org.gradle.util.internal.VersionNumber;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
 /**
  * A parsed version.
  *
- * This should be synced with {@link VersionNumber} and {@link org.gradle.util.GradleVersion} at some point.
+ * This should be synced with [VersionNumber] and [org.gradle.util.GradleVersion] at some point.
  */
-public interface Version {
+interface Version {
     /**
-     * Returns the original {@link String} representation of the version.
+     * Returns the original [String] representation of the version.
      */
-    String getSource();
+    val source: String?
 
     /**
      * Returns all the parts of this version. e.g. 1.2.3 returns [1,2,3] or 1.2-beta4 returns [1,2,beta,4].
      */
-    String[] getParts();
+    val parts: Array<String?>?
 
     /**
-     * Returns all the numeric parts of this version as {@link Long}, with nulls in non-numeric positions. eg. 1.2.3 returns [1,2,3] or 1.2-beta4 returns [1,2,null,4].
+     * Returns all the numeric parts of this version as [Long], with nulls in non-numeric positions. eg. 1.2.3 returns [1,2,3] or 1.2-beta4 returns [1,2,null,4].
      */
-    Long[] getNumericParts();
+    val numericParts: Array<Long?>?
 
     /**
      * Returns the base version for this version, which removes any qualifiers. Generally this is the first '.' separated parts of this version.
      * e.g. 1.2.3-beta-4 returns 1.2.3, or 7.0.12beta5 returns 7.0.12.
      */
-    Version getBaseVersion();
+    val baseVersion: Version?
 
     /**
      * Returns true if this version is qualified in any way. For example, 1.2.3 is not qualified, 1.2-beta-3 is.
      */
-    boolean isQualified();
+    val isQualified: Boolean
 }

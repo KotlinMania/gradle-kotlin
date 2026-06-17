@@ -13,294 +13,236 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.cache.ArtifactResolutionControl;
-import org.gradle.api.internal.artifacts.cache.DependencyResolutionControl;
-import org.gradle.api.internal.artifacts.cache.ModuleResolutionControl;
-import org.gradle.api.internal.artifacts.cache.ResolutionControl;
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-
-import java.io.File;
-import java.time.Duration;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.cache.ArtifactResolutionControl
+import org.gradle.api.internal.artifacts.cache.DependencyResolutionControl
+import org.gradle.api.internal.artifacts.cache.ModuleResolutionControl
+import org.gradle.api.internal.artifacts.cache.ResolutionControl
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import java.io.File
+import java.time.Duration
+import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 /**
- * Default implementation of {@link CacheExpirationControl}.
+ * Default implementation of [CacheExpirationControl].
  */
-public class DefaultCacheExpirationControl implements CacheExpirationControl {
-
-    private final ImmutableList<Action<? super DependencyResolutionControl>> dependencyCacheRules;
-    private final ImmutableList<Action<? super ModuleResolutionControl>> moduleCacheRules;
-    private final ImmutableList<Action<? super ArtifactResolutionControl>> artifactCacheRules;
-    private final long keepDynamicVersionsFor;
-    private final long keepChangingModulesFor;
-    private final boolean offline;
-    private final boolean refresh;
-
-    public DefaultCacheExpirationControl(
-        ImmutableList<Action<? super DependencyResolutionControl>> dependencyCacheRules,
-        ImmutableList<Action<? super ModuleResolutionControl>> moduleCacheRules,
-        ImmutableList<Action<? super ArtifactResolutionControl>> artifactCacheRules,
-        long keepDynamicVersionsFor,
-        long keepChangingModulesFor,
-        boolean offline,
-        boolean refresh
-    ) {
-        this.dependencyCacheRules = dependencyCacheRules;
-        this.moduleCacheRules = moduleCacheRules;
-        this.artifactCacheRules = artifactCacheRules;
-        this.keepDynamicVersionsFor = keepDynamicVersionsFor;
-        this.keepChangingModulesFor = keepChangingModulesFor;
-        this.offline = offline;
-        this.refresh = refresh;
-    }
-
-    @Override
-    public Expiry versionListExpiry(ModuleIdentifier moduleIdentifier, Set<ModuleVersionIdentifier> moduleVersions, Duration age) {
-        CachedDependencyResolutionControl dependencyResolutionControl = new CachedDependencyResolutionControl(moduleIdentifier, moduleVersions, age.toMillis(), keepDynamicVersionsFor);
+class DefaultCacheExpirationControl(
+    private val dependencyCacheRules: ImmutableList<Action<in DependencyResolutionControl?>>,
+    private val moduleCacheRules: ImmutableList<Action<in ModuleResolutionControl?>>,
+    private val artifactCacheRules: ImmutableList<Action<in ArtifactResolutionControl?>>,
+    private val keepDynamicVersionsFor: Long,
+    private val keepChangingModulesFor: Long,
+    private val offline: Boolean,
+    private val refresh: Boolean
+) : CacheExpirationControl {
+    override fun versionListExpiry(moduleIdentifier: ModuleIdentifier?, moduleVersions: MutableSet<ModuleVersionIdentifier?>?, age: Duration): CacheExpirationControl.Expiry {
+        val dependencyResolutionControl = CachedDependencyResolutionControl(moduleIdentifier, moduleVersions, age.toMillis(), keepDynamicVersionsFor)
 
         if (applyOfflineRule(dependencyResolutionControl) || applyRefreshRule(dependencyResolutionControl)) {
-            return dependencyResolutionControl;
+            return dependencyResolutionControl
         }
 
-        for (Action<? super DependencyResolutionControl> rule : dependencyCacheRules) {
-            rule.execute(dependencyResolutionControl);
+        for (rule in dependencyCacheRules) {
+            rule.execute(dependencyResolutionControl)
             if (dependencyResolutionControl.ruleMatch()) {
-                break;
+                break
             }
         }
 
-        return dependencyResolutionControl;
+        return dependencyResolutionControl
     }
 
-    @Override
-    public Expiry missingModuleExpiry(ModuleComponentIdentifier component, Duration age) {
-        return mustRefreshModule(component, null, age, false);
+    override fun missingModuleExpiry(component: ModuleComponentIdentifier, age: Duration?): CacheExpirationControl.Expiry? {
+        return mustRefreshModule(component, null, age, false)
     }
 
-    @Override
-    public Expiry moduleExpiry(ModuleComponentIdentifier component, ResolvedModuleVersion resolvedModuleVersion, Duration age) {
-        return mustRefreshModule(component, resolvedModuleVersion, age, false);
+    override fun moduleExpiry(component: ModuleComponentIdentifier, resolvedModuleVersion: ResolvedModuleVersion?, age: Duration?): CacheExpirationControl.Expiry? {
+        return mustRefreshModule(component, resolvedModuleVersion, age, false)
     }
 
-    @Override
-    public Expiry moduleExpiry(ResolvedModuleVersion resolvedModuleVersion, Duration age, boolean changing) {
-        return mustRefreshModule(resolvedModuleVersion.getId(), resolvedModuleVersion, age, changing);
+    override fun moduleExpiry(resolvedModuleVersion: ResolvedModuleVersion, age: Duration, changing: Boolean): CacheExpirationControl.Expiry {
+        return mustRefreshModule(resolvedModuleVersion.getId(), resolvedModuleVersion, age, changing)
     }
 
-    @Override
-    public Expiry moduleArtifactsExpiry(
-        ModuleVersionIdentifier moduleVersionId, Set<ModuleComponentArtifactMetadata> artifacts,
-        Duration age, boolean belongsToChangingModule, boolean moduleDescriptorInSync
-    ) {
-        CachedModuleResolutionControl resolutionControl = mustRefreshModule(moduleVersionId, new DefaultResolvedModuleVersion(moduleVersionId), age, belongsToChangingModule);
+    override fun moduleArtifactsExpiry(
+        moduleVersionId: ModuleVersionIdentifier?, artifacts: MutableSet<ModuleComponentArtifactMetadata?>?,
+        age: Duration, belongsToChangingModule: Boolean, moduleDescriptorInSync: Boolean
+    ): CacheExpirationControl.Expiry {
+        val resolutionControl = mustRefreshModule(moduleVersionId, DefaultResolvedModuleVersion(moduleVersionId), age, belongsToChangingModule)
         if (belongsToChangingModule && !moduleDescriptorInSync) {
-            resolutionControl.refresh();
+            resolutionControl.refresh()
         }
-        return resolutionControl;
+        return resolutionControl
     }
 
-    @Override
-    public Expiry artifactExpiry(ModuleComponentArtifactMetadata artifactMetadata, File cachedArtifactFile, Duration age, boolean belongsToChangingModule, boolean moduleDescriptorInSync) {
-        CachedArtifactResolutionControl artifactResolutionControl = new CachedArtifactResolutionControl(artifactMetadata, cachedArtifactFile, age.toMillis(), keepChangingModulesFor, belongsToChangingModule);
+    override fun artifactExpiry(
+        artifactMetadata: ModuleComponentArtifactMetadata?,
+        cachedArtifactFile: File?,
+        age: Duration,
+        belongsToChangingModule: Boolean,
+        moduleDescriptorInSync: Boolean
+    ): CacheExpirationControl.Expiry {
+        val artifactResolutionControl = CachedArtifactResolutionControl(artifactMetadata, cachedArtifactFile, age.toMillis(), keepChangingModulesFor, belongsToChangingModule)
 
         if (applyOfflineRule(artifactResolutionControl) || applyRefreshRule(artifactResolutionControl)) {
-            return artifactResolutionControl;
+            return artifactResolutionControl
         }
 
-        for (Action<? super ArtifactResolutionControl> rule : artifactCacheRules) {
-            rule.execute(artifactResolutionControl);
+        for (rule in artifactCacheRules) {
+            rule.execute(artifactResolutionControl)
             if (artifactResolutionControl.ruleMatch()) {
-                break;
+                break
             }
         }
 
         if (belongsToChangingModule && !moduleDescriptorInSync) {
-            artifactResolutionControl.refresh();
+            artifactResolutionControl.refresh()
         }
 
-        return artifactResolutionControl;
+        return artifactResolutionControl
     }
 
-    @Override
-    public Expiry changingModuleExpiry(ModuleComponentIdentifier component, ResolvedModuleVersion resolvedModuleVersion, Duration age) {
-        return mustRefreshModule(component, resolvedModuleVersion, age, true);
+    override fun changingModuleExpiry(component: ModuleComponentIdentifier, resolvedModuleVersion: ResolvedModuleVersion?, age: Duration?): CacheExpirationControl.Expiry? {
+        return mustRefreshModule(component, resolvedModuleVersion, age, true)
     }
 
-    private Expiry mustRefreshModule(ModuleComponentIdentifier component, ResolvedModuleVersion version, Duration age, boolean changingModule) {
-        return mustRefreshModule(DefaultModuleVersionIdentifier.newId(component.getModuleIdentifier(), component.getVersion()), version, age, changingModule);
+    private fun mustRefreshModule(component: ModuleComponentIdentifier, version: ResolvedModuleVersion?, age: Duration?, changingModule: Boolean): CacheExpirationControl.Expiry? {
+        return mustRefreshModule(DefaultModuleVersionIdentifier.newId(component.getModuleIdentifier(), component.getVersion()), version, age!!, changingModule)
     }
 
-    private CachedModuleResolutionControl mustRefreshModule(ModuleVersionIdentifier moduleVersionId, ResolvedModuleVersion version, Duration age, boolean changingModule) {
-        CachedModuleResolutionControl moduleResolutionControl = new CachedModuleResolutionControl(moduleVersionId, version, changingModule, age.toMillis(), changingModule ? keepChangingModulesFor: Long.MAX_VALUE);
+    private fun mustRefreshModule(moduleVersionId: ModuleVersionIdentifier?, version: ResolvedModuleVersion?, age: Duration, changingModule: Boolean): CachedModuleResolutionControl {
+        val moduleResolutionControl = CachedModuleResolutionControl(moduleVersionId, version, changingModule, age.toMillis(), if (changingModule) keepChangingModulesFor else Long.MAX_VALUE)
 
         if (applyOfflineRule(moduleResolutionControl) || applyRefreshRule(moduleResolutionControl)) {
-            return moduleResolutionControl;
+            return moduleResolutionControl
         }
 
-        for (Action<? super ModuleResolutionControl> rule : moduleCacheRules) {
-            rule.execute(moduleResolutionControl);
+        for (rule in moduleCacheRules) {
+            rule.execute(moduleResolutionControl)
             if (moduleResolutionControl.ruleMatch()) {
-                break;
+                break
             }
         }
 
-        return moduleResolutionControl;
+        return moduleResolutionControl
     }
 
     /**
      * @param resolutionControl The resolution control to mutate
      * @return If the offline rule was applied
      */
-    private boolean applyOfflineRule(ResolutionControl<?, ?> resolutionControl) {
+    private fun applyOfflineRule(resolutionControl: ResolutionControl<*, *>): Boolean {
         if (offline) {
-            resolutionControl.useCachedResult();
-            return true;
+            resolutionControl.useCachedResult()
+            return true
         }
-        return false;
+        return false
     }
 
     /**
      * @param resolutionControl The resolution control to mutate
      * @return If the refresh rule was applied
      */
-    private boolean applyRefreshRule(ResolutionControl<?, ?> resolutionControl) {
+    private fun applyRefreshRule(resolutionControl: ResolutionControl<*, *>): Boolean {
         if (refresh) {
-            resolutionControl.refresh();
-            return true;
+            resolutionControl.refresh()
+            return true
         }
-        return false;
+        return false
     }
 
-    private static abstract class AbstractResolutionControl<A, B> implements ResolutionControl<A, B>, Expiry {
+    private abstract class AbstractResolutionControl<A, B>(private val request: A?, private val cachedResult: B?, ageMillis: Long, private var keepForMillis: Long) : ResolutionControl<A?, B?>,
+        CacheExpirationControl.Expiry {
+        private val ageMillis: Long
+        private var ruleMatch = false
+        private var mustCheck = false
 
-        private final A request;
-        private final B cachedResult;
-        private final long ageMillis;
-        private long keepForMillis;
-        private boolean ruleMatch;
-        private boolean mustCheck;
-
-        private AbstractResolutionControl(A request, B cachedResult, long ageMillis, long keepForMillis) {
-            this.request = request;
-            this.cachedResult = cachedResult;
-            this.ageMillis = correctForClockShift(ageMillis);
-            this.keepForMillis = keepForMillis;
+        init {
+            this.ageMillis = correctForClockShift(ageMillis)
         }
 
-        /**
-         * If the age is less than 0, then it's probable that we've had a clock shift. In this case, treat the age as 1ms.
-         */
-        private static long correctForClockShift(long ageMillis) {
-            if (ageMillis < 0) {
-                return 1;
-            }
-            return ageMillis;
+        override fun getRequest(): A? {
+            return request
         }
 
-        @Override
-        public A getRequest() {
-            return request;
+        override fun getCachedResult(): B? {
+            return cachedResult
         }
 
-        @Override
-        public B getCachedResult() {
-            return cachedResult;
+        override fun cacheFor(value: Int, units: TimeUnit) {
+            keepForMillis = TimeUnit.MILLISECONDS.convert(value.toLong(), units)
+            setMustCheck(ageMillis > keepForMillis)
         }
 
-        @Override
-        public void cacheFor(int value, TimeUnit units) {
-            keepForMillis = TimeUnit.MILLISECONDS.convert(value, units);
-            setMustCheck(ageMillis > keepForMillis);
+        override fun useCachedResult() {
+            setMustCheck(false)
         }
 
-        @Override
-        public void useCachedResult() {
-            setMustCheck(false);
+        override fun refresh() {
+            setMustCheck(true)
         }
 
-        @Override
-        public void refresh() {
-            setMustCheck(true);
+        fun setMustCheck(`val`: Boolean) {
+            ruleMatch = true
+            mustCheck = `val`
         }
 
-        private void setMustCheck(boolean val) {
-            ruleMatch = true;
-            mustCheck = val;
+        fun ruleMatch(): Boolean {
+            return ruleMatch
         }
 
-        public boolean ruleMatch() {
-            return ruleMatch;
-        }
-
-        @Override
-        public Duration getKeepFor() {
+        override fun getKeepFor(): Duration? {
             if (mustCheck && ageMillis > 0) {
                 // Must check and was not cached in this build, so do not keep the value
-                return Duration.ZERO;
+                return Duration.ZERO
             }
             if (keepForMillis == Long.MAX_VALUE) {
-                return Duration.ofMillis(Long.MAX_VALUE);
+                return Duration.ofMillis(Long.MAX_VALUE)
             }
-            return Duration.ofMillis(Math.max(0, keepForMillis - ageMillis));
+            return Duration.ofMillis(max(0, keepForMillis - ageMillis))
         }
 
-        @Override
-        public boolean isMustCheck() {
-            return mustCheck && ageMillis > 0;
+        override fun isMustCheck(): Boolean {
+            return mustCheck && ageMillis > 0
         }
 
+        companion object {
+            /**
+             * If the age is less than 0, then it's probable that we've had a clock shift. In this case, treat the age as 1ms.
+             */
+            private fun correctForClockShift(ageMillis: Long): Long {
+                if (ageMillis < 0) {
+                    return 1
+                }
+                return ageMillis
+            }
+        }
     }
 
-    private static class CachedModuleResolutionControl extends AbstractResolutionControl<ModuleVersionIdentifier, ResolvedModuleVersion> implements ModuleResolutionControl {
-
-        private final boolean changing;
-
-        private CachedModuleResolutionControl(ModuleVersionIdentifier moduleVersionId, ResolvedModuleVersion cachedVersion, boolean changing, long ageMillis, long keepForMillis) {
-            super(moduleVersionId, cachedVersion, ageMillis, keepForMillis);
-            this.changing = changing;
+    private class CachedModuleResolutionControl(moduleVersionId: ModuleVersionIdentifier?, cachedVersion: ResolvedModuleVersion?, private val changing: Boolean, ageMillis: Long, keepForMillis: Long) :
+        AbstractResolutionControl<ModuleVersionIdentifier?, ResolvedModuleVersion?>(moduleVersionId, cachedVersion, ageMillis, keepForMillis), ModuleResolutionControl {
+        override fun isChanging(): Boolean {
+            return changing
         }
-
-        @Override
-        public boolean isChanging() {
-            return changing;
-        }
-
     }
 
-    private static class CachedArtifactResolutionControl extends AbstractResolutionControl<ModuleComponentArtifactMetadata, File> implements ArtifactResolutionControl {
-
-        private final boolean belongsToChangingModule;
-
-        private CachedArtifactResolutionControl(ModuleComponentArtifactMetadata artifact, File cachedResult, long ageMillis, long keepForMillis, boolean belongsToChangingModule) {
-            super(artifact, cachedResult, ageMillis, keepForMillis);
-            this.belongsToChangingModule = belongsToChangingModule;
+    private class CachedArtifactResolutionControl(artifact: ModuleComponentArtifactMetadata?, cachedResult: File?, ageMillis: Long, keepForMillis: Long, private val belongsToChangingModule: Boolean) :
+        AbstractResolutionControl<ModuleComponentArtifactMetadata?, File?>(artifact, cachedResult, ageMillis, keepForMillis), ArtifactResolutionControl {
+        override fun belongsToChangingModule(): Boolean {
+            return belongsToChangingModule
         }
-
-        @Override
-        public boolean belongsToChangingModule() {
-            return belongsToChangingModule;
-        }
-
     }
 
-    private static class CachedDependencyResolutionControl extends AbstractResolutionControl<ModuleIdentifier, Set<ModuleVersionIdentifier>> implements DependencyResolutionControl {
-
-        private CachedDependencyResolutionControl(ModuleIdentifier request, Set<ModuleVersionIdentifier> result, long ageMillis, long keepForMillis) {
-            super(request, result, ageMillis, keepForMillis);
-        }
-
-    }
-
+    private class CachedDependencyResolutionControl(request: ModuleIdentifier?, result: MutableSet<ModuleVersionIdentifier?>?, ageMillis: Long, keepForMillis: Long) :
+        AbstractResolutionControl<ModuleIdentifier?, MutableSet<ModuleVersionIdentifier?>?>(request, result, ageMillis, keepForMillis), DependencyResolutionControl
 }

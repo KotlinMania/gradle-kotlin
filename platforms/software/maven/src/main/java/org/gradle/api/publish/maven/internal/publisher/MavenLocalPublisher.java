@@ -53,9 +53,9 @@ public class MavenLocalPublisher extends AbstractMavenPublisher {
     public void publish(MavenNormalizedPublication publication, @Nullable MavenArtifactRepository artifactRepository) {
         LOGGER.info("Publishing to maven local repository");
 
-        URI rootUri = mavenRepositoryLocator.getLocalMavenRepository().toURI();
+        URI rootUri = mavenRepositoryLocator.localMavenRepository.toURI();
         RepositoryTransport transport = repositoryTransportFactory.createFileTransport("mavenLocal");
-        ExternalResourceRepository repository = transport.getRepository();
+        ExternalResourceRepository repository = transport.repository;
 
         publish(publication, repository, rootUri, true);
     }

@@ -13,71 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.internal.artifacts.ResolveArtifactsBuildOperationType;
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DependencyVerificationOverride;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.work.WorkerLeaseService;
-
-import javax.inject.Inject;
+import org.gradle.api.internal.artifacts.ResolveArtifactsBuildOperationType
+import org.gradle.api.internal.artifacts.configurations.ResolutionHost
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DependencyVerificationOverride
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.work.WorkerLeaseService
+import javax.inject.Inject
 
 /**
- * Resolves a {@link ResolvedArtifactSet} in a build operation, visiting the results.
+ * Resolves a [ResolvedArtifactSet] in a build operation, visiting the results.
  */
-@ServiceScope(Scope.Build.class)
-public class ResolvedArtifactSetResolver {
-
-    private final WorkerLeaseService workerLeaseService;
-    private final BuildOperationRunner buildOperationRunner;
-    private final BuildOperationExecutor buildOperationExecutor;
-    private final DependencyVerificationOverride dependencyVerificationOverride;
-
-    @Inject
-    public ResolvedArtifactSetResolver(
-        WorkerLeaseService workerLeaseService,
-        BuildOperationRunner buildOperationRunner,
-        BuildOperationExecutor buildOperationExecutor,
-        DependencyVerificationOverride dependencyVerificationOverride
-    ) {
-        this.workerLeaseService = workerLeaseService;
-        this.buildOperationRunner = buildOperationRunner;
-        this.buildOperationExecutor = buildOperationExecutor;
-        this.dependencyVerificationOverride = dependencyVerificationOverride;
-    }
-
-    public void visitInUnmanagedWorkerThread(ResolvedArtifactSet artifacts, ArtifactVisitor visitor, ResolutionHost resolutionHost) {
+@ServiceScope(Scope.Build::class)
+class ResolvedArtifactSetResolver @Inject constructor(
+    private val workerLeaseService: WorkerLeaseService,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val buildOperationExecutor: BuildOperationExecutor,
+    private val dependencyVerificationOverride: DependencyVerificationOverride
+) {
+    fun visitInUnmanagedWorkerThread(artifacts: ResolvedArtifactSet, visitor: ArtifactVisitor, resolutionHost: ResolutionHost) {
         // This may be called from an unmanaged thread, so temporarily enlist the current thread
         // as a worker if it is not already so that it can visit the results. It would be better
         // to instead to memoize the results on the first visit so that this is not required.
-        workerLeaseService.runAsUnmanagedWorkerThread(() -> visitArtifacts(artifacts, visitor, resolutionHost));
+        workerLeaseService.runAsUnmanagedWorkerThread(Runnable { visitArtifacts(artifacts, visitor, resolutionHost) })
     }
 
-    public void visitArtifacts(ResolvedArtifactSet artifacts, ArtifactVisitor visitor, ResolutionHost resolutionHost) {
-        buildOperationRunner.run(new RunnableBuildOperation() {
-            @Override
-            public void run(BuildOperationContext context) {
-                ParallelResolveArtifactSet.wrap(artifacts, buildOperationExecutor).visit(visitor);
-                dependencyVerificationOverride.artifactsAccessed(resolutionHost.getDisplayName());
-                context.setResult(new ResolveArtifactsBuildOperationType.Result() {});
+    fun visitArtifacts(artifacts: ResolvedArtifactSet, visitor: ArtifactVisitor, resolutionHost: ResolutionHost) {
+        buildOperationRunner.run(object : RunnableBuildOperation {
+            override fun run(context: BuildOperationContext) {
+                ParallelResolveArtifactSet.Companion.wrap(artifacts, buildOperationExecutor).visit(visitor)
+                dependencyVerificationOverride.artifactsAccessed(resolutionHost.getDisplayName())
+                context.setResult(object : ResolveArtifactsBuildOperationType.Result {})
             }
 
-            @Override
-            public BuildOperationDescriptor.Builder description() {
-                String displayName = "Resolve files of " + resolutionHost.getDisplayName();
+            override fun description(): BuildOperationDescriptor.Builder {
+                val displayName = "Resolve files of " + resolutionHost.getDisplayName()
                 return BuildOperationDescriptor
                     .displayName(displayName)
                     .progressDisplayName(displayName)
-                    .details(new ResolveArtifactsBuildOperationType.Details() {});
+                    .details(object : ResolveArtifactsBuildOperationType.Details {})
             }
-        });
+        })
     }
 }

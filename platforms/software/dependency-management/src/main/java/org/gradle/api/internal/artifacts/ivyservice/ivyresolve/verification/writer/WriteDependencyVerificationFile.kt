@@ -13,645 +13,661 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import org.bouncycastle.bcpg.ArmoredOutputStream;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ArtifactView;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.GradleInternal;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.DependencyVerifyingModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DefaultKeyServers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DependencyVerificationOverride;
-import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException;
-import org.gradle.api.internal.artifacts.verification.model.ChecksumKind;
-import org.gradle.api.internal.artifacts.verification.model.IgnoredKey;
-import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlReader;
-import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlWriter;
-import org.gradle.api.internal.artifacts.verification.signatures.BuildTreeDefinedKeys;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationServiceFactory;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifierBuilder;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.Factory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.deprecation.DeprecatableConfiguration;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.security.internal.Fingerprint;
-import org.gradle.security.internal.PGPUtils;
-import org.gradle.security.internal.PublicKeyResultBuilder;
-import org.gradle.security.internal.PublicKeyService;
-import org.gradle.security.internal.SecuritySupport;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Sets
+import com.google.common.io.Files
+import org.bouncycastle.bcpg.ArmoredOutputStream
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.GradleInternal
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.DependencyVerifyingModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DefaultKeyServers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.DependencyVerificationOverride
+import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException
+import org.gradle.api.internal.artifacts.verification.model.ChecksumKind
+import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.IgnoredKey
+import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlReader.readFromXml
+import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlWriter.Companion.serialize
+import org.gradle.api.internal.artifacts.verification.signatures.BuildTreeDefinedKeys
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationServiceFactory
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifierBuilder
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectState
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.Factory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.deprecation.DeprecatableConfiguration
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.security.internal.Fingerprint.Companion.fromString
+import org.gradle.security.internal.PGPUtils.getSize
+import org.gradle.security.internal.PGPUtils.getUserIDs
+import org.gradle.security.internal.PublicKeyResultBuilder
+import org.gradle.security.internal.PublicKeyService
+import org.gradle.security.internal.SecuritySupport.loadKeyRingFile
+import org.gradle.security.internal.SecuritySupport.toLongIdHexString
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.lang.String
+import java.math.BigInteger
+import java.nio.charset.StandardCharsets
+import java.util.SortedMap
+import java.util.TreeMap
+import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Consumer
+import java.util.stream.Stream
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Exception
+import kotlin.IllegalArgumentException
+import kotlin.Long
+import kotlin.Throws
+import kotlin.code
+import kotlin.collections.HashSet
+import kotlin.collections.MutableCollection
+import kotlin.collections.MutableList
+import kotlin.collections.MutableSet
+import kotlin.collections.contains
+import kotlin.collections.map
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableSetOf
+import kotlin.map
+import kotlin.sequences.map
+import kotlin.synchronized
+import kotlin.text.StringBuilder
+import kotlin.text.map
+import kotlin.text.toByteArray
+import kotlin.text.uppercase
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
+class WriteDependencyVerificationFile(
+    private val verificationFile: File,
+    private val buildOperationExecutor: BuildOperationExecutor,
+    private val checksums: MutableList<String>,
+    private val checksumService: ChecksumService,
+    private val signatureVerificationServiceFactory: SignatureVerificationServiceFactory,
+    private val isDryRun: Boolean,
+    private val isExportKeyring: Boolean
+) : DependencyVerificationOverride, ArtifactVerificationOperation {
+    private val verificationsBuilder = DependencyVerifierBuilder()
+    private val entriesToBeWritten: MutableSet<VerificationEntry> = Sets.newLinkedHashSetWithExpectedSize<VerificationEntry>(512)
+    private val generatePgpInfo: Boolean
 
-import static com.google.common.io.Files.getFileExtension;
-import static com.google.common.io.Files.getNameWithoutExtension;
+    private var hasMissingSignatures = false
+    private var hasMissingKeys = false
+    private var hasFailedVerification = false
 
-public class WriteDependencyVerificationFile implements DependencyVerificationOverride, ArtifactVerificationOperation {
-    private static final Logger LOGGER = Logging.getLogger(WriteDependencyVerificationFile.class);
-    private static final Action<ArtifactView.ViewConfiguration> MODULE_COMPONENT_FILES = conf -> {
-        conf.componentFilter(id -> id instanceof ModuleComponentIdentifier);
-        conf.setLenient(true);
-    };
-    private static final String PGP = "pgp";
-    private static final String MD5 = "md5";
-    private static final String SHA1 = "sha1";
-    private static final String SHA256 = "sha256";
-    private static final String SHA512 = "sha512";
-    private static final Set<String> SUPPORTED_CHECKSUMS = ImmutableSet.of(MD5, SHA1, SHA256, SHA512, PGP);
-    private static final Set<String> SECURE_CHECKSUMS = ImmutableSet.of(SHA256, SHA512, PGP);
-    private static final String PGP_VERIFICATION_FAILED = "PGP verification failed";
-    private static final String KEY_NOT_DOWNLOADED = "Key couldn't be downloaded from any key server";
-
-    private final DependencyVerifierBuilder verificationsBuilder = new DependencyVerifierBuilder();
-    private final BuildOperationExecutor buildOperationExecutor;
-    private final List<String> checksums;
-    private final Set<VerificationEntry> entriesToBeWritten = Sets.newLinkedHashSetWithExpectedSize(512);
-    private final ChecksumService checksumService;
-    private final File verificationFile;
-    private final SignatureVerificationServiceFactory signatureVerificationServiceFactory;
-    private final boolean isDryRun;
-    private final boolean generatePgpInfo;
-    private final boolean isExportKeyring;
-
-    private boolean hasMissingSignatures = false;
-    private boolean hasMissingKeys = false;
-    private boolean hasFailedVerification = false;
-
-    public WriteDependencyVerificationFile(
-        File verificationFile,
-        BuildOperationExecutor buildOperationExecutor,
-        List<String> checksums,
-        ChecksumService checksumService,
-        SignatureVerificationServiceFactory signatureVerificationServiceFactory,
-        boolean isDryRun,
-        boolean exportKeyRing
-    ) {
-        this.buildOperationExecutor = buildOperationExecutor;
-        this.checksums = checksums;
-        this.checksumService = checksumService;
-        this.verificationFile = verificationFile;
-        this.signatureVerificationServiceFactory = signatureVerificationServiceFactory;
-        this.isDryRun = isDryRun;
-        this.generatePgpInfo = checksums.contains(PGP);
-        this.isExportKeyring = exportKeyRing;
-        maybeCleanupDryRunFiles();
+    init {
+        this.generatePgpInfo = checksums.contains(PGP)
+        maybeCleanupDryRunFiles()
     }
 
-    private boolean isWriteVerificationFile() {
-        return !checksums.isEmpty();
-    }
+    private val isWriteVerificationFile: Boolean
+        get() = !checksums.isEmpty()
 
-    private void validateChecksums() {
-        if (isWriteVerificationFile()) {
-            assertSupportedChecksums();
-            warnAboutInsecureChecksums();
+    private fun validateChecksums() {
+        if (this.isWriteVerificationFile) {
+            assertSupportedChecksums()
+            warnAboutInsecureChecksums()
         }
     }
 
-    private void assertSupportedChecksums() {
-        for (String checksum : checksums) {
+    private fun assertSupportedChecksums() {
+        for (checksum in checksums) {
             if (!SUPPORTED_CHECKSUMS.contains(checksum)) {
                 // we cannot throw an exception at this stage because this happens too early
                 // in the build and the user feedback isn't great ("cannot create service blah!")
-                LOGGER.warn("Invalid checksum type: '" + checksum + "'. You must choose one or more in " + SUPPORTED_CHECKSUMS);
+                LOGGER.warn("Invalid checksum type: '" + checksum + "'. You must choose one or more in " + SUPPORTED_CHECKSUMS)
             }
         }
-        assertPgpHasChecksumFallback(checksums);
+        assertPgpHasChecksumFallback(checksums)
     }
 
-    private void assertPgpHasChecksumFallback(List<String> kinds) {
-        if (kinds.size() == 1 && PGP.equals(kinds.get(0))) {
-            throw new DependencyVerificationException("Generating a file with signature verification requires at least one checksum type (sha256 or sha512) as fallback.");
+    private fun assertPgpHasChecksumFallback(kinds: MutableList<String>) {
+        if (kinds.size == 1 && PGP == kinds.get(0)) {
+            throw DependencyVerificationException("Generating a file with signature verification requires at least one checksum type (sha256 or sha512) as fallback.")
         }
     }
 
-    private void warnAboutInsecureChecksums() {
-        if (checksums.stream().noneMatch(SECURE_CHECKSUMS::contains)) {
-            LOGGER.warn("You chose to generate " + String.join(" and ", checksums) + " checksums but they are all considered insecure. You should consider adding at least one of " + String.join(" or ", SECURE_CHECKSUMS) + ".");
+    private fun warnAboutInsecureChecksums() {
+        if (checksums.stream().noneMatch { o: String? -> SECURE_CHECKSUMS.contains(o) }) {
+            LOGGER.warn(
+                "You chose to generate " + String.join(
+                    " and ",
+                    checksums
+                ) + " checksums but they are all considered insecure. You should consider adding at least one of " + String.join(" or ", SECURE_CHECKSUMS) + "."
+            )
         }
     }
 
-    @Override
-    public ModuleComponentRepository<ExternalModuleComponentGraphResolveState> overrideDependencyVerification(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> original) {
-        return new DependencyVerifyingModuleComponentRepository(original, this, generatePgpInfo);
+    override fun overrideDependencyVerification(original: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>): ModuleComponentRepository<ExternalModuleComponentGraphResolveState?> {
+        return DependencyVerifyingModuleComponentRepository(original, this, generatePgpInfo)
     }
 
-    private void maybeCleanupDryRunFiles() {
+    private fun maybeCleanupDryRunFiles() {
         if (isDryRun) {
-            boolean removed = false;
-            removed |= mayBeDryRunFile(verificationFile).delete() || removed;
+            var removed = false
+            removed = removed or (mayBeDryRunFile(verificationFile).delete() || removed)
             if (isExportKeyring) {
-                BuildTreeDefinedKeys existingKeyring = new BuildTreeDefinedKeys(verificationFile.getParentFile(), verificationsBuilder.getKeyringFormat());
-                removed |= mayBeDryRunFile(existingKeyring.getAsciiKeyringsFile()).delete();
-                removed |= mayBeDryRunFile(existingKeyring.getBinaryKeyringsFile()).delete();
+                val existingKeyring = BuildTreeDefinedKeys(verificationFile.getParentFile(), verificationsBuilder.keyringFormat)
+                removed = removed or mayBeDryRunFile(existingKeyring.asciiKeyringsFile).delete()
+                removed = removed or mayBeDryRunFile(existingKeyring.binaryKeyringsFile).delete()
             }
             if (removed) {
-                LOGGER.lifecycle("Removed dry-run verification files from the previous run");
+                LOGGER.lifecycle("Removed dry-run verification files from the previous run")
             }
         }
     }
 
-    @Override
-    public void buildFinished(GradleInternal gradle) {
-        ensureOutputDirCreated();
-        maybeReadExistingFile();
+    override fun buildFinished(gradle: GradleInternal) {
+        ensureOutputDirCreated()
+        maybeReadExistingFile()
         // when we generate the verification file, we intentionally ignore if the "use key servers" flag is false
         // because otherwise it forces the user to remove the option in the XML file, generate, then switch it back.
-        boolean offline = gradle.getStartParameter().isOffline();
-        BuildTreeDefinedKeys existingKeyring = new BuildTreeDefinedKeys(verificationFile.getParentFile(), verificationsBuilder.getKeyringFormat());
-        SignatureVerificationService signatureVerificationService = signatureVerificationServiceFactory.create(
+        val offline = gradle.getStartParameter().isOffline()
+        val existingKeyring = BuildTreeDefinedKeys(verificationFile.getParentFile(), verificationsBuilder.keyringFormat)
+        val signatureVerificationService = signatureVerificationServiceFactory.create(
             existingKeyring,
-            DefaultKeyServers.getOrDefaults(verificationsBuilder.getKeyServers()),
+            DefaultKeyServers.getOrDefaults(verificationsBuilder.keyServers),
             !offline
-        );
-        if (!verificationsBuilder.isUseKeyServers() && !offline) {
-            LOGGER.lifecycle("Will use key servers to download missing keys. If you really want to ignore key servers when generating the verification file, you can use the --offline flag in addition");
+        )
+        if (!verificationsBuilder.isUseKeyServers && !offline) {
+            LOGGER.lifecycle("Will use key servers to download missing keys. If you really want to ignore key servers when generating the verification file, you can use the --offline flag in addition")
         }
         try {
-            validateChecksums();
-            resolveAllConfigurationsConcurrently(gradle);
-            computeChecksumsConcurrently(signatureVerificationService);
-            writeEntriesSerially();
-            serializeResult(signatureVerificationService, existingKeyring);
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            validateChecksums()
+            resolveAllConfigurationsConcurrently(gradle)
+            computeChecksumsConcurrently(signatureVerificationService!!)
+            writeEntriesSerially()
+            serializeResult(signatureVerificationService, existingKeyring)
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         } finally {
-            signatureVerificationService.stop();
+            signatureVerificationService!!.stop()
         }
     }
 
-    public boolean ensureOutputDirCreated() {
-        return verificationFile.getParentFile().mkdirs();
+    fun ensureOutputDirCreated(): Boolean {
+        return verificationFile.getParentFile().mkdirs()
     }
 
-    private void serializeResult(SignatureVerificationService signatureVerificationService, BuildTreeDefinedKeys existingKeyring) throws IOException {
-        File out = mayBeDryRunFile(verificationFile);
+    @Throws(IOException::class)
+    private fun serializeResult(signatureVerificationService: SignatureVerificationService, existingKeyring: BuildTreeDefinedKeys) {
+        val out = mayBeDryRunFile(verificationFile)
         if (generatePgpInfo) {
-            verificationsBuilder.setVerifySignatures(true);
+            verificationsBuilder.isVerifySignatures = true
         }
-        DependencyVerifier verifier = verificationsBuilder.build();
-        if (isWriteVerificationFile()) {
-            DependencyVerificationsXmlWriter.serialize(
+        val verifier = verificationsBuilder.build()
+        if (this.isWriteVerificationFile) {
+            serialize(
                 verifier,
-                new FileOutputStream(out)
-            );
+                FileOutputStream(out)
+            )
         }
         if (isExportKeyring) {
-            exportKeys(signatureVerificationService, verifier, existingKeyring);
+            exportKeys(signatureVerificationService, verifier, existingKeyring)
         }
     }
 
-    private File mayBeDryRunFile(File originalFile) {
+    private fun mayBeDryRunFile(originalFile: File): File {
         if (!isDryRun) {
-            return originalFile;
+            return originalFile
         } else {
-            return new File(originalFile.getParent(), getNameWithoutExtension(originalFile.getName()) + ".dryrun." + getFileExtension(originalFile.getName()));
+            return File(originalFile.getParent(), Files.getNameWithoutExtension(originalFile.getName()) + ".dryrun." + Files.getFileExtension(originalFile.getName()))
         }
     }
 
-    private void exportKeys(SignatureVerificationService signatureVerificationService, DependencyVerifier verifier, BuildTreeDefinedKeys existingKeyring) throws IOException {
-        Set<String> keysToExport = new HashSet<>();
-        verifier.getConfiguration()
-            .getTrustedKeys()
+    @Throws(IOException::class)
+    private fun exportKeys(signatureVerificationService: SignatureVerificationService, verifier: DependencyVerifier, existingKeyring: BuildTreeDefinedKeys) {
+        val keysToExport: MutableSet<kotlin.String> = HashSet<kotlin.String>()
+        verifier.configuration
+            .trustedKeys
             .stream()
-            .map(DependencyVerificationConfiguration.TrustedKey::getKeyId)
-            .forEach(keysToExport::add);
-        verifier.getConfiguration()
-            .getIgnoredKeys()
+            .map<kotlin.String>(DependencyVerificationConfiguration.TrustedKey::keyId)
+            .forEach { e: kotlin.String? -> keysToExport.add(e!!) }
+        verifier.configuration
+            .ignoredKeys
             .stream()
-            .map(IgnoredKey::getKeyId)
-            .forEach(keysToExport::add);
+            .map<Any>(IgnoredKey::getKeyId)
+            .forEach { e: Any? -> keysToExport.add(e) }
         verifier.getVerificationMetadata()
             .stream()
-            .flatMap(md -> md.getArtifactVerifications().stream())
-            .flatMap(avm -> Stream.concat(avm.getTrustedPgpKeys().stream(), avm.getIgnoredPgpKeys().stream().map(IgnoredKey::getKeyId)))
-            .forEach(keysToExport::add);
+            .flatMap<Any> { md: ComponentVerificationMetadata? -> md!!.artifactVerifications!!.stream() }
+            .flatMap<Any> { avm: Any? -> Stream.concat<T>(avm.trustedPgpKeys.stream(), avm.ignoredPgpKeys.stream().map(IgnoredKey::getKeyId)) }
+            .forEach { e: Any? -> keysToExport.add(e) }
 
         exportKeyRingCollection(
-            signatureVerificationService.getPublicKeyService(),
+            signatureVerificationService.publicKeyService,
             existingKeyring,
             keysToExport,
-            verifier.getConfiguration().getKeyringFormat()
-        );
+            verifier.configuration.keyringFormat
+        )
     }
 
-    private void maybeReadExistingFile() {
+    private fun maybeReadExistingFile() {
         if (isDryRun) {
-            File previous = mayBeDryRunFile(verificationFile);
+            val previous = mayBeDryRunFile(verificationFile)
             if (previous.exists()) {
-                LOGGER.info("Found dependency verification dryrun metadata file, updating");
+                LOGGER.info("Found dependency verification dryrun metadata file, updating")
                 try {
-                    DependencyVerificationsXmlReader.readFromXml(new FileInputStream(previous), verificationsBuilder);
-                } catch (FileNotFoundException e) {
-                    throw UncheckedException.throwAsUncheckedException(e);
+                    readFromXml(FileInputStream(previous), verificationsBuilder)
+                } catch (e: FileNotFoundException) {
+                    throw throwAsUncheckedException(e)
                 }
-                return;
+                return
             }
         }
         if (verificationFile.exists()) {
-            LOGGER.info("Found dependency verification metadata file, updating");
+            LOGGER.info("Found dependency verification metadata file, updating")
             try {
-                DependencyVerificationsXmlReader.readFromXml(new FileInputStream(verificationFile), verificationsBuilder);
-            } catch (FileNotFoundException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+                readFromXml(FileInputStream(verificationFile), verificationsBuilder)
+            } catch (e: FileNotFoundException) {
+                throw throwAsUncheckedException(e)
             }
         }
     }
 
-    private void writeEntriesSerially() {
-        AtomicReference<PgpEntry> previousEntry = new AtomicReference<>();
+    private fun writeEntriesSerially() {
+        val previousEntry = AtomicReference<PgpEntry>()
         entriesToBeWritten.stream()
             .sorted()
-            .filter(this::shouldWriteEntry)
-            .forEachOrdered(e -> registerEntryToBuilder(e, previousEntry));
-        printWarnings();
+            .filter { entry: VerificationEntry? -> this.shouldWriteEntry(entry!!) }
+            .forEachOrdered { e: VerificationEntry? -> registerEntryToBuilder(e!!, previousEntry) }
+        printWarnings()
     }
 
-    private void printWarnings() {
+    private fun printWarnings() {
         if (hasMissingKeys || hasFailedVerification) {
-            StringBuilder sb = new StringBuilder("A verification file was generated but some problems were discovered:\n");
+            val sb = StringBuilder("A verification file was generated but some problems were discovered:\n")
             if (hasMissingSignatures) {
-                sb.append("   - some artifacts aren't signed or the signature couldn't be retrieved.");
-                sb.append("\n");
+                sb.append("   - some artifacts aren't signed or the signature couldn't be retrieved.")
+                sb.append("\n")
             }
             if (hasMissingKeys) {
-                sb.append("   - some keys couldn't be downloaded. They were automatically added as ignored keys but you should review if this is acceptable. Look for entries with the following comment: ");
-                sb.append(KEY_NOT_DOWNLOADED);
-                sb.append("\n");
+                sb.append("   - some keys couldn't be downloaded. They were automatically added as ignored keys but you should review if this is acceptable. Look for entries with the following comment: ")
+                sb.append(KEY_NOT_DOWNLOADED)
+                sb.append("\n")
             }
             if (hasFailedVerification) {
-                sb.append("   - some signature verification failed. Checksums were generated for those artifacts but you MUST check if there's an actual problem. Look for entries with the following comment: ");
-                sb.append(PGP_VERIFICATION_FAILED);
-                sb.append("\n");
+                sb.append("   - some signature verification failed. Checksums were generated for those artifacts but you MUST check if there's an actual problem. Look for entries with the following comment: ")
+                sb.append(PGP_VERIFICATION_FAILED)
+                sb.append("\n")
             }
-            LOGGER.warn(sb.toString());
+            LOGGER.warn(sb.toString())
         }
     }
 
-    private void registerEntryToBuilder(VerificationEntry entry, AtomicReference<PgpEntry> previousEntry) {
+    private fun registerEntryToBuilder(entry: VerificationEntry, previousEntry: AtomicReference<PgpEntry>) {
         // checksums are written _after_ PGP, so if the previous entry was PGP and
         // that it matches the artifact id we don't always need to write the checksum
-        PgpEntry pgpEntry = previousEntry.get();
-        if (pgpEntry != null && !pgpEntry.id.equals(entry.id)) {
+        var pgpEntry = previousEntry.get()
+        if (pgpEntry != null && pgpEntry.id != entry.id) {
             // previous entry was on unrelated module
-            pgpEntry = null;
-            previousEntry.set(null);
+            pgpEntry = null
+            previousEntry.set(null)
         }
-        if (entry instanceof ChecksumEntry) {
-            ChecksumEntry checksum = (ChecksumEntry) entry;
-            if (pgpEntry == null || (entry.id.equals(pgpEntry.id) && pgpEntry.isRequiringChecksums())) {
-                String origin = "Generated by Gradle";
-                String reason = null;
+        if (entry is ChecksumEntry) {
+            val checksum = entry
+            if (pgpEntry == null || (entry.id == pgpEntry.id && pgpEntry.isRequiringChecksums())) {
+                val origin = "Generated by Gradle"
+                var reason: kotlin.String? = null
                 if (pgpEntry != null) {
                     if (pgpEntry.isFailed()) {
-                        hasFailedVerification = true;
-                        reason = "PGP signature verification failed!";
+                        hasFailedVerification = true
+                        reason = "PGP signature verification failed!"
                     } else {
                         if (pgpEntry.hasSignatureFile()) {
-                            hasMissingKeys = true;
-                            reason = "A key couldn't be downloaded";
+                            hasMissingKeys = true
+                            reason = "A key couldn't be downloaded"
                         } else {
-                            hasMissingSignatures = true;
-                            reason = "Artifact is not signed";
+                            hasMissingSignatures = true
+                            reason = "Artifact is not signed"
                         }
                     }
                 }
-                verificationsBuilder.addChecksum(entry.id, checksum.getChecksumKind(), checksum.getChecksum(), origin, reason);
+                verificationsBuilder.addChecksum(entry.id, checksum.getChecksumKind(), checksum.getChecksum(), origin, reason)
             }
         } else {
-            PgpEntry pgp = (PgpEntry) entry;
-            previousEntry.set(pgp);
-            Set<String> failedKeys = Sets.newTreeSet(pgp.getFailed());
-            for (String failedKey : failedKeys) {
-                verificationsBuilder.addIgnoredKey(pgp.id, new IgnoredKey(failedKey, PGP_VERIFICATION_FAILED));
+            val pgp = entry as PgpEntry
+            previousEntry.set(pgp)
+            val failedKeys: MutableSet<kotlin.String> = Sets.newTreeSet<kotlin.String>(pgp.getFailed())
+            for (failedKey in failedKeys) {
+                verificationsBuilder.addIgnoredKey(pgp.id, IgnoredKey(failedKey, PGP_VERIFICATION_FAILED))
             }
             if (pgp.hasArtifactLevelKeys()) {
-                for (String key : pgp.getArtifactLevelKeys()) {
+                for (key in pgp.getArtifactLevelKeys()) {
                     if (!failedKeys.contains(key)) {
-                        verificationsBuilder.addTrustedKey(pgp.id, key);
+                        verificationsBuilder.addTrustedKey(pgp.id, key)
                     }
                 }
             }
         }
     }
 
-    private boolean shouldWriteEntry(VerificationEntry entry) {
-        if (entry instanceof ChecksumEntry) {
-            return ((ChecksumEntry) entry).getChecksum() != null && !isTrustedArtifact(entry.id);
+    private fun shouldWriteEntry(entry: VerificationEntry): Boolean {
+        if (entry is ChecksumEntry) {
+            return entry.getChecksum() != null && !isTrustedArtifact(entry.id)
         }
-        return !isTrustedArtifact(entry.id);
+        return !isTrustedArtifact(entry.id)
     }
 
-    private void resolveAllConfigurationsConcurrently(GradleInternal gradle) {
-        buildOperationExecutor.runAllWithAccessToProjectState(queue -> {
-            Set<? extends ProjectState> allProjects = gradle.getOwner().getProjects().getAllProjects();
-            for (ProjectState projectState : allProjects) {
-                queue.add(new RunnableBuildOperation() {
-                    @Override
-                    public void run(BuildOperationContext context) {
-                        resolveAllConfigurationsAndForceDownload(projectState);
+    private fun resolveAllConfigurationsConcurrently(gradle: GradleInternal) {
+        buildOperationExecutor.runAllWithAccessToProjectState<RunnableBuildOperation>(Action { queue: BuildOperationQueue<RunnableBuildOperation>? ->
+            val allProjects = gradle.getOwner().getProjects().getAllProjects()
+            for (projectState in allProjects) {
+                queue!!.add(object : RunnableBuildOperation {
+                    override fun run(context: BuildOperationContext) {
+                        resolveAllConfigurationsAndForceDownload(projectState)
                     }
 
-                    @Override
-                    public BuildOperationDescriptor.Builder description() {
-                        String displayName = "Resolving configurations of " + projectState.getDisplayName();
-                        return BuildOperationDescriptor.displayName(displayName)
-                            .progressDisplayName(displayName);
+                    override fun description(): BuildOperationDescriptor.Builder {
+                        val displayName = "Resolving configurations of " + projectState.getDisplayName()
+                        return@runAllWithAccessToProjectState BuildOperationDescriptor.displayName(displayName)
+                            .progressDisplayName(displayName)
                     }
-                });
+                })
             }
-        });
+        })
     }
 
-    private void computeChecksumsConcurrently(SignatureVerificationService signatureVerificationService) {
-        Set<String> collectedIgnoredKeys = generatePgpInfo ? Sets.newConcurrentHashSet() : null;
-        buildOperationExecutor.runAll(queue -> {
-            for (VerificationEntry entry : entriesToBeWritten) {
+    private fun computeChecksumsConcurrently(signatureVerificationService: SignatureVerificationService) {
+        val collectedIgnoredKeys = if (generatePgpInfo) Sets.newConcurrentHashSet<kotlin.String>() else null
+        buildOperationExecutor.runAll<RunnableBuildOperation>(Action { queue: BuildOperationQueue<RunnableBuildOperation>? ->
+            for (entry in entriesToBeWritten) {
                 if (shouldSkipVerification(entry.getArtifactKind())) {
-                    continue;
+                    continue
                 }
                 if (!entry.getFile().exists()) {
-                    LOGGER.warn("Cannot compute checksum for " + entry.getFile() + " because it doesn't exist. It may indicate a corrupt or tampered cache.");
-                    continue;
+                    LOGGER.warn("Cannot compute checksum for " + entry.getFile() + " because it doesn't exist. It may indicate a corrupt or tampered cache.")
+                    continue
                 }
-                if (entry instanceof ChecksumEntry) {
-                    queueChecksumVerification(queue, (ChecksumEntry) entry);
+                if (entry is ChecksumEntry) {
+                    queueChecksumVerification(queue!!, entry)
                 } else {
-                    queueSignatureVerification(queue, signatureVerificationService, (PgpEntry) entry, collectedIgnoredKeys);
+                    queueSignatureVerification(queue!!, signatureVerificationService, entry as PgpEntry, collectedIgnoredKeys!!)
                 }
             }
-        });
+        })
         if (generatePgpInfo) {
-            postProcessPgpResults(collectedIgnoredKeys);
+            postProcessPgpResults(collectedIgnoredKeys!!)
         }
     }
 
-    private void postProcessPgpResults(Set<String> collectedIgnoredKeys) {
-        for (String ignoredKey : collectedIgnoredKeys) {
-            verificationsBuilder.addIgnoredKey(new IgnoredKey(ignoredKey, KEY_NOT_DOWNLOADED));
+    private fun postProcessPgpResults(collectedIgnoredKeys: MutableSet<kotlin.String>) {
+        for (ignoredKey in collectedIgnoredKeys) {
+            verificationsBuilder.addIgnoredKey(IgnoredKey(ignoredKey, KEY_NOT_DOWNLOADED))
         }
-        PgpKeyGrouper grouper = new PgpKeyGrouper(verificationsBuilder, entriesToBeWritten);
-        grouper.performPgpKeyGrouping();
+        val grouper = PgpKeyGrouper(verificationsBuilder, entriesToBeWritten)
+        grouper.performPgpKeyGrouping()
     }
 
-    private void queueSignatureVerification(BuildOperationQueue<RunnableBuildOperation> queue, SignatureVerificationService signatureVerificationService, PgpEntry entry, Set<String> ignoredKeys) {
-        queue.add(new RunnableBuildOperation() {
-            @Override
-            public void run(BuildOperationContext context) {
-                File signature = entry.getSignatureFile().create();
+    private fun queueSignatureVerification(
+        queue: BuildOperationQueue<RunnableBuildOperation>,
+        signatureVerificationService: SignatureVerificationService,
+        entry: PgpEntry,
+        ignoredKeys: MutableSet<kotlin.String>
+    ) {
+        queue.add(object : RunnableBuildOperation {
+            override fun run(context: BuildOperationContext) {
+                val signature = entry.getSignatureFile().create()
                 if (signature != null) {
-                    SignatureVerificationResultBuilder builder = new WriterSignatureVerificationResult(ignoredKeys, entry);
-                    signatureVerificationService.verify(entry.file, signature, Collections.emptySet(), Collections.emptySet(), builder);
+                    val builder: SignatureVerificationResultBuilder = WriterSignatureVerificationResult(ignoredKeys, entry)
+                    signatureVerificationService.verify(entry.file, signature, mutableSetOf<kotlin.String?>(), mutableSetOf<kotlin.String?>(), builder)
                 }
             }
 
-            @Override
-            public BuildOperationDescriptor.Builder description() {
+            override fun description(): BuildOperationDescriptor.Builder {
                 return BuildOperationDescriptor.displayName("Verifying dependency signature")
-                    .progressDisplayName("Verifying signature of " + entry.id);
+                    .progressDisplayName("Verifying signature of " + entry.id)
             }
-        });
+        })
     }
 
-    private void queueChecksumVerification(BuildOperationQueue<RunnableBuildOperation> queue, ChecksumEntry entry) {
-        queue.add(new RunnableBuildOperation() {
-            @Override
-            public void run(BuildOperationContext context) {
-                entry.setChecksum(createHash(entry.getFile(), entry.getChecksumKind()));
+    private fun queueChecksumVerification(queue: BuildOperationQueue<RunnableBuildOperation>, entry: ChecksumEntry) {
+        queue.add(object : RunnableBuildOperation {
+            override fun run(context: BuildOperationContext) {
+                entry.setChecksum(createHash(entry.getFile(), entry.getChecksumKind()))
             }
 
-            @Override
-            public BuildOperationDescriptor.Builder description() {
+            override fun description(): BuildOperationDescriptor.Builder {
                 return BuildOperationDescriptor.displayName("Computing checksums")
-                    .progressDisplayName("Computing checksum of " + entry.id);
+                    .progressDisplayName("Computing checksum of " + entry.id)
             }
-        });
+        })
     }
 
-    @Override
-    public void onArtifact(ArtifactKind kind, ModuleComponentArtifactIdentifier id, File mainFile, Factory<File> signatureFile, String repositoryName, String repositoryId) {
-        for (String checksum : checksums) {
-            if (PGP.equals(checksum)) {
-                addPgp(id, kind, mainFile, signatureFile);
+    override fun onArtifact(
+        kind: ArtifactVerificationOperation.ArtifactKind,
+        id: ModuleComponentArtifactIdentifier,
+        mainFile: File,
+        signatureFile: Factory<File?>,
+        repositoryName: kotlin.String,
+        repositoryId: kotlin.String
+    ) {
+        for (checksum in checksums) {
+            if (PGP == checksum) {
+                addPgp(id, kind, mainFile, signatureFile)
             } else {
-                addChecksum(id, kind, mainFile, ChecksumKind.valueOf(checksum));
+                addChecksum(id, kind, mainFile, ChecksumKind.valueOf(checksum))
             }
         }
     }
 
-    private void addPgp(ModuleComponentArtifactIdentifier id, ArtifactKind kind, File mainFile, Factory<File> signatureFile) {
-        PgpEntry entry = new PgpEntry(id, kind, mainFile, signatureFile);
-        synchronized (entriesToBeWritten) {
-            entriesToBeWritten.add(entry);
+    private fun addPgp(id: ModuleComponentArtifactIdentifier, kind: ArtifactVerificationOperation.ArtifactKind, mainFile: File, signatureFile: Factory<File?>) {
+        val entry = PgpEntry(id, kind, mainFile, signatureFile)
+        synchronized(entriesToBeWritten) {
+            entriesToBeWritten.add(entry)
         }
     }
 
-    private boolean shouldSkipVerification(ArtifactVerificationOperation.ArtifactKind kind) {
-        return kind == ArtifactKind.METADATA && !verificationsBuilder.isVerifyMetadata();
+    private fun shouldSkipVerification(kind: ArtifactVerificationOperation.ArtifactKind): Boolean {
+        return kind == ArtifactVerificationOperation.ArtifactKind.METADATA && !verificationsBuilder.isVerifyMetadata
     }
 
-    private void addChecksum(ModuleComponentArtifactIdentifier id, ArtifactKind artifactKind, File file, ChecksumKind kind) {
-        ChecksumEntry e = new ChecksumEntry(id, artifactKind, file, kind);
-        synchronized (entriesToBeWritten) {
-            entriesToBeWritten.add(e);
+    private fun addChecksum(id: ModuleComponentArtifactIdentifier, artifactKind: ArtifactVerificationOperation.ArtifactKind, file: File, kind: ChecksumKind) {
+        val e = ChecksumEntry(id, artifactKind, file, kind)
+        synchronized(entriesToBeWritten) {
+            entriesToBeWritten.add(e)
         }
     }
 
-    private boolean isTrustedArtifact(ModuleComponentArtifactIdentifier id) {
-        return verificationsBuilder.getTrustedArtifacts().stream().anyMatch(artifact -> artifact.matches(id));
+    private fun isTrustedArtifact(id: ModuleComponentArtifactIdentifier): Boolean {
+        return verificationsBuilder.trustedArtifacts.stream().anyMatch { artifact: DependencyVerificationConfiguration.TrustedArtifact? -> artifact!!.matches(id) }
     }
 
-    private String createHash(File file, ChecksumKind kind) {
+    private fun createHash(file: File, kind: ChecksumKind): kotlin.String {
         try {
-            return checksumService.hash(file, kind.getAlgorithm()).toString();
-        } catch (Exception e) {
-            LOGGER.debug("Error while snapshotting " + file, e);
-            return null;
+            return checksumService.hash(file, kind.algorithm!!).toString()
+        } catch (e: Exception) {
+            LOGGER.debug("Error while snapshotting " + file, e)
+            return null
         }
     }
 
-    private static void resolveAllConfigurationsAndForceDownload(ProjectState projectState) {
-        projectState.applyToMutableState(p ->
-            p.getConfigurations().all(cnf -> {
-                if (((DeprecatableConfiguration) cnf).canSafelyBeResolved()) {
-                    try {
-                        resolveAndDownloadExternalFiles(cnf);
-                    } catch (Exception e) {
-                        LOGGER.debug("Cannot resolve configuration {}: {}", cnf.getName(), e.getMessage());
-                    }
-                }
-            })
-        );
-    }
-
-    private static void resolveAndDownloadExternalFiles(Configuration cnf) {
-        cnf.getIncoming().artifactView(MODULE_COMPONENT_FILES).getFiles().getFiles();
-    }
-
-    private void exportKeyRingCollection(
-        PublicKeyService publicKeyService,
-        BuildTreeDefinedKeys existingKeyring,
-        Set<String> publicKeys,
-        DependencyVerificationConfiguration.@Nullable KeyringFormat keyringFormat
-    ) throws IOException {
-        List<PGPPublicKeyRing> existingRings = loadExistingKeyRing(existingKeyring);
-        PGPPublicKeyRingListBuilder builder = new PGPPublicKeyRingListBuilder();
-        for (String publicKey : publicKeys) {
-            if (publicKey.length() <= 16) {
-                publicKeyService.findByLongId(new BigInteger(publicKey, 16).longValue(), builder);
+    @Throws(IOException::class)
+    private fun exportKeyRingCollection(
+        publicKeyService: PublicKeyService,
+        existingKeyring: BuildTreeDefinedKeys,
+        publicKeys: MutableSet<kotlin.String>,
+        keyringFormat: DependencyVerificationConfiguration.KeyringFormat?
+    ) {
+        val existingRings = loadExistingKeyRing(existingKeyring)
+        val builder = PGPPublicKeyRingListBuilder()
+        for (publicKey in publicKeys) {
+            if (publicKey.length <= 16) {
+                publicKeyService.findByLongId(BigInteger(publicKey, 16).toLong(), builder)
             } else {
-                publicKeyService.findByFingerprint(Fingerprint.fromString(publicKey).getBytes(), builder);
+                publicKeyService.findByFingerprint(fromString(publicKey).bytes, builder)
             }
         }
 
-        Stream<PGPPublicKeyRing> keysSeenInVerifier = builder.build()
+        val keysSeenInVerifier = builder.build()
             .stream()
-            .filter(keyring -> PGPUtils.getSize(keyring) != 0);
+            .filter { keyring: PGPPublicKeyRing -> getSize(keyring) != 0 }
 
-        Collection<PGPPublicKeyRing> allKeyRings = uniqueKeyRings(Stream.concat(keysSeenInVerifier, existingRings.stream()));
+        val allKeyRings: MutableCollection<PGPPublicKeyRing> = uniqueKeyRings(Stream.concat<PGPPublicKeyRing>(keysSeenInVerifier, existingRings.stream()))
 
-        File asciiArmoredFile = mayBeDryRunFile(existingKeyring.getAsciiKeyringsFile());
-        File keyringFile = mayBeDryRunFile(existingKeyring.getBinaryKeyringsFile());
+        val asciiArmoredFile = mayBeDryRunFile(existingKeyring.asciiKeyringsFile)
+        val keyringFile = mayBeDryRunFile(existingKeyring.binaryKeyringsFile)
 
         if (keyringFormat == null) {
-            writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeyRings);
-            writeBinaryKeyringFile(keyringFile, allKeyRings);
-            LOGGER.lifecycle("Exported {} keys to {} and {}", allKeyRings.size(), keyringFile, asciiArmoredFile);
-        } else if (keyringFormat.equals(DependencyVerificationConfiguration.KeyringFormat.ARMORED)) {
-            writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeyRings);
-            LOGGER.lifecycle("Exported {} keys to {}", allKeyRings.size(), asciiArmoredFile);
-        } else if (keyringFormat.equals(DependencyVerificationConfiguration.KeyringFormat.BINARY)) {
-            writeBinaryKeyringFile(keyringFile, allKeyRings);
-            LOGGER.lifecycle("Exported {} keys to {}", allKeyRings.size(), keyringFile);
+            writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeyRings)
+            writeBinaryKeyringFile(keyringFile, allKeyRings)
+            LOGGER.lifecycle("Exported {} keys to {} and {}", allKeyRings.size, keyringFile, asciiArmoredFile)
+        } else if (keyringFormat == DependencyVerificationConfiguration.KeyringFormat.ARMORED) {
+            writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeyRings)
+            LOGGER.lifecycle("Exported {} keys to {}", allKeyRings.size, asciiArmoredFile)
+        } else if (keyringFormat == DependencyVerificationConfiguration.KeyringFormat.BINARY) {
+            writeBinaryKeyringFile(keyringFile, allKeyRings)
+            LOGGER.lifecycle("Exported {} keys to {}", allKeyRings.size, keyringFile)
         } else {
-            throw new IllegalArgumentException("Unknown keyring format " + keyringFormat);
+            throw IllegalArgumentException("Unknown keyring format " + keyringFormat)
         }
     }
 
-    private static Collection<PGPPublicKeyRing> uniqueKeyRings(Stream<PGPPublicKeyRing> keyRings) {
-        SortedMap<Long, PGPPublicKeyRing> seenKeyIds = new TreeMap<>();
-        keyRings.forEach(keyRing -> {
-            Long keyId = keyRing.getPublicKey().getKeyID();
-            PGPPublicKeyRing current = seenKeyIds.get(keyId);
-            if (current == null || PGPUtils.getSize(current) < PGPUtils.getSize(keyRing)) {
-                seenKeyIds.put(keyId, keyRing);
-            }
-        });
-        return seenKeyIds.values();
-    }
-
-    private void writeAsciiArmoredKeyRingFile(File ascii, Collection<PGPPublicKeyRing> allKeyRings) throws IOException {
+    @Throws(IOException::class)
+    private fun writeAsciiArmoredKeyRingFile(ascii: File, allKeyRings: MutableCollection<PGPPublicKeyRing>) {
         if (ascii.exists()) {
-            ascii.delete();
+            ascii.delete()
         }
-        boolean hasKey = false;
-        for (PGPPublicKeyRing keyRing : allKeyRings) {
+        var hasKey = false
+        for (keyRing in allKeyRings) {
             // First let's write some human readable info about the keyring being serialized
-            try (OutputStream out = new FileOutputStream(ascii, true)) {
+            FileOutputStream(ascii, true).use { out ->
                 if (hasKey) {
-                    out.write('\n');
+                    out.write('\n'.code)
                 }
-                Iterator<PGPPublicKey> pks = keyRing.getPublicKeys();
+                val pks = keyRing.getPublicKeys()
                 while (pks.hasNext()) {
-                    boolean hasUid = false;
-                    PGPPublicKey pk = pks.next();
-                    String keyType = pk.isMasterKey() ? "pub" : "sub";
-                    out.write((keyType + "    " + SecuritySupport.toLongIdHexString(pk.getKeyID()).toUpperCase(Locale.ROOT) + "\n").getBytes(StandardCharsets.US_ASCII));
-                    List<String> userIDs = PGPUtils.getUserIDs(pk);
-                    for(String uid : userIDs) {
-                        hasUid = true;
+                    var hasUid = false
+                    val pk = pks.next()
+                    val keyType = if (pk.isMasterKey()) "pub" else "sub"
+                    out.write((keyType + "    " + toLongIdHexString(pk.getKeyID()).uppercase() + "\n").toByteArray(StandardCharsets.US_ASCII))
+                    val userIDs: MutableList<kotlin.String> = getUserIDs(pk)
+                    for (uid in userIDs) {
+                        hasUid = true
                         // We can store UTF-8 text despite being an ASCII-armored file,
                         // as ArmoredInputStream only cares about finding armor headers and does not otherwise care about encoding
-                        out.write(("uid    " + uid + "\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(("uid    " + uid + "\n").toByteArray(StandardCharsets.UTF_8))
                     }
                     if (hasUid) {
-                        out.write('\n');
+                        out.write('\n'.code)
                     }
                 }
             }
-            // Then write the ascii armored keyring
-            try (FileOutputStream fos = new FileOutputStream(ascii, true);
-                 ArmoredOutputStream out = ArmoredOutputStream.builder().build(fos)) {
-                keyRing.encode(out, true);
+            FileOutputStream(ascii, true).use { fos ->
+                ArmoredOutputStream.builder().build(fos).use { out ->
+                    keyRing.encode(out, true)
+                }
             }
-            hasKey = true;
+            hasKey = true
         }
     }
 
-    private void writeBinaryKeyringFile(File keyringFile, Collection<PGPPublicKeyRing> allKeyRings) throws IOException {
-        try (OutputStream out = new FileOutputStream(keyringFile)) {
-            for (PGPPublicKeyRing keyRing : allKeyRings) {
-                keyRing.encode(out, true);
+    @Throws(IOException::class)
+    private fun writeBinaryKeyringFile(keyringFile: File, allKeyRings: MutableCollection<PGPPublicKeyRing>) {
+        FileOutputStream(keyringFile).use { out ->
+            for (keyRing in allKeyRings) {
+                keyRing.encode(out, true)
             }
         }
     }
 
-    private static class PGPPublicKeyRingListBuilder implements PublicKeyResultBuilder {
-        private final ImmutableList.Builder<PGPPublicKeyRing> builder = ImmutableList.builder();
+    private class PGPPublicKeyRingListBuilder : PublicKeyResultBuilder {
+        private val builder = ImmutableList.builder<PGPPublicKeyRing>()
 
-        @Override
-        public void keyRing(PGPPublicKeyRing keyring) {
-            builder.add(keyring);
+        override fun keyRing(keyring: PGPPublicKeyRing) {
+            builder.add(keyring)
         }
 
-        @Override
-        public void publicKey(PGPPublicKey publicKey) {
-
+        override fun publicKey(publicKey: PGPPublicKey) {
         }
 
-        public List<PGPPublicKeyRing> build() {
-            return builder.build();
+        fun build(): MutableList<PGPPublicKeyRing> {
+            return builder.build()
         }
     }
 
-    private List<PGPPublicKeyRing> loadExistingKeyRing(BuildTreeDefinedKeys keyrings) throws IOException {
-        File effectiveFile = mayBeDryRunFile(keyrings.getEffectiveKeyringsFile());
+    @Throws(IOException::class)
+    private fun loadExistingKeyRing(keyrings: BuildTreeDefinedKeys): MutableList<PGPPublicKeyRing> {
+        val effectiveFile = mayBeDryRunFile(keyrings.effectiveKeyringsFile!!)
         if (!effectiveFile.exists()) {
-            return Collections.emptyList();
+            return mutableListOf<PGPPublicKeyRing>()
         }
-        List<PGPPublicKeyRing> existingRings = SecuritySupport.loadKeyRingFile(effectiveFile);
-        LOGGER.info("Existing keyring file contains {} keyrings", existingRings.size());
-        return existingRings;
+        val existingRings: MutableList<PGPPublicKeyRing> = loadKeyRingFile(effectiveFile)
+        LOGGER.info("Existing keyring file contains {} keyrings", existingRings.size)
+        return existingRings
+    }
+
+    companion object {
+        private val LOGGER: Logger = getLogger(WriteDependencyVerificationFile::class.java)!!
+        private val MODULE_COMPONENT_FILES = Action { conf: ArtifactView.ViewConfiguration ->
+            conf.componentFilter(org.gradle.api.specs.Spec { id: ComponentIdentifier? -> id is ModuleComponentIdentifier })
+            conf.setLenient(true)
+        }
+        private const val PGP = "pgp"
+        private const val MD5 = "md5"
+        private const val SHA1 = "sha1"
+        private const val SHA256 = "sha256"
+        private const val SHA512 = "sha512"
+        private val SUPPORTED_CHECKSUMS: MutableSet<kotlin.String> = ImmutableSet.of<kotlin.String>(MD5, SHA1, SHA256, SHA512, PGP)
+        private val SECURE_CHECKSUMS: MutableSet<kotlin.String> = ImmutableSet.of<kotlin.String>(SHA256, SHA512, PGP)
+        private const val PGP_VERIFICATION_FAILED = "PGP verification failed"
+        private const val KEY_NOT_DOWNLOADED = "Key couldn't be downloaded from any key server"
+
+        private fun resolveAllConfigurationsAndForceDownload(projectState: ProjectState) {
+            projectState.applyToMutableState(Consumer { p: ProjectInternal? ->
+                p!!.getConfigurations().all(Action { cnf: Configuration? ->
+                    if ((cnf as DeprecatableConfiguration).canSafelyBeResolved()) {
+                        try {
+                            resolveAndDownloadExternalFiles(cnf)
+                        } catch (e: Exception) {
+                            LOGGER.debug("Cannot resolve configuration {}: {}", cnf.getName(), e.message)
+                        }
+                    }
+                })
+            }
+            )
+        }
+
+        private fun resolveAndDownloadExternalFiles(cnf: Configuration) {
+            cnf.getIncoming().artifactView(MODULE_COMPONENT_FILES).getFiles().getFiles()
+        }
+
+        private fun uniqueKeyRings(keyRings: Stream<PGPPublicKeyRing>): MutableCollection<PGPPublicKeyRing> {
+            val seenKeyIds: SortedMap<Long, PGPPublicKeyRing> = TreeMap<Long, PGPPublicKeyRing>()
+            keyRings.forEach { keyRing: PGPPublicKeyRing? ->
+                val keyId = keyRing!!.getPublicKey().getKeyID()
+                val current = seenKeyIds.get(keyId)
+                if (current == null || getSize(current) < getSize(keyRing)) {
+                    seenKeyIds.put(keyId, keyRing)
+                }
+            }
+            return seenKeyIds.values
+        }
     }
 }

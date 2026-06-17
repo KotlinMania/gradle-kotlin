@@ -13,52 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.Action
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
 
-import org.gradle.api.Action;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-
-public class NoBuildDependenciesArtifactSet implements ArtifactSet {
-    private final ArtifactSet set;
-
-    public NoBuildDependenciesArtifactSet(ArtifactSet set) {
-        this.set = set;
+class NoBuildDependenciesArtifactSet(private val set: ArtifactSet) : ArtifactSet {
+    override fun select(consumerServices: ArtifactSelectionServices, spec: ArtifactSelectionSpec): ResolvedArtifactSet {
+        val selectedArtifacts = set.select(consumerServices, spec)
+        if (selectedArtifacts === ResolvedArtifactSet.Companion.EMPTY) {
+            return selectedArtifacts
+        }
+        return NoDepsResolvedArtifactSet(selectedArtifacts)
     }
 
-    @Override
-    public ResolvedArtifactSet select(ArtifactSelectionServices consumerServices, ArtifactSelectionSpec spec) {
-        final ResolvedArtifactSet selectedArtifacts = set.select(consumerServices, spec);
-        if (selectedArtifacts == ResolvedArtifactSet.EMPTY) {
-            return selectedArtifacts;
-        }
-        return new NoDepsResolvedArtifactSet(selectedArtifacts);
-    }
-
-    private static class NoDepsResolvedArtifactSet implements ResolvedArtifactSet {
-        private final ResolvedArtifactSet selectedArtifacts;
-
-        public NoDepsResolvedArtifactSet(ResolvedArtifactSet selectedArtifacts) {
-            this.selectedArtifacts = selectedArtifacts;
+    private class NoDepsResolvedArtifactSet(private val selectedArtifacts: ResolvedArtifactSet) : ResolvedArtifactSet {
+        override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+            selectedArtifacts.visit(visitor)
         }
 
-        @Override
-        public void visit(Visitor visitor) {
-            selectedArtifacts.visit(visitor);
+        override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
+            selectedArtifacts.visitTransformSources(visitor)
         }
 
-        @Override
-        public void visitTransformSources(TransformSourceVisitor visitor) {
-            selectedArtifacts.visitTransformSources(visitor);
+        override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
+            selectedArtifacts.visitExternalArtifacts(visitor)
         }
 
-        @Override
-        public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-            selectedArtifacts.visitExternalArtifacts(visitor);
-        }
-
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
         }
     }
 }

@@ -13,68 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import com.google.common.base.Joiner;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ResolvedVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.base.Joiner
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal
+import java.util.function.Consumer
 
 /**
- * A utility class that packages the logic necessary to build a message describing why a {@link ComponentState} was rejected.
+ * A utility class that packages the logic necessary to build a message describing why a [ComponentState] was rejected.
  */
-class ComponentRejectedMessageBuilder {
-    String buildFailureMessage(ModuleResolveState module) {
-        boolean hasRejectAll = false;
-        for (SelectorState candidate : module.getSelectors()) {
-            ResolvedVersionConstraint versionConstraint = candidate.getVersionConstraint();
+internal class ComponentRejectedMessageBuilder {
+    fun buildFailureMessage(module: ModuleResolveState): String {
+        var hasRejectAll = false
+        for (candidate in module.getSelectors()) {
+            val versionConstraint = candidate.getVersionConstraint()
             if (versionConstraint != null) {
-                hasRejectAll |= versionConstraint.isRejectAll;
+                hasRejectAll = hasRejectAll or versionConstraint.isRejectAll
             }
         }
-        StringBuilder sb = new StringBuilder();
+        val sb = StringBuilder()
         if (hasRejectAll) {
-            sb.append("Module '").append(module.getId()).append("' has been rejected:\n");
+            sb.append("Module '").append(module.getId()).append("' has been rejected:\n")
         } else {
-            sb.append("Cannot find a version of '").append(module.getId()).append("' that satisfies the version constraints:\n");
+            sb.append("Cannot find a version of '").append(module.getId()).append("' that satisfies the version constraints:\n")
         }
 
-        module.visitAllIncomingEdges(incomingEdge -> {
-            ComponentSelector selector = incomingEdge.getDependencyMetadata().selector;
-            for (String path : MessageBuilderHelper.formattedPathsTo(incomingEdge)) {
-                sb.append("   ").append(path);
-                sb.append(" --> ");
-                renderSelector(sb, selector);
-                renderReason(sb, incomingEdge.getReason());
-                sb.append("\n");
+        module.visitAllIncomingEdges(Consumer { incomingEdge: EdgeState? ->
+            val selector: ComponentSelector = incomingEdge!!.getDependencyMetadata().selector!!
+            for (path in MessageBuilderHelper.formattedPathsTo(incomingEdge)) {
+                sb.append("   ").append(path)
+                sb.append(" --> ")
+                renderSelector(sb, selector)
+                renderReason(sb, incomingEdge.getReason())
+                sb.append("\n")
             }
-        });
+        })
 
-        return sb.toString();
+        return sb.toString()
     }
 
-    private static void renderSelector(StringBuilder sb, ComponentSelector selector) {
-        sb.append('\'').append(selector.getDisplayName()).append('\'');
-    }
+    companion object {
+        private fun renderSelector(sb: StringBuilder, selector: ComponentSelector) {
+            sb.append('\'').append(selector.getDisplayName()).append('\'')
+        }
 
-    private static void renderReason(StringBuilder sb, ComponentSelectionReasonInternal selectionReason) {
-        if (selectionReason.hasCustomDescriptions()) {
-            sb.append(" because of the following reason");
-            List<String> reasons = new ArrayList<>(1);
-            for (ComponentSelectionDescriptorInternal componentSelectionDescriptor : selectionReason.getDescriptions()) {
-                if (componentSelectionDescriptor.hasCustomDescription()) {
-                    reasons.add(componentSelectionDescriptor.getDescription());
+        private fun renderReason(sb: StringBuilder, selectionReason: ComponentSelectionReasonInternal) {
+            if (selectionReason.hasCustomDescriptions()) {
+                sb.append(" because of the following reason")
+                val reasons: MutableList<String> = ArrayList<String>(1)
+                for (componentSelectionDescriptor in selectionReason.getDescriptions()!!) {
+                    if (componentSelectionDescriptor.hasCustomDescription()) {
+                        reasons.add(componentSelectionDescriptor.getDescription())
+                    }
                 }
-            }
-            if (reasons.size() == 1) {
-                sb.append(": ").append(reasons.get(0));
-            } else {
-                sb.append("s: ");
-                Joiner.on(", ").appendTo(sb, reasons);
+                if (reasons.size == 1) {
+                    sb.append(": ").append(reasons.get(0))
+                } else {
+                    sb.append("s: ")
+                    Joiner.on(", ").appendTo(sb, reasons)
+                }
             }
         }
     }

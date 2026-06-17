@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-
-import java.util.List;
-
-public interface VersionLister {
+interface VersionLister {
     /**
      * Uses resource listing to attempt to get the list of versions for a module across a set of patterns.
      */
-    void listVersions(ModuleIdentifier module, IvyArtifactName artifact, List<ResourcePattern> patterns, BuildableModuleVersionListingResolveResult result);
+    fun listVersions(module: ModuleIdentifier, artifact: IvyArtifactName, patterns: MutableList<ResourcePattern>, result: BuildableModuleVersionListingResolveResult)
 }

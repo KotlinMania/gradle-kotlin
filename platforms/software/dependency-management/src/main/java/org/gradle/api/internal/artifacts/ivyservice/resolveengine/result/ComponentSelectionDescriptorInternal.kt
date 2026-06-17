@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
+import org.gradle.api.Describable
+import org.gradle.api.artifacts.result.ComponentSelectionDescriptor
 
-public interface ComponentSelectionDescriptorInternal extends ComponentSelectionDescriptor {
+interface ComponentSelectionDescriptorInternal : ComponentSelectionDescriptor {
     /**
      * Updates the description of this component selection descriptor.
      *
@@ -26,7 +26,7 @@ public interface ComponentSelectionDescriptorInternal extends ComponentSelection
      *
      * @return this descriptor
      */
-    ComponentSelectionDescriptorInternal withDescription(Describable description);
+    fun withDescription(description: Describable): ComponentSelectionDescriptorInternal?
 
     /**
      * Determines if a custom description was provided. This can be used in reporting to determine if additional details should
@@ -34,22 +34,21 @@ public interface ComponentSelectionDescriptorInternal extends ComponentSelection
      *
      * @return true if the description is not the default cause description.
      */
-    boolean hasCustomDescription();
+    fun hasCustomDescription(): Boolean
 
     /**
      * Updates this component selection descriptor to indicate it is equivalent to a force
      *
      * @return a new descriptor, equivalent to force
      */
-    ComponentSelectionDescriptorInternal markAsEquivalentToForce();
+    fun markAsEquivalentToForce(): ComponentSelectionDescriptorInternal?
 
     /**
      * Indicates whether the component selection descriptor is equivalent to a forced dependency
      *
-     * @return {@code true} if equivalent to force, {@code false} otherwise
+     * @return `true` if equivalent to force, `false` otherwise
      */
-    boolean isEquivalentToForce();
+    val isEquivalentToForce: Boolean
 
-    Describable getDescribable();
-
+    val describable: Describable?
 }

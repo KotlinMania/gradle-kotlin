@@ -13,41 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Set;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Notified of the use of changing values during dependency resolution, so this can be noted in the configuration cache inputs.
- * These events are not sent through {@code ListenerManager}.
+ * These events are not sent through `ListenerManager`.
  */
-@ServiceScope(Scope.Build.class)
-public interface ChangingValueDependencyResolutionListener {
-    ChangingValueDependencyResolutionListener NO_OP = new ChangingValueDependencyResolutionListener() {
-        @Override
-        public void onDynamicVersionSelection(ModuleComponentSelector requested, CacheExpirationControl.Expiry expiry, Set<ModuleVersionIdentifier> versions) {
-        }
-
-        @Override
-        public void onChangingModuleResolve(ModuleComponentIdentifier moduleId, CacheExpirationControl.Expiry expiry) {
-        }
-    };
-
+@ServiceScope(Scope.Build::class)
+interface ChangingValueDependencyResolutionListener {
     /**
      * Called when a dynamic version is selected using the set of candidate versions queried from a repository.
      */
-    void onDynamicVersionSelection(ModuleComponentSelector requested, CacheExpirationControl.Expiry expiry, Set<ModuleVersionIdentifier> versions);
+    fun onDynamicVersionSelection(requested: ModuleComponentSelector?, expiry: CacheExpirationControl.Expiry?, versions: MutableSet<ModuleVersionIdentifier?>?)
 
     /**
      * Called when a changing artifact is resolved using the artifact state queried from a repository.
      */
-    void onChangingModuleResolve(ModuleComponentIdentifier moduleId, CacheExpirationControl.Expiry expiry);
+    fun onChangingModuleResolve(moduleId: ModuleComponentIdentifier?, expiry: CacheExpirationControl.Expiry?)
+
+    companion object {
+        val NO_OP: ChangingValueDependencyResolutionListener = object : ChangingValueDependencyResolutionListener {
+            override fun onDynamicVersionSelection(requested: ModuleComponentSelector?, expiry: CacheExpirationControl.Expiry?, versions: MutableSet<ModuleVersionIdentifier?>?) {
+            }
+
+            override fun onChangingModuleResolve(moduleId: ModuleComponentIdentifier?, expiry: CacheExpirationControl.Expiry?) {
+            }
+        }
+    }
 }

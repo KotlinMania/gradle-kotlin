@@ -13,80 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.api.internal.artifacts.verification.model.ChecksumKind;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.api.internal.artifacts.verification.model.ChecksumKind
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import java.io.File
 
-import java.io.File;
-
-class ChecksumEntry extends VerificationEntry {
-
-    private final ChecksumKind checksumKind;
-    private final int hashCode;
+internal class ChecksumEntry(id: ModuleComponentArtifactIdentifier, artifactKind: ArtifactVerificationOperation.ArtifactKind, file: File, val checksumKind: ChecksumKind) :
+    VerificationEntry(id, artifactKind, file) {
+    private val hashCode: Int
 
     // This field is mutable and is just a performance optimization
     // to avoid creating an extra map in the end, so it does NOT
     // participate in equals/hashcode
-    private String checksum;
+    var checksum: String? = null
 
-    ChecksumEntry(ModuleComponentArtifactIdentifier id, ArtifactVerificationOperation.ArtifactKind artifactKind, File file, ChecksumKind checksumKind) {
-        super(id, artifactKind, file);
-        this.checksumKind = checksumKind;
-        this.hashCode = precomputeHashCode();
+    init {
+        this.hashCode = precomputeHashCode()
     }
 
-    private int precomputeHashCode() {
-        int result = id.hashCode();
-        result = 31 * result + getFile().getName().hashCode();
-        result = 31 * result + getArtifactKind().hashCode();
-        result = 31 * result + checksumKind.hashCode();
-        return result;
+    private fun precomputeHashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + getFile().getName().hashCode()
+        result = 31 * result + getArtifactKind().hashCode()
+        result = 31 * result + checksumKind.hashCode()
+        return result
     }
 
-    ChecksumKind getChecksumKind() {
-        return checksumKind;
+    override fun getOrder(): Int {
+        return checksumKind.ordinal
     }
 
-    public String getChecksum() {
-        return checksum;
-    }
-
-    public void setChecksum(String checksum) {
-        this.checksum = checksum;
-    }
-
-    @Override
-    int getOrder() {
-        return checksumKind.ordinal();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        ChecksumEntry that = (ChecksumEntry) o;
+        val that = o as ChecksumEntry
 
-        if (!id.equals(that.id)) {
-            return false;
+        if (id != that.id) {
+            return false
         }
-        if (!getArtifactKind().equals(that.getArtifactKind())) {
-            return false;
+        if (getArtifactKind() != that.getArtifactKind()) {
+            return false
         }
-        if (!getFile().equals(that.getFile())) {
-            return false;
+        if (getFile() != that.getFile()) {
+            return false
         }
-        return checksumKind == that.checksumKind;
+        return checksumKind == that.checksumKind
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 }

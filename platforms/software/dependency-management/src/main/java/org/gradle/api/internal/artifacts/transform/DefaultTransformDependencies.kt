@@ -13,22 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.file.FileCollection
+import java.util.Optional
 
-import org.gradle.api.file.FileCollection;
-
-import java.util.Optional;
-
-public class DefaultTransformDependencies implements TransformDependencies {
-    private final FileCollection files;
-
-    public DefaultTransformDependencies(FileCollection files) {
-        this.files = files;
-    }
-
-    @Override
-    public Optional<FileCollection> getFiles() {
-        return Optional.of(files);
+class DefaultTransformDependencies(private val files: FileCollection) : TransformDependencies {
+    override fun getFiles(): Optional<FileCollection> {
+        return Optional.of<FileCollection>(files)
     }
 }

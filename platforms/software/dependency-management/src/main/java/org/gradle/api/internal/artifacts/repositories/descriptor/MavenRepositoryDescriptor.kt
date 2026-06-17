@@ -13,108 +13,86 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.descriptor
 
-package org.gradle.api.internal.artifacts.repositories.descriptor;
+import com.google.common.base.Preconditions
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSortedMap
+import org.gradle.api.internal.artifacts.repositories.resolver.M2ResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.MavenPattern
+import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.internal.hash.Hasher
+import org.gradle.internal.scan.UsedByScanPlugin
+import java.net.URI
+import java.util.function.Consumer
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.api.internal.artifacts.repositories.resolver.M2ResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.MavenPattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.internal.scan.UsedByScanPlugin;
-
-import java.net.URI;
-import java.util.Collection;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-
-public class MavenRepositoryDescriptor extends UrlRepositoryDescriptor {
+class MavenRepositoryDescriptor private constructor(
+    id: String?,
+    name: String?,
+    url: URI?,
+    private val metadataResources: ImmutableList<ResourcePattern?>?,
+    private val artifactResources: ImmutableList<ResourcePattern?>?,
+    metadataSources: ImmutableList<String?>?,
+    authenticated: Boolean,
+    authenticationSchemes: ImmutableList<String?>?,
+    private val artifactUrls: ImmutableList<URI>
+) : UrlRepositoryDescriptor(id, name, url, metadataSources, authenticated, authenticationSchemes) {
     @UsedByScanPlugin("doesn't link against this type, but expects these values - See ResolveConfigurationDependenciesBuildOperationType")
-    private enum Property {
+    private enum class Property {
         ARTIFACT_URLS,
     }
 
-    private final ImmutableList<ResourcePattern> metadataResources;
-    private final ImmutableList<URI> artifactUrls;
-    private final ImmutableList<ResourcePattern> artifactResources;
-
-    private MavenRepositoryDescriptor(
-        String id,
-        String name,
-        URI url,
-        ImmutableList<ResourcePattern> metadataResources,
-        ImmutableList<ResourcePattern> artifactResources,
-        ImmutableList<String> metadataSources,
-        boolean authenticated,
-        ImmutableList<String> authenticationSchemes,
-        ImmutableList<URI> artifactUrls
-    ) {
-        super(id, name, url, metadataSources, authenticated, authenticationSchemes);
-        this.artifactUrls = artifactUrls;
-        this.metadataResources = metadataResources;
-        this.artifactResources = artifactResources;
+    override fun getType(): Type {
+        return Type.MAVEN
     }
 
-    @Override
-    public Type getType() {
-        return Type.MAVEN;
+    override fun getMetadataResources(): ImmutableList<ResourcePattern?>? {
+        return metadataResources
     }
 
-    @Override
-    public ImmutableList<ResourcePattern> getMetadataResources() {
-        return metadataResources;
+    override fun getArtifactResources(): ImmutableList<ResourcePattern?>? {
+        return artifactResources
     }
 
-    @Override
-    public ImmutableList<ResourcePattern> getArtifactResources() {
-        return artifactResources;
+    override fun addProperties(builder: ImmutableSortedMap.Builder<String?, Any?>) {
+        super.addProperties(builder)
+        builder.put(Property.ARTIFACT_URLS.name, artifactUrls)
     }
 
-    @Override
-    protected void addProperties(ImmutableSortedMap.Builder<String, Object> builder) {
-        super.addProperties(builder);
-        builder.put(Property.ARTIFACT_URLS.name(), artifactUrls);
-    }
+    class Builder(name: String?, url: URI?) : UrlRepositoryDescriptor.Builder<Builder?>(name, url) {
+        private var artifactUrls: ImmutableList<URI>? = null
 
-    public static class Builder extends UrlRepositoryDescriptor.Builder<Builder> {
-
-        private ImmutableList<URI> artifactUrls;
-
-        public Builder(String name, URI url) {
-            super(name, url);
+        fun setArtifactUrls(artifactUrls: MutableCollection<URI?>): Builder {
+            this.artifactUrls = ImmutableList.copyOf<URI?>(artifactUrls)
+            return this
         }
 
-        public Builder setArtifactUrls(Collection<URI> artifactUrls) {
-            this.artifactUrls = ImmutableList.copyOf(artifactUrls);
-            return this;
-        }
+        fun create(): MavenRepositoryDescriptor {
+            Preconditions.checkNotNull<ImmutableList<URI?>?>(artifactUrls)
+            Preconditions.checkNotNull<ImmutableList<String?>?>(metadataSources)
 
-        public MavenRepositoryDescriptor create() {
-            checkNotNull(artifactUrls);
-            checkNotNull(metadataSources);
-
-            ImmutableList<ResourcePattern> metadataResources = ImmutableList.of(new M2ResourcePattern(url, MavenPattern.M2_PATTERN));
-            ImmutableList.Builder<ResourcePattern> artifactResourcesBuilder = ImmutableList.builderWithExpectedSize(1 + artifactUrls.size());
-            artifactResourcesBuilder.add(new M2ResourcePattern(url, MavenPattern.M2_PATTERN));
-            for (URI rootUri : artifactUrls) {
-                artifactResourcesBuilder.add(new M2ResourcePattern(rootUri, MavenPattern.M2_PATTERN));
+            val metadataResources = ImmutableList.of<ResourcePattern?>(M2ResourcePattern(url, MavenPattern.M2_PATTERN))
+            val artifactResourcesBuilder = ImmutableList.builderWithExpectedSize<ResourcePattern?>(1 + artifactUrls!!.size)
+            artifactResourcesBuilder.add(M2ResourcePattern(url, MavenPattern.M2_PATTERN))
+            for (rootUri in artifactUrls!!) {
+                artifactResourcesBuilder.add(M2ResourcePattern(rootUri, MavenPattern.M2_PATTERN))
             }
-            ImmutableList<ResourcePattern> artifactResources = artifactResourcesBuilder.build();
+            val artifactResources = artifactResourcesBuilder.build()
 
-            String id = calculateId(MavenResolver.class, metadataResources, artifactResources, metadataSources, hasher -> {});
+            val id = calculateId(MavenResolver::class.java, metadataResources, artifactResources, metadataSources, Consumer { hasher: Hasher? -> })
 
-            return new MavenRepositoryDescriptor(
+            return MavenRepositoryDescriptor(
                 id,
-                checkNotNull(name),
+                Preconditions.checkNotNull<String?>(name),
                 url,
                 metadataResources,
                 artifactResources,
                 metadataSources,
-                checkNotNull(authenticated),
-                checkNotNull(authenticationSchemes),
-                artifactUrls
-            );
+                Preconditions.checkNotNull<Boolean?>(authenticated)!!,
+                Preconditions.checkNotNull<ImmutableList<String?>?>(authenticationSchemes),
+                artifactUrls!!
+            )
         }
     }
 }

@@ -13,96 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.StartParameter;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter;
-import org.gradle.api.internal.artifacts.GlobalDependencyResolutionRules;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParserFactory;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ComponentSelectorNotationConverter;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DefaultDependencySubstitutions;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultCachePolicy;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultCapabilitiesResolution;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultResolutionStrategy;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.Factory;
-import org.gradle.internal.build.BuildState;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.vcs.internal.VcsResolver;
-
-import javax.inject.Inject;
+import org.gradle.StartParameter
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.ComponentSelectorConverter
+import org.gradle.api.internal.artifacts.GlobalDependencyResolutionRules
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParserFactory
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ComponentSelectorNotationConverter
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DefaultDependencySubstitutions
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultCachePolicy
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultCapabilitiesResolution
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultResolutionStrategy
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.internal.Factory
+import org.gradle.internal.build.BuildState
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.vcs.internal.VcsResolver
+import javax.inject.Inject
 
 /**
- * Creates fully initialized {@link ResolutionStrategyInternal} instances.
+ * Creates fully initialized [ResolutionStrategyInternal] instances.
  */
-@ServiceScope(Scope.Project.class)
-public class ResolutionStrategyFactory implements Factory<ResolutionStrategyInternal> {
+@ServiceScope(Scope.Project::class)
+class ResolutionStrategyFactory @Inject constructor(
+    private val currentBuild: BuildState,
+    private val instantiator: Instantiator,
+    private val globalDependencySubstitutionRules: GlobalDependencyResolutionRules,
+    private val vcsResolver: VcsResolver,
+    private val attributesFactory: AttributesFactory,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val componentSelectorConverter: ComponentSelectorConverter,
+    private val dependencyLockingProvider: DependencyLockingProvider,
+    private val moduleSelectorNotationParser: ComponentSelectorNotationConverter,
+    private val objectFactory: ObjectFactory,
+    private val startParameter: StartParameter
+) : Factory<ResolutionStrategyInternal?> {
+    private val capabilityNotationParser: NotationParser<Any, Capability>
 
-    private final BuildState currentBuild;
-    private final Instantiator instantiator;
-    private final GlobalDependencyResolutionRules globalDependencySubstitutionRules;
-    private final VcsResolver vcsResolver;
-    private final AttributesFactory attributesFactory;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final ComponentSelectorConverter componentSelectorConverter;
-    private final DependencyLockingProvider dependencyLockingProvider;
-    private final ComponentSelectorNotationConverter moduleSelectorNotationParser;
-    private final ObjectFactory objectFactory;
-    private final StartParameter startParameter;
-    private final NotationParser<Object, Capability> capabilityNotationParser;
-
-    @Inject
-    public ResolutionStrategyFactory(
-        BuildState currentBuild,
-        Instantiator instantiator,
-        GlobalDependencyResolutionRules globalDependencySubstitutionRules,
-        VcsResolver vcsResolver,
-        AttributesFactory attributesFactory,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        ComponentSelectorConverter componentSelectorConverter,
-        DependencyLockingProvider dependencyLockingProvider,
-        ComponentSelectorNotationConverter moduleSelectorNotationParser,
-        ObjectFactory objectFactory,
-        StartParameter startParameter
-    ) {
-        this.currentBuild = currentBuild;
-        this.instantiator = instantiator;
-        this.globalDependencySubstitutionRules = globalDependencySubstitutionRules;
-        this.vcsResolver = vcsResolver;
-        this.attributesFactory = attributesFactory;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.componentSelectorConverter = componentSelectorConverter;
-        this.dependencyLockingProvider = dependencyLockingProvider;
-        this.moduleSelectorNotationParser = moduleSelectorNotationParser;
-        this.objectFactory = objectFactory;
-        this.startParameter = startParameter;
-        this.capabilityNotationParser = new CapabilityNotationParserFactory(false).create();
+    init {
+        this.capabilityNotationParser = CapabilityNotationParserFactory(false).create()
     }
 
-    @Override
-    public ResolutionStrategyInternal create() {
-        CapabilitiesResolutionInternal capabilitiesResolutionInternal = instantiator.newInstance(
-            DefaultCapabilitiesResolution.class,
+    override fun create(): ResolutionStrategyInternal {
+        val capabilitiesResolutionInternal: CapabilitiesResolutionInternal = instantiator.newInstance<DefaultCapabilitiesResolution>(
+            DefaultCapabilitiesResolution::class.java,
             capabilityNotationParser
-        );
+        )
 
-        DependencySubstitutionsInternal dependencySubstitutions = DefaultDependencySubstitutions.forResolutionStrategy(
+        val dependencySubstitutions: DependencySubstitutionsInternal? = DefaultDependencySubstitutions.forResolutionStrategy(
             currentBuild, moduleSelectorNotationParser, instantiator, objectFactory, attributesFactory, capabilityNotationParser
-        );
+        )
 
-        CachePolicy cachePolicy = createCachePolicy(startParameter);
+        val cachePolicy: CachePolicy = createCachePolicy(startParameter)
 
-        return instantiator.newInstance(DefaultResolutionStrategy.class,
+        return instantiator.newInstance<DefaultResolutionStrategy>(
+            DefaultResolutionStrategy::class.java,
             cachePolicy,
             dependencySubstitutions,
             globalDependencySubstitutionRules,
@@ -112,16 +86,18 @@ public class ResolutionStrategyFactory implements Factory<ResolutionStrategyInte
             dependencyLockingProvider,
             capabilitiesResolutionInternal,
             objectFactory
-        );
+        )
     }
 
-    private static CachePolicy createCachePolicy(StartParameter startParameter) {
-        CachePolicy cachePolicy = new DefaultCachePolicy();
-        if (startParameter.isOffline()) {
-            cachePolicy.setOffline();
-        } else if (startParameter.isRefreshDependencies()) {
-            cachePolicy.setRefreshDependencies();
+    companion object {
+        private fun createCachePolicy(startParameter: StartParameter): CachePolicy {
+            val cachePolicy: CachePolicy = DefaultCachePolicy()
+            if (startParameter.isOffline()) {
+                cachePolicy.setOffline()
+            } else if (startParameter.isRefreshDependencies()) {
+                cachePolicy.setRefreshDependencies()
+            }
+            return cachePolicy
         }
-        return cachePolicy;
     }
 }

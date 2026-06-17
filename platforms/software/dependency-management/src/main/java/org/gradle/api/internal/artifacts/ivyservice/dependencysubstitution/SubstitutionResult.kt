@@ -13,35 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
 /**
  * Represents the result of successfully applying substitution rules to a dependency metadata.
  */
-public interface SubstitutionResult {
-
+interface SubstitutionResult {
     /**
      * The new target component selector, or null if a new target selector was not configured.
      */
-    @Nullable
-    ComponentSelector getTarget();
+    val target: ComponentSelector?
 
     /**
      * The new target artifacts, or null if no new target artifacts were configured.
      */
-    @Nullable
-    ImmutableList<IvyArtifactName> getArtifacts();
+    val artifacts: ImmutableList<IvyArtifactName>?
 
     /**
      * Descriptors describing the substitution rules that produced this result.
      */
-    ImmutableList<ComponentSelectionDescriptorInternal> getRuleDescriptors();
-
+    val ruleDescriptors: ImmutableList<ComponentSelectionDescriptorInternal>?
 }

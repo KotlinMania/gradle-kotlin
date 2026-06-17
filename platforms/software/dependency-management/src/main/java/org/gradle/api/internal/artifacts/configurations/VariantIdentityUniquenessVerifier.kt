@@ -13,177 +13,153 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.MultimapBuilder;
-import org.gradle.api.GradleException;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.external.model.ProjectDerivedCapability;
-import org.gradle.internal.deprecation.DocumentedFailure;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import com.google.common.collect.ListMultimap
+import com.google.common.collect.MultimapBuilder
+import org.gradle.api.GradleException
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.external.model.ImmutableCapabilities.Companion.of
+import org.gradle.internal.component.external.model.ProjectDerivedCapability
+import org.gradle.internal.deprecation.DocumentedFailure.builder
+import java.util.function.Consumer
+import java.util.stream.Collectors
 
 /**
  * Static utility to verify a set of variants each have a unique identity in terms of attributes and capabilities.
  */
-public class VariantIdentityUniquenessVerifier {
-
+object VariantIdentityUniquenessVerifier {
     /**
      * Build a report of all possible variant uniqueness failures for the given configurations.
      */
-    public static VerificationReport buildReport(ConfigurationsProvider configurations) {
-        ListMultimap<VariantIdentity, ConfigurationInternal> byIdentity =
-            MultimapBuilder.linkedHashKeys().arrayListValues().build();
+    @JvmStatic
+    fun buildReport(configurations: ConfigurationsProvider): VerificationReport {
+        val byIdentity =
+            MultimapBuilder.linkedHashKeys().arrayListValues().build<VariantIdentity, ConfigurationInternal>()
 
-        configurations.visitConsumable(configuration -> {
-            if (!mustHaveUniqueAttributes(configuration)) {
-                return;
+        configurations.visitConsumable(Consumer { configuration: ConfigurationInternal? ->
+            if (!VariantIdentityUniquenessVerifier.mustHaveUniqueAttributes(configuration!!)) {
+                return@visitConsumable
             }
+            byIdentity.put(VariantIdentity.Companion.from(configuration), configuration)
+        })
 
-            byIdentity.put(VariantIdentity.from(configuration), configuration);
-        });
-
-        return new VerificationReport(byIdentity);
+        return VariantIdentityUniquenessVerifier.VerificationReport(byIdentity)
     }
 
     /**
      * Consumable, non-resolvable, non-default configurations with attributes must have unique attributes.
      */
-    private static boolean mustHaveUniqueAttributes(Configuration configuration) {
-        return !configuration.isCanBeResolved() &&
-            !Dependency.DEFAULT_CONFIGURATION.equals(configuration.getName()) &&
-            !configuration.getAttributes().isEmpty();
+    private fun mustHaveUniqueAttributes(configuration: Configuration): Boolean {
+        return !configuration.isCanBeResolved() && (Dependency.DEFAULT_CONFIGURATION != configuration.getName()) && !configuration.getAttributes().isEmpty()
     }
 
     /**
      * A report tracking all possible variant uniqueness failures for a component.
      */
-    public static class VerificationReport {
-
-        private final ListMultimap<VariantIdentity, ConfigurationInternal> byIdentity;
-
-        private VerificationReport(ListMultimap<VariantIdentity, ConfigurationInternal> byIdentity) {
-            this.byIdentity = byIdentity;
-        }
-
+    class VerificationReport private constructor(private val byIdentity: ListMultimap<VariantIdentity, ConfigurationInternal>) {
         /**
          * Get a failure that only checks variant uniqueness for the given configuration.
          */
-        @Nullable
-        public GradleException failureFor(ConfigurationInternal configuration, boolean withTaskAdvice) {
-            List<ConfigurationInternal> collisions =
-                byIdentity.get(VariantIdentity.from(configuration)).stream()
-                    .filter(it -> !it.getName().equals(configuration.getName()))
-                    .collect(Collectors.toList());
+        fun failureFor(configuration: ConfigurationInternal, withTaskAdvice: Boolean): GradleException? {
+            val collisions =
+                byIdentity.get(VariantIdentity.Companion.from(configuration)).stream()
+                    .filter { it: ConfigurationInternal? -> it!!.getName() != configuration.getName() }
+                    .collect(Collectors.toList())
 
             if (collisions.isEmpty()) {
-                return null;
+                return null
             }
 
-            return buildFailure(configuration, withTaskAdvice, collisions);
+            return buildFailure(configuration, withTaskAdvice, collisions)
         }
 
         /**
          * Throw an exception if any variants have conflicting identities.
          */
-        public void assertNoConflicts() {
-            for (VariantIdentity identity : byIdentity.keySet()) {
-                List<ConfigurationInternal> collisions = byIdentity.get(identity);
-                if (collisions.size() > 1) {
-
-                    ConfigurationInternal configuration = collisions.get(0);
-                    List<ConfigurationInternal> filtered =
+        fun assertNoConflicts() {
+            for (identity in byIdentity.keySet()) {
+                val collisions = byIdentity.get(identity)
+                if (collisions.size > 1) {
+                    val configuration = collisions.get(0)
+                    val filtered =
                         byIdentity.get(identity).stream()
-                            .filter(it -> !it.getName().equals(configuration.getName()))
-                            .collect(Collectors.toList());
+                            .filter { it: ConfigurationInternal? -> it!!.getName() != configuration.getName() }
+                            .collect(Collectors.toList())
 
-                    throw  buildFailure(configuration, true, filtered);
+                    throw buildFailure(configuration, true, filtered)
                 }
             }
         }
 
-        private static GradleException buildFailure(
-            ConfigurationInternal configuration,
-            boolean withTaskAdvice,
-            List<ConfigurationInternal> collisions
-        ) {
-            DocumentedFailure.Builder builder = DocumentedFailure.builder();
-            String advice = "Consider adding an additional attribute to one of the configurations to disambiguate them.";
-            if (withTaskAdvice) {
-                advice += "  Run the 'outgoingVariants' task for more details.";
+        companion object {
+            private fun buildFailure(
+                configuration: ConfigurationInternal,
+                withTaskAdvice: Boolean,
+                collisions: MutableList<ConfigurationInternal>
+            ): GradleException {
+                val builder = builder()
+                var advice = "Consider adding an additional attribute to one of the configurations to disambiguate them."
+                if (withTaskAdvice) {
+                    advice += "  Run the 'outgoingVariants' task for more details."
+                }
+
+                val message = "Consumable configurations with identical capabilities within a project (other than the default configuration) " +
+                        "must have unique attributes, but " + configuration.displayName + " and " + collisions + " contain identical attribute sets."
+
+                return builder.withSummary(message)
+                    .withAdvice(advice)
+                    .withUserManual("upgrading_version_7", "unique_attribute_sets")!!
+                    .build()
             }
-
-            String message = "Consumable configurations with identical capabilities within a project (other than the default configuration) " +
-                "must have unique attributes, but " + configuration.getDisplayName() + " and " + collisions + " contain identical attribute sets.";
-
-            return builder.withSummary(message)
-                .withAdvice(advice)
-                .withUserManual("upgrading_version_7", "unique_attribute_sets")
-                .build();
         }
     }
 
     /**
      * The identity of a variant -- its attributes and capabilities.
      */
-    private static class VariantIdentity {
-        private final ImmutableAttributes attributes;
-        private final ImmutableCapabilities capabilities;
-
-        private VariantIdentity(ImmutableAttributes attributes, ImmutableCapabilities capabilities) {
-            this.attributes = attributes;
-            this.capabilities = capabilities;
+    private class VariantIdentity(private val attributes: ImmutableAttributes, private val capabilities: ImmutableCapabilities) {
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+            val that = o as VariantIdentity
+            return attributes == that.attributes &&
+                    capabilities == that.capabilities
         }
 
-        public static VariantIdentity from(ConfigurationInternal configuration) {
-            return new VariantIdentity(
-                configuration.getAttributes().asImmutable(),
-                allCapabilitiesIncludingDefault(configuration)
-            );
+        override fun hashCode(): Int {
+            return attributes.hashCode() xor capabilities.hashCode()
         }
 
-        private static ImmutableCapabilities allCapabilitiesIncludingDefault(ConfigurationInternal conf) {
-            Collection<? extends Capability> declaredCapabilities = conf.getOutgoing().getCapabilities();
-            if (!declaredCapabilities.isEmpty()) {
-                return ImmutableCapabilities.of(declaredCapabilities);
+        companion object {
+            fun from(configuration: ConfigurationInternal): VariantIdentity {
+                return VariantIdentity(
+                    configuration.getAttributes()!!.asImmutable(),
+                    allCapabilitiesIncludingDefault(configuration)
+                )
             }
 
-            // If no capabilities are declared, use the implicit capability.
-            ProjectInternal project = conf.getDomainObjectContext().getProject();
-            if (project == null) {
-                return ImmutableCapabilities.EMPTY;
-            }
-            return ImmutableCapabilities.of(new ProjectDerivedCapability(project));
-        }
+            private fun allCapabilitiesIncludingDefault(conf: ConfigurationInternal): ImmutableCapabilities {
+                val declaredCapabilities = conf.getOutgoing().getCapabilities()
+                if (!declaredCapabilities.isEmpty()) {
+                    return of(declaredCapabilities)!!
+                }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+                // If no capabilities are declared, use the implicit capability.
+                val project: ProjectInternal? = conf.domainObjectContext.getProject()
+                if (project == null) {
+                    return ImmutableCapabilities.EMPTY
+                }
+                return of(ProjectDerivedCapability(project))!!
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            VariantIdentity that = (VariantIdentity) o;
-            return Objects.equals(attributes, that.attributes) &&
-                   Objects.equals(capabilities, that.capabilities);
-        }
-
-        @Override
-        public int hashCode() {
-            return attributes.hashCode() ^ capabilities.hashCode();
         }
     }
-
 }

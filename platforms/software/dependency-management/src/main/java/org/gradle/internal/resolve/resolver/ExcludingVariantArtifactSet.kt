@@ -37,7 +37,7 @@ class ExcludingVariantArtifactSet(private val delegate: ResolvedVariant, private
     private val id: VariantResolveMetadata.Identifier
 
     init {
-        this.id = ExcludingIdentifier(delegate.getIdentifier(), moduleId, exclusions)
+        this.id = ExcludingIdentifier(delegate.identifier, moduleId, exclusions)
     }
 
     override fun asDescribable(): DisplayName {
@@ -49,7 +49,7 @@ class ExcludingVariantArtifactSet(private val delegate: ResolvedVariant, private
     }
 
     override fun getSourceVariantId(): VariantIdentifier {
-        return delegate.getSourceVariantId()
+        return delegate.sourceVariantId
     }
 
     override fun getAttributes(): ImmutableAttributes {
@@ -57,16 +57,16 @@ class ExcludingVariantArtifactSet(private val delegate: ResolvedVariant, private
     }
 
     override fun getCapabilities(): ImmutableCapabilities {
-        return delegate.getCapabilities()
+        return delegate.capabilities
     }
 
     override fun getArtifacts(): ResolvedArtifactSet {
-        val artifacts = delegate.getArtifacts()
+        val artifacts = delegate.artifacts
         return FilteringResolvedArtifactSet(artifacts, Predicate { artifact: ResolvableArtifact? -> this.include(artifact!!) })
     }
 
     private fun include(artifact: ResolvableArtifact): Boolean {
-        return !exclusions.excludesArtifact(moduleId, artifact.getArtifactName())
+        return !exclusions.excludesArtifact(moduleId, artifact.artifactName)
     }
 
     private class ExcludingIdentifier(

@@ -13,82 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
 
-import java.util.List;
-import java.util.Set;
+class ImmutableArtifactVerificationMetadata(private val artifactName: String, checksums: MutableList<Checksum?>, trustedPgpKeys: MutableSet<String?>, ignoredPgpKeys: MutableSet<IgnoredKey?>) :
+    ArtifactVerificationMetadata {
+    private val checksums: MutableList<Checksum?>
+    private val trustedPgpKeys: MutableSet<String?>
+    private val ignoredPgpKeys: MutableSet<IgnoredKey?>
+    private val hashCode: Int
 
-public class ImmutableArtifactVerificationMetadata implements ArtifactVerificationMetadata {
-    private final String artifactName;
-    private final List<Checksum> checksums;
-    private final Set<String> trustedPgpKeys;
-    private final Set<IgnoredKey> ignoredPgpKeys;
-    private final int hashCode;
-
-    public ImmutableArtifactVerificationMetadata(String artifactName, List<Checksum> checksums, Set<String> trustedPgpKeys, Set<IgnoredKey> ignoredPgpKeys) {
-        this.artifactName = artifactName;
-        this.checksums = ImmutableList.copyOf(checksums);
-        this.trustedPgpKeys = ImmutableSet.copyOf(trustedPgpKeys);
-        this.ignoredPgpKeys = ImmutableSet.copyOf(ignoredPgpKeys);
-        this.hashCode = computeHashCode();
+    init {
+        this.checksums = ImmutableList.copyOf<Checksum?>(checksums)
+        this.trustedPgpKeys = ImmutableSet.copyOf<String?>(trustedPgpKeys)
+        this.ignoredPgpKeys = ImmutableSet.copyOf<IgnoredKey?>(ignoredPgpKeys)
+        this.hashCode = computeHashCode()
     }
 
-    @Override
-    public String getArtifactName() {
-        return artifactName;
+    override fun getArtifactName(): String {
+        return artifactName
     }
 
-    @Override
-    public List<Checksum> getChecksums() {
-        return checksums;
+    override fun getChecksums(): MutableList<Checksum?> {
+        return checksums
     }
 
-    @Override
-    public Set<String> getTrustedPgpKeys() {
-        return trustedPgpKeys;
+    override fun getTrustedPgpKeys(): MutableSet<String?> {
+        return trustedPgpKeys
     }
 
-    @Override
-    public Set<IgnoredKey> getIgnoredPgpKeys() {
-        return ignoredPgpKeys;
+    override fun getIgnoredPgpKeys(): MutableSet<IgnoredKey?> {
+        return ignoredPgpKeys
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        ImmutableArtifactVerificationMetadata that = (ImmutableArtifactVerificationMetadata) o;
+        val that = o as ImmutableArtifactVerificationMetadata
 
-        if (!artifactName.equals(that.artifactName)) {
-            return false;
+        if (artifactName != that.artifactName) {
+            return false
         }
-        if (!checksums.equals(that.checksums)) {
-            return false;
+        if (checksums != that.checksums) {
+            return false
         }
-        if (!ignoredPgpKeys.equals(that.ignoredPgpKeys)) {
-            return false;
+        if (ignoredPgpKeys != that.ignoredPgpKeys) {
+            return false
         }
-        return trustedPgpKeys.equals(that.trustedPgpKeys);
+        return trustedPgpKeys == that.trustedPgpKeys
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private int computeHashCode() {
-        int result = artifactName.hashCode();
-        result = 31 * result + checksums.hashCode();
-        result = 31 * result + trustedPgpKeys.hashCode();
-        result = 31 * result + ignoredPgpKeys.hashCode();
-        return result;
+    private fun computeHashCode(): Int {
+        var result = artifactName.hashCode()
+        result = 31 * result + checksums.hashCode()
+        result = 31 * result + trustedPgpKeys.hashCode()
+        result = 31 * result + ignoredPgpKeys.hashCode()
+        return result
     }
 }

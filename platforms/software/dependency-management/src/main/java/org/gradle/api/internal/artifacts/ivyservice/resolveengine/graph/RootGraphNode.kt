@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ResolveOptimizations;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata;
+interface RootGraphNode : DependencyGraphNode {
+    override fun getMetadata(): LocalVariantGraphResolveMetadata?
 
-public interface RootGraphNode extends DependencyGraphNode {
-    @Override
-    LocalVariantGraphResolveMetadata getMetadata();
-
-    ResolveOptimizations getResolveOptimizations();
+    val resolveOptimizations: ResolveOptimizations?
 }

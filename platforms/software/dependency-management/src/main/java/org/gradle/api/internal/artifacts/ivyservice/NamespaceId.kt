@@ -13,113 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.Base64;
+import org.apache.commons.lang3.builder.HashCodeBuilder
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.IOException
+import java.io.Serializable
+import java.util.Base64
 
 /**
  * Represents an identifier containing a tuple of namespace and name for use when
  * consuming/producing namespaced elements in descriptors.
  */
-public class NamespaceId implements Serializable {
-    private String namespace;
-    private String name;
-
-    public static NamespaceId decode(String encoding) {
-        byte[] data = Base64.getDecoder().decode(encoding);
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(data); DataInputStream dis = new DataInputStream(bais)) {
-            String namespace = dis.readUTF();
-            String name = dis.readUTF();
-            return new NamespaceId(namespace, name);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed decoding namespace ID");
-        }
-    }
-
-    public NamespaceId(String namespace, String name) {
-        this.namespace = namespace;
-        this.name = name;
-    }
-
-    public String encode() {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); DataOutputStream dos = new DataOutputStream(baos)) {
-            dos.writeUTF(namespace);
-            dos.writeUTF(name);
-            return Base64.getEncoder().encodeToString(baos.toByteArray());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed encoding namespace ID '" + name + "'");
-        }
-    }
-
-    /**
-     * Gets the namespace for this identifier.
-     *
-     * @return the namespace for this identifier
-     */
-    public String getNamespace() {
-        return namespace;
-    }
-
+class NamespaceId(
     /**
      * Sets the namespace for this identifier.
      *
      * @param namespace the namespace
      */
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
-
-    /**
-     * Gets the name for this identifier.
-     *
-     * @return the name for this identifier
-     */
-    public String getName() {
-        return name;
-    }
-
+    @JvmField var namespace: String,
     /**
      * Sets the name for this identifier.
      *
      * @param name the name
      */
-    public void setName(String name) {
-        this.name = name;
+    @JvmField var name: String
+) : Serializable {
+    /**
+     * Gets the namespace for this identifier.
+     *
+     * @return the namespace for this identifier
+     */
+    /**
+     * Gets the name for this identifier.
+     *
+     * @return the name for this identifier
+     */
+
+    fun encode(): String {
+        try {
+            ByteArrayOutputStream().use { baos ->
+                DataOutputStream(baos).use { dos ->
+                    dos.writeUTF(namespace)
+                    dos.writeUTF(name)
+                    return Base64.getEncoder().encodeToString(baos.toByteArray())
+                }
+            }
+        } catch (e: IOException) {
+            throw RuntimeException("Failed encoding namespace ID '" + name + "'")
+        }
     }
 
-    @Override
-    public String toString() {
-        return name;
+    override fun toString(): String {
+        return name
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == this) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (o === this) {
+            return true
         }
 
-        if (o == null || o.getClass() != getClass()) {
-            return false;
+        if (o == null || o.javaClass != javaClass) {
+            return false
         }
 
-        NamespaceId other = (NamespaceId) o;
-        return other.getName().equals(name) && other.getNamespace().equals(namespace);
+        val other = o as NamespaceId
+        return other.name == name && other.namespace == namespace
     }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 31)
-                .append(namespace)
-                .append(name)
-                .toHashCode();
+    override fun hashCode(): Int {
+        return HashCodeBuilder(17, 31)
+            .append(namespace)
+            .append(name)
+            .toHashCode()
+    }
+
+    companion object {
+        @JvmStatic
+        fun decode(encoding: String): NamespaceId {
+            val data = Base64.getDecoder().decode(encoding)
+            try {
+                ByteArrayInputStream(data).use { bais ->
+                    DataInputStream(bais).use { dis ->
+                        val namespace = dis.readUTF()
+                        val name = dis.readUTF()
+                        return NamespaceId(namespace, name)
+                    }
+                }
+            } catch (e: Exception) {
+                throw RuntimeException("Failed decoding namespace ID")
+            }
+        }
     }
 }

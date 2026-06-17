@@ -13,21 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal;
-import org.gradle.internal.ImmutableActionSet;
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal
 
-public interface ResolutionStrategyInternal extends ResolutionStrategy {
+interface ResolutionStrategyInternal : ResolutionStrategy {
     /**
      * Discard any configuration state that is not required after graph resolution has been attempted.
      */
-    void maybeDiscardStateRequiredForGraphResolution();
+    fun maybeDiscardStateRequiredForGraphResolution()
 
     /**
      * Sets whether or not any configuration resolution is final and the state required for resolution can be
@@ -35,82 +31,79 @@ public interface ResolutionStrategyInternal extends ResolutionStrategy {
      *
      * Defaults to false.
      */
-    void setKeepStateRequiredForGraphResolution(boolean keepStateRequiredForGraphResolution);
+    fun setKeepStateRequiredForGraphResolution(keepStateRequiredForGraphResolution: Boolean)
 
     /**
      * Gets the current expiry policy for dynamic revisions.
      *
      * @return the expiry policy
      */
-    CachePolicy getCachePolicy();
+    val cachePolicy: CachePolicy?
 
     /**
      * Until the feature 'settles' and we receive more feedback, it's internal
      *
      * @return conflict resolution
      */
-    ConflictResolution getConflictResolution();
+    val conflictResolution: ConflictResolution?
 
     /**
      * @return the dependency substitution rule (may aggregate multiple rules)
      */
-    ImmutableActionSet<DependencySubstitutionInternal> getDependencySubstitutionRule();
+    val dependencySubstitutionRule: ImmutableActionSet<DependencySubstitutionInternal>?
 
     /**
      * Used by tests to validate behaviour of the 'task graph modified' state
      */
-    void assumeFluidDependencies();
+    fun assumeFluidDependencies()
 
     /**
      * Should the configuration be fully resolved to determine the task dependencies?
      * If not, we do a shallow 'resolve' of SelfResolvingDependencies only.
      */
-    boolean resolveGraphToDetermineTaskDependencies();
+    fun resolveGraphToDetermineTaskDependencies(): Boolean
 
-    SortOrder getSortOrder();
+    val sortOrder: ResolutionStrategy.SortOrder?
 
-    @Override
-    DependencySubstitutionsInternal getDependencySubstitution();
+    override fun getDependencySubstitution(): DependencySubstitutionsInternal?
 
     /**
      * @return the version selection rules object
      */
-    @Override
-    ComponentSelectionRulesInternal getComponentSelection();
+    override fun getComponentSelection(): ComponentSelectionRulesInternal?
 
     /**
-     * @return copy of this resolution strategy. See the contract of {@link org.gradle.api.artifacts.Configuration#copy()}.
+     * @return copy of this resolution strategy. See the contract of [org.gradle.api.artifacts.Configuration.copy].
      */
-    ResolutionStrategyInternal copy();
+    fun copy(): ResolutionStrategyInternal?
 
     /**
      * Sets the validator to invoke before mutation. Any exception thrown by the action will veto the mutation.
      */
-    void setMutationValidator(MutationValidator action);
+    fun setMutationValidator(action: MutationValidator)
 
     /**
      * Returns the dependency locking provider linked to this resolution strategy.
      *
      * @return dependency locking provider
      */
-    DependencyLockingProvider getDependencyLockingProvider();
+    val dependencyLockingProvider: DependencyLockingProvider?
 
     /**
      * Indicates if dependency locking is enabled.
      *
-     * @return {@code true} if dependency locking is enabled, {@code false} otherwise
+     * @return `true` if dependency locking is enabled, `false` otherwise
      */
-    boolean isDependencyLockingEnabled();
+    val isDependencyLockingEnabled: Boolean
 
-    CapabilitiesResolutionInternal getCapabilitiesResolutionRules();
+    val capabilitiesResolutionRules: CapabilitiesResolutionInternal?
 
-    boolean isFailingOnDynamicVersions();
+    val isFailingOnDynamicVersions: Boolean
 
-    boolean isFailingOnChangingVersions();
+    val isFailingOnChangingVersions: Boolean
 
-    boolean isDependencyVerificationEnabled();
+    val isDependencyVerificationEnabled: Boolean
 
-    void setIncludeAllSelectableVariantResults(boolean selectableVariantResults);
-
-    boolean getIncludeAllSelectableVariantResults();
+    @JvmField
+    var includeAllSelectableVariantResults: Boolean
 }

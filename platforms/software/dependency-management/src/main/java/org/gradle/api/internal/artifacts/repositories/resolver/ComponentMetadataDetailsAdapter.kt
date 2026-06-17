@@ -13,155 +13,146 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.VariantMetadata;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.api.artifacts.DependencyConstraintMetadata
+import org.gradle.api.artifacts.DirectDependenciesMetadata
+import org.gradle.api.artifacts.DirectDependencyMetadata
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.VariantMetadata
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Category
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
 
-import java.util.List;
-
-public class ComponentMetadataDetailsAdapter implements ComponentMetadataDetails {
-    private final MutableModuleComponentResolveMetadata metadata;
-    private final Instantiator instantiator;
-    private final NotationParser<Object, DirectDependencyMetadata> dependencyMetadataNotationParser;
-    private final NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintMetadataNotationParser;
-    private final NotationParser<Object, ComponentIdentifier> componentIdentifierParser;
-    private final PlatformSupport platformSupport;
-
-    public ComponentMetadataDetailsAdapter(MutableModuleComponentResolveMetadata metadata, Instantiator instantiator,
-                                           NotationParser<Object, DirectDependencyMetadata> dependencyMetadataNotationParser,
-                                           NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintMetadataNotationParser,
-                                           NotationParser<Object, ComponentIdentifier> dependencyNotationParser,
-                                           PlatformSupport platformSupport) {
-        this.metadata = metadata;
-        this.instantiator = instantiator;
-        this.dependencyMetadataNotationParser = dependencyMetadataNotationParser;
-        this.dependencyConstraintMetadataNotationParser = dependencyConstraintMetadataNotationParser;
-        this.componentIdentifierParser = dependencyNotationParser;
-        this.platformSupport = platformSupport;
+class ComponentMetadataDetailsAdapter(
+    private val metadata: MutableModuleComponentResolveMetadata, private val instantiator: Instantiator,
+    private val dependencyMetadataNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+    private val dependencyConstraintMetadataNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+    private val componentIdentifierParser: NotationParser<Any, ComponentIdentifier>,
+    private val platformSupport: PlatformSupport
+) : ComponentMetadataDetails {
+    override fun getId(): ModuleVersionIdentifier {
+        return metadata.moduleVersionId
     }
 
-    @Override
-    public ModuleVersionIdentifier getId() {
-        return metadata.getModuleVersionId();
+    override fun isChanging(): Boolean {
+        return metadata.isChanging
     }
 
-    @Override
-    public boolean isChanging() {
-        return metadata.isChanging();
+    override fun getStatus(): String {
+        return metadata.status!!
     }
 
-    @Override
-    public String getStatus() {
-        return metadata.getStatus();
+    override fun getStatusScheme(): MutableList<String> {
+        return metadata.statusScheme!!
     }
 
-    @Override
-    public List<String> getStatusScheme() {
-        return metadata.getStatusScheme();
+    override fun setChanging(changing: Boolean) {
+        metadata.isChanging = changing
     }
 
-    @Override
-    public void setChanging(boolean changing) {
-        metadata.setChanging(changing);
+    override fun setStatus(status: String) {
+        metadata.status = status
     }
 
-    @Override
-    public void setStatus(String status) {
-        metadata.setStatus(status);
+    override fun setStatusScheme(statusScheme: MutableList<String>) {
+        metadata.statusScheme = statusScheme
     }
 
-    @Override
-    public void setStatusScheme(List<String> statusScheme) {
-        metadata.setStatusScheme(statusScheme);
+    override fun withVariant(name: String, action: Action<in VariantMetadata>) {
+        action.execute(
+            instantiator.newInstance<VariantMetadataAdapter>(
+                VariantMetadataAdapter::class.java,
+                name,
+                metadata,
+                instantiator,
+                dependencyMetadataNotationParser,
+                dependencyConstraintMetadataNotationParser
+            )
+        )
     }
 
-    @Override
-    public void withVariant(String name, Action<? super VariantMetadata> action) {
-        action.execute(instantiator.newInstance(VariantMetadataAdapter.class, name, metadata, instantiator, dependencyMetadataNotationParser, dependencyConstraintMetadataNotationParser));
+    override fun allVariants(action: Action<in VariantMetadata>) {
+        action.execute(
+            instantiator.newInstance<VariantMetadataAdapter>(
+                VariantMetadataAdapter::class.java,
+                null,
+                metadata,
+                instantiator,
+                dependencyMetadataNotationParser,
+                dependencyConstraintMetadataNotationParser
+            )
+        )
     }
 
-    @Override
-    public void allVariants(Action<? super VariantMetadata> action) {
-        action.execute(instantiator.newInstance(VariantMetadataAdapter.class, null, metadata, instantiator, dependencyMetadataNotationParser, dependencyConstraintMetadataNotationParser));
+    override fun addVariant(name: String, action: Action<in VariantMetadata>) {
+        metadata.variantMetadataRules!!.addVariant(name)
+        withVariant(name, action)
     }
 
-    @Override
-    public void addVariant(String name, Action<? super VariantMetadata> action) {
-        metadata.getVariantMetadataRules().addVariant(name);
-        withVariant(name, action);
+    override fun addVariant(name: String, base: String, action: Action<in VariantMetadata>) {
+        metadata.variantMetadataRules!!.addVariant(name, base, false)
+        withVariant(name, action)
     }
 
-    @Override
-    public void addVariant(String name, String base, Action<? super VariantMetadata> action) {
-        metadata.getVariantMetadataRules().addVariant(name, base, false);
-        withVariant(name, action);
+    override fun maybeAddVariant(name: String, base: String, action: Action<in VariantMetadata>) {
+        metadata.variantMetadataRules!!.addVariant(name, base, true)
+        withVariant(name, action)
     }
 
-    @Override
-    public void maybeAddVariant(String name, String base, Action<? super VariantMetadata> action) {
-        metadata.getVariantMetadataRules().addVariant(name, base, true);
-        withVariant(name, action);
+    override fun belongsTo(notation: Any) {
+        belongsTo(notation, true)
     }
 
-    @Override
-    public void belongsTo(Object notation) {
-        belongsTo(notation, true);
-    }
-
-    @Override
-    public void belongsTo(Object notation, boolean virtual) {
-        ComponentIdentifier id = componentIdentifierParser.parseNotation(notation);
+    override fun belongsTo(notation: Any, virtual: Boolean) {
+        val id = componentIdentifierParser.parseNotation(notation)
         if (virtual) {
-            metadata.belongsTo(VirtualComponentHelper.makeVirtual(id));
-        } else if (id instanceof ModuleComponentIdentifier) {
-            addPlatformDependencyToAllVariants((ModuleComponentIdentifier) id);
+            metadata.belongsTo(VirtualComponentHelper.makeVirtual(id))
+        } else if (id is ModuleComponentIdentifier) {
+            addPlatformDependencyToAllVariants(id)
         } else {
-            throw new InvalidUserCodeException(notation + " is not a valid platform identifier");
+            throw InvalidUserCodeException(notation.toString() + " is not a valid platform identifier")
         }
     }
 
-    private void addPlatformDependencyToAllVariants(ModuleComponentIdentifier platformId) {
-        allVariants(v -> v.withDependencies(dependencies -> {
-            String dependencyNotation = platformId.getGroup() + ":" + platformId.getModule() + ":" + platformId.getVersion();
-            dependencies.add(dependencyNotation, platformDependency ->
-                platformDependency.attributes(attributes ->
-                    attributes.attribute(Category.CATEGORY_ATTRIBUTE, platformSupport.getRegularPlatformCategory())
+    private fun addPlatformDependencyToAllVariants(platformId: ModuleComponentIdentifier) {
+        allVariants(Action { v: VariantMetadata ->
+            v.withDependencies(Action { dependencies: DirectDependenciesMetadata? ->
+                val dependencyNotation = platformId.getGroup() + ":" + platformId.getModule() + ":" + platformId.getVersion()
+                dependencies!!.add(dependencyNotation, Action { platformDependency: DirectDependencyMetadata? ->
+                    platformDependency!!.attributes(Action { attributes: AttributeContainer? ->
+                        attributes!!.attribute<Category>(
+                            Category.CATEGORY_ATTRIBUTE, platformSupport.getRegularPlatformCategory()
+                        )
+                    }
+                    )
+                }
                 )
-            );
-        }));
+            })
+        })
     }
 
-    @Override
-    public ComponentMetadataDetails attributes(Action<? super AttributeContainer> action) {
-        AttributeContainer attributes = metadata.getAttributesFactory().mutable((AttributeContainerInternal) metadata.getAttributes());
-        action.execute(attributes);
-        metadata.setAttributes(attributes);
-        return this;
+    override fun attributes(action: Action<in AttributeContainer>): ComponentMetadataDetails {
+        val attributes: AttributeContainer? = metadata.attributesFactory.mutable(metadata.attributes as AttributeContainerInternal)
+        action.execute(attributes)
+        metadata.attributes = attributes
+        return this
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return metadata.getAttributes();
+    override fun getAttributes(): AttributeContainer {
+        return metadata.attributes
     }
 
-    @Override
-    public String toString() {
-        return metadata.getModuleVersionId().toString();
+    override fun toString(): String {
+        return metadata.moduleVersionId.toString()
     }
-
 }

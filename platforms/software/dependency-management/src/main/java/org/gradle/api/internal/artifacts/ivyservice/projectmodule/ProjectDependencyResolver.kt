@@ -13,100 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult;
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.component.local.model.DefaultProjectComponentSelector
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.resolver.ArtifactResolver
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult
+import org.gradle.internal.resolve.result.BuildableComponentResolveResult
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Project.class)
-public class ProjectDependencyResolver implements ComponentMetaDataResolver, DependencyToComponentIdResolver, ArtifactResolver, ComponentResolvers {
-    private final LocalComponentRegistry localComponentRegistry;
-    private final ProjectArtifactResolver artifactResolver;
-
-    public ProjectDependencyResolver(LocalComponentRegistry localComponentRegistry, ProjectArtifactResolver artifactResolver) {
-        this.localComponentRegistry = localComponentRegistry;
-        this.artifactResolver = artifactResolver;
+@ServiceScope(Scope.Project::class)
+class ProjectDependencyResolver(private val localComponentRegistry: LocalComponentRegistry, private val artifactResolver: ProjectArtifactResolver) : ComponentMetaDataResolver,
+    DependencyToComponentIdResolver, ArtifactResolver, ComponentResolvers {
+    override fun getArtifactResolver(): ArtifactResolver {
+        return this
     }
 
-    @Override
-    public ArtifactResolver getArtifactResolver() {
-        return this;
+    override fun getComponentIdResolver(): DependencyToComponentIdResolver {
+        return this
     }
 
-    @Override
-    public DependencyToComponentIdResolver getComponentIdResolver() {
-        return this;
+    override fun getComponentResolver(): ComponentMetaDataResolver {
+        return this
     }
 
-    @Override
-    public ComponentMetaDataResolver getComponentResolver() {
-        return this;
-    }
-
-    @Override
-    public void resolve(ComponentSelector selector, ComponentOverrideMetadata overrideMetadata, VersionSelector acceptor, @Nullable VersionSelector rejector, BuildableComponentIdResolveResult result, ImmutableAttributes consumerAttributes) {
-        if (selector instanceof DefaultProjectComponentSelector) {
-            DefaultProjectComponentSelector projectSelector = (DefaultProjectComponentSelector) selector;
-            ProjectComponentIdentifier projectId = projectSelector.toIdentifier();
-            LocalComponentGraphResolveState component = localComponentRegistry.getComponent(projectId);
-            if (rejector != null && rejector.accept(component.getModuleVersionId().getVersion())) {
-                result.rejected(projectId, component.getModuleVersionId());
+    override fun resolve(
+        selector: ComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata,
+        acceptor: VersionSelector,
+        rejector: VersionSelector?,
+        result: BuildableComponentIdResolveResult,
+        consumerAttributes: ImmutableAttributes
+    ) {
+        if (selector is DefaultProjectComponentSelector) {
+            val projectSelector = selector
+            val projectId = projectSelector.toIdentifier()
+            val component = localComponentRegistry.getComponent(projectId)
+            if (rejector != null && rejector.accept(component.moduleVersionId.getVersion())) {
+                result.rejected(projectId, component.moduleVersionId)
             } else {
-                result.resolved(component, ComponentGraphSpecificResolveState.EMPTY_STATE);
+                result.resolved(component, ComponentGraphSpecificResolveState.EMPTY_STATE)
             }
         }
     }
 
-    @Override
-    public void resolve(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata, final BuildableComponentResolveResult result) {
+    override fun resolve(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata, result: BuildableComponentResolveResult) {
         if (isProjectModule(identifier)) {
-            ProjectComponentIdentifier projectId = (ProjectComponentIdentifier) identifier;
-            LocalComponentGraphResolveState component = localComponentRegistry.getComponent(projectId);
-            result.resolved(component, ComponentGraphSpecificResolveState.EMPTY_STATE);
+            val projectId = identifier as ProjectComponentIdentifier
+            val component = localComponentRegistry.getComponent(projectId)
+            result.resolved(component, ComponentGraphSpecificResolveState.EMPTY_STATE)
         }
     }
 
-    @Override
-    public boolean isFetchingMetadataCheap(ComponentIdentifier identifier) {
-        return true;
+    override fun isFetchingMetadataCheap(identifier: ComponentIdentifier): Boolean {
+        return true
     }
 
-    @Override
-    public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-        if (isProjectModule(component.getId())) {
-            throw new UnsupportedOperationException("Resolving artifacts by type is not yet supported for project modules");
+    override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
+        if (Companion.isProjectModule(component.getId()!!)) {
+            throw UnsupportedOperationException("Resolving artifacts by type is not yet supported for project modules")
         }
     }
 
-    @Override
-    public void resolveArtifact(ComponentArtifactResolveMetadata component, ComponentArtifactMetadata artifact, BuildableArtifactResolveResult result) {
-        if (isProjectModule(artifact.getComponentId())) {
-            artifactResolver.resolveArtifact(component, artifact, result);
+    override fun resolveArtifact(component: ComponentArtifactResolveMetadata, artifact: ComponentArtifactMetadata, result: BuildableArtifactResolveResult) {
+        if (Companion.isProjectModule(artifact.getComponentId()!!)) {
+            artifactResolver.resolveArtifact(component, artifact, result)
         }
     }
 
-    private static boolean isProjectModule(ComponentIdentifier componentId) {
-        return componentId instanceof ProjectComponentIdentifier;
+    companion object {
+        private fun isProjectModule(componentId: ComponentIdentifier): Boolean {
+            return componentId is ProjectComponentIdentifier
+        }
     }
 }

@@ -13,46 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
 /**
  * Version matcher for dynamic version selectors ending in '+'.
  */
-public class SubVersionSelector extends AbstractStringVersionSelector {
-    private final String prefix;
+class SubVersionSelector(selector: String) : AbstractStringVersionSelector(selector) {
+    val prefix: String
 
-    public SubVersionSelector(String selector) {
-        super(selector);
-        prefix = selector.substring(0, selector.length() - 1);
+    init {
+        prefix = selector.substring(0, selector.length - 1)
     }
 
-    public String getPrefix() {
-        return prefix;
+    override fun isDynamic(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isDynamic() {
-        return true;
+    override fun requiresMetadata(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean requiresMetadata() {
-        return false;
+    override fun matchesUniqueVersion(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean matchesUniqueVersion() {
-        return false;
+    override fun accept(candidate: String): Boolean {
+        return candidate.startsWith(prefix)
     }
 
-    @Override
-    public boolean accept(String candidate) {
-        return candidate.startsWith(prefix);
+    override fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean {
+        return false
     }
-
-    @Override
-    public boolean canShortCircuitWhenVersionAlreadyPreselected() {
-        return false;
-    }
-
 }

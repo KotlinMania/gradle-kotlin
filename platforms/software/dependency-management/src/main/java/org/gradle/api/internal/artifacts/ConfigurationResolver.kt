@@ -13,73 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ResolveException;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider;
-import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository;
-import org.gradle.api.internal.artifacts.transform.DefaultTransformUpstreamDependenciesResolver;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.List;
+import org.gradle.api.artifacts.ResolveException
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Resolves {@link ConfigurationInternal}s and produces {@link ResolverResults}.
- * <p>
+ * Resolves [ConfigurationInternal]s and produces [ResolverResults].
+ *
+ *
  * This resolution is lenient, except for some fatal failure cases,
  * in the sense that resolution failures in most cases will not cause exceptions
  * to be thrown. Instead, recoverable failures are packaged in the result type.
  */
-public interface ConfigurationResolver {
+interface ConfigurationResolver {
     /**
      * Traverses enough of the graph to calculate the build dependencies of the given configuration. All failures are packaged in the result.
      *
      * @param configuration The resolve context to resolve.
-     * @param futureCompleteResults The future value of the output of {@link #resolveGraph(ConfigurationInternal)}. See
-     * {@link DefaultTransformUpstreamDependenciesResolver} for why this is needed.
+     * @param futureCompleteResults The future value of the output of [.resolveGraph]. See
+     * [DefaultTransformUpstreamDependenciesResolver] for why this is needed.
      */
-    ResolverResults resolveBuildDependencies(ConfigurationInternal configuration, CalculatedValue<ResolverResults> futureCompleteResults);
+    fun resolveBuildDependencies(configuration: ConfigurationInternal?, futureCompleteResults: CalculatedValue<ResolverResults?>?): ResolverResults?
 
     /**
      * Traverses the full dependency graph of the given configuration. All failures are packaged in the result.
      */
-    ResolverResults resolveGraph(ConfigurationInternal configuration) throws ResolveException;
+    @Throws(ResolveException::class)
+    fun resolveGraph(configuration: ConfigurationInternal?): ResolverResults?
 
     /**
      * Returns the list of repositories available to resolve a given configuration.
      */
-    List<ResolutionAwareRepository> getAllRepositories();
+    val allRepositories: MutableList<ResolutionAwareRepository?>?
 
     /**
-     * Creates {@link ConfigurationResolver} instances.
-     * <p>
+     * Creates [ConfigurationResolver] instances.
+     *
+     *
      * We require this factory since configuration resolvers within a project
      * need a reference to the configuration container, and the configuration container
      * needs a reference to the configuration resolver (since new configurations also
      * need a reference to the resolver).
-     * <p>
+     *
+     *
      * In future versions, we will want to avoid this circular dependency by making
      * the root variant of a resolved configuration live in an adhoc root component,
      * just like all other resolved configurations.
      */
-    @ServiceScope(Scope.Project.class)
+    @ServiceScope(Scope.Project::class)
     interface Factory {
-
         /**
          * Create a new configuration resolver, potentially using the given configurations
          * provider as a source of variants for the root component that will own the root
          * variant of the dependency graph.
          */
-        ConfigurationResolver create(
-            ConfigurationsProvider configurations,
-            DomainObjectContext owner,
-            AttributesSchemaInternal schema
-        );
-
+        fun create(
+            configurations: ConfigurationsProvider?,
+            owner: DomainObjectContext?,
+            schema: AttributesSchemaInternal?
+        ): ConfigurationResolver?
     }
 }

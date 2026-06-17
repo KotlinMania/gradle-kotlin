@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.component.model.ModuleSource;
+import org.gradle.internal.component.model.ModuleSource
 
-public class RepositoryChainModuleSource implements ModuleSource {
-    private final String repositoryId;
+class RepositoryChainModuleSource(repository: ModuleComponentRepository<*>) : ModuleSource {
+    val repositoryId: String
 
-    public RepositoryChainModuleSource(ModuleComponentRepository<?> repository) {
-        this.repositoryId = repository.getId();
+    init {
+        this.repositoryId = repository.id
     }
 
-    @Override
-    public String toString() {
-        return "{repo: " + repositoryId + "}";
-    }
-
-    public String getRepositoryId() {
-        return repositoryId;
+    override fun toString(): String {
+        return "{repo: " + repositoryId + "}"
     }
 }

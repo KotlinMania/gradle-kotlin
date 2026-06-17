@@ -13,179 +13,168 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import com.google.common.collect.ImmutableList;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.cache.CacheConfigurationsInternal;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.cache.CacheCleanupStrategyFactory;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.UnscopedCacheBuilderFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.Factory;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.versionedcache.UsedGradleVersions;
-import org.gradle.util.internal.IncubationLogger;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.cache.CacheConfigurationsInternal
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.cache.CacheCleanupStrategyFactory
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.UnscopedCacheBuilderFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.Factory
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.internal.IncubationLogger.incubatingFeatureUsed
+import java.io.Closeable
+import java.io.File
+import java.util.Optional
+import java.util.function.Supplier
+import kotlin.concurrent.Volatile
 
-import java.io.Closeable;
-import java.io.File;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
+class DefaultArtifactCaches(
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    unscopedCacheBuilderFactory: UnscopedCacheBuilderFactory,
+    params: WritableArtifactCacheLockingParameters,
+    documentationRegistry: DocumentationRegistry,
+    cacheConfigurations: CacheConfigurationsInternal,
+    cacheCleanupStrategyFactory: CacheCleanupStrategyFactory
+) : ArtifactCachesProvider {
+    private val writableCacheMetadata: DefaultArtifactCacheMetadata
+    private val readOnlyCacheMetadata: DefaultArtifactCacheMetadata?
+    private val writableCacheAccessCoordinator: LateInitWritableArtifactCacheLockingAccessCoordinator
+    private val readOnlyCacheAccessCoordinator: ReadOnlyArtifactCacheLockingAccessCoordinator?
 
-public class DefaultArtifactCaches implements ArtifactCachesProvider {
-    private final static Logger LOGGER = Logging.getLogger(DefaultArtifactCaches.class);
-
-    private final DefaultArtifactCacheMetadata writableCacheMetadata;
-    private final DefaultArtifactCacheMetadata readOnlyCacheMetadata;
-    private final LateInitWritableArtifactCacheLockingAccessCoordinator writableCacheAccessCoordinator;
-    private final ReadOnlyArtifactCacheLockingAccessCoordinator readOnlyCacheAccessCoordinator;
-
-    public DefaultArtifactCaches(
-            GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-            UnscopedCacheBuilderFactory unscopedCacheBuilderFactory,
-            WritableArtifactCacheLockingParameters params,
-            DocumentationRegistry documentationRegistry,
-            CacheConfigurationsInternal cacheConfigurations,
-            CacheCleanupStrategyFactory cacheCleanupStrategyFactory) {
-        writableCacheMetadata = new DefaultArtifactCacheMetadata(cacheBuilderFactory);
-        writableCacheAccessCoordinator = new LateInitWritableArtifactCacheLockingAccessCoordinator(() -> {
-            return new WritableArtifactCacheLockingAccessCoordinator(unscopedCacheBuilderFactory, writableCacheMetadata, params.getFileAccessTimeJournal(), params.getUsedGradleVersions(), cacheConfigurations, cacheCleanupStrategyFactory);
-        });
-        String roCache = System.getenv(READONLY_CACHE_ENV_VAR);
+    init {
+        writableCacheMetadata = DefaultArtifactCacheMetadata(cacheBuilderFactory)
+        writableCacheAccessCoordinator = LateInitWritableArtifactCacheLockingAccessCoordinator(org.gradle.internal.Factory {
+            WritableArtifactCacheLockingAccessCoordinator(
+                unscopedCacheBuilderFactory, writableCacheMetadata,
+                params.fileAccessTimeJournal,
+                params.usedGradleVersions, cacheConfigurations, cacheCleanupStrategyFactory
+            )
+        })
+        val roCache = System.getenv(ArtifactCachesProvider.Companion.READONLY_CACHE_ENV_VAR)
         if (StringUtils.isNotEmpty(roCache)) {
-            IncubationLogger.incubatingFeatureUsed("Shared read-only dependency cache");
-            File baseDir = validateReadOnlyCache(documentationRegistry, new File(roCache).getAbsoluteFile());
+            incubatingFeatureUsed("Shared read-only dependency cache")
+            val baseDir: File? = validateReadOnlyCache(documentationRegistry, File(roCache).getAbsoluteFile())
             if (baseDir != null) {
-                readOnlyCacheMetadata = new DefaultArtifactCacheMetadata(cacheBuilderFactory, baseDir);
-                readOnlyCacheAccessCoordinator = new ReadOnlyArtifactCacheLockingAccessCoordinator(unscopedCacheBuilderFactory, readOnlyCacheMetadata);
-                LOGGER.info("The read-only dependency cache is enabled \nThe {} environment variable was set to {}", READONLY_CACHE_ENV_VAR, baseDir);
+                readOnlyCacheMetadata = DefaultArtifactCacheMetadata(cacheBuilderFactory, baseDir)
+                readOnlyCacheAccessCoordinator = ReadOnlyArtifactCacheLockingAccessCoordinator(unscopedCacheBuilderFactory, readOnlyCacheMetadata)
+                LOGGER!!.info("The read-only dependency cache is enabled \nThe {} environment variable was set to {}", ArtifactCachesProvider.Companion.READONLY_CACHE_ENV_VAR, baseDir)
             } else {
-                readOnlyCacheMetadata = null;
-                readOnlyCacheAccessCoordinator = null;
+                readOnlyCacheMetadata = null
+                readOnlyCacheAccessCoordinator = null
             }
         } else {
-            readOnlyCacheMetadata = null;
-            readOnlyCacheAccessCoordinator = null;
+            readOnlyCacheMetadata = null
+            readOnlyCacheAccessCoordinator = null
         }
     }
 
-    @Nullable
-    private static File validateReadOnlyCache(DocumentationRegistry documentationRegistry, File cacheDir) {
-        if (!cacheDir.exists()) {
-            LOGGER.warn("The read-only dependency cache is disabled because of a configuration problem:");
-            LOGGER.warn("The " + READONLY_CACHE_ENV_VAR + " environment variable was set to " + cacheDir + " which doesn't exist!");
-            return null;
-        }
-        File root = CacheLayout.MODULES.getPath(cacheDir);
-        if (!root.exists()) {
-            String docLink = documentationRegistry.getDocumentationRecommendationFor("instructions on how to do this", "dependency_resolution", "sub:shared-readonly-cache");
-            LOGGER.warn("The read-only dependency cache is disabled because of a configuration problem:");
-            LOGGER.warn("Read-only cache is configured but the directory layout isn't expected. You must have a pre-populated " +
-                CacheLayout.MODULES.getKey() + " directory at " + root + " . " + docLink);
-            return null;
-        }
-        return cacheDir;
+    override fun getWritableCacheMetadata(): ArtifactCacheMetadata {
+        return writableCacheMetadata
     }
 
-    @Override
-    public ArtifactCacheMetadata getWritableCacheMetadata() {
-        return writableCacheMetadata;
+    override fun getReadOnlyCacheMetadata(): Optional<ArtifactCacheMetadata?> {
+        return Optional.ofNullable<ArtifactCacheMetadata?>(readOnlyCacheMetadata)
     }
 
-    @Override
-    public Optional<ArtifactCacheMetadata> getReadOnlyCacheMetadata() {
-        return Optional.ofNullable(readOnlyCacheMetadata);
+    override fun getWritableCacheAccessCoordinator(): ArtifactCacheLockingAccessCoordinator {
+        return writableCacheAccessCoordinator
     }
 
-    @Override
-    public ArtifactCacheLockingAccessCoordinator getWritableCacheAccessCoordinator() {
-        return writableCacheAccessCoordinator;
+    override fun getReadOnlyCacheAccessCoordinator(): Optional<ArtifactCacheLockingAccessCoordinator?> {
+        return Optional.ofNullable<ArtifactCacheLockingAccessCoordinator?>(readOnlyCacheAccessCoordinator)
     }
 
-    @Override
-    public Optional<ArtifactCacheLockingAccessCoordinator> getReadOnlyCacheAccessCoordinator() {
-        return Optional.ofNullable(readOnlyCacheAccessCoordinator);
+    override fun getGlobalCacheRoots(): MutableList<File?> {
+        return if (readOnlyCacheMetadata == null)
+            ImmutableList.of<File?>()
+        else
+            readOnlyCacheMetadata.getGlobalCacheRoots()
     }
 
-    @Override
-    public List<File> getGlobalCacheRoots() {
-        return readOnlyCacheMetadata == null
-            ? ImmutableList.of()
-            : readOnlyCacheMetadata.getGlobalCacheRoots();
-    }
-
-    @Override
-    public void close() {
-        writableCacheAccessCoordinator.close();
+    override fun close() {
+        writableCacheAccessCoordinator.close()
         if (readOnlyCacheAccessCoordinator != null) {
-            readOnlyCacheAccessCoordinator.close();
+            readOnlyCacheAccessCoordinator.close()
         }
     }
 
-    @ServiceScope(Scope.UserHome.class)
-    public interface WritableArtifactCacheLockingParameters {
-        FileAccessTimeJournal getFileAccessTimeJournal();
+    @ServiceScope(Scope.UserHome::class)
+    interface WritableArtifactCacheLockingParameters {
+        val fileAccessTimeJournal: FileAccessTimeJournal?
 
-        UsedGradleVersions getUsedGradleVersions();
+        val usedGradleVersions: UsedGradleVersions?
     }
 
-    private static class LateInitWritableArtifactCacheLockingAccessCoordinator implements ArtifactCacheLockingAccessCoordinator, Closeable {
-        private final Factory<WritableArtifactCacheLockingAccessCoordinator> factory;
-        private volatile WritableArtifactCacheLockingAccessCoordinator delegate;
+    private class LateInitWritableArtifactCacheLockingAccessCoordinator(private val factory: Factory<WritableArtifactCacheLockingAccessCoordinator?>) : ArtifactCacheLockingAccessCoordinator,
+        Closeable {
+        @Volatile
+        private var delegate: WritableArtifactCacheLockingAccessCoordinator? = null
 
-        private LateInitWritableArtifactCacheLockingAccessCoordinator(Factory<WritableArtifactCacheLockingAccessCoordinator> factory) {
-            this.factory = factory;
-        }
-
-        private WritableArtifactCacheLockingAccessCoordinator getDelegate() {
+        fun getDelegate(): WritableArtifactCacheLockingAccessCoordinator? {
             if (delegate == null) {
-                synchronized (factory) {
+                synchronized(factory) {
                     if (delegate == null) {
-                        delegate = factory.create();
+                        delegate = factory.create()
                     }
                 }
             }
-            return delegate;
+            return delegate
         }
 
-        @Override
-        public void close() {
+        override fun close() {
             if (delegate != null) {
-                delegate.close();
+                delegate!!.close()
             }
         }
 
-        @Override
-        public <T> T withFileLock(Supplier<? extends T> action) {
-            return getDelegate().withFileLock(action);
+        override fun <T> withFileLock(action: Supplier<out T?>): T? {
+            return getDelegate()!!.withFileLock(action)
         }
 
-        @Override
-        public void withFileLock(Runnable action) {
-            getDelegate().withFileLock(action);
+        override fun withFileLock(action: Runnable) {
+            getDelegate()!!.withFileLock(action)
         }
 
-        @Override
-        public <T> T useCache(Supplier<? extends T> action) {
-            return getDelegate().useCache(action);
+        override fun <T> useCache(action: Supplier<out T?>): T? {
+            return getDelegate()!!.useCache(action)
         }
 
-        @Override
-        public void useCache(Runnable action) {
-            getDelegate().useCache(action);
+        override fun useCache(action: Runnable) {
+            getDelegate()!!.useCache(action)
         }
 
-        @Override
-        public <K, V> IndexedCache<K, V> createCache(String cacheName, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
-            return getDelegate().createCache(cacheName, keySerializer, valueSerializer);
+        override fun <K, V> createCache(cacheName: String, keySerializer: Serializer<K?>, valueSerializer: Serializer<V?>): IndexedCache<K?, V?> {
+            return getDelegate()!!.createCache<K?, V?>(cacheName, keySerializer, valueSerializer)
+        }
+    }
+
+    companion object {
+        private val LOGGER = getLogger(DefaultArtifactCaches::class.java)
+
+        private fun validateReadOnlyCache(documentationRegistry: DocumentationRegistry, cacheDir: File): File? {
+            if (!cacheDir.exists()) {
+                LOGGER!!.warn("The read-only dependency cache is disabled because of a configuration problem:")
+                LOGGER.warn("The " + ArtifactCachesProvider.Companion.READONLY_CACHE_ENV_VAR + " environment variable was set to " + cacheDir + " which doesn't exist!")
+                return null
+            }
+            val root = CacheLayout.MODULES.getPath(cacheDir)
+            if (!root.exists()) {
+                val docLink = documentationRegistry.getDocumentationRecommendationFor("instructions on how to do this", "dependency_resolution", "sub:shared-readonly-cache")
+                LOGGER!!.warn("The read-only dependency cache is disabled because of a configuration problem:")
+                LOGGER.warn(
+                    "Read-only cache is configured but the directory layout isn't expected. You must have a pre-populated " +
+                            CacheLayout.MODULES.getKey() + " directory at " + root + " . " + docLink
+                )
+                return null
+            }
+            return cacheDir
         }
     }
 }

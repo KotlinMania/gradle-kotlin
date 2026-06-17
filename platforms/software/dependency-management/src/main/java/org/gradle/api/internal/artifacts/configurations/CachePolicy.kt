@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-
-import java.util.concurrent.TimeUnit;
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import java.util.concurrent.TimeUnit
 
 /**
- * Immutable counterpart to {@link CacheExpirationControl}.
- * <p>
- * Encapsulates all configurable caching rules of a {@link ResolutionStrategyInternal}.
+ * Immutable counterpart to [CacheExpirationControl].
+ *
+ *
+ * Encapsulates all configurable caching rules of a [ResolutionStrategyInternal].
  */
-public interface CachePolicy {
+interface CachePolicy {
+    fun setMutationValidator(validator: MutationValidator)
 
-    void setMutationValidator(MutationValidator validator);
+    fun setOffline()
 
-    void setOffline();
+    fun setRefreshDependencies()
 
-    void setRefreshDependencies();
+    fun cacheChangingModulesFor(value: Int, units: TimeUnit)
 
-    void cacheChangingModulesFor(int value, TimeUnit units);
+    fun cacheDynamicVersionsFor(value: Int, units: TimeUnit)
 
-    void cacheDynamicVersionsFor(int value, TimeUnit units);
+    fun copy(): CachePolicy?
 
-    CachePolicy copy();
-
-    CacheExpirationControl asImmutable();
-
+    fun asImmutable(): CacheExpirationControl?
 }

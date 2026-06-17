@@ -13,378 +13,285 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.execution.plan.CreationOrderedNode
+import org.gradle.execution.plan.Node
+import org.gradle.execution.plan.SelfExecutingNode
+import org.gradle.execution.plan.TaskDependencyResolver
+import org.gradle.internal.Describables
+import org.gradle.internal.Try.getOrMapFailure
+import org.gradle.internal.model.CalculatedValueContainer
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.model.ValueCalculator
+import org.gradle.internal.operations.BuildOperationCategory
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.CallableBuildOperation
+import org.gradle.internal.scan.UsedByScanPlugin
+import org.gradle.operations.dependencies.transforms.ExecutePlannedTransformStepBuildOperationType
+import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity
+import org.gradle.operations.dependencies.variants.Capability
+import java.util.function.Function
+import java.util.stream.Collectors
+import javax.annotation.OverridingMethodsMustInvokeSuper
 
-import org.gradle.api.Describable;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.NodeExecutionContext;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.execution.plan.CreationOrderedNode;
-import org.gradle.execution.plan.Node;
-import org.gradle.execution.plan.SelfExecutingNode;
-import org.gradle.execution.plan.TaskDependencyResolver;
-import org.gradle.internal.Describables;
-import org.gradle.internal.Try;
-import org.gradle.internal.model.CalculatedValueContainer;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.model.ValueCalculator;
-import org.gradle.internal.operations.BuildOperationCategory;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.CallableBuildOperation;
-import org.gradle.internal.scan.UsedByScanPlugin;
-import org.gradle.operations.dependencies.transforms.ExecutePlannedTransformStepBuildOperationType;
-import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity;
-import org.gradle.operations.dependencies.variants.Capability;
-import org.gradle.operations.dependencies.variants.ComponentIdentifier;
-import org.jspecify.annotations.Nullable;
+abstract class TransformStepNode protected constructor(
+    val transformStepNodeId: Long,
+    val targetComponentVariant: ComponentVariantIdentifier,
+    val sourceAttributes: AttributeContainer,
+    val transformStep: TransformStep,
+    val inputArtifact: ResolvableArtifact,
+    val upstreamDependencies: TransformUpstreamDependencies
+) : CreationOrderedNode(), SelfExecutingNode {
+    private var cachedIdentity: PlannedTransformStepIdentity? = null
 
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-public abstract class TransformStepNode extends CreationOrderedNode implements SelfExecutingNode {
-
-    protected final TransformStep transformStep;
-    protected final ResolvableArtifact artifact;
-    private final ComponentVariantIdentifier targetComponentVariant;
-    private final AttributeContainer sourceAttributes;
-    protected final TransformUpstreamDependencies upstreamDependencies;
-    private final long transformStepNodeId;
-
-    private PlannedTransformStepIdentity cachedIdentity;
-
-    protected TransformStepNode(
-        long transformStepNodeId,
-        ComponentVariantIdentifier targetComponentVariant,
-        AttributeContainer sourceAttributes,
-        TransformStep transformStep,
-        ResolvableArtifact artifact,
-        TransformUpstreamDependencies upstreamDependencies
-    ) {
-        this.targetComponentVariant = targetComponentVariant;
-        this.sourceAttributes = sourceAttributes;
-        this.transformStep = transformStep;
-        this.artifact = artifact;
-        this.upstreamDependencies = upstreamDependencies;
-        this.transformStepNodeId = transformStepNodeId;
-    }
-
-    public long getTransformStepNodeId() {
-        return transformStepNodeId;
-    }
-
-    public ComponentVariantIdentifier getTargetComponentVariant() {
-        return targetComponentVariant;
-    }
-
-    public AttributeContainer getSourceAttributes() {
-        return sourceAttributes;
-    }
-
-    public PlannedTransformStepIdentity getNodeIdentity() {
-        if (cachedIdentity == null) {
-            cachedIdentity = createIdentity();
+    val nodeIdentity: PlannedTransformStepIdentity
+        get() {
+            if (cachedIdentity == null) {
+                cachedIdentity = createIdentity()
+            }
+            return cachedIdentity
         }
-        return cachedIdentity;
-    }
 
-    private PlannedTransformStepIdentity createIdentity() {
-        ProjectIdentity projectId = transformStep.getOwningProject().getProjectIdentity();
-        String consumerBuildPath = projectId.getBuildPath().asString();
-        String consumerProjectPath = projectId.getProjectPath().asString();
-        ComponentIdentifier componentId = ComponentToOperationConverter.convertComponentIdentifier(targetComponentVariant.getComponentId());
-        Map<String, String> sourceAttributes = AttributesToMapConverter.convertToMap(this.sourceAttributes);
-        Map<String, String> targetAttributes = AttributesToMapConverter.convertToMap(targetComponentVariant.getAttributes());
-        List<Capability> capabilities = targetComponentVariant.getCapabilities().asSet().stream()
-            .map(TransformStepNode::convertCapability)
-            .collect(Collectors.toList());
+    private fun createIdentity(): PlannedTransformStepIdentity {
+        val projectId = transformStep.getOwningProject()!!.getProjectIdentity()
+        val consumerBuildPath = projectId.getBuildPath().asString()
+        val consumerProjectPath = projectId.getProjectPath().asString()
+        val componentId = ComponentToOperationConverter.convertComponentIdentifier(targetComponentVariant.getComponentId())
+        val sourceAttributes = AttributesToMapConverter.convertToMap(this.sourceAttributes)
+        val targetAttributes = AttributesToMapConverter.convertToMap(targetComponentVariant.getAttributes())
+        val capabilities = targetComponentVariant.getCapabilities().asSet().stream()
+            .map<Capability> { capability: ImmutableCapability? -> Companion.convertCapability(capability!!) }
+            .collect(Collectors.toList())
 
-        return new DefaultPlannedTransformStepIdentity(
+        return DefaultPlannedTransformStepIdentity(
             consumerBuildPath,
             consumerProjectPath,
             componentId,
             sourceAttributes,
             targetAttributes,
             capabilities,
-            artifact.getArtifactName().displayName,
+            inputArtifact.artifactName.displayName!!,
             upstreamDependencies.getConfigurationIdentity(),
             transformStepNodeId
-        );
+        )
     }
 
-    private static Capability convertCapability(org.gradle.api.capabilities.Capability capability) {
-        return new Capability() {
-            @Override
-            public String getGroup() {
-                return capability.getGroup();
-            }
-
-            @Override
-            public String getName() {
-                return capability.getName();
-            }
-
-            @Override
-            public String getVersion() {
-                return capability.getVersion();
-            }
-
-            @Override
-            public String toString() {
-                return getGroup() + ":" + getName() + (getVersion() == null ? "" : (":" + getVersion()));
-            }
-        };
+    override fun getOwningProject(): ProjectInternal? {
+        return transformStep.getOwningProject()
     }
 
-    public ResolvableArtifact getInputArtifact() {
-        return artifact;
+    override fun isPublicNode(): Boolean {
+        return true
     }
 
-    public TransformUpstreamDependencies getUpstreamDependencies() {
-        return upstreamDependencies;
+    override fun toString(): String {
+        return transformStep.getDisplayName()
     }
 
-    @Nullable
-    @Override
-    public ProjectInternal getOwningProject() {
-        return transformStep.getOwningProject();
+    val transformedSubject: Try<TransformStepSubject?>
+        get() = this.transformedArtifacts.getValue()
+
+    override fun execute(context: NodeExecutionContext) {
+        this.transformedArtifacts.run(context)
     }
 
-    @Override
-    public boolean isPublicNode() {
-        return true;
+    open fun executeIfNotAlready() {
+        transformStep.isolateParametersIfNotAlready()
+        upstreamDependencies.finalizeIfNotAlready()
+        this.transformedArtifacts.finalizeIfNotAlready()
     }
 
-    @Override
-    public String toString() {
-        return transformStep.getDisplayName();
+    protected abstract val transformedArtifacts: CalculatedValueContainer<TransformStepSubject, *>?
+
+    override fun getNodeFailure(): Throwable {
+        return null
     }
 
-    public TransformStep getTransformStep() {
-        return transformStep;
+    override fun resolveDependencies(dependencyResolver: TaskDependencyResolver) {
+        processDependencies(dependencyResolver.resolveDependenciesFor(null, TaskDependencyContainer { context: TaskDependencyResolveContext? -> this.transformedArtifacts.visitDependencies(context) }))
     }
 
-    public Try<TransformStepSubject> getTransformedSubject() {
-        return getTransformedArtifacts().getValue();
-    }
-
-    @Override
-    public void execute(NodeExecutionContext context) {
-        getTransformedArtifacts().run(context);
-    }
-
-    public void executeIfNotAlready() {
-        transformStep.isolateParametersIfNotAlready();
-        upstreamDependencies.finalizeIfNotAlready();
-        getTransformedArtifacts().finalizeIfNotAlready();
-    }
-
-    protected abstract CalculatedValueContainer<TransformStepSubject, ?> getTransformedArtifacts();
-
-    @Override
-    public Throwable getNodeFailure() {
-        return null;
-    }
-
-    @Override
-    public void resolveDependencies(TaskDependencyResolver dependencyResolver) {
-        processDependencies(dependencyResolver.resolveDependenciesFor(null, (TaskDependencyContainer) context -> getTransformedArtifacts().visitDependencies(context)));
-    }
-
-    protected void processDependencies(Set<Node> dependencies) {
-        for (Node dependency : dependencies) {
-            addDependencySuccessor(dependency);
+    protected fun processDependencies(dependencies: MutableSet<Node>) {
+        for (dependency in dependencies) {
+            addDependencySuccessor(dependency)
         }
     }
 
-    public static class InitialTransformStepNode extends TransformStepNode {
-        private final CalculatedValueContainer<TransformStepSubject, TransformInitialArtifact> result;
+    class InitialTransformStepNode(
+        transformStepNodeId: Long,
+        targetComponentVariant: ComponentVariantIdentifier,
+        sourceAttributes: AttributeContainer,
+        transformStep: TransformStep,
+        artifact: ResolvableArtifact,
+        upstreamDependencies: TransformUpstreamDependencies,
+        buildOperationRunner: BuildOperationRunner,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ) : TransformStepNode(transformStepNodeId, targetComponentVariant, sourceAttributes, transformStep, artifact, upstreamDependencies) {
+        private val result: CalculatedValueContainer<TransformStepSubject, TransformInitialArtifact>
 
-        public InitialTransformStepNode(
-            long transformStepNodeId,
-            ComponentVariantIdentifier targetComponentVariant,
-            AttributeContainer sourceAttributes,
-            TransformStep transformStep,
-            ResolvableArtifact artifact,
-            TransformUpstreamDependencies upstreamDependencies,
-            BuildOperationRunner buildOperationRunner,
-            CalculatedValueContainerFactory calculatedValueContainerFactory
-        ) {
-            super(transformStepNodeId, targetComponentVariant, sourceAttributes, transformStep, artifact, upstreamDependencies);
-            result = calculatedValueContainerFactory.create(Describables.of(this), new TransformInitialArtifact(buildOperationRunner));
+        init {
+            result =
+                calculatedValueContainerFactory.create<TransformStepSubject, TransformInitialArtifact>(Describables.of(this), InitialTransformStepNode.TransformInitialArtifact(buildOperationRunner))
         }
 
-        @Override
-        protected CalculatedValueContainer<TransformStepSubject, TransformInitialArtifact> getTransformedArtifacts() {
-            return result;
+        override fun getTransformedArtifacts(): CalculatedValueContainer<TransformStepSubject, TransformInitialArtifact> {
+            return result
         }
 
-        protected class TransformInitialArtifact extends AbstractTransformArtifacts {
-
-            public TransformInitialArtifact(BuildOperationRunner buildOperationRunner) {
-                super(buildOperationRunner);
+        protected inner class TransformInitialArtifact(buildOperationRunner: BuildOperationRunner) : AbstractTransformArtifacts(buildOperationRunner) {
+            override fun visitDependencies(context: TaskDependencyResolveContext) {
+                super.visitDependencies(context)
+                context.add(this.inputArtifact)
             }
 
-            @Override
-            public void visitDependencies(TaskDependencyResolveContext context) {
-                super.visitDependencies(context);
-                context.add(artifact);
-            }
-
-            @Override
-            protected TransformStepBuildOperation createBuildOperation(NodeExecutionContext context) {
-                return new TransformStepBuildOperation() {
-                    @Override
-                    protected TransformStepSubject transform() {
+            override fun createBuildOperation(context: NodeExecutionContext): TransformStepBuildOperation {
+                return object : TransformStepBuildOperation() {
+                    protected override fun transform(): TransformStepSubject {
                         return transformStep
-                            .createInvocation(TransformStepSubject.initial(artifact), upstreamDependencies, context)
+                            .createInvocation(org.gradle.api.internal.artifacts.transform.TransformStepSubject.Companion.initial(this.inputArtifact), upstreamDependencies, context)
                             .completeAndGet()
-                            .get();
+                            .get()!!
                     }
 
-                    @Override
-                    protected String describeSubject() {
-                        return artifact.getId().getDisplayName();
+                    override fun describeSubject(): String {
+                        return inputArtifact.id.getDisplayName()
                     }
-                };
+                }
             }
         }
     }
 
-    public static class ChainedTransformStepNode extends TransformStepNode {
-        private final TransformStepNode previousTransformStepNode;
-        private final CalculatedValueContainer<TransformStepSubject, TransformPreviousArtifacts> result;
+    class ChainedTransformStepNode(
+        transformStepNodeId: Long,
+        targetComponentVariant: ComponentVariantIdentifier,
+        sourceAttributes: AttributeContainer,
+        transformStep: TransformStep,
+        val previousTransformStepNode: TransformStepNode,
+        upstreamDependencies: TransformUpstreamDependencies,
+        buildOperationExecutor: BuildOperationRunner,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ) : TransformStepNode(transformStepNodeId, targetComponentVariant, sourceAttributes, transformStep, previousTransformStepNode.inputArtifact, upstreamDependencies) {
+        private val result: CalculatedValueContainer<TransformStepSubject, TransformPreviousArtifacts>
 
-        public ChainedTransformStepNode(
-            long transformStepNodeId,
-            ComponentVariantIdentifier targetComponentVariant,
-            AttributeContainer sourceAttributes,
-            TransformStep transformStep,
-            TransformStepNode previousTransformStepNode,
-            TransformUpstreamDependencies upstreamDependencies,
-            BuildOperationRunner buildOperationExecutor,
-            CalculatedValueContainerFactory calculatedValueContainerFactory
-        ) {
-            super(transformStepNodeId, targetComponentVariant, sourceAttributes, transformStep, previousTransformStepNode.artifact, upstreamDependencies);
-            this.previousTransformStepNode = previousTransformStepNode;
-            result = calculatedValueContainerFactory.create(Describables.of(this), new TransformPreviousArtifacts(buildOperationExecutor));
+        init {
+            result = calculatedValueContainerFactory.create<TransformStepSubject, TransformPreviousArtifacts>(
+                Describables.of(this),
+                ChainedTransformStepNode.TransformPreviousArtifacts(buildOperationExecutor)
+            )
         }
 
-        public TransformStepNode getPreviousTransformStepNode() {
-            return previousTransformStepNode;
+        override fun getTransformedArtifacts(): CalculatedValueContainer<TransformStepSubject, TransformPreviousArtifacts> {
+            return result
         }
 
-        @Override
-        protected CalculatedValueContainer<TransformStepSubject, TransformPreviousArtifacts> getTransformedArtifacts() {
-            return result;
-        }
-
-        @Override
-        public void executeIfNotAlready() {
+        override fun executeIfNotAlready() {
             // Only finalize the previous node when executing this node on demand
-            previousTransformStepNode.executeIfNotAlready();
-            super.executeIfNotAlready();
+            previousTransformStepNode.executeIfNotAlready()
+            super.executeIfNotAlready()
         }
 
-        protected class TransformPreviousArtifacts extends AbstractTransformArtifacts {
-
-            public TransformPreviousArtifacts(BuildOperationRunner buildOperationRunner) {
-                super(buildOperationRunner);
+        protected inner class TransformPreviousArtifacts(buildOperationRunner: BuildOperationRunner) : AbstractTransformArtifacts(buildOperationRunner) {
+            override fun visitDependencies(context: TaskDependencyResolveContext) {
+                super.visitDependencies(context)
+                context.add(DefaultTransformNodeDependency(mutableListOf<TransformStepNode>(previousTransformStepNode)))
             }
 
-            @Override
-            public void visitDependencies(TaskDependencyResolveContext context) {
-                super.visitDependencies(context);
-                context.add(new DefaultTransformNodeDependency(Collections.singletonList(previousTransformStepNode)));
-            }
-
-            @Override
-            protected TransformStepBuildOperation createBuildOperation(NodeExecutionContext context) {
-                return new TransformStepBuildOperation() {
-                    @Override
-                    protected TransformStepSubject transform() {
-                        return previousTransformStepNode.getTransformedSubject()
-                            .flatMap(transformedSubject -> transformStep
-                                .createInvocation(transformedSubject, upstreamDependencies, context)
-                                .completeAndGet())
-                            .get();
+            override fun createBuildOperation(context: NodeExecutionContext): TransformStepBuildOperation {
+                return object : TransformStepBuildOperation() {
+                    protected override fun transform(): TransformStepSubject {
+                        return previousTransformStepNode.transformedSubject
+                            .flatMap<TransformStepSubject?>(Function { transformedSubject: TransformStepSubject? ->
+                                transformStep
+                                    .createInvocation(transformedSubject!!, upstreamDependencies, context)
+                                    .completeAndGet()
+                            })
+                            .get()
                     }
 
-                    @Override
-                    protected String describeSubject() {
-                        return previousTransformStepNode.getTransformedSubject()
-                            .map(Describable::getDisplayName)
-                            .getOrMapFailure(Throwable::getMessage);
+                    override fun describeSubject(): String {
+                        return previousTransformStepNode.transformedSubject
+                            .map<String?>(Function { obj: TransformStepSubject? -> obj!!.getDisplayName() })
+                            .getOrMapFailure(Function { obj: Throwable? -> obj!!.message })
                     }
-                };
+                }
             }
         }
     }
 
-    protected abstract class AbstractTransformArtifacts implements ValueCalculator<TransformStepSubject> {
-        private final BuildOperationRunner buildOperationRunner;
-
-        protected AbstractTransformArtifacts(BuildOperationRunner buildOperationRunner) {
-            this.buildOperationRunner = buildOperationRunner;
-        }
-
+    protected abstract inner class AbstractTransformArtifacts protected constructor(private val buildOperationRunner: BuildOperationRunner) : ValueCalculator<TransformStepSubject> {
         @OverridingMethodsMustInvokeSuper
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-            context.add(transformStep);
-            context.add(upstreamDependencies);
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
+            context.add(transformStep)
+            context.add(upstreamDependencies)
         }
 
-        @Override
-        public TransformStepSubject calculateValue(NodeExecutionContext context) {
-            TransformStepBuildOperation buildOperation = createBuildOperation(context);
-            ProjectInternal owningProject = transformStep.getOwningProject();
-            return (owningProject == null || !context.isPartOfExecutionGraph())
-                ? buildOperation.transform()
-                : buildOperationRunner.call(buildOperation);
+        override fun calculateValue(context: NodeExecutionContext): TransformStepSubject {
+            val buildOperation = createBuildOperation(context)
+            val owningProject = transformStep.getOwningProject()
+            return if (owningProject == null || !context.isPartOfExecutionGraph())
+                buildOperation.transform()
+            else
+                buildOperationRunner.call<TransformStepSubject>(buildOperation)
         }
 
-        protected abstract TransformStepBuildOperation createBuildOperation(NodeExecutionContext context);
+        protected abstract fun createBuildOperation(context: NodeExecutionContext): TransformStepBuildOperation
     }
 
-    protected abstract class TransformStepBuildOperation implements CallableBuildOperation<TransformStepSubject> {
-
-        @UsedByScanPlugin("The string is used for filtering out artifact transform logs in Develocity")
-        private static final String TRANSFORMING_PROGRESS_PREFIX = "Transforming ";
-
-        @Override
-        public final BuildOperationDescriptor.Builder description() {
-            String transformStepName = transformStep.getDisplayName();
-            String subjectName = describeSubject();
-            String basicName = subjectName + " with " + transformStepName;
+    protected abstract inner class TransformStepBuildOperation : CallableBuildOperation<TransformStepSubject> {
+        override fun description(): BuildOperationDescriptor.Builder {
+            val transformStepName = transformStep.getDisplayName()
+            val subjectName = describeSubject()
+            val basicName = subjectName + " with " + transformStepName
             return BuildOperationDescriptor.displayName("Transform " + basicName)
                 .progressDisplayName(TRANSFORMING_PROGRESS_PREFIX + basicName)
                 .metadata(BuildOperationCategory.TRANSFORM)
-                .details(new ExecutePlannedTransformStepBuildOperationDetails(TransformStepNode.this, transformStepName, subjectName));
+                .details(ExecutePlannedTransformStepBuildOperationDetails(this@TransformStepNode, transformStepName, subjectName))
         }
 
-        protected abstract String describeSubject();
+        protected abstract fun describeSubject(): String
 
-        @Override
-        public TransformStepSubject call(BuildOperationContext context) {
-            context.setResult(RESULT);
-            return transform();
+        override fun call(context: BuildOperationContext): TransformStepSubject {
+            context.setResult(RESULT)
+            return transform()
         }
 
-        protected abstract TransformStepSubject transform();
+        abstract fun transform(): TransformStepSubject
+
+        companion object {
+            @UsedByScanPlugin("The string is used for filtering out artifact transform logs in Develocity")
+            private const val TRANSFORMING_PROGRESS_PREFIX = "Transforming "
+        }
     }
 
-    private static final ExecutePlannedTransformStepBuildOperationType.Result RESULT = new ExecutePlannedTransformStepBuildOperationType.Result() {
-    };
+    companion object {
+        private fun convertCapability(capability: org.gradle.api.capabilities.Capability): Capability {
+            return object : Capability {
+                val group: String
+                    get() = capability.getGroup()
 
+                val name: String
+                    get() = capability.getName()
+
+                val version: String
+                    get() = capability.getVersion()!!
+
+                override fun toString(): String {
+                    return group + ":" + name + (if (version == null) "" else (":" + version))
+                }
+            }
+        }
+
+        private val RESULT: ExecutePlannedTransformStepBuildOperationType.Result = object : ExecutePlannedTransformStepBuildOperationType.Result {
+        }
+    }
 }

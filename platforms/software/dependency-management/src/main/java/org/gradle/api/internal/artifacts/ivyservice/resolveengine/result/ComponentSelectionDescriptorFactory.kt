@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.BuildSession.class)
-public interface ComponentSelectionDescriptorFactory {
+@ServiceScope(Scope.BuildSession::class)
+interface ComponentSelectionDescriptorFactory {
+    fun newDescriptor(cause: ComponentSelectionCause, reason: String): ComponentSelectionDescriptorInternal?
 
-    ComponentSelectionDescriptorInternal newDescriptor(ComponentSelectionCause cause, String reason);
-
-    ComponentSelectionDescriptorInternal newDescriptor(ComponentSelectionCause cause);
+    fun newDescriptor(cause: ComponentSelectionCause): ComponentSelectionDescriptorInternal?
 }

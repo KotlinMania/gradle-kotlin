@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.internal.component.model.IvyArtifactName
 
-public interface ExcludeSpec {
+interface ExcludeSpec {
     /**
      * Determines if this exclude rule excludes the supplied module.
      */
-    boolean excludes(ModuleIdentifier module);
+    fun excludes(module: ModuleIdentifier?): Boolean
 
     /**
      * Determines if this exclude rule excludes the supplied artifact, for the specified module.
      */
-    boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName);
+    fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean
 
     /**
      * Tells if this rule may exclude some artifacts. This is used to optimize artifact resolution.
      */
-    boolean mayExcludeArtifacts();
-
+    fun mayExcludeArtifacts(): Boolean
 }

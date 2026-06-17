@@ -13,37 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.VirtualComponentIdentifier;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.VirtualComponentIdentifier
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.result.BuildableComponentResolveResult
 
 /**
  * A component metadata resolver which should be used first in chain of resolvers as it will make sure
  * that we never "find" a virtual component, by shortcutting resolution if we find the marker interface
  * for virtual components.
  */
-class VirtualComponentMetadataResolver implements ComponentMetaDataResolver {
-
-    public static final ComponentMetaDataResolver INSTANCE = new VirtualComponentMetadataResolver();
-
-    private VirtualComponentMetadataResolver() {
-
-    }
-
-    @Override
-    public void resolve(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata, BuildableComponentResolveResult result) {
-        if (identifier instanceof VirtualComponentIdentifier && identifier instanceof ModuleComponentIdentifier) {
-            result.notFound((ModuleComponentIdentifier) identifier);
+internal class VirtualComponentMetadataResolver private constructor() : ComponentMetaDataResolver {
+    override fun resolve(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata, result: BuildableComponentResolveResult) {
+        if (identifier is VirtualComponentIdentifier && identifier is ModuleComponentIdentifier) {
+            result.notFound(identifier as ModuleComponentIdentifier)
         }
     }
 
-    @Override
-    public boolean isFetchingMetadataCheap(ComponentIdentifier identifier) {
-        return true;
+    override fun isFetchingMetadataCheap(identifier: ComponentIdentifier): Boolean {
+        return true
+    }
+
+    companion object {
+        val INSTANCE: ComponentMetaDataResolver = VirtualComponentMetadataResolver()
     }
 }

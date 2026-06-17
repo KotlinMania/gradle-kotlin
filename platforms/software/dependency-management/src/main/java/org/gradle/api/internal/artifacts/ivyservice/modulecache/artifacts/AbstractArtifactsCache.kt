@@ -13,59 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.hash.HashCode
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public abstract class AbstractArtifactsCache implements ModuleArtifactsCache {
-    protected final BuildCommencedTimeProvider timeProvider;
-
-    public AbstractArtifactsCache(BuildCommencedTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+abstract class AbstractArtifactsCache(protected val timeProvider: BuildCommencedTimeProvider) : ModuleArtifactsCache {
+    override fun cacheArtifacts(
+        repository: ModuleComponentRepository<*>,
+        componentId: ComponentIdentifier?,
+        context: String?,
+        descriptorHash: HashCode?,
+        artifacts: MutableCollection<out ComponentArtifactMetadata?>
+    ): CachedArtifacts {
+        val key = ArtifactsAtRepositoryKey(repository.id, componentId, context)
+        val entry = ModuleArtifactsCacheEntry(ImmutableSet.copyOf(artifacts), timeProvider.getCurrentTime(), descriptorHash)
+        store(key, entry)
+        return createCacheArtifacts(entry)
     }
 
-    @Override
-    public CachedArtifacts cacheArtifacts(ModuleComponentRepository<?> repository, ComponentIdentifier componentId, String context, HashCode descriptorHash, Collection<? extends ComponentArtifactMetadata> artifacts) {
-        ArtifactsAtRepositoryKey key = new ArtifactsAtRepositoryKey(repository.getId(), componentId, context);
-        ModuleArtifactsCacheEntry entry = new ModuleArtifactsCacheEntry(ImmutableSet.copyOf(artifacts), timeProvider.getCurrentTime(), descriptorHash);
-        store(key, entry);
-        return createCacheArtifacts(entry);
+    abstract fun store(key: ArtifactsAtRepositoryKey?, entry: ModuleArtifactsCacheEntry?)
+
+    override fun getCachedArtifacts(repository: ModuleComponentRepository<*>, componentId: ComponentIdentifier?, context: String?): CachedArtifacts? {
+        val key = ArtifactsAtRepositoryKey(repository.id, componentId, context)
+        val entry = get(key)
+        return if (entry == null) null else createCacheArtifacts(entry)
     }
 
-    protected abstract void store(ArtifactsAtRepositoryKey key, ModuleArtifactsCacheEntry entry);
+    abstract fun get(key: ArtifactsAtRepositoryKey?): ModuleArtifactsCacheEntry?
 
-    @Override
-    public CachedArtifacts getCachedArtifacts(ModuleComponentRepository<?> repository, ComponentIdentifier componentId, String context) {
-        ArtifactsAtRepositoryKey key = new ArtifactsAtRepositoryKey(repository.getId(), componentId, context);
-        ModuleArtifactsCacheEntry entry = get(key);
-        return entry == null ? null : createCacheArtifacts(entry);
+    private fun createCacheArtifacts(entry: ModuleArtifactsCacheEntry): CachedArtifacts {
+        val entryAge = timeProvider.getCurrentTime() - entry.createTimestamp
+        return DefaultCachedArtifacts(entry.artifacts, entry.moduleDescriptorHash, entryAge)
     }
 
-    protected abstract ModuleArtifactsCacheEntry get(ArtifactsAtRepositoryKey key);
+    protected class ModuleArtifactsCacheEntry internal constructor(artifacts: MutableSet<out ComponentArtifactMetadata?>, val createTimestamp: Long, val moduleDescriptorHash: HashCode?) {
+        val artifacts: MutableSet<ComponentArtifactMetadata?>
 
-    private CachedArtifacts createCacheArtifacts(ModuleArtifactsCacheEntry entry) {
-        long entryAge = timeProvider.getCurrentTime() - entry.createTimestamp;
-        return new DefaultCachedArtifacts(entry.artifacts, entry.moduleDescriptorHash, entryAge);
-    }
-
-    protected static class ModuleArtifactsCacheEntry {
-        protected final Set<ComponentArtifactMetadata> artifacts;
-        protected final HashCode moduleDescriptorHash;
-        protected final long createTimestamp;
-
-        ModuleArtifactsCacheEntry(Set<? extends ComponentArtifactMetadata> artifacts, long createTimestamp, HashCode moduleDescriptorHash) {
-            this.artifacts = new LinkedHashSet<>(artifacts);
-            this.createTimestamp = createTimestamp;
-            this.moduleDescriptorHash = moduleDescriptorHash;
+        init {
+            this.artifacts = LinkedHashSet<ComponentArtifactMetadata?>(artifacts)
         }
     }
 }

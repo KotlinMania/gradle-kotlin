@@ -13,55 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.resource.ExternalResourceName
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resource.ExternalResourceName;
-
-public interface ResourcePattern {
+interface ResourcePattern {
     /**
      * Returns this pattern converted to a String.
      */
-    String getPattern();
+    val pattern: String?
 
     /**
      * Returns the path for the given artifact.
      */
-    ExternalResourceName getLocation(ModuleComponentArtifactMetadata artifact);
+    fun getLocation(artifact: ModuleComponentArtifactMetadata): ExternalResourceName?
 
     /**
      * Returns the pattern which can be used to search for versions of the given artifact.
      * The returned pattern should include at least one [revision] placeholder.
      */
-    ExternalResourceName toVersionListPattern(ModuleIdentifier module, IvyArtifactName artifact);
+    fun toVersionListPattern(module: ModuleIdentifier, artifact: IvyArtifactName): ExternalResourceName?
 
     /**
      * Returns the path for the given module.
      */
-    ExternalResourceName toModulePath(ModuleIdentifier moduleIdentifier);
+    fun toModulePath(moduleIdentifier: ModuleIdentifier): ExternalResourceName?
 
     /**
      * Returns the path for the given component.
      */
-    ExternalResourceName toModuleVersionPath(ModuleComponentIdentifier componentIdentifier);
+    fun toModuleVersionPath(componentIdentifier: ModuleComponentIdentifier): ExternalResourceName?
 
     /**
      * Checks if the given identifier contains sufficient information to bind the tokens in this pattern.
      */
-    boolean isComplete(ModuleIdentifier moduleIdentifier);
+    fun isComplete(moduleIdentifier: ModuleIdentifier): Boolean
 
     /**
      * Checks if the given identifier contains sufficient information to bind the tokens in this pattern.
      */
-    boolean isComplete(ModuleComponentIdentifier componentIdentifier);
+    fun isComplete(componentIdentifier: ModuleComponentIdentifier): Boolean
 
     /**
      * Checks if the given identifier contains sufficient information to bind the tokens in this pattern.
      */
-    boolean isComplete(ModuleComponentArtifactMetadata id);
-
+    fun isComplete(id: ModuleComponentArtifactMetadata): Boolean
 }

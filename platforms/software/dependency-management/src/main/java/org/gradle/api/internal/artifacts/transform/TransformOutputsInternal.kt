@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.TransformOutputs
 
-import org.gradle.api.artifacts.transform.TransformOutputs;
-
-public interface TransformOutputsInternal extends TransformOutputs {
-
-    TransformExecutionResult getRegisteredOutputs();
+interface TransformOutputsInternal : TransformOutputs {
+    val registeredOutputs: TransformExecutionResult?
 }

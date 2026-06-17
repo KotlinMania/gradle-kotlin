@@ -13,27 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dsl;
+package org.gradle.api.internal.artifacts.dsl
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ComponentModuleMetadataDetails;
-import org.gradle.api.internal.artifacts.ComponentModuleMetadataHandlerInternal;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ComponentModuleMetadataDetails
+import org.gradle.api.internal.artifacts.ComponentModuleMetadataHandlerInternal
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
 
-public class DefaultComponentModuleMetadataHandler implements ComponentModuleMetadataHandlerInternal {
-    private final ComponentModuleMetadataContainer moduleMetadataContainer;
+class DefaultComponentModuleMetadataHandler(moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : ComponentModuleMetadataHandlerInternal {
+    private val moduleMetadataContainer: ComponentModuleMetadataContainer
 
-    public DefaultComponentModuleMetadataHandler(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        this.moduleMetadataContainer = new ComponentModuleMetadataContainer(moduleIdentifierFactory);
+    init {
+        this.moduleMetadataContainer = ComponentModuleMetadataContainer(moduleIdentifierFactory)
     }
 
-    @Override
-    public void module(Object moduleNotation, Action<? super ComponentModuleMetadataDetails> rule) {
-        rule.execute(moduleMetadataContainer.module(moduleNotation));
+    override fun module(moduleNotation: Any, rule: Action<in ComponentModuleMetadataDetails>) {
+        rule.execute(moduleMetadataContainer.module(moduleNotation))
     }
 
-    @Override
-    public ImmutableModuleReplacements getModuleReplacements() {
-        return moduleMetadataContainer.getReplacements();
-    }
+    val moduleReplacements: ImmutableModuleReplacements
+        get() = moduleMetadataContainer.getReplacements()
 }

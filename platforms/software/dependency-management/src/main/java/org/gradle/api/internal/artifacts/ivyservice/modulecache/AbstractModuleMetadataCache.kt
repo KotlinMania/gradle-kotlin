@@ -13,57 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-public abstract class AbstractModuleMetadataCache implements ModuleMetadataCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(PersistentModuleMetadataCache.class);
-    protected final BuildCommencedTimeProvider timeProvider;
-
-    AbstractModuleMetadataCache(BuildCommencedTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+abstract class AbstractModuleMetadataCache internal constructor(protected val timeProvider: BuildCommencedTimeProvider) : ModuleMetadataCache {
+    override fun getCachedModuleDescriptor(repository: ModuleComponentRepository<*>, id: ModuleComponentIdentifier): ModuleMetadataCache.CachedMetadata? {
+        val key = createKey(repository, id)
+        return get(key)
     }
 
-    @Override
-    public CachedMetadata getCachedModuleDescriptor(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id) {
-        final ModuleComponentAtRepositoryKey key = createKey(repository, id);
-        return get(key);
+    override fun cacheMissing(repository: ModuleComponentRepository<*>, id: ModuleComponentIdentifier): ModuleMetadataCache.CachedMetadata {
+        LOGGER.debug("Recording absence of module descriptor in cache: {} [changing = {}]", id, false)
+        val key = createKey(repository, id)
+        val entry: ModuleMetadataCacheEntry = ModuleMetadataCacheEntry.Companion.forMissingModule(timeProvider.getCurrentTime())
+        val cachedMetaData = DefaultCachedMetadata(entry, null, timeProvider)
+        store(key, entry, cachedMetaData)
+        return cachedMetaData
     }
 
-    @Override
-    public CachedMetadata cacheMissing(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id) {
-        LOGGER.debug("Recording absence of module descriptor in cache: {} [changing = {}]", id, false);
-        ModuleComponentAtRepositoryKey key = createKey(repository, id);
-        ModuleMetadataCacheEntry entry = ModuleMetadataCacheEntry.forMissingModule(timeProvider.getCurrentTime());
-        DefaultCachedMetadata cachedMetaData = new DefaultCachedMetadata(entry, null, timeProvider);
-        store(key, entry, cachedMetaData);
-        return cachedMetaData;
+    override fun cacheMetaData(repository: ModuleComponentRepository<*>, id: ModuleComponentIdentifier, metadata: ModuleComponentResolveMetadata): ModuleMetadataCache.CachedMetadata? {
+        LOGGER.debug("Recording module descriptor in cache: {} [changing = {}]", metadata.getId(), metadata.isChanging)
+        val key = createKey(repository, id)
+        val entry = createEntry(metadata)
+        val cachedMetaData = DefaultCachedMetadata(entry, metadata, timeProvider)
+        return store(key, entry, cachedMetaData)
     }
 
-    @Override
-    public CachedMetadata cacheMetaData(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id, ModuleComponentResolveMetadata metadata) {
-        LOGGER.debug("Recording module descriptor in cache: {} [changing = {}]", metadata.getId(), metadata.isChanging);
-        final ModuleComponentAtRepositoryKey key = createKey(repository, id);
-        ModuleMetadataCacheEntry entry = createEntry(metadata);
-        DefaultCachedMetadata cachedMetaData = new DefaultCachedMetadata(entry, metadata, timeProvider);
-        return store(key, entry, cachedMetaData);
+    protected fun createKey(repository: ModuleComponentRepository<*>, id: ModuleComponentIdentifier): ModuleComponentAtRepositoryKey {
+        return ModuleComponentAtRepositoryKey(repository.id, id)
     }
 
-    protected ModuleComponentAtRepositoryKey createKey(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id) {
-        return new ModuleComponentAtRepositoryKey(repository.getId(), id);
+    private fun createEntry(metaData: ModuleComponentResolveMetadata): ModuleMetadataCacheEntry {
+        return ModuleMetadataCacheEntry.Companion.forMetaData(metaData, timeProvider.getCurrentTime())
     }
 
-    private ModuleMetadataCacheEntry createEntry(ModuleComponentResolveMetadata metaData) {
-        return ModuleMetadataCacheEntry.forMetaData(metaData, timeProvider.getCurrentTime());
+    abstract fun store(key: ModuleComponentAtRepositoryKey?, entry: ModuleMetadataCacheEntry?, cachedMetaData: ModuleMetadataCache.CachedMetadata?): ModuleMetadataCache.CachedMetadata?
+
+    abstract fun get(key: ModuleComponentAtRepositoryKey?): ModuleMetadataCache.CachedMetadata?
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(PersistentModuleMetadataCache::class.java)
     }
-
-    protected abstract CachedMetadata store(ModuleComponentAtRepositoryKey key, ModuleMetadataCacheEntry entry, CachedMetadata cachedMetaData);
-
-    protected abstract CachedMetadata get(ModuleComponentAtRepositoryKey key);
 }

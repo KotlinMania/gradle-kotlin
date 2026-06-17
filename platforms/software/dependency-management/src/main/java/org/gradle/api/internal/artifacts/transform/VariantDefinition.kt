@@ -13,34 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.jspecify.annotations.Nullable;
+package org.gradle.api.internal.artifacts.transform
 
 /**
  * Defines a variant that is the result of applying a transform chain to produce a variant with the given attributes.
  */
-public interface VariantDefinition {
+interface VariantDefinition {
     /**
      * @return This variant's attributes after all chain transforms are applied.
      */
-    ImmutableAttributes getTargetAttributes();
+    @JvmField
+    val targetAttributes: ImmutableAttributes?
 
     /**
      * @return The transform chain which transforms the root variant to this variant.
      */
-    TransformChain getTransformChain();
+    @JvmField
+    val transformChain: TransformChain?
 
     /**
      * The single transform step which transforms the previous variant to this variant.
      */
-    TransformStep getTransformStep();
+    val transformStep: TransformStep?
 
     /**
      * @return The previous variant in the transform chain. If null, this variant uses the producer variant as its root.
      */
-    @Nullable
-    VariantDefinition getPrevious();
+    val previous: VariantDefinition?
 }

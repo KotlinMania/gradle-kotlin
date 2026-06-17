@@ -13,27 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import java.time.Duration;
-import java.util.Set;
+import java.time.Duration
 
-class DefaultCachedModuleVersionList implements ModuleVersionsCache.CachedModuleVersionList {
-    private final Set<String> moduleVersions;
-    private final long ageMillis;
-
-    public DefaultCachedModuleVersionList(Set<String> moduleVersions, long ageMillis) {
-        this.moduleVersions = moduleVersions;
-        this.ageMillis = ageMillis;
+internal class DefaultCachedModuleVersionList(private val moduleVersions: MutableSet<String?>?, private val ageMillis: Long) : ModuleVersionsCache.CachedModuleVersionList {
+    override fun getModuleVersions(): MutableSet<String?>? {
+        return moduleVersions
     }
 
-    @Override
-    public Set<String> getModuleVersions() {
-        return moduleVersions;
-    }
-
-    @Override
-    public Duration getAge() {
-        return Duration.ofMillis(ageMillis);
+    override fun getAge(): Duration? {
+        return Duration.ofMillis(ageMillis)
     }
 }

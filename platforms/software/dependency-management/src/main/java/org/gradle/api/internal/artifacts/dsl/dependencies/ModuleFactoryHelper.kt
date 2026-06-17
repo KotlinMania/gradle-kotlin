@@ -13,26 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dsl.dependencies;
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyArtifact;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyArtifact
 
-public class ModuleFactoryHelper {
-    public static void addExplicitArtifactsIfDefined(ExternalDependency moduleDependency, @Nullable String artifactType, @Nullable String classifier) {
-        String actualArtifactType = artifactType;
+object ModuleFactoryHelper {
+    @JvmStatic
+    fun addExplicitArtifactsIfDefined(moduleDependency: ExternalDependency, artifactType: String?, classifier: String?) {
+        var actualArtifactType = artifactType
         if (actualArtifactType == null) {
             if (classifier != null) {
-                actualArtifactType = DependencyArtifact.DEFAULT_TYPE;
+                actualArtifactType = DependencyArtifact.DEFAULT_TYPE
             }
         } else {
-            moduleDependency.setTransitive(false);
+            moduleDependency.setTransitive(false)
         }
         if (actualArtifactType != null) {
-            moduleDependency.addArtifact(new DefaultDependencyArtifact(moduleDependency.getName(),
-                    actualArtifactType, actualArtifactType, classifier, null));
+            moduleDependency.addArtifact(
+                DefaultDependencyArtifact(
+                    moduleDependency.getName(),
+                    actualArtifactType, actualArtifactType, classifier, null
+                )
+            )
         }
     }
 }

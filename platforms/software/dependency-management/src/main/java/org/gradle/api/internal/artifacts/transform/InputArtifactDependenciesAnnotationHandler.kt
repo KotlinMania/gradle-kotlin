@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.InputArtifactDependencies
+import org.gradle.internal.execution.model.annotations.AbstractInputFilePropertyAnnotationHandler
+import org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory
+import org.gradle.internal.instantiation.InjectAnnotationHandler
+import org.gradle.internal.properties.InputFilePropertyType
 
-import org.gradle.api.artifacts.transform.InputArtifactDependencies;
-import org.gradle.internal.execution.model.annotations.AbstractInputFilePropertyAnnotationHandler;
-import org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory;
-import org.gradle.internal.instantiation.InjectAnnotationHandler;
-import org.gradle.internal.properties.InputFilePropertyType;
-
-import static org.gradle.internal.execution.model.annotations.ModifierAnnotationCategory.NORMALIZATION;
-
-public class InputArtifactDependenciesAnnotationHandler extends AbstractInputFilePropertyAnnotationHandler implements InjectAnnotationHandler {
-    public InputArtifactDependenciesAnnotationHandler() {
-        super(
-            InputArtifactDependencies.class,
-            InputFilePropertyType.FILES,
-            ModifierAnnotationCategory.annotationsOf(NORMALIZATION)
-        );
-    }
-}
+class InputArtifactDependenciesAnnotationHandler : AbstractInputFilePropertyAnnotationHandler(
+    InputArtifactDependencies::class.java,
+    InputFilePropertyType.FILES,
+    ModifierAnnotationCategory.annotationsOf(ModifierAnnotationCategory.NORMALIZATION)
+), InjectAnnotationHandler

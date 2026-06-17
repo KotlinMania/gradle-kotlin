@@ -13,82 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.internal.Actions;
+import com.google.common.collect.Maps
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.internal.Actions
+import java.util.function.Supplier
 
-import java.util.function.Supplier;
+internal class DefaultMavenRepositoryContentDescriptor(repositoryNameSupplier: Supplier<String>, versionParser: VersionParser) :
+    DefaultRepositoryContentDescriptor(repositoryNameSupplier, versionParser), MavenRepositoryContentDescriptor {
+    private var snapshots = true
+    private var releases = true
 
-class DefaultMavenRepositoryContentDescriptor extends DefaultRepositoryContentDescriptor implements MavenRepositoryContentDescriptor {
-    private boolean snapshots = true;
-    private boolean releases = true;
-
-    public DefaultMavenRepositoryContentDescriptor(Supplier<String> repositoryNameSupplier, VersionParser versionParser) {
-        super(repositoryNameSupplier, versionParser);
+    override fun releasesOnly() {
+        snapshots = false
+        releases = true
     }
 
-    @Override
-    public void releasesOnly() {
-        snapshots = false;
-        releases = true;
+    override fun snapshotsOnly() {
+        snapshots = true
+        releases = false
     }
 
-    @Override
-    public void snapshotsOnly() {
-        snapshots = true;
-        releases = false;
-    }
-
-    @Override
-    public Action<? super ArtifactResolutionDetails> toContentFilter() {
-        Action<? super ArtifactResolutionDetails> filter = super.toContentFilter();
+    override fun toContentFilter(): Action<in ArtifactResolutionDetails> {
+        val filter = super.toContentFilter()
         if (!snapshots || !releases) {
-            Action<? super ArtifactResolutionDetails> action = details -> {
+            val action: Action<in ArtifactResolutionDetails> = Action { details: ArtifactResolutionDetails ->
                 if (!details.isVersionListing()) {
-                    String version = MavenVersionUtils.toEffectiveVersion(details.getComponentId().getVersion());
+                    val version = MavenVersionUtils.toEffectiveVersion(details.getComponentId()!!.getVersion())
                     if (snapshots && !version.endsWith("-SNAPSHOT")) {
-                        details.notFound();
-                        return;
+                        details.notFound()
+                        return@Action
                     }
                     if (releases && version.endsWith("-SNAPSHOT")) {
-                        details.notFound();
+                        details.notFound()
                     }
                 }
-            };
-            if (filter == Actions.doNothing()) {
-                return action;
             }
-            return Actions.composite(filter, action);
+            if (filter === Actions.doNothing<Any>()) {
+                return action
+            }
+            return Actions.composite<ArtifactResolutionDetails>(filter, action)
         }
-        return filter;
+        return filter
     }
 
-    @Override
-    public RepositoryContentDescriptorInternal asMutableCopy() {
-        DefaultMavenRepositoryContentDescriptor copy = new DefaultMavenRepositoryContentDescriptor(getRepositoryNameSupplier(), getVersionParser());
+    override fun asMutableCopy(): RepositoryContentDescriptorInternal {
+        val copy = DefaultMavenRepositoryContentDescriptor(getRepositoryNameSupplier(), getVersionParser())
         if (getIncludedConfigurations() != null) {
-            copy.setIncludedConfigurations(Sets.newHashSet(getIncludedConfigurations()));
+            copy.setIncludedConfigurations(Sets.newHashSet<String>(getIncludedConfigurations()))
         }
         if (getExcludedConfigurations() != null) {
-            copy.setExcludedConfigurations(Sets.newHashSet(getExcludedConfigurations()));
+            copy.setExcludedConfigurations(Sets.newHashSet<String>(getExcludedConfigurations()))
         }
         if (getIncludeSpecs() != null) {
-            copy.setIncludeSpecs(Sets.newHashSet(getIncludeSpecs()));
+            copy.setIncludeSpecs(Sets.newHashSet<ContentSpec>(getIncludeSpecs()))
         }
         if (getExcludeSpecs() != null) {
-            copy.setExcludeSpecs(Sets.newHashSet(getExcludeSpecs()));
+            copy.setExcludeSpecs(Sets.newHashSet<ContentSpec>(getExcludeSpecs()))
         }
         if (getRequiredAttributes() != null) {
-            copy.setRequiredAttributes(Maps.newHashMap(getRequiredAttributes()));
+            copy.setRequiredAttributes(Maps.newHashMap<Attribute<Any>, MutableSet<Any>>(getRequiredAttributes()!!))
         }
-        copy.releases = releases;
-        copy.snapshots = snapshots;
-        return copy;
+        copy.releases = releases
+        copy.snapshots = snapshots
+        return copy
     }
 }

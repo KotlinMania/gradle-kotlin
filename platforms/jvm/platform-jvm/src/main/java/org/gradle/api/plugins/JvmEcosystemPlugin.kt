@@ -51,7 +51,7 @@ abstract class JvmEcosystemPlugin @Inject constructor(private val objectFactory:
 
     private fun configureVariantDerivationStrategy(project: ProjectInternal) {
         val metadataHandler = project.getDependencies().getComponents() as ComponentMetadataHandlerInternal
-        metadataHandler.setVariantDerivationStrategy(objectFactory.newInstance<JavaEcosystemVariantDerivationStrategy?>(JavaEcosystemVariantDerivationStrategy::class.java)!!)
+        metadataHandler.variantDerivationStrategy = objectFactory.newInstance<JavaEcosystemVariantDerivationStrategy?>(JavaEcosystemVariantDerivationStrategy::class.java)!!
     }
 
     private fun configureSchema(project: ProjectInternal) {

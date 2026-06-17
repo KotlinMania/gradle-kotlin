@@ -13,123 +13,106 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.metadata.ComponentArtifactMetadataSerializer;
-import org.gradle.cache.IndexedCache;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.serialize.SetSerializer;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.base.Objects
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.metadata.ComponentArtifactMetadataSerializer
+import org.gradle.cache.IndexedCache
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.serialize.SetSerializer
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import java.util.Set;
-
-public class DefaultModuleArtifactsCache extends AbstractArtifactsCache {
-    private final ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator;
-
-    private IndexedCache<ArtifactsAtRepositoryKey, ModuleArtifactsCacheEntry> cache;
-
-    public DefaultModuleArtifactsCache(BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator) {
-        super(timeProvider);
-        this.cacheAccessCoordinator = cacheAccessCoordinator;
-    }
-
-    private IndexedCache<ArtifactsAtRepositoryKey, ModuleArtifactsCacheEntry> getCache() {
-        if (cache == null) {
-            cache = initCache();
-        }
-        return cache;
-    }
-
-    private IndexedCache<ArtifactsAtRepositoryKey, ModuleArtifactsCacheEntry> initCache() {
-        return cacheAccessCoordinator.createCache("module-artifacts", new ModuleArtifactsKeySerializer(), new ModuleArtifactsCacheEntrySerializer());
-    }
-
-    @Override
-    protected void store(ArtifactsAtRepositoryKey key, AbstractArtifactsCache.ModuleArtifactsCacheEntry entry) {
-        getCache().put(key, entry);
-    }
-
-    @Override
-    protected ModuleArtifactsCacheEntry get(ArtifactsAtRepositoryKey key) {
-        return getCache().getIfPresent(key);
-    }
-
-    private static class ModuleArtifactsKeySerializer extends AbstractSerializer<ArtifactsAtRepositoryKey> {
-        private final ComponentIdentifierSerializer identifierSerializer = new ComponentIdentifierSerializer();
-
-        @Override
-        public void write(Encoder encoder, ArtifactsAtRepositoryKey value) throws Exception {
-            encoder.writeString(value.repositoryId);
-            identifierSerializer.write(encoder, value.componentId);
-            encoder.writeString(value.context);
+open class DefaultModuleArtifactsCache(timeProvider: BuildCommencedTimeProvider?, private val cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator) : AbstractArtifactsCache(timeProvider) {
+    private var cache: IndexedCache<ArtifactsAtRepositoryKey?, ModuleArtifactsCacheEntry?>? = null
+        get() {
+            if (field == null) {
+                field = initCache()
+            }
+            return field
         }
 
-        @Override
-        public ArtifactsAtRepositoryKey read(Decoder decoder) throws Exception {
-            String resolverId = decoder.readString();
-            ComponentIdentifier componentId = identifierSerializer.read(decoder);
-            String context = decoder.readString();
-            return new ArtifactsAtRepositoryKey(resolverId, componentId, context);
+    private fun initCache(): IndexedCache<ArtifactsAtRepositoryKey?, ModuleArtifactsCacheEntry?>? {
+        return cacheAccessCoordinator.createCache<ArtifactsAtRepositoryKey?, ModuleArtifactsCacheEntry?>("module-artifacts", ModuleArtifactsKeySerializer(), ModuleArtifactsCacheEntrySerializer())
+    }
+
+    protected override fun store(key: ArtifactsAtRepositoryKey, entry: ModuleArtifactsCacheEntry) {
+        this.cache!!.put(key, entry)
+    }
+
+    protected override fun get(key: ArtifactsAtRepositoryKey): ModuleArtifactsCacheEntry? {
+        return this.cache!!.getIfPresent(key)
+    }
+
+    private class ModuleArtifactsKeySerializer : AbstractSerializer<ArtifactsAtRepositoryKey?>() {
+        private val identifierSerializer = ComponentIdentifierSerializer()
+
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ArtifactsAtRepositoryKey) {
+            encoder.writeString(value.repositoryId)
+            identifierSerializer.write(encoder, value.componentId)
+            encoder.writeString(value.context)
         }
 
-        @Override
-        public boolean equals(Object obj) {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ArtifactsAtRepositoryKey {
+            val resolverId = decoder.readString()
+            val componentId = identifierSerializer.read(decoder)
+            val context = decoder.readString()
+            return ArtifactsAtRepositoryKey(resolverId, componentId, context)
+        }
+
+        public override fun equals(obj: Any?): Boolean {
             if (!super.equals(obj)) {
-                return false;
+                return false
             }
 
-            ModuleArtifactsKeySerializer rhs = (ModuleArtifactsKeySerializer) obj;
-            return Objects.equal(identifierSerializer, rhs.identifierSerializer);
+            val rhs = obj as ModuleArtifactsKeySerializer
+            return Objects.equal(identifierSerializer, rhs.identifierSerializer)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(super.hashCode(), identifierSerializer);
+        public override fun hashCode(): Int {
+            return Objects.hashCode(super.hashCode(), identifierSerializer)
         }
     }
 
-    private static class ModuleArtifactsCacheEntrySerializer extends AbstractSerializer<ModuleArtifactsCacheEntry> {
-        private final Serializer<Set<ComponentArtifactMetadata>> artifactsSerializer =
-            new SetSerializer<>(new ComponentArtifactMetadataSerializer());
-        @Override
-        public void write(Encoder encoder, ModuleArtifactsCacheEntry value) throws Exception {
-            encoder.writeLong(value.createTimestamp);
-            byte[] hash = value.moduleDescriptorHash.toByteArray();
-            encoder.writeBinary(hash);
-            artifactsSerializer.write(encoder, value.artifacts);
+    private class ModuleArtifactsCacheEntrySerializer : AbstractSerializer<ModuleArtifactsCacheEntry?>() {
+        private val artifactsSerializer: Serializer<MutableSet<ComponentArtifactMetadata?>?> = SetSerializer<ComponentArtifactMetadata?>(ComponentArtifactMetadataSerializer())
+
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ModuleArtifactsCacheEntry) {
+            encoder.writeLong(value.createTimestamp)
+            val hash = value.moduleDescriptorHash.toByteArray()
+            encoder.writeBinary(hash)
+            artifactsSerializer.write(encoder, value.artifacts)
         }
 
-        @Override
-        public ModuleArtifactsCacheEntry read(Decoder decoder) throws Exception {
-            long createTimestamp = decoder.readLong();
-            byte[] encodedHash = decoder.readBinary();
-            HashCode hash = HashCode.fromBytes(encodedHash);
-            Set<ComponentArtifactMetadata> artifacts = artifactsSerializer.read(decoder);
-            return new ModuleArtifactsCacheEntry(artifacts, createTimestamp, hash);
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ModuleArtifactsCacheEntry {
+            val createTimestamp = decoder.readLong()
+            val encodedHash = decoder.readBinary()
+            val hash = HashCode.fromBytes(encodedHash!!)
+            val artifacts = artifactsSerializer.read(decoder)
+            return ModuleArtifactsCacheEntry(artifacts, createTimestamp, hash)
         }
 
-        @Override
-        public boolean equals(Object obj) {
+        public override fun equals(obj: Any?): Boolean {
             if (!super.equals(obj)) {
-                return false;
+                return false
             }
 
-            ModuleArtifactsCacheEntrySerializer rhs = (ModuleArtifactsCacheEntrySerializer) obj;
-            return Objects.equal(artifactsSerializer, rhs.artifactsSerializer);
+            val rhs = obj as ModuleArtifactsCacheEntrySerializer
+            return Objects.equal(artifactsSerializer, rhs.artifactsSerializer)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(super.hashCode(), artifactsSerializer);
+        public override fun hashCode(): Int {
+            return Objects.hashCode(super.hashCode(), artifactsSerializer)
         }
     }
 }

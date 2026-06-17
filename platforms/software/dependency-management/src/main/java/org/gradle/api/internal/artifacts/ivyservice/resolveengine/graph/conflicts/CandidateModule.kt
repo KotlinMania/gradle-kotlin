@@ -13,29 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ComponentState;
-
-import java.util.Collection;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ComponentState
 
 /**
  * Module that participates in conflict resolution. Contains id of the module and candidate versions.
  */
-public interface CandidateModule {
+interface CandidateModule {
     /**
      * Id of this module
      */
-    ModuleIdentifier getId();
+    val id: ModuleIdentifier?
 
     /**
      * Candidate versions of this module. Many times, it has only single version.
      */
-    Collection<ComponentState> getVersions();
+    val versions: MutableCollection<ComponentState>?
 
-    void changeSelection(ComponentState selected);
+    fun changeSelection(selected: ComponentState)
 
-    boolean isVirtualPlatform();
+    val isVirtualPlatform: Boolean
 }

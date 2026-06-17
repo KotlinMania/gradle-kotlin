@@ -13,37 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.ImmutableCapabilities
 
 /**
  * Identifier of a variant of a component.
  */
-public class ComponentVariantIdentifier {
-
-    private final ComponentIdentifier componentId;
-    private final ImmutableAttributes attributes;
-    private final ImmutableCapabilities capabilities;
-
-    public ComponentVariantIdentifier(ComponentIdentifier componentId, ImmutableAttributes attributes, ImmutableCapabilities capabilities) {
-        this.componentId = componentId;
-        this.attributes = attributes;
-        this.capabilities = capabilities;
-    }
-
-    public ComponentIdentifier getComponentId() {
-        return componentId;
-    }
-
-    public ImmutableAttributes getAttributes() {
-        return attributes;
-    }
-
-    public ImmutableCapabilities getCapabilities() {
-        return capabilities;
-    }
-}
+class ComponentVariantIdentifier(val componentId: ComponentIdentifier, val attributes: ImmutableAttributes, val capabilities: ImmutableCapabilities)

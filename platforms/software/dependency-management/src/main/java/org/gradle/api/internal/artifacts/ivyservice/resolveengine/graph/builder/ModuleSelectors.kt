@@ -13,201 +13,189 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+import org.gradle.api.internal.artifacts.ResolvedVersionConstraint
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ExactVersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.LatestVersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ModuleSelectors.Companion.hasLatestSelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors.ResolvableSelectorState
+import org.gradle.internal.component.model.IvyArtifactName
+import java.lang.Boolean
+import java.util.Collections
+import kotlin.Comparator
+import kotlin.Int
 
-import org.gradle.api.internal.artifacts.ResolvedVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ExactVersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.LatestVersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors.ResolvableSelectorState;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+class ModuleSelectors<T : ResolvableSelectorState?>(versionComparator: Comparator<Version>, private val versionParser: VersionParser) : Iterable<T?> {
+    private val emptyVersion: Version
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+    private val selectors: MutableList<T?> = ArrayList<T?>()
+    private var deferSelection = false
+    private var forced = false
+    private val selectorComparator: Comparator<ResolvableSelectorState>
 
-public class ModuleSelectors<T extends ResolvableSelectorState> implements Iterable<T> {
-
-    private final Version emptyVersion;
-
-    private final VersionParser versionParser;
-    private final List<T> selectors = new ArrayList<>();
-    private boolean deferSelection;
-    private boolean forced;
-    private final Comparator<ResolvableSelectorState> selectorComparator;
-
-    public ModuleSelectors(Comparator<Version> versionComparator, VersionParser versionParser) {
-        this.versionParser = versionParser;
-        this.emptyVersion = versionParser.transform("");
-        this.selectorComparator = new SelectorComparator(versionComparator);
+    init {
+        this.emptyVersion = versionParser.transform("")
+        this.selectorComparator = ModuleSelectors.SelectorComparator(versionComparator)
     }
 
-    private class SelectorComparator implements Comparator<ResolvableSelectorState> {
-        private final Comparator<Version> versionComparator;
-
-        private SelectorComparator(Comparator<Version> versionComparator) {
-            this.versionComparator = versionComparator;
-        }
-
-        @Override
-        public int compare(ResolvableSelectorState left, ResolvableSelectorState right) {
+    private inner class SelectorComparator(private val versionComparator: Comparator<Version>) : Comparator<ResolvableSelectorState?> {
+        override fun compare(left: ResolvableSelectorState, right: ResolvableSelectorState): Int {
             if (right.isProject() == left.isProject()) {
                 if (right.isFromLock() == left.isFromLock()) {
                     if (hasLatestSelector(right) == hasLatestSelector(left)) {
                         if (isDynamicSelector(right) == isDynamicSelector(left)) {
-                            Version o1RequiredVersion = ModuleSelectors.this.requiredVersion(right);
-                            Version o2RequiredVersion = ModuleSelectors.this.requiredVersion(left);
-                            int compareRequiredVersion = versionComparator.compare(o1RequiredVersion, o2RequiredVersion);
+                            val o1RequiredVersion = this@ModuleSelectors.requiredVersion(right)
+                            val o2RequiredVersion = this@ModuleSelectors.requiredVersion(left)
+                            val compareRequiredVersion = versionComparator.compare(o1RequiredVersion, o2RequiredVersion)
                             if (compareRequiredVersion == 0) {
-                                Version o1Version = ModuleSelectors.this.preferredVersion(right);
-                                Version o2Version = ModuleSelectors.this.preferredVersion(left);
-                                return versionComparator.compare(o1Version, o2Version);
+                                val o1Version = this@ModuleSelectors.preferredVersion(right)
+                                val o2Version = this@ModuleSelectors.preferredVersion(left)
+                                return versionComparator.compare(o1Version, o2Version)
                             } else {
-                                return compareRequiredVersion;
+                                return compareRequiredVersion
                             }
                         } else {
-                            return Boolean.compare(isDynamicSelector(left), isDynamicSelector(right));
+                            return Boolean.compare(isDynamicSelector(left), isDynamicSelector(right))
                         }
                     } else {
-                        return Boolean.compare(hasLatestSelector(right), hasLatestSelector(left));
+                        return Boolean.compare(hasLatestSelector(right), hasLatestSelector(left))
                     }
                 } else {
-                    return Boolean.compare(right.isFromLock(), left.isFromLock());
+                    return Boolean.compare(right.isFromLock(), left.isFromLock())
                 }
             }
-            return Boolean.compare(right.isProject(), left.isProject());
+            return Boolean.compare(right.isProject(), left.isProject())
         }
     }
 
-    public boolean checkDeferSelection() {
+    fun checkDeferSelection(): kotlin.Boolean {
         if (deferSelection) {
-            deferSelection = false;
-            return true;
+            deferSelection = false
+            return true
         }
-        return false;
+        return false
     }
 
-    @Override
-    public Iterator<T> iterator() {
-        return selectors.iterator();
+    override fun iterator(): MutableIterator<T?> {
+        return selectors.iterator()
     }
 
-    public void add(T selector, boolean deferSelection) {
-        this.deferSelection = deferSelection;
+    fun add(selector: T?, deferSelection: kotlin.Boolean) {
+        this.deferSelection = deferSelection
         if (selectors.isEmpty() || forced) {
-            selectors.add(selector);
+            selectors.add(selector)
         } else {
-            doAdd(selector);
+            doAdd(selector)
         }
-        forced = forced || selector.isForce();
+        forced = forced || selector!!.isForce()
     }
 
-    private void doAdd(T selector) {
-        int size = selectors.size();
+    private fun doAdd(selector: T?) {
+        val size = selectors.size
         if (size == 1) {
-            doAddWhenListHasOneElement(selector);
+            doAddWhenListHasOneElement(selector)
         } else {
-            doAddWhenListHasManyElements(selectors, selector, size);
+            doAddWhenListHasManyElements(selectors, selector, size)
         }
     }
 
-    private void doAddWhenListHasManyElements(List<T> selectors, T selector, int size) {
-        int insertionPoint = Collections.binarySearch(selectors, selector, selectorComparator);
-        insertionPoint = advanceToPreserveOrder(selectors, selector, size, insertionPoint);
+    private fun doAddWhenListHasManyElements(selectors: MutableList<T?>, selector: T?, size: Int) {
+        var insertionPoint = Collections.binarySearch<T?>(selectors, selector, selectorComparator)
+        insertionPoint = advanceToPreserveOrder(selectors, selector, size, insertionPoint)
         if (insertionPoint < 0) {
-            insertionPoint = ~insertionPoint;
+            insertionPoint = insertionPoint.inv()
         }
-        selectors.add(insertionPoint, selector);
+        selectors.add(insertionPoint, selector)
     }
 
-    private int advanceToPreserveOrder(List<T> selectors, T selector, int size, int insertionPoint) {
+    private fun advanceToPreserveOrder(selectors: MutableList<T?>, selector: T?, size: Int, insertionPoint: Int): Int {
+        var insertionPoint = insertionPoint
         while (insertionPoint > 0 && insertionPoint < size && selectorComparator.compare(selectors.get(insertionPoint), selector) == 0) {
-            insertionPoint++;
+            insertionPoint++
         }
-        return insertionPoint;
+        return insertionPoint
     }
 
-    private void doAddWhenListHasOneElement(T selector) {
-        T first = selectors.get(0);
-        int c = selectorComparator.compare(first, selector);
+    private fun doAddWhenListHasOneElement(selector: T?) {
+        val first: T? = selectors.get(0)
+        val c = selectorComparator.compare(first, selector)
         if (c <= 0) {
-            selectors.add(selector);
+            selectors.add(selector)
         } else {
-            selectors.add(0, selector);
+            selectors.add(0, selector)
         }
     }
 
-    public boolean remove(T selector) {
-        return selectors.remove(selector);
+    fun remove(selector: T?): kotlin.Boolean {
+        return selectors.remove(selector)
     }
 
-    private static boolean isDynamicSelector(ResolvableSelectorState selector) {
-        return selector.getVersionConstraint() != null && selector.getVersionConstraint().isDynamic;
-    }
-
-    private static boolean hasLatestSelector(ResolvableSelectorState selector) {
-        return selector.getVersionConstraint() != null
-            && hasLatestSelector(selector.getVersionConstraint());
-    }
-
-    private static boolean hasLatestSelector(ResolvedVersionConstraint vc) {
-        // Latest is only given priority if it's in a require
-        return hasLatestSelector(vc.requiredSelector);
-    }
-
-    private static boolean hasLatestSelector(@Nullable VersionSelector versionSelector) {
-        return versionSelector instanceof LatestVersionSelector;
-    }
-
-    private Version requiredVersion(ResolvableSelectorState selector) {
-        ResolvedVersionConstraint versionConstraint = selector.getVersionConstraint();
+    private fun requiredVersion(selector: ResolvableSelectorState): Version {
+        val versionConstraint = selector.getVersionConstraint()
         if (versionConstraint == null) {
-            return emptyVersion;
+            return emptyVersion
         }
-        return versionOf(versionConstraint.requiredSelector);
+        return versionOf(versionConstraint.requiredSelector)
     }
 
-    private Version preferredVersion(ResolvableSelectorState selector) {
-        ResolvedVersionConstraint versionConstraint = selector.getVersionConstraint();
+    private fun preferredVersion(selector: ResolvableSelectorState): Version {
+        val versionConstraint = selector.getVersionConstraint()
         if (versionConstraint == null) {
-            return emptyVersion;
+            return emptyVersion
         }
-        return versionOf(versionConstraint.preferredSelector);
+        return versionOf(versionConstraint.preferredSelector)
     }
 
-    private Version versionOf(@Nullable VersionSelector selector) {
-        if (!(selector instanceof ExactVersionSelector)) {
-            return emptyVersion;
+    private fun versionOf(selector: VersionSelector?): Version {
+        if (selector !is ExactVersionSelector) {
+            return emptyVersion
         }
-        return versionParser.transform(selector.getSelector());
+        return versionParser.transform(selector.getSelector())
     }
 
-    public int size() {
-        return selectors.size();
+    fun size(): Int {
+        return selectors.size
     }
 
-    @Nullable
-    public T first() {
+    fun first(): T? {
         if (size() == 0) {
-            return null;
+            return null
         }
-        return selectors.get(0);
+        return selectors.get(0)
     }
 
-    @Nullable
-    public IvyArtifactName getFirstDependencyArtifact() {
-        for (T selector: selectors) {
-            IvyArtifactName artifact = selector.getFirstDependencyArtifact();
-            if (artifact != null) {
-                return artifact;
+    val firstDependencyArtifact: IvyArtifactName?
+        get() {
+            for (selector in selectors) {
+                val artifact = selector!!.getFirstDependencyArtifact()
+                if (artifact != null) {
+                    return artifact
+                }
             }
+            return null
         }
-        return null;
+
+    companion object {
+        private fun isDynamicSelector(selector: ResolvableSelectorState): kotlin.Boolean {
+            return selector.getVersionConstraint() != null && selector.getVersionConstraint()!!.isDynamic
+        }
+
+        private fun hasLatestSelector(selector: ResolvableSelectorState): kotlin.Boolean {
+            return selector.getVersionConstraint() != null
+                    && Companion.hasLatestSelector(selector.getVersionConstraint()!!)
+        }
+
+        private fun hasLatestSelector(vc: ResolvedVersionConstraint): kotlin.Boolean {
+            // Latest is only given priority if it's in a require
+            return hasLatestSelector(vc.requiredSelector)
+        }
+
+        private fun hasLatestSelector(versionSelector: VersionSelector?): kotlin.Boolean {
+            return versionSelector is LatestVersionSelector
+        }
     }
 }

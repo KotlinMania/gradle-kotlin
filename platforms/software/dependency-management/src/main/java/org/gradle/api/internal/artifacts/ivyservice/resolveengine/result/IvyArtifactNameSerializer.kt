@@ -13,60 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.jspecify.annotations.Nullable;
-
-import java.io.IOException;
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.IOException
 
 /**
- * Serializes and de-serializes {@link IvyArtifactName}s.
+ * Serializes and de-serializes [IvyArtifactName]s.
  */
-public class IvyArtifactNameSerializer extends AbstractSerializer<IvyArtifactName>  {
-
-    public static final IvyArtifactNameSerializer INSTANCE = new IvyArtifactNameSerializer();
-    private IvyArtifactNameSerializer() {
-        // Private to enforce singleton.
+class IvyArtifactNameSerializer private constructor() : AbstractSerializer<IvyArtifactName?>() {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): IvyArtifactName {
+        val artifactName = decoder.readString()
+        val type = decoder.readString()
+        val extension = decoder.readNullableString()
+        val classifier = decoder.readNullableString()
+        return DefaultIvyArtifactName(artifactName!!, type!!, extension, classifier)
     }
 
-    @Override
-    public IvyArtifactName read(Decoder decoder) throws IOException {
-        String artifactName = decoder.readString();
-        String type = decoder.readString();
-        String extension = decoder.readNullableString();
-        String classifier = decoder.readNullableString();
-        return new DefaultIvyArtifactName(artifactName, type, extension, classifier);
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: IvyArtifactName) {
+        encoder.writeString(value.name)
+        encoder.writeString(value.type)
+        encoder.writeNullableString(value.extension)
+        encoder.writeNullableString(value.classifier)
     }
 
-    @Override
-    public void write(Encoder encoder, IvyArtifactName value) throws IOException {
-        encoder.writeString(value.name);
-        encoder.writeString(value.type);
-        encoder.writeNullableString(value.extension);
-        encoder.writeNullableString(value.classifier);
-    }
-
-    public void writeNullable(Encoder encoder, @Nullable IvyArtifactName value) throws IOException {
+    @Throws(IOException::class)
+    fun writeNullable(encoder: Encoder, value: IvyArtifactName?) {
         if (value == null) {
-            encoder.writeBoolean(false);
+            encoder.writeBoolean(false)
         } else {
-            encoder.writeBoolean(true);
-            write(encoder, value);
+            encoder.writeBoolean(true)
+            write(encoder, value)
         }
     }
 
-    @Nullable
-    public IvyArtifactName readNullable(Decoder decoder) throws IOException {
-        boolean hasArtifact = decoder.readBoolean();
+    @Throws(IOException::class)
+    fun readNullable(decoder: Decoder): IvyArtifactName? {
+        val hasArtifact = decoder.readBoolean()
         if (hasArtifact) {
-            return read(decoder);
+            return read(decoder)
         }
-        return null;
+        return null
+    }
+
+    companion object {
+        val INSTANCE: IvyArtifactNameSerializer = IvyArtifactNameSerializer()
     }
 }

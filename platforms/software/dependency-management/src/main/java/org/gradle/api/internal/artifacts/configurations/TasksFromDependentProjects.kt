@@ -13,96 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.TaskDependencyContainerInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.util.Path
+import java.util.function.Consumer
 
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.TaskDependencyContainerInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
+@Deprecated("")
+class TasksFromDependentProjects(val taskName: String, val configurationName: String, checker: TaskDependencyChecker, taskDependencyFactory: TaskDependencyFactory) : TaskDependencyContainerInternal {
+    private val taskDependencyDelegate: TaskDependencyContainerInternal
 
-import java.util.Set;
+    constructor(taskName: String, configurationName: String, taskDependencyFactory: TaskDependencyFactory) : this(taskName, configurationName, TaskDependencyChecker(), taskDependencyFactory)
 
-@Deprecated
-public class TasksFromDependentProjects implements TaskDependencyContainerInternal {
-
-    private final String taskName;
-    private final String configurationName;
-    private final TaskDependencyContainerInternal taskDependencyDelegate;
-
-    public TasksFromDependentProjects(String taskName, String configurationName, TaskDependencyFactory taskDependencyFactory) {
-        this(taskName, configurationName, new TaskDependencyChecker(), taskDependencyFactory);
-    }
-
-    public TasksFromDependentProjects(String taskName, String configurationName, TaskDependencyChecker checker, TaskDependencyFactory taskDependencyFactory) {
-        this.taskName = taskName;
-        this.configurationName = configurationName;
-        this.taskDependencyDelegate = taskDependencyFactory.visitingDependencies(context -> {
-            Project thisProject = context.getTask().getProject();
-            Set<Task> tasksWithName = thisProject.getRootProject().getTasksByName(taskName, true);
-            for (Task nextTask : tasksWithName) {
-                if (context.getTask() != nextTask) {
-                    boolean isDependency = checker.isDependent(thisProject, configurationName, nextTask.getProject());
+    init {
+        this.taskDependencyDelegate = taskDependencyFactory.visitingDependencies(Consumer { context: TaskDependencyResolveContext? ->
+            val thisProject = context!!.getTask()!!.getProject()
+            val tasksWithName = thisProject.getRootProject().getTasksByName(taskName, true)
+            for (nextTask in tasksWithName) {
+                if (context.getTask() !== nextTask) {
+                    val isDependency = checker.isDependent(thisProject, configurationName, nextTask.getProject())
                     if (isDependency) {
-                        context.add(nextTask);
+                        context.add(nextTask)
                     }
                 }
             }
-        });
+        })
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        taskDependencyDelegate.visitDependencies(context);
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        taskDependencyDelegate.visitDependencies(context)
     }
 
-    @Override
-    public Set<? extends Task> getDependencies(@Nullable Task task) {
-        return taskDependencyDelegate.getDependencies(task);
+    override fun getDependencies(task: Task?): MutableSet<out Task> {
+        return taskDependencyDelegate.getDependencies(task)
     }
 
-    @Override
-    public Set<? extends Task> getDependenciesForInternalUse(@Nullable Task task) {
-        return taskDependencyDelegate.getDependenciesForInternalUse(task);
+    override fun getDependenciesForInternalUse(task: Task?): MutableSet<out Task> {
+        return taskDependencyDelegate.getDependenciesForInternalUse(task)
     }
 
-    static class TaskDependencyChecker {
+    internal class TaskDependencyChecker {
         //checks if candidate project is dependent of the origin project with given configuration
-        boolean isDependent(Project originProject, String configurationName, Project candidateProject) {
-            Configuration configuration = candidateProject.getConfigurations().findByName(configurationName);
+        fun isDependent(originProject: Project, configurationName: String, candidateProject: Project): Boolean {
+            val configuration = candidateProject.getConfigurations().findByName(configurationName)
             if (configuration == null) {
-                return false;
+                return false
             }
 
-            Path identityPath = ((ProjectInternal) originProject).getIdentityPath();
-            return doesConfigurationDependOnProject(configuration, identityPath);
+            val identityPath = (originProject as ProjectInternal).getIdentityPath()
+            return doesConfigurationDependOnProject(configuration, identityPath)
         }
 
-        private static boolean doesConfigurationDependOnProject(Configuration configuration, Path identityPath) {
-            Set<ProjectDependency> projectDependencies = configuration.getAllDependencies().withType(ProjectDependency.class);
-            for (ProjectDependency projectDependency : projectDependencies) {
-                Path dependencyIdentityPath = ((ProjectDependencyInternal) projectDependency).getTargetProjectIdentity().getBuildTreePath();
-                if (dependencyIdentityPath.equals(identityPath)) {
-                    return true;
+        companion object {
+            private fun doesConfigurationDependOnProject(configuration: Configuration, identityPath: Path): Boolean {
+                val projectDependencies: MutableSet<ProjectDependency> = configuration.getAllDependencies().withType<ProjectDependency>(ProjectDependency::class.java)
+                for (projectDependency in projectDependencies) {
+                    val dependencyIdentityPath = (projectDependency as ProjectDependencyInternal).getTargetProjectIdentity().getBuildTreePath()
+                    if (dependencyIdentityPath == identityPath) {
+                        return true
+                    }
                 }
+                return false
             }
-            return false;
         }
     }
-
-    public String getTaskName() {
-        return taskName;
-    }
-
-    public String getConfigurationName() {
-        return configurationName;
-    }
-
 }

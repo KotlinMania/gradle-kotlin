@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-import java.util.function.Supplier;
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import java.util.function.Supplier
 
 /**
  * State captured from a resolved dependency graph necessary to reconstruct it
@@ -30,10 +25,11 @@ import java.util.function.Supplier;
  *
  * @param requestAttributes The original request attributes used to build the graph.
  * @param graphSource A supplier of the graph structure, which deserializes the graph on-demand.
- * @param availableVariantsByComponent Additional data captured when {@link ResolutionStrategyInternal#getIncludeAllSelectableVariantResults()} is enabled.
+ * @param availableVariantsByComponent Additional data captured when [ResolutionStrategyInternal.getIncludeAllSelectableVariantResults] is enabled.
  */
-public record ResolvedDependencyGraph(
-    ImmutableAttributes requestAttributes,
-    Supplier<GraphStructure> graphSource,
-    @Nullable List<List<ResolvedVariantResult>> availableVariantsByComponent
-) { }
+@JvmRecord
+data class ResolvedDependencyGraph(
+    val requestAttributes: ImmutableAttributes,
+    val graphSource: Supplier<GraphStructure>,
+    val availableVariantsByComponent: MutableList<MutableList<ResolvedVariantResult>>?
+)

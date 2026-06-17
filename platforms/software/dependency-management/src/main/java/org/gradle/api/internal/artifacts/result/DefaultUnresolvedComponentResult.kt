@@ -13,27 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.result;
+package org.gradle.api.internal.artifacts.result
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.UnresolvedComponentResult;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.result.UnresolvedComponentResult
 
-public class DefaultUnresolvedComponentResult implements UnresolvedComponentResult {
-    private final ComponentIdentifier componentIdentifier;
-    private final Throwable failure;
-
-    public DefaultUnresolvedComponentResult(ComponentIdentifier componentIdentifier, Throwable failure) {
-        this.componentIdentifier = componentIdentifier;
-        this.failure = failure;
+class DefaultUnresolvedComponentResult(private val componentIdentifier: ComponentIdentifier, private val failure: Throwable) : UnresolvedComponentResult {
+    override fun getId(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        return componentIdentifier;
-    }
-
-    @Override
-    public Throwable getFailure() {
-        return failure;
+    override fun getFailure(): Throwable {
+        return failure
     }
 }

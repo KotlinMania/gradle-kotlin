@@ -13,38 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor
+import org.gradle.api.model.ObjectFactory
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor;
-import org.gradle.api.model.ObjectFactory;
+abstract class AbstractResolutionAwareArtifactRepository<T : RepositoryDescriptor?> protected constructor(objectFactory: ObjectFactory, versionParser: VersionParser) :
+    AbstractArtifactRepository(objectFactory, versionParser), ResolutionAwareRepository {
+    private var descriptor: T? = null
 
-public abstract class AbstractResolutionAwareArtifactRepository<T extends RepositoryDescriptor> extends AbstractArtifactRepository implements ResolutionAwareRepository {
-
-    private T descriptor;
-
-    protected AbstractResolutionAwareArtifactRepository(ObjectFactory objectFactory, VersionParser versionParser) {
-        super(objectFactory, versionParser);
-    }
-
-    @Override
-    final public T getDescriptor() {
+    override fun getDescriptor(): T? {
         if (descriptor == null) {
-            descriptor = createDescriptor();
+            descriptor = createDescriptor()
         }
-        return descriptor;
+        return descriptor
     }
 
-    protected void invalidateDescriptor() {
-        descriptor = null;
+    protected open fun invalidateDescriptor() {
+        descriptor = null
     }
 
-    protected abstract T createDescriptor();
+    protected abstract fun createDescriptor(): T?
 
-    @Override
-    public void setName(String name) {
-        invalidateDescriptor();
-        super.setName(name);
+    override fun setName(name: String) {
+        invalidateDescriptor()
+        super.setName(name)
     }
 }

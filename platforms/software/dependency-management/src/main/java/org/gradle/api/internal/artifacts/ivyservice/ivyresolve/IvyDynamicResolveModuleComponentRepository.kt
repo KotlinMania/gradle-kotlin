@@ -13,54 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ModuleComponentGraphResolveStateFactory;
-import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentGraphResolveStateFactory
+import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
 
 /**
  * A ModuleComponentRepository that provides the 'dynamic resolve mode' for an Ivy repository, where the 'revConstraint'
  * attribute is used for versions instead of the 'rev' attribute.
  */
-class IvyDynamicResolveModuleComponentRepository extends BaseModuleComponentRepository<ExternalModuleComponentGraphResolveState> {
-    IvyDynamicResolveModuleComponentRepository(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> delegate, ModuleComponentGraphResolveStateFactory resolveStateFactory) {
-        super(delegate,
-            new IvyDynamicResolveModuleComponentRepositoryAccess(delegate.getLocalAccess(), resolveStateFactory),
-            new IvyDynamicResolveModuleComponentRepositoryAccess(delegate.getRemoteAccess(), resolveStateFactory));
-    }
-
-    private static class IvyDynamicResolveModuleComponentRepositoryAccess extends BaseModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> {
-        private final ModuleComponentGraphResolveStateFactory resolveStateFactory;
-
-        IvyDynamicResolveModuleComponentRepositoryAccess(ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> delegate, ModuleComponentGraphResolveStateFactory resolveStateFactory) {
-            super(delegate);
-            this.resolveStateFactory = resolveStateFactory;
+internal class IvyDynamicResolveModuleComponentRepository(
+    delegate: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>,
+    resolveStateFactory: ModuleComponentGraphResolveStateFactory
+) : BaseModuleComponentRepository<ExternalModuleComponentGraphResolveState?>(
+    delegate,
+    IvyDynamicResolveModuleComponentRepositoryAccess(delegate.getLocalAccess(), resolveStateFactory),
+    IvyDynamicResolveModuleComponentRepositoryAccess(delegate.getRemoteAccess(), resolveStateFactory)
+) {
+    private class IvyDynamicResolveModuleComponentRepositoryAccess(
+        delegate: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>?,
+        private val resolveStateFactory: ModuleComponentGraphResolveStateFactory
+    ) : BaseModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>(delegate) {
+        override fun toString(): String {
+            return "Ivy dynamic resolve > " + getDelegate()
         }
 
-        @Override
-        public String toString() {
-            return "Ivy dynamic resolve > " + getDelegate();
-        }
-
-        @Override
-        public void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-            super.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result);
-            if (result.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved) {
-                transformDependencies(result);
+        override fun resolveComponentMetaData(
+            moduleComponentIdentifier: ModuleComponentIdentifier?,
+            requestMetaData: ComponentOverrideMetadata?,
+            result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>
+        ) {
+            super.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result)
+            if (result.state === BuildableModuleComponentMetaDataResolveResult.State.Resolved) {
+                transformDependencies(result)
             }
         }
 
-        private void transformDependencies(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-            @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = result.metaData.getLegacyMetadata();
-            if (legacyMetadata instanceof IvyModuleResolveMetadata) {
-                IvyModuleResolveMetadata transformedMetadata = ((IvyModuleResolveMetadata) legacyMetadata).withDynamicConstraintVersions();
-                result.setMetadata(resolveStateFactory.stateFor(transformedMetadata));
+        fun transformDependencies(result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>) {
+            @Suppress("deprecation") val legacyMetadata: ExternalComponentResolveMetadata? = result.metaData.getLegacyMetadata()
+            if (legacyMetadata is IvyModuleResolveMetadata) {
+                val transformedMetadata = legacyMetadata.withDynamicConstraintVersions()
+                result.setMetadata(resolveStateFactory.stateFor(transformedMetadata))
             }
         }
     }

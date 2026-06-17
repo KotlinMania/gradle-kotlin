@@ -13,154 +13,147 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
-
-import org.apache.ivy.core.IvyPatternHelper;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.apache.ivy.util.StringUtils.isNullOrEmpty;
+import org.apache.ivy.util.StringUtils
 
 /**
- * Utility methods originally used directly from {@link IvyPatternHelper}, but
+ * Utility methods originally used directly from [IvyPatternHelper], but
  * which have been now copied to facilitate alterations and also to isolate
  * the usages from Ivy concepts.
  */
-public class PatternHelper {
+object PatternHelper {
+    const val TYPE_KEY: String = "type"
 
-    public static final String TYPE_KEY = "type";
+    const val EXT_KEY: String = "ext"
 
-    public static final String EXT_KEY = "ext";
+    const val ARTIFACT_KEY: String = "artifact"
 
-    public static final String ARTIFACT_KEY = "artifact";
+    const val REVISION_KEY: String = "revision"
 
-    public static final String REVISION_KEY = "revision";
+    const val MODULE_KEY: String = "module"
 
-    public static final String MODULE_KEY = "module";
+    const val ORGANISATION_KEY: String = "organisation"
 
-    public static final String ORGANISATION_KEY = "organisation";
+    const val ORGANISATION_KEY2: String = "organization"
 
-    public static final String ORGANISATION_KEY2 = "organization";
-
-    public static final String ORGANISATION_PATH_KEY = "orgPath";
+    const val ORGANISATION_PATH_KEY: String = "orgPath"
 
     /**
-     * Selective copy of {@link IvyPatternHelper#substituteTokens(String, Map)},
+     * Selective copy of [IvyPatternHelper.substituteTokens],
      * necessary because we allow for paths which are no longer supported by the Ivy code (for
      * example paths with parent traversals, i.e. with ".." in them).
      */
-    public static String substituteTokens(String pattern, Map<String, String> attributes) {
-        Map<String, Object> tokens = new HashMap<>(attributes);
+    fun substituteTokens(pattern: String, attributes: MutableMap<String, String>): String {
+        val tokens: MutableMap<String, Any> = HashMap<String, Any>(attributes)
         if (tokens.containsKey(ORGANISATION_KEY) && !tokens.containsKey(ORGANISATION_KEY2)) {
-            tokens.put(ORGANISATION_KEY2, tokens.get(ORGANISATION_KEY));
+            tokens.put(ORGANISATION_KEY2, tokens.get(ORGANISATION_KEY)!!)
         }
         if (tokens.containsKey(ORGANISATION_KEY)
-            && !tokens.containsKey(ORGANISATION_PATH_KEY)) {
-            String org = (String) tokens.get(ORGANISATION_KEY);
-            tokens.put(ORGANISATION_PATH_KEY, org == null ? "" : org.replace('.', '/'));
+            && !tokens.containsKey(ORGANISATION_PATH_KEY)
+        ) {
+            val org = tokens.get(ORGANISATION_KEY) as String?
+            tokens.put(org.gradle.api.internal.artifacts.repositories.PatternHelper.ORGANISATION_PATH_KEY, if (org == null) "" else org.replace('.', '/'))
         }
 
-        StringBuilder buffer = new StringBuilder();
+        val buffer = StringBuilder()
 
-        StringBuilder optionalPart = null;
-        StringBuilder tokenBuffer = null;
-        boolean insideOptionalPart = false;
-        boolean insideToken = false;
-        boolean tokenSeen = false;
-        boolean tokenHadValue = false;
+        var optionalPart: StringBuilder? = null
+        var tokenBuffer: StringBuilder? = null
+        var insideOptionalPart = false
+        var insideToken = false
+        var tokenSeen = false
+        var tokenHadValue = false
 
-        for (int i = 0; i < pattern.length(); i++) {
-            char ch = pattern.charAt(i);
-            switch (ch) {
-                case '(':
-                    if (insideOptionalPart) {
-                        throw new IllegalArgumentException(
-                            "invalid start of optional part at position " + i + " in pattern "
-                                + pattern);
+        for (i in 0..<pattern.length) {
+            val ch = pattern.get(i)
+            when (ch) {
+                '(' -> {
+                    require(!insideOptionalPart) {
+                        ("invalid start of optional part at position " + i + " in pattern "
+                                + pattern)
                     }
 
-                    optionalPart = new StringBuilder();
-                    insideOptionalPart = true;
-                    tokenSeen = false;
-                    tokenHadValue = false;
-                    break;
-                case ')':
-                    if (!insideOptionalPart || insideToken) {
-                        throw new IllegalArgumentException(
-                            "invalid end of optional part at position " + i + " in pattern "
-                                + pattern);
+                    optionalPart = StringBuilder()
+                    insideOptionalPart = true
+                    tokenSeen = false
+                    tokenHadValue = false
+                }
+
+                ')' -> {
+                    require(!(!insideOptionalPart || insideToken)) {
+                        ("invalid end of optional part at position " + i + " in pattern "
+                                + pattern)
                     }
 
                     if (tokenHadValue) {
-                        buffer.append(optionalPart.toString());
+                        buffer.append(optionalPart.toString())
                     } else if (!tokenSeen) {
-                        buffer.append('(').append(optionalPart.toString()).append(')');
+                        buffer.append('(').append(optionalPart.toString()).append(')')
                     }
-                    insideOptionalPart = false;
-                    break;
-                case '[':
-                    if (insideToken) {
-                        throw new IllegalArgumentException("invalid start of token at position "
-                            + i + " in pattern " + pattern);
+                    insideOptionalPart = false
+                }
+
+                '[' -> {
+                    require(!insideToken) {
+                        ("invalid start of token at position "
+                                + i + " in pattern " + pattern)
                     }
 
-                    tokenBuffer = new StringBuilder();
-                    insideToken = true;
-                    break;
-                case ']':
-                    if (!insideToken) {
-                        throw new IllegalArgumentException("invalid end of token at position " + i
-                            + " in pattern " + pattern);
+                    tokenBuffer = StringBuilder()
+                    insideToken = true
+                }
+
+                ']' -> {
+                    require(insideToken) {
+                        ("invalid end of token at position " + i
+                                + " in pattern " + pattern)
                     }
 
-                    String token = tokenBuffer.toString();
-                    Object tokenValue = tokens.get(token);
-                    String value = (tokenValue == null) ? null : tokenValue.toString();
+                    val token = tokenBuffer.toString()
+                    val tokenValue = tokens.get(token)
+                    val value = if (tokenValue == null) null else tokenValue.toString()
                     if (insideOptionalPart) {
-                        tokenHadValue = !isNullOrEmpty(value);
-                        optionalPart.append(value);
+                        tokenHadValue = !StringUtils.isNullOrEmpty(value)
+                        optionalPart!!.append(value)
                     } else {
                         if (value == null) { // the token wasn't set, it's kept as is
-                            value = "[" + token + "]";
+                            value = "[" + token + "]"
                         }
-                        buffer.append(value);
+                        buffer.append(value)
                     }
-                    insideToken = false;
-                    tokenSeen = true;
-                    break;
-                default:
-                    if (insideToken) {
-                        tokenBuffer.append(ch);
-                    } else if (insideOptionalPart) {
-                        optionalPart.append(ch);
-                    } else {
-                        buffer.append(ch);
-                    }
-                    break;
+                    insideToken = false
+                    tokenSeen = true
+                }
+
+                else -> if (insideToken) {
+                    tokenBuffer!!.append(ch)
+                } else if (insideOptionalPart) {
+                    optionalPart!!.append(ch)
+                } else {
+                    buffer.append(ch)
+                }
             }
         }
 
-        if (insideToken) {
-            throw new IllegalArgumentException("last token hasn't been closed in pattern "
-                + pattern);
+        require(!insideToken) {
+            ("last token hasn't been closed in pattern "
+                    + pattern)
         }
 
-        if (insideOptionalPart) {
-            throw new IllegalArgumentException("optional part hasn't been closed in pattern "
-                + pattern);
+        require(!insideOptionalPart) {
+            ("optional part hasn't been closed in pattern "
+                    + pattern)
         }
 
-        return buffer.toString();
+        return buffer.toString()
     }
 
     /**
-     * Exact copy of {@link IvyPatternHelper#getTokenString(String)}, used to isolate
+     * Exact copy of [IvyPatternHelper.getTokenString], used to isolate
      * the usages from Ivy concepts.
      */
-    public static String getTokenString(String token) {
-        return "[" + token + "]";
+    fun getTokenString(token: String): String {
+        return "[" + token + "]"
     }
-
 }

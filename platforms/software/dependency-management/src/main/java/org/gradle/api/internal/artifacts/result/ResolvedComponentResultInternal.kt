@@ -13,55 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal
 
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-
-public interface ResolvedComponentResultInternal extends ResolvedComponentResult {
-
+interface ResolvedComponentResultInternal : ResolvedComponentResult {
     /**
      * Get the index of this component in the underling graph structure.
      */
-    int index();
+    fun index(): Int
 
     /**
      * The underlying resolved graph this component belongs to.
      */
-    ResolvedGraphResult graph();
+    fun graph(): ResolvedGraphResult?
+
+    @get:Deprecated("")
+    val repositoryName: String?
 
     /**
-     * Used by the Android plugin. Do not use this method.
+     *
+     * Returns the id of the repository used to source this component, or `null` if this component was not resolved from a repository.
      */
-    @Deprecated
-    String getRepositoryName();
-
-    /**
-     * <p>Returns the id of the repository used to source this component, or {@code null} if this component was not resolved from a repository.
-     */
-    @Nullable
-    String getRepositoryId();
+    @JvmField
+    val repositoryId: String?
 
     /**
      * Returns all the variants of this component available for selection. Does not include variants that cannot be consumed, which means this
-     * may not include all the variants returned by {@link #getVariants()}.
+     * may not include all the variants returned by [.getVariants].
      *
-     * <p>
+     *
+     *
      * Note: for performance reasons,
-     * {@link org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal#setIncludeAllSelectableVariantResults(boolean)}
-     * must be set to {@code true} for this to actually return all variants in all cases.
-     * </p>
+     * [org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal.setIncludeAllSelectableVariantResults]
+     * must be set to `true` for this to actually return all variants in all cases.
+     *
      *
      * @return all variants for this component
      * @since 7.5
      */
-    List<ResolvedVariantResult> getAvailableVariants();
+    @JvmField
+    val availableVariants: MutableList<ResolvedVariantResult>?
 
-    @Override
-    ComponentSelectionReasonInternal getSelectionReason();
+    override fun getSelectionReason(): ComponentSelectionReasonInternal?
 }

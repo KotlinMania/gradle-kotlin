@@ -13,31 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList
 
-import java.util.List;
-
-public enum ChecksumKind {
+enum class ChecksumKind(algorithm: String) {
     md5("MD5"),
     sha1("SHA1"),
     sha256("SHA-256"),
     sha512("SHA-512");
 
-    private static final List<ChecksumKind> SORTED_BY_SECURITY = ImmutableList.of(sha512, sha256, sha1, md5);
-    private final String algorithm;
+    @JvmField
+    val algorithm: String?
 
-    ChecksumKind(String algorithm) {
-
-        this.algorithm = algorithm;
+    init {
+        this.algorithm = algorithm
     }
 
-    public String getAlgorithm() {
-        return algorithm;
-    }
-
-    public static List<ChecksumKind> mostSecureFirst() {
-        return SORTED_BY_SECURITY;
+    companion object {
+        private val SORTED_BY_SECURITY: MutableList<ChecksumKind?> = ImmutableList.of<ChecksumKind?>(ChecksumKind.sha512, ChecksumKind.sha256, ChecksumKind.sha1, ChecksumKind.md5)
+        fun mostSecureFirst(): MutableList<ChecksumKind?> {
+            return SORTED_BY_SECURITY
+        }
     }
 }

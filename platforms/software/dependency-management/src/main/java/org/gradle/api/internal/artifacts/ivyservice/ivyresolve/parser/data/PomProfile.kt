@@ -13,17 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data;
-
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomReader.PomDependencyData;
-
-import java.util.List;
-import java.util.Map;
-
-public interface PomProfile {
-    String getId();
-    Map<String, String> getProperties();
-    List<PomDependencyMgt> getDependencyMgts();
-    List<PomDependencyData> getDependencies();
+interface PomProfile {
+    val id: String?
+    val properties: MutableMap<String?, String?>?
+    val dependencyMgts: MutableList<PomDependencyMgt?>?
+    val dependencies: MutableList<PomReader.PomDependencyData?>?
 }

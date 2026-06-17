@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.query;
+package org.gradle.api.internal.artifacts.query
 
-import org.gradle.api.artifacts.query.ArtifactResolutionQuery;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.query.ArtifactResolutionQuery
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Project.class)
-public interface ArtifactResolutionQueryFactory {
-    ArtifactResolutionQuery createArtifactResolutionQuery();
+@ServiceScope(Scope.Project::class)
+interface ArtifactResolutionQueryFactory {
+    fun createArtifactResolutionQuery(): ArtifactResolutionQuery?
 }

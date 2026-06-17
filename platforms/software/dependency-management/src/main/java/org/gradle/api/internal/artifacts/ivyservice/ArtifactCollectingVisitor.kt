@@ -13,69 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.LocalDependencyFiles
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
 
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.LocalDependencyFiles;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
+class ArtifactCollectingVisitor @JvmOverloads constructor(val artifacts: MutableSet<ResolvedArtifact?> = LinkedHashSet<ResolvedArtifact?>()) : ArtifactVisitor {
+    private var failures: MutableList<Throwable?>? = null
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-public class ArtifactCollectingVisitor implements ArtifactVisitor {
-    private final Set<ResolvedArtifact> artifacts;
-    private List<Throwable> failures;
-
-    public ArtifactCollectingVisitor() {
-        this(new LinkedHashSet<>());
+    override fun visitArtifact(artifactSetName: DisplayName, sourceVariantId: VariantIdentifier, attributes: ImmutableAttributes, capabilities: ImmutableCapabilities, artifact: ResolvableArtifact) {
+        this.artifacts.add(artifact.toPublicView())
     }
 
-    public ArtifactCollectingVisitor(Set<ResolvedArtifact> artifacts) {
-        this.artifacts = artifacts;
-    }
-
-    @Override
-    public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact) {
-        this.artifacts.add(artifact.toPublicView());
-    }
-
-    @Override
-    public void visitFailure(Throwable failure) {
+    override fun visitFailure(failure: Throwable) {
         if (failures == null) {
-            failures = new ArrayList<>();
+            failures = ArrayList<Throwable?>()
         }
-        failures.add(failure);
+        failures!!.add(failure)
     }
 
-    @Override
-    public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-        if (source instanceof LocalDependencyFiles) {
-            return FileCollectionStructureVisitor.VisitType.NoContents;
+    override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+        if (source is LocalDependencyFiles) {
+            return FileCollectionStructureVisitor.VisitType.NoContents
         }
-        return FileCollectionStructureVisitor.VisitType.Visit;
+        return FileCollectionStructureVisitor.VisitType.Visit
     }
 
-    @Override
-    public boolean requireArtifactFiles() {
-        return false;
+    override fun requireArtifactFiles(): Boolean {
+        return false
     }
 
-    public Set<ResolvedArtifact> getArtifacts() {
-        return artifacts;
-    }
-
-    public List<Throwable> getFailures() {
-        return failures != null ? failures : Collections.emptyList();
+    fun getFailures(): MutableList<Throwable?> {
+        return (if (failures != null) failures else kotlin.collections.mutableListOf<kotlin.Throwable?>())!!
     }
 }

@@ -13,330 +13,189 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ComponentModuleMetadataHandlerInternal;
-import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal;
-import org.gradle.api.internal.artifacts.ConfigurationResolver;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.LegacyResolutionParameters;
-import org.gradle.api.internal.artifacts.RepositoriesSupplier;
-import org.gradle.api.internal.artifacts.ResolverResults;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider;
-import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
-import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal;
-import org.gradle.api.internal.artifacts.dsl.ImmutableModuleReplacements;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.AdhocRootComponentProvider;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.ProjectRootComponentProvider;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.RootComponentProvider;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultLocalVariantGraphResolveStateBuilder;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.LocalVariantGraphResolveStateBuilder;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.Conflict;
-import org.gradle.api.internal.artifacts.repositories.ContentFilteringRepository;
-import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository;
-import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributeSchemaServices;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistry;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.internal.ImmutableActionSet;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveState;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ComponentModuleMetadataHandlerInternal
+import org.gradle.api.internal.artifacts.ConfigurationResolver
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.LegacyResolutionParameters
+import org.gradle.api.internal.artifacts.RepositoriesSupplier
+import org.gradle.api.internal.artifacts.ResolverResults
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider
+import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider
+import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal
+import org.gradle.api.internal.artifacts.dsl.ImmutableModuleReplacements
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.AdhocRootComponentProvider
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.ProjectRootComponentProvider
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.RootComponentProvider
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.LocalVariantGraphResolveStateBuilder
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.Conflict
+import org.gradle.api.internal.artifacts.repositories.ContentFilteringRepository
+import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository
+import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributeSchemaServices
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveState
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.util.Path
+import java.util.stream.Collectors
 
 /**
- * Responsible for resolving a configuration. Delegates to a {@link ShortCircuitingResolutionExecutor} to perform
+ * Responsible for resolving a configuration. Delegates to a [ShortCircuitingResolutionExecutor] to perform
  * the actual resolution.
  */
-public class DefaultConfigurationResolver implements ConfigurationResolver {
+class DefaultConfigurationResolver(
+    private val repositoriesSupplier: RepositoriesSupplier,
+    private val resolutionExecutor: ShortCircuitingResolutionExecutor,
+    private val artifactTypeRegistry: ArtifactTypeRegistry,
+    private val componentModuleMetadataHandler: ComponentModuleMetadataHandlerInternal,
+    private val attributeSchemaServices: AttributeSchemaServices,
+    private val variantStateBuilder: LocalVariantGraphResolveStateBuilder,
+    private val calculatedValueContainerFactory: CalculatedValueContainerFactory,
+    private val rootComponentProvider: RootComponentProvider
+) : ConfigurationResolver {
+    override fun resolveBuildDependencies(configuration: ConfigurationInternal, futureCompleteResults: CalculatedValue<ResolverResults?>): ResolverResults? {
+        val rootComponent = rootComponentProvider.getRootComponent(configuration.isDetachedConfiguration)
+        val rootVariant = asRootVariant(configuration, rootComponent.getId()!!)
 
-    private final RepositoriesSupplier repositoriesSupplier;
-    private final ShortCircuitingResolutionExecutor resolutionExecutor;
-    private final ArtifactTypeRegistry artifactTypeRegistry;
-    private final ComponentModuleMetadataHandlerInternal componentModuleMetadataHandler;
-    private final AttributeSchemaServices attributeSchemaServices;
-    private final LocalVariantGraphResolveStateBuilder variantStateBuilder;
-    private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-    private final RootComponentProvider rootComponentProvider;
-
-    public DefaultConfigurationResolver(
-        RepositoriesSupplier repositoriesSupplier,
-        ShortCircuitingResolutionExecutor resolutionExecutor,
-        ArtifactTypeRegistry artifactTypeRegistry,
-        ComponentModuleMetadataHandlerInternal componentModuleMetadataHandler,
-        AttributeSchemaServices attributeSchemaServices,
-        LocalVariantGraphResolveStateBuilder variantStateBuilder,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        RootComponentProvider rootComponentProvider
-    ) {
-        this.repositoriesSupplier = repositoriesSupplier;
-        this.resolutionExecutor = resolutionExecutor;
-        this.artifactTypeRegistry = artifactTypeRegistry;
-        this.componentModuleMetadataHandler = componentModuleMetadataHandler;
-        this.attributeSchemaServices = attributeSchemaServices;
-        this.variantStateBuilder = variantStateBuilder;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.rootComponentProvider = rootComponentProvider;
+        val params = getResolutionParameters(configuration, rootComponent, rootVariant, false)
+        val legacyParams: LegacyResolutionParameters = ConfigurationLegacyResolutionParameters(configuration.getResolutionStrategy())
+        return resolutionExecutor.resolveBuildDependencies(legacyParams, params, futureCompleteResults)
     }
 
-    @Override
-    public ResolverResults resolveBuildDependencies(ConfigurationInternal configuration, CalculatedValue<ResolverResults> futureCompleteResults) {
-        LocalComponentGraphResolveState rootComponent = rootComponentProvider.getRootComponent(configuration.isDetachedConfiguration());
-        LocalVariantGraphResolveState rootVariant = asRootVariant(configuration, rootComponent.getId());
+    override fun resolveGraph(configuration: ConfigurationInternal): ResolverResults? {
+        val rootComponent = rootComponentProvider.getRootComponent(configuration.isDetachedConfiguration)
+        val rootVariant = asRootVariant(configuration, rootComponent.getId()!!)
 
-        ResolutionParameters params = getResolutionParameters(configuration, rootComponent, rootVariant, false);
-        LegacyResolutionParameters legacyParams = new ConfigurationLegacyResolutionParameters(configuration.getResolutionStrategy());
-        return resolutionExecutor.resolveBuildDependencies(legacyParams, params, futureCompleteResults);
+        val attributes: AttributeContainerInternal = rootVariant.attributes
+        val filteredRepositories = repositoriesSupplier.get()!!.stream()
+            .filter { repository: ResolutionAwareRepository? -> !shouldSkipRepository(repository, configuration.getName(), attributes) }
+            .collect(Collectors.toList())
+
+        val params = getResolutionParameters(configuration, rootComponent, rootVariant, true)
+        val legacyParams: LegacyResolutionParameters = ConfigurationLegacyResolutionParameters(configuration.getResolutionStrategy())
+        return resolutionExecutor.resolveGraph(legacyParams, params, filteredRepositories)
     }
 
-    @Override
-    public ResolverResults resolveGraph(ConfigurationInternal configuration) {
-        LocalComponentGraphResolveState rootComponent = rootComponentProvider.getRootComponent(configuration.isDetachedConfiguration());
-        LocalVariantGraphResolveState rootVariant = asRootVariant(configuration, rootComponent.getId());
-
-        AttributeContainerInternal attributes = rootVariant.getAttributes();
-        List<ResolutionAwareRepository> filteredRepositories = repositoriesSupplier.get().stream()
-            .filter(repository -> !shouldSkipRepository(repository, configuration.getName(), attributes))
-            .collect(Collectors.toList());
-
-        ResolutionParameters params = getResolutionParameters(configuration, rootComponent, rootVariant, true);
-        LegacyResolutionParameters legacyParams = new ConfigurationLegacyResolutionParameters(configuration.getResolutionStrategy());
-        return resolutionExecutor.resolveGraph(legacyParams, params, filteredRepositories);
-    }
-
-    @SuppressWarnings("NonCanonicalType") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private LocalVariantGraphResolveState asRootVariant(ConfigurationInternal configuration, ComponentIdentifier componentId) {
+    //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+    private fun asRootVariant(configuration: ConfigurationInternal, componentId: ComponentIdentifier): LocalVariantGraphResolveState {
         return variantStateBuilder.createRootVariantState(
             configuration,
             componentId,
-            new DefaultLocalVariantGraphResolveStateBuilder.DependencyCache(),
-            configuration.getDomainObjectContext().getModel(),
+            LocalVariantGraphResolveStateBuilder.DependencyCache(),
+            configuration.domainObjectContext.getModel(),
             calculatedValueContainerFactory
-        );
+        )
     }
 
-    @Override
-    public List<ResolutionAwareRepository> getAllRepositories() {
-        return repositoriesSupplier.get();
-    }
+    val allRepositories: MutableList<ResolutionAwareRepository?>?
+        get() = repositoriesSupplier.get()
 
-    private ResolutionParameters getResolutionParameters(
-        ConfigurationInternal configuration,
-        LocalComponentGraphResolveState rootComponent,
-        LocalVariantGraphResolveState rootVariant,
-        boolean includeConsistentResolutionLocks
-    ) {
-        ResolutionStrategyInternal resolutionStrategy = configuration.getResolutionStrategy();
-        ImmutableList<ResolutionParameters.ModuleVersionLock> moduleVersionLocks = includeConsistentResolutionLocks ? configuration.getConsistentResolutionVersionLocks() : ImmutableList.of();
-        ImmutableArtifactTypeRegistry immutableArtifactTypeRegistry = attributeSchemaServices.getArtifactTypeRegistryFactory().create(artifactTypeRegistry);
-        ImmutableModuleReplacements moduleReplacements = componentModuleMetadataHandler.getModuleReplacements();
-        ConfigurationFailureResolutions failureResolutions = new ConfigurationFailureResolutions(configuration.getDomainObjectContext().getProjectIdentity(), configuration.getName());
+    private fun getResolutionParameters(
+        configuration: ConfigurationInternal,
+        rootComponent: LocalComponentGraphResolveState,
+        rootVariant: LocalVariantGraphResolveState,
+        includeConsistentResolutionLocks: Boolean
+    ): ResolutionParameters {
+        val resolutionStrategy = configuration.getResolutionStrategy()
+        val moduleVersionLocks: ImmutableList<ResolutionParameters.ModuleVersionLock?> =
+            if (includeConsistentResolutionLocks) configuration.consistentResolutionVersionLocks else ImmutableList.of<ResolutionParameters.ModuleVersionLock?>()
+        val immutableArtifactTypeRegistry = attributeSchemaServices.artifactTypeRegistryFactory.create(artifactTypeRegistry)
+        val moduleReplacements: ImmutableModuleReplacements = componentModuleMetadataHandler.moduleReplacements
+        val failureResolutions = ConfigurationFailureResolutions(configuration.domainObjectContext.getProjectIdentity(), configuration.getName())
 
-        return new ResolutionParameters(
-            configuration.getResolutionHost(),
+        return ResolutionParameters(
+            configuration.resolutionHost,
             rootComponent,
             rootVariant,
             moduleVersionLocks,
-            resolutionStrategy.getSortOrder(),
-            configuration.getConfigurationIdentity(),
+            resolutionStrategy.sortOrder,
+            configuration.configurationIdentity,
             immutableArtifactTypeRegistry,
             moduleReplacements,
-            resolutionStrategy.getConflictResolution(),
+            resolutionStrategy.conflictResolution,
             configuration.getName(),
-            resolutionStrategy.isDependencyLockingEnabled(),
-            resolutionStrategy.getIncludeAllSelectableVariantResults(),
-            resolutionStrategy.isDependencyVerificationEnabled(),
-            resolutionStrategy.isFailingOnDynamicVersions(),
-            resolutionStrategy.isFailingOnChangingVersions(),
+            resolutionStrategy.isDependencyLockingEnabled,
+            resolutionStrategy.includeAllSelectableVariantResults,
+            resolutionStrategy.isDependencyVerificationEnabled,
+            resolutionStrategy.isFailingOnDynamicVersions,
+            resolutionStrategy.isFailingOnChangingVersions,
             failureResolutions,
-            resolutionStrategy.getCachePolicy().asImmutable()
-        );
+            resolutionStrategy.cachePolicy.asImmutable()
+        )
     }
 
-    private static class ConfigurationLegacyResolutionParameters implements LegacyResolutionParameters {
+    private class ConfigurationLegacyResolutionParameters(private val resolutionStrategy: ResolutionStrategyInternal) : LegacyResolutionParameters {
+        val dependencySubstitutionRules: ImmutableActionSet<DependencySubstitutionInternal?>
+            get() = resolutionStrategy.dependencySubstitutionRule
 
-        private final ResolutionStrategyInternal resolutionStrategy;
+        val capabilityConflictResolutionRules: ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule?>
+            get() = resolutionStrategy.capabilitiesResolutionRules.rules
 
-        public ConfigurationLegacyResolutionParameters(ResolutionStrategyInternal resolutionStrategy) {
-            this.resolutionStrategy = resolutionStrategy;
-        }
-
-        @Override
-        public ImmutableActionSet<DependencySubstitutionInternal> getDependencySubstitutionRules() {
-            return resolutionStrategy.getDependencySubstitutionRule();
-        }
-
-        @Override
-        public ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule> getCapabilityConflictResolutionRules() {
-            return resolutionStrategy.getCapabilitiesResolutionRules().getRules();
-        }
-
-        @Override
-        public ComponentSelectionRulesInternal getComponentSelectionRules() {
-            return resolutionStrategy.getComponentSelection();
-        }
-
+        val componentSelectionRules: ComponentSelectionRulesInternal
+            get() = resolutionStrategy.getComponentSelection()
     }
 
-    private static class ConfigurationFailureResolutions implements ResolutionParameters.FailureResolutions {
-
-        private final @Nullable ProjectIdentity owningProject;
-        private final String configurationName;
-
-        public ConfigurationFailureResolutions(
-            @Nullable ProjectIdentity owningProject,
-            String configurationName
-        ) {
-            this.owningProject = owningProject;
-            this.configurationName = configurationName;
-        }
-
-        @Override
-        public List<String> forVersionConflict(Conflict conflict) {
+    private class ConfigurationFailureResolutions(
+        private val owningProject: ProjectIdentity?,
+        private val configurationName: String?
+    ) : ResolutionParameters.FailureResolutions {
+        override fun forVersionConflict(conflict: Conflict): MutableList<String?>? {
             if (owningProject == null) {
                 // owningProject is null for settings execution
-                return Collections.emptyList();
+                return mutableListOf<String?>()
             }
 
-            String taskPath = owningProject.getBuildTreePath().append(Path.path("dependencyInsight")).asString();
+            val taskPath = owningProject.getBuildTreePath().append(Path.path("dependencyInsight")).asString()
 
-            ModuleIdentifier moduleId = conflict.getModuleId();
-            String dependencyNotation = moduleId.getGroup() + ":" + moduleId.getName();
+            val moduleId = conflict.getModuleId()
+            val dependencyNotation = moduleId.getGroup() + ":" + moduleId.getName()
 
-            return Collections.singletonList(String.format(
-                "Run with %s --configuration %s --dependency %s to get more insight on how to solve the conflict.",
-                taskPath, configurationName, dependencyNotation
-            ));
+            return mutableListOf<String?>(
+                String.format(
+                    "Run with %s --configuration %s --dependency %s to get more insight on how to solve the conflict.",
+                    taskPath, configurationName, dependencyNotation
+                )
+            )
         }
-
     }
 
     /**
-     * Determines if the repository should not be used to resolve this configuration.
+     * Constructs new instances of [DefaultConfigurationResolver]s.
      */
-    private static boolean shouldSkipRepository(
-        ResolutionAwareRepository repository,
-        String configurationName,
-        AttributeContainer consumerAttributes
-    ) {
-        if (!(repository instanceof ContentFilteringRepository)) {
-            return false;
-        }
+    class Factory(
+        private val moduleIdentity: DependencyMetaDataProvider,
+        private val repositoriesSupplier: RepositoriesSupplier,
+        private val resolutionExecutor: ShortCircuitingResolutionExecutor,
+        private val artifactTypeRegistry: ArtifactTypeRegistry,
+        private val componentModuleMetadataHandler: ComponentModuleMetadataHandlerInternal,
+        private val attributeSchemaServices: AttributeSchemaServices,
+        private val variantStateBuilder: LocalVariantGraphResolveStateBuilder,
+        private val calculatedValueContainerFactory: CalculatedValueContainerFactory,
+        private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+        private val attributesSchemaFactory: ImmutableAttributesSchemaFactory,
+        private val localResolveStateFactory: LocalComponentGraphResolveStateFactory
+    ) : ConfigurationResolver.Factory {
+        override fun create(
+            configurations: ConfigurationsProvider,
+            owner: DomainObjectContext,
+            schema: AttributesSchemaInternal
+        ): ConfigurationResolver? {
+            val rootComponentProvider = createRootComponentProvider(configurations, owner, schema)
 
-        ContentFilteringRepository cfr = (ContentFilteringRepository) repository;
-
-        Set<String> includedConfigurations = cfr.getIncludedConfigurations();
-        Set<String> excludedConfigurations = cfr.getExcludedConfigurations();
-
-        if ((includedConfigurations != null && !includedConfigurations.contains(configurationName)) ||
-            (excludedConfigurations != null && excludedConfigurations.contains(configurationName))
-        ) {
-            return true;
-        }
-
-        Map<Attribute<Object>, Set<Object>> requiredAttributes = cfr.getRequiredAttributes();
-        return hasNonRequiredAttribute(requiredAttributes, consumerAttributes);
-    }
-
-    /**
-     * Accepts a map of attribute types to the set of values that are allowed for that attribute type.
-     * If the request attributes of the resolve context being resolved do not match the allowed values,
-     * then the repository is skipped.
-     */
-    private static boolean hasNonRequiredAttribute(
-        @Nullable Map<Attribute<Object>, Set<Object>> requiredAttributes,
-        AttributeContainer consumerAttributes
-    ) {
-        if (requiredAttributes == null) {
-            return false;
-        }
-
-        for (Map.Entry<Attribute<Object>, Set<Object>> entry : requiredAttributes.entrySet()) {
-            Attribute<Object> key = entry.getKey();
-            Set<Object> allowedValues = entry.getValue();
-            Object value = consumerAttributes.getAttribute(key);
-            if (!allowedValues.contains(value)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Constructs new instances of {@link DefaultConfigurationResolver}s.
-     */
-    public static class Factory implements ConfigurationResolver.Factory {
-
-        private final DependencyMetaDataProvider moduleIdentity;
-        private final RepositoriesSupplier repositoriesSupplier;
-        private final ShortCircuitingResolutionExecutor resolutionExecutor;
-        private final ArtifactTypeRegistry artifactTypeRegistry;
-        private final ComponentModuleMetadataHandlerInternal componentModuleMetadataHandler;
-        private final AttributeSchemaServices attributeSchemaServices;
-        private final LocalVariantGraphResolveStateBuilder variantStateBuilder;
-        private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-        private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-        private final ImmutableAttributesSchemaFactory attributesSchemaFactory;
-        private final LocalComponentGraphResolveStateFactory localResolveStateFactory;
-
-        public Factory(
-            DependencyMetaDataProvider moduleIdentity,
-            RepositoriesSupplier repositoriesSupplier,
-            ShortCircuitingResolutionExecutor resolutionExecutor,
-            ArtifactTypeRegistry artifactTypeRegistry,
-            ComponentModuleMetadataHandlerInternal componentModuleMetadataHandler,
-            AttributeSchemaServices attributeSchemaServices,
-            LocalVariantGraphResolveStateBuilder variantStateBuilder,
-            CalculatedValueContainerFactory calculatedValueContainerFactory,
-            ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-            ImmutableAttributesSchemaFactory attributesSchemaFactory,
-            LocalComponentGraphResolveStateFactory localResolveStateFactory
-        ) {
-            this.moduleIdentity = moduleIdentity;
-            this.repositoriesSupplier = repositoriesSupplier;
-            this.resolutionExecutor = resolutionExecutor;
-            this.artifactTypeRegistry = artifactTypeRegistry;
-            this.componentModuleMetadataHandler = componentModuleMetadataHandler;
-            this.attributeSchemaServices = attributeSchemaServices;
-            this.variantStateBuilder = variantStateBuilder;
-            this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-            this.moduleIdentifierFactory = moduleIdentifierFactory;
-            this.attributesSchemaFactory = attributesSchemaFactory;
-            this.localResolveStateFactory = localResolveStateFactory;
-        }
-
-        @Override
-        public ConfigurationResolver create(
-            ConfigurationsProvider configurations,
-            DomainObjectContext owner,
-            AttributesSchemaInternal schema
-        ) {
-            RootComponentProvider rootComponentProvider = createRootComponentProvider(configurations, owner, schema);
-
-            return new DefaultConfigurationResolver(
+            return DefaultConfigurationResolver(
                 repositoriesSupplier,
                 resolutionExecutor,
                 artifactTypeRegistry,
@@ -345,29 +204,29 @@ public class DefaultConfigurationResolver implements ConfigurationResolver {
                 variantStateBuilder,
                 calculatedValueContainerFactory,
                 rootComponentProvider
-            );
+            )
         }
 
-        private RootComponentProvider createRootComponentProvider(
-            ConfigurationsProvider configurations,
-            DomainObjectContext owner,
-            AttributesSchemaInternal schema
-        ) {
-            AdhocRootComponentProvider adhocRootComponentProvider = new AdhocRootComponentProvider(
+        private fun createRootComponentProvider(
+            configurations: ConfigurationsProvider,
+            owner: DomainObjectContext,
+            schema: AttributesSchemaInternal
+        ): RootComponentProvider {
+            val adhocRootComponentProvider = AdhocRootComponentProvider(
                 schema,
                 moduleIdentifierFactory,
                 attributesSchemaFactory,
                 localResolveStateFactory
-            );
+            )
 
             if (owner.getProjectIdentity() == null) {
-                return adhocRootComponentProvider;
+                return adhocRootComponentProvider
             }
 
             // TODO #1629: Eventually, resolutions within a project should live within
             //  an adhoc root component, and should use an AdhocRootComponentProvider.
-            return new ProjectRootComponentProvider(
-                owner.getProject().getOwner(),
+            return ProjectRootComponentProvider(
+                owner.getProject()!!.getOwner(),
                 moduleIdentity,
                 schema,
                 configurations,
@@ -375,9 +234,61 @@ public class DefaultConfigurationResolver implements ConfigurationResolver {
                 localResolveStateFactory,
                 attributesSchemaFactory,
                 adhocRootComponentProvider
-            );
+            )
         }
-
     }
 
+    companion object {
+        /**
+         * Determines if the repository should not be used to resolve this configuration.
+         */
+        private fun shouldSkipRepository(
+            repository: ResolutionAwareRepository?,
+            configurationName: String?,
+            consumerAttributes: AttributeContainer
+        ): Boolean {
+            if (repository !is ContentFilteringRepository) {
+                return false
+            }
+
+            val cfr = repository as ContentFilteringRepository
+
+            val includedConfigurations: MutableSet<String?>? = cfr.includedConfigurations
+            val excludedConfigurations: MutableSet<String?>? = cfr.excludedConfigurations
+
+            if ((includedConfigurations != null && !includedConfigurations.contains(configurationName)) ||
+                (excludedConfigurations != null && excludedConfigurations.contains(configurationName))
+            ) {
+                return true
+            }
+
+            val requiredAttributes: MutableMap<Attribute<Any?>?, MutableSet<Any?>?>? = cfr.requiredAttributes
+            return hasNonRequiredAttribute(requiredAttributes, consumerAttributes)
+        }
+
+        /**
+         * Accepts a map of attribute types to the set of values that are allowed for that attribute type.
+         * If the request attributes of the resolve context being resolved do not match the allowed values,
+         * then the repository is skipped.
+         */
+        private fun hasNonRequiredAttribute(
+            requiredAttributes: MutableMap<Attribute<Any?>?, MutableSet<Any?>?>?,
+            consumerAttributes: AttributeContainer
+        ): Boolean {
+            if (requiredAttributes == null) {
+                return false
+            }
+
+            for (entry in requiredAttributes.entries) {
+                val key: Attribute<Any?> = entry.key!!
+                val allowedValues: MutableSet<Any?> = entry.value!!
+                val value = consumerAttributes.getAttribute<Any?>(key)
+                if (!allowedValues.contains(value)) {
+                    return true
+                }
+            }
+
+            return false
+        }
+    }
 }

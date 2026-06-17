@@ -13,25 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
 
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-
-public class BrokenArtifacts implements ResolvedArtifactSet.Artifacts {
-    private final Throwable failure;
-
-    public BrokenArtifacts(Throwable failure) {
-        this.failure = failure;
+class BrokenArtifacts(private val failure: Throwable?) : ResolvedArtifactSet.Artifacts {
+    override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation?>?, requireFiles: Boolean) {
     }
 
-    @Override
-    public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
-    }
-
-    @Override
-    public void visit(ArtifactVisitor visitor) {
-        visitor.visitFailure(failure);
+    override fun visit(visitor: ArtifactVisitor) {
+        visitor.visitFailure(failure)
     }
 }

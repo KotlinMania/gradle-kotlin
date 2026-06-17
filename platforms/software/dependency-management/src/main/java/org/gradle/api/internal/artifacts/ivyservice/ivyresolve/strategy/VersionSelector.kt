@@ -13,56 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
-
-import org.gradle.api.artifacts.ComponentMetadata;
+import org.gradle.api.artifacts.ComponentMetadata
 
 /**
  * Implementations of version selector are expected to be immutable and thread-safe.
  */
-public interface VersionSelector {
+interface VersionSelector {
     /**
      * Indicates if the given version selector is dynamic.
      */
-    boolean isDynamic();
+    @JvmField
+    val isDynamic: Boolean
 
     /**
      * Indicates if module metadata is required to determine if the
      * selector matches a candidate version.
      */
-    boolean requiresMetadata();
+    fun requiresMetadata(): Boolean
 
     /**
      * Indicates if the selector implies that it matches only a single version.
      */
-    boolean matchesUniqueVersion();
+    fun matchesUniqueVersion(): Boolean
 
     /**
      * Indicates if the selector matches the given candidate version.
-     * Only called if {@link #requiresMetadata()} returned {@code false}.
+     * Only called if [.requiresMetadata] returned `false`.
      *
      * @param candidate the candidate version
      */
-    boolean accept(String candidate);
+    fun accept(candidate: String?): Boolean
 
     /**
      * Indicates if the selector matches the given candidate version.
-     * Only called if {@link #requiresMetadata()} returned {@code false}.
+     * Only called if [.requiresMetadata] returned `false`.
      *
      * @param candidate the candidate version
      */
-    boolean accept(Version candidate);
+    fun accept(candidate: Version?): Boolean
 
     /**
      * Indicates if the selector matches the given candidate version
-     * (whose metadata is provided). May also be called if {@link #isDynamic} returned
-     * {@code false}, in which case it should return the same result as
-     * {@code accept(candidate.getId().getVersion()}.
+     * (whose metadata is provided). May also be called if [.isDynamic] returned
+     * `false`, in which case it should return the same result as
+     * `accept(candidate.getId().getVersion()`.
      *
      * @param candidate the metadata for the candidate version
      */
-    boolean accept(ComponentMetadata candidate);
+    fun accept(candidate: ComponentMetadata?): Boolean
 
     /**
      * Indicates if a version selector can be used to short-circuit selection, whenever a different
@@ -73,12 +73,12 @@ public interface VersionSelector {
      *
      * @return true if this selector can short-circuit
      */
-    boolean canShortCircuitWhenVersionAlreadyPreselected();
+    fun canShortCircuitWhenVersionAlreadyPreselected(): Boolean
 
     /**
      * Returns this selector as a string.
      *
      * @return a stringy representation of this selector
      */
-    String getSelector();
+    val selector: String?
 }

@@ -13,49 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
+import org.gradle.api.internal.artifacts.configurations.ResolutionHost
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import java.util.function.Consumer
 
 /**
- * Resolves a {@link ResolvedArtifactSet} into a {@link SelectedArtifactSet}.
+ * Resolves a [ResolvedArtifactSet] into a [SelectedArtifactSet].
  */
-public class DefaultSelectedArtifactSet implements SelectedArtifactSet {
-    private final VisitedGraphResults graphResults;
-    private final ResolvedArtifactSet resolvedArtifacts;
-    private final ResolvedArtifactSetResolver artifactResolver;
-    private final ResolutionHost resolutionHost;
+class DefaultSelectedArtifactSet(
+    artifactResolver: ResolvedArtifactSetResolver,
+    graphResults: VisitedGraphResults,
+    resolvedArtifacts: ResolvedArtifactSet,
+    resolutionHost: ResolutionHost
+) : SelectedArtifactSet {
+    private val graphResults: VisitedGraphResults
+    private val resolvedArtifacts: ResolvedArtifactSet
+    private val artifactResolver: ResolvedArtifactSetResolver
+    private val resolutionHost: ResolutionHost
 
-    public DefaultSelectedArtifactSet(
-        ResolvedArtifactSetResolver artifactResolver,
-        VisitedGraphResults graphResults,
-        ResolvedArtifactSet resolvedArtifacts,
-        ResolutionHost resolutionHost
-    ) {
-        this.artifactResolver = artifactResolver;
-        this.graphResults = graphResults;
-        this.resolvedArtifacts = resolvedArtifacts;
-        this.resolutionHost = resolutionHost;
+    init {
+        this.artifactResolver = artifactResolver
+        this.graphResults = graphResults
+        this.resolvedArtifacts = resolvedArtifacts
+        this.resolutionHost = resolutionHost
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        graphResults.visitFailures(context::visitFailure);
-        context.add(resolvedArtifacts);
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        graphResults.visitFailures(Consumer { failure: Throwable? -> context.visitFailure(failure) })
+        context.add(resolvedArtifacts)
     }
 
-    @Override
-    public void visitArtifacts(ArtifactVisitor visitor, boolean continueOnSelectionFailure) {
+    override fun visitArtifacts(visitor: ArtifactVisitor, continueOnSelectionFailure: Boolean) {
         if (graphResults.hasAnyFailure()) {
-            graphResults.visitFailures(visitor::visitFailure);
+            graphResults.visitFailures(Consumer { failure: Throwable? -> visitor.visitFailure(failure) })
             if (!continueOnSelectionFailure) {
-                return;
+                return
             }
         }
 
-        artifactResolver.visitInUnmanagedWorkerThread(resolvedArtifacts, visitor, resolutionHost);
+        artifactResolver.visitInUnmanagedWorkerThread(resolvedArtifacts, visitor, resolutionHost)
     }
 }

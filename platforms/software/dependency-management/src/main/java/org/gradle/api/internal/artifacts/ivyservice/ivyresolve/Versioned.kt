@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
-
-public interface Versioned {
-    Version getVersion();
+interface Versioned {
+    @JvmField
+    val version: Version?
 }

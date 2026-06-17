@@ -13,111 +13,104 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.BuildAdapter
+import org.gradle.BuildResult
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCachesProvider
+import org.gradle.api.internal.artifacts.ivyservice.CacheLayout
+import org.gradle.api.internal.artifacts.ivyservice.DefaultArtifactCaches
+import org.gradle.api.internal.artifacts.transform.ImmutableTransformWorkspaceServices
+import org.gradle.api.internal.artifacts.transform.ToPlannedTransformStepConverter
+import org.gradle.api.internal.artifacts.transform.TransformExecutionResult
+import org.gradle.api.internal.cache.CacheConfigurationsInternal
+import org.gradle.cache.Cache
+import org.gradle.cache.CacheCleanupStrategyFactory
+import org.gradle.cache.FineGrainedCacheCleanupStrategyFactory
+import org.gradle.cache.UnscopedCacheBuilderFactory
+import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.execution.plan.ToPlannedNodeConverter
+import org.gradle.internal.event.ListenerManager
+import org.gradle.internal.execution.DeferredResult
+import org.gradle.internal.execution.Identity
+import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider
+import org.gradle.internal.execution.workspace.impl.CacheBasedImmutableWorkspaceProvider
+import org.gradle.internal.file.FileAccessTimeJournal
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.versionedcache.UsedGradleVersions
+import java.util.function.Predicate
 
-import org.gradle.BuildAdapter;
-import org.gradle.BuildResult;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCachesProvider;
-import org.gradle.api.internal.artifacts.ivyservice.CacheLayout;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultArtifactCaches;
-import org.gradle.api.internal.artifacts.transform.ImmutableTransformWorkspaceServices;
-import org.gradle.api.internal.artifacts.transform.ToPlannedTransformStepConverter;
-import org.gradle.api.internal.artifacts.transform.TransformExecutionResult;
-import org.gradle.api.internal.cache.CacheConfigurationsInternal;
-import org.gradle.cache.Cache;
-import org.gradle.cache.CacheCleanupStrategyFactory;
-import org.gradle.cache.FineGrainedCacheBuilder;
-import org.gradle.cache.FineGrainedCacheCleanupStrategyFactory;
-import org.gradle.cache.UnscopedCacheBuilderFactory;
-import org.gradle.cache.internal.CrossBuildInMemoryCache;
-import org.gradle.cache.internal.CrossBuildInMemoryCacheFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.execution.plan.ToPlannedNodeConverter;
-import org.gradle.internal.event.ListenerManager;
-import org.gradle.internal.execution.DeferredResult;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider;
-import org.gradle.internal.execution.workspace.impl.CacheBasedImmutableWorkspaceProvider;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.versionedcache.UsedGradleVersions;
-
-public class DependencyManagementGradleUserHomeScopeServices implements ServiceRegistrationProvider {
-
+class DependencyManagementGradleUserHomeScopeServices : ServiceRegistrationProvider {
     @Provides
-    ToPlannedNodeConverter createToPlannedTransformStepConverter() {
-        return new ToPlannedTransformStepConverter();
+    fun createToPlannedTransformStepConverter(): ToPlannedNodeConverter {
+        return ToPlannedTransformStepConverter()
     }
 
     @Provides
-    DefaultArtifactCaches.WritableArtifactCacheLockingParameters createWritableArtifactCacheLockingParameters(FileAccessTimeJournal fileAccessTimeJournal, UsedGradleVersions usedGradleVersions) {
-        return new DefaultArtifactCaches.WritableArtifactCacheLockingParameters() {
-            @Override
-            public FileAccessTimeJournal getFileAccessTimeJournal() {
-                return fileAccessTimeJournal;
+    fun createWritableArtifactCacheLockingParameters(
+        fileAccessTimeJournal: FileAccessTimeJournal,
+        usedGradleVersions: UsedGradleVersions
+    ): DefaultArtifactCaches.WritableArtifactCacheLockingParameters {
+        return object : DefaultArtifactCaches.WritableArtifactCacheLockingParameters {
+            override fun getFileAccessTimeJournal(): FileAccessTimeJournal {
+                return fileAccessTimeJournal
             }
 
-            @Override
-            public UsedGradleVersions getUsedGradleVersions() {
-                return usedGradleVersions;
+            override fun getUsedGradleVersions(): UsedGradleVersions {
+                return usedGradleVersions
             }
-        };
+        }
     }
 
     @Provides
-    ArtifactCachesProvider createArtifactCaches(
-        GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-        UnscopedCacheBuilderFactory unscopedCacheBuilderFactory,
-        DefaultArtifactCaches.WritableArtifactCacheLockingParameters parameters,
-        ListenerManager listenerManager,
-        DocumentationRegistry documentationRegistry,
-        CacheConfigurationsInternal cacheConfigurations,
-        CacheCleanupStrategyFactory cacheCleanupStrategyFactory
-    ) {
-        DefaultArtifactCaches artifactCachesProvider = new DefaultArtifactCaches(cacheBuilderFactory, unscopedCacheBuilderFactory, parameters, documentationRegistry, cacheConfigurations, cacheCleanupStrategyFactory);
-        listenerManager.addListener(new BuildAdapter() {
-            @SuppressWarnings("deprecation")
-            @Override
-            public void buildFinished(BuildResult result) {
-                artifactCachesProvider.getWritableCacheAccessCoordinator().useCache(() -> {
-                    // forces cleanup even if cache wasn't used
-                });
+    fun createArtifactCaches(
+        cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+        unscopedCacheBuilderFactory: UnscopedCacheBuilderFactory,
+        parameters: DefaultArtifactCaches.WritableArtifactCacheLockingParameters,
+        listenerManager: ListenerManager,
+        documentationRegistry: DocumentationRegistry,
+        cacheConfigurations: CacheConfigurationsInternal,
+        cacheCleanupStrategyFactory: CacheCleanupStrategyFactory
+    ): ArtifactCachesProvider {
+        val artifactCachesProvider = DefaultArtifactCaches(cacheBuilderFactory, unscopedCacheBuilderFactory, parameters, documentationRegistry, cacheConfigurations, cacheCleanupStrategyFactory)
+        listenerManager.addListener(object : BuildAdapter() {
+            @Suppress("deprecation")
+            override fun buildFinished(result: BuildResult) {
+                artifactCachesProvider.getWritableCacheAccessCoordinator().useCache(Runnable {})
             }
-        });
-        return artifactCachesProvider;
+        })
+        return artifactCachesProvider
     }
 
     @Provides
-    ImmutableTransformWorkspaceServices createTransformWorkspaceServices(
-        GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-        CrossBuildInMemoryCacheFactory crossBuildInMemoryCacheFactory,
-        FileAccessTimeJournal fileAccessTimeJournal,
-        CacheConfigurationsInternal cacheConfigurations,
-        FineGrainedCacheCleanupStrategyFactory cacheCleanupStrategyFactory
-    ) {
-        FineGrainedCacheBuilder cacheBuilder = cacheBuilderFactory
+    fun createTransformWorkspaceServices(
+        cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+        crossBuildInMemoryCacheFactory: CrossBuildInMemoryCacheFactory,
+        fileAccessTimeJournal: FileAccessTimeJournal,
+        cacheConfigurations: CacheConfigurationsInternal,
+        cacheCleanupStrategyFactory: FineGrainedCacheCleanupStrategyFactory
+    ): ImmutableTransformWorkspaceServices {
+        val cacheBuilder = cacheBuilderFactory
             .createFineGrainedCacheBuilder(CacheLayout.TRANSFORMS.getName())
-            .withDisplayName("Artifact transforms cache");
-        CrossBuildInMemoryCache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> identityCache = crossBuildInMemoryCacheFactory.<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>>newCacheRetainingDataFromPreviousBuild(result -> result.getResult().isSuccessful);
-        CacheBasedImmutableWorkspaceProvider workspaceProvider = CacheBasedImmutableWorkspaceProvider.createWorkspaceProvider(cacheBuilder, fileAccessTimeJournal, cacheConfigurations, cacheCleanupStrategyFactory);
-        return new ImmutableTransformWorkspaceServices() {
-            @Override
-            public ImmutableWorkspaceProvider getWorkspaceProvider() {
-                return workspaceProvider;
+            .withDisplayName("Artifact transforms cache")
+        val identityCache =
+            crossBuildInMemoryCacheFactory.newCacheRetainingDataFromPreviousBuild<Identity?, DeferredResult<TransformExecutionResult.TransformWorkspaceResult?>?>(Predicate { result: DeferredResult<TransformExecutionResult.TransformWorkspaceResult?>? -> result!!.getResult().isSuccessful })
+        val workspaceProvider = CacheBasedImmutableWorkspaceProvider.createWorkspaceProvider(cacheBuilder, fileAccessTimeJournal, cacheConfigurations, cacheCleanupStrategyFactory)
+        return object : ImmutableTransformWorkspaceServices {
+            override fun getWorkspaceProvider(): ImmutableWorkspaceProvider {
+                return workspaceProvider
             }
 
-            @Override
-            public Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> getIdentityCache() {
-                return identityCache;
+            override fun getIdentityCache(): Cache<Identity?, DeferredResult<TransformExecutionResult.TransformWorkspaceResult?>?> {
+                return identityCache
             }
 
-            @Override
-            public void close() {
-                workspaceProvider.close();
+            override fun close() {
+                workspaceProvider.close()
             }
-        };
+        }
     }
 }

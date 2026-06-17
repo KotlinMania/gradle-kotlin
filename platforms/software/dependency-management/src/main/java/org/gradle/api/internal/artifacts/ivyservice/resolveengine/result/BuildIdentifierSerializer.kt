@@ -13,32 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.artifacts.component.BuildIdentifier;
-import org.gradle.api.internal.artifacts.DefaultBuildIdentifier;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-
-import java.io.IOException;
+import org.gradle.api.artifacts.component.BuildIdentifier
+import org.gradle.api.internal.artifacts.DefaultBuildIdentifier
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link BuildIdentifier}.
+ * A thread-safe and reusable serializer for [BuildIdentifier].
  */
-public class BuildIdentifierSerializer extends AbstractSerializer<BuildIdentifier> {
+class BuildIdentifierSerializer : AbstractSerializer<BuildIdentifier?>() {
+    private val pathSerializer = PathSerializer()
 
-    private final PathSerializer pathSerializer = new PathSerializer();
-
-    @Override
-    public BuildIdentifier read(Decoder decoder) throws IOException {
-        return new DefaultBuildIdentifier(pathSerializer.read(decoder));
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): BuildIdentifier {
+        return DefaultBuildIdentifier(pathSerializer.read(decoder))
     }
 
-    @Override
-    public void write(Encoder encoder, BuildIdentifier value) throws IOException {
-        pathSerializer.write(encoder, ((DefaultBuildIdentifier) value).getIdentityPath());
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: BuildIdentifier) {
+        pathSerializer.write(encoder, (value as DefaultBuildIdentifier).getIdentityPath())
     }
-
 }

@@ -13,28 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.VariantFileMetadata
 
-import org.gradle.api.artifacts.VariantFileMetadata;
-
-public class DefaultVariantFileMetadata implements VariantFileMetadata {
-
-    private final String name;
-    private final String url;
-
-    public DefaultVariantFileMetadata(String name, String url) {
-        this.name = name;
-        this.url = url;
+class DefaultVariantFileMetadata(private val name: String, private val url: String) : VariantFileMetadata {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getUrl() {
-        return url;
+    override fun getUrl(): String {
+        return url
     }
 }

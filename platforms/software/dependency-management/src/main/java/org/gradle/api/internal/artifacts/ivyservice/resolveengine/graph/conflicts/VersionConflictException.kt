@@ -13,46 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.api.artifacts.result.ComponentSelectionDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphValidationException;
-import org.gradle.internal.exceptions.ResolutionProvider;
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphValidationException
+import org.gradle.internal.exceptions.ResolutionProvider
 
-import java.util.List;
+class VersionConflictException(conflict: Conflict, resolutions: MutableList<String>) : GraphValidationException(buildMessage(conflict)), ResolutionProvider {
+    val resolutions: MutableList<String>
 
-public class VersionConflictException extends GraphValidationException implements ResolutionProvider {
-
-    private final List<String> resolutions;
-
-    public VersionConflictException(Conflict conflict, List<String> resolutions) {
-        super(buildMessage(conflict));
-        this.resolutions = resolutions;
+    init {
+        this.resolutions = resolutions
     }
 
-    private static String buildMessage(Conflict conflict) {
-        String conflictDescription = getConflictDescription(conflict);
-        ModuleIdentifier moduleId = conflict.getModuleId();
+    companion object {
+        private fun buildMessage(conflict: Conflict): String {
+            val conflictDescription: String = getConflictDescription(conflict)
+            val moduleId = conflict.getModuleId()
 
-        return "Conflict found for module '" + moduleId.getGroup() + ":" + moduleId.getName() + "': " + conflictDescription;
-    }
-
-    private static String getConflictDescription(Conflict conflict) {
-        String conflictDescription = null;
-        for (ComponentSelectionDescriptor description : conflict.getSelectionReason().getDescriptions()) {
-            if (description.getCause().equals(ComponentSelectionCause.CONFLICT_RESOLUTION)) {
-                conflictDescription = description.getDescription();
-            }
+            return "Conflict found for module '" + moduleId.getGroup() + ":" + moduleId.getName() + "': " + conflictDescription
         }
-        assert conflictDescription != null;
-        return conflictDescription;
-    }
 
-    @Override
-    public List<String> getResolutions() {
-        return resolutions;
+        private fun getConflictDescription(conflict: Conflict): String {
+            var conflictDescription: String = null
+            for (description in conflict.getSelectionReason().getDescriptions()) {
+                if (description.getCause() == ComponentSelectionCause.CONFLICT_RESOLUTION) {
+                    conflictDescription = description.getDescription()
+                }
+            }
+            checkNotNull(conflictDescription)
+            return conflictDescription
+        }
     }
-
 }

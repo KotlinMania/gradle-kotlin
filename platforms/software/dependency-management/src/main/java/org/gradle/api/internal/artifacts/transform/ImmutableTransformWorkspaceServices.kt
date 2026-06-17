@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.Closeable
 
-import org.gradle.cache.Cache;
-import org.gradle.internal.execution.DeferredResult;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.UserHome::class)
+interface ImmutableTransformWorkspaceServices : Closeable {
+    val workspaceProvider: ImmutableWorkspaceProvider?
 
-import java.io.Closeable;
-
-@ServiceScope(Scope.UserHome.class)
-public interface ImmutableTransformWorkspaceServices extends Closeable {
-    ImmutableWorkspaceProvider getWorkspaceProvider();
-
-    Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> getIdentityCache();
+    val identityCache: Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>>?
 }

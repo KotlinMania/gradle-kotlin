@@ -42,7 +42,7 @@ class DependencyLockingGraphVisitor(private val lockId: String, private val lock
     override fun start(root: RootGraphNode) {
         dependencyLockingState = dependencyLockingProvider.loadLockState(lockId, lockOwner)
         if (dependencyLockingState!!.mustValidateLockState()) {
-            val lockedModules = dependencyLockingState!!.getLockedDependencies()
+            val lockedModules = dependencyLockingState!!.lockedDependencies
             modulesToBeLocked = Maps.newHashMapWithExpectedSize<ModuleIdentifier, ModuleComponentIdentifier>(lockedModules.size)
             for (lockedModule in lockedModules) {
                 modulesToBeLocked!!.put(lockedModule.getModuleIdentifier(), lockedModule)
@@ -76,7 +76,7 @@ class DependencyLockingGraphVisitor(private val lockId: String, private val lock
                     if (dependencyLockingState!!.mustValidateLockState()) {
                         val lockedId = modulesToBeLocked!!.remove(id.getModuleIdentifier())
                         if (lockedId == null) {
-                            if (!dependencyLockingState!!.getIgnoredEntryFilter().isSatisfiedBy(id)) {
+                            if (!dependencyLockingState!!.ignoredEntryFilter.isSatisfiedBy(id)) {
                                 extraModules!!.add(id)
                             }
                         } else if (lockedId.getVersion() != id.getVersion() && !isNodeRejected(node)) {
@@ -91,7 +91,7 @@ class DependencyLockingGraphVisitor(private val lockId: String, private val lock
 
     private fun isNodeRejected(node: DependencyGraphNode): Boolean {
         // That is the state a node is in when it was selected but the selection violates a constraint (reject or strictly)
-        return node.getComponent().isRejected()
+        return node.getComponent().isRejected
     }
 
     private fun addChangingModule(id: ModuleComponentIdentifier) {

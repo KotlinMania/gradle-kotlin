@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
 
 /**
  * A factory for creating instances of `MutableComponentResolveMetadata` for different repository formats.
  */
-public interface MutableModuleMetadataFactory<S extends MutableModuleComponentResolveMetadata> {
+interface MutableModuleMetadataFactory<S : MutableModuleComponentResolveMetadata?> {
+    fun createForGradleModuleMetadata(from: ModuleComponentIdentifier): S?
 
-    S createForGradleModuleMetadata(ModuleComponentIdentifier from);
-
-    S missing(ModuleComponentIdentifier from);
+    fun missing(from: ModuleComponentIdentifier): S?
 }

@@ -13,131 +13,101 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.CacheableTransform
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.InputArtifactDependencies
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.TransformRegistration
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.FileLookup
+import org.gradle.api.internal.tasks.properties.FileParameterUtils
+import org.gradle.api.problems.internal.ProblemsInternal
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.execution.WorkValidationException
+import org.gradle.internal.fingerprint.DirectorySensitivity
+import org.gradle.internal.fingerprint.FileNormalizer
+import org.gradle.internal.fingerprint.LineEndingSensitivity
+import org.gradle.internal.hash.ClassLoaderHierarchyHasher
+import org.gradle.internal.instantiation.InstantiationScheme
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.properties.InputBehavior
+import org.gradle.internal.properties.InputFilePropertyType
+import org.gradle.internal.properties.PropertyValue
+import org.gradle.internal.properties.PropertyVisitor
+import org.gradle.internal.properties.annotations.TypeMetadataStore
+import org.gradle.internal.properties.bean.PropertyWalker
+import org.gradle.internal.reflect.DefaultTypeValidationContext
+import org.gradle.internal.service.ServiceLookup
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.transform.CacheableTransform;
-import org.gradle.api.artifacts.transform.InputArtifact;
-import org.gradle.api.artifacts.transform.InputArtifactDependencies;
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.api.artifacts.transform.TransformParameters;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.TransformRegistration;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.FileLookup;
-import org.gradle.api.internal.tasks.properties.FileParameterUtils;
-import org.gradle.api.problems.internal.ProblemInternal;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.execution.WorkValidationException;
-import org.gradle.internal.fingerprint.DirectorySensitivity;
-import org.gradle.internal.fingerprint.FileNormalizer;
-import org.gradle.internal.fingerprint.LineEndingSensitivity;
-import org.gradle.internal.hash.ClassLoaderHierarchyHasher;
-import org.gradle.internal.instantiation.InstantiationScheme;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.properties.InputBehavior;
-import org.gradle.internal.properties.InputFilePropertyType;
-import org.gradle.internal.properties.PropertyValue;
-import org.gradle.internal.properties.PropertyVisitor;
-import org.gradle.internal.properties.annotations.PropertyMetadata;
-import org.gradle.internal.properties.annotations.TypeMetadata;
-import org.gradle.internal.properties.annotations.TypeMetadataStore;
-import org.gradle.internal.properties.bean.PropertyWalker;
-import org.gradle.internal.reflect.DefaultTypeValidationContext;
-import org.gradle.internal.service.ServiceLookup;
-import org.jspecify.annotations.Nullable;
+class DefaultTransformRegistrationFactory(
+    private val buildOperationRunner: BuildOperationRunner,
+    private val isolatableFactory: IsolatableFactory,
+    private val classLoaderHierarchyHasher: ClassLoaderHierarchyHasher,
+    private val transformInvocationFactory: TransformInvocationFactory,
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val fileLookup: FileLookup,
+    private val inputFingerprinter: InputFingerprinter,
+    private val calculatedValueContainerFactory: CalculatedValueContainerFactory,
+    private val owner: DomainObjectContext,
+    parameterScheme: TransformParameterScheme,
+    actionScheme: TransformActionScheme,
+    private val internalServices: ServiceLookup
+) : TransformRegistrationFactory {
+    private val parametersPropertyWalker: PropertyWalker
+    private val actionMetadataStore: TypeMetadataStore
+    private val actionInstantiationScheme: InstantiationScheme
 
-import java.lang.annotation.Annotation;
-
-public class DefaultTransformRegistrationFactory implements TransformRegistrationFactory {
-
-    private final BuildOperationRunner buildOperationRunner;
-    private final IsolatableFactory isolatableFactory;
-    private final ClassLoaderHierarchyHasher classLoaderHierarchyHasher;
-    private final TransformInvocationFactory transformInvocationFactory;
-    private final PropertyWalker parametersPropertyWalker;
-    private final ServiceLookup internalServices;
-    private final TypeMetadataStore actionMetadataStore;
-    private final FileCollectionFactory fileCollectionFactory;
-    private final FileLookup fileLookup;
-    private final InputFingerprinter inputFingerprinter;
-    private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-    private final DomainObjectContext owner;
-    private final InstantiationScheme actionInstantiationScheme;
-
-    public DefaultTransformRegistrationFactory(
-        BuildOperationRunner buildOperationRunner,
-        IsolatableFactory isolatableFactory,
-        ClassLoaderHierarchyHasher classLoaderHierarchyHasher,
-        TransformInvocationFactory transformInvocationFactory,
-        FileCollectionFactory fileCollectionFactory,
-        FileLookup fileLookup,
-        InputFingerprinter inputFingerprinter,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        DomainObjectContext owner,
-        TransformParameterScheme parameterScheme,
-        TransformActionScheme actionScheme,
-        ServiceLookup internalServices
-    ) {
-        this.buildOperationRunner = buildOperationRunner;
-        this.isolatableFactory = isolatableFactory;
-        this.classLoaderHierarchyHasher = classLoaderHierarchyHasher;
-        this.transformInvocationFactory = transformInvocationFactory;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.fileLookup = fileLookup;
-        this.inputFingerprinter = inputFingerprinter;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.owner = owner;
-        this.actionInstantiationScheme = actionScheme.getInstantiationScheme();
-        this.actionMetadataStore = actionScheme.getInspectionScheme().getMetadataStore();
-        this.parametersPropertyWalker = parameterScheme.getInspectionScheme().getPropertyWalker();
-        this.internalServices = internalServices;
+    init {
+        this.actionInstantiationScheme = actionScheme.getInstantiationScheme()
+        this.actionMetadataStore = actionScheme.getInspectionScheme().getMetadataStore()
+        this.parametersPropertyWalker = parameterScheme.getInspectionScheme().getPropertyWalker()
     }
 
-    @Override
-    public TransformRegistration create(ImmutableAttributes from, ImmutableAttributes to, Class<? extends TransformAction<?>> implementation, TransformParameters parameterObject) {
-        TypeMetadata actionMetadata = actionMetadataStore.getTypeMetadata(implementation);
-        boolean cacheable = implementation.isAnnotationPresent(CacheableTransform.class);
-        ProblemsInternal problems = (ProblemsInternal) internalServices.get(ProblemsInternal.class);
-        DefaultTypeValidationContext validationContext = DefaultTypeValidationContext.withoutRootType(cacheable, problems);
-        actionMetadata.visitValidationFailures(null, validationContext);
+    override fun create(from: ImmutableAttributes, to: ImmutableAttributes, implementation: Class<out TransformAction<*>>, parameterObject: TransformParameters): TransformRegistration {
+        val actionMetadata = actionMetadataStore.getTypeMetadata(implementation)
+        val cacheable = implementation.isAnnotationPresent(CacheableTransform::class.java)
+        val problems = internalServices.get(ProblemsInternal::class.java) as ProblemsInternal?
+        val validationContext = DefaultTypeValidationContext.withoutRootType(cacheable, problems!!)
+        actionMetadata.visitValidationFailures(null, validationContext)
 
         // Should retain this on the metadata rather than calculate on each invocation
-        FileNormalizer inputArtifactNormalizer = null;
-        FileNormalizer dependenciesNormalizer = null;
-        DirectorySensitivity artifactDirectorySensitivity = DirectorySensitivity.DEFAULT;
-        DirectorySensitivity dependenciesDirectorySensitivity = DirectorySensitivity.DEFAULT;
-        LineEndingSensitivity artifactLineEndingSensitivity = LineEndingSensitivity.DEFAULT;
-        LineEndingSensitivity dependenciesLineEndingSensitivity = LineEndingSensitivity.DEFAULT;
-        for (PropertyMetadata propertyMetadata : actionMetadata.getPropertiesMetadata()) {
+        var inputArtifactNormalizer: FileNormalizer? = null
+        var dependenciesNormalizer: FileNormalizer? = null
+        var artifactDirectorySensitivity = DirectorySensitivity.DEFAULT
+        var dependenciesDirectorySensitivity = DirectorySensitivity.DEFAULT
+        var artifactLineEndingSensitivity = LineEndingSensitivity.DEFAULT
+        var dependenciesLineEndingSensitivity = LineEndingSensitivity.DEFAULT
+        for (propertyMetadata in actionMetadata.getPropertiesMetadata()) {
             // Should ask the annotation handler to figure this out instead
-            Class<? extends Annotation> propertyType = propertyMetadata.getPropertyType();
-            NormalizerCollectingVisitor visitor = new NormalizerCollectingVisitor();
-            if (propertyType.equals(InputArtifact.class)) {
-                actionMetadata.getAnnotationHandlerFor(propertyMetadata).visitPropertyValue(propertyMetadata.getPropertyName(), PropertyValue.ABSENT, propertyMetadata, visitor);
-                inputArtifactNormalizer = visitor.normalizer;
-                artifactDirectorySensitivity = visitor.directorySensitivity;
-                artifactLineEndingSensitivity = visitor.lineEndingSensitivity;
-                DefaultTransform.validateInputFileNormalizer(propertyMetadata.getPropertyName(), inputArtifactNormalizer, cacheable, validationContext);
-            } else if (propertyType.equals(InputArtifactDependencies.class)) {
-                actionMetadata.getAnnotationHandlerFor(propertyMetadata).visitPropertyValue(propertyMetadata.getPropertyName(), PropertyValue.ABSENT, propertyMetadata, visitor);
-                dependenciesNormalizer = visitor.normalizer;
-                dependenciesDirectorySensitivity = visitor.directorySensitivity;
-                dependenciesLineEndingSensitivity = visitor.lineEndingSensitivity;
-                DefaultTransform.validateInputFileNormalizer(propertyMetadata.getPropertyName(), dependenciesNormalizer, cacheable, validationContext);
+            val propertyType = propertyMetadata.getPropertyType()
+            val visitor = NormalizerCollectingVisitor()
+            if (propertyType == InputArtifact::class.java) {
+                actionMetadata.getAnnotationHandlerFor(propertyMetadata).visitPropertyValue(propertyMetadata.getPropertyName(), PropertyValue.ABSENT, propertyMetadata, visitor)
+                inputArtifactNormalizer = visitor.normalizer
+                artifactDirectorySensitivity = visitor.directorySensitivity
+                artifactLineEndingSensitivity = visitor.lineEndingSensitivity
+                DefaultTransform.Companion.validateInputFileNormalizer(propertyMetadata.getPropertyName(), inputArtifactNormalizer, cacheable, validationContext)
+            } else if (propertyType == InputArtifactDependencies::class.java) {
+                actionMetadata.getAnnotationHandlerFor(propertyMetadata).visitPropertyValue(propertyMetadata.getPropertyName(), PropertyValue.ABSENT, propertyMetadata, visitor)
+                dependenciesNormalizer = visitor.normalizer
+                dependenciesDirectorySensitivity = visitor.directorySensitivity
+                dependenciesLineEndingSensitivity = visitor.lineEndingSensitivity
+                DefaultTransform.Companion.validateInputFileNormalizer(propertyMetadata.getPropertyName(), dependenciesNormalizer, cacheable, validationContext)
             }
         }
-        ImmutableList<ProblemInternal> errors = validationContext.getErrors();
+        val errors = validationContext.getErrors()
         if (!errors.isEmpty()) {
-            WorkValidationException exception = WorkValidationException.withSummaryForType(implementation, errors.size());
-            throw problems.reporter.throwing(exception, errors);
+            val exception = WorkValidationException.withSummaryForType(implementation, errors.size)
+            throw problems.reporter!!.throwing(exception, errors)
         }
-        Transform transform = new DefaultTransform(
+        val transform: Transform = DefaultTransform(
             implementation,
             parameterObject,
             from,
@@ -159,62 +129,35 @@ public class DefaultTransformRegistrationFactory implements TransformRegistratio
             owner,
             calculatedValueContainerFactory,
             internalServices
-        );
+        )
 
-        return new DefaultTransformRegistration(from, to, new TransformStep(transform, transformInvocationFactory, owner, inputFingerprinter));
+        return DefaultTransformRegistration(from, to, TransformStep(transform, transformInvocationFactory, owner, inputFingerprinter))
     }
 
-    private static class DefaultTransformRegistration implements TransformRegistration {
-        private final ImmutableAttributes from;
-        private final ImmutableAttributes to;
-        private final TransformStep transformStep;
-
-        public DefaultTransformRegistration(ImmutableAttributes from, ImmutableAttributes to, TransformStep transformStep) {
-            this.from = from;
-            this.to = to;
-            this.transformStep = transformStep;
-        }
-
-        @Override
-        public ImmutableAttributes getFrom() {
-            return from;
-        }
-
-        @Override
-        public ImmutableAttributes getTo() {
-            return to;
-        }
-
-        @Override
-        public TransformStep getTransformStep() {
-            return transformStep;
-        }
-
-        @Override
-        public String toString() {
-            return transformStep + " transform from " + from + " to " + to;
+    private class DefaultTransformRegistration(val from: ImmutableAttributes, val to: ImmutableAttributes, val transformStep: TransformStep) : TransformRegistration {
+        override fun toString(): String {
+            return transformStep.toString() + " transform from " + from + " to " + to
         }
     }
 
-    private static class NormalizerCollectingVisitor implements PropertyVisitor {
-        private FileNormalizer normalizer;
-        private DirectorySensitivity directorySensitivity = DirectorySensitivity.DEFAULT;
-        private LineEndingSensitivity lineEndingSensitivity = LineEndingSensitivity.DEFAULT;
+    private class NormalizerCollectingVisitor : PropertyVisitor {
+        private var normalizer: FileNormalizer? = null
+        private var directorySensitivity = DirectorySensitivity.DEFAULT
+        private var lineEndingSensitivity = LineEndingSensitivity.DEFAULT
 
-        @Override
-        public void visitInputFileProperty(
-            String propertyName,
-            boolean optional,
-            InputBehavior behavior,
-            DirectorySensitivity directorySensitivity,
-            LineEndingSensitivity lineEndingSensitivity,
-            @Nullable FileNormalizer fileNormalizer,
-            PropertyValue value,
-            InputFilePropertyType filePropertyType
+        override fun visitInputFileProperty(
+            propertyName: String,
+            optional: Boolean,
+            behavior: InputBehavior,
+            directorySensitivity: DirectorySensitivity,
+            lineEndingSensitivity: LineEndingSensitivity,
+            fileNormalizer: FileNormalizer?,
+            value: PropertyValue,
+            filePropertyType: InputFilePropertyType
         ) {
-            this.normalizer = fileNormalizer;
-            this.directorySensitivity = directorySensitivity;
-            this.lineEndingSensitivity = lineEndingSensitivity;
+            this.normalizer = fileNormalizer
+            this.directorySensitivity = directorySensitivity
+            this.lineEndingSensitivity = lineEndingSensitivity
         }
     }
 }

@@ -13,64 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.type
 
-package org.gradle.api.internal.artifacts.type;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.type.ArtifactTypeContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.type.ArtifactTypeContainer;
-import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-
-@ServiceScope(Scope.Project.class)
-public class ArtifactTypeRegistry {
-
-    private final Instantiator instantiator;
-    private final AttributesFactory attributesFactory;
-    private final CollectionCallbackActionDecorator callbackActionDecorator;
-    private final AttributeContainerInternal defaultArtifactAttributes;
-    private ArtifactTypeContainer artifactTypeDefinitions;
-
-    @Inject
-    public ArtifactTypeRegistry(Instantiator instantiator, AttributesFactory attributesFactory, CollectionCallbackActionDecorator callbackActionDecorator) {
-        this.instantiator = instantiator;
-        this.attributesFactory = attributesFactory;
-        this.callbackActionDecorator = callbackActionDecorator;
-        this.defaultArtifactAttributes = attributesFactory.mutable();
-    }
+@ServiceScope(Scope.Project::class)
+class ArtifactTypeRegistry @Inject constructor(private val instantiator: Instantiator, attributesFactory: AttributesFactory, callbackActionDecorator: CollectionCallbackActionDecorator?) {
+    private val attributesFactory: AttributesFactory?
+    private val callbackActionDecorator: CollectionCallbackActionDecorator?
 
     /**
      * Default attributes added to all artifact variants during artifact selection.
      */
-    public AttributeContainerInternal getDefaultArtifactAttributes() {
-        return defaultArtifactAttributes;
+    @JvmField
+    val defaultArtifactAttributes: AttributeContainerInternal?
+    private var artifactTypeDefinitions: ArtifactTypeContainer? = null
+
+    init {
+        this.attributesFactory = attributesFactory
+        this.callbackActionDecorator = callbackActionDecorator
+        this.defaultArtifactAttributes = attributesFactory.mutable()
     }
 
-    public ArtifactTypeContainer getArtifactTypeContainer() {
-        if (artifactTypeDefinitions == null) {
-            artifactTypeDefinitions = instantiator.newInstance(DefaultArtifactTypeContainer.class, instantiator, attributesFactory, callbackActionDecorator);
-        }
-        return artifactTypeDefinitions;
-    }
-
-    public ImmutableMap<String, ImmutableAttributes> getArtifactTypeMappings() {
-        if (artifactTypeDefinitions == null) {
-            return ImmutableMap.of();
-        }
-
-        ImmutableMap.Builder<String, ImmutableAttributes> builder = ImmutableMap.builder();
-        for (ArtifactTypeDefinition artifactTypeDefinition : artifactTypeDefinitions) {
-            ImmutableAttributes attributes = ((AttributeContainerInternal) artifactTypeDefinition.getAttributes()).asImmutable();
-            builder.put(artifactTypeDefinition.getName(), attributes);
+    val artifactTypeContainer: ArtifactTypeContainer
+        get() {
+            if (artifactTypeDefinitions == null) {
+                artifactTypeDefinitions = instantiator.newInstance<DefaultArtifactTypeContainer?>(
+                    DefaultArtifactTypeContainer::class.java,
+                    instantiator,
+                    attributesFactory,
+                    callbackActionDecorator
+                )
+            }
+            return artifactTypeDefinitions
         }
 
-        return builder.build();
-    }
+    val artifactTypeMappings: ImmutableMap<String?, ImmutableAttributes?>
+        get() {
+            if (artifactTypeDefinitions == null) {
+                return ImmutableMap.of<String?, ImmutableAttributes?>()
+            }
+
+            val builder =
+                ImmutableMap.builder<String?, ImmutableAttributes?>()
+            for (artifactTypeDefinition in artifactTypeDefinitions) {
+                val attributes =
+                    (artifactTypeDefinition.getAttributes() as AttributeContainerInternal).asImmutable()
+                builder.put(artifactTypeDefinition.getName(), attributes)
+            }
+
+            return builder.build()
+        }
 }

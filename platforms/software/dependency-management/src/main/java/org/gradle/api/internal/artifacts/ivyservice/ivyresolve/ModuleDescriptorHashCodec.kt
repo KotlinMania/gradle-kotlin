@@ -13,40 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.component.model.PersistentModuleSource;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
+import org.gradle.internal.component.model.PersistentModuleSource
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.IOException
 
-import java.io.IOException;
-
-public class ModuleDescriptorHashCodec implements PersistentModuleSource.Codec<ModuleDescriptorHashModuleSource> {
-    @Override
-    public void encode(ModuleDescriptorHashModuleSource moduleSource, Encoder encoder) throws IOException {
-        encoder.writeBinary(moduleSource.getDescriptorHash().toByteArray());
-        encoder.writeBoolean(moduleSource.isChangingModule());
+class ModuleDescriptorHashCodec : PersistentModuleSource.Codec<ModuleDescriptorHashModuleSource?> {
+    @Throws(IOException::class)
+    override fun encode(moduleSource: ModuleDescriptorHashModuleSource, encoder: Encoder) {
+        encoder.writeBinary(moduleSource.getDescriptorHash().toByteArray())
+        encoder.writeBoolean(moduleSource.isChangingModule())
     }
 
-    @Override
-    public ModuleDescriptorHashModuleSource decode(Decoder decoder) throws IOException {
-        return new ModuleDescriptorHashModuleSource(
-            HashCode.fromBytes(decoder.readBinary()),
+    @Throws(IOException::class)
+    override fun decode(decoder: Decoder): ModuleDescriptorHashModuleSource {
+        return ModuleDescriptorHashModuleSource(
+            HashCode.fromBytes(decoder.readBinary()!!),
             decoder.readBoolean()
-        );
+        )
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        return o != null && getClass() == o.getClass();
+        return o != null && javaClass == o.javaClass
     }
 
-    @Override
-    public int hashCode() {
-        return super.hashCode();
+    override fun hashCode(): Int {
+        return super.hashCode()
     }
 }

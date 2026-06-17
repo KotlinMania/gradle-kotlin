@@ -13,23 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.internal.file.ReservedFileSystemLocation
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.cache.Cache;
-import org.gradle.internal.execution.DeferredResult;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.history.ExecutionHistoryStore;
-import org.gradle.internal.execution.workspace.MutableWorkspaceProvider;
-import org.gradle.internal.file.ReservedFileSystemLocation;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.Project::class)
+interface MutableTransformWorkspaceServices : ReservedFileSystemLocation {
+    val workspaceProvider: MutableWorkspaceProvider?
 
-@ServiceScope(Scope.Project.class)
-public interface MutableTransformWorkspaceServices extends ReservedFileSystemLocation {
-    MutableWorkspaceProvider getWorkspaceProvider();
+    val executionHistoryStore: ExecutionHistoryStore?
 
-    ExecutionHistoryStore getExecutionHistoryStore();
-
-    Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> getIdentityCache();
+    val identityCache: Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>>?
 }

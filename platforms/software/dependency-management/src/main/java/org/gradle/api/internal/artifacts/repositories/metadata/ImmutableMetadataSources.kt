@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList
 
 /**
  * An immutable, usable representation of metadata sources.
  */
-public interface ImmutableMetadataSources {
-    ImmutableList<MetadataSource<?>> sources();
+interface ImmutableMetadataSources {
+    fun sources(): ImmutableList<MetadataSource<*>>?
 }

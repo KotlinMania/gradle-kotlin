@@ -13,57 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.descriptor;
+package org.gradle.api.internal.artifacts.repositories.descriptor
 
-import com.google.common.collect.ImmutableSortedMap;
-import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository;
-import org.gradle.internal.scan.UsedByScanPlugin;
-
-import java.util.Map;
+import com.google.common.collect.ImmutableSortedMap
+import org.gradle.internal.scan.UsedByScanPlugin
 
 /**
- * A non-functional, immutable, description of a {@link ResolutionAwareRepository} at a point in time.
+ * A non-functional, immutable, description of a [ResolutionAwareRepository] at a point in time.
  *
  * See org.gradle.api.internal.artifacts.configurations.ResolveConfigurationResolutionBuildOperationDetails.RepositoryImpl
  */
-public abstract class RepositoryDescriptor {
-
+abstract class RepositoryDescriptor internal constructor(val id: String?, @JvmField val name: String?) {
     @UsedByScanPlugin("doesn't link against this type, but expects these values - See ResolveConfigurationDependenciesBuildOperationType")
-    public enum Type {
+    enum class Type {
         MAVEN,
         IVY,
         FLAT_DIR
     }
 
-    private final String id;
-    private final String name;
-    private Map<String, ?> properties;
+    var properties: MutableMap<String?, *>? = null
+        get() {
+            if (field == null) {
+                val builder =
+                    ImmutableSortedMap.naturalOrder<String?, Any?>()
+                addProperties(builder)
+                field = builder.build()
+            }
 
-    RepositoryDescriptor(String id, String name) {
-        this.id = id;
-        this.name = name;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public abstract Type getType();
-
-    public final Map<String, ?> getProperties() {
-        if (properties == null) {
-            ImmutableSortedMap.Builder<String, Object> builder = ImmutableSortedMap.naturalOrder();
-            addProperties(builder);
-            properties = builder.build();
+            return field
         }
+        private set
 
-        return properties;
-    }
+    @JvmField
+    abstract val type: Type?
 
-    protected abstract void addProperties(ImmutableSortedMap.Builder<String, Object> builder);
-
+    protected abstract fun addProperties(builder: ImmutableSortedMap.Builder<String?, Any?>?)
 }

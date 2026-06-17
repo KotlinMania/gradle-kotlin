@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import org.gradle.api.artifacts.ArtifactCollection
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.file.FileCollectionInternal
 
-import org.gradle.api.artifacts.ArtifactCollection;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.file.FileCollectionInternal;
+interface ArtifactCollectionInternal : ArtifactCollection {
+    val resolutionHost: ResolutionHost?
 
-public interface ArtifactCollectionInternal extends ArtifactCollection {
-    ResolutionHost getResolutionHost();
+    val isLenient: Boolean
 
-    boolean isLenient();
+    fun visitArtifacts(visitor: ArtifactVisitor)
 
-    void visitArtifacts(ArtifactVisitor visitor);
-
-    @Override
-    FileCollectionInternal getArtifactFiles();
+    override fun getArtifactFiles(): FileCollectionInternal?
 }

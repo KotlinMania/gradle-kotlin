@@ -13,138 +13,103 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import org.gradle.api.artifacts.ArtifactCollection
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.internal.artifacts.ivyservice.ResolvedArtifactCollectingVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet
+import org.gradle.api.internal.attributes.AttributeDesugaring
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.provider.BuildableBackedProvider
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.provider.Provider
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Factory
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueFactory
+import java.util.function.Supplier
 
-import org.gradle.api.artifacts.ArtifactCollection;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.internal.artifacts.ivyservice.ResolvedArtifactCollectingVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet;
-import org.gradle.api.internal.attributes.AttributeDesugaring;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.provider.BuildableBackedProvider;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Factory;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueFactory;
+class DefaultArtifactCollection(
+    private val artifacts: SelectedArtifactSet,
+    private val lenient: Boolean,
+    private val resolutionHost: ResolutionHost,
+    private val taskDependencyFactory: TaskDependencyFactory,
+    calculatedValueFactory: CalculatedValueFactory,
+    attributeDesugaring: AttributeDesugaring
+) : ArtifactCollectionInternal {
+    private val result: CalculatedValue<ArtifactSetResult>
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Set;
+    init {
+        this.result = calculatedValueFactory.create<ArtifactSetResult>(resolutionHost.displayName("files"), Supplier {
+            val visitor = ResolvedArtifactCollectingVisitor(attributeDesugaring)
+            artifacts.visitArtifacts(visitor, lenient)
 
-public class DefaultArtifactCollection implements ArtifactCollectionInternal {
-
-    private final SelectedArtifactSet artifacts;
-    private final boolean lenient;
-    private final ResolutionHost resolutionHost;
-    private final CalculatedValue<ArtifactSetResult> result;
-    private final TaskDependencyFactory taskDependencyFactory;
-
-    public DefaultArtifactCollection(
-        SelectedArtifactSet artifacts,
-        boolean lenient,
-        ResolutionHost resolutionHost,
-        TaskDependencyFactory taskDependencyFactory,
-        CalculatedValueFactory calculatedValueFactory,
-        AttributeDesugaring attributeDesugaring
-    ) {
-        this.artifacts = artifacts;
-        this.lenient = lenient;
-        this.resolutionHost = resolutionHost;
-        this.taskDependencyFactory = taskDependencyFactory;
-
-        this.result = calculatedValueFactory.create(resolutionHost.displayName("files"), () -> {
-            ResolvedArtifactCollectingVisitor visitor = new ResolvedArtifactCollectingVisitor(attributeDesugaring);
-            artifacts.visitArtifacts(visitor, lenient);
-
-            Set<ResolvedArtifactResult> artifactResults = visitor.getArtifacts();
-            Set<Throwable> failures = visitor.getFailures();
+            val artifactResults = visitor.artifacts
+            val failures = visitor.failures
 
             if (!lenient) {
-                resolutionHost.rethrowFailuresAndReportProblems("artifacts", failures);
+                resolutionHost.rethrowFailuresAndReportProblems("artifacts", failures)
             }
-            return new ArtifactSetResult(artifactResults, failures);
-        });
+            ArtifactSetResult(artifactResults, failures)
+        })
     }
 
-    @Override
-    public ResolutionHost getResolutionHost() {
-        return resolutionHost;
+    override fun getResolutionHost(): ResolutionHost {
+        return resolutionHost
     }
 
-    @Override
-    public boolean isLenient() {
-        return lenient;
+    override fun isLenient(): Boolean {
+        return lenient
     }
 
-    @Override
-    public FileCollectionInternal getArtifactFiles() {
-        return new ResolutionBackedFileCollection(
+    override fun getArtifactFiles(): FileCollectionInternal {
+        return ResolutionBackedFileCollection(
             artifacts,
             lenient,
             resolutionHost,
             taskDependencyFactory
-        );
+        )
     }
 
-    @Override
-    public Set<ResolvedArtifactResult> getArtifacts() {
-        ensureResolved();
-        return result.get().artifactResults;
+    override fun getArtifacts(): MutableSet<ResolvedArtifactResult> {
+        ensureResolved()
+        return result.get().artifactResults
     }
 
-    @Override
-    public Provider<Set<ResolvedArtifactResult>> getResolvedArtifacts() {
-        return new BuildableBackedProvider<>(getArtifactFiles(), Cast.uncheckedCast(Set.class), new ArtifactCollectionResolvedArtifactsFactory(this));
+    override fun getResolvedArtifacts(): Provider<MutableSet<ResolvedArtifactResult>> {
+        return BuildableBackedProvider<FileCollectionInternal, MutableSet<ResolvedArtifactResult?>?>(
+            getArtifactFiles(),
+            uncheckedCast<Class<MutableSet<ResolvedArtifactResult>>?>(MutableSet::class.java),
+            ArtifactCollectionResolvedArtifactsFactory(this)
+        )
     }
 
-    @Override
-    public Iterator<ResolvedArtifactResult> iterator() {
-        ensureResolved();
-        return result.get().artifactResults.iterator();
+    override fun iterator(): MutableIterator<ResolvedArtifactResult> {
+        ensureResolved()
+        return result.get().artifactResults.iterator()
     }
 
-    @Override
-    public Collection<Throwable> getFailures() {
-        ensureResolved();
-        return result.get().failures;
+    override fun getFailures(): MutableCollection<Throwable> {
+        ensureResolved()
+        return result.get().failures
     }
 
-    @Override
-    public void visitArtifacts(ArtifactVisitor visitor) {
+    override fun visitArtifacts(visitor: ArtifactVisitor) {
         // TODO - if already resolved, use the results
-        artifacts.visitArtifacts(visitor, lenient);
+        artifacts.visitArtifacts(visitor, lenient)
     }
 
-    private void ensureResolved() {
-        result.finalizeIfNotAlready();
+    private fun ensureResolved() {
+        result.finalizeIfNotAlready()
     }
 
-    private static class ArtifactSetResult {
-        private final Set<ResolvedArtifactResult> artifactResults;
-        private final Set<Throwable> failures;
+    private class ArtifactSetResult(private val artifactResults: MutableSet<ResolvedArtifactResult>, private val failures: MutableSet<Throwable>)
 
-        ArtifactSetResult(Set<ResolvedArtifactResult> artifactResults, Set<Throwable> failures) {
-            this.artifactResults = artifactResults;
-            this.failures = failures;
+    private class ArtifactCollectionResolvedArtifactsFactory(private val artifactCollection: ArtifactCollection) : Factory<MutableSet<ResolvedArtifactResult>?> {
+        override fun create(): MutableSet<ResolvedArtifactResult> {
+            return artifactCollection.getArtifacts()
         }
     }
-
-    private static class ArtifactCollectionResolvedArtifactsFactory implements Factory<Set<ResolvedArtifactResult>> {
-
-        private final ArtifactCollection artifactCollection;
-
-        private ArtifactCollectionResolvedArtifactsFactory(ArtifactCollection artifactCollection) {
-            this.artifactCollection = artifactCollection;
-        }
-
-        @Override
-        public Set<ResolvedArtifactResult> create() {
-            return artifactCollection.getArtifacts();
-        }
-    }
-
 }

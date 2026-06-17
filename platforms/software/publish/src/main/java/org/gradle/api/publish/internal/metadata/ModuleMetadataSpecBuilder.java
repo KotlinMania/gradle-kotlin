@@ -90,7 +90,7 @@ public class ModuleMetadataSpecBuilder {
         InvalidPublicationChecker checker,
         DependencyCoordinateResolverFactory dependencyCoordinateResolverFactory
     ) {
-        this.component = publication.getComponent();
+        this.component = publication.component;
         this.publicationCoordinates = publication.getCoordinates();
         this.publication = publication;
         this.publications = publications;
@@ -481,7 +481,7 @@ public class ModuleMetadataSpecBuilder {
         Map<SoftwareComponent, SoftwareComponent> owners
     ) {
         for (PublicationInternal<?> publication : publications) {
-            SoftwareComponent component = publication.getComponent().getOrNull();
+            SoftwareComponent component = publication.component.getOrNull();
             if (component instanceof ComponentWithVariants) {
                 ComponentWithVariants componentWithVariants = (ComponentWithVariants) component;
                 for (SoftwareComponent child : componentWithVariants.getVariants()) {
@@ -493,7 +493,7 @@ public class ModuleMetadataSpecBuilder {
 
     private void collectCoordinates(Map<SoftwareComponent, ComponentData> coordinates) {
         for (PublicationInternal<?> publication : publications) {
-            SoftwareComponentInternal component = publication.getComponent().getOrNull();
+            SoftwareComponentInternal component = publication.component.getOrNull();
             if (component != null) {
                 coordinates.put(
                     component,

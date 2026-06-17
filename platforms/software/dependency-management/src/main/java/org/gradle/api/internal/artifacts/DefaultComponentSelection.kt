@@ -13,65 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.ivy.IvyModuleDescriptor
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.MetadataProvider
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.MetadataProvider;
-import org.jspecify.annotations.Nullable;
+class DefaultComponentSelection(private val candidate: ModuleComponentIdentifier, private val metadataProvider: MetadataProvider) : ComponentSelectionInternal {
+    private var rejected = false
+    private var rejectionReason: String? = null
 
-public class DefaultComponentSelection implements ComponentSelectionInternal {
-    private final ModuleComponentIdentifier candidate;
-    private final MetadataProvider metadataProvider;
-    private boolean rejected;
-    private String rejectionReason;
-
-    public DefaultComponentSelection(ModuleComponentIdentifier candidate, MetadataProvider metadataProvider) {
-        this.candidate = candidate;
-        this.metadataProvider = metadataProvider;
+    override fun getCandidate(): ModuleComponentIdentifier {
+        return candidate
     }
 
-    @Override
-    public ModuleComponentIdentifier getCandidate() {
-        return candidate;
-    }
-
-    @Override
-    public ComponentMetadata getMetadata() {
-        if (metadataProvider.isUsable()) {
-            return metadataProvider.getComponentMetadata();
+    override fun getMetadata(): ComponentMetadata? {
+        if (metadataProvider.isUsable) {
+            return metadataProvider.componentMetadata
         } else {
-            return null;
+            return null
         }
-
     }
 
-    @Nullable
-    @Override
-    public <T> T getDescriptor(Class<T> descriptorClass) {
-        if (metadataProvider.isUsable()) {
-            if (IvyModuleDescriptor.class.isAssignableFrom(descriptorClass)) {
-                return descriptorClass.cast(metadataProvider.getIvyModuleDescriptor());
+    override fun <T> getDescriptor(descriptorClass: Class<T?>): T? {
+        if (metadataProvider.isUsable) {
+            if (IvyModuleDescriptor::class.java.isAssignableFrom(descriptorClass)) {
+                return descriptorClass.cast(metadataProvider.ivyModuleDescriptor)
             }
         }
-        return null;
+        return null
     }
 
-    @Override
-    public void reject(String reason) {
-        rejected = true;
-        rejectionReason = reason;
+    override fun reject(reason: String) {
+        rejected = true
+        rejectionReason = reason
     }
 
-    @Override
-    public boolean isRejected() {
-        return rejected;
+    override fun isRejected(): Boolean {
+        return rejected
     }
 
-    @Override
-    public String getRejectionReason() {
-        return rejectionReason;
+    override fun getRejectionReason(): String? {
+        return rejectionReason
     }
 }

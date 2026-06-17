@@ -13,85 +13,74 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyMetadata
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Cast.uncheckedCast
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyMetadata;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Cast;
+abstract class AbstractDependencyImpl<T : DependencyMetadata<T?>?>(group: String, name: String, version: String) : DependencyMetadata<T?> {
+    private val moduleIdentifier: ModuleIdentifier
+    private val versionConstraint: MutableVersionConstraint
+    private var reason: String? = null
+    private var attributes: AttributeContainer = ImmutableAttributes.EMPTY
 
-public abstract class AbstractDependencyImpl<T extends DependencyMetadata<T>> implements DependencyMetadata<T> {
-    private final ModuleIdentifier moduleIdentifier;
-    private final MutableVersionConstraint versionConstraint;
-    private String reason;
-    private AttributeContainer attributes = ImmutableAttributes.EMPTY;
-
-    public AbstractDependencyImpl(String group, String name, String version) {
-        this.moduleIdentifier = DefaultModuleIdentifier.newId(group, name);
-        this.versionConstraint = new DefaultMutableVersionConstraint(version);
+    init {
+        this.moduleIdentifier = DefaultModuleIdentifier.newId(group, name)
+        this.versionConstraint = DefaultMutableVersionConstraint(version)
     }
 
-    @Override
-    public String getGroup() {
-        return moduleIdentifier.getGroup();
+    override fun getGroup(): String {
+        return moduleIdentifier.getGroup()
     }
 
-    @Override
-    public String getName() {
-        return moduleIdentifier.getName();
+    override fun getName(): String {
+        return moduleIdentifier.getName()
     }
 
-    @Override
-    public VersionConstraint getVersionConstraint() {
-        return this.versionConstraint;
+    override fun getVersionConstraint(): VersionConstraint {
+        return this.versionConstraint
     }
 
-    @Override
-    public ModuleIdentifier getModule() {
-        return moduleIdentifier;
+    override fun getModule(): ModuleIdentifier {
+        return moduleIdentifier
     }
 
-    @Override
-    public T version(Action<? super MutableVersionConstraint> configureAction) {
-        configureAction.execute(versionConstraint);
-        return Cast.uncheckedCast(this);
+    override fun version(configureAction: Action<in MutableVersionConstraint>): T? {
+        configureAction.execute(versionConstraint)
+        return uncheckedCast<T?>(this)
     }
 
-    @Override
-    public T attributes(Action<? super AttributeContainer> configureAction) {
-        configureAction.execute(attributes);
-        return Cast.uncheckedCast(this);
+    override fun attributes(configureAction: Action<in AttributeContainer>): T? {
+        configureAction.execute(attributes)
+        return uncheckedCast<T?>(this)
     }
 
-    @Override
-    public String getReason() {
-        return reason;
+    override fun getReason(): String {
+        return reason!!
     }
 
-    @Override
-    public T because(String reason) {
-        this.reason = reason;
-        return Cast.uncheckedCast(this);
+    override fun because(reason: String): T? {
+        this.reason = reason
+        return uncheckedCast<T?>(this)
     }
 
-    public void setAttributes(AttributeContainer attributes) {
-        this.attributes = attributes;
+    fun setAttributes(attributes: AttributeContainer) {
+        this.attributes = attributes
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return attributes;
+    override fun getAttributes(): AttributeContainer {
+        return attributes
     }
 
-    @Override
-    public String toString() {
-        return getGroup() + ":" + getName() + ":" + getVersionConstraint();
+    override fun toString(): String {
+        return getGroup() + ":" + getName() + ":" + getVersionConstraint()
     }
 }

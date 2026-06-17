@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
-import org.gradle.internal.resource.ExternalResource;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
+import org.gradle.internal.resource.ExternalResource
 
 @Contextual
-public class MetaDataParseException extends GradleException {
-    public MetaDataParseException(String message) {
-        super(message);
-    }
+class MetaDataParseException : GradleException {
+    constructor(message: String?) : super(message)
 
-    public MetaDataParseException(String typeName, ExternalResource resource, Throwable cause) {
-        super(String.format("Could not parse %s %s", typeName, resource.getDisplayName()), cause);
-    }
+    constructor(typeName: String?, resource: ExternalResource, cause: Throwable?) : super(String.format("Could not parse %s %s", typeName, resource.getDisplayName()), cause)
 
-    public MetaDataParseException(String typeName, ExternalResource resource, String details, Throwable cause) {
-        super(String.format("Could not parse %s %s: %s", typeName, resource.getDisplayName(), details), cause);
-    }
+    constructor(typeName: String?, resource: ExternalResource, details: String?, cause: Throwable?) : super(
+        String.format("Could not parse %s %s: %s", typeName, resource.getDisplayName(), details),
+        cause
+    )
 }

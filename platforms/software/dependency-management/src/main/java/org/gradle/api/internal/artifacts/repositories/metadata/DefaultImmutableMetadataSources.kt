@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList
 
-public class DefaultImmutableMetadataSources implements ImmutableMetadataSources {
-    private final ImmutableList<MetadataSource<?>> sources;
+class DefaultImmutableMetadataSources(sources: Iterable<MetadataSource<*>>) : ImmutableMetadataSources {
+    private val sources: ImmutableList<MetadataSource<*>>
 
-    public DefaultImmutableMetadataSources(Iterable<MetadataSource<?>> sources) {
-        this.sources = ImmutableList.copyOf(sources);
+    init {
+        this.sources = ImmutableList.copyOf<MetadataSource<*>>(sources)
     }
 
-    @Override
-    public ImmutableList<MetadataSource<?>> sources() {
-        return sources;
+    override fun sources(): ImmutableList<MetadataSource<*>> {
+        return sources
     }
-
 }

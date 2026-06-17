@@ -13,66 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.component.external.model.PreferJavaRuntimeVariant;
-import org.gradle.internal.component.external.model.maven.DefaultMutableMavenModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor;
-import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.repositories.resolver.MavenResolver
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.external.model.PreferJavaRuntimeVariant
+import org.gradle.internal.component.external.model.maven.DefaultMutableMavenModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor
+import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.Collections;
-import java.util.List;
+@ServiceScope(Scope.BuildSession::class)
+class MavenMutableModuleMetadataFactory @Inject constructor(
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val attributesFactory: AttributesFactory,
+    private val objectInstantiator: NamedObjectInstantiator,
+    schema: PreferJavaRuntimeVariant
+) : MutableModuleMetadataFactory<MutableMavenModuleResolveMetadata> {
+    private val schema: ImmutableAttributesSchema
 
-@ServiceScope(Scope.BuildSession.class)
-public class MavenMutableModuleMetadataFactory implements MutableModuleMetadataFactory<MutableMavenModuleResolveMetadata> {
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final AttributesFactory attributesFactory;
-    private final NamedObjectInstantiator objectInstantiator;
-    private final ImmutableAttributesSchema schema;
-
-    @Inject
-    public MavenMutableModuleMetadataFactory(
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        AttributesFactory attributesFactory,
-        NamedObjectInstantiator objectInstantiator,
-        PreferJavaRuntimeVariant schema
-    ) {
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.attributesFactory = attributesFactory;
-        this.schema = schema.getSchema();
-        this.objectInstantiator = objectInstantiator;
+    init {
+        this.schema = schema.schema
     }
 
-    @Override
-    public MutableMavenModuleResolveMetadata createForGradleModuleMetadata(ModuleComponentIdentifier from) {
-        ModuleVersionIdentifier mvi = asVersionIdentifier(from);
-        return new DefaultMutableMavenModuleResolveMetadata(mvi, from, Collections.emptyList(), attributesFactory, objectInstantiator, schema, ImmutableMap.of());
+    override fun createForGradleModuleMetadata(from: ModuleComponentIdentifier): MutableMavenModuleResolveMetadata {
+        val mvi = asVersionIdentifier(from)
+        return DefaultMutableMavenModuleResolveMetadata(mvi, from, mutableListOf<MavenDependencyDescriptor>(), attributesFactory, objectInstantiator, schema, ImmutableMap.of<String, Configuration>())
     }
 
-    private ModuleVersionIdentifier asVersionIdentifier(ModuleComponentIdentifier from) {
-        return moduleIdentifierFactory.moduleWithVersion(from.getModuleIdentifier(), from.getVersion());
+    private fun asVersionIdentifier(from: ModuleComponentIdentifier): ModuleVersionIdentifier {
+        return moduleIdentifierFactory.moduleWithVersion(from.getModuleIdentifier(), from.getVersion())!!
     }
 
-    @Override
-    public MutableMavenModuleResolveMetadata missing(ModuleComponentIdentifier from) {
-        MutableMavenModuleResolveMetadata metadata = create(from, Collections.emptyList());
-        metadata.setMissing(true);
-        return MavenResolver.processMetaData(metadata);
+    override fun missing(from: ModuleComponentIdentifier): MutableMavenModuleResolveMetadata {
+        val metadata = create(from, mutableListOf<MavenDependencyDescriptor>())
+        metadata.isMissing = true
+        return MavenResolver.Companion.processMetaData(metadata)
     }
 
-    public MutableMavenModuleResolveMetadata create(ModuleComponentIdentifier from, List<MavenDependencyDescriptor> dependencies) {
-        ModuleVersionIdentifier mvi = asVersionIdentifier(from);
-        return new DefaultMutableMavenModuleResolveMetadata(mvi, from, dependencies, attributesFactory, objectInstantiator, schema);
+    fun create(from: ModuleComponentIdentifier, dependencies: MutableList<MavenDependencyDescriptor>): MutableMavenModuleResolveMetadata {
+        val mvi = asVersionIdentifier(from)
+        return DefaultMutableMavenModuleResolveMetadata(mvi, from, dependencies, attributesFactory, objectInstantiator, schema)
     }
 }

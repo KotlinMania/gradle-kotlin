@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
-
-import org.gradle.internal.DisplayName;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
 /**
  * Provides information about a publication of a project.
  */
-public interface ProjectPublication {
-    DisplayName getDisplayName();
+interface ProjectPublication {
+    @JvmField
+    val displayName: DisplayName?
 }

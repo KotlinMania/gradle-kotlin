@@ -13,51 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import java.io.Serializable
 
-import java.io.Serializable;
-
-public class DefaultMinimalDependency extends DefaultExternalModuleDependency implements MinimalExternalModuleDependencyInternal, Serializable {
-    public DefaultMinimalDependency(ModuleIdentifier module, MutableVersionConstraint versionConstraint) {
-        super(module, versionConstraint, null);
+class DefaultMinimalDependency(module: ModuleIdentifier, versionConstraint: MutableVersionConstraint) : DefaultExternalModuleDependency(module, versionConstraint, null),
+    MinimalExternalModuleDependencyInternal, Serializable {
+    override fun because(reason: String) {
+        validateMutation()
     }
 
-    @Override
-    public void because(String reason) {
-        validateMutation();
+    override fun validateMutation() {
+        throw UnsupportedOperationException("Minimal dependencies are immutable.")
     }
 
-    @Override
-    protected void validateMutation() {
-        throw new UnsupportedOperationException("Minimal dependencies are immutable.");
+    override fun validateMutation(currentValue: Any, newValue: Any) {
+        validateMutation()
     }
 
-    @Override
-    protected void validateMutation(Object currentValue, Object newValue) {
-        validateMutation();
-    }
-
-    @Override
-    public void copyTo(AbstractExternalModuleDependency target) {
-        super.copyTo(target);
+    override fun copyTo(target: AbstractExternalModuleDependency) {
+        super.copyTo(target)
     }
 
     // Intentionally changes to the mutable version.
-    @Override
-    public DefaultMutableMinimalDependency copy() {
-        DefaultMutableMinimalDependency dependency = new DefaultMutableMinimalDependency(getModule(), new DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration());
-        copyTo(dependency);
-        return dependency;
+    override fun copy(): DefaultMutableMinimalDependency {
+        val dependency = DefaultMutableMinimalDependency(getModule(), DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration())
+        copyTo(dependency)
+        return dependency
     }
 
-    @Override
-    public String toString() {
-        String versionConstraintAsString = getVersionConstraint().toString();
-        return versionConstraintAsString.isEmpty()
-            ? getModule().toString()
-            : getModule() + ":" + versionConstraintAsString;
+    override fun toString(): String {
+        val versionConstraintAsString = getVersionConstraint().toString()
+        return if (versionConstraintAsString.isEmpty())
+            getModule().toString()
+        else
+            getModule().toString() + ":" + versionConstraintAsString
     }
 }

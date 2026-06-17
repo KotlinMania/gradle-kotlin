@@ -13,35 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.IOException;
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link Capability}.
+ * A thread-safe and reusable serializer for [Capability].
  */
-public class CapabilitySerializer implements Serializer<Capability> {
-
-    @Override
-    public ImmutableCapability read(Decoder decoder) throws IOException {
-        String group = decoder.readString();
-        String name = decoder.readString();
-        String version = decoder.readNullableString();
-        return new DefaultImmutableCapability(group, name, version);
+class CapabilitySerializer : Serializer<Capability?> {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ImmutableCapability {
+        val group = decoder.readString()
+        val name = decoder.readString()
+        val version = decoder.readNullableString()
+        return DefaultImmutableCapability(group!!, name!!, version)
     }
 
-    @Override
-    public void write(Encoder encoder, Capability value) throws IOException {
-        encoder.writeString(value.getGroup());
-        encoder.writeString(value.getName());
-        encoder.writeNullableString(value.getVersion());
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: Capability) {
+        encoder.writeString(value.getGroup())
+        encoder.writeString(value.getName())
+        encoder.writeNullableString(value.getVersion())
     }
 }

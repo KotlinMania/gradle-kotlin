@@ -13,29 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.internal.Try
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.internal.Try;
-import org.gradle.operations.dependencies.configurations.ConfigurationIdentity;
-import org.jspecify.annotations.Nullable;
-
-public interface TransformUpstreamDependencies extends TaskDependencyContainer {
-
-    @Nullable
-    ConfigurationIdentity getConfigurationIdentity();
+interface TransformUpstreamDependencies : TaskDependencyContainer {
+    val configurationIdentity: ConfigurationIdentity?
 
     /**
      * Returns a collection containing the future artifacts for the given transform step.
      */
-    FileCollection selectedArtifacts();
+    fun selectedArtifacts(): FileCollection?
 
     /**
      * Computes the finalized dependency artifacts for the given transform step.
      */
-    Try<TransformDependencies> computeArtifacts();
+    fun computeArtifacts(): Try<TransformDependencies?>?
 
-    void finalizeIfNotAlready();
+    fun finalizeIfNotAlready()
 }

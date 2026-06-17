@@ -13,53 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.metadata
 
-package org.gradle.api.internal.artifacts.metadata;
-
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.publish.ImmutablePublishArtifact;
-import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.File;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.publish.ImmutablePublishArtifact
+import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.File
 
 /**
- * A thread-safe and reusable serializer for {@link PublishArtifactLocalArtifactMetadata}.
+ * A thread-safe and reusable serializer for [PublishArtifactLocalArtifactMetadata].
  */
-public class PublishArtifactLocalArtifactMetadataSerializer implements Serializer<PublishArtifactLocalArtifactMetadata> {
-
-    private final ComponentIdentifierSerializer componentIdentifierSerializer;
-
-    public PublishArtifactLocalArtifactMetadataSerializer(ComponentIdentifierSerializer componentIdentifierSerializer) {
-        this.componentIdentifierSerializer = componentIdentifierSerializer;
-    }
-
-    @Override
-    public PublishArtifactLocalArtifactMetadata read(Decoder decoder) throws Exception {
-        ComponentIdentifier identifier = componentIdentifierSerializer.read(decoder);
-        String artifactName = decoder.readString();
-        String artifactExtension = decoder.readString();
-        String artifactType = decoder.readString();
-        String artifactClassifier = decoder.readNullableString();
-        File artifactFile = new File(decoder.readString());
-        return new PublishArtifactLocalArtifactMetadata(
+class PublishArtifactLocalArtifactMetadataSerializer(private val componentIdentifierSerializer: ComponentIdentifierSerializer) : Serializer<PublishArtifactLocalArtifactMetadata?> {
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): PublishArtifactLocalArtifactMetadata {
+        val identifier = componentIdentifierSerializer.read(decoder)
+        val artifactName = decoder.readString()
+        val artifactExtension = decoder.readString()
+        val artifactType = decoder.readString()
+        val artifactClassifier = decoder.readNullableString()
+        val artifactFile = File(decoder.readString())
+        return PublishArtifactLocalArtifactMetadata(
             identifier,
-            new ImmutablePublishArtifact(artifactName, artifactExtension, artifactType, artifactClassifier, artifactFile)
-        );
+            ImmutablePublishArtifact(artifactName, artifactExtension, artifactType, artifactClassifier, artifactFile)
+        )
     }
 
-    @Override
-    public void write(Encoder encoder, PublishArtifactLocalArtifactMetadata value) throws Exception {
-        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier());
-        PublishArtifact publishArtifact = value.getPublishArtifact();
-        encoder.writeString(publishArtifact.getName());
-        encoder.writeString(publishArtifact.getType());
-        encoder.writeString(publishArtifact.getExtension());
-        encoder.writeNullableString(publishArtifact.getClassifier());
-        encoder.writeString(publishArtifact.getFile().getCanonicalPath());
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: PublishArtifactLocalArtifactMetadata) {
+        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier())
+        val publishArtifact = value.publishArtifact
+        encoder.writeString(publishArtifact.getName())
+        encoder.writeString(publishArtifact.getType())
+        encoder.writeString(publishArtifact.getExtension())
+        encoder.writeNullableString(publishArtifact.getClassifier())
+        encoder.writeString(publishArtifact.getFile().getCanonicalPath())
     }
 }

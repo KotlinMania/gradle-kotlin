@@ -13,53 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.CapabilitiesResolution;
-import org.gradle.api.artifacts.CapabilityResolutionDetails;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.CapabilitiesResolution
+import org.gradle.api.artifacts.CapabilityResolutionDetails
+import org.gradle.api.internal.capabilities.ImmutableCapability
 
 /**
- * Internal counterpart to {@link CapabilitiesResolution}.
+ * Internal counterpart to [CapabilitiesResolution].
  */
-public interface CapabilitiesResolutionInternal extends CapabilitiesResolution {
-
-    ImmutableList<CapabilityResolutionRule> getRules();
+interface CapabilitiesResolutionInternal : CapabilitiesResolution {
+    val rules: ImmutableList<CapabilityResolutionRule>?
 
     /**
      * An action that may resolve a capability conflict.
      */
-    final class CapabilityResolutionRule {
-
-        private final @Nullable ImmutableCapability capability;
-        private final Action<? super CapabilityResolutionDetails> action;
-
-        public CapabilityResolutionRule(
-            @Nullable ImmutableCapability capability,
-            Action<? super CapabilityResolutionDetails> action
-        ) {
-            this.capability = capability;
-            this.action = action;
-        }
-
+    class CapabilityResolutionRule(
+        private val capability: ImmutableCapability?,
+        /**
+         * The action to apply.
+         */
+        val action: Action<in CapabilityResolutionDetails>
+    ) {
         /**
          * Returns true if this rule may be executed to resolve conflicts on
          * a capability with the given group and name.
          */
-        public boolean appliesTo(String group, String name) {
-            return capability == null || (capability.getGroup().equals(group) && capability.getName().equals(name));
+        fun appliesTo(group: String, name: String): Boolean {
+            return capability == null || (capability.getGroup() == group && capability.getName() == name)
         }
-
-        /**
-         * The action to apply.
-         */
-        public Action<? super CapabilityResolutionDetails> getAction() {
-            return action;
-        }
-
     }
-
 }

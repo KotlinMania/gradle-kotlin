@@ -13,74 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.internal.action.InstantiatingAction;
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.internal.action.InstantiatingAction
 
-import java.util.Map;
+open class BaseModuleComponentRepository<T> : ModuleComponentRepository<T?> {
+    protected val delegate: ModuleComponentRepository<T?>
+    private val localAccess: ModuleComponentRepositoryAccess<T?>?
+    private val remoteAccess: ModuleComponentRepositoryAccess<T?>?
 
-public class BaseModuleComponentRepository<T> implements ModuleComponentRepository<T> {
-    protected final ModuleComponentRepository<T> delegate;
-    private final ModuleComponentRepositoryAccess<T> localAccess;
-    private final ModuleComponentRepositoryAccess<T> remoteAccess;
-
-    public BaseModuleComponentRepository(ModuleComponentRepository<T> delegate, ModuleComponentRepositoryAccess<T> localAccess, ModuleComponentRepositoryAccess<T> remoteAccess) {
-        this.delegate = delegate;
-        this.localAccess = localAccess;
-        this.remoteAccess = remoteAccess;
+    constructor(delegate: ModuleComponentRepository<T?>, localAccess: ModuleComponentRepositoryAccess<T?>?, remoteAccess: ModuleComponentRepositoryAccess<T?>?) {
+        this.delegate = delegate
+        this.localAccess = localAccess
+        this.remoteAccess = remoteAccess
     }
 
-    public BaseModuleComponentRepository(ModuleComponentRepository<T> delegate) {
-        this.delegate = delegate;
-        this.localAccess = delegate.getLocalAccess();
-        this.remoteAccess = delegate.getRemoteAccess();
+    constructor(delegate: ModuleComponentRepository<T?>) {
+        this.delegate = delegate
+        this.localAccess = delegate.getLocalAccess()
+        this.remoteAccess = delegate.getRemoteAccess()
     }
 
-    @Override
-    public String toString() {
-        return delegate.toString();
+    override fun toString(): String {
+        return delegate.toString()
     }
 
-    @Override
-    public String getId() {
-        return delegate.getId();
+    override fun getId(): String? {
+        return delegate.getId()
     }
 
-    @Override
-    public String getName() {
-        return delegate.getName();
+    override fun getName(): String? {
+        return delegate.getName()
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<T> getLocalAccess() {
-        return localAccess;
+    override fun getLocalAccess(): ModuleComponentRepositoryAccess<T?>? {
+        return localAccess
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<T> getRemoteAccess() {
-        return remoteAccess;
+    override fun getRemoteAccess(): ModuleComponentRepositoryAccess<T?>? {
+        return remoteAccess
     }
 
-    @Override
-    public Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() {
-        return delegate.getArtifactCache();
+    override fun getArtifactCache(): MutableMap<ComponentArtifactIdentifier?, ResolvableArtifact?>? {
+        return delegate.getArtifactCache()
     }
 
-    @Override
-    public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
-        return delegate.getComponentMetadataSupplier();
+    override fun getComponentMetadataSupplier(): InstantiatingAction<ComponentMetadataSupplierDetails?>? {
+        return delegate.getComponentMetadataSupplier()
     }
 
-    @Override
-    public boolean isContinueOnConnectionFailure() {
-        return delegate.isContinueOnConnectionFailure();
+    override fun isContinueOnConnectionFailure(): Boolean {
+        return delegate.isContinueOnConnectionFailure()
     }
 
-    @Override
-    public boolean isRepositoryDisabled() {
-        return delegate.isRepositoryDisabled();
+    override fun isRepositoryDisabled(): Boolean {
+        return delegate.isRepositoryDisabled()
     }
 }

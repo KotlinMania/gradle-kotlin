@@ -195,7 +195,7 @@ abstract class AbstractRealisedModuleResolveMetadataSerializationHelper(
                 val componentId = artifact.getComponentId()
                 if (componentId is MavenUniqueSnapshotComponentIdentifier) {
                     val uid = componentId
-                    encoder.writeNullableString(uid.getTimestamp())
+                    encoder.writeNullableString(uid.timestamp)
                     encoder.writeString(uid.getVersion())
                 } else {
                     encoder.writeNullableString(null)

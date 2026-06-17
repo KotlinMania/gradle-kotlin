@@ -13,35 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
-
-import java.util.ArrayList;
-import java.util.Collection;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
 /**
  * Data structure to collect repository failures during dependency resolution.
  *
  * @see DynamicVersionResolver
+ *
  * @see RepositoryChainComponentMetaDataResolver
  */
-class RepositoryFailureCollector {
-    private final Collection<Throwable> failures = new ArrayList<>();
-    private boolean fatalError;
+internal class RepositoryFailureCollector {
+    @JvmField
+    val failures: MutableCollection<Throwable> = ArrayList<Throwable>()
+    private var fatalError = false
 
-    void addFailure(Throwable failure) {
-        failures.add(failure);
+    fun addFailure(failure: Throwable) {
+        failures.add(failure)
     }
 
-    Collection<Throwable> getFailures() {
-        return failures;
+    fun hasFatalError(): Boolean {
+        return fatalError
     }
 
-    boolean hasFatalError() {
-        return fatalError;
-    }
-
-    void markFatalError() {
-        this.fatalError = true;
+    fun markFatalError() {
+        this.fatalError = true
     }
 }

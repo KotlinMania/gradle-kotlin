@@ -13,468 +13,347 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeAnyOf;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude;
-import org.gradle.internal.collect.PersistentSet;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeAnyOf
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude
+import org.gradle.internal.collect.PersistentSet
+import org.jspecify.annotations.NullMarked
+import java.util.function.Function
+import java.util.function.Predicate
 
 @NullMarked
-class Intersections {
-    private final ExcludeFactory factory;
-    private final List<Intersection<? extends ExcludeSpec, ? extends ExcludeSpec>> intersections = new ArrayList<>();
+internal class Intersections(private val factory: ExcludeFactory) {
+    private val intersections: MutableList<Intersection<out ExcludeSpec, out ExcludeSpec>> = ArrayList<Intersection<out ExcludeSpec, out ExcludeSpec>>()
 
-    public Intersections(ExcludeFactory factory) {
-        this.factory = factory;
-
+    init {
         // For the Any intersections, be sure to add the more specific type first, so it gets used if applicable
-        intersections.add(new IntersectAnyWithAny());
-        intersections.add(new IntersectAnyWithBaseSpec());
+        intersections.add(Intersections.IntersectAnyWithAny())
+        intersections.add(Intersections.IntersectAnyWithBaseSpec())
 
-        intersections.add(new IntersectGroupWithGroup());
-        intersections.add(new IntersectGroupWithModuleId());
-        intersections.add(new IntersectGroupWithGroupSet());
-        intersections.add(new IntersectGroupWithModuleIdSet());
-        intersections.add(new IntersectGroupWithModule());
-        intersections.add(new IntersectGroupWithModuleSet());
+        intersections.add(IntersectGroupWithGroup())
+        intersections.add(IntersectGroupWithModuleId())
+        intersections.add(IntersectGroupWithGroupSet())
+        intersections.add(IntersectGroupWithModuleIdSet())
+        intersections.add(IntersectGroupWithModule())
+        intersections.add(IntersectGroupWithModuleSet())
 
-        intersections.add(new IntersectGroupSetWithGroupSet());
-        intersections.add(new IntersectGroupSetWithModuleId());
-        intersections.add(new IntersectGroupSetWithModuleIdSet());
+        intersections.add(IntersectGroupSetWithGroupSet())
+        intersections.add(IntersectGroupSetWithModuleId())
+        intersections.add(IntersectGroupSetWithModuleIdSet())
 
-        intersections.add(new IntersectModuleWithModule());
-        intersections.add(new IntersectModuleWithModuleId());
-        intersections.add(new IntersectModuleWithModuleSet());
-        intersections.add(new IntersectModuleWithModuleIdSet());
-        intersections.add(new IntersectModuleWithGroupSet());
+        intersections.add(IntersectModuleWithModule())
+        intersections.add(IntersectModuleWithModuleId())
+        intersections.add(IntersectModuleWithModuleSet())
+        intersections.add(IntersectModuleWithModuleIdSet())
+        intersections.add(IntersectModuleWithGroupSet())
 
-        intersections.add(new IntersectModuleIdWithModuleId());
-        intersections.add(new IntersectModuleIdWithModuleIdSet());
-        intersections.add(new IntersectModuleIdWithModuleSet());
+        intersections.add(IntersectModuleIdWithModuleId())
+        intersections.add(IntersectModuleIdWithModuleIdSet())
+        intersections.add(IntersectModuleIdWithModuleSet())
 
-        intersections.add(new IntersectModuleIdSetWithModuleIdSet());
-        intersections.add(new IntersectModuleIdSetWithModuleSet());
+        intersections.add(IntersectModuleIdSetWithModuleIdSet())
+        intersections.add(IntersectModuleIdSetWithModuleSet())
 
-        intersections.add(new IntersectModuleSetWithModuleSet());
-        intersections.add(new IntersectModuleSetWithGroupSet());
+        intersections.add(IntersectModuleSetWithModuleSet())
+        intersections.add(IntersectModuleSetWithGroupSet())
     }
 
-    @Nullable
-    ExcludeSpec tryIntersect(ExcludeSpec left, ExcludeSpec right) {
-        if (left.equals(right)) {
-            return left;
+    fun tryIntersect(left: ExcludeSpec, right: ExcludeSpec): ExcludeSpec? {
+        if (left == right) {
+            return left
         } else {
             return intersections.stream()
-                .filter(i -> i.applies(left, right))
+                .filter { i: Intersection<out ExcludeSpec?, out ExcludeSpec?>? -> i!!.applies(left, right) }
                 .findFirst()
-                .map(i -> i.intersect(left, right, factory))
-                .orElse(null);
+                .map<ExcludeSpec?>(Function { i: Intersection<out ExcludeSpec?, out ExcludeSpec?>? -> i!!.intersect(left, right, factory) })
+                .orElse(null)
         }
     }
 
-    private final class IntersectAnyWithAny extends AbstractIntersection<ExcludeAnyOf, ExcludeAnyOf> {
-        public IntersectAnyWithAny() {
-            super(ExcludeAnyOf.class, ExcludeAnyOf.class);
-        }
+    private inner class IntersectAnyWithAny : AbstractIntersection<ExcludeAnyOf, ExcludeAnyOf>(ExcludeAnyOf::class.java, ExcludeAnyOf::class.java) {
+        public override fun doIntersect(left: ExcludeAnyOf, right: ExcludeAnyOf, factory: ExcludeFactory): ExcludeSpec {
+            val leftComponents = left.getComponents()
+            val rightComponents = right.getComponents()
 
-        @Override
-        public ExcludeSpec doIntersect(ExcludeAnyOf left, ExcludeAnyOf right, ExcludeFactory factory) {
-            PersistentSet<ExcludeSpec> leftComponents = left.getComponents();
-            PersistentSet<ExcludeSpec> rightComponents = right.getComponents();
-
-            PersistentSet<ExcludeSpec> common = leftComponents.intersect(rightComponents);
+            val common = leftComponents.intersect(rightComponents)
             if (!common.isEmpty()) {
-                ExcludeSpec alpha = factory.fromUnion(common);
-                if (leftComponents.equals(common) || rightComponents.equals(common)) {
-                    return alpha;
+                val alpha = factory.fromUnion(common)
+                if (leftComponents == common || rightComponents == common) {
+                    return alpha
                 }
-                PersistentSet<ExcludeSpec> remainderLeft = leftComponents.except(common);
-                PersistentSet<ExcludeSpec> remainderRight = rightComponents.except(common);
+                val remainderLeft = leftComponents.except(common)
+                val remainderRight = rightComponents.except(common)
 
-                ExcludeSpec unionLeft = factory.fromUnion(remainderLeft);
-                ExcludeSpec unionRight = factory.fromUnion(remainderRight);
-                ExcludeSpec beta = factory.allOf(unionLeft, unionRight);
-                return factory.anyOf(alpha, beta);
+                val unionLeft = factory.fromUnion(remainderLeft)
+                val unionRight = factory.fromUnion(remainderRight)
+                val beta = factory.allOf(unionLeft, unionRight)
+                return factory.anyOf(alpha, beta)
             } else {
                 // slowest path, full distribution
                 // (A ∪ B) ∩ (C ∪ D) = (A ∩ C) ∪ (A ∩ D) ∪ (B ∩ C) ∪ (B ∩ D)
-                PersistentSet<ExcludeSpec> intersections = PersistentSet.of();
-                for (ExcludeSpec leftSpec : leftComponents) {
-                    for (ExcludeSpec rightSpec : rightComponents) {
-                        ExcludeSpec merged = tryIntersect(leftSpec, rightSpec);
+                var intersections = PersistentSet.of<ExcludeSpec>()
+                for (leftSpec in leftComponents) {
+                    for (rightSpec in rightComponents) {
+                        var merged = tryIntersect(leftSpec, rightSpec)
                         if (merged == null) {
-                            merged = factory.allOf(leftSpec, rightSpec);
+                            merged = factory.allOf(leftSpec, rightSpec)
                         }
-                        if (!(merged instanceof ExcludeNothing)) {
-                            intersections = intersections.plus(merged);
+                        if (merged !is ExcludeNothing) {
+                            intersections = intersections.plus(merged)
                         }
                     }
                 }
-                return factory.fromUnion(intersections);
+                return factory.fromUnion(intersections)
             }
         }
     }
 
-    private final class IntersectAnyWithBaseSpec extends AbstractIntersection<ExcludeAnyOf, ExcludeSpec> {
-        private IntersectAnyWithBaseSpec() {
-            super(ExcludeAnyOf.class, ExcludeSpec.class);
-        }
-
-        @Override
-        @Nullable
-        public ExcludeSpec doIntersect(ExcludeAnyOf left, ExcludeSpec right, ExcludeFactory factory) {
+    private inner class IntersectAnyWithBaseSpec : AbstractIntersection<ExcludeAnyOf, ExcludeSpec>(ExcludeAnyOf::class.java, ExcludeSpec::class.java) {
+        public override fun doIntersect(left: ExcludeAnyOf, right: ExcludeSpec, factory: ExcludeFactory): ExcludeSpec? {
             // Here, we will distribute A ∩ (B ∪ C) if, and only if, at
             // least one of the distribution operations (A ∩ B) can be simplified
-            ExcludeSpec[] excludeSpecs = left.getComponents().toArray(new ExcludeSpec[0]);
-            @Nullable ExcludeSpec[] intersections = null;
-            for (int i = 0; i < excludeSpecs.length; i++) {
-                ExcludeSpec excludeSpec = tryIntersect(excludeSpecs[i], right);
+            val excludeSpecs = left.getComponents().toArray<ExcludeSpec>(arrayOfNulls<ExcludeSpec>(0))
+            var intersections: Array<ExcludeSpec?>? = null
+            for (i in excludeSpecs.indices) {
+                val excludeSpec = tryIntersect(excludeSpecs[i], right)
                 if (excludeSpec != null) {
                     if (intersections == null) {
-                        intersections = new ExcludeSpec[excludeSpecs.length];
+                        intersections = arrayOfNulls<ExcludeSpec>(excludeSpecs.size)
                     }
-                    intersections[i] = excludeSpec;
+                    intersections[i] = excludeSpec
                 }
             }
             if (intersections != null) {
-                PersistentSet<ExcludeSpec> simplified = PersistentSet.of();
-                for (int i = 0; i < intersections.length; i++) {
-                    ExcludeSpec intersection = intersections[i];
-                    if (intersection instanceof ExcludeNothing) {
-                        continue;
+                var simplified = PersistentSet.of<ExcludeSpec>()
+                for (i in intersections.indices) {
+                    val intersection = intersections[i]
+                    if (intersection is ExcludeNothing) {
+                        continue
                     }
                     if (intersection != null) {
-                        simplified = simplified.plus(intersection);
+                        simplified = simplified.plus(intersection)
                     } else {
-                        simplified = simplified.plus(factory.allOf(excludeSpecs[i], right));
+                        simplified = simplified.plus(factory.allOf(excludeSpecs[i], right))
                     }
                 }
-                return factory.fromUnion(simplified);
+                return factory.fromUnion(simplified)
             } else {
-                return null;
+                return null
             }
         }
 
-        @Override
-        public boolean applies(ExcludeSpec left, ExcludeSpec right) {
+        override fun applies(left: ExcludeSpec, right: ExcludeSpec): Boolean {
             // We want to use the more specific AnyWithAny intersection if possible
-            return (left instanceof ExcludeAnyOf && !(right instanceof ExcludeAnyOf))
-                || (right instanceof ExcludeAnyOf && !(left instanceof ExcludeAnyOf));
+            return (left is ExcludeAnyOf && right !is ExcludeAnyOf)
+                    || (right is ExcludeAnyOf && left !is ExcludeAnyOf)
         }
     }
 
-    private static final class IntersectGroupWithGroup extends AbstractIntersection<GroupExclude, GroupExclude> {
-        private IntersectGroupWithGroup() {
-            super(GroupExclude.class, GroupExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, GroupExclude right, ExcludeFactory factory) {
+    private class IntersectGroupWithGroup : AbstractIntersection<GroupExclude, GroupExclude>(GroupExclude::class.java, GroupExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: GroupExclude, factory: ExcludeFactory): ExcludeSpec {
             // equality has been tested before, so we know groups are different
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectGroupWithModuleId extends AbstractIntersection<GroupExclude, ModuleIdExclude> {
-        private IntersectGroupWithModuleId() {
-            super(GroupExclude.class, ModuleIdExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, ModuleIdExclude right, ExcludeFactory factory) {
-            String group = left.getGroup();
-            if (right.getModuleId().getGroup().equals(group)) {
-                return right;
+    private class IntersectGroupWithModuleId : AbstractIntersection<GroupExclude, ModuleIdExclude>(GroupExclude::class.java, ModuleIdExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: ModuleIdExclude, factory: ExcludeFactory): ExcludeSpec {
+            val group = left.getGroup()
+            if (right.getModuleId().getGroup() == group) {
+                return right
             } else {
-                return factory.nothing();
+                return factory.nothing()
             }
         }
     }
 
-    private static final class IntersectGroupWithGroupSet extends AbstractIntersection<GroupExclude, GroupSetExclude> {
-        private IntersectGroupWithGroupSet() {
-            super(GroupExclude.class, GroupSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, GroupSetExclude right, ExcludeFactory factory) {
-            String group = left.getGroup();
-            if (right.getGroups().anyMatch(g -> g.equals(group))) {
-                return left;
+    private class IntersectGroupWithGroupSet : AbstractIntersection<GroupExclude, GroupSetExclude>(GroupExclude::class.java, GroupSetExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: GroupSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val group = left.getGroup()
+            if (right.getGroups().anyMatch(Predicate { g: String? -> g == group })) {
+                return left
             }
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectGroupWithModuleIdSet extends AbstractIntersection<GroupExclude, ModuleIdSetExclude> {
-        private IntersectGroupWithModuleIdSet() {
-            super(GroupExclude.class, ModuleIdSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, ModuleIdSetExclude right, ExcludeFactory factory) {
-            String group = left.getGroup();
-            PersistentSet<ModuleIdentifier> moduleIds = right.getModuleIds().filter(id -> id.getGroup().equals(group));
-            return factory.fromModuleIds(moduleIds);
+    private class IntersectGroupWithModuleIdSet : AbstractIntersection<GroupExclude, ModuleIdSetExclude>(GroupExclude::class.java, ModuleIdSetExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: ModuleIdSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val group = left.getGroup()
+            val moduleIds = right.getModuleIds().filter(Predicate { id: ModuleIdentifier -> id.getGroup() == group })
+            return factory.fromModuleIds(moduleIds)
         }
     }
 
-    private static final class IntersectGroupWithModule extends AbstractIntersection<GroupExclude, ModuleExclude> {
-        private IntersectGroupWithModule() {
-            super(GroupExclude.class, ModuleExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, ModuleExclude right, ExcludeFactory factory) {
-            return factory.moduleId(DefaultModuleIdentifier.newId(left.getGroup(), right.getModule()));
+    private class IntersectGroupWithModule : AbstractIntersection<GroupExclude, ModuleExclude>(GroupExclude::class.java, ModuleExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: ModuleExclude, factory: ExcludeFactory): ExcludeSpec {
+            return factory.moduleId(DefaultModuleIdentifier.newId(left.getGroup(), right.getModule()))
         }
     }
 
-    private static final class IntersectGroupWithModuleSet extends AbstractIntersection<GroupExclude, ModuleSetExclude> {
-        private IntersectGroupWithModuleSet() {
-            super(GroupExclude.class, ModuleSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupExclude left, ModuleSetExclude right, ExcludeFactory factory) {
+    private class IntersectGroupWithModuleSet : AbstractIntersection<GroupExclude, ModuleSetExclude>(GroupExclude::class.java, ModuleSetExclude::class.java) {
+        public override fun doIntersect(left: GroupExclude, right: ModuleSetExclude, factory: ExcludeFactory): ExcludeSpec {
             return factory.moduleIdSet(
-                right.getModules().map(module -> DefaultModuleIdentifier.newId(left.getGroup(), module))
-            );
+                right.getModules().map<ModuleIdentifier>(Function { module: String? -> DefaultModuleIdentifier.newId(left.getGroup(), module!!) })
+            )
         }
     }
 
-    private static final class IntersectGroupSetWithGroupSet extends AbstractIntersection<GroupSetExclude, GroupSetExclude> {
-        private IntersectGroupSetWithGroupSet() {
-            super(GroupSetExclude.class, GroupSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupSetExclude left, GroupSetExclude right, ExcludeFactory factory) {
-            PersistentSet<String> groups = left.getGroups();
-            PersistentSet<String> common = right.getGroups().intersect(groups);
-            return factory.fromGroups(common);
+    private class IntersectGroupSetWithGroupSet : AbstractIntersection<GroupSetExclude, GroupSetExclude>(GroupSetExclude::class.java, GroupSetExclude::class.java) {
+        public override fun doIntersect(left: GroupSetExclude, right: GroupSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val groups = left.getGroups()
+            val common = right.getGroups().intersect(groups)
+            return factory.fromGroups(common)
         }
     }
 
-    private static final class IntersectGroupSetWithModuleId extends AbstractIntersection<GroupSetExclude, ModuleIdExclude> {
-        private IntersectGroupSetWithModuleId() {
-            super(GroupSetExclude.class, ModuleIdExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupSetExclude left, ModuleIdExclude right, ExcludeFactory factory) {
-            PersistentSet<String> groups = left.getGroups();
+    private class IntersectGroupSetWithModuleId : AbstractIntersection<GroupSetExclude, ModuleIdExclude>(GroupSetExclude::class.java, ModuleIdExclude::class.java) {
+        public override fun doIntersect(left: GroupSetExclude, right: ModuleIdExclude, factory: ExcludeFactory): ExcludeSpec {
+            val groups = left.getGroups()
             if (groups.contains(right.getModuleId().getGroup())) {
-                return right;
+                return right
             }
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectGroupSetWithModuleIdSet extends AbstractIntersection<GroupSetExclude, ModuleIdSetExclude> {
-        private IntersectGroupSetWithModuleIdSet() {
-            super(GroupSetExclude.class, ModuleIdSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(GroupSetExclude left, ModuleIdSetExclude right, ExcludeFactory factory) {
-            PersistentSet<String> groups = left.getGroups();
-            PersistentSet<ModuleIdentifier> filtered = right.getModuleIds()
-                .filter(id -> groups.contains(id.getGroup()));
-            return factory.fromModuleIds(filtered);
+    private class IntersectGroupSetWithModuleIdSet : AbstractIntersection<GroupSetExclude, ModuleIdSetExclude>(GroupSetExclude::class.java, ModuleIdSetExclude::class.java) {
+        public override fun doIntersect(left: GroupSetExclude, right: ModuleIdSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val groups = left.getGroups()
+            val filtered = right.getModuleIds()
+                .filter(Predicate { id: ModuleIdentifier -> groups.contains(id.getGroup()) })
+            return factory.fromModuleIds(filtered)
         }
     }
 
-    private static final class IntersectModuleWithModule extends AbstractIntersection<ModuleExclude, ModuleExclude> {
-        private IntersectModuleWithModule() {
-            super(ModuleExclude.class, ModuleExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleExclude left, ModuleExclude right, ExcludeFactory factory) {
-            String module = left.getModule();
-            if (right.getModule().equals(module)) {
-                return left;
+    private class IntersectModuleWithModule : AbstractIntersection<ModuleExclude, ModuleExclude>(ModuleExclude::class.java, ModuleExclude::class.java) {
+        public override fun doIntersect(left: ModuleExclude, right: ModuleExclude, factory: ExcludeFactory): ExcludeSpec {
+            val module = left.getModule()
+            if (right.getModule() == module) {
+                return left
             } else {
-                return factory.nothing();
+                return factory.nothing()
             }
         }
     }
 
-    private static final class IntersectModuleWithModuleId extends AbstractIntersection<ModuleExclude, ModuleIdExclude> {
-        private IntersectModuleWithModuleId() {
-            super(ModuleExclude.class, ModuleIdExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleExclude left, ModuleIdExclude right, ExcludeFactory factory) {
-            String module = left.getModule();
-            if (right.getModuleId().getName().equals(module)) {
-                return right;
+    private class IntersectModuleWithModuleId : AbstractIntersection<ModuleExclude, ModuleIdExclude>(ModuleExclude::class.java, ModuleIdExclude::class.java) {
+        public override fun doIntersect(left: ModuleExclude, right: ModuleIdExclude, factory: ExcludeFactory): ExcludeSpec {
+            val module = left.getModule()
+            if (right.getModuleId().getName() == module) {
+                return right
             } else {
-                return factory.nothing();
+                return factory.nothing()
             }
         }
     }
 
-    private static final class IntersectModuleWithModuleSet extends AbstractIntersection<ModuleExclude, ModuleSetExclude> {
-        private IntersectModuleWithModuleSet() {
-            super(ModuleExclude.class, ModuleSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleExclude left, ModuleSetExclude right, ExcludeFactory factory) {
-            String module = left.getModule();
-            if (right.getModules().anyMatch(g -> g.equals(module))) {
-                return left;
+    private class IntersectModuleWithModuleSet : AbstractIntersection<ModuleExclude, ModuleSetExclude>(ModuleExclude::class.java, ModuleSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleExclude, right: ModuleSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val module = left.getModule()
+            if (right.getModules().anyMatch(Predicate { g: String? -> g == module })) {
+                return left
             }
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectModuleWithModuleIdSet extends AbstractIntersection<ModuleExclude, ModuleIdSetExclude> {
-        private IntersectModuleWithModuleIdSet() {
-            super(ModuleExclude.class, ModuleIdSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleExclude left, ModuleIdSetExclude right, ExcludeFactory factory) {
-            String module = left.getModule();
-            PersistentSet<ModuleIdentifier> common = right.getModuleIds().filter(id -> id.getName().equals(module));
-            return factory.fromModuleIds(common);
+    private class IntersectModuleWithModuleIdSet : AbstractIntersection<ModuleExclude, ModuleIdSetExclude>(ModuleExclude::class.java, ModuleIdSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleExclude, right: ModuleIdSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val module = left.getModule()
+            val common = right.getModuleIds().filter(Predicate { id: ModuleIdentifier -> id.getName() == module })
+            return factory.fromModuleIds(common)
         }
     }
 
-    private static final class IntersectModuleIdWithModuleId extends AbstractIntersection<ModuleIdExclude, ModuleIdExclude> {
-        private IntersectModuleIdWithModuleId() {
-            super(ModuleIdExclude.class, ModuleIdExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleIdExclude left, ModuleIdExclude right, ExcludeFactory factory) {
-            if (left.equals(right)) {
-                return left;
+    private class IntersectModuleIdWithModuleId : AbstractIntersection<ModuleIdExclude, ModuleIdExclude>(ModuleIdExclude::class.java, ModuleIdExclude::class.java) {
+        public override fun doIntersect(left: ModuleIdExclude, right: ModuleIdExclude, factory: ExcludeFactory): ExcludeSpec {
+            if (left == right) {
+                return left
             }
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectModuleIdWithModuleIdSet extends AbstractIntersection<ModuleIdExclude, ModuleIdSetExclude> {
-        private IntersectModuleIdWithModuleIdSet() {
-            super(ModuleIdExclude.class, ModuleIdSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleIdExclude left, ModuleIdSetExclude right, ExcludeFactory factory) {
-            PersistentSet<ModuleIdentifier> rightModuleIds = right.getModuleIds();
+    private class IntersectModuleIdWithModuleIdSet : AbstractIntersection<ModuleIdExclude, ModuleIdSetExclude>(ModuleIdExclude::class.java, ModuleIdSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleIdExclude, right: ModuleIdSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val rightModuleIds = right.getModuleIds()
             if (rightModuleIds.contains(left.getModuleId())) {
-                return left;
+                return left
             }
-            return factory.nothing();
+            return factory.nothing()
         }
     }
 
-    private static final class IntersectModuleIdWithModuleSet extends AbstractIntersection<ModuleIdExclude, ModuleSetExclude> {
-        private IntersectModuleIdWithModuleSet() {
-            super(ModuleIdExclude.class, ModuleSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleIdExclude left, ModuleSetExclude right, ExcludeFactory factory) {
+    private class IntersectModuleIdWithModuleSet : AbstractIntersection<ModuleIdExclude, ModuleSetExclude>(ModuleIdExclude::class.java, ModuleSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleIdExclude, right: ModuleSetExclude, factory: ExcludeFactory): ExcludeSpec {
             if (right.getModules().contains(left.getModuleId().getName())) {
-                return left;
+                return left
             } else {
-                return factory.nothing();
+                return factory.nothing()
             }
         }
     }
 
-    private static final class IntersectModuleIdSetWithModuleIdSet extends AbstractIntersection<ModuleIdSetExclude, ModuleIdSetExclude> {
-        private IntersectModuleIdSetWithModuleIdSet() {
-            super(ModuleIdSetExclude.class, ModuleIdSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleIdSetExclude left, ModuleIdSetExclude right, ExcludeFactory factory) {
-            PersistentSet<ModuleIdentifier> moduleIds = left.getModuleIds();
-            PersistentSet<ModuleIdentifier> common = right.getModuleIds().intersect(moduleIds);
-            return factory.fromModuleIds(common);
+    private class IntersectModuleIdSetWithModuleIdSet : AbstractIntersection<ModuleIdSetExclude, ModuleIdSetExclude>(ModuleIdSetExclude::class.java, ModuleIdSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleIdSetExclude, right: ModuleIdSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val moduleIds = left.getModuleIds()
+            val common = right.getModuleIds().intersect(moduleIds)
+            return factory.fromModuleIds(common)
         }
     }
 
-    private static final class IntersectModuleIdSetWithModuleSet extends AbstractIntersection<ModuleIdSetExclude, ModuleSetExclude> {
-        private IntersectModuleIdSetWithModuleSet() {
-            super(ModuleIdSetExclude.class, ModuleSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleIdSetExclude left, ModuleSetExclude right, ExcludeFactory factory) {
-            PersistentSet<ModuleIdentifier> moduleIds = left.getModuleIds();
-            PersistentSet<String> modules = right.getModules();
-            PersistentSet<ModuleIdentifier> identifiers = moduleIds
-                .filter(e -> modules.contains(e.getName()));
+    private class IntersectModuleIdSetWithModuleSet : AbstractIntersection<ModuleIdSetExclude, ModuleSetExclude>(ModuleIdSetExclude::class.java, ModuleSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleIdSetExclude, right: ModuleSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val moduleIds = left.getModuleIds()
+            val modules = right.getModules()
+            val identifiers = moduleIds
+                .filter(Predicate { e: ModuleIdentifier -> modules.contains(e.getName()) })
             if (identifiers.isEmpty()) {
-                return factory.nothing();
+                return factory.nothing()
             }
             if (identifiers.size() == 1) {
-                return factory.moduleId(identifiers.iterator().next());
+                return factory.moduleId(identifiers.iterator().next())
             } else {
-                return factory.moduleIdSet(identifiers);
+                return factory.moduleIdSet(identifiers)
             }
         }
     }
 
-    private static final class IntersectModuleSetWithModuleSet extends AbstractIntersection<ModuleSetExclude, ModuleSetExclude> {
-        private IntersectModuleSetWithModuleSet() {
-            super(ModuleSetExclude.class, ModuleSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleSetExclude left, ModuleSetExclude right, ExcludeFactory factory) {
-            PersistentSet<String> modules = left.getModules().intersect(right.getModules());
+    private class IntersectModuleSetWithModuleSet : AbstractIntersection<ModuleSetExclude, ModuleSetExclude>(ModuleSetExclude::class.java, ModuleSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleSetExclude, right: ModuleSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            val modules = left.getModules().intersect(right.getModules())
             if (modules.isEmpty()) {
-                return factory.nothing();
+                return factory.nothing()
             }
             if (modules.size() == 1) {
-                return factory.module(modules.iterator().next());
+                return factory.module(modules.iterator().next())
             }
-            return factory.moduleSet(modules);
+            return factory.moduleSet(modules)
         }
     }
 
-    private static final class IntersectModuleSetWithGroupSet extends AbstractIntersection<ModuleSetExclude, GroupSetExclude> {
-        private IntersectModuleSetWithGroupSet() {
-            super(ModuleSetExclude.class, GroupSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleSetExclude left, GroupSetExclude right, ExcludeFactory factory) {
-            return factory.moduleIdSet(right.getGroups().flatMap(group -> left.getModules().map(module -> DefaultModuleIdentifier.newId(group, module))));
+    private class IntersectModuleSetWithGroupSet : AbstractIntersection<ModuleSetExclude, GroupSetExclude>(ModuleSetExclude::class.java, GroupSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleSetExclude, right: GroupSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            return factory.moduleIdSet(
+                right.getGroups().flatMap<ModuleIdentifier>(Function { group: String? -> left.getModules().map<Any>(Function { module: String? -> DefaultModuleIdentifier.newId(group, module!!) }) })
+            )
         }
     }
 
-    private static final class IntersectModuleWithGroupSet extends AbstractIntersection<ModuleExclude, GroupSetExclude> {
-        private IntersectModuleWithGroupSet() {
-            super(ModuleExclude.class, GroupSetExclude.class);
-        }
-
-        @Override
-        public ExcludeSpec doIntersect(ModuleExclude left, GroupSetExclude right, ExcludeFactory factory) {
-            return factory.moduleIdSet(right.getGroups().map(group -> DefaultModuleIdentifier.newId(group, left.getModule())));
+    private class IntersectModuleWithGroupSet : AbstractIntersection<ModuleExclude, GroupSetExclude>(ModuleExclude::class.java, GroupSetExclude::class.java) {
+        public override fun doIntersect(left: ModuleExclude, right: GroupSetExclude, factory: ExcludeFactory): ExcludeSpec {
+            return factory.moduleIdSet(right.getGroups().map<ModuleIdentifier>(Function { group: String? -> DefaultModuleIdentifier.newId(group, left.getModule()) }))
         }
     }
 }

@@ -13,84 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
+import org.gradle.internal.component.local.model.DefaultProjectComponentSelector
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.LocalComponentDependencyMetadata
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
+import org.gradle.util.internal.WrapUtil
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector;
-import org.gradle.internal.component.model.LocalComponentDependencyMetadata;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.gradle.util.internal.WrapUtil;
-import org.jspecify.annotations.Nullable;
+class DefaultDependencyMetadataFactory(vararg dependencyDescriptorFactories: DependencyMetadataConverter) : DependencyMetadataFactory {
+    private val dependencyDescriptorFactories: MutableList<DependencyMetadataConverter>
 
-import java.util.List;
-
-public class DefaultDependencyMetadataFactory implements DependencyMetadataFactory {
-    private final List<DependencyMetadataConverter> dependencyDescriptorFactories;
-
-    public DefaultDependencyMetadataFactory(DependencyMetadataConverter... dependencyDescriptorFactories) {
-        this.dependencyDescriptorFactories = WrapUtil.toList(dependencyDescriptorFactories);
+    init {
+        this.dependencyDescriptorFactories = WrapUtil.toList<DependencyMetadataConverter>(*dependencyDescriptorFactories)
     }
 
-    @Override
-    public LocalOriginDependencyMetadata createDependencyMetadata(ModuleDependency dependency) {
-        DependencyMetadataConverter factoryInternal = findFactoryForDependency(dependency);
-        return factoryInternal.createDependencyMetadata(dependency);
+    override fun createDependencyMetadata(dependency: ModuleDependency): LocalOriginDependencyMetadata {
+        val factoryInternal = findFactoryForDependency(dependency)
+        return factoryInternal.createDependencyMetadata(dependency)
     }
 
-    @Override
-    public LocalOriginDependencyMetadata createDependencyConstraintMetadata(DependencyConstraint dependencyConstraint) {
-        ComponentSelector selector = createSelector(dependencyConstraint);
-        return new LocalComponentDependencyMetadata(
+    override fun createDependencyConstraintMetadata(dependencyConstraint: DependencyConstraint): LocalOriginDependencyMetadata {
+        val selector = createSelector(dependencyConstraint)
+        return LocalComponentDependencyMetadata(
             selector,
             null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            ((DependencyConstraintInternal) dependencyConstraint).isForce(),
+            ImmutableList.of<IvyArtifactName>(),
+            ImmutableList.of<ExcludeMetadata>(),
+            (dependencyConstraint as DependencyConstraintInternal).isForce(),
             false,
             false,
             true,
             false,
             dependencyConstraint.getReason()
-        );
+        )
     }
 
-    private ComponentSelector createSelector(DependencyConstraint dependencyConstraint) {
-        if (dependencyConstraint instanceof DefaultProjectDependencyConstraint) {
-            ProjectDependencyInternal projectDependency = (ProjectDependencyInternal) ((DefaultProjectDependencyConstraint) dependencyConstraint).getProjectDependency();
+    private fun createSelector(dependencyConstraint: DependencyConstraint): ComponentSelector {
+        if (dependencyConstraint is DefaultProjectDependencyConstraint) {
+            val projectDependency = dependencyConstraint.projectDependency as ProjectDependencyInternal
 
-            return new DefaultProjectComponentSelector(
+            return DefaultProjectComponentSelector(
                 projectDependency.getTargetProjectIdentity(),
-                ((ImmutableAttributes) projectDependency.getAttributes()).asImmutable(),
-                ImmutableSet.of()
-            );
+                (projectDependency.getAttributes() as ImmutableAttributes).asImmutable(),
+                ImmutableSet.of<CapabilitySelector>()
+            )
         }
 
         return DefaultModuleComponentSelector.newSelector(
-            DefaultModuleIdentifier.newId(nullToEmpty(dependencyConstraint.getGroup()), nullToEmpty(dependencyConstraint.getName())), dependencyConstraint.getVersionConstraint(), dependencyConstraint.getAttributes(), ImmutableSet.of());
+            DefaultModuleIdentifier.newId(nullToEmpty(dependencyConstraint.getGroup()), nullToEmpty(dependencyConstraint.getName())),
+            dependencyConstraint.getVersionConstraint(),
+            dependencyConstraint.getAttributes(),
+            ImmutableSet.of<E>()
+        )
     }
 
-    private DependencyMetadataConverter findFactoryForDependency(ModuleDependency dependency) {
-        for (DependencyMetadataConverter dependencyMetadataConverter : dependencyDescriptorFactories) {
+    private fun findFactoryForDependency(dependency: ModuleDependency): DependencyMetadataConverter {
+        for (dependencyMetadataConverter in dependencyDescriptorFactories) {
             if (dependencyMetadataConverter.canConvert(dependency)) {
-                return dependencyMetadataConverter;
+                return dependencyMetadataConverter
             }
         }
-        throw new InvalidUserDataException("Can't map dependency of type: " + dependency.getClass());
+        throw InvalidUserDataException("Can't map dependency of type: " + dependency.javaClass)
     }
 
-    private String nullToEmpty(@Nullable String input) {
-        return input == null ? "" : input;
+    private fun nullToEmpty(input: String?): String {
+        return if (input == null) "" else input
     }
 }

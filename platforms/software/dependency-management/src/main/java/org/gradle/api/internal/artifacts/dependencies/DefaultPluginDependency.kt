@@ -13,60 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.plugin.use.PluginDependency;
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.plugin.use.PluginDependency
 
-public class DefaultPluginDependency implements PluginDependency {
-    private final String pluginId;
-    private final MutableVersionConstraint versionConstraint;
-
-    public DefaultPluginDependency(String pluginId, MutableVersionConstraint versionConstraint) {
-        this.pluginId = pluginId;
-        this.versionConstraint = versionConstraint;
+class DefaultPluginDependency(private val pluginId: String, private val versionConstraint: MutableVersionConstraint) : PluginDependency {
+    override fun getPluginId(): String {
+        return pluginId
     }
 
-    @Override
-    public String getPluginId() {
-        return pluginId;
+    override fun getVersion(): VersionConstraint {
+        return versionConstraint
     }
 
-    @Override
-    public VersionConstraint getVersion() {
-        return versionConstraint;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultPluginDependency that = (DefaultPluginDependency) o;
+        val that = o as DefaultPluginDependency
 
-        if (!pluginId.equals(that.pluginId)) {
-            return false;
+        if (pluginId != that.pluginId) {
+            return false
         }
-        return versionConstraint.equals(that.versionConstraint);
+        return versionConstraint == that.versionConstraint
     }
 
-    @Override
-    public int hashCode() {
-        int result = pluginId.hashCode();
-        result = 31 * result + versionConstraint.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = pluginId.hashCode()
+        result = 31 * result + versionConstraint.hashCode()
+        return result
     }
 
-    @Override
-    public String toString() {
-        String versionConstraintAsString = versionConstraint.toString();
-        return versionConstraintAsString.isEmpty()
-            ? pluginId
-            : pluginId + ":" + versionConstraintAsString;
+    override fun toString(): String {
+        val versionConstraintAsString = versionConstraint.toString()
+        return if (versionConstraintAsString.isEmpty())
+            pluginId
+        else
+            pluginId + ":" + versionConstraintAsString
     }
 }

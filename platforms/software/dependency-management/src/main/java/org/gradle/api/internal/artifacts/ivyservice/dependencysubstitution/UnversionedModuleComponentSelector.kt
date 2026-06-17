@@ -13,73 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.Collections;
-import java.util.List;
-
-class UnversionedModuleComponentSelector implements ComponentSelectorInternal {
-
-    private final ModuleIdentifier moduleIdentifier;
-
-    UnversionedModuleComponentSelector(ModuleIdentifier id) {
-        this.moduleIdentifier = id;
+internal class UnversionedModuleComponentSelector(val moduleIdentifier: ModuleIdentifier) : ComponentSelectorInternal {
+    override fun getDisplayName(): String {
+        return moduleIdentifier.toString() + ":*"
     }
 
-    public ModuleIdentifier getModuleIdentifier() {
-        return moduleIdentifier;
+    override fun matchesStrictly(identifier: ComponentIdentifier): Boolean {
+        return false
     }
 
-    @Override
-    public String getDisplayName() {
-        return moduleIdentifier.toString() + ":*";
+    override fun getAttributes(): ImmutableAttributes {
+        return ImmutableAttributes.EMPTY
     }
 
-    @Override
-    public boolean matchesStrictly(ComponentIdentifier identifier) {
-        return false;
+    override fun getRequestedCapabilities(): MutableList<Capability> {
+        return mutableListOf<Capability>()
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return ImmutableAttributes.EMPTY;
+    override fun getCapabilitySelectors(): ImmutableSet<CapabilitySelector> {
+        return ImmutableSet.of<CapabilitySelector>()
     }
 
-    @Override
-    public List<Capability> getRequestedCapabilities() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public ImmutableSet<CapabilitySelector> getCapabilitySelectors() {
-        return ImmutableSet.of();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        UnversionedModuleComponentSelector that = (UnversionedModuleComponentSelector) o;
-        return Objects.equal(moduleIdentifier, that.moduleIdentifier);
+        val that = o as UnversionedModuleComponentSelector
+        return Objects.equal(moduleIdentifier, that.moduleIdentifier)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(moduleIdentifier);
+    override fun hashCode(): Int {
+        return Objects.hashCode(moduleIdentifier)
     }
-
 }

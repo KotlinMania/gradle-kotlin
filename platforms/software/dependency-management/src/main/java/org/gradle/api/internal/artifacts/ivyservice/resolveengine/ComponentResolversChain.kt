@@ -13,140 +13,123 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ErrorHandlingArtifactResolver;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult;
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ErrorHandlingArtifactResolver
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.resolver.ArtifactResolver
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult
+import org.gradle.internal.resolve.result.BuildableComponentResolveResult
 
 /**
  * A factory for the various resolver services backed by a chain of repositories.
  */
-public class ComponentResolversChain implements ComponentResolvers {
-    private final DependencyToComponentIdResolverChain dependencyToComponentIdResolver;
-    private final ComponentMetaDataResolverChain componentMetaDataResolver;
-    private final ArtifactResolver artifactResolverChain;
+class ComponentResolversChain(providers: MutableList<ComponentResolvers>) : ComponentResolvers {
+    private val dependencyToComponentIdResolver: DependencyToComponentIdResolverChain
+    private val componentMetaDataResolver: ComponentMetaDataResolverChain
+    private val artifactResolverChain: ArtifactResolver
 
-    public ComponentResolversChain(List<ComponentResolvers> providers) {
-        List<DependencyToComponentIdResolver> depToComponentIdResolvers = new ArrayList<>(providers.size());
-        List<ComponentMetaDataResolver> componentMetaDataResolvers = new ArrayList<>(1 + providers.size());
-        componentMetaDataResolvers.add(VirtualComponentMetadataResolver.INSTANCE);
-        List<ArtifactResolver> artifactResolvers = new ArrayList<>(providers.size());
-        for (ComponentResolvers provider : providers) {
-            depToComponentIdResolvers.add(provider.getComponentIdResolver());
-            componentMetaDataResolvers.add(provider.getComponentResolver());
-            artifactResolvers.add(provider.getArtifactResolver());
+    init {
+        val depToComponentIdResolvers: MutableList<DependencyToComponentIdResolver> = ArrayList<DependencyToComponentIdResolver>(providers.size)
+        val componentMetaDataResolvers: MutableList<ComponentMetaDataResolver> = ArrayList<ComponentMetaDataResolver>(1 + providers.size)
+        componentMetaDataResolvers.add(VirtualComponentMetadataResolver.Companion.INSTANCE)
+        val artifactResolvers: MutableList<ArtifactResolver> = ArrayList<ArtifactResolver>(providers.size)
+        for (provider in providers) {
+            depToComponentIdResolvers.add(provider.componentIdResolver)
+            componentMetaDataResolvers.add(provider.componentResolver)
+            artifactResolvers.add(provider.artifactResolver)
         }
-        dependencyToComponentIdResolver = new DependencyToComponentIdResolverChain(depToComponentIdResolvers);
-        componentMetaDataResolver = new ComponentMetaDataResolverChain(componentMetaDataResolvers);
-        artifactResolverChain = new ErrorHandlingArtifactResolver(new ArtifactResolverChain(artifactResolvers));
+        dependencyToComponentIdResolver = DependencyToComponentIdResolverChain(depToComponentIdResolvers)
+        componentMetaDataResolver = ComponentMetaDataResolverChain(componentMetaDataResolvers)
+        artifactResolverChain = ErrorHandlingArtifactResolver(ArtifactResolverChain(artifactResolvers))
     }
 
-    @Override
-    public DependencyToComponentIdResolver getComponentIdResolver() {
-        return dependencyToComponentIdResolver;
+    override fun getComponentIdResolver(): DependencyToComponentIdResolver {
+        return dependencyToComponentIdResolver
     }
 
-    @Override
-    public ComponentMetaDataResolver getComponentResolver() {
-        return componentMetaDataResolver;
+    override fun getComponentResolver(): ComponentMetaDataResolver {
+        return componentMetaDataResolver
     }
 
-    @Override
-    public ArtifactResolver getArtifactResolver() {
-        return artifactResolverChain;
+    override fun getArtifactResolver(): ArtifactResolver {
+        return artifactResolverChain
     }
 
-    private static class ComponentMetaDataResolverChain implements ComponentMetaDataResolver {
-        private final List<ComponentMetaDataResolver> resolvers;
-
-        public ComponentMetaDataResolverChain(List<ComponentMetaDataResolver> resolvers) {
-            this.resolvers = resolvers;
-        }
-
-        @Override
-        public void resolve(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata, BuildableComponentResolveResult result) {
-            for (ComponentMetaDataResolver resolver : resolvers) {
+    private class ComponentMetaDataResolverChain(private val resolvers: MutableList<ComponentMetaDataResolver>) : ComponentMetaDataResolver {
+        override fun resolve(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata, result: BuildableComponentResolveResult) {
+            for (resolver in resolvers) {
                 if (result.hasResult()) {
-                    return;
+                    return
                 }
-                resolver.resolve(identifier, componentOverrideMetadata, result);
+                resolver.resolve(identifier, componentOverrideMetadata, result)
             }
         }
 
-        @Override
-        public boolean isFetchingMetadataCheap(ComponentIdentifier identifier) {
-            for (ComponentMetaDataResolver resolver : resolvers) {
+        override fun isFetchingMetadataCheap(identifier: ComponentIdentifier): Boolean {
+            for (resolver in resolvers) {
                 if (!resolver.isFetchingMetadataCheap(identifier)) {
-                    return false;
+                    return false
                 }
             }
-            return true;
+            return true
         }
     }
 
-    private static class ArtifactResolverChain implements ArtifactResolver {
-        private final List<ArtifactResolver> resolvers;
-
-        private ArtifactResolverChain(List<ArtifactResolver> resolvers) {
-            this.resolvers = resolvers;
-        }
-
-        @Override
-        public void resolveArtifact(ComponentArtifactResolveMetadata component, ComponentArtifactMetadata artifact, BuildableArtifactResolveResult result) {
-            for (ArtifactResolver resolver : resolvers) {
+    private class ArtifactResolverChain(private val resolvers: MutableList<ArtifactResolver>) : ArtifactResolver {
+        override fun resolveArtifact(component: ComponentArtifactResolveMetadata, artifact: ComponentArtifactMetadata, result: BuildableArtifactResolveResult) {
+            for (resolver in resolvers) {
                 if (result.hasResult()) {
-                    return;
+                    return
                 }
-                resolver.resolveArtifact(component, artifact, result);
+                resolver.resolveArtifact(component, artifact, result)
             }
         }
 
-        @Override
-        public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-            for (ArtifactResolver resolver : resolvers) {
+        override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
+            for (resolver in resolvers) {
                 if (result.hasResult()) {
-                    return;
+                    return
                 }
-                resolver.resolveArtifactsWithType(component, artifactType, result);
+                resolver.resolveArtifactsWithType(component, artifactType, result)
             }
         }
     }
 
-    private static class DependencyToComponentIdResolverChain implements DependencyToComponentIdResolver {
+    private class DependencyToComponentIdResolverChain(resolvers: MutableList<DependencyToComponentIdResolver>) : DependencyToComponentIdResolver {
         // Using an array here because we're going to iterate pretty often and it avoids the creation of an iterator
         // that checks for concurrent modification
-        private final DependencyToComponentIdResolver[] resolvers;
+        private val resolvers: Array<DependencyToComponentIdResolver>
 
-        public DependencyToComponentIdResolverChain(List<DependencyToComponentIdResolver> resolvers) {
-            this.resolvers = resolvers.toArray(new DependencyToComponentIdResolver[0]);
+        init {
+            this.resolvers = resolvers.toTypedArray<DependencyToComponentIdResolver>()
         }
 
-        @Override
-        public void resolve(ComponentSelector selector, ComponentOverrideMetadata overrideMetadata, VersionSelector acceptor, @Nullable VersionSelector rejector, BuildableComponentIdResolveResult result, ImmutableAttributes consumerAttributes) {
-            for (DependencyToComponentIdResolver resolver : resolvers) {
+        override fun resolve(
+            selector: ComponentSelector,
+            overrideMetadata: ComponentOverrideMetadata,
+            acceptor: VersionSelector,
+            rejector: VersionSelector?,
+            result: BuildableComponentIdResolveResult,
+            consumerAttributes: ImmutableAttributes
+        ) {
+            for (resolver in resolvers) {
                 if (result.hasResult()) {
-                    return;
+                    return
                 }
-                resolver.resolve(selector, overrideMetadata, acceptor, rejector, result, consumerAttributes);
+                resolver.resolve(selector, overrideMetadata, acceptor, rejector, result, consumerAttributes)
             }
         }
     }

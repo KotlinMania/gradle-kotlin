@@ -13,96 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.Module;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider;
-import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveMetadata;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.configurations.ConfigurationsProvider
+import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.api.internal.project.ProjectState
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveMetadata
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Provides the component that owns the root variant of a resolved configuration within a project.
- * <p>
- * TODO #1629: This should be replaced with {@link AdhocRootComponentProvider} and
- *  all resolved configurations should live within an adhoc root component.
+ *
+ *
+ * TODO #1629: This should be replaced with [AdhocRootComponentProvider] and
+ * all resolved configurations should live within an adhoc root component.
  */
-@ServiceScope(Scope.Project.class)
-public class ProjectRootComponentProvider implements RootComponentProvider {
-
-    // Services
-    private final ProjectState owner;
-    private final DependencyMetaDataProvider componentIdentity;
-    private final AttributesSchemaInternal schema;
-    private final ConfigurationsProvider configurationsProvider;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final LocalComponentGraphResolveStateFactory localResolveStateFactory;
-    private final ImmutableAttributesSchemaFactory attributesSchemaFactory;
-    private final AdhocRootComponentProvider adhocRootComponentProvider;
-
+@ServiceScope(Scope.Project::class)
+class ProjectRootComponentProvider(// Services
+    private val owner: ProjectState,
+    private val componentIdentity: DependencyMetaDataProvider,
+    private val schema: AttributesSchemaInternal,
+    private val configurationsProvider: ConfigurationsProvider,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val localResolveStateFactory: LocalComponentGraphResolveStateFactory,
+    private val attributesSchemaFactory: ImmutableAttributesSchemaFactory,
+    private val adhocRootComponentProvider: AdhocRootComponentProvider
+) : RootComponentProvider {
     // State
-    private @Nullable LocalComponentGraphResolveState cachedValue;
+    private var cachedValue: LocalComponentGraphResolveState? = null
 
-    public ProjectRootComponentProvider(
-        ProjectState owner,
-        DependencyMetaDataProvider componentIdentity,
-        AttributesSchemaInternal schema,
-        ConfigurationsProvider configurationsProvider,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        LocalComponentGraphResolveStateFactory localResolveStateFactory,
-        ImmutableAttributesSchemaFactory attributesSchemaFactory,
-        AdhocRootComponentProvider adhocRootComponentProvider
-    ) {
-        this.owner = owner;
-        this.componentIdentity = componentIdentity;
-        this.schema = schema;
-        this.configurationsProvider = configurationsProvider;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.localResolveStateFactory = localResolveStateFactory;
-        this.attributesSchemaFactory = attributesSchemaFactory;
-        this.adhocRootComponentProvider = adhocRootComponentProvider;
-    }
-
-    @Override
-    public LocalComponentGraphResolveState getRootComponent(boolean detached) {
+    override fun getRootComponent(detached: Boolean): LocalComponentGraphResolveState {
         if (detached) {
-            return adhocRootComponentProvider.getRootComponent(true);
+            return adhocRootComponentProvider.getRootComponent(true)
         }
 
         if (cachedValue == null) {
-            this.cachedValue = createProjectRootComponent();
+            this.cachedValue = createProjectRootComponent()
         }
 
-        return cachedValue;
+        return cachedValue!!
     }
 
-    private LocalComponentGraphResolveState createProjectRootComponent() {
-        Module module = componentIdentity.getModule();
+    private fun createProjectRootComponent(): LocalComponentGraphResolveState {
+        val module = componentIdentity.module
 
-        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group, module.name, module.version);
-        ComponentIdentifier componentIdentifier = owner.getComponentIdentifier();
-        String status = module.status;
-        ImmutableAttributesSchema immutableSchema = attributesSchemaFactory.create(schema);
+        val moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group!!, module.name!!, module.version!!)
+        val componentIdentifier: ComponentIdentifier = owner.getComponentIdentifier()
+        val status: String = module.status!!
+        val immutableSchema = attributesSchemaFactory.create(schema)
 
-        LocalComponentGraphResolveMetadata metadata = new LocalComponentGraphResolveMetadata(
-            moduleVersionId,
+        val metadata = LocalComponentGraphResolveMetadata(
+            moduleVersionId!!,
             componentIdentifier,
             status,
             immutableSchema
-        );
+        )
 
-        return localResolveStateFactory.stateFor(owner, metadata, configurationsProvider);
+        return localResolveStateFactory.stateFor(owner, metadata, configurationsProvider)
     }
-
 }

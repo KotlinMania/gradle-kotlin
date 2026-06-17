@@ -13,225 +13,196 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExternalModuleDependencyBundle
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.dsl.DependencyConstraintHandler
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Category
+import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal
+import org.gradle.api.internal.provider.ProviderInternal
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderConvertible
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.metaobject.MethodAccess
+import org.gradle.internal.metaobject.MethodMixIn
+import org.gradle.util.internal.ConfigureUtil
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExternalModuleDependencyBundle;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.dsl.DependencyConstraintHandler;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal;
-import org.gradle.api.internal.provider.ProviderInternal;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderConvertible;
-import org.gradle.internal.Cast;
-import org.gradle.internal.metaobject.MethodAccess;
-import org.gradle.internal.metaobject.MethodMixIn;
-import org.gradle.util.internal.ConfigureUtil;
-import org.jspecify.annotations.Nullable;
+class DefaultDependencyConstraintHandler(
+    private val configurationContainer: ConfigurationContainer,
+    private val dependencyConstraintFactory: DependencyConstraintFactoryInternal,
+    private val platformSupport: PlatformSupport
+) : DependencyConstraintHandler, MethodMixIn {
+    private val dynamicMethods: DynamicAddDependencyMethods
 
-public class DefaultDependencyConstraintHandler implements DependencyConstraintHandler, MethodMixIn {
-    private final static DependencyConstraint DUMMY_CONSTRAINT = new DependencyConstraint() {
-        private InvalidUserCodeException shouldNotBeCalled() {
-            return new InvalidUserCodeException("You shouldn't use a dependency constraint created via a Provider directly");
-        }
-
-        @Override
-        public void version(Action<? super MutableVersionConstraint> configureAction) {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public String getReason() {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public void because(@Nullable String reason) {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public AttributeContainer getAttributes() {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public DependencyConstraint attributes(Action<? super AttributeContainer> configureAction) {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public VersionConstraint getVersionConstraint() {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public String getGroup() {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public String getName() {
-            throw shouldNotBeCalled();
-        }
-
-        @Nullable
-        @Override
-        public String getVersion() {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public boolean matchesStrictly(ModuleVersionIdentifier identifier) {
-            throw shouldNotBeCalled();
-        }
-
-        @Override
-        public ModuleIdentifier getModule() {
-            throw shouldNotBeCalled();
-        }
-    };
-    private final ConfigurationContainer configurationContainer;
-    private final DependencyConstraintFactoryInternal dependencyConstraintFactory;
-    private final DynamicAddDependencyMethods dynamicMethods;
-    private final PlatformSupport platformSupport;
-
-    public DefaultDependencyConstraintHandler(ConfigurationContainer configurationContainer,
-                                              DependencyConstraintFactoryInternal dependencyConstraintFactory,
-                                              PlatformSupport platformSupport) {
-        this.configurationContainer = configurationContainer;
-        this.dependencyConstraintFactory = dependencyConstraintFactory;
-        this.dynamicMethods = new DynamicAddDependencyMethods(configurationContainer, new DependencyConstraintAdder());
-        this.platformSupport = platformSupport;
+    init {
+        this.dynamicMethods = DynamicAddDependencyMethods(configurationContainer, DefaultDependencyConstraintHandler.DependencyConstraintAdder())
     }
 
-    @Override
-    public DependencyConstraint add(String configurationName, Object dependencyNotation) {
-        return doAdd(configurationContainer.getByName(configurationName), dependencyNotation, null);
+    override fun add(configurationName: String, dependencyNotation: Any): DependencyConstraint {
+        return doAdd(configurationContainer.getByName(configurationName), dependencyNotation, null)
     }
 
-    @Override
-    public DependencyConstraint add(String configurationName, Object dependencyNotation, Action<? super DependencyConstraint> configureAction) {
-        return doAdd(configurationContainer.getByName(configurationName), dependencyNotation, configureAction);
+    override fun add(configurationName: String, dependencyNotation: Any, configureAction: Action<in DependencyConstraint>): DependencyConstraint {
+        return doAdd(configurationContainer.getByName(configurationName), dependencyNotation, configureAction)
     }
 
-    @Override
-    public <T> void addProvider(String configurationName, Provider<T> dependencyNotation) {
-        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation, null);
+    override fun <T> addProvider(configurationName: String, dependencyNotation: Provider<T?>) {
+        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation, null)
     }
 
-    @Override
-    public <T> void addProvider(String configurationName, Provider<T> dependencyNotation, Action<? super DependencyConstraint> configureAction) {
-        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation, configureAction);
+    override fun <T> addProvider(configurationName: String, dependencyNotation: Provider<T?>, configureAction: Action<in DependencyConstraint>) {
+        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation, configureAction)
     }
 
-    @Override
-    public <T> void addProviderConvertible(String configurationName, ProviderConvertible<T> dependencyNotation) {
-        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation.asProvider(), null);
+    override fun <T> addProviderConvertible(configurationName: String, dependencyNotation: ProviderConvertible<T?>) {
+        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation.asProvider(), null)
     }
 
-    @Override
-    public <T> void addProviderConvertible(String configurationName, ProviderConvertible<T> dependencyNotation, Action<? super DependencyConstraint> configureAction) {
-        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation.asProvider(), configureAction);
+    override fun <T> addProviderConvertible(configurationName: String, dependencyNotation: ProviderConvertible<T?>, configureAction: Action<in DependencyConstraint>) {
+        doAddProvider(configurationContainer.getByName(configurationName), dependencyNotation.asProvider(), configureAction)
     }
 
-    @Override
-    public DependencyConstraint create(Object dependencyNotation) {
-        return doCreate(dependencyNotation, null);
+    override fun create(dependencyNotation: Any): DependencyConstraint {
+        return doCreate(dependencyNotation, null)
     }
 
-    @Override
-    public DependencyConstraint create(Object dependencyNotation, Action<? super DependencyConstraint> configureAction) {
-        return doCreate(dependencyNotation, configureAction);
+    override fun create(dependencyNotation: Any, configureAction: Action<in DependencyConstraint>): DependencyConstraint {
+        return doCreate(dependencyNotation, configureAction)
     }
 
-    @Override
-    public DependencyConstraint enforcedPlatform(Object notation) {
-        DependencyConstraintInternal platformDependency = (DependencyConstraintInternal) create(notation);
-        platformDependency.setForce(true);
-        platformSupport.addPlatformAttribute(platformDependency, Category.ENFORCED_PLATFORM);
-        return platformDependency;
+    override fun enforcedPlatform(notation: Any): DependencyConstraint {
+        val platformDependency = create(notation) as DependencyConstraintInternal
+        platformDependency.setForce(true)
+        platformSupport.addPlatformAttribute<DependencyConstraint>(platformDependency, Category.ENFORCED_PLATFORM)
+        return platformDependency
     }
 
-    @Override
-    public DependencyConstraint enforcedPlatform(Object notation, Action<? super DependencyConstraint> configureAction) {
-        DependencyConstraint dep = enforcedPlatform(notation);
-        configureAction.execute(dep);
-        return dep;
+    override fun enforcedPlatform(notation: Any, configureAction: Action<in DependencyConstraint>): DependencyConstraint {
+        val dep = enforcedPlatform(notation)
+        configureAction.execute(dep)
+        return dep
     }
 
-    private DependencyConstraint doCreate(Object dependencyNotation, @Nullable Action<? super DependencyConstraint> configureAction) {
-        DependencyConstraint dependencyConstraint = dependencyConstraintFactory.createDependencyConstraint(dependencyNotation);
+    private fun doCreate(dependencyNotation: Any, configureAction: Action<in DependencyConstraint>?): DependencyConstraint {
+        val dependencyConstraint = dependencyConstraintFactory.createDependencyConstraint(dependencyNotation)
         if (configureAction != null) {
-            configureAction.execute(dependencyConstraint);
+            configureAction.execute(dependencyConstraint)
         }
-        return dependencyConstraint;
+        return dependencyConstraint
     }
 
-    private DependencyConstraint doAdd(Configuration configuration, Object dependencyNotation, @Nullable Action<? super DependencyConstraint> configureAction) {
-        if(dependencyNotation instanceof ProviderConvertible<?>) {
-            return doAddProvider(configuration, ((ProviderConvertible<?>) dependencyNotation).asProvider(), configureAction);
+    private fun doAdd(configuration: Configuration, dependencyNotation: Any, configureAction: Action<in DependencyConstraint>?): DependencyConstraint {
+        if (dependencyNotation is ProviderConvertible<*>) {
+            return doAddProvider(configuration, dependencyNotation.asProvider(), configureAction)
         }
-        if (dependencyNotation instanceof Provider<?>) {
-            return doAddProvider(configuration, (Provider<?>) dependencyNotation, configureAction);
+        if (dependencyNotation is Provider<*>) {
+            return doAddProvider(configuration, dependencyNotation, configureAction)
         }
-        DependencyConstraint dependency = doCreate(dependencyNotation, configureAction);
-        configuration.getDependencyConstraints().add(dependency);
-        return dependency;
+        val dependency = doCreate(dependencyNotation, configureAction)
+        configuration.getDependencyConstraints().add(dependency)
+        return dependency
     }
 
-    private DependencyConstraint doAddProvider(Configuration configuration, Provider<?> dependencyNotation, @Nullable Action<? super DependencyConstraint> configureAction) {
-        if (dependencyNotation instanceof ProviderInternal<?>) {
-            ProviderInternal<?> provider = (ProviderInternal<?>) dependencyNotation;
-            if (provider.getType() != null && ExternalModuleDependencyBundle.class.isAssignableFrom(provider.getType())) {
-                ExternalModuleDependencyBundle bundle = Cast.uncheckedCast(provider.get());
-                for (MinimalExternalModuleDependency dependency : bundle) {
-                    doAdd(configuration, dependency, configureAction);
+    private fun doAddProvider(configuration: Configuration, dependencyNotation: Provider<*>, configureAction: Action<in DependencyConstraint>?): DependencyConstraint {
+        if (dependencyNotation is ProviderInternal<*>) {
+            val provider = dependencyNotation
+            if (provider.getType() != null && ExternalModuleDependencyBundle::class.java.isAssignableFrom(provider.getType())) {
+                val bundle: ExternalModuleDependencyBundle = uncheckedCast<ExternalModuleDependencyBundle?>(provider.get())!!
+                for (dependency in bundle) {
+                    doAdd(configuration, dependency, configureAction)
                 }
-                return DUMMY_CONSTRAINT;
+                return DUMMY_CONSTRAINT
             }
         }
-        Provider<DependencyConstraint> lazyConstraint = dependencyNotation.map(mapDependencyConstraintProvider(configureAction));
-        configuration.getDependencyConstraints().addLater(lazyConstraint);
+        val lazyConstraint = dependencyNotation.map<DependencyConstraint>(mapDependencyConstraintProvider(configureAction))
+        configuration.getDependencyConstraints().addLater(lazyConstraint)
         // Return a fake dependency constraint object to satisfy Kotlin DSL backwards compatibility
-        return DUMMY_CONSTRAINT;
+        return DUMMY_CONSTRAINT
     }
 
-    private <T> Transformer<DependencyConstraint, T> mapDependencyConstraintProvider(@Nullable Action<? super DependencyConstraint> configurationAction) {
-        return lazyNotation -> doCreate(lazyNotation, configurationAction);
+    private fun <T> mapDependencyConstraintProvider(configurationAction: Action<in DependencyConstraint>?): Transformer<DependencyConstraint, T?> {
+        return Transformer { lazyNotation: T? -> doCreate(lazyNotation!!, configurationAction) }
     }
 
-    @Override
-    public MethodAccess getAdditionalMethods() {
-        return dynamicMethods;
+    override fun getAdditionalMethods(): MethodAccess {
+        return dynamicMethods
     }
 
-    private class DependencyConstraintAdder implements DynamicAddDependencyMethods.DependencyAdder<DependencyConstraint> {
-        @Override
-        @SuppressWarnings("rawtypes")
-        public DependencyConstraint add(Configuration configuration, Object dependencyNotation, Closure configureClosure) {
-            if(dependencyNotation instanceof ProviderConvertible<?>) {
-                return doAddProvider(configuration, ((ProviderConvertible<?>) dependencyNotation).asProvider(), ConfigureUtil.configureUsing(configureClosure));
+    private inner class DependencyConstraintAdder : DynamicAddDependencyMethods.DependencyAdder<DependencyConstraint?> {
+        override fun add(configuration: Configuration, dependencyNotation: Any, configureClosure: Closure<*>): DependencyConstraint {
+            if (dependencyNotation is ProviderConvertible<*>) {
+                return doAddProvider(configuration, dependencyNotation.asProvider(), ConfigureUtil.configureUsing<DependencyConstraint>(configureClosure))
             }
-            if (dependencyNotation instanceof Provider<?>) {
-                return doAddProvider(configuration, (Provider<?>) dependencyNotation, ConfigureUtil.configureUsing(configureClosure));
+            if (dependencyNotation is Provider<*>) {
+                return doAddProvider(configuration, dependencyNotation, ConfigureUtil.configureUsing<DependencyConstraint>(configureClosure))
             }
-            DependencyConstraint dependencyConstraint = ConfigureUtil.configure(configureClosure, dependencyConstraintFactory.createDependencyConstraint(dependencyNotation));
-            configuration.getDependencyConstraints().add(dependencyConstraint);
-            return dependencyConstraint;
+            val dependencyConstraint = ConfigureUtil.configure<DependencyConstraint>(configureClosure, dependencyConstraintFactory.createDependencyConstraint(dependencyNotation))
+            configuration.getDependencyConstraints().add(dependencyConstraint)
+            return dependencyConstraint
+        }
+    }
+
+    companion object {
+        private val DUMMY_CONSTRAINT: DependencyConstraint = object : DependencyConstraint {
+            private fun shouldNotBeCalled(): InvalidUserCodeException {
+                return InvalidUserCodeException("You shouldn't use a dependency constraint created via a Provider directly")
+            }
+
+            override fun version(configureAction: Action<in MutableVersionConstraint>) {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getReason(): String? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun because(reason: String?) {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getAttributes(): AttributeContainer? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun attributes(configureAction: Action<in AttributeContainer>): DependencyConstraint? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getVersionConstraint(): VersionConstraint? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getGroup(): String? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getName(): String? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getVersion(): String? {
+                throw shouldNotBeCalled()
+            }
+
+            override fun matchesStrictly(identifier: ModuleVersionIdentifier): Boolean {
+                throw shouldNotBeCalled()
+            }
+
+            override fun getModule(): ModuleIdentifier? {
+                throw shouldNotBeCalled()
+            }
         }
     }
 }

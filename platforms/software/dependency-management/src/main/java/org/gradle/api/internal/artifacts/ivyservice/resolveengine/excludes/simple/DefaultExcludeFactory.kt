@@ -13,86 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories.ExcludeFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude;
-import org.gradle.internal.collect.PersistentSet;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories.ExcludeFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeNothing
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.GroupSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleIdSetExclude
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ModuleSetExclude
+import org.gradle.internal.collect.PersistentSet
+import org.gradle.internal.component.model.IvyArtifactName
 
-public class DefaultExcludeFactory implements ExcludeFactory {
-    @Override
-    public ExcludeNothing nothing() {
-        return DefaultExcludeNothing.get();
+class DefaultExcludeFactory : ExcludeFactory {
+    override fun nothing(): ExcludeNothing {
+        return DefaultExcludeNothing.Companion.get()
     }
 
-    @Override
-    public ExcludeEverything everything() {
-        return DefaultExcludeEverything.get();
+    override fun everything(): ExcludeEverything {
+        return DefaultExcludeEverything.Companion.get()
     }
 
-    @Override
-    public GroupExclude group(String group) {
-        return DefaultGroupExclude.of(group);
+    override fun group(group: String?): GroupExclude {
+        return DefaultGroupExclude.Companion.of(group)
     }
 
-    @Override
-    public ModuleExclude module(String module) {
-        return DefaultModuleExclude.of(module);
+    override fun module(module: String?): ModuleExclude {
+        return DefaultModuleExclude.Companion.of(module)
     }
 
-    @Override
-    public ModuleIdExclude moduleId(ModuleIdentifier id) {
-        return DefaultModuleIdExclude.of(id);
+    override fun moduleId(id: ModuleIdentifier?): ModuleIdExclude {
+        return DefaultModuleIdExclude.Companion.of(id)
     }
 
-    @Override
-    public ExcludeSpec anyOf(ExcludeSpec one, ExcludeSpec two) {
-        return DefaultExcludeAnyOf.of(PersistentSet.of(one, two));
+    override fun anyOf(one: ExcludeSpec, two: ExcludeSpec?): ExcludeSpec {
+        return DefaultExcludeAnyOf.Companion.of(PersistentSet.of<ExcludeSpec?>(one, two))
     }
 
-    @Override
-    public ExcludeSpec allOf(ExcludeSpec one, ExcludeSpec two) {
-        return DefaultExcludeAllOf.of(PersistentSet.of(one, two));
+    override fun allOf(one: ExcludeSpec, two: ExcludeSpec?): ExcludeSpec {
+        return DefaultExcludeAllOf.Companion.of(PersistentSet.of<ExcludeSpec?>(one, two))
     }
 
-    @Override
-    public ExcludeSpec anyOf(PersistentSet<ExcludeSpec> specs) {
-        return DefaultExcludeAnyOf.of(specs);
+    override fun anyOf(specs: PersistentSet<ExcludeSpec?>?): ExcludeSpec {
+        return DefaultExcludeAnyOf.Companion.of(specs)
     }
 
-    @Override
-    public ExcludeSpec allOf(PersistentSet<ExcludeSpec> specs) {
-        return DefaultExcludeAllOf.of(specs);
+    override fun allOf(specs: PersistentSet<ExcludeSpec?>?): ExcludeSpec {
+        return DefaultExcludeAllOf.Companion.of(specs)
     }
 
-    @Override
-    public ExcludeSpec ivyPatternExclude(ModuleIdentifier moduleId, @Nullable IvyArtifactName artifact, String matcher) {
-        return DefaultIvyPatternMatcherExcludeRuleSpec.of(moduleId, artifact, matcher);
+    override fun ivyPatternExclude(moduleId: ModuleIdentifier?, artifact: IvyArtifactName?, matcher: String?): ExcludeSpec {
+        return DefaultIvyPatternMatcherExcludeRuleSpec.Companion.of(moduleId, artifact, matcher)
     }
 
-    @Override
-    public ModuleIdSetExclude moduleIdSet(PersistentSet<ModuleIdentifier> modules) {
-        return DefaultModuleIdSetExclude.of(modules);
+    override fun moduleIdSet(modules: PersistentSet<ModuleIdentifier?>?): ModuleIdSetExclude {
+        return DefaultModuleIdSetExclude.Companion.of(modules)
     }
 
-    @Override
-    public GroupSetExclude groupSet(PersistentSet<String> groups) {
-        return new DefaultGroupSetExclude(groups);
+    override fun groupSet(groups: PersistentSet<String?>): GroupSetExclude {
+        return DefaultGroupSetExclude(groups)
     }
 
-    @Override
-    public ModuleSetExclude moduleSet(PersistentSet<String> modules) {
-        return new DefaultModuleSetExclude(modules);
+    override fun moduleSet(modules: PersistentSet<String?>): ModuleSetExclude {
+        return DefaultModuleSetExclude(modules)
     }
 }

@@ -47,14 +47,14 @@ class DefaultDependencyLockingHandler(private val configurationContainer: Suppli
     }
 
     override fun getLockMode(): Property<LockMode> {
-        return dependencyLockingProvider.getLockMode()
+        return dependencyLockingProvider.lockMode
     }
 
     override fun getLockFile(): RegularFileProperty {
-        return dependencyLockingProvider.getLockFile()
+        return dependencyLockingProvider.lockFile
     }
 
     override fun getIgnoredDependencies(): ListProperty<String> {
-        return dependencyLockingProvider.getIgnoredDependencies()
+        return dependencyLockingProvider.ignoredDependencies
     }
 }

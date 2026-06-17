@@ -13,118 +13,106 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.writer
 
-import com.google.common.collect.Sets;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration;
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
+import com.google.common.collect.Sets
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration
+import org.gradle.internal.Factory
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import java.io.File
+import java.util.TreeSet
+import java.util.concurrent.atomic.AtomicBoolean
 
-import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-class PgpEntry extends VerificationEntry {
-    private final Factory<File> signatureFile;
-    private final Set<String> trustedKeys = new TreeSet<>();
-    private final AtomicBoolean requiresChecksums = new AtomicBoolean();
-    private final Set<String> failed = Sets.newConcurrentHashSet();
-    private final AtomicBoolean noSignature = new AtomicBoolean();
-    private final AtomicBoolean hasSignatureFile = new AtomicBoolean();
+internal class PgpEntry(id: ModuleComponentArtifactIdentifier, artifactKind: ArtifactVerificationOperation.ArtifactKind, file: File, signatureFile: Factory<File?>) :
+    VerificationEntry(id, artifactKind, file) {
+    val signatureFile: Factory<File?>
+    val trustedKeys: MutableSet<String> = TreeSet<String>()
+    private val requiresChecksums = AtomicBoolean()
+    private val failed: MutableSet<String> = Sets.newConcurrentHashSet<String>()
+    private val noSignature = AtomicBoolean()
+    private val hasSignatureFile = AtomicBoolean()
 
     // this field is used during "grouping" of entries to tell if we should ignore writing this entry
-    private final Set<String> keysDeclaredGlobally = new HashSet<>();
+    private val keysDeclaredGlobally: MutableSet<String> = HashSet<String>()
 
-    PgpEntry(ModuleComponentArtifactIdentifier id, ArtifactVerificationOperation.ArtifactKind artifactKind, File file, Factory<File> signatureFile) {
-        super(id, artifactKind, file);
-        this.signatureFile = () -> {
-            File f = signatureFile.create();
-            boolean hasSig = f != null && f.exists();
-            hasSignatureFile.set(hasSig);
+    init {
+        this.signatureFile = org.gradle.internal.Factory {
+            val f = signatureFile.create()
+            val hasSig = f != null && f.exists()
+            hasSignatureFile.set(hasSig)
             if (!hasSig) {
-                requiresChecksums.set(true);
+                requiresChecksums.set(true)
             }
-            return f;
-        };
-    }
-
-    @Override
-    int getOrder() {
-        return -1;
-    }
-
-    public Set<String> getTrustedKeys() {
-        return trustedKeys;
-    }
-
-    public PgpEntry addVerifiedKey(String key) {
-        trustedKeys.add(key);
-        return this;
-    }
-
-    public Factory<File> getSignatureFile() {
-        return signatureFile;
-    }
-
-    public void fail(String keyId) {
-        requiresChecksums.set(true);
-        failed.add(keyId);
-    }
-
-    public void missing() {
-        requiresChecksums.set(true);
-    }
-
-    public void noSignatures() {
-        requiresChecksums.set(true);
-        noSignature.set(true);
-    }
-
-    public boolean isRequiringChecksums() {
-        return requiresChecksums.get();
-    }
-
-    public boolean isFailed() {
-        return !failed.isEmpty() || noSignature.get();
-    }
-
-    public Set<String> getFailed() {
-        return failed;
-    }
-
-    public void keyDeclaredGlobally(String keyId) {
-        keysDeclaredGlobally.add(keyId);
-    }
-
-    public boolean doesNotDeclareKeyGlobally(String keyId) {
-        return !keysDeclaredGlobally.contains(keyId);
-    }
-
-    public boolean hasArtifactLevelKeys() {
-        return !trustedKeys.equals(keysDeclaredGlobally);
-    }
-
-    public Set<String> getArtifactLevelKeys() {
-        Set<String> keys = Sets.newHashSet(trustedKeys);
-        keys.removeAll(keysDeclaredGlobally);
-        return keys;
-    }
-
-    public boolean hasSignatureFile() {
-        return hasSignatureFile.get();
-    }
-
-    boolean checkAndMarkSatisfiedBy(DependencyVerificationConfiguration.TrustedKey trustedKey) {
-        if (!trustedKeys.contains(trustedKey.getKeyId())) {
-            return false;
+            f
         }
-        boolean matches = trustedKey.matches(id);
+    }
+
+    override fun getOrder(): Int {
+        return -1
+    }
+
+    fun addVerifiedKey(key: String): PgpEntry {
+        trustedKeys.add(key)
+        return this
+    }
+
+    fun fail(keyId: String) {
+        requiresChecksums.set(true)
+        failed.add(keyId)
+    }
+
+    fun missing() {
+        requiresChecksums.set(true)
+    }
+
+    fun noSignatures() {
+        requiresChecksums.set(true)
+        noSignature.set(true)
+    }
+
+    val isRequiringChecksums: Boolean
+        get() = requiresChecksums.get()
+
+    fun isFailed(): Boolean {
+        return !failed.isEmpty() || noSignature.get()
+    }
+
+    fun getFailed(): MutableSet<String> {
+        return failed
+    }
+
+    fun keyDeclaredGlobally(keyId: String) {
+        keysDeclaredGlobally.add(keyId)
+    }
+
+    fun doesNotDeclareKeyGlobally(keyId: String): Boolean {
+        return !keysDeclaredGlobally.contains(keyId)
+    }
+
+    fun hasArtifactLevelKeys(): Boolean {
+        return trustedKeys != keysDeclaredGlobally
+    }
+
+    val artifactLevelKeys: MutableSet<String>
+        get() {
+            val keys: MutableSet<String> = Sets.newHashSet<String>(trustedKeys)
+            keys.removeAll(keysDeclaredGlobally)
+            return keys
+        }
+
+    fun hasSignatureFile(): Boolean {
+        return hasSignatureFile.get()
+    }
+
+    fun checkAndMarkSatisfiedBy(trustedKey: DependencyVerificationConfiguration.TrustedKey): Boolean {
+        if (!trustedKeys.contains(trustedKey.keyId)) {
+            return false
+        }
+        val matches: Boolean = trustedKey.matches(id)
         if (matches) {
-            keyDeclaredGlobally(trustedKey.getKeyId());
+            keyDeclaredGlobally(trustedKey.keyId)
         }
-        return matches;
+        return matches
     }
 }

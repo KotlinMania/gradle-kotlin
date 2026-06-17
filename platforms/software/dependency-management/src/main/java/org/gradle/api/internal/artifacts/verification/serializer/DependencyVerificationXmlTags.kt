@@ -13,37 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.serializer;
+package org.gradle.api.internal.artifacts.verification.serializer
 
-abstract class DependencyVerificationXmlTags {
-    static final String ALSO_TRUST = "also-trust";
-    static final String ARTIFACT = "artifact";
-    static final String COMPONENT = "component";
-    static final String COMPONENTS = "components";
-    static final String CONFIG = "configuration";
-    static final String ENABLED = "enabled";
-    static final String FILE = "file";
-    static final String GROUP = "group";
-    static final String ID = "id";
-    static final String IGNORED_KEY = "ignored-key";
-    static final String IGNORED_KEYS = "ignored-keys";
-    static final String KEY_SERVER = "key-server";
-    static final String KEY_SERVERS = "key-servers";
-    static final String NAME = "name";
-    static final String ORIGIN = "origin";
-    static final String PGP = "pgp";
-    static final String REASON = "reason";
-    static final String REGEX = "regex";
-    static final String TRUST = "trust";
-    static final String TRUSTED_ARTIFACTS = "trusted-artifacts";
-    static final String TRUSTED_KEY = "trusted-key";
-    static final String TRUSTED_KEYS = "trusted-keys";
-    static final String TRUSTING = "trusting";
-    static final String URI = "uri";
-    static final String VALUE = "value";
-    static final String VERIFICATION_METADATA = "verification-metadata";
-    static final String VERIFY_METADATA = "verify-metadata";
-    static final String VERIFY_SIGNATURES = "verify-signatures";
-    static final String VERSION = "version";
-    static final String KEYRING_FORMAT = "keyring-format";
+internal object DependencyVerificationXmlTags {
+    const val ALSO_TRUST: String = "also-trust"
+    const val ARTIFACT: String = "artifact"
+    const val COMPONENT: String = "component"
+    const val COMPONENTS: String = "components"
+    const val CONFIG: String = "configuration"
+    const val ENABLED: String = "enabled"
+    const val FILE: String = "file"
+    const val GROUP: String = "group"
+    const val ID: String = "id"
+    const val IGNORED_KEY: String = "ignored-key"
+    const val IGNORED_KEYS: String = "ignored-keys"
+    const val KEY_SERVER: String = "key-server"
+    const val KEY_SERVERS: String = "key-servers"
+    const val NAME: String = "name"
+    const val ORIGIN: String = "origin"
+    const val PGP: String = "pgp"
+    const val REASON: String = "reason"
+    const val REGEX: String = "regex"
+    const val TRUST: String = "trust"
+    const val TRUSTED_ARTIFACTS: String = "trusted-artifacts"
+    const val TRUSTED_KEY: String = "trusted-key"
+    const val TRUSTED_KEYS: String = "trusted-keys"
+    const val TRUSTING: String = "trusting"
+    const val URI: String = "uri"
+    const val VALUE: String = "value"
+    const val VERIFICATION_METADATA: String = "verification-metadata"
+    const val VERIFY_METADATA: String = "verify-metadata"
+    const val VERIFY_SIGNATURES: String = "verify-signatures"
+    const val VERSION: String = "version"
+    const val KEYRING_FORMAT: String = "keyring-format"
 }

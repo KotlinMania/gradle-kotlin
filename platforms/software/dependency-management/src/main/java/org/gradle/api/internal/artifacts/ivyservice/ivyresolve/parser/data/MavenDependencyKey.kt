@@ -13,70 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data
 
-import com.google.common.base.Objects;
+import com.google.common.base.Objects
 
-public class MavenDependencyKey {
-    private static final String KEY_SEPARATOR = ":";
-    private final String groupId;
-    private final String artifactId;
-    private final String type;
-    private final String classifier;
-
-    public MavenDependencyKey(String groupId, String artifactId, String type, String classifier) {
-        this.groupId = groupId;
-        this.artifactId = artifactId;
-        this.type = type;
-        this.classifier = classifier;
-    }
-
-    public String getGroupId() {
-        return groupId;
-    }
-
-    public String getArtifactId() {
-        return artifactId;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public String getClassifier() {
-        return classifier;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+class MavenDependencyKey(val groupId: String?, val artifactId: String?, val type: String?, val classifier: String?) {
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        MavenDependencyKey that = (MavenDependencyKey) o;
+        val that = o as MavenDependencyKey
         return Objects.equal(groupId, that.groupId)
-            && Objects.equal(artifactId, that.artifactId)
-            && Objects.equal(classifier, that.classifier)
-            && Objects.equal(type, that.type);
+                && Objects.equal(artifactId, that.artifactId)
+                && Objects.equal(classifier, that.classifier)
+                && Objects.equal(type, that.type)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(groupId, artifactId, classifier, type);
+    override fun hashCode(): Int {
+        return Objects.hashCode(groupId, artifactId, classifier, type)
     }
 
-    @Override
-    public String toString() {
-        StringBuilder key = new StringBuilder();
-        key.append(groupId).append(KEY_SEPARATOR).append(artifactId).append(KEY_SEPARATOR).append(type);
+    override fun toString(): String {
+        val key = StringBuilder()
+        key.append(groupId).append(KEY_SEPARATOR).append(artifactId).append(KEY_SEPARATOR).append(type)
 
-        if(classifier != null) {
-            key.append(KEY_SEPARATOR).append(classifier);
+        if (classifier != null) {
+            key.append(KEY_SEPARATOR).append(classifier)
         }
 
-        return key.toString();
+        return key.toString()
+    }
+
+    companion object {
+        private const val KEY_SEPARATOR = ":"
     }
 }

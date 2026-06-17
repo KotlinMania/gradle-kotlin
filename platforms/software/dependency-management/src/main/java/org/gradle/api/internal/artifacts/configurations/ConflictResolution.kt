@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
 /**
  * The conflict resolution
  */
-public enum ConflictResolution {
+enum class ConflictResolution {
     strict,
     latest,
     preferProjectModules

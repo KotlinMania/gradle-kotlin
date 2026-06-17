@@ -13,31 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
 
 /**
- * A visitor over the contents of a {@link ResolvedArtifactSet}. A {@link ResolvedArtifactSet} may contain zero or more sets of files, each set containing zero or more artifacts.
+ * A visitor over the contents of a [ResolvedArtifactSet]. A [ResolvedArtifactSet] may contain zero or more sets of files, each set containing zero or more artifacts.
  */
-public interface ArtifactVisitor {
+interface ArtifactVisitor {
     /**
      * Called prior to scheduling resolution of a set of artifacts. Should be called in result order.
      */
-    default FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-        return FileCollectionStructureVisitor.VisitType.Visit;
+    fun prepareForVisit(source: FileCollectionInternal.Source?): FileCollectionStructureVisitor.VisitType? {
+        return FileCollectionStructureVisitor.VisitType.Visit
     }
 
     /**
      * Visits an artifact from the artifact set.
-     * <p>
-     * Artifacts are resolved but not necessarily available unless {@link #requireArtifactFiles()} returns true.
+     *
+     *
+     * Artifacts are resolved but not necessarily available unless [.requireArtifactFiles] returns true.
      * A given artifact may be visited multiple times. The implementation is required to filter out duplicates.
      *
      * @param artifactSetName The name of the artifact set that this artifact belongs to.
@@ -46,23 +46,23 @@ public interface ArtifactVisitor {
      * @param capabilities The capabilities of the artifact.
      * @param artifact The artifact.
      */
-    void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact);
+    fun visitArtifact(artifactSetName: DisplayName?, sourceVariantId: VariantIdentifier?, attributes: ImmutableAttributes?, capabilities: ImmutableCapabilities?, artifact: ResolvableArtifact?)
 
     /**
-     * Should the file for each artifact be made available prior to calling {@link #visitArtifact(DisplayName, VariantIdentifier, ImmutableAttributes, ImmutableCapabilities, ResolvableArtifact)}?
+     * Should the file for each artifact be made available prior to calling [.visitArtifact]?
      *
      * Returns true here allows the collection to preemptively resolve the files in parallel.
      */
-    boolean requireArtifactFiles();
+    fun requireArtifactFiles(): Boolean
 
     /**
      * Called when some problem occurs visiting some element of the set. Visiting may continue.
      */
-    void visitFailure(Throwable failure);
+    fun visitFailure(failure: Throwable?)
 
     /**
      * Called after a set of artifacts has been visited.
      */
-    default void endVisitCollection(FileCollectionInternal.Source source) {
+    fun endVisitCollection(source: FileCollectionInternal.Source?) {
     }
 }

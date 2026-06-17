@@ -13,49 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasons;
+class ModuleForcingResolveRule(forcedModules: MutableCollection<out ModuleComponentSelector>) : Action<DependencySubstitutionInternal?> {
+    private val forcedModules: MutableMap<ModuleIdentifier, String>?
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.gradle.internal.component.external.model.DefaultModuleComponentSelector.newSelector;
-
-public class ModuleForcingResolveRule implements Action<DependencySubstitutionInternal> {
-
-    private final Map<ModuleIdentifier, String> forcedModules;
-
-    public ModuleForcingResolveRule(Collection<? extends ModuleComponentSelector> forcedModules) {
+    init {
         if (!forcedModules.isEmpty()) {
-            this.forcedModules = new HashMap<>();
-            for (ModuleComponentSelector module : forcedModules) {
-                this.forcedModules.put(module.getModuleIdentifier(), module.getVersion());
+            this.forcedModules = HashMap<ModuleIdentifier, String>()
+            for (module in forcedModules) {
+                this.forcedModules.put(module.getModuleIdentifier(), module.getVersion())
             }
         } else {
-            this.forcedModules = null;
+            this.forcedModules = null
         }
     }
 
-    @Override
-    public void execute(DependencySubstitutionInternal details) {
+    override fun execute(details: DependencySubstitutionInternal) {
         if (forcedModules == null) {
-            return;
+            return
         }
-        if (details.getRequested() instanceof ModuleComponentSelector) {
-            ModuleComponentSelector selector = (ModuleComponentSelector) details.getRequested();
-            ModuleIdentifier key = selector.getModuleIdentifier();
+        if (details.getRequested() is ModuleComponentSelector) {
+            val selector = details.getRequested() as ModuleComponentSelector
+            val key = selector.getModuleIdentifier()
             if (forcedModules.containsKey(key)) {
-                DefaultImmutableVersionConstraint versionConstraint = new DefaultImmutableVersionConstraint(forcedModules.get(key));
-                details.useTarget(newSelector(key, versionConstraint, selector.getAttributes(), selector.getCapabilitySelectors()), ComponentSelectionReasons.FORCED);
-
+                val versionConstraint = DefaultImmutableVersionConstraint(forcedModules.get(key)!!)
+                details.useTarget(newSelector(key, versionConstraint, selector.getAttributes(), selector.getCapabilitySelectors()), ComponentSelectionReasons.FORCED)
             }
         }
     }

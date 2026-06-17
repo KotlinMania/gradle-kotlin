@@ -13,30 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.PatternMatchers;
-import org.gradle.internal.component.external.descriptor.DefaultExclude;
-import org.gradle.util.internal.GUtil;
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.PatternMatchers
+import org.gradle.internal.component.external.descriptor.DefaultExclude
+import org.gradle.util.internal.GUtil
 
-public class DefaultExcludeRuleConverter implements ExcludeRuleConverter {
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    public DefaultExcludeRuleConverter(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
+class DefaultExcludeRuleConverter(private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : ExcludeRuleConverter {
+    override fun convertExcludeRule(excludeRule: ExcludeRule): DefaultExclude {
+        return createExcludeRule(excludeRule.getGroup(), excludeRule.getModule())
     }
 
-    @Override
-    public DefaultExclude convertExcludeRule(ExcludeRule excludeRule) {
-        return createExcludeRule(excludeRule.getGroup(), excludeRule.getModule());
-    }
-
-    @Override
-    public DefaultExclude createExcludeRule(String group, String module) {
-        group = GUtil.elvis(group, PatternMatchers.ANY_EXPRESSION);
-        module = GUtil.elvis(module, PatternMatchers.ANY_EXPRESSION);
-        return new DefaultExclude(moduleIdentifierFactory.module(group, module));
+    override fun createExcludeRule(group: String, module: String): DefaultExclude {
+        var group = group
+        var module = module
+        group = GUtil.elvis<String>(group, PatternMatchers.ANY_EXPRESSION)!!
+        module = GUtil.elvis<String>(module, PatternMatchers.ANY_EXPRESSION)!!
+        return DefaultExclude(moduleIdentifierFactory.module(group, module)!!)
     }
 }

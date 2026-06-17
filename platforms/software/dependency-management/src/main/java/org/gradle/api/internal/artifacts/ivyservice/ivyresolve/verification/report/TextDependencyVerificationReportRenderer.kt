@@ -13,94 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import java.nio.file.Path;
-import java.util.Set;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.logging.text.TreeFormatter
+import java.nio.file.Path
 
 /**
- * A text report renderer, which is <i>not</i> cumulative.
+ * A text report renderer, which is *not* cumulative.
  */
-class TextDependencyVerificationReportRenderer extends AbstractTextDependencyVerificationReportRenderer {
+internal class TextDependencyVerificationReportRenderer(gradleUserHome: Path, documentationRegistry: DocumentationRegistry) :
+    AbstractTextDependencyVerificationReportRenderer(gradleUserHome, documentationRegistry) {
+    private var inMultiErrors = false
 
-    private boolean inMultiErrors;
-
-    public TextDependencyVerificationReportRenderer(Path gradleUserHome, DocumentationRegistry documentationRegistry) {
-        super(gradleUserHome, documentationRegistry);
+    override fun startNewSection(title: String) {
+        formatter = TreeFormatter()
+        formatter.node("Dependency verification failed for " + title)
     }
 
-    @Override
-    public void startNewSection(String title) {
-        formatter = new TreeFormatter();
-        formatter.node("Dependency verification failed for " + title);
+    override fun startArtifactErrors(action: Runnable) {
+        formatter.startChildren()
+        action.run()
+        formatter.endChildren()
+        formatter.blankLine()
     }
 
-    @Override
-    public void startArtifactErrors(Runnable action) {
-        formatter.startChildren();
-        action.run();
-        formatter.endChildren();
-        formatter.blankLine();
+    override fun startNewArtifact(key: ModuleComponentArtifactIdentifier, action: Runnable) {
+        formatter.node("On artifact " + key.getDisplayName() + " ")
+        action.run()
     }
 
-    @Override
-    public void startNewArtifact(ModuleComponentArtifactIdentifier key, Runnable action) {
-        formatter.node("On artifact " + key.getDisplayName() + " ");
-        action.run();
-    }
-
-    @Override
-    public void reportFailure(RepositoryAwareVerificationFailure failure) {
+    override fun reportFailure(failure: RepositoryAwareVerificationFailure) {
         if (inMultiErrors) {
-            formatter.node("");
+            formatter.node("")
         }
-        formatter.append("in repository '" + failure.getRepositoryName() + "': ");
-        failure.getFailure().explainTo(formatter);
+        formatter.append("in repository '" + failure.repositoryName + "': ")
+        failure.failure.explainTo(formatter)
     }
 
-    @Override
-    public void reportAsMultipleErrors(Runnable action) {
-        formatter.append("multiple problems reported:");
-        formatter.startChildren();
-        inMultiErrors = true;
-        action.run();
-        inMultiErrors = false;
-        formatter.endChildren();
+    override fun reportAsMultipleErrors(action: Runnable) {
+        formatter.append("multiple problems reported:")
+        formatter.startChildren()
+        inMultiErrors = true
+        action.run()
+        inMultiErrors = false
+        formatter.endChildren()
     }
 
-    private void processAffectedFiles(Set<String> affectedFiles) {
-        formatter.blankLine();
-        formatter.node("These files failed verification:");
-        formatter.startChildren();
-        for (String affectedFile : affectedFiles) {
-            formatter.node(affectedFile);
+    private fun processAffectedFiles(affectedFiles: MutableSet<String>) {
+        formatter.blankLine()
+        formatter.node("These files failed verification:")
+        formatter.startChildren()
+        for (affectedFile in affectedFiles) {
+            formatter.node(affectedFile)
         }
-        formatter.endChildren();
-        formatter.blankLine();
-        formatter.node("GRADLE_USER_HOME = " + gradleUserHome);
+        formatter.endChildren()
+        formatter.blankLine()
+        formatter.node("GRADLE_USER_HOME = " + gradleUserHome)
     }
 
-    @Override
-    public void finish(VerificationHighLevelErrors highLevelErrors) {
-        super.finish(highLevelErrors);
-        Set<String> affectedFiles = highLevelErrors.getAffectedFiles();
+    override fun finish(highLevelErrors: VerificationHighLevelErrors) {
+        super.finish(highLevelErrors)
+        val affectedFiles = highLevelErrors.getAffectedFiles()
         if (!affectedFiles.isEmpty()) {
-            processAffectedFiles(affectedFiles);
+            processAffectedFiles(affectedFiles)
         }
-        formatter.blankLine();
-        formatter.node("These files failed verification:");
-        formatter.startChildren();
-        for (String affectedFile : highLevelErrors.getAffectedFiles()) {
-            formatter.node(affectedFile);
+        formatter.blankLine()
+        formatter.node("These files failed verification:")
+        formatter.startChildren()
+        for (affectedFile in highLevelErrors.getAffectedFiles()) {
+            formatter.node(affectedFile)
         }
-        formatter.endChildren();
-        formatter.blankLine();
-        formatter.node("GRADLE_USER_HOME = " + gradleUserHome);
+        formatter.endChildren()
+        formatter.blankLine()
+        formatter.node("GRADLE_USER_HOME = " + gradleUserHome)
     }
-
 }

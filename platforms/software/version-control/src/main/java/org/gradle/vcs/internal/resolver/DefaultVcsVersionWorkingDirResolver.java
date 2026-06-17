@@ -78,7 +78,7 @@ public class DefaultVcsVersionWorkingDirResolver implements VcsVersionWorkingDir
 
         String version = constraint.getRequiredVersion();
         VersionSelector versionSelector = versionSelectorScheme.parseSelector(version);
-        if (versionSelector instanceof LatestVersionSelector && ((LatestVersionSelector) versionSelector).getSelectorStatus().equals("integration")) {
+        if (versionSelector instanceof LatestVersionSelector && ((LatestVersionSelector) versionSelector).selectorStatus.equals("integration")) {
             return repository.getDefaultBranch();
         }
 

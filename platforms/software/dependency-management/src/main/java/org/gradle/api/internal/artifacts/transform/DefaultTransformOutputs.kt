@@ -13,96 +13,84 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.internal.file.FileLookup
+import org.gradle.internal.file.PathToFileResolver
+import org.gradle.util.internal.GFileUtils
+import java.io.File
+import java.util.function.Consumer
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.internal.file.FileLookup;
-import org.gradle.internal.file.PathToFileResolver;
-import org.gradle.util.internal.GFileUtils;
+class DefaultTransformOutputs(private val inputArtifact: File, private val outputDir: File, fileLookup: FileLookup) : TransformOutputsInternal {
+    private val resultBuilder: TransformExecutionResult.OutputTypeInferringBuilder
+    private val outputDirectories: MutableSet<File> = HashSet<File>()
+    private val outputFiles: MutableSet<File> = HashSet<File>()
+    private val resolver: PathToFileResolver
 
-import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Consumer;
-
-public class DefaultTransformOutputs implements TransformOutputsInternal {
-
-    private final TransformExecutionResult.OutputTypeInferringBuilder resultBuilder;
-    private final Set<File> outputDirectories = new HashSet<>();
-    private final Set<File> outputFiles = new HashSet<>();
-    private final PathToFileResolver resolver;
-    private final File inputArtifact;
-    private final File outputDir;
-
-    public DefaultTransformOutputs(File inputArtifact, File outputDir, FileLookup fileLookup) {
-        this.resolver = fileLookup.getPathToFileResolver(outputDir);
-        this.inputArtifact = inputArtifact;
-        this.outputDir = outputDir;
-        this.resultBuilder = TransformExecutionResult.builderFor(inputArtifact, outputDir);
+    init {
+        this.resolver = fileLookup.getPathToFileResolver(outputDir)
+        this.resultBuilder = TransformExecutionResult.Companion.builderFor(inputArtifact, outputDir)
     }
 
-    @Override
-    public TransformExecutionResult getRegisteredOutputs() {
-        TransformExecutionResult result = resultBuilder.build();
-        result.visitOutputs(new TransformExecutionResult.OutputVisitor() {
-            @Override
-            public void visitEntireInputArtifact() {
-                validate(inputArtifact);
+    override fun getRegisteredOutputs(): TransformExecutionResult {
+        val result = resultBuilder.build()
+        result.visitOutputs(object : TransformExecutionResult.OutputVisitor {
+            override fun visitEntireInputArtifact() {
+                validate(inputArtifact)
             }
 
-            @Override
-            public void visitPartOfInputArtifact(String relativePath) {
-                validate(new File(inputArtifact, relativePath));
+            override fun visitPartOfInputArtifact(relativePath: String) {
+                validate(File(inputArtifact, relativePath))
             }
 
-            @Override
-            public void visitProducedOutput(String relativePath) {
-                validate(new File(outputDir, relativePath));
+            override fun visitProducedOutput(relativePath: String) {
+                validate(File(outputDir, relativePath))
             }
 
-            private void validate(File output) {
-                validateOutputExists(outputDir, output);
+            fun validate(output: File) {
+                validateOutputExists(outputDir, output)
                 if (outputFiles.contains(output) && !output.isFile()) {
-                    throw new InvalidUserDataException("Transform output file " + output.getPath() + " must be a file, but is not.");
+                    throw InvalidUserDataException("Transform output file " + output.getPath() + " must be a file, but is not.")
                 }
                 if (outputDirectories.contains(output) && !output.isDirectory()) {
-                    throw new InvalidUserDataException("Transform output directory " + output.getPath() + " must be a directory, but is not.");
+                    throw InvalidUserDataException("Transform output directory " + output.getPath() + " must be a directory, but is not.")
                 }
             }
-        });
+        })
 
-        return result;
+        return result
     }
 
-    @Override
-    public File dir(Object path) {
-        File outputDir = resolveAndRegister(path, GFileUtils::mkdirs);
-        outputDirectories.add(outputDir);
-        return outputDir;
+    override fun dir(path: Any): File {
+        val outputDir = resolveAndRegister(path, Consumer { dir: File -> GFileUtils.mkdirs(dir) })
+        outputDirectories.add(outputDir)
+        return outputDir
     }
 
-    @Override
-    public File file(Object path) {
-        File outputFile = resolveAndRegister(path, location -> GFileUtils.mkdirs(location.getParentFile()));
-        outputFiles.add(outputFile);
-        return outputFile;
+    override fun file(path: Any): File {
+        val outputFile = resolveAndRegister(path, Consumer { location: File -> GFileUtils.mkdirs(location.getParentFile()) })
+        outputFiles.add(outputFile)
+        return outputFile
     }
 
-    private File resolveAndRegister(Object path, Consumer<File> prepareOutputLocation) {
-        File output = resolver.resolve(path);
-        resultBuilder.addOutput(output, prepareOutputLocation);
-        return output;
+    private fun resolveAndRegister(path: Any, prepareOutputLocation: Consumer<File>): File {
+        val output = resolver.resolve(path)
+        resultBuilder.addOutput(output, prepareOutputLocation)
+        return output
     }
 
-    private static void validateOutputExists(File outputDir, File output) {
-        if (!output.exists()) {
-            String outputAbsolutePath = output.getAbsolutePath();
-            String outputDirPrefix = outputDir.getAbsolutePath() + File.separator;
-            String reportedPath = outputAbsolutePath.startsWith(outputDirPrefix)
-                ? outputAbsolutePath.substring(outputDirPrefix.length())
-                : outputAbsolutePath;
-            throw new InvalidUserDataException("Transform output " + reportedPath + " must exist.");
+    companion object {
+        private fun validateOutputExists(outputDir: File, output: File) {
+            if (!output.exists()) {
+                val outputAbsolutePath = output.getAbsolutePath()
+                val outputDirPrefix = outputDir.getAbsolutePath() + File.separator
+                val reportedPath = if (outputAbsolutePath.startsWith(outputDirPrefix))
+                    outputAbsolutePath.substring(outputDirPrefix.length)
+                else
+                    outputAbsolutePath
+                throw InvalidUserDataException("Transform output " + reportedPath + " must exist.")
+            }
         }
     }
 }

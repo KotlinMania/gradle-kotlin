@@ -13,164 +13,149 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.ExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec;
-import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Strings
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec
+import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
 
-import java.util.List;
+abstract class AbstractExternalModuleDependency : AbstractModuleDependency, ExternalModuleDependency {
+    private val moduleIdentifier: ModuleIdentifier
+    private var changing = false
+    private val versionConstraint: MutableVersionConstraint
 
-public abstract class AbstractExternalModuleDependency extends AbstractModuleDependency implements ExternalModuleDependency {
-
-    private final ModuleIdentifier moduleIdentifier;
-    private boolean changing;
-    private final MutableVersionConstraint versionConstraint;
-
-    public AbstractExternalModuleDependency(ModuleIdentifier module, String version, @Nullable String configuration) {
-        this.moduleIdentifier = module;
-        this.versionConstraint = new DefaultMutableVersionConstraint(version);
+    constructor(module: ModuleIdentifier, version: String, configuration: String?) {
+        this.moduleIdentifier = module
+        this.versionConstraint = DefaultMutableVersionConstraint(version)
         if (configuration != null) {
-            setTargetConfiguration(configuration);
+            setTargetConfiguration(configuration)
         }
     }
 
-    public AbstractExternalModuleDependency(ModuleIdentifier module, MutableVersionConstraint version, @Nullable String configuration) {
-        this.moduleIdentifier = module;
-        this.versionConstraint = version;
+    constructor(module: ModuleIdentifier, version: MutableVersionConstraint, configuration: String?) {
+        this.moduleIdentifier = module
+        this.versionConstraint = version
         if (configuration != null) {
-            setTargetConfiguration(configuration);
+            setTargetConfiguration(configuration)
         }
     }
 
-    protected void copyTo(AbstractExternalModuleDependency target) {
-        super.copyTo(target);
-        target.setChanging(isChanging());
+    protected open fun copyTo(target: AbstractExternalModuleDependency) {
+        super.copyTo(target)
+        target.setChanging(isChanging())
     }
 
-    @Override
-    public boolean matchesStrictly(ModuleVersionIdentifier identifier) {
-        return new ModuleVersionSelectorStrictSpec(this).isSatisfiedBy(identifier);
+    override fun matchesStrictly(identifier: ModuleVersionIdentifier): Boolean {
+        return ModuleVersionSelectorStrictSpec(this).isSatisfiedBy(identifier)
     }
 
-    @Override
-    public @Nullable String getGroup() {
-        return moduleIdentifier.getGroup();
+    override fun getGroup(): String? {
+        return moduleIdentifier.getGroup()
     }
 
-    @Override
-    public String getName() {
-        return moduleIdentifier.getName();
+    override fun getName(): String {
+        return moduleIdentifier.getName()
     }
 
-    @Override
-    public @Nullable String getVersion() {
-        String requiredVersion = versionConstraint.getRequiredVersion();
-        String version = requiredVersion.isEmpty() ? versionConstraint.getPreferredVersion() : requiredVersion;
-        return Strings.emptyToNull(version);
+    override fun getVersion(): String? {
+        val requiredVersion = versionConstraint.getRequiredVersion()
+        val version = if (requiredVersion.isEmpty()) versionConstraint.getPreferredVersion() else requiredVersion
+        return Strings.emptyToNull(version)
     }
 
-    @Override
-    public boolean isForce() {
-        return false; // Enforced Platforms no longer mark force, so there is no way for a dependency to be forced (configurations and resolution strategies are used instead)
+    override fun isForce(): Boolean {
+        return false // Enforced Platforms no longer mark force, so there is no way for a dependency to be forced (configurations and resolution strategies are used instead)
     }
 
-    @Override
-    public boolean isChanging() {
-        return changing;
+    override fun isChanging(): Boolean {
+        return changing
     }
 
-    @Override
-    public ExternalModuleDependency setChanging(boolean changing) {
-        validateMutation(this.changing, changing);
-        this.changing = changing;
-        return this;
+    override fun setChanging(changing: Boolean): ExternalModuleDependency {
+        validateMutation(this.changing, changing)
+        this.changing = changing
+        return this
     }
 
-    @Override
-    public VersionConstraint getVersionConstraint() {
-        return versionConstraint;
+    override fun getVersionConstraint(): VersionConstraint {
+        return versionConstraint
     }
 
-    @Override
-    public void version(Action<? super MutableVersionConstraint> configureAction) {
-        validateMutation();
-        configureAction.execute(versionConstraint);
+    override fun version(configureAction: Action<in MutableVersionConstraint>) {
+        validateMutation()
+        configureAction.execute(versionConstraint)
     }
 
-    @Override
-    public ModuleIdentifier getModule() {
-        return moduleIdentifier;
+    override fun getModule(): ModuleIdentifier {
+        return moduleIdentifier
     }
 
-    static ModuleIdentifier assertModuleId(@Nullable String group, @Nullable String name) {
-        if (name == null) {
-            throw new InvalidUserDataException("Name must not be null!");
-        }
-        return DefaultModuleIdentifier.newId(group, name);
-    }
-
-    @Override
-    @SuppressWarnings("deprecation")
-    public List<Capability> getRequestedCapabilities() {
+    @Suppress("deprecation")
+    override fun getRequestedCapabilities(): MutableList<Capability> {
         return getCapabilitySelectors().stream()
-            .map(c -> {
-                if (c instanceof SpecificCapabilitySelector) {
-                    return ((DefaultSpecificCapabilitySelector) c).getBackingCapability();
-                } else if (c instanceof FeatureCapabilitySelector) {
-                    return new DefaultImmutableCapability(
-                        getGroup(),
-                        getName() + "-" + ((FeatureCapabilitySelector) c).getFeatureName(),
+            .map<ImmutableCapability> { c: CapabilitySelector? ->
+                if (c is SpecificCapabilitySelector) {
+                    return@map (c as DefaultSpecificCapabilitySelector).getBackingCapability()
+                } else if (c is FeatureCapabilitySelector) {
+                    return@map DefaultImmutableCapability(
+                        getGroup()!!,
+                        getName() + "-" + c.getFeatureName(),
                         getVersion()
-                    );
+                    )
                 } else {
-                    throw new UnsupportedOperationException("Unsupported capability selector type: " + c.getClass().getName());
+                    throw UnsupportedOperationException("Unsupported capability selector type: " + c!!.javaClass.getName())
                 }
-            })
-            .collect(ImmutableList.toImmutableList());
+            }
+            .collect(ImmutableList.toImmutableList<Capability>())
     }
 
-    @Override
-    public String toString() {
-        return getGroup() + ":" + getName() + ":" + getVersionConstraint().getDisplayName();
+    override fun toString(): String {
+        return getGroup() + ":" + getName() + ":" + getVersionConstraint().getDisplayName()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        AbstractExternalModuleDependency that = (AbstractExternalModuleDependency) o;
+        val that = o as AbstractExternalModuleDependency
 
-        return moduleIdentifier.equals(that.moduleIdentifier) &&
-            versionConstraint.equals(that.versionConstraint) &&
-            changing == that.changing &&
-            isCommonContentEquals(that);
+        return moduleIdentifier == that.moduleIdentifier &&
+                versionConstraint == that.versionConstraint && changing == that.changing &&
+                isCommonContentEquals(that)
     }
 
-    @Override
-    public int hashCode() {
-        int result = getGroup() != null ? getGroup().hashCode() : 0;
-        result = 31 * result + getName().hashCode();
-        result = 31 * result + (getVersion() != null ? getVersion().hashCode() : 0);
-        return result;
+    override fun hashCode(): Int {
+        var result = if (getGroup() != null) getGroup().hashCode() else 0
+        result = 31 * result + getName().hashCode()
+        result = 31 * result + (if (getVersion() != null) getVersion().hashCode() else 0)
+        return result
+    }
+
+    companion object {
+        fun assertModuleId(group: String?, name: String?): ModuleIdentifier {
+            if (name == null) {
+                throw InvalidUserDataException("Name must not be null!")
+            }
+            return DefaultModuleIdentifier.newId(group, name)
+        }
     }
 }

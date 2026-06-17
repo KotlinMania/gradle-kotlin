@@ -13,55 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.util.Path;
-
-import java.io.IOException;
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.util.Path
+import java.io.IOException
 
 /**
- * A thread-safe, reusable serializer for {@link ProjectIdentity}.
+ * A thread-safe, reusable serializer for [ProjectIdentity].
  */
-public class ProjectIdentitySerializer extends AbstractSerializer<ProjectIdentity> {
+class ProjectIdentitySerializer(private val pathSerializer: PathSerializer) : AbstractSerializer<ProjectIdentity?>() {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ProjectIdentity {
+        val buildPath = pathSerializer.read(decoder)
 
-    private final PathSerializer pathSerializer;
-
-    public ProjectIdentitySerializer(PathSerializer pathSerializer) {
-        this.pathSerializer = pathSerializer;
-    }
-
-    @Override
-    public ProjectIdentity read(Decoder decoder) throws IOException {
-        Path buildPath = pathSerializer.read(decoder);
-
-        boolean isRoot = decoder.readBoolean();
+        val isRoot = decoder.readBoolean()
 
         if (isRoot) {
-            String projectName = decoder.readString();
-            return ProjectIdentity.forRootProject(buildPath, projectName);
+            val projectName = decoder.readString()
+            return ProjectIdentity.forRootProject(buildPath, projectName!!)
         } else {
-            Path projectPath = pathSerializer.read(decoder);
-            return ProjectIdentity.forSubproject(buildPath, projectPath);
+            val projectPath = pathSerializer.read(decoder)
+            return ProjectIdentity.forSubproject(buildPath, projectPath)
         }
     }
 
-    @Override
-    public void write(Encoder encoder, ProjectIdentity value) throws IOException {
-        pathSerializer.write(encoder, value.getBuildPath());
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: ProjectIdentity) {
+        pathSerializer.write(encoder, value.getBuildPath())
 
-        boolean isRoot = value.getProjectPath().equals(Path.ROOT);
-        encoder.writeBoolean(isRoot);
+        val isRoot = value.getProjectPath() == Path.ROOT
+        encoder.writeBoolean(isRoot)
 
         if (isRoot) {
-            encoder.writeString(value.getProjectName());
+            encoder.writeString(value.getProjectName())
         } else {
-            pathSerializer.write(encoder, value.getProjectPath());
+            pathSerializer.write(encoder, value.getProjectPath())
         }
     }
-
 }

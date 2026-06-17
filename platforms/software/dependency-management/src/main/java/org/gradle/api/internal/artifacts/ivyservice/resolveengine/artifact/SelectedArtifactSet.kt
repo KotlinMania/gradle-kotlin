@@ -13,24 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
+import org.gradle.api.internal.tasks.TaskDependencyContainer
 
 /**
  * A container of artifacts that match some criteria.
  */
-public interface SelectedArtifactSet extends TaskDependencyContainer {
+interface SelectedArtifactSet : TaskDependencyContainer {
     /**
      * Visits the artifacts of this set. Does not include any artifacts that could not be selected. Failures to select or resolve artifacts are supplied to the visitor.
      */
-    void visitArtifacts(ArtifactVisitor visitor, boolean continueOnSelectionFailure);
+    fun visitArtifacts(visitor: ArtifactVisitor, continueOnSelectionFailure: Boolean)
 
     /**
      * Visits the files of this set. Does not include any files that could not be selected. Failures to select or resolve artifacts are supplied to the visitor.
      */
-    default void visitFiles(ResolvedFileVisitor visitor, boolean continueOnSelectionFailure) {
-        visitArtifacts(new ArtifactVisitorToResolvedFileVisitorAdapter(visitor), continueOnSelectionFailure);
+    fun visitFiles(visitor: ResolvedFileVisitor, continueOnSelectionFailure: Boolean) {
+        visitArtifacts(ArtifactVisitorToResolvedFileVisitorAdapter(visitor), continueOnSelectionFailure)
     }
 }

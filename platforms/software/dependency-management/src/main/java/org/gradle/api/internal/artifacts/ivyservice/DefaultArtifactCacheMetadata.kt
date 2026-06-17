@@ -13,57 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.cache.GlobalCache;
-import org.gradle.cache.internal.CacheVersion;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
+import com.google.common.collect.ImmutableList
+import org.gradle.cache.GlobalCache
+import org.gradle.cache.internal.CacheVersion
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import java.io.File
 
-import java.io.File;
-import java.util.List;
+class DefaultArtifactCacheMetadata(cacheBuilderFactory: GlobalScopedCacheBuilderFactory) : ArtifactCacheMetadata, GlobalCache {
+    private val cacheDir: File?
+    private val baseDir: File
 
-public class DefaultArtifactCacheMetadata implements ArtifactCacheMetadata, GlobalCache {
-
-    public static final CacheVersion CACHE_LAYOUT_VERSION = CacheLayout.META_DATA.getVersion();
-    private final File cacheDir;
-    private final File baseDir;
-
-    public DefaultArtifactCacheMetadata(GlobalScopedCacheBuilderFactory cacheBuilderFactory) {
-        this.baseDir = cacheBuilderFactory.getRootDir();
-        this.cacheDir = cacheBuilderFactory.baseDirForCrossVersionCache(CacheLayout.MODULES.getKey());
+    init {
+        this.baseDir = cacheBuilderFactory.getRootDir()
+        this.cacheDir = cacheBuilderFactory.baseDirForCrossVersionCache(CacheLayout.MODULES.getKey())
     }
 
-    public DefaultArtifactCacheMetadata(GlobalScopedCacheBuilderFactory cacheBuilderFactory, File baseDir) {
-        this(cacheBuilderFactory.createCacheBuilderFactory(baseDir));
+    constructor(cacheBuilderFactory: GlobalScopedCacheBuilderFactory, baseDir: File?) : this(cacheBuilderFactory.createCacheBuilderFactory(baseDir))
+
+    override fun getCacheDir(): File? {
+        return cacheDir
     }
 
-    @Override
-    public File getCacheDir() {
-        return cacheDir;
+    override fun getFileStoreDirectory(): File {
+        return createCacheRelativeDir(CacheLayout.FILE_STORE)
     }
 
-    @Override
-    public File getFileStoreDirectory() {
-        return createCacheRelativeDir(CacheLayout.FILE_STORE);
+    override fun getExternalResourcesStoreDirectory(): File {
+        return createCacheRelativeDir(CacheLayout.RESOURCES)
     }
 
-    @Override
-    public File getExternalResourcesStoreDirectory() {
-        return createCacheRelativeDir(CacheLayout.RESOURCES);
+    override fun getMetaDataStoreDirectory(): File {
+        return File(createCacheRelativeDir(CacheLayout.META_DATA), "descriptors")
     }
 
-    @Override
-    public File getMetaDataStoreDirectory() {
-        return new File(createCacheRelativeDir(CacheLayout.META_DATA), "descriptors");
+    private fun createCacheRelativeDir(cacheLayout: CacheLayout): File {
+        return cacheLayout.getPath(getCacheDir())
     }
 
-    private File createCacheRelativeDir(CacheLayout cacheLayout) {
-        return cacheLayout.getPath(getCacheDir());
+    override fun getGlobalCacheRoots(): MutableList<File?> {
+        return ImmutableList.of<File?>(baseDir)
     }
 
-    @Override
-    public List<File> getGlobalCacheRoots() {
-        return ImmutableList.of(baseDir);
+    companion object {
+        val CACHE_LAYOUT_VERSION: CacheVersion = CacheLayout.META_DATA.getVersion()
     }
 }

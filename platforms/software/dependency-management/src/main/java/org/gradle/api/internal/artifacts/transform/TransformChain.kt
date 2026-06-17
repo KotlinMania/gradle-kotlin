@@ -13,63 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.Action;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.Action
 
 /**
- * A series of {@link TransformStep}s.
+ * A series of [TransformStep]s.
  */
-public class TransformChain {
-    @Nullable
-    private final TransformChain init;
-    private final TransformStep last;
-
-    /**
-     * @param init The initial steps of this chain, or null if this chain only contains one step.
-     * @param last The last step of this chain.
-     */
-    public TransformChain(@Nullable TransformChain init, TransformStep last) {
-        this.init = init;
-        this.last = last;
-    }
-
+class TransformChain
+/**
+ * @param init The initial steps of this chain, or null if this chain only contains one step.
+ * @param last The last step of this chain.
+ */(
     /**
      * @return The initial steps of this chain, or null if this chain only contains one step.
      */
-    @Nullable
-    public TransformChain getInit() {
-        return init;
-    }
-
+    val init: TransformChain?,
     /**
      * @return The last step of this chain.
      */
-    public TransformStep getLast() {
-        return last;
+    val last: TransformStep
+) {
+    fun requiresDependencies(): Boolean {
+        return (init != null && init.requiresDependencies()) || last.requiresDependencies()
     }
 
-    public boolean requiresDependencies() {
-        return (init != null && init.requiresDependencies()) || last.requiresDependencies();
-    }
-
-    public String getDisplayName() {
-        String lastDisplayName = last.getDisplayName();
-        return init == null
-            ? lastDisplayName
-            : init.getDisplayName() + " -> " + lastDisplayName;
-    }
-
-    public void visitTransformSteps(Action<? super TransformStep> action) {
-        if (init != null) {
-            init.visitTransformSteps(action);
+    val displayName: String
+        get() {
+            val lastDisplayName = last.getDisplayName()
+            return if (init == null)
+                lastDisplayName
+            else
+                init.getDisplayName() + " -> " + lastDisplayName
         }
-        action.execute(last);
+
+    fun visitTransformSteps(action: Action<in TransformStep>) {
+        if (init != null) {
+            init.visitTransformSteps(action)
+        }
+        action.execute(last)
     }
 
-    public int length() {
-        return (init == null ? 0 : init.length()) + 1;
+    fun length(): Int {
+        return (if (init == null) 0 else init.length()) + 1
     }
 }

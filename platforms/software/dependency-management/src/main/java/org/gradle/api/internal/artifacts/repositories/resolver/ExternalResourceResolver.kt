@@ -13,549 +13,496 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import com.google.common.annotations.VisibleForTesting
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ComponentMetadataListerDetails
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepositoryAccess
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.repositories.descriptor.UrlRepositoryDescriptor
+import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.MetadataArtifactProvider
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.DefaultModuleDescriptorArtifactMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.ArtifactResolveException
+import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resolve.result.BuildableTypedResolveResult
+import org.gradle.internal.resolve.result.DefaultResourceAwareResolveResult
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.local.ByteArrayReadableContent
+import org.gradle.internal.resource.local.FileReadableContent
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.gradle.util.internal.CollectionUtils
+import org.gradle.util.internal.CollectionUtils.collect
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.lang.Boolean
+import java.nio.charset.StandardCharsets
+import java.util.function.Consumer
+import java.util.function.Function
+import kotlin.Any
+import kotlin.ByteArray
+import kotlin.Exception
+import kotlin.IllegalStateException
+import kotlin.String
+import kotlin.UnsupportedOperationException
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ComponentMetadataListerDetails;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepositoryAccess;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.repositories.descriptor.UrlRepositoryDescriptor;
-import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.MetadataArtifactProvider;
-import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.DefaultModuleDescriptorArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.ArtifactResolveException;
-import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resolve.result.BuildableTypedResolveResult;
-import org.gradle.internal.resolve.result.DefaultResourceAwareResolveResult;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.local.ByteArrayReadableContent;
-import org.gradle.internal.resource.local.FileReadableContent;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.util.internal.CollectionUtils;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+abstract class ExternalResourceResolver protected constructor(
+    descriptor: UrlRepositoryDescriptor,
+    private val local: Boolean,
+    protected val repository: ExternalResourceRepository,
+    private val cachingResourceAccessor: CacheAwareExternalResourceAccessor,
+    private val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    private val artifactFileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    private val metadataSources: ImmutableMetadataSources,
+    private val metadataArtifactProvider: MetadataArtifactProvider,
+    private val componentMetadataSupplierFactory: InstantiatingAction<ComponentMetadataSupplierDetails>?,
+    private val providedVersionLister: InstantiatingAction<ComponentMetadataListerDetails>?,
+    private val injector: Instantiator,
+    private val checksumService: ChecksumService,
+    private val continueOnConnectionFailure: Boolean
+) : ConfiguredModuleComponentRepository {
+    private val name: String
+    private val ivyPatterns: ImmutableList<ResourcePattern>
+    private val artifactPatterns: ImmutableList<ResourcePattern>
+    private var componentResolvers: ComponentResolvers? = null
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+    private val id: String
+    private var cachedArtifactResolver: ExternalResourceArtifactResolver? = null
 
-public abstract class ExternalResourceResolver implements ConfiguredModuleComponentRepository {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExternalResourceResolver.class);
-
-    private final String name;
-    private final ImmutableList<ResourcePattern> ivyPatterns;
-    private final ImmutableList<ResourcePattern> artifactPatterns;
-    private ComponentResolvers componentResolvers;
-
-    private final ExternalResourceRepository repository;
-    private final boolean local;
-    private final CacheAwareExternalResourceAccessor cachingResourceAccessor;
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
-
-    private final ImmutableMetadataSources metadataSources;
-    private final MetadataArtifactProvider metadataArtifactProvider;
-
-    private final InstantiatingAction<ComponentMetadataSupplierDetails> componentMetadataSupplierFactory;
-    private final InstantiatingAction<ComponentMetadataListerDetails> providedVersionLister;
-    private final Instantiator injector;
-    private final ChecksumService checksumService;
-    private final boolean continueOnConnectionFailure;
-
-    private final String id;
-    private ExternalResourceArtifactResolver cachedArtifactResolver;
-
-    protected ExternalResourceResolver(
-        UrlRepositoryDescriptor descriptor,
-        boolean local,
-        ExternalResourceRepository repository,
-        CacheAwareExternalResourceAccessor cachingResourceAccessor,
-        LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-        FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
-        ImmutableMetadataSources metadataSources,
-        MetadataArtifactProvider metadataArtifactProvider,
-        @Nullable InstantiatingAction<ComponentMetadataSupplierDetails> componentMetadataSupplierFactory,
-        @Nullable InstantiatingAction<ComponentMetadataListerDetails> providedVersionLister,
-        Instantiator injector,
-        ChecksumService checksumService,
-        boolean continueOnConnectionFailure
-    ) {
-        this.id = descriptor.getId();
-        this.name = descriptor.getName();
-        this.ivyPatterns = descriptor.getMetadataResources();
-        this.artifactPatterns = descriptor.getArtifactResources();
-        this.local = local;
-        this.cachingResourceAccessor = cachingResourceAccessor;
-        this.repository = repository;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.artifactFileStore = artifactFileStore;
-        this.metadataSources = metadataSources;
-        this.metadataArtifactProvider = metadataArtifactProvider;
-        this.componentMetadataSupplierFactory = componentMetadataSupplierFactory;
-        this.providedVersionLister = providedVersionLister;
-        this.injector = injector;
-        this.checksumService = checksumService;
-        this.continueOnConnectionFailure = continueOnConnectionFailure;
+    init {
+        this.id = descriptor.getId()
+        this.name = descriptor.getName()
+        this.ivyPatterns = descriptor.getMetadataResources()
+        this.artifactPatterns = descriptor.getArtifactResources()
     }
 
-    @Override
-    public String getId() {
-        return id;
+    override fun getId(): String {
+        return id
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public boolean isDynamicResolveMode() {
-        return false;
+    override fun isDynamicResolveMode(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isContinueOnConnectionFailure() {
-        return continueOnConnectionFailure;
+    override fun isContinueOnConnectionFailure(): Boolean {
+        return continueOnConnectionFailure
     }
 
-    @Override
-    public boolean isRepositoryDisabled() {
+    override fun isRepositoryDisabled(): Boolean {
         // A repository is never disabled by default
-        return false;
+        return false
     }
 
-    @Override
-    public void setComponentResolvers(ComponentResolvers resolver) {
-        this.componentResolvers = resolver;
+    override fun setComponentResolvers(resolver: ComponentResolvers) {
+        this.componentResolvers = resolver
     }
 
-    protected ExternalResourceRepository getRepository() {
-        return repository;
+    override fun isLocal(): Boolean {
+        return local
     }
 
-    @Override
-    public boolean isLocal() {
-        return local;
+    override fun getComponentMetadataInstantiator(): Instantiator {
+        return injector
     }
 
-    @Override
-    public Instantiator getComponentMetadataInstantiator() {
-        return injector;
-    }
-
-    @Override
-    public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
-        return componentMetadataSupplierFactory;
+    override fun getComponentMetadataSupplier(): InstantiatingAction<ComponentMetadataSupplierDetails> {
+        return componentMetadataSupplierFactory!!
     }
 
     @VisibleForTesting
-    public InstantiatingAction<ComponentMetadataListerDetails> getProvidedVersionLister() {
-        return providedVersionLister;
+    fun getProvidedVersionLister(): InstantiatingAction<ComponentMetadataListerDetails> {
+        return providedVersionLister!!
     }
 
-    @Override
-    public Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() {
-        throw new UnsupportedOperationException();
+    override fun getArtifactCache(): MutableMap<ComponentArtifactIdentifier, ResolvableArtifact>? {
+        throw UnsupportedOperationException()
     }
 
-    private void doListModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-        ModuleIdentifier module = selector.getModuleIdentifier();
+    private fun doListModuleVersions(selector: ModuleComponentSelector, overrideMetadata: ComponentOverrideMetadata, result: BuildableModuleVersionListingResolveResult) {
+        val module = selector.getModuleIdentifier()
 
-        tryListingViaRule(module, result);
+        tryListingViaRule(module, result)
 
         if (result.hasResult() && result.isAuthoritative) {
-            return;
+            return
         }
 
         // TODO: Provide an abstraction for accessing resources within the same module (maven-metadata, directory listing, etc)
         // That way we can avoid passing `ivyPatterns` and `artifactPatterns` around everywhere
-        ResourceVersionLister versionLister = new ResourceVersionLister(repository);
-        List<ResourcePattern> completeIvyPatterns = filterComplete(this.ivyPatterns, module);
-        List<ResourcePattern> completeArtifactPatterns = filterComplete(this.artifactPatterns, module);
+        val versionLister = ResourceVersionLister(repository)
+        val completeIvyPatterns = filterComplete(this.ivyPatterns, module)
+        val completeArtifactPatterns = filterComplete(this.artifactPatterns, module)
 
         // Iterate over the metadata sources to see if they can provide the version list
-        for (MetadataSource<?> metadataSource : metadataSources.sources()) {
-            metadataSource.listModuleVersions(selector, overrideMetadata, completeIvyPatterns, completeArtifactPatterns, versionLister, result);
+        for (metadataSource in metadataSources.sources()) {
+            metadataSource.listModuleVersions(selector, overrideMetadata, completeIvyPatterns, completeArtifactPatterns, versionLister, result)
             if (result.hasResult() && result.isAuthoritative) {
-                return;
+                return
             }
         }
 
-        result.listed(ImmutableSet.of());
+        result.listed(ImmutableSet.of<String?>())
     }
 
     /**
      * If the repository provides a rule to create a list of versions of a module, use it.
      * It's assumed that the result of such a call is authoritative.
      */
-    private void tryListingViaRule(ModuleIdentifier module, BuildableModuleVersionListingResolveResult result) {
+    private fun tryListingViaRule(module: ModuleIdentifier, result: BuildableModuleVersionListingResolveResult) {
         if (providedVersionLister != null) {
-            providedVersionLister.execute(new DefaultComponentVersionsLister(module, result));
+            providedVersionLister.execute(DefaultComponentVersionsLister(module, result))
         }
     }
 
-    private List<ResourcePattern> filterComplete(List<ResourcePattern> ivyPatterns, final ModuleIdentifier module) {
-        return CollectionUtils.filter(ivyPatterns, element -> element.isComplete(module));
+    private fun filterComplete(ivyPatterns: MutableList<ResourcePattern>, module: ModuleIdentifier): MutableList<ResourcePattern> {
+        return CollectionUtils.filter<ResourcePattern?>(ivyPatterns, org.gradle.api.specs.Spec { element: ResourcePattern? -> element!!.isComplete(module) })
     }
 
-    protected void doResolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata prescribedMetaData, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result) {
-        resolveStaticDependency(moduleComponentIdentifier, prescribedMetaData, result, createArtifactResolver());
+    protected open fun doResolveComponentMetaData(
+        moduleComponentIdentifier: ModuleComponentIdentifier,
+        prescribedMetaData: ComponentOverrideMetadata,
+        result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+    ) {
+        resolveStaticDependency(moduleComponentIdentifier, prescribedMetaData, result, createArtifactResolver())
     }
 
-    protected final void resolveStaticDependency(ModuleComponentIdentifier moduleVersionIdentifier, ComponentOverrideMetadata prescribedMetaData, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result, ExternalResourceArtifactResolver artifactResolver) {
-        for (MetadataSource<?> source : metadataSources.sources()) {
-            MutableModuleComponentResolveMetadata value = source.create(name, componentResolvers, moduleVersionIdentifier, prescribedMetaData, artifactResolver, result);
+    protected fun resolveStaticDependency(
+        moduleVersionIdentifier: ModuleComponentIdentifier,
+        prescribedMetaData: ComponentOverrideMetadata,
+        result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>,
+        artifactResolver: ExternalResourceArtifactResolver
+    ) {
+        for (source in metadataSources.sources()) {
+            val value: MutableModuleComponentResolveMetadata? = source.create(name, componentResolvers!!, moduleVersionIdentifier, prescribedMetaData, artifactResolver, result)
             if (value != null) {
-                maybeDisableComponentMetadataRuleCaching(value);
-                result.resolved(value.asImmutable());
-                return;
+                maybeDisableComponentMetadataRuleCaching(value)
+                result.resolved(value.asImmutable())
+                return
             }
         }
 
-        LOGGER.debug("No meta-data file or artifact found for module '{}' in repository '{}'.", moduleVersionIdentifier, getName());
-        result.missing();
+        LOGGER.debug("No meta-data file or artifact found for module '{}' in repository '{}'.", moduleVersionIdentifier, getName())
+        result.missing()
     }
 
-    private void maybeDisableComponentMetadataRuleCaching(MutableModuleComponentResolveMetadata value) {
+    private fun maybeDisableComponentMetadataRuleCaching(value: MutableModuleComponentResolveMetadata) {
         if (isLocal()) {
             // Caching component metadata rules for local repositories leads to issues
             // when in some cases cached file does not exist yet, but we anyway try to use it
-            value.setComponentMetadataRuleCachingEnabled(false);
+            value.isComponentMetadataRuleCachingEnabled = false
         }
     }
 
-    protected abstract boolean isMetaDataArtifact(ArtifactType artifactType);
+    protected abstract fun isMetaDataArtifact(artifactType: ArtifactType): Boolean
 
-    protected Set<ModuleComponentArtifactMetadata> findOptionalArtifacts(ComponentArtifactResolveMetadata module, String type, String classifier) {
-        if (!(module.getId() instanceof ModuleComponentIdentifier)) {
-            return Collections.emptySet();
+    protected fun findOptionalArtifacts(module: ComponentArtifactResolveMetadata, type: String, classifier: String): MutableSet<ModuleComponentArtifactMetadata> {
+        if (module.getId() !is ModuleComponentIdentifier) {
+            return mutableSetOf<ModuleComponentArtifactMetadata>()
         }
 
-        ModuleComponentIdentifier moduleId = (ModuleComponentIdentifier) module.getId();
-        IvyArtifactName ivyArtifactName = new DefaultIvyArtifactName(moduleId.getModule(), type, "jar", classifier);
+        val moduleId = module.getId() as ModuleComponentIdentifier?
+        val ivyArtifactName: IvyArtifactName = DefaultIvyArtifactName(moduleId!!.getModule(), type, "jar", classifier)
 
-        ModuleComponentArtifactMetadata artifact = new DefaultModuleComponentArtifactMetadata(moduleId, ivyArtifactName);
-        if (createArtifactResolver(module.getSources()).artifactExists(artifact, new DefaultResourceAwareResolveResult())) {
-            return ImmutableSet.of(artifact);
+        val artifact: ModuleComponentArtifactMetadata = DefaultModuleComponentArtifactMetadata(moduleId, ivyArtifactName)
+        if (createArtifactResolver(module.getSources()!!).artifactExists(artifact, DefaultResourceAwareResolveResult())) {
+            return ImmutableSet.of<ModuleComponentArtifactMetadata>(artifact)
         }
-        return Collections.emptySet();
+        return mutableSetOf<ModuleComponentArtifactMetadata>()
     }
 
-    private ModuleDescriptorArtifactMetadata getMetaDataArtifactFor(ModuleComponentIdentifier moduleComponentIdentifier) {
-        IvyArtifactName ivyArtifactName = metadataArtifactProvider.getMetaDataArtifactName(moduleComponentIdentifier.getModule());
-        return new DefaultModuleDescriptorArtifactMetadata(moduleComponentIdentifier, ivyArtifactName);
+    private fun getMetaDataArtifactFor(moduleComponentIdentifier: ModuleComponentIdentifier): ModuleDescriptorArtifactMetadata {
+        val ivyArtifactName = metadataArtifactProvider.getMetaDataArtifactName(moduleComponentIdentifier.getModule())
+        return DefaultModuleDescriptorArtifactMetadata(moduleComponentIdentifier, ivyArtifactName)
     }
 
-    protected ExternalResourceArtifactResolver createArtifactResolver() {
+    protected open fun createArtifactResolver(): ExternalResourceArtifactResolver {
         if (cachedArtifactResolver != null) {
-            return cachedArtifactResolver;
+            return cachedArtifactResolver!!
         }
-        ExternalResourceArtifactResolver artifactResolver = createArtifactResolver(ivyPatterns, artifactPatterns);
-        cachedArtifactResolver = artifactResolver;
-        return artifactResolver;
+        val artifactResolver = createArtifactResolver(ivyPatterns, artifactPatterns)
+        cachedArtifactResolver = artifactResolver
+        return artifactResolver
     }
 
-    private ExternalResourceArtifactResolver createArtifactResolver(List<ResourcePattern> ivyPatterns, List<ResourcePattern> artifactPatterns) {
-        return new DefaultExternalResourceArtifactResolver(repository, locallyAvailableResourceFinder, ivyPatterns, artifactPatterns, artifactFileStore, cachingResourceAccessor);
+    private fun createArtifactResolver(ivyPatterns: MutableList<ResourcePattern>, artifactPatterns: MutableList<ResourcePattern>): ExternalResourceArtifactResolver {
+        return DefaultExternalResourceArtifactResolver(repository, locallyAvailableResourceFinder, ivyPatterns, artifactPatterns, artifactFileStore, cachingResourceAccessor)
     }
 
-    protected ExternalResourceArtifactResolver createArtifactResolver(ModuleSources moduleSources) {
-        return createArtifactResolver();
+    protected open fun createArtifactResolver(moduleSources: ModuleSources): ExternalResourceArtifactResolver {
+        return createArtifactResolver()
     }
 
-    public void publish(ModuleComponentArtifactMetadata artifact, File src) {
-        ResourcePattern destinationPattern;
-        if ("ivy".equals(artifact.getName().type) && !ivyPatterns.isEmpty()) {
-            destinationPattern = ivyPatterns.get(0);
+    fun publish(artifact: ModuleComponentArtifactMetadata, src: File) {
+        val destinationPattern: ResourcePattern?
+        if ("ivy" == artifact.getName()!!.type && !ivyPatterns.isEmpty()) {
+            destinationPattern = ivyPatterns.get(0)
         } else if (!artifactPatterns.isEmpty()) {
-            destinationPattern = artifactPatterns.get(0);
+            destinationPattern = artifactPatterns.get(0)
         } else {
-            throw new IllegalStateException("impossible to publish " + artifact + " using " + this + ": no artifact pattern defined");
+            throw IllegalStateException("impossible to publish " + artifact + " using " + this + ": no artifact pattern defined")
         }
-        ExternalResourceName destination = destinationPattern.getLocation(artifact);
+        val destination = destinationPattern.getLocation(artifact)
 
-        put(src, destination);
-        LOGGER.info("Published {} to {}", artifact, destination);
+        put(src, destination)
+        LOGGER.info("Published {} to {}", artifact, destination)
     }
 
-    private void put(File src, ExternalResourceName destination) {
-        repository.withProgressLogging().resource(destination).put(new FileReadableContent(src));
-        publishChecksums(destination, src);
+    private fun put(src: File, destination: ExternalResourceName) {
+        repository.withProgressLogging().resource(destination).put(FileReadableContent(src))
+        publishChecksums(destination, src)
     }
 
-    private void publishChecksums(ExternalResourceName destination, File content) {
-        publishChecksum(destination, content, "sha1");
+    private fun publishChecksums(destination: ExternalResourceName, content: File) {
+        publishChecksum(destination, content, "sha1")
 
-        if (!ExternalResourceResolver.disableExtraChecksums()) {
-            publishPossiblyUnsupportedChecksum(destination, content, "sha-256");
-            publishPossiblyUnsupportedChecksum(destination, content, "sha-512");
+        if (!disableExtraChecksums()) {
+            publishPossiblyUnsupportedChecksum(destination, content, "sha-256")
+            publishPossiblyUnsupportedChecksum(destination, content, "sha-512")
         }
     }
 
-    private void publishPossiblyUnsupportedChecksum(ExternalResourceName destination, File content, String algorithm) {
+    private fun publishPossiblyUnsupportedChecksum(destination: ExternalResourceName, content: File, algorithm: String) {
         try {
-            publishChecksum(destination, content, algorithm);
-        } catch (Exception ex) {
+            publishChecksum(destination, content, algorithm)
+        } catch (ex: Exception) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.warn("Cannot upload checksum for " + content.getName() + " because the remote repository doesn't support " + algorithm + ". This will not fail the build.", ex);
+                LOGGER.warn("Cannot upload checksum for " + content.getName() + " because the remote repository doesn't support " + algorithm + ". This will not fail the build.", ex)
             } else {
-                LOGGER.warn("Cannot upload checksum for " + content.getName() + " because the remote repository doesn't support " + algorithm + ". This will not fail the build.");
+                LOGGER.warn("Cannot upload checksum for " + content.getName() + " because the remote repository doesn't support " + algorithm + ". This will not fail the build.")
             }
         }
     }
 
-    private void publishChecksum(ExternalResourceName destination, File content, String algorithm) {
-        byte[] checksum = createChecksumFile(content, algorithm.toUpperCase(Locale.ROOT));
-        ExternalResourceName checksumDestination = destination.append("." + algorithm.replaceAll("-", ""));
-        repository.resource(checksumDestination).put(new ByteArrayReadableContent(checksum));
+    private fun publishChecksum(destination: ExternalResourceName, content: File, algorithm: String) {
+        val checksum = createChecksumFile(content, algorithm.uppercase())
+        val checksumDestination = destination.append("." + algorithm.replace("-".toRegex(), ""))
+        repository.resource(checksumDestination).put(ByteArrayReadableContent(checksum))
     }
 
-    private byte[] createChecksumFile(File src, String algorithm) {
-        HashCode hash = checksumService.hash(src, algorithm);
-        String formattedHashString = hash.toString();
-        return formattedHashString.getBytes(StandardCharsets.US_ASCII);
+    private fun createChecksumFile(src: File, algorithm: String): ByteArray {
+        val hash = checksumService.hash(src, algorithm)
+        val formattedHashString = hash.toString()
+        return formattedHashString.toByteArray(StandardCharsets.US_ASCII)
     }
 
-    public List<String> getIvyPatterns() {
-        return CollectionUtils.collect(ivyPatterns, ResourcePattern::getPattern);
+    fun getIvyPatterns(): MutableList<String> {
+        return collect<String?, ResourcePattern?>(ivyPatterns, Function { obj: ResourcePattern? -> obj!!.getPattern() })
     }
 
-    public List<String> getArtifactPatterns() {
-        return CollectionUtils.collect(artifactPatterns, ResourcePattern::getPattern);
+    fun getArtifactPatterns(): MutableList<String> {
+        return collect<String?, ResourcePattern?>(artifactPatterns, Function { obj: ResourcePattern? -> obj!!.getPattern() })
     }
 
-    protected abstract class AbstractRepositoryAccess implements ModuleComponentRepositoryAccess<ModuleComponentResolveMetadata> {
-        @Override
-        public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
+    protected abstract inner class AbstractRepositoryAccess : ModuleComponentRepositoryAccess<ModuleComponentResolveMetadata> {
+        override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
             if (artifactType == ArtifactType.JAVADOC) {
-                resolveJavadocArtifacts(component, result);
+                resolveJavadocArtifacts(component, result)
             } else if (artifactType == ArtifactType.SOURCES) {
-                resolveSourceArtifacts(component, result);
+                resolveSourceArtifacts(component, result)
             } else if (isMetaDataArtifact(artifactType)) {
-                resolveMetaDataArtifacts(component, result);
+                resolveMetaDataArtifacts(component, result)
             }
         }
 
-        protected abstract void resolveMetaDataArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result);
+        protected abstract fun resolveMetaDataArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult)
 
-        protected abstract void resolveJavadocArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result);
+        protected abstract fun resolveJavadocArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult)
 
-        protected abstract void resolveSourceArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result);
+        protected abstract fun resolveSourceArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult)
     }
 
-    protected abstract class LocalRepositoryAccess extends AbstractRepositoryAccess {
-        @Override
-        public String toString() {
-            return "local > " + ExternalResourceResolver.this;
+    protected abstract inner class LocalRepositoryAccess : AbstractRepositoryAccess() {
+        override fun toString(): String {
+            return "local > " + this@ExternalResourceResolver
         }
 
-        @Override
-        public final void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
+        override fun listModuleVersions(selector: ModuleComponentSelector, overrideMetadata: ComponentOverrideMetadata, result: BuildableModuleVersionListingResolveResult) {
         }
 
-        @Override
-        public final void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result) {
+        override fun resolveComponentMetaData(
+            moduleComponentIdentifier: ModuleComponentIdentifier,
+            requestMetaData: ComponentOverrideMetadata,
+            result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+        ) {
         }
 
-        @Override
-        protected final void resolveMetaDataArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result) {
-            if (!(module.getId() instanceof ModuleComponentIdentifier)) {
-                return;
+        override fun resolveMetaDataArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult) {
+            if (module.getId() !is ModuleComponentIdentifier) {
+                return
             }
 
-            ModuleComponentIdentifier moduleId = (ModuleComponentIdentifier) module.getId();
-            ModuleDescriptorArtifactMetadata artifact = getMetaDataArtifactFor(moduleId);
-            result.resolved(Collections.singleton(artifact));
+            val moduleId = module.getId() as ModuleComponentIdentifier?
+            val artifact = getMetaDataArtifactFor(moduleId!!)
+            result.resolved(mutableSetOf<ModuleDescriptorArtifactMetadata>(artifact))
         }
 
-        @Override
-        public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
-
+        override fun resolveArtifact(artifact: ComponentArtifactMetadata, moduleSources: ModuleSources, result: BuildableArtifactFileResolveResult) {
         }
 
-        @Override
-        public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
-            return MetadataFetchingCost.CHEAP;
+        override fun estimateMetadataFetchingCost(moduleComponentIdentifier: ModuleComponentIdentifier): MetadataFetchingCost {
+            return MetadataFetchingCost.CHEAP
         }
     }
 
-    protected abstract class RemoteRepositoryAccess extends AbstractRepositoryAccess {
-        @Override
-        public String toString() {
-            return "remote > " + ExternalResourceResolver.this;
+    protected abstract inner class RemoteRepositoryAccess : AbstractRepositoryAccess() {
+        override fun toString(): String {
+            return "remote > " + this@ExternalResourceResolver
         }
 
-        @Override
-        public final void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-            doListModuleVersions(selector, overrideMetadata, result);
+        override fun listModuleVersions(selector: ModuleComponentSelector, overrideMetadata: ComponentOverrideMetadata, result: BuildableModuleVersionListingResolveResult) {
+            doListModuleVersions(selector, overrideMetadata, result)
         }
 
-        @Override
-        public final void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result) {
-            doResolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result);
+        override fun resolveComponentMetaData(
+            moduleComponentIdentifier: ModuleComponentIdentifier,
+            requestMetaData: ComponentOverrideMetadata,
+            result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+        ) {
+            doResolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result)
         }
 
-        @Override
-        public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-            super.resolveArtifactsWithType(component, artifactType, result);
-            checkArtifactsResolved(component, artifactType, result);
+        override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
+            super.resolveArtifactsWithType(component, artifactType, result)
+            checkArtifactsResolved(component, artifactType, result)
         }
 
-        private void checkArtifactsResolved(ComponentArtifactResolveMetadata component, Object context, BuildableTypedResolveResult<?, ? super ArtifactResolveException> result) {
+        private fun checkArtifactsResolved(component: ComponentArtifactResolveMetadata, context: Any, result: BuildableTypedResolveResult<*, in ArtifactResolveException?>) {
             if (!result.hasResult()) {
-                result.failed(new ArtifactResolveException(component.getId(),
-                    String.format("Cannot locate %s for '%s' in repository '%s'", context, component.getId().getDisplayName(), name)));
+                result.failed(
+                    ArtifactResolveException(
+                        component.getId()!!,
+                        String.format("Cannot locate %s for '%s' in repository '%s'", context, component.getId()!!.getDisplayName(), name)
+                    )
+                )
             }
         }
 
-        @Override
-        protected final void resolveMetaDataArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result) {
+        override fun resolveMetaDataArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult) {
             // Meta data artifacts are determined locally
         }
 
-        @Override
-        protected void resolveJavadocArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result) {
+        override fun resolveJavadocArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult) {
             // Probe for artifact with classifier
-            result.resolved(findOptionalArtifacts(module, "javadoc", "javadoc"));
+            result.resolved(findOptionalArtifacts(module, "javadoc", "javadoc"))
         }
 
-        @Override
-        protected void resolveSourceArtifacts(ComponentArtifactResolveMetadata module, BuildableArtifactSetResolveResult result) {
+        override fun resolveSourceArtifacts(module: ComponentArtifactResolveMetadata, result: BuildableArtifactSetResolveResult) {
             // Probe for artifact with classifier
-            result.resolved(findOptionalArtifacts(module, "source", "sources"));
+            result.resolved(findOptionalArtifacts(module, "source", "sources"))
         }
 
-        @Override
-        public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
-            if (artifact.isOptionalArtifact() && artifact instanceof ModuleComponentArtifactMetadata) {
-                if (!createArtifactResolver(moduleSources).artifactExists((ModuleComponentArtifactMetadata) artifact, new DefaultResourceAwareResolveResult())) {
-                    result.notFound(artifact.getId());
-                    return;
+        override fun resolveArtifact(artifact: ComponentArtifactMetadata, moduleSources: ModuleSources, result: BuildableArtifactFileResolveResult) {
+            if (artifact.isOptionalArtifact() && artifact is ModuleComponentArtifactMetadata) {
+                if (!createArtifactResolver(moduleSources).artifactExists(artifact, DefaultResourceAwareResolveResult())) {
+                    result.notFound(artifact.getId())
+                    return
                 }
             } else if (artifact.getAlternativeArtifact().isPresent()) {
-                DefaultResourceAwareResolveResult checkForArtifact = new DefaultResourceAwareResolveResult();
-                if (!createArtifactResolver(moduleSources).artifactExists((ModuleComponentArtifactMetadata) artifact, checkForArtifact)) {
-                    checkForArtifact.getAttempted().forEach(result::attempted);
-                    resolveArtifact(artifact.getAlternativeArtifact().get(), moduleSources, result);
-                    return;
+                val checkForArtifact = DefaultResourceAwareResolveResult()
+                if (!createArtifactResolver(moduleSources).artifactExists(artifact as ModuleComponentArtifactMetadata, checkForArtifact)) {
+                    checkForArtifact.getAttempted().forEach(Consumer { locationDescription: String? -> result.attempted(locationDescription) })
+                    resolveArtifact(artifact.getAlternativeArtifact().get(), moduleSources, result)
+                    return
                 }
             }
             try {
-                ExternalResourceArtifactResolver resolver = createArtifactResolver(moduleSources);
-                ModuleComponentArtifactMetadata moduleArtifact = (ModuleComponentArtifactMetadata) artifact;
-                LocallyAvailableExternalResource artifactResource = resolver.resolveArtifact(moduleArtifact, result);
+                val resolver = createArtifactResolver(moduleSources)
+                val moduleArtifact = artifact as ModuleComponentArtifactMetadata
+                val artifactResource = resolver.resolveArtifact(moduleArtifact, result)
                 if (artifactResource == null) {
-                    result.notFound(artifact.getId());
+                    result.notFound(artifact.getId())
                 } else {
-                    result.resolved(artifactResource.getFile());
+                    result.resolved(artifactResource.getFile())
                 }
-            } catch (Exception e) {
-                result.failed(new ArtifactResolveException(artifact.getId(), e));
+            } catch (e: Exception) {
+                result.failed(ArtifactResolveException(artifact.getId()!!, e))
             }
         }
 
-        @Override
-        public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
-            if (ExternalResourceResolver.this.local) {
-                ModuleComponentArtifactMetadata artifact = getMetaDataArtifactFor(moduleComponentIdentifier);
-                if (createArtifactResolver().artifactExists(artifact, NoOpResourceAwareResolveResult.INSTANCE)) {
-                    return MetadataFetchingCost.FAST;
+        override fun estimateMetadataFetchingCost(moduleComponentIdentifier: ModuleComponentIdentifier): MetadataFetchingCost {
+            if (this@ExternalResourceResolver.local) {
+                val artifact: ModuleComponentArtifactMetadata = getMetaDataArtifactFor(moduleComponentIdentifier)
+                if (createArtifactResolver().artifactExists(artifact, NoOpResourceAwareResolveResult.Companion.INSTANCE)) {
+                    return MetadataFetchingCost.FAST
                 }
-                return MetadataFetchingCost.CHEAP;
+                return MetadataFetchingCost.CHEAP
             }
-            return MetadataFetchingCost.EXPENSIVE;
+            return MetadataFetchingCost.EXPENSIVE
         }
     }
 
-    private static class NoOpResourceAwareResolveResult implements ResourceAwareResolveResult {
+    private class NoOpResourceAwareResolveResult : ResourceAwareResolveResult {
+        val attempted: MutableList<String>
+            get() = mutableListOf<String>()
 
-        private static final NoOpResourceAwareResolveResult INSTANCE = new NoOpResourceAwareResolveResult();
-
-        @Override
-        public List<String> getAttempted() {
-            return Collections.emptyList();
+        override fun attempted(locationDescription: String) {
         }
 
-        @Override
-        public void attempted(String locationDescription) {
-
+        override fun attempted(location: ExternalResourceName) {
         }
 
-        @Override
-        public void attempted(ExternalResourceName location) {
-
+        override fun applyTo(target: ResourceAwareResolveResult) {
+            throw UnsupportedOperationException()
         }
 
-        @Override
-        public void applyTo(ResourceAwareResolveResult target) {
-            throw new UnsupportedOperationException();
+        companion object {
+            private val INSTANCE = NoOpResourceAwareResolveResult()
         }
     }
 
-    private static class DefaultComponentVersionsLister implements ComponentMetadataListerDetails {
-
-        private final ModuleIdentifier id;
-        private final BuildableModuleVersionListingResolveResult result;
-
-        private DefaultComponentVersionsLister(ModuleIdentifier id, BuildableModuleVersionListingResolveResult result) {
-            this.id = id;
-            this.result = result;
+    private class DefaultComponentVersionsLister(private val id: ModuleIdentifier, private val result: BuildableModuleVersionListingResolveResult) : ComponentMetadataListerDetails {
+        override fun getModuleIdentifier(): ModuleIdentifier {
+            return id
         }
 
-        @Override
-        public ModuleIdentifier getModuleIdentifier() {
-            return id;
-        }
-
-        @Override
-        public void listed(List<String> versions) {
-            result.listed(versions);
+        override fun listed(versions: MutableList<String>) {
+            result.listed(versions)
         }
     }
 
-    public static boolean disableExtraChecksums() {
-        return Boolean.getBoolean("org.gradle.internal.publish.checksums.insecure");
-    }
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(ExternalResourceResolver::class.java)
 
+        @JvmStatic
+        fun disableExtraChecksums(): Boolean {
+            return Boolean.getBoolean("org.gradle.internal.publish.checksums.insecure")
+        }
+    }
 }

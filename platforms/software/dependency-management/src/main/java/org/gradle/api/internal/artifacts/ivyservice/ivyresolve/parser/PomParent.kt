@@ -13,36 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomReader.PomDependencyData;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt;
-
-import java.util.Map;
-
-public interface PomParent {
+interface PomParent {
     /**
      * Gets POM, GAV and custom properties.
      *
      * @return Properties
      */
-    Map<String, String> getProperties();
+    val properties: MutableMap<String?, String?>?
 
     /**
      * Gets declared dependencies.
      *
      * @return Dependencies
      */
-    Map<MavenDependencyKey, PomDependencyData> getDependencies();
+    val dependencies: MutableMap<MavenDependencyKey?, PomReader.PomDependencyData?>?
 
     /**
      * Gets declared dependency management.
      *
      * @return Dependency management
      */
-    Map<MavenDependencyKey, PomDependencyMgt> getDependencyMgt();
+    val dependencyMgt: MutableMap<MavenDependencyKey?, PomDependencyMgt?>?
 
     /**
      * Finds dependency management default coordinates for a dependency. Returns null if default cannot be found.
@@ -50,5 +46,5 @@ public interface PomParent {
      * @param dependencyKey Dependency key
      * @return Dependency management element or null
      */
-    PomDependencyMgt findDependencyDefaults(MavenDependencyKey dependencyKey);
+    fun findDependencyDefaults(dependencyKey: MavenDependencyKey?): PomDependencyMgt?
 }

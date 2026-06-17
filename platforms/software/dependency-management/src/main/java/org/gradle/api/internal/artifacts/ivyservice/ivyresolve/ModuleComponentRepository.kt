@@ -13,68 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
-
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.internal.action.InstantiatingAction;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
 /**
  * A repository of module components.
  *
  * @param <T> the component resolution result type
- */
-public interface ModuleComponentRepository<T> {
+</T> */
+interface ModuleComponentRepository<T> {
     /**
      * A unique identifier for this repository, based on its type and attributes.
      * Two repositories with the same configuration will share the same id.
      * This id is stable across builds on the same machine.
      *
-     * <p>The name is not encoded in the id, as it is not relevant for resolution. The name is only used for diagnotics.</p>
+     *
+     * The name is not encoded in the id, as it is not relevant for resolution. The name is only used for diagnotics.
      */
-    String getId();
+    val id: String?
 
     /**
      * A user-friendly name for this repository.
      */
-    String getName();
+    val name: String?
 
     /**
      * Accessor that attempts to locate module components without expensive network operations.
      */
-    ModuleComponentRepositoryAccess<T> getLocalAccess();
+    val localAccess: ModuleComponentRepositoryAccess<T?>?
 
     /**
      * Accessor that attempts to locate module components remotely, allowing expensive network operations.
      * This access will be disabled when Gradle is executed with `--offline`.
      */
-    ModuleComponentRepositoryAccess<T> getRemoteAccess();
+    val remoteAccess: ModuleComponentRepositoryAccess<T?>?
 
     // TODO - put this somewhere else
-    Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache();
+    val artifactCache: MutableMap<ComponentArtifactIdentifier?, ResolvableArtifact?>?
 
-    @Nullable
-    InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier();
+    val componentMetadataSupplier: InstantiatingAction<ComponentMetadataSupplierDetails?>?
 
     /**
      * Should resolution continue to the next repository if this repository is unavailable due to connection failure.
-     * <p>
-     * This can only return {@code true} if the repository is remote.
      *
-     * @return {@code true} if resolution should continue on connection failure, {@code false} otherwise.
+     *
+     * This can only return `true` if the repository is remote.
+     *
+     * @return `true` if resolution should continue on connection failure, `false` otherwise.
      */
-    boolean isContinueOnConnectionFailure();
+    val isContinueOnConnectionFailure: Boolean
 
     /**
      * Indicates whether a previous attempt at using this repository for resolution has resulted in disabling it due to unrecoverable errors.
      *
-     * @return {@code true} if the repository is disabled, {@code false} otherwise.
+     * @return `true` if the repository is disabled, `false` otherwise.
      */
-    boolean isRepositoryDisabled();
-
+    val isRepositoryDisabled: Boolean
 }

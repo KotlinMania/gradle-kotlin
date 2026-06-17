@@ -13,74 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.artifacts.ModuleIdentifier
+import java.util.Objects
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.jspecify.annotations.Nullable;
+class DefaultModuleIdentifier private constructor(private val group: String?, private val name: String) : ModuleIdentifier {
+    private val hashCode: Int
 
-import java.util.Objects;
-
-public class DefaultModuleIdentifier implements ModuleIdentifier {
-    private final String group;
-    private final String name;
-    private final int hashCode;
-
-    private DefaultModuleIdentifier(@Nullable String group, String name) {
-        this.group = group;
-        this.name = name;
-        this.hashCode = computeHashCode(group, name);
+    init {
+        this.hashCode = computeHashCode(group, name)
     }
 
-    public static ModuleIdentifier newId(ModuleIdentifier other) {
-        if (other instanceof DefaultModuleIdentifier) {
-            return other;
+    override fun getGroup(): String {
+        return group!!
+    }
+
+    override fun getName(): String {
+        return name
+    }
+
+    override fun toString(): String {
+        return group + ":" + name
+    }
+
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        return newId(other.getGroup(), other.getName());
-    }
-
-    public static ModuleIdentifier newId(@Nullable String group, String name) {
-        return new DefaultModuleIdentifier(group, name);
-    }
-
-    @Override
-    public String getGroup() {
-        return group;
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String toString() {
-        return group + ":" + name;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        DefaultModuleIdentifier that = (DefaultModuleIdentifier) o;
+        val that = o as DefaultModuleIdentifier
         return hashCode == that.hashCode &&
-            Objects.equals(group, that.group) &&
-            Objects.equals(name, that.name);
+                group == that.group &&
+                name == that.name
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private static int computeHashCode(@Nullable String group, String name) {
-        int result = Objects.hashCode(group);
-        result = 31 * result + name.hashCode();
-        return result;
-    }
+    companion object {
+        fun newId(other: ModuleIdentifier): ModuleIdentifier {
+            if (other is DefaultModuleIdentifier) {
+                return other
+            }
+            return newId(other.getGroup(), other.getName())
+        }
 
+        fun newId(group: String?, name: String): ModuleIdentifier {
+            return DefaultModuleIdentifier(group, name)
+        }
+
+        private fun computeHashCode(group: String?, name: String): Int {
+            var result = Objects.hashCode(group)
+            result = 31 * result + name.hashCode()
+            return result
+        }
+    }
 }

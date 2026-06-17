@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Global.class)
-public interface DependencyMetadataFactory {
-    LocalOriginDependencyMetadata createDependencyMetadata(ModuleDependency dependency);
-    LocalOriginDependencyMetadata createDependencyConstraintMetadata(DependencyConstraint dependencyConstraint);
+@ServiceScope(Scope.Global::class)
+interface DependencyMetadataFactory {
+    fun createDependencyMetadata(dependency: ModuleDependency): LocalOriginDependencyMetadata?
+    fun createDependencyConstraintMetadata(dependencyConstraint: DependencyConstraint): LocalOriginDependencyMetadata?
 }

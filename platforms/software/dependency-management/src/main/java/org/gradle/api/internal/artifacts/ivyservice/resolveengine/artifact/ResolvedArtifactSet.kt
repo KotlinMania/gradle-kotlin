@@ -13,75 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.Action;
-import org.gradle.api.internal.artifacts.transform.TransformStepNode;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
+import org.gradle.api.Action
+import org.gradle.api.internal.artifacts.transform.TransformStepNode
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
 
 /**
  * A container for a set of files or artifacts. May or may not be immutable, and may require building and further resolution.
- * <p>
- * There are no guarantees of uniqueness of visited artifacts. This would be better named {@code ResolvedArtifactCollection}.
+ *
+ *
+ * There are no guarantees of uniqueness of visited artifacts. This would be better named `ResolvedArtifactCollection`.
  */
-public interface ResolvedArtifactSet extends TaskDependencyContainer {
+interface ResolvedArtifactSet : TaskDependencyContainer {
     /**
      * Visits the contents of the set, adding any remaining work to finalise the set of artifacts to the given queue.
      */
-    void visit(Visitor visitor);
+    fun visit(visitor: Visitor)
 
-    void visitTransformSources(TransformSourceVisitor visitor);
+    fun visitTransformSources(visitor: TransformSourceVisitor)
 
     interface TransformSourceVisitor {
-        void visitArtifact(ResolvableArtifact artifact);
+        fun visitArtifact(artifact: ResolvableArtifact)
 
-        void visitTransform(TransformStepNode source);
+        fun visitTransform(source: TransformStepNode)
     }
 
     /**
      * Visits the external artifacts of this set.
      */
-    void visitExternalArtifacts(Action<ResolvableArtifact> visitor);
-
-    ResolvedArtifactSet EMPTY = new ResolvedArtifactSet() {
-        @Override
-        public void visit(Visitor visitor) {
-        }
-
-        @Override
-        public void visitTransformSources(TransformSourceVisitor visitor) {
-        }
-
-        @Override
-        public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-        }
-
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-        }
-    };
+    fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>)
 
     interface Artifacts {
         /**
          * Called before any of the other methods are called on this set.
          */
-        default void prepareForVisitingIfNotAlready() {}
+        fun prepareForVisitingIfNotAlready() {}
 
         /**
          * Queues up any work still remaining to finalize the set of artifacts contained in this set.
          */
-        void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles);
+        fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation>, requireFiles: Boolean)
 
         /**
          * Invoked once all async work as completed, to visit the final result. The result is visited using the current thread and in the relevant order.
          */
-        void visit(ArtifactVisitor visitor);
+        fun visit(visitor: ArtifactVisitor)
     }
 
     /**
@@ -91,11 +73,28 @@ public interface ResolvedArtifactSet extends TaskDependencyContainer {
         /**
          * Called prior to scheduling resolution of a set of the given type. Should be called in result order.
          */
-        FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source);
+        fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType?
 
         /**
          * Visits zero or more artifacts.
          */
-        void visitArtifacts(Artifacts artifacts);
+        fun visitArtifacts(artifacts: Artifacts)
+    }
+
+    companion object {
+        @JvmField
+        val EMPTY: ResolvedArtifactSet = object : ResolvedArtifactSet {
+            override fun visit(visitor: Visitor) {
+            }
+
+            override fun visitTransformSources(visitor: TransformSourceVisitor) {
+            }
+
+            override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
+            }
+
+            override fun visitDependencies(context: TaskDependencyResolveContext) {
+            }
+        }
     }
 }

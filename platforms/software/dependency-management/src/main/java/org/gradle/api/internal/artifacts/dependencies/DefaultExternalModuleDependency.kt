@@ -13,33 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dependencies
 
-package org.gradle.api.internal.artifacts.dependencies;
+import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
 
-import org.gradle.api.artifacts.ExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.jspecify.annotations.Nullable;
+open class DefaultExternalModuleDependency : AbstractExternalModuleDependency, ExternalModuleDependency {
+    @JvmOverloads
+    constructor(group: String, name: String, version: String, configuration: String? = null) : super(AbstractExternalModuleDependency.Companion.assertModuleId(group, name), version, configuration)
 
-public class DefaultExternalModuleDependency extends AbstractExternalModuleDependency implements ExternalModuleDependency {
+    constructor(id: ModuleIdentifier, versionConstraint: MutableVersionConstraint, configuration: String?) : super(id, versionConstraint, configuration)
 
-    public DefaultExternalModuleDependency(String group, String name, String version) {
-        this(group, name, version, null);
+    override fun copy(): ExternalModuleDependency {
+        val copiedModuleDependency = DefaultExternalModuleDependency(getModule(), DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration())
+        copyTo(copiedModuleDependency)
+        return copiedModuleDependency
     }
-
-    public DefaultExternalModuleDependency(String group, String name, String version, @Nullable String configuration) {
-        super(assertModuleId(group, name), version, configuration);
-    }
-
-    public DefaultExternalModuleDependency(ModuleIdentifier id, MutableVersionConstraint versionConstraint, @Nullable String configuration) {
-        super(id, versionConstraint, configuration);
-    }
-
-    @Override
-    public ExternalModuleDependency copy() {
-        DefaultExternalModuleDependency copiedModuleDependency = new DefaultExternalModuleDependency(getModule(), new DefaultMutableVersionConstraint(getVersionConstraint()), getTargetConfiguration());
-        copyTo(copiedModuleDependency);
-        return copiedModuleDependency;
-    }
-
 }

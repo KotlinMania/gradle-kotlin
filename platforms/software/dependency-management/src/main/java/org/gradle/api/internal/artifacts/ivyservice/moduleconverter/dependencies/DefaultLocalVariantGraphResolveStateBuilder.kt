@@ -13,264 +13,217 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Named;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.artifacts.FileCollectionDependency;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.Configurations;
-import org.gradle.api.internal.artifacts.dependencies.SelfResolvingDependencyInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.local.model.DefaultLocalVariantGraphResolveMetadata;
-import org.gradle.internal.component.local.model.DefaultLocalVariantGraphResolveState;
-import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata;
-import org.gradle.internal.component.local.model.LocalFileDependencyMetadata;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata;
-import org.gradle.internal.component.local.model.LocalVariantGraphResolveState;
-import org.gradle.internal.component.local.model.LocalVariantMetadata;
-import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata;
-import org.gradle.internal.component.model.ComponentConfigurationIdentifier;
-import org.gradle.internal.component.model.ComponentIdGenerator;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.model.ModelContainer;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.FileCollectionDependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.attributes.Category
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.Configurations
+import org.gradle.api.internal.artifacts.dependencies.SelfResolvingDependencyInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities.Companion.of
+import org.gradle.internal.component.local.model.DefaultLocalVariantGraphResolveMetadata
+import org.gradle.internal.component.local.model.DefaultLocalVariantGraphResolveState
+import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata
+import org.gradle.internal.component.local.model.LocalFileDependencyMetadata
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveMetadata
+import org.gradle.internal.component.local.model.LocalVariantGraphResolveState
+import org.gradle.internal.component.local.model.LocalVariantMetadata
+import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata
+import org.gradle.internal.component.model.ComponentConfigurationIdentifier
+import org.gradle.internal.component.model.ComponentIdGenerator
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.model.ModelContainer
+import org.gradle.internal.model.ValueCalculator
+import java.util.function.Consumer
+import java.util.function.Function
 
 /**
- * Encapsulates all logic required to build a {@link LocalVariantGraphResolveMetadata} from a
- * {@link ConfigurationInternal}. Utilizes caching to prevent unnecessary duplicate conversions
+ * Encapsulates all logic required to build a [LocalVariantGraphResolveMetadata] from a
+ * [ConfigurationInternal]. Utilizes caching to prevent unnecessary duplicate conversions
  * between DSL and internal metadata types.
  */
-public class DefaultLocalVariantGraphResolveStateBuilder implements LocalVariantGraphResolveStateBuilder {
+class DefaultLocalVariantGraphResolveStateBuilder(
+    private val idGenerator: ComponentIdGenerator,
+    private val dependencyMetadataFactory: DependencyMetadataFactory,
+    private val excludeRuleConverter: ExcludeRuleConverter
+) : LocalVariantGraphResolveStateBuilder {
+    override fun createRootVariantState(
+        configuration: ConfigurationInternal,
+        componentId: ComponentIdentifier,
+        dependencyCache: LocalVariantGraphResolveStateBuilder.DependencyCache,
+        model: ModelContainer<*>,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ): LocalVariantGraphResolveState {
+        finalize(configuration, "resolved")
 
-    private final ComponentIdGenerator idGenerator;
-    private final DependencyMetadataFactory dependencyMetadataFactory;
-    private final ExcludeRuleConverter excludeRuleConverter;
-
-    public DefaultLocalVariantGraphResolveStateBuilder(
-        ComponentIdGenerator idGenerator,
-        DependencyMetadataFactory dependencyMetadataFactory,
-        ExcludeRuleConverter excludeRuleConverter
-    ) {
-        this.idGenerator = idGenerator;
-        this.dependencyMetadataFactory = dependencyMetadataFactory;
-        this.excludeRuleConverter = excludeRuleConverter;
-    }
-
-    @Override
-    public LocalVariantGraphResolveState createRootVariantState(
-        ConfigurationInternal configuration,
-        ComponentIdentifier componentId,
-        DependencyCache dependencyCache,
-        ModelContainer<?> model,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
-    ) {
-        finalize(configuration, "resolved");
-
-        ImmutableAttributes attributes = configuration.getAttributes().asImmutable();
-        CalculatedValue<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata> dependencies = getConfigurationDependencyState(
+        val attributes = configuration.getAttributes().asImmutable()
+        val dependencies = getConfigurationDependencyState(
             configuration.asDescribable(),
             configuration.getHierarchy(),
             attributes,
             dependencyCache,
             model,
             calculatedValueContainerFactory
-        );
+        )
 
         // TODO: The root node should have no capabilities, as it has no artifacts.
         // However, changing this prevents conflicts between code being compiled and its
         // dependencies from being detected during compilation -- though this also
         // can lead to some false positives.
-        VariantIdentifier id = new NamedVariantIdentifier(componentId, configuration.getName());
-        ImmutableCapabilities capabilities = ImmutableCapabilities.of(Configurations.collectCapabilities(configuration, new HashSet<>(), new HashSet<>()));
-        LocalVariantGraphResolveMetadata metadata = new DefaultLocalVariantGraphResolveMetadata(
+        val id: VariantIdentifier = NamedVariantIdentifier(componentId, configuration.getName())
+        val capabilities = of(Configurations.collectCapabilities(configuration, HashSet<Capability?>(), HashSet<Configuration?>()))
+        val metadata: LocalVariantGraphResolveMetadata = DefaultLocalVariantGraphResolveMetadata(
             id,
             configuration.getName(),
             configuration.isTransitive(),
             attributes,
-            capabilities,
+            capabilities!!,
             false
-        );
+        )
 
-        return new DefaultLocalVariantGraphResolveState(
+        return DefaultLocalVariantGraphResolveState(
             idGenerator.nextVariantId(),
             metadata,
             dependencies,
-            Collections.emptySet()
-        );
+            mutableSetOf<LocalVariantMetadata>()
+        )
     }
 
-    @Override
-    public LocalVariantGraphResolveState createConsumableVariantState(
-        ConfigurationInternal configuration,
-        ComponentIdentifier componentId,
-        DependencyCache dependencyCache,
-        ModelContainer<?> model,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
-    ) {
-        finalize(configuration, "consumed as a variant");
+    override fun createConsumableVariantState(
+        configuration: ConfigurationInternal,
+        componentId: ComponentIdentifier,
+        dependencyCache: LocalVariantGraphResolveStateBuilder.DependencyCache,
+        model: ModelContainer<*>,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ): LocalVariantGraphResolveState {
+        finalize(configuration, "consumed as a variant")
 
-        String configurationName = configuration.getName();
-        ComponentConfigurationIdentifier configurationIdentifier = new ComponentConfigurationIdentifier(componentId, configurationName);
+        val configurationName = configuration.getName()
+        val configurationIdentifier = ComponentConfigurationIdentifier(componentId, configurationName)
 
-        ImmutableAttributes attributes = configuration.getAttributes().asImmutable();
-        ImmutableCapabilities capabilities = ImmutableCapabilities.of(Configurations.collectCapabilities(configuration, new HashSet<>(), new HashSet<>()));
+        val attributes = configuration.getAttributes().asImmutable()
+        val capabilities = of(Configurations.collectCapabilities(configuration, HashSet<Capability?>(), HashSet<Configuration?>()))
 
         // Collect all artifact sets.
-        ImmutableSet.Builder<LocalVariantMetadata> artifactSets = ImmutableSet.builder();
-        configuration.collectVariants(new ConfigurationInternal.VariantVisitor() {
-            @Override
-            public void visitOwnVariant(DisplayName displayName, ImmutableAttributes attributes, Collection<? extends PublishArtifact> artifacts) {
-                CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> variantArtifacts = getVariantArtifacts(displayName, componentId, artifacts, model, calculatedValueContainerFactory);
-                artifactSets.add(new LocalVariantMetadata(configurationName, configurationIdentifier, displayName, attributes, capabilities, variantArtifacts));
+        val artifactSets = ImmutableSet.builder<LocalVariantMetadata>()
+        configuration.collectVariants(object : ConfigurationInternal.VariantVisitor {
+            override fun visitOwnVariant(displayName: DisplayName, attributes: ImmutableAttributes, artifacts: MutableCollection<out PublishArtifact>) {
+                val variantArtifacts: CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> = getVariantArtifacts(displayName, componentId, artifacts, model, calculatedValueContainerFactory)
+                artifactSets.add(LocalVariantMetadata(configurationName, configurationIdentifier, displayName, attributes, capabilities!!, variantArtifacts))
             }
 
-            @Override
-            public void visitChildVariant(String name, DisplayName displayName, ImmutableAttributes attributes, Collection<? extends PublishArtifact> artifacts) {
-                CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> variantArtifacts = getVariantArtifacts(displayName, componentId, artifacts, model, calculatedValueContainerFactory);
-                artifactSets.add(new LocalVariantMetadata(configurationName + "-" + name, new NonImplicitArtifactVariantIdentifier(configurationIdentifier, name), displayName, attributes, capabilities, variantArtifacts));
+            override fun visitChildVariant(name: String, displayName: DisplayName, attributes: ImmutableAttributes, artifacts: MutableCollection<out PublishArtifact>) {
+                val variantArtifacts: CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> = getVariantArtifacts(displayName, componentId, artifacts, model, calculatedValueContainerFactory)
+                artifactSets.add(
+                    LocalVariantMetadata(
+                        configurationName + "-" + name,
+                        NonImplicitArtifactVariantIdentifier(configurationIdentifier, name),
+                        displayName,
+                        attributes,
+                        capabilities!!,
+                        variantArtifacts
+                    )
+                )
             }
-        });
+        })
 
-        CalculatedValue<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata> dependencies = getConfigurationDependencyState(
+        val dependencies = getConfigurationDependencyState(
             configuration.asDescribable(),
             configuration.getHierarchy(),
             attributes,
             dependencyCache,
             model,
             calculatedValueContainerFactory
-        );
+        )
 
-        VariantIdentifier id = new NamedVariantIdentifier(componentId, configuration.getName());
-        LocalVariantGraphResolveMetadata metadata = new DefaultLocalVariantGraphResolveMetadata(
+        val id: VariantIdentifier = NamedVariantIdentifier(componentId, configuration.getName())
+        val metadata: LocalVariantGraphResolveMetadata = DefaultLocalVariantGraphResolveMetadata(
             id,
             configurationName,
             configuration.isTransitive(),
             attributes,
-            capabilities,
+            capabilities!!,
             configuration.isDeprecatedForConsumption()
-        );
+        )
 
-        return new DefaultLocalVariantGraphResolveState(
+        return DefaultLocalVariantGraphResolveState(
             idGenerator.nextVariantId(),
             metadata,
             dependencies,
             artifactSets.build()
-        );
+        )
     }
 
     /**
-     * Perform any final mutating actions for this configuration and its parents.
-     * Then, lock this configuration and its parents from mutation.
-     * After we observe a configuration (by building its metadata), its state should not change.
+     * Lazily collect all dependencies and excludes of all configurations in the provided `hierarchy`.
      */
-    private static void finalize(ConfigurationInternal configuration, String reason) {
-        // Perform any final mutating actions for this configuration and its parents.
-        // Then, lock this configuration and its parents from mutation.
-        // After we observe a configuration (by building its metadata), its state should not change.
-        configuration.runDependencyActions();
-        configuration.markAsObserved(reason);
-    }
+    private fun getConfigurationDependencyState(
+        description: DisplayName,
+        hierarchy: MutableSet<Configuration>,
+        attributes: ImmutableAttributes,
+        dependencyCache: LocalVariantGraphResolveStateBuilder.DependencyCache,
+        model: ModelContainer<*>,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
+    ): CalculatedValue<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata> {
+        return calculatedValueContainerFactory.create<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata, ValueCalculator<out DefaultLocalVariantGraphResolveState.VariantDependencyMetadata>>(
+            Describables.of("Dependency state for", description), ValueCalculator { context: NodeExecutionContext? ->
+                model.fromMutableState<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata> { p: Any? ->
+                    val dependencies = ImmutableList.builder<LocalOriginDependencyMetadata>()
+                    val files = ImmutableSet.builder<LocalFileDependencyMetadata>()
+                    val excludes = ImmutableList.builder<ExcludeMetadata>()
 
-    private static CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> getVariantArtifacts(
-        DisplayName displayName,
-        ComponentIdentifier componentId,
-        Collection<? extends PublishArtifact> sourceArtifacts,
-        ModelContainer<?> model,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
-    ) {
-        return calculatedValueContainerFactory.create(Describables.of(displayName, "artifacts"), context -> {
-            if (sourceArtifacts.isEmpty()) {
-                return ImmutableList.of();
-            } else {
-                return model.fromMutableState(m -> {
-                    ImmutableList.Builder<LocalComponentArtifactMetadata> result = ImmutableList.builderWithExpectedSize(sourceArtifacts.size());
-                    for (PublishArtifact sourceArtifact : sourceArtifacts) {
-                        result.add(new PublishArtifactLocalArtifactMetadata(componentId, sourceArtifact));
-                    }
-                    return result.build();
-                });
-            }
-        });
+                    // For historical reasons, and to maintain behavior, dependencies
+                    // are ordered based on the name of the extended configurations.
+                    val sortedHierarchy = ArrayList<Configuration>(hierarchy)
+                    sortedHierarchy.sort(Comparator.comparing<Configuration, String>(Function { obj: Configuration -> obj.getName() }))
+                    sortedHierarchy.forEach(Consumer { config: Configuration? ->
+                        val defined = getDefinedState(config as ConfigurationInternal, dependencyCache)
+                        dependencies.addAll(defined.dependencies)
+                        files.addAll(defined.files)
+                        excludes.addAll(defined.excludes)
+                    })
+
+                    val state = LocalVariantGraphResolveStateBuilder.DependencyState(dependencies.build(), files.build(), excludes.build())
+                    DefaultLocalVariantGraphResolveState.VariantDependencyMetadata(
+                        maybeForceDependencies(state.dependencies, attributes), state.files, state.excludes
+                    )
+                }
+            })
     }
 
     /**
-     * Lazily collect all dependencies and excludes of all configurations in the provided {@code hierarchy}.
+     * Get the defined dependencies and excludes for `configuration`, while also caching the result.
      */
-    private CalculatedValue<DefaultLocalVariantGraphResolveState.VariantDependencyMetadata> getConfigurationDependencyState(
-        DisplayName description,
-        Set<Configuration> hierarchy,
-        ImmutableAttributes attributes,
-        DependencyCache dependencyCache,
-        ModelContainer<?> model,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
-    ) {
-        return calculatedValueContainerFactory.create(Describables.of("Dependency state for", description), context -> model.fromMutableState(p -> {
-            ImmutableList.Builder<LocalOriginDependencyMetadata> dependencies = ImmutableList.builder();
-            ImmutableSet.Builder<LocalFileDependencyMetadata> files = ImmutableSet.builder();
-            ImmutableList.Builder<ExcludeMetadata> excludes = ImmutableList.builder();
-
-            // For historical reasons, and to maintain behavior, dependencies
-            // are ordered based on the name of the extended configurations.
-            ArrayList<Configuration> sortedHierarchy = new ArrayList<>(hierarchy);
-            sortedHierarchy.sort(Comparator.comparing(Named::getName));
-            sortedHierarchy.forEach(config -> {
-                DependencyState defined = getDefinedState((ConfigurationInternal) config, dependencyCache);
-                dependencies.addAll(defined.dependencies);
-                files.addAll(defined.files);
-                excludes.addAll(defined.excludes);
-            });
-
-            DependencyState state = new DependencyState(dependencies.build(), files.build(), excludes.build());
-            return new DefaultLocalVariantGraphResolveState.VariantDependencyMetadata(
-                maybeForceDependencies(state.dependencies, attributes), state.files, state.excludes
-            );
-        }));
+    private fun getDefinedState(configuration: ConfigurationInternal, cache: LocalVariantGraphResolveStateBuilder.DependencyCache): LocalVariantGraphResolveStateBuilder.DependencyState {
+        return cache.computeIfAbsent(configuration, Function { configuration: ConfigurationInternal? -> this.doGetDefinedState(configuration!!) })
     }
 
     /**
-     * Get the defined dependencies and excludes for {@code configuration}, while also caching the result.
-     */
-    private DependencyState getDefinedState(ConfigurationInternal configuration, DependencyCache cache) {
-        return cache.computeIfAbsent(configuration, this::doGetDefinedState);
-    }
-
-    /**
-     * Calculate the defined dependencies and excludes for {@code configuration}, while converting the
+     * Calculate the defined dependencies and excludes for `configuration`, while converting the
      * DSL representation to the internal representation.
      */
-    private DependencyState doGetDefinedState(ConfigurationInternal configuration) {
-
-        ImmutableList.Builder<LocalOriginDependencyMetadata> dependencyBuilder = ImmutableList.builder();
-        ImmutableSet.Builder<LocalFileDependencyMetadata> fileBuilder = ImmutableSet.builder();
-        ImmutableList.Builder<ExcludeMetadata> excludeBuilder = ImmutableList.builder();
+    private fun doGetDefinedState(configuration: ConfigurationInternal): LocalVariantGraphResolveStateBuilder.DependencyState {
+        val dependencyBuilder = ImmutableList.builder<LocalOriginDependencyMetadata>()
+        val fileBuilder = ImmutableSet.builder<LocalFileDependencyMetadata>()
+        val excludeBuilder = ImmutableList.builder<ExcludeMetadata>()
 
         // Configurations that are not declarable should not have dependencies or constraints present,
         // but we need to allow dependencies to be checked to avoid emitting many warnings when the
@@ -279,15 +232,15 @@ public class DefaultLocalVariantGraphResolveStateBuilder implements LocalVariant
         // To demonstrate this, add a check for configuration.isCanBeDeclared() && configuration.assertHasNoDeclarations() if not
         // and run tests such as KotlinDslPluginTest, or the building-kotlin-applications samples and you'll configurations which
         // aren't declarable but have declared dependencies present.
-        for (Dependency dependency : configuration.getDependencies()) {
-            if (dependency instanceof ModuleDependency) {
-                ModuleDependency moduleDependency = (ModuleDependency) dependency;
-                dependencyBuilder.add(dependencyMetadataFactory.createDependencyMetadata(moduleDependency));
-            } else if (dependency instanceof FileCollectionDependency) {
-                final FileCollectionDependency fileDependency = (FileCollectionDependency) dependency;
-                fileBuilder.add(new DefaultLocalFileDependencyMetadata(fileDependency));
+        for (dependency in configuration.getDependencies()) {
+            if (dependency is ModuleDependency) {
+                val moduleDependency = dependency
+                dependencyBuilder.add(dependencyMetadataFactory.createDependencyMetadata(moduleDependency))
+            } else if (dependency is FileCollectionDependency) {
+                val fileDependency = dependency
+                fileBuilder.add(DefaultLocalFileDependencyMetadata(fileDependency))
             } else {
-                throw new IllegalArgumentException("Cannot convert dependency " + dependency + " to local component dependency metadata.");
+                throw IllegalArgumentException("Cannot convert dependency " + dependency + " to local component dependency metadata.")
             }
         }
 
@@ -295,97 +248,120 @@ public class DefaultLocalVariantGraphResolveStateBuilder implements LocalVariant
         // no smoke-tested plugins add constraints, so we should be able to safely throw an exception here
         // if we find any - but we'll avoid doing so for now to avoid breaking any existing builds and to
         // remain consistent with the behavior for dependencies.
-        for (DependencyConstraint dependencyConstraint : configuration.getDependencyConstraints()) {
-            dependencyBuilder.add(dependencyMetadataFactory.createDependencyConstraintMetadata(dependencyConstraint));
+        for (dependencyConstraint in configuration.getDependencyConstraints()) {
+            dependencyBuilder.add(dependencyMetadataFactory.createDependencyConstraintMetadata(dependencyConstraint))
         }
 
-        for (ExcludeRule excludeRule : configuration.getExcludeRules()) {
-            excludeBuilder.add(excludeRuleConverter.convertExcludeRule(excludeRule));
+        for (excludeRule in configuration.getExcludeRules()) {
+            excludeBuilder.add(excludeRuleConverter.convertExcludeRule(excludeRule))
         }
 
-        configuration.markDependenciesObserved();
+        configuration.markDependenciesObserved()
 
-        return new DependencyState(dependencyBuilder.build(), fileBuilder.build(), excludeBuilder.build());
-    }
-
-    private static ImmutableList<LocalOriginDependencyMetadata> maybeForceDependencies(
-        ImmutableList<LocalOriginDependencyMetadata> dependencies,
-        ImmutableAttributes attributes
-    ) {
-        ImmutableAttributesEntry<Category> entry = attributes.findEntry(Category.CATEGORY_ATTRIBUTE);
-        if (entry == null || !entry.getIsolatedValue().getName().equals(Category.ENFORCED_PLATFORM)) {
-            return dependencies;
-        }
-
-        // Need to wrap all dependencies to force them.
-        ImmutableList.Builder<LocalOriginDependencyMetadata> forcedDependencies = ImmutableList.builder();
-        for (LocalOriginDependencyMetadata rawDependency : dependencies) {
-            forcedDependencies.add(rawDependency.forced());
-        }
-        return forcedDependencies.build();
+        return LocalVariantGraphResolveStateBuilder.DependencyState(dependencyBuilder.build(), fileBuilder.build(), excludeBuilder.build())
     }
 
     /**
      * Identifier for non-implicit artifact variants of a local graph variant.
      */
-    private static class NonImplicitArtifactVariantIdentifier implements VariantResolveMetadata.Identifier {
-        private final VariantResolveMetadata.Identifier parent;
-        private final String name;
+    private class NonImplicitArtifactVariantIdentifier(private val parent: VariantResolveMetadata.Identifier, private val name: String) : VariantResolveMetadata.Identifier {
+        private val hashCode: Int
 
-        private final int hashCode;
-
-        public NonImplicitArtifactVariantIdentifier(VariantResolveMetadata.Identifier parent, String name) {
-            this.parent = parent;
-            this.name = name;
-
-            this.hashCode = computeHashCode(name, parent);
+        init {
+            this.hashCode = computeHashCode(
+                name,
+                parent
+            )
         }
 
-        private static int computeHashCode(String name, VariantResolveMetadata.Identifier parent) {
-            return 31 * parent.hashCode() + name.hashCode();
+        override fun hashCode(): Int {
+            return hashCode
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
+        override fun equals(obj: Any): Boolean {
+            if (obj === this) {
+                return true
             }
-            if (obj == null || getClass() != obj.getClass()) {
-                return false;
+            if (obj == null || javaClass != obj.javaClass) {
+                return false
             }
-            NonImplicitArtifactVariantIdentifier other = (NonImplicitArtifactVariantIdentifier) obj;
-            return parent.equals(other.parent) && name.equals(other.name);
+            val other = obj as NonImplicitArtifactVariantIdentifier
+            return parent == other.parent && name == other.name
+        }
+
+        companion object {
+            private fun computeHashCode(name: String, parent: VariantResolveMetadata.Identifier): Int {
+                return 31 * parent.hashCode() + name.hashCode()
+            }
         }
     }
 
     /**
-     * Default implementation of {@link LocalFileDependencyMetadata}.
+     * Default implementation of [LocalFileDependencyMetadata].
      */
-    public static class DefaultLocalFileDependencyMetadata implements LocalFileDependencyMetadata {
-        private final FileCollectionDependency fileDependency;
+    class DefaultLocalFileDependencyMetadata(val source: FileCollectionDependency) : LocalFileDependencyMetadata {
+        val componentId: ComponentIdentifier?
+            get() = (this.source as SelfResolvingDependencyInternal).getTargetComponentId()
 
-        public DefaultLocalFileDependencyMetadata(FileCollectionDependency fileDependency) {
-            this.fileDependency = fileDependency;
+        val files: FileCollectionInternal
+            get() = source.getFiles() as FileCollectionInternal
+    }
+
+    companion object {
+        /**
+         * Perform any final mutating actions for this configuration and its parents.
+         * Then, lock this configuration and its parents from mutation.
+         * After we observe a configuration (by building its metadata), its state should not change.
+         */
+        private fun finalize(configuration: ConfigurationInternal, reason: String) {
+            // Perform any final mutating actions for this configuration and its parents.
+            // Then, lock this configuration and its parents from mutation.
+            // After we observe a configuration (by building its metadata), its state should not change.
+            configuration.runDependencyActions()
+            configuration.markAsObserved(reason)
         }
 
-        @Override
-        public FileCollectionDependency getSource() {
-            return fileDependency;
+        private fun getVariantArtifacts(
+            displayName: DisplayName,
+            componentId: ComponentIdentifier,
+            sourceArtifacts: MutableCollection<out PublishArtifact>,
+            model: ModelContainer<*>,
+            calculatedValueContainerFactory: CalculatedValueContainerFactory
+        ): CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> {
+            return calculatedValueContainerFactory.create<ImmutableList<LocalComponentArtifactMetadata>, ValueCalculator<out ImmutableList<LocalComponentArtifactMetadata>>>(
+                Describables.of(
+                    displayName,
+                    "artifacts"
+                ), ValueCalculator { context: NodeExecutionContext? ->
+                    if (sourceArtifacts.isEmpty()) {
+                        return@create ImmutableList.of<LocalComponentArtifactMetadata>()
+                    } else {
+                        return@create model.fromMutableState<ImmutableList<LocalComponentArtifactMetadata>> { m: Any? ->
+                            val result = ImmutableList.builderWithExpectedSize<LocalComponentArtifactMetadata>(sourceArtifacts.size)
+                            for (sourceArtifact in sourceArtifacts) {
+                                result.add(PublishArtifactLocalArtifactMetadata(componentId, sourceArtifact))
+                            }
+                            result.build()
+                        }
+                    }
+                })
         }
 
-        @Override @Nullable
-        public ComponentIdentifier getComponentId() {
-            return ((SelfResolvingDependencyInternal) fileDependency).getTargetComponentId();
-        }
+        private fun maybeForceDependencies(
+            dependencies: ImmutableList<LocalOriginDependencyMetadata>,
+            attributes: ImmutableAttributes
+        ): ImmutableList<LocalOriginDependencyMetadata> {
+            val entry = attributes.findEntry<Category>(Category.CATEGORY_ATTRIBUTE)
+            if (entry == null || entry.getIsolatedValue().getName() != Category.ENFORCED_PLATFORM) {
+                return dependencies
+            }
 
-        @Override
-        public FileCollectionInternal getFiles() {
-            return (FileCollectionInternal) fileDependency.getFiles();
+            // Need to wrap all dependencies to force them.
+            val forcedDependencies = ImmutableList.builder<LocalOriginDependencyMetadata>()
+            for (rawDependency in dependencies) {
+                forcedDependencies.add(rawDependency.forced()!!)
+            }
+            return forcedDependencies.build()
         }
     }
 }

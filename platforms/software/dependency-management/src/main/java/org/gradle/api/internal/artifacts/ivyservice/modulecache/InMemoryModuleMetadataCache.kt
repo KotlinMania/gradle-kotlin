@@ -13,47 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.util.concurrent.ConcurrentHashMap
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+class InMemoryModuleMetadataCache : AbstractModuleMetadataCache {
+    private val inMemoryCache: MutableMap<ModuleComponentAtRepositoryKey?, ModuleMetadataCache.CachedMetadata?> =
+        ConcurrentHashMap<ModuleComponentAtRepositoryKey?, ModuleMetadataCache.CachedMetadata?>()
+    private val delegate: AbstractModuleMetadataCache?
 
-public class InMemoryModuleMetadataCache extends AbstractModuleMetadataCache {
-    private final Map<ModuleComponentAtRepositoryKey, CachedMetadata> inMemoryCache = new ConcurrentHashMap<>();
-    private final AbstractModuleMetadataCache delegate;
-
-    public InMemoryModuleMetadataCache(BuildCommencedTimeProvider timeProvider) {
-        super(timeProvider);
-        delegate = null;
+    constructor(timeProvider: BuildCommencedTimeProvider?) : super(timeProvider) {
+        delegate = null
     }
 
-    public InMemoryModuleMetadataCache(BuildCommencedTimeProvider timeProvider, AbstractModuleMetadataCache delegate) {
-        super(timeProvider);
-        this.delegate = delegate;
+    constructor(timeProvider: BuildCommencedTimeProvider?, delegate: AbstractModuleMetadataCache?) : super(timeProvider) {
+        this.delegate = delegate
     }
 
-    @Override
-    protected CachedMetadata get(ModuleComponentAtRepositoryKey key) {
-        CachedMetadata metadata = inMemoryCache.get(key);
+    protected override fun get(key: ModuleComponentAtRepositoryKey?): ModuleMetadataCache.CachedMetadata? {
+        var metadata = inMemoryCache.get(key)
         if (metadata == null && delegate != null) {
-            metadata = delegate.get(key);
+            metadata = delegate.get(key)
             if (metadata != null) {
-                inMemoryCache.put(key, metadata);
+                inMemoryCache.put(key, metadata)
             }
         }
-        return metadata;
+        return metadata
     }
 
-    @Override
-    protected CachedMetadata store(ModuleComponentAtRepositoryKey key, ModuleMetadataCacheEntry entry, CachedMetadata cachedMetaData) {
-        CachedMetadata dehydrated = cachedMetaData.dehydrate();
-        inMemoryCache.put(key, dehydrated);
+    protected override fun store(key: ModuleComponentAtRepositoryKey?, entry: ModuleMetadataCacheEntry?, cachedMetaData: ModuleMetadataCache.CachedMetadata): ModuleMetadataCache.CachedMetadata? {
+        val dehydrated = cachedMetaData.dehydrate()
+        inMemoryCache.put(key, dehydrated)
         if (delegate != null) {
-            delegate.store(key, entry, dehydrated);
+            delegate.store(key, entry, dehydrated)
         }
-        return dehydrated;
+        return dehydrated
     }
-
 }

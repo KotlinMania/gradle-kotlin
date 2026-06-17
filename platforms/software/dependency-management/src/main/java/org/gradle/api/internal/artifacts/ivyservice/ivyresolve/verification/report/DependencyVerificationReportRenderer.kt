@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.RepositoryAwareVerificationFailure
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
 
-interface DependencyVerificationReportRenderer {
-    void startNewSection(String title);
-    void startArtifactErrors(Runnable action);
-    void startNewArtifact(ModuleComponentArtifactIdentifier key, Runnable action);
-    void reportFailure(RepositoryAwareVerificationFailure failure);
-    void reportAsMultipleErrors(Runnable action);
-    void finish(VerificationHighLevelErrors highLevelErrors);
+internal interface DependencyVerificationReportRenderer {
+    fun startNewSection(title: String)
+    fun startArtifactErrors(action: Runnable)
+    fun startNewArtifact(key: ModuleComponentArtifactIdentifier, action: Runnable)
+    fun reportFailure(failure: RepositoryAwareVerificationFailure)
+    fun reportAsMultipleErrors(action: Runnable)
+    fun finish(highLevelErrors: VerificationHighLevelErrors)
 }

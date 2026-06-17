@@ -122,7 +122,7 @@ class LocallyAvailableResourceFinderFactory(
 
         // Maven local
         try {
-            val localMavenRepository = localMavenRepositoryLocator.getLocalMavenRepository()
+            val localMavenRepository = localMavenRepositoryLocator.localMavenRepository
             if (localMavenRepository.exists()) {
                 addForPattern(finders, localMavenRepository, M2ResourcePattern("[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier])(.[ext])"))
             }

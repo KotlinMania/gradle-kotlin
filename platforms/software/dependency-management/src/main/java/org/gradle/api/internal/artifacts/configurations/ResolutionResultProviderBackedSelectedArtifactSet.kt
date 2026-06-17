@@ -13,42 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
 
 /**
- * A {@link SelectedArtifactSet} that is backed by a {@link ResolutionResultProvider}.
- * <p>
- * This is used as a source for constructing {@link ResolutionBackedFileCollection}
- * instances derived from resolving a {@link Configuration}.
+ * A [SelectedArtifactSet] that is backed by a [ResolutionResultProvider].
+ *
+ *
+ * This is used as a source for constructing [ResolutionBackedFileCollection]
+ * instances derived from resolving a [Configuration].
  */
-public class ResolutionResultProviderBackedSelectedArtifactSet implements SelectedArtifactSet {
+class ResolutionResultProviderBackedSelectedArtifactSet(
+    private val artifacts: ResolutionResultProvider<SelectedArtifactSet>
+) : SelectedArtifactSet {
+    private var delegate: SelectedArtifactSet? = null
 
-    private final ResolutionResultProvider<SelectedArtifactSet> artifacts;
-
-    private SelectedArtifactSet delegate;
-
-    public ResolutionResultProviderBackedSelectedArtifactSet(
-        ResolutionResultProvider<SelectedArtifactSet> artifacts
-    ) {
-        this.artifacts = artifacts;
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        artifacts.getTaskDependencyValue().visitDependencies(context)
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        artifacts.getTaskDependencyValue().visitDependencies(context);
-    }
-
-    @Override
-    public void visitArtifacts(ArtifactVisitor visitor, boolean continueOnSelectionFailure) {
+    override fun visitArtifacts(visitor: ArtifactVisitor, continueOnSelectionFailure: Boolean) {
         if (delegate == null) {
-            delegate = artifacts.getValue();
+            delegate = artifacts.getValue()
         }
-        delegate.visitArtifacts(visitor, continueOnSelectionFailure);
+        delegate!!.visitArtifacts(visitor, continueOnSelectionFailure)
     }
 }

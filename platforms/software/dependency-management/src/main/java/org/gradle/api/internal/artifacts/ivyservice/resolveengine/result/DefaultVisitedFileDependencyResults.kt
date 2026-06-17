@@ -13,23 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+import org.gradle.api.artifacts.FileCollectionDependency
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedFileDependencyResults
 
-import org.gradle.api.artifacts.FileCollectionDependency;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedFileDependencyResults;
-
-import java.util.Map;
-
-public class DefaultVisitedFileDependencyResults implements VisitedFileDependencyResults {
-    private final Map<FileCollectionDependency, Integer> rootFiles;
-
-    public DefaultVisitedFileDependencyResults(Map<FileCollectionDependency, Integer> rootFiles) {
-        this.rootFiles = rootFiles;
-    }
-
-    @Override
-    public Map<FileCollectionDependency, Integer> getFirstLevelFiles() {
-        return rootFiles;
+class DefaultVisitedFileDependencyResults(private val rootFiles: MutableMap<FileCollectionDependency, Int>) : VisitedFileDependencyResults {
+    override fun getFirstLevelFiles(): MutableMap<FileCollectionDependency, Int> {
+        return rootFiles
     }
 }

@@ -13,56 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.verification.exceptions
 
-package org.gradle.api.internal.artifacts.verification.exceptions;
-
-import org.gradle.api.GradleException;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import java.util.List;
+import org.gradle.api.GradleException
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.internal.logging.text.TreeFormatter
 
 /**
  * Exception class used when a GPG IDs were not correct.
  *
- * <p>
+ *
+ *
  * An example is using short/long IDs instead of fingerprints when trusting keys
  */
-public class InvalidGpgKeyIdsException extends GradleException {
-    private final List<String> wrongKeys;
-
+class InvalidGpgKeyIdsException
+/**
+ * Creates a new exception with a list of incorrect keys.
+ *
+ * @param wrongKeys the list of incorrect IDs, which will be nicely formatted as part of the exception messages so the user can find them
+ */(private val wrongKeys: MutableList<String?>) : GradleException() {
     /**
-     * Creates a new exception with a list of incorrect keys.
+     * Formats a nice error message by using a [TreeFormatter].
      *
-     * @param wrongKeys the list of incorrect IDs, which will be nicely formatted as part of the exception messages so the user can find them
-     */
-    public InvalidGpgKeyIdsException(List<String> wrongKeys) {
-        this.wrongKeys = wrongKeys;
-    }
-
-    /**
-     * Formats a nice error message by using a {@link TreeFormatter}.
      *
-     * <p>
-     * Idea for this method is that you can pass a higher-level {@link TreeFormatter} into here, and get a coherent, nice error message printed out - so the user will see a nice chain of causes.
+     *
+     * Idea for this method is that you can pass a higher-level [TreeFormatter] into here, and get a coherent, nice error message printed out - so the user will see a nice chain of causes.
      */
-    public void formatMessage(TreeFormatter formatter) {
-        final String documentLink = new DocumentationRegistry()
-            .getDocumentationRecommendationFor("on this", "dependency_verification", "sec:understanding-signature-verification");
+    fun formatMessage(formatter: TreeFormatter) {
+        val documentLink = DocumentationRegistry()
+            .getDocumentationRecommendationFor("on this", "dependency_verification", "sec:understanding-signature-verification")
 
-        formatter.node(String.format("The following trusted GPG IDs are not in a minimum 160-bit fingerprint format (%s):", documentLink));
-        formatter.startChildren();
+        formatter.node(String.format("The following trusted GPG IDs are not in a minimum 160-bit fingerprint format (%s):", documentLink))
+        formatter.startChildren()
         wrongKeys
             .stream()
-            .map(key -> String.format("'%s'", key))
-            .forEach(formatter::node);
-        formatter.endChildren();
+            .map<String?> { key: String? -> String.format("'%s'", key) }
+            .forEach { text: String? -> formatter.node(text) }
+        formatter.endChildren()
     }
 
-    @Override
-    public String getMessage() {
-        final TreeFormatter treeFormatter = new TreeFormatter();
-        formatMessage(treeFormatter);
-        return treeFormatter.toString();
-    }
+    val message: String
+        get() {
+            val treeFormatter = TreeFormatter()
+            formatMessage(treeFormatter)
+            return treeFormatter.toString()
+        }
 }

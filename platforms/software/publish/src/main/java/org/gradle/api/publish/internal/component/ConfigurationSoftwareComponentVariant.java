@@ -88,7 +88,7 @@ public class ConfigurationSoftwareComponentVariant extends AbstractSoftwareCompo
     @Override
     public Set<ExcludeRule> getGlobalExcludes() {
         if (excludeRules == null) {
-            this.excludeRules = ImmutableSet.copyOf(((ConfigurationInternal) configuration).getAllExcludeRules());
+            this.excludeRules = ImmutableSet.copyOf(((ConfigurationInternal) configuration).allExcludeRules);
         }
         return excludeRules;
     }

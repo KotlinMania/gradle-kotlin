@@ -13,171 +13,152 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+import com.google.common.annotations.VisibleForTesting
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.metadata.ComponentArtifactIdentifierSerializer
+import org.gradle.api.internal.artifacts.metadata.ModuleComponentFileArtifactIdentifierSerializer
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier
+import org.gradle.internal.file.FileAccessTracker
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.resource.cached.AbstractCachedIndex
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.DefaultSerializerRegistry
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
+import java.io.IOException
+import java.nio.file.Path
 
-import com.google.common.annotations.VisibleForTesting;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.metadata.ComponentArtifactIdentifierSerializer;
-import org.gradle.api.internal.artifacts.metadata.ModuleComponentFileArtifactIdentifierSerializer;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.resource.cached.AbstractCachedIndex;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.DefaultSerializerRegistry;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
-public class DefaultModuleArtifactCache extends AbstractCachedIndex<ArtifactAtRepositoryKey, CachedArtifact> implements ModuleArtifactCache {
-    private static final ArtifactAtRepositoryKeySerializer KEY_SERIALIZER = keySerializer();
-    private final BuildCommencedTimeProvider timeProvider;
-
-    public DefaultModuleArtifactCache(String persistentCacheFile, BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, FileAccessTracker fileAccessTracker, Path commonRootPath) {
-        super(persistentCacheFile, KEY_SERIALIZER, new CachedArtifactSerializer(commonRootPath), cacheAccessCoordinator, fileAccessTracker);
-        this.timeProvider = timeProvider;
+open class DefaultModuleArtifactCache(
+    persistentCacheFile: String,
+    private val timeProvider: BuildCommencedTimeProvider,
+    cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator,
+    fileAccessTracker: FileAccessTracker,
+    commonRootPath: Path
+) : AbstractCachedIndex<ArtifactAtRepositoryKey?, CachedArtifact?>(persistentCacheFile, KEY_SERIALIZER, CachedArtifactSerializer(commonRootPath), cacheAccessCoordinator, fileAccessTracker),
+    ModuleArtifactCache {
+    override fun store(key: ArtifactAtRepositoryKey?, artifactFile: File, moduleDescriptorHash: HashCode?) {
+        assertArtifactFileNotNull(artifactFile)
+        assertKeyNotNull(key)
+        storeInternal(key, createEntry(artifactFile, moduleDescriptorHash))
     }
 
-    protected static ArtifactAtRepositoryKeySerializer keySerializer() {
-        DefaultSerializerRegistry serializerRegistry = new DefaultSerializerRegistry();
-        serializerRegistry.register(DefaultModuleComponentArtifactIdentifier.class, new ComponentArtifactIdentifierSerializer());
-        serializerRegistry.register(ModuleComponentFileArtifactIdentifier.class, new ModuleComponentFileArtifactIdentifierSerializer());
-        return new ArtifactAtRepositoryKeySerializer(serializerRegistry.build(ComponentArtifactIdentifier.class));
+    private fun createEntry(artifactFile: File?, moduleDescriptorHash: HashCode?): DefaultCachedArtifact {
+        return DefaultCachedArtifact(artifactFile, timeProvider.getCurrentTime(), moduleDescriptorHash)
     }
 
-    @Override
-    public void store(final ArtifactAtRepositoryKey key, final File artifactFile, HashCode moduleDescriptorHash) {
-        assertArtifactFileNotNull(artifactFile);
-        assertKeyNotNull(key);
-        storeInternal(key, createEntry(artifactFile, moduleDescriptorHash));
+    override fun storeMissing(key: ArtifactAtRepositoryKey?, attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?) {
+        storeInternal(key, createMissingEntry(attemptedLocations, descriptorHash))
     }
 
-    private DefaultCachedArtifact createEntry(File artifactFile, HashCode moduleDescriptorHash) {
-        return new DefaultCachedArtifact(artifactFile, timeProvider.getCurrentTime(), moduleDescriptorHash);
+    private fun createMissingEntry(attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?): CachedArtifact {
+        return DefaultCachedArtifact(attemptedLocations, timeProvider.getCurrentTime(), descriptorHash)
     }
 
-    @Override
-    public void storeMissing(ArtifactAtRepositoryKey key, List<String> attemptedLocations, HashCode descriptorHash) {
-        storeInternal(key, createMissingEntry(attemptedLocations, descriptorHash));
+    override fun lookup(key: ArtifactAtRepositoryKey?): CachedArtifact? {
+        assertKeyNotNull(key)
+
+        return super.lookup(key)
     }
 
-    private CachedArtifact createMissingEntry(List<String> attemptedLocations, HashCode descriptorHash) {
-        return new DefaultCachedArtifact(attemptedLocations, timeProvider.getCurrentTime(), descriptorHash);
-    }
-
-    @Override
-    public CachedArtifact lookup(ArtifactAtRepositoryKey key) {
-        assertKeyNotNull(key);
-
-        return super.lookup(key);
-    }
-
-    private static class ArtifactAtRepositoryKeySerializer implements Serializer<ArtifactAtRepositoryKey> {
-        private final Serializer<ComponentArtifactIdentifier> artifactIdSerializer;
-
-        public ArtifactAtRepositoryKeySerializer(Serializer<ComponentArtifactIdentifier> artifactIdSerializer) {
-            this.artifactIdSerializer = artifactIdSerializer;
+    private class ArtifactAtRepositoryKeySerializer(private val artifactIdSerializer: Serializer<ComponentArtifactIdentifier?>) : Serializer<ArtifactAtRepositoryKey?> {
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ArtifactAtRepositoryKey) {
+            encoder.writeString(value.getRepositoryId())
+            artifactIdSerializer.write(encoder, value.getArtifactId())
         }
 
-        @Override
-        public void write(Encoder encoder, ArtifactAtRepositoryKey value) throws Exception {
-            encoder.writeString(value.getRepositoryId());
-            artifactIdSerializer.write(encoder, value.getArtifactId());
-        }
-
-        @Override
-        public ArtifactAtRepositoryKey read(Decoder decoder) throws Exception {
-            String repositoryId = decoder.readString();
-            ComponentArtifactIdentifier artifactIdentifier = artifactIdSerializer.read(decoder);
-            return new ArtifactAtRepositoryKey(repositoryId, artifactIdentifier);
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ArtifactAtRepositoryKey {
+            val repositoryId = decoder.readString()
+            val artifactIdentifier = artifactIdSerializer.read(decoder)
+            return ArtifactAtRepositoryKey(repositoryId, artifactIdentifier)
         }
     }
 
     @VisibleForTesting
-    static class CachedArtifactSerializer implements Serializer<CachedArtifact> {
-
-        private final Path commonRootPath;
-
-        public CachedArtifactSerializer(Path commonRootPath) {
-            this.commonRootPath = commonRootPath;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+    internal class CachedArtifactSerializer(private val commonRootPath: Path) : Serializer<CachedArtifact?> {
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            CachedArtifactSerializer that = (CachedArtifactSerializer) o;
-            return commonRootPath.equals(that.commonRootPath);
+            val that = o as CachedArtifactSerializer
+            return commonRootPath == that.commonRootPath
         }
 
-        @Override
-        public int hashCode() {
-            return commonRootPath.hashCode();
+        override fun hashCode(): Int {
+            return commonRootPath.hashCode()
         }
 
-        @Override
-        public void write(Encoder encoder, CachedArtifact value) throws Exception {
-            encoder.writeBoolean(value.isMissing);
-            encoder.writeLong(value.cachedAt);
-            byte[] hash = value.getDescriptorHash().toByteArray();
-            encoder.writeBinary(hash);
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CachedArtifact) {
+            encoder.writeBoolean(value.isMissing)
+            encoder.writeLong(value.cachedAt)
+            val hash = value.getDescriptorHash().toByteArray()
+            encoder.writeBinary(hash)
             if (!value.isMissing) {
-                encoder.writeString(relativizeAndNormalizeFilePath(value.cachedFile));
+                encoder.writeString(relativizeAndNormalizeFilePath(value.cachedFile))
             } else {
-                encoder.writeSmallInt(value.attemptedLocations().size());
-                for (String location : value.attemptedLocations()) {
-                    encoder.writeString(location);
+                encoder.writeSmallInt(value.attemptedLocations().size)
+                for (location in value.attemptedLocations()) {
+                    encoder.writeString(location)
                 }
             }
         }
 
-        @Override
-        public CachedArtifact read(Decoder decoder) throws Exception {
-            boolean isMissing = decoder.readBoolean();
-            long createTimestamp = decoder.readLong();
-            byte[] encodedHash = decoder.readBinary();
-            HashCode hash = HashCode.fromBytes(encodedHash);
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): CachedArtifact? {
+            val isMissing = decoder.readBoolean()
+            val createTimestamp = decoder.readLong()
+            val encodedHash = decoder.readBinary()
+            val hash = HashCode.fromBytes(encodedHash!!)
             if (!isMissing) {
-                return new DefaultCachedArtifact(denormalizeAndResolveFilePath(decoder.readString()), createTimestamp, hash);
+                return DefaultCachedArtifact(denormalizeAndResolveFilePath(decoder.readString()!!), createTimestamp, hash)
             } else {
-                int size = decoder.readSmallInt();
-                List<String> attempted = new ArrayList<>(size);
-                for (int i = 0; i < size; i++) {
-                    attempted.add(decoder.readString());
+                val size = decoder.readSmallInt()
+                val attempted: MutableList<String?> = ArrayList<String?>(size)
+                for (i in 0..<size) {
+                    attempted.add(decoder.readString())
                 }
-                return new DefaultCachedArtifact(attempted, createTimestamp, hash);
+                return DefaultCachedArtifact(attempted, createTimestamp, hash)
             }
         }
 
-        private String relativizeAndNormalizeFilePath(File cachedFile) {
-            Path filePath = cachedFile.toPath();
-            assert filePath.startsWith(commonRootPath) : "Attempting to cache file " + filePath + " not in " + commonRootPath;
-            String systemDependentPath = commonRootPath.relativize(filePath).toString();
-            if (!filePath.getFileSystem().getSeparator().equals("/")) {
-                return systemDependentPath.replace(filePath.getFileSystem().getSeparator(), "/");
+        private fun relativizeAndNormalizeFilePath(cachedFile: File): String {
+            val filePath = cachedFile.toPath()
+            assert(filePath.startsWith(commonRootPath)) { "Attempting to cache file " + filePath + " not in " + commonRootPath }
+            val systemDependentPath = commonRootPath.relativize(filePath).toString()
+            if (filePath.getFileSystem().getSeparator() != "/") {
+                return systemDependentPath.replace(filePath.getFileSystem().getSeparator(), "/")
             }
-            return systemDependentPath;
+            return systemDependentPath
         }
 
-        private File denormalizeAndResolveFilePath(String relativePath) throws IOException {
-            if (!commonRootPath.getFileSystem().getSeparator().equals("/")) {
-                relativePath = relativePath.replace("/", commonRootPath.getFileSystem().getSeparator());
+        @Throws(IOException::class)
+        private fun denormalizeAndResolveFilePath(relativePath: String): File {
+            var relativePath = relativePath
+            if (commonRootPath.getFileSystem().getSeparator() != "/") {
+                relativePath = relativePath.replace("/", commonRootPath.getFileSystem().getSeparator())
             }
-            return commonRootPath.resolve(relativePath).toFile();
+            return commonRootPath.resolve(relativePath).toFile()
         }
     }
 
+    companion object {
+        private val KEY_SERIALIZER: ArtifactAtRepositoryKeySerializer = keySerializer()
+        protected fun keySerializer(): ArtifactAtRepositoryKeySerializer {
+            val serializerRegistry = DefaultSerializerRegistry()
+            serializerRegistry.register<DefaultModuleComponentArtifactIdentifier?>(DefaultModuleComponentArtifactIdentifier::class.java, ComponentArtifactIdentifierSerializer())
+            serializerRegistry.register<ModuleComponentFileArtifactIdentifier?>(ModuleComponentFileArtifactIdentifier::class.java, ModuleComponentFileArtifactIdentifierSerializer())
+            return DefaultModuleArtifactCache.ArtifactAtRepositoryKeySerializer(serializerRegistry.build<ComponentArtifactIdentifier?>(ComponentArtifactIdentifier::class.java)!!)
+        }
+    }
 }

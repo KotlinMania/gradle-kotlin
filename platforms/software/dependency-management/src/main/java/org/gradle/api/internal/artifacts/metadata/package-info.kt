@@ -13,8 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.metadata
 
-@NullMarked
-package org.gradle.api.internal.artifacts.metadata;
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier.getComponentIdentifier
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getComponentId
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
+import org.gradle.internal.serialize.AbstractSerializer.equals
+import org.gradle.internal.serialize.AbstractSerializer.hashCode
+import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier.getComponentIdentifier
+import org.gradle.internal.serialize.Encoder.writeString
+import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier.fileName
+import org.gradle.internal.serialize.Decoder.readString
+import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier.getComponentIdentifier
+import org.gradle.internal.serialize.Decoder.readNullableString
+import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata.getComponentIdentifier
+import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetadata.publishArtifact
+import org.gradle.internal.serialize.Encoder.writeNullableString
 
-import org.jspecify.annotations.NullMarked;

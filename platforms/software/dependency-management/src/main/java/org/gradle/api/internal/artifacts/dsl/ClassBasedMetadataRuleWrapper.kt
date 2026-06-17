@@ -13,53 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.action.ConfigurableRule
+import org.gradle.internal.rules.SpecRuleAction
+import java.util.stream.Collectors
 
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.action.ConfigurableRule;
-import org.gradle.internal.rules.SpecRuleAction;
+internal class ClassBasedMetadataRuleWrapper(classRule: SpecConfigurableRule) : MetadataRuleWrapper {
+    private val classRules: MutableList<SpecConfigurableRule> = ArrayList<SpecConfigurableRule>(5)
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
-class ClassBasedMetadataRuleWrapper implements MetadataRuleWrapper {
-    private final List<SpecConfigurableRule> classRules = new ArrayList<>(5);
-
-    ClassBasedMetadataRuleWrapper(SpecConfigurableRule classRule) {
-        this.classRules.add(classRule);
+    init {
+        this.classRules.add(classRule)
     }
 
-    @Override
-    public boolean isClassBased() {
-        return true;
+    override fun isClassBased(): Boolean {
+        return true
     }
 
-    @Override
-    public Collection<SpecConfigurableRule> getClassRules() {
-        return classRules;
+    override fun getClassRules(): MutableCollection<SpecConfigurableRule> {
+        return classRules
     }
 
-    @Override
-    public void addClassRule(SpecConfigurableRule classRule) {
-        classRules.add(classRule);
+    override fun addClassRule(classRule: SpecConfigurableRule) {
+        classRules.add(classRule)
     }
 
-    @Override
-    public SpecRuleAction<? super ComponentMetadataDetails> getRule() {
-        throw new UnsupportedOperationException("This operation is not supported by this implementation");
+    override fun getRule(): SpecRuleAction<in ComponentMetadataDetails?>? {
+        throw UnsupportedOperationException("This operation is not supported by this implementation")
     }
 
-    @Override
-    public DisplayName getDisplayName() {
-        return Describables.of(classRules.stream()
-            .map(SpecConfigurableRule::getConfigurableRule)
-            .map(ConfigurableRule::getRuleClass)
-            .map(Class::getName)
-            .collect(Collectors.joining(",")));
+    override fun getDisplayName(): DisplayName {
+        return Describables.of(
+            classRules.stream()
+                .map<ConfigurableRule<ComponentMetadataContext>> { obj: SpecConfigurableRule? -> obj!!.getConfigurableRule() }
+                .map { obj: ConfigurableRule<ComponentMetadataContext?>? -> obj!!.getRuleClass() }
+                .map<String> { obj: Class<Action<ComponentMetadataContext?>?>? -> obj!!.getName() }
+                .collect(Collectors.joining(",")))
     }
 }

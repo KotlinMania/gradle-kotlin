@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.artifacts.FileCollectionDependency;
-
-import java.util.Map;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
 /**
  * Collects the file dependencies visited during graph traversal. These should be treated as dependencies, but are currently treated separately as a migration step.
  */
-public interface VisitedFileDependencyResults {
+interface VisitedFileDependencyResults {
     /**
      * Returns the direct dependencies of the root node. The map is from dependency to the id of the associated artifact set.
      */
-    Map<FileCollectionDependency, Integer> getFirstLevelFiles();
+    val firstLevelFiles: MutableMap<FileCollectionDependency, Int>?
 }

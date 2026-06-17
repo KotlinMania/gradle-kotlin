@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPPublicKey
 
-public interface SignatureVerificationResultBuilder {
-    void missingKey(String keyId);
-    void verified(PGPPublicKey key, boolean trusted);
-    void failed(PGPPublicKey pgpPublicKey);
-    void ignored(String keyId);
+interface SignatureVerificationResultBuilder {
+    fun missingKey(keyId: String?)
+    fun verified(key: PGPPublicKey?, trusted: Boolean)
+    fun failed(pgpPublicKey: PGPPublicKey?)
+    fun ignored(keyId: String?)
 
-    void noSignatures();
+    fun noSignatures()
 
-    void failedToReadSignatureFile(String causeDescription);
+    fun failedToReadSignatureFile(causeDescription: String?)
 }

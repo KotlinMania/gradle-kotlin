@@ -13,45 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.util.concurrent.ConcurrentHashMap
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+class InMemoryModuleVersionsCache : AbstractModuleVersionsCache {
+    private val inMemoryCache: MutableMap<ModuleAtRepositoryKey?, ModuleVersionsCacheEntry?> = ConcurrentHashMap<ModuleAtRepositoryKey?, ModuleVersionsCacheEntry?>()
+    private val delegate: AbstractModuleVersionsCache?
 
-public class InMemoryModuleVersionsCache extends AbstractModuleVersionsCache {
-    private final Map<ModuleAtRepositoryKey, ModuleVersionsCacheEntry> inMemoryCache = new ConcurrentHashMap<>();
-    private final AbstractModuleVersionsCache delegate;
-
-    public InMemoryModuleVersionsCache(BuildCommencedTimeProvider timeProvider) {
-        super(timeProvider);
-        this.delegate = null;
+    constructor(timeProvider: BuildCommencedTimeProvider?) : super(timeProvider) {
+        this.delegate = null
     }
 
-    public InMemoryModuleVersionsCache(BuildCommencedTimeProvider timeProvider, AbstractModuleVersionsCache delegate) {
-        super(timeProvider);
-        this.delegate = delegate;
+    constructor(timeProvider: BuildCommencedTimeProvider?, delegate: AbstractModuleVersionsCache?) : super(timeProvider) {
+        this.delegate = delegate
     }
 
-    @Override
-    protected void store(ModuleAtRepositoryKey key, ModuleVersionsCacheEntry entry) {
-        inMemoryCache.put(key, entry);
+    protected override fun store(key: ModuleAtRepositoryKey?, entry: ModuleVersionsCacheEntry?) {
+        inMemoryCache.put(key, entry)
         if (delegate != null) {
-            delegate.store(key, entry);
+            delegate.store(key, entry)
         }
     }
 
-    @Override
-    protected ModuleVersionsCacheEntry get(ModuleAtRepositoryKey key) {
-        ModuleVersionsCacheEntry entry = inMemoryCache.get(key);
+    protected override fun get(key: ModuleAtRepositoryKey?): ModuleVersionsCacheEntry? {
+        var entry = inMemoryCache.get(key)
         if (entry == null && delegate != null) {
-            entry = delegate.get(key);
+            entry = delegate.get(key)
             if (entry != null) {
-                inMemoryCache.put(key, entry);
+                inMemoryCache.put(key, entry)
             }
         }
-        return entry;
+        return entry
     }
-
 }

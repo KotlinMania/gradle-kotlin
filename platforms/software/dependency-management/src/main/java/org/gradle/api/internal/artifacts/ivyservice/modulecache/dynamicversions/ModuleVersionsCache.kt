@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
 
-import java.time.Duration;
-import java.util.Set;
+interface ModuleVersionsCache {
+    fun cacheModuleVersionList(repository: ModuleComponentRepository<*>?, moduleId: ModuleIdentifier?, listedVersions: MutableSet<String?>?)
 
-public interface ModuleVersionsCache {
-
-    void cacheModuleVersionList(ModuleComponentRepository<?> repository, ModuleIdentifier moduleId, Set<String> listedVersions);
-
-    CachedModuleVersionList getCachedModuleResolution(ModuleComponentRepository<?> repository, ModuleIdentifier moduleId);
+    fun getCachedModuleResolution(repository: ModuleComponentRepository<*>?, moduleId: ModuleIdentifier?): CachedModuleVersionList?
 
     interface CachedModuleVersionList {
-        Set<String> getModuleVersions();
+        @JvmField
+        val moduleVersions: MutableSet<String?>?
 
-        Duration getAge();
+        @JvmField
+        val age: Duration?
     }
 }

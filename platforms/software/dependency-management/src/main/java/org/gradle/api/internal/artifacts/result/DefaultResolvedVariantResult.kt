@@ -13,112 +13,91 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.DisplayName
+import java.util.Optional
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.internal.Cast;
-import org.gradle.internal.DisplayName;
-import org.jspecify.annotations.Nullable;
+class DefaultResolvedVariantResult(
+    private val owner: ComponentIdentifier,
+    private val displayName: DisplayName,
+    private val attributes: AttributeContainer,
+    private val capabilities: ImmutableList<out Capability>,
+    private val externalVariant: ResolvedVariantResult?
+) : ResolvedVariantResult {
+    private val hashCode: Int
 
-import java.util.List;
-import java.util.Optional;
-
-public class DefaultResolvedVariantResult implements ResolvedVariantResult {
-
-    private final ComponentIdentifier owner;
-    private final DisplayName displayName;
-    private final AttributeContainer attributes;
-    private final ImmutableList<? extends Capability> capabilities;
-    private final ResolvedVariantResult externalVariant;
-    private final int hashCode;
-
-    public DefaultResolvedVariantResult(ComponentIdentifier owner,
-                                        DisplayName displayName,
-                                        AttributeContainer attributes,
-                                        ImmutableList<? extends Capability> capabilities,
-                                        @Nullable ResolvedVariantResult externalVariant) {
-        this.owner = owner;
-        this.displayName = displayName;
-        this.attributes = attributes;
-        this.capabilities = capabilities;
-        this.externalVariant = externalVariant;
-        this.hashCode = computeHashCode();
+    init {
+        this.hashCode = computeHashCode()
     }
 
-    @Override
-    public ComponentIdentifier getOwner() {
-        return owner;
+    override fun getOwner(): ComponentIdentifier {
+        return owner
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return attributes;
+    override fun getAttributes(): AttributeContainer {
+        return attributes
     }
 
-    @Override
-    public String getDisplayName() {
-        return displayName.getDisplayName();
+    override fun getDisplayName(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public List<Capability> getCapabilities() {
-        return Cast.uncheckedCast(capabilities);
+    override fun getCapabilities(): MutableList<Capability> {
+        return uncheckedCast<MutableList<Capability>?>(capabilities)!!
     }
 
-    @Override
-    public Optional<ResolvedVariantResult> getExternalVariant() {
-        return Optional.ofNullable(externalVariant);
+    override fun getExternalVariant(): Optional<ResolvedVariantResult> {
+        return Optional.ofNullable<ResolvedVariantResult>(externalVariant)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultResolvedVariantResult that = (DefaultResolvedVariantResult) o;
+        val that = o as DefaultResolvedVariantResult
 
-        if (!owner.equals(that.owner)) {
-            return false;
+        if (owner != that.owner) {
+            return false
         }
-        if (!displayName.equals(that.displayName)) {
-            return false;
+        if (displayName != that.displayName) {
+            return false
         }
-        if (!attributes.equals(that.attributes)) {
-            return false;
+        if (attributes != that.attributes) {
+            return false
         }
-        if (!capabilities.equals(that.capabilities)) {
-            return false;
+        if (capabilities != that.capabilities) {
+            return false
         }
-        return externalVariant == null ? that.externalVariant == null : externalVariant.equals(that.externalVariant);
+        return if (externalVariant == null) that.externalVariant == null else (externalVariant == that.externalVariant)
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private int computeHashCode() {
-        int result = owner.hashCode();
-        result = 31 * result + displayName.hashCode();
-        result = 31 * result + attributes.hashCode();
-        result = 31 * result + capabilities.hashCode();
+    private fun computeHashCode(): Int {
+        var result = owner.hashCode()
+        result = 31 * result + displayName.hashCode()
+        result = 31 * result + attributes.hashCode()
+        result = 31 * result + capabilities.hashCode()
         if (externalVariant != null) {
-            result = 31 * externalVariant.hashCode();
+            result = 31 * externalVariant.hashCode()
         }
-        return result;
+        return result
     }
 
-    @Override
-    public String toString() {
-        return displayName.toString();
+    override fun toString(): String {
+        return displayName.toString()
     }
 }

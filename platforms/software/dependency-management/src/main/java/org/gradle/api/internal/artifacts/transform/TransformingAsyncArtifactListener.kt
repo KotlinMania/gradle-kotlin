@@ -13,248 +13,197 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.BrokenArtifacts
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.Deferrable
+import org.gradle.internal.DisplayName
+import org.gradle.internal.Try
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import java.util.function.Consumer
+import java.util.function.Function
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.BrokenArtifacts;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.Deferrable;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.Try;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.jspecify.annotations.Nullable;
+class TransformingAsyncArtifactListener(
+    private val transformSteps: MutableList<BoundTransformStep>,
+    private val target: ImmutableAttributes,
+    private val capabilities: ImmutableCapabilities,
+    private val result: ImmutableList.Builder<ResolvedArtifactSet.Artifacts>
+) : ResolvedArtifactSet.Visitor {
+    override fun visitArtifacts(artifacts: ResolvedArtifactSet.Artifacts) {
+        artifacts.visit(object : ArtifactVisitor {
+            override fun visitArtifact(
+                artifactSetName: DisplayName,
+                sourceVariantId: VariantIdentifier,
+                attributes: ImmutableAttributes,
+                variantCapabilities: ImmutableCapabilities,
+                artifact: ResolvableArtifact
+            ) {
+                val transformedArtifact = TransformedArtifact(artifactSetName, sourceVariantId, target, capabilities, artifact, transformSteps)
+                result.add(transformedArtifact)
+            }
 
-import java.io.File;
-import java.util.List;
+            override fun requireArtifactFiles(): Boolean {
+                return false
+            }
 
-public class TransformingAsyncArtifactListener implements ResolvedArtifactSet.Visitor {
-    private final List<BoundTransformStep> transformSteps;
-    private final ImmutableAttributes target;
-    private final ImmutableCapabilities capabilities;
-    private final ImmutableList.Builder<ResolvedArtifactSet.Artifacts> result;
-
-    public TransformingAsyncArtifactListener(
-        List<BoundTransformStep> transformSteps,
-        ImmutableAttributes target,
-        ImmutableCapabilities capabilities,
-        ImmutableList.Builder<ResolvedArtifactSet.Artifacts> result
-    ) {
-        this.transformSteps = transformSteps;
-        this.target = target;
-        this.capabilities = capabilities;
-        this.result = result;
+            override fun visitFailure(failure: Throwable) {
+                result.add(BrokenArtifacts(failure))
+            }
+        })
     }
 
-    @Override
-    public void visitArtifacts(ResolvedArtifactSet.Artifacts artifacts) {
-        artifacts.visit(new ArtifactVisitor() {
-            @Override
-            public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities variantCapabilities, ResolvableArtifact artifact) {
-                TransformedArtifact transformedArtifact = new TransformedArtifact(artifactSetName, sourceVariantId, target, capabilities, artifact, transformSteps);
-                result.add(transformedArtifact);
-            }
-
-            @Override
-            public boolean requireArtifactFiles() {
-                return false;
-            }
-
-            @Override
-            public void visitFailure(Throwable failure) {
-                result.add(new BrokenArtifacts(failure));
-            }
-        });
-    }
-
-    @Override
-    public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
+    override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
         // Visit everything
-        return FileCollectionStructureVisitor.VisitType.Visit;
+        return FileCollectionStructureVisitor.VisitType.Visit
     }
 
-    public static class TransformedArtifact implements ResolvedArtifactSet.Artifacts, RunnableBuildOperation {
-        private final DisplayName artifactSetName;
-        private final ImmutableCapabilities capabilities;
-        private final VariantIdentifier sourceVariantId;
-        private final ResolvableArtifact artifact;
-        private final ImmutableAttributes target;
-        private final List<BoundTransformStep> transformSteps;
-        private Try<TransformStepSubject> transformedSubject;
-        private Deferrable<Try<TransformStepSubject>> invocation;
+    class TransformedArtifact(
+        val artifactSetName: DisplayName,
+        val sourceVariantId: VariantIdentifier,
+        val target: ImmutableAttributes,
+        val capabilities: ImmutableCapabilities,
+        val artifact: ResolvableArtifact,
+        val transformSteps: MutableList<BoundTransformStep>
+    ) : ResolvedArtifactSet.Artifacts, RunnableBuildOperation {
+        private var transformedSubject: Try<TransformStepSubject?>? = null
+        private var invocation: Deferrable<Try<TransformStepSubject?>?>? = null
 
-        public TransformedArtifact(
-            DisplayName artifactSetName,
-            VariantIdentifier sourceVariantId,
-            ImmutableAttributes target,
-            ImmutableCapabilities capabilities,
-            ResolvableArtifact artifact,
-            List<BoundTransformStep> transformSteps
-        ) {
-            this.artifactSetName = artifactSetName;
-            this.sourceVariantId = sourceVariantId;
-            this.artifact = artifact;
-            this.target = target;
-            this.capabilities = capabilities;
-            this.transformSteps = transformSteps;
-        }
-
-        public DisplayName getArtifactSetName() {
-            return artifactSetName;
-        }
-
-        public VariantIdentifier getSourceVariantId() {
-            return sourceVariantId;
-        }
-
-        public ResolvableArtifact getArtifact() {
-            return artifact;
-        }
-
-        public ImmutableAttributes getTarget() {
-            return target;
-        }
-
-        public ImmutableCapabilities getCapabilities() {
-            return capabilities;
-        }
-
-        public List<BoundTransformStep> getTransformSteps() {
-            return transformSteps;
-        }
-
-        @Override
-        public void prepareForVisitingIfNotAlready() {
+        override fun prepareForVisitingIfNotAlready() {
             // The parameters of the transforms should already be isolated prior to visiting this set.
             // However, in certain cases, the transform's parameters may not be isolated (eg https://github.com/gradle/gradle/issues/23116), so do this now
             // Those cases should be improved so that the parameters are always isolated, for example by always using work nodes to do this work
-            for (BoundTransformStep step : transformSteps) {
-                step.getTransformStep().isolateParametersIfNotAlready();
+            for (step in transformSteps) {
+                step.getTransformStep().isolateParametersIfNotAlready()
             }
         }
 
-        @Override
-        public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
+        override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation>, requireFiles: Boolean) {
             if (prepareInvocation()) {
-                actions.add(this);
+                actions.add(this)
             }
         }
 
-        @Override
-        public BuildOperationDescriptor.Builder description() {
-            return BuildOperationDescriptor.displayName("Execute transform chain: " + artifact.getId().getDisplayName());
+        override fun description(): BuildOperationDescriptor.Builder {
+            return BuildOperationDescriptor.displayName("Execute transform chain: " + artifact.id.getDisplayName())
         }
 
-        @Override
-        public void run(@Nullable BuildOperationContext context) {
-            finalizeValue();
+        override fun run(context: BuildOperationContext?) {
+            finalizeValue()
         }
 
         /**
          * Returns true if this artifact should be queued for execution, false when a value is already available.
          */
-        private boolean prepareInvocation() {
-            synchronized (this) {
+        private fun prepareInvocation(): Boolean {
+            synchronized(this) {
                 if (transformedSubject != null) {
                     // Already have a result, no need to execute
-                    return false;
+                    return false
                 }
             }
-            if (!artifact.getFileSource().isFinalized()) {
+            if (!artifact.fileSource.isFinalized()) {
                 // No input artifact yet, should execute
-                return true;
+                return true
             }
-            if (!artifact.getFileSource().getValue().isSuccessful) {
-                synchronized (this) {
+            if (!artifact.fileSource.getValue().isSuccessful) {
+                synchronized(this) {
                     // Failed to resolve input artifact, no need to execute
-                    transformedSubject = Try.failure(artifact.getFileSource().getValue().failure.get());
-                    return false;
+                    transformedSubject = Try.failure<U?>(artifact.fileSource.getValue().failure!!.get())
+                    return false
                 }
             }
 
-            Deferrable<Try<TransformStepSubject>> invocation = createInvocation();
-            synchronized (this) {
-                this.invocation = invocation;
-                if (invocation.completed.isPresent()) {
+            val invocation: Deferrable<Try<TransformStepSubject?>?> = createInvocation()
+            synchronized(this) {
+                this.invocation = invocation
+                if (invocation.completed!!.isPresent()) {
                     // Have already executed the transform, no need to execute
-                    transformedSubject = invocation.completed.get();
-                    return false;
+                    transformedSubject = invocation.completed!!.get()
+                    return false
                 } else {
                     // Have not executed the transform, should execute
-                    return true;
+                    return true
                 }
             }
         }
 
-        private Try<TransformStepSubject> finalizeValue() {
-            synchronized (this) {
+        private fun finalizeValue(): Try<TransformStepSubject?> {
+            synchronized(this) {
                 if (transformedSubject != null) {
-                    return transformedSubject;
+                    return transformedSubject!!
                 }
             }
 
-            artifact.getFileSource().finalizeIfNotAlready();
-            if (!artifact.getFileSource().getValue().isSuccessful) {
-                synchronized (this) {
-                    transformedSubject = Try.failure(artifact.getFileSource().getValue().failure.get());
-                    return transformedSubject;
+            artifact.fileSource.finalizeIfNotAlready()
+            if (!artifact.fileSource.getValue().isSuccessful) {
+                synchronized(this) {
+                    transformedSubject = Try.failure<U?>(artifact.fileSource.getValue().failure!!.get())
+                    return transformedSubject!!
                 }
             }
 
-            Deferrable<Try<TransformStepSubject>> invocation;
-            synchronized (this) {
-                invocation = this.invocation;
+            var invocation: Deferrable<Try<TransformStepSubject?>?>?
+            synchronized(this) {
+                invocation = this.invocation
             }
 
             if (invocation == null) {
-                invocation = createInvocation();
+                invocation = createInvocation()
             }
-            Try<TransformStepSubject> result = invocation.completeAndGet();
-            synchronized (this) {
-                transformedSubject = result;
-                return result;
+            val result: Try<TransformStepSubject?> = invocation.completeAndGet()!!
+            synchronized(this) {
+                transformedSubject = result
+                return result
             }
         }
 
-        private Deferrable<Try<TransformStepSubject>> createInvocation() {
-            TransformStepSubject initialSubject = TransformStepSubject.initial(artifact);
-            BoundTransformStep initialStep = transformSteps.get(0);
-            Deferrable<Try<TransformStepSubject>> invocation = initialStep.getTransformStep()
-                .createInvocation(initialSubject, initialStep.getUpstreamDependencies(), null);
-            for (int i = 1; i < transformSteps.size(); i++) {
-                BoundTransformStep nextStep = transformSteps.get(i);
+        private fun createInvocation(): Deferrable<Try<TransformStepSubject?>?> {
+            val initialSubject: TransformStepSubject = TransformStepSubject.Companion.initial(artifact)
+            val initialStep = transformSteps.get(0)
+            var invocation: Deferrable<Try<TransformStepSubject?>?> = initialStep.getTransformStep()
+                .createInvocation(initialSubject, initialStep.getUpstreamDependencies(), null)
+            for (i in 1..<transformSteps.size) {
+                val nextStep = transformSteps.get(i)
                 invocation = invocation
-                    .flatMap(intermediateResult -> intermediateResult
-                        .map(intermediateSubject -> nextStep.getTransformStep()
-                            .createInvocation(intermediateSubject, nextStep.getUpstreamDependencies(), null))
-                        .getOrMapFailure(failure -> Deferrable.completed(Try.failure(failure))));
+                    .flatMap<Try<TransformStepSubject?>?>(Function { intermediateResult: Try<TransformStepSubject?>? ->
+                        intermediateResult!!
+                            .map<org.gradle.internal.Deferrable<org.gradle.internal.Try<org.gradle.api.internal.artifacts.transform.TransformStepSubject>?>?>(java.util.function.Function { intermediateSubject: org.gradle.api.internal.artifacts.transform.TransformStepSubject? ->
+                                nextStep.getTransformStep()
+                                    .createInvocation(intermediateSubject!!, nextStep.getUpstreamDependencies(), null)
+                            })!!
+                            .getOrMapFailure(Function { failure: Throwable? -> Deferrable.completed(Try.failure<U?>(failure)) })
+                    })
             }
-            return invocation;
+            return invocation
         }
 
-        @Override
-        public void visit(ArtifactVisitor visitor) {
-            Try<TransformStepSubject> transformedSubject = finalizeValue();
+        override fun visit(visitor: ArtifactVisitor) {
+            val transformedSubject: Try<TransformStepSubject?> = finalizeValue()
             transformedSubject.ifSuccessfulOrElse(
-                subject -> {
-                    for (File output : subject.getFiles()) {
-                        ResolvableArtifact resolvedArtifact = artifact.transformedTo(output);
-                        visitor.visitArtifact(artifactSetName, sourceVariantId, target, capabilities, resolvedArtifact);
+                Consumer { subject: TransformStepSubject? ->
+                    for (output in subject!!.getFiles()) {
+                        val resolvedArtifact = artifact.transformedTo(output)
+                        visitor.visitArtifact(artifactSetName, sourceVariantId, target, capabilities, resolvedArtifact)
                     }
                 },
-                failure -> visitor.visitFailure(
-                    new TransformException(String.format("Failed to transform %s to match attributes %s.", artifact.getId().getDisplayName(), target), failure))
-            );
+                Consumer { failure: Throwable? ->
+                    visitor.visitFailure(
+                        TransformException(String.format("Failed to transform %s to match attributes %s.", artifact.id.getDisplayName(), target), failure!!)
+                    )
+                }
+            )
         }
     }
 }

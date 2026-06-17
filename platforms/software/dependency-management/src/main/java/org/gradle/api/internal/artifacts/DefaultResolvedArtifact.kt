@@ -13,84 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.model.CalculatedValue;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.DefaultResolvedModuleVersion
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.model.CalculatedValue
+import java.io.File
 
 /**
- * Default implementation of {@link ResolvedArtifact}, the artifact type used by the legacy
- * {@link org.gradle.api.artifacts.ResolvedConfiguration} API. This class presents a file extension, type,
- * classifier via its {@link IvyArtifactName}. This name is tracked on a best-effort basis, and may not
+ * Default implementation of [ResolvedArtifact], the artifact type used by the legacy
+ * [org.gradle.api.artifacts.ResolvedConfiguration] API. This class presents a file extension, type,
+ * classifier via its [IvyArtifactName]. This name is tracked on a best-effort basis, and may not
  * always represent the actual file name.
  */
-public class DefaultResolvedArtifact implements ResolvedArtifact {
-
-    private final ComponentArtifactIdentifier id;
-    private final CalculatedValue<File> fileSource;
-    private final ModuleVersionIdentifier owner;
-    private final IvyArtifactName artifactName;
-
-    public DefaultResolvedArtifact(ComponentArtifactIdentifier id, CalculatedValue<File> fileSource, @Nullable ModuleVersionIdentifier owner, IvyArtifactName artifactName) {
-        this.id = id;
-        this.fileSource = fileSource;
-        this.owner = owner;
-        this.artifactName = artifactName;
+class DefaultResolvedArtifact(
+    private val id: ComponentArtifactIdentifier,
+    private val fileSource: CalculatedValue<File>,
+    private val owner: ModuleVersionIdentifier?,
+    private val artifactName: IvyArtifactName
+) : ResolvedArtifact {
+    override fun getFile(): File {
+        fileSource.finalizeIfNotAlready()
+        return fileSource.get()
     }
 
-    @Override
-    public File getFile() {
-        fileSource.finalizeIfNotAlready();
-        return fileSource.get();
+    override fun getId(): ComponentArtifactIdentifier {
+        return id
     }
 
-    @Override
-    public ComponentArtifactIdentifier getId() {
-        return id;
+    override fun toString(): String {
+        return id.getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return id.getDisplayName();
-    }
-
-    @Override
-    public ResolvedModuleVersion getModuleVersion() {
+    override fun getModuleVersion(): ResolvedModuleVersion {
         if (owner == null) {
             // Local file dependencies do not have an owner
-            throw new UnsupportedOperationException();
+            throw UnsupportedOperationException()
         }
-        return new DefaultResolvedModuleVersion(owner);
+        return DefaultResolvedModuleVersion(owner)
     }
 
-    @Override
-    public String getName() {
-        return artifactName.name;
+    override fun getName(): String {
+        return artifactName.name!!
     }
 
-    @Override
-    public String getType() {
-        return artifactName.type;
+    override fun getType(): String {
+        return artifactName.type!!
     }
 
-    @Nullable
-    @Override
-    public String getExtension() {
-        return artifactName.extension;
+    override fun getExtension(): String? {
+        return artifactName.extension
     }
 
-    @Nullable
-    @Override
-    public String getClassifier() {
-        return artifactName.classifier;
+    override fun getClassifier(): String? {
+        return artifactName.classifier
     }
 }

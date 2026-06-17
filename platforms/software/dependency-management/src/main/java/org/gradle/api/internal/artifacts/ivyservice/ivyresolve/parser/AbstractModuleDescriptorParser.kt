@@ -13,49 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import java.io.File
 
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-
-import java.io.File;
-
-public abstract class AbstractModuleDescriptorParser<T extends MutableModuleComponentResolveMetadata> implements MetaDataParser<T> {
-    private final FileResourceRepository fileResourceRepository;
-
-    public AbstractModuleDescriptorParser(FileResourceRepository fileResourceRepository) {
-        this.fileResourceRepository = fileResourceRepository;
+abstract class AbstractModuleDescriptorParser<T : MutableModuleComponentResolveMetadata?>(private val fileResourceRepository: FileResourceRepository) : MetaDataParser<T?> {
+    @Throws(MetaDataParseException::class)
+    override fun parseMetaData(ivySettings: DescriptorParseContext?, descriptorFile: File?, validate: Boolean): MetaDataParser.ParseResult<T?>? {
+        val resource = fileResourceRepository.resource(descriptorFile)
+        return parseDescriptor(ivySettings, resource, validate)
     }
 
-    @Override
-    public ParseResult<T> parseMetaData(DescriptorParseContext ivySettings, File descriptorFile, boolean validate) throws MetaDataParseException {
-        LocallyAvailableExternalResource resource = fileResourceRepository.resource(descriptorFile);
-        return parseDescriptor(ivySettings, resource, validate);
+    @Throws(MetaDataParseException::class)
+    override fun parseMetaData(ivySettings: DescriptorParseContext?, descriptorFile: File?): MetaDataParser.ParseResult<T?>? {
+        return parseMetaData(ivySettings, descriptorFile, false)
     }
 
-    @Override
-    public ParseResult<T> parseMetaData(DescriptorParseContext ivySettings, File descriptorFile) throws MetaDataParseException {
-        return parseMetaData(ivySettings, descriptorFile, false);
+    @Throws(MetaDataParseException::class)
+    override fun parseMetaData(ivySettings: DescriptorParseContext?, resource: LocallyAvailableExternalResource): MetaDataParser.ParseResult<T?>? {
+        return parseDescriptor(ivySettings, resource, false)
     }
 
-    @Override
-    public ParseResult<T> parseMetaData(DescriptorParseContext ivySettings, LocallyAvailableExternalResource resource) throws MetaDataParseException {
-        return parseDescriptor(ivySettings, resource, false);
-    }
-
-    protected ParseResult<T> parseDescriptor(DescriptorParseContext ivySettings, LocallyAvailableExternalResource resource, boolean validate) throws MetaDataParseException {
+    @Throws(MetaDataParseException::class)
+    protected fun parseDescriptor(ivySettings: DescriptorParseContext?, resource: LocallyAvailableExternalResource, validate: Boolean): MetaDataParser.ParseResult<T?>? {
         try {
-            return doParseDescriptor(ivySettings, resource, validate);
-        } catch (MetaDataParseException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new MetaDataParseException(getTypeName(), resource, e);
+            return doParseDescriptor(ivySettings, resource, validate)
+        } catch (e: MetaDataParseException) {
+            throw e
+        } catch (e: Exception) {
+            throw MetaDataParseException(this.typeName, resource, e)
         }
     }
 
-    protected abstract String getTypeName();
+    protected abstract val typeName: String?
 
-    protected abstract ParseResult<T> doParseDescriptor(DescriptorParseContext ivySettings, LocallyAvailableExternalResource resource, boolean validate) throws Exception;
+    @Throws(Exception::class)
+    protected abstract fun doParseDescriptor(ivySettings: DescriptorParseContext?, resource: LocallyAvailableExternalResource?, validate: Boolean): MetaDataParser.ParseResult<T?>?
 }

@@ -13,173 +13,151 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dependencies
 
-package org.gradle.api.internal.artifacts.dependencies;
+import com.google.common.base.Objects
+import com.google.common.base.Strings
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
 
-import com.google.common.base.Objects;
-import com.google.common.base.Strings;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ModuleVersionSelectorStrictSpec;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.jspecify.annotations.Nullable;
+class DefaultDependencyConstraint : AbstractDependencyConstraint {
+    private val moduleIdentifier: ModuleIdentifier
+    private val versionConstraint: MutableVersionConstraint
 
-public class DefaultDependencyConstraint extends AbstractDependencyConstraint {
+    private var reason: String? = null
+    private var attributesFactory: AttributesFactory? = null
+    private var attributes: AttributeContainerInternal? = null
+    private var force = false
 
-    private final static Logger LOG = Logging.getLogger(DefaultDependencyConstraint.class);
-
-    private final ModuleIdentifier moduleIdentifier;
-    private final MutableVersionConstraint versionConstraint;
-
-    private String reason;
-    private AttributesFactory attributesFactory;
-    private AttributeContainerInternal attributes;
-    private boolean force;
-
-    public DefaultDependencyConstraint(String group, String name, String version) {
-        this.moduleIdentifier = DefaultModuleIdentifier.newId(group, name);
-        this.versionConstraint = new DefaultMutableVersionConstraint(version);
+    constructor(group: String, name: String, version: String) {
+        this.moduleIdentifier = DefaultModuleIdentifier.newId(group, name)
+        this.versionConstraint = DefaultMutableVersionConstraint(version)
     }
 
-    public DefaultDependencyConstraint(ModuleIdentifier module, VersionConstraint versionConstraint) {
-        this(module, new DefaultMutableVersionConstraint(versionConstraint));
+    constructor(module: ModuleIdentifier, versionConstraint: VersionConstraint) : this(module, DefaultMutableVersionConstraint(versionConstraint))
+
+    private constructor(module: ModuleIdentifier, versionConstraint: MutableVersionConstraint) {
+        this.moduleIdentifier = module
+        this.versionConstraint = versionConstraint
     }
 
-    private DefaultDependencyConstraint(ModuleIdentifier module, MutableVersionConstraint versionConstraint) {
-        this.moduleIdentifier = module;
-        this.versionConstraint = versionConstraint;
+    override fun getGroup(): String? {
+        return moduleIdentifier.getGroup()
     }
 
-    @Nullable
-    @Override
-    public String getGroup() {
-        return moduleIdentifier.getGroup();
+    override fun getName(): String {
+        return moduleIdentifier.getName()
     }
 
-    @Override
-    public String getName() {
-        return moduleIdentifier.getName();
+    override fun getVersion(): String {
+        return Strings.emptyToNull(versionConstraint.getRequiredVersion())!!
     }
 
-    @Override
-    public String getVersion() {
-        return Strings.emptyToNull(versionConstraint.getRequiredVersion());
+    override fun getAttributes(): AttributeContainer {
+        return if (attributes == null) ImmutableAttributes.EMPTY else attributes!!.asImmutable()
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return attributes == null ? ImmutableAttributes.EMPTY : attributes.asImmutable();
-    }
-
-    @Override
-    public DependencyConstraint attributes(Action<? super AttributeContainer> configureAction) {
+    override fun attributes(configureAction: Action<in AttributeContainer>): DependencyConstraint {
         if (attributesFactory == null) {
-            warnAboutInternalApiUse();
-            return this;
+            warnAboutInternalApiUse()
+            return this
         }
-        validateMutation();
+        validateMutation()
         if (attributes == null) {
-            attributes = attributesFactory.mutable();
+            attributes = attributesFactory!!.mutable()
         }
-        configureAction.execute(attributes);
-        return this;
+        configureAction.execute(attributes)
+        return this
     }
 
-    private void warnAboutInternalApiUse() {
-        LOG.warn("Cannot set attributes for constraint \"" + this.getGroup() + ":" + this.getName() + ":" + this.getVersion() + "\": it was probably created by a plugin using internal APIs");
+    private fun warnAboutInternalApiUse() {
+        LOG.warn("Cannot set attributes for constraint \"" + this.getGroup() + ":" + this.getName() + ":" + this.getVersion() + "\": it was probably created by a plugin using internal APIs")
     }
 
-    public void setAttributesFactory(AttributesFactory attributesFactory) {
-        this.attributesFactory = attributesFactory;
+    fun setAttributesFactory(attributesFactory: AttributesFactory) {
+        this.attributesFactory = attributesFactory
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultDependencyConstraint that = (DefaultDependencyConstraint) o;
+        val that = o as DefaultDependencyConstraint
         return Objects.equal(moduleIdentifier, that.moduleIdentifier) &&
-            Objects.equal(versionConstraint, that.versionConstraint) &&
-            Objects.equal(attributes, that.attributes) &&
-            force == that.force;
+                Objects.equal(versionConstraint, that.versionConstraint) &&
+                Objects.equal(attributes, that.attributes) && force == that.force
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(moduleIdentifier, versionConstraint, attributes);
+    override fun hashCode(): Int {
+        return Objects.hashCode(moduleIdentifier, versionConstraint, attributes)
     }
 
-    @Override
-    public void version(Action<? super MutableVersionConstraint> configureAction) {
-        validateMutation();
-        configureAction.execute(versionConstraint);
+    override fun version(configureAction: Action<in MutableVersionConstraint>) {
+        validateMutation()
+        configureAction.execute(versionConstraint)
     }
 
-    @Override
-    public VersionConstraint getVersionConstraint() {
-        return versionConstraint;
+    override fun getVersionConstraint(): VersionConstraint {
+        return versionConstraint
     }
 
-    @Override
-    public boolean matchesStrictly(ModuleVersionIdentifier identifier) {
-        return new ModuleVersionSelectorStrictSpec(this).isSatisfiedBy(identifier);
+    override fun matchesStrictly(identifier: ModuleVersionIdentifier): Boolean {
+        return ModuleVersionSelectorStrictSpec(this).isSatisfiedBy(identifier)
     }
 
-    @Override
-    public ModuleIdentifier getModule() {
-        return moduleIdentifier;
+    override fun getModule(): ModuleIdentifier {
+        return moduleIdentifier
     }
 
-    @Override
-    public String getReason() {
-        return reason;
+    override fun getReason(): String {
+        return reason!!
     }
 
-    @Override
-    public void because(String reason) {
-        validateMutation();
-        this.reason = reason;
+    override fun because(reason: String) {
+        validateMutation()
+        this.reason = reason
     }
 
-    @Override
-    public DependencyConstraint copy() {
-        DefaultDependencyConstraint constraint = new DefaultDependencyConstraint(moduleIdentifier, versionConstraint);
-        constraint.reason = reason;
-        constraint.attributes = attributes;
-        constraint.attributesFactory = attributesFactory;
-        constraint.force = force;
-        return constraint;
+    override fun copy(): DependencyConstraint {
+        val constraint = DefaultDependencyConstraint(moduleIdentifier, versionConstraint)
+        constraint.reason = reason
+        constraint.attributes = attributes
+        constraint.attributesFactory = attributesFactory
+        constraint.force = force
+        return constraint
     }
 
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "constraint " +
-            moduleIdentifier + ":" + versionConstraint +
-            ", attributes=" + attributes;
+                moduleIdentifier + ":" + versionConstraint +
+                ", attributes=" + attributes
     }
 
-    @Override
-    public void setForce(boolean force) {
-        validateMutation();
-        this.force = force;
+    override fun setForce(force: Boolean) {
+        validateMutation()
+        this.force = force
     }
 
-    @Override
-    public boolean isForce() {
-        return force;
+    override fun isForce(): Boolean {
+        return force
+    }
+
+    companion object {
+        private val LOG: Logger = getLogger(DefaultDependencyConstraint::class.java)!!
     }
 }

@@ -13,35 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.result;
+package org.gradle.api.internal.artifacts.result
 
-import org.gradle.api.artifacts.result.ArtifactResolutionResult;
-import org.gradle.api.artifacts.result.ComponentArtifactsResult;
-import org.gradle.api.artifacts.result.ComponentResult;
+import org.gradle.api.artifacts.result.ArtifactResolutionResult
+import org.gradle.api.artifacts.result.ComponentArtifactsResult
+import org.gradle.api.artifacts.result.ComponentResult
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class DefaultArtifactResolutionResult implements ArtifactResolutionResult {
-    private final Set<ComponentResult> componentResults;
-
-    public DefaultArtifactResolutionResult(Set<ComponentResult> componentResults) {
-        this.componentResults = componentResults;
+class DefaultArtifactResolutionResult(private val componentResults: MutableSet<ComponentResult>) : ArtifactResolutionResult {
+    override fun getComponents(): MutableSet<ComponentResult> {
+        return componentResults
     }
 
-    @Override
-    public Set<ComponentResult> getComponents() {
-        return componentResults;
-    }
-
-    @Override
-    public Set<ComponentArtifactsResult> getResolvedComponents() {
-        Set<ComponentArtifactsResult> resolvedComponentResults = new LinkedHashSet<>();
-        for (ComponentResult componentResult : componentResults) {
-            if (componentResult instanceof ComponentArtifactsResult) {
-                resolvedComponentResults.add((ComponentArtifactsResult) componentResult);
+    override fun getResolvedComponents(): MutableSet<ComponentArtifactsResult> {
+        val resolvedComponentResults: MutableSet<ComponentArtifactsResult> = LinkedHashSet<ComponentArtifactsResult>()
+        for (componentResult in componentResults) {
+            if (componentResult is ComponentArtifactsResult) {
+                resolvedComponentResults.add(componentResult)
             }
         }
-        return resolvedComponentResults;
+        return resolvedComponentResults
     }
 }

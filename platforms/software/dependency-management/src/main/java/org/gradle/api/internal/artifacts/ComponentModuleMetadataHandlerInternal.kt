@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.dsl.ComponentModuleMetadataHandler;
-import org.gradle.api.internal.artifacts.dsl.ImmutableModuleReplacements;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.dsl.ComponentModuleMetadataHandler
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Internal counterpart to {@link ComponentModuleMetadataHandler}.
+ * Internal counterpart to [ComponentModuleMetadataHandler].
  */
-@ServiceScope(Scope.Project.class)
-public interface ComponentModuleMetadataHandlerInternal extends ComponentModuleMetadataHandler {
-
-    ImmutableModuleReplacements getModuleReplacements();
-
+@ServiceScope(Scope.Project::class)
+interface ComponentModuleMetadataHandlerInternal : ComponentModuleMetadataHandler {
+    val moduleReplacements: ImmutableModuleReplacements?
 }

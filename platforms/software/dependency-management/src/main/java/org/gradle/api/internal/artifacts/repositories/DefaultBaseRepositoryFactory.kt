@@ -13,204 +13,209 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.AuthenticationContainer
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.artifacts.BaseRepositoryFactory
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.authentication.Authentication
+import org.gradle.internal.authentication.AuthenticationSchemeRegistry
+import org.gradle.internal.authentication.DefaultAuthenticationContainer
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
 
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
-import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.artifacts.repositories.MavenRepositoryContentDescriptor;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.artifacts.BaseRepositoryFactory;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.authentication.AuthenticationSchemeRegistry;
-import org.gradle.internal.authentication.DefaultAuthenticationContainer;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.maven.MutableMavenModuleResolveMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
+class DefaultBaseRepositoryFactory(
+    private val localMavenRepositoryLocator: LocalMavenRepositoryLocator,
+    private val fileResolver: FileResolver,
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val transportFactory: RepositoryTransportFactory,
+    private val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    private val artifactFileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    private val externalResourcesFileStore: FileStore<String>,
+    private val pomParser: MetaDataParser<MutableMavenModuleResolveMetadata>,
+    private val metadataParser: GradleModuleMetadataParser,
+    private val authenticationSchemeRegistry: AuthenticationSchemeRegistry,
+    private val ivyContextManager: IvyContextManager,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val instantiatorFactory: InstantiatorFactory,
+    private val fileResourceRepository: FileResourceRepository,
+    private val mavenMetadataFactory: MavenMutableModuleMetadataFactory,
+    private val ivyMetadataFactory: IvyMutableModuleMetadataFactory,
+    private val isolatableFactory: IsolatableFactory,
+    private val objectFactory: ObjectFactory,
+    private val callbackActionDecorator: CollectionCallbackActionDecorator,
+    private val urlArtifactRepositoryFactory: DefaultUrlArtifactRepository.Factory,
+    private val checksumService: ChecksumService,
+    private val providerFactory: ProviderFactory,
+    private val versionParser: VersionParser
+) : BaseRepositoryFactory {
+    private val instantiator: Instantiator
 
-import java.io.File;
-import java.net.URI;
-import java.util.Map;
-
-public class DefaultBaseRepositoryFactory implements BaseRepositoryFactory {
-    private final LocalMavenRepositoryLocator localMavenRepositoryLocator;
-    private final FileResolver fileResolver;
-    private final Instantiator instantiator;
-    private final RepositoryTransportFactory transportFactory;
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
-    private final FileStore<String> externalResourcesFileStore;
-    private final MetaDataParser<MutableMavenModuleResolveMetadata> pomParser;
-    private final FileCollectionFactory fileCollectionFactory;
-    private final GradleModuleMetadataParser metadataParser;
-    private final AuthenticationSchemeRegistry authenticationSchemeRegistry;
-    private final IvyContextManager ivyContextManager;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final InstantiatorFactory instantiatorFactory;
-    private final FileResourceRepository fileResourceRepository;
-    private final MavenMutableModuleMetadataFactory mavenMetadataFactory;
-    private final IvyMutableModuleMetadataFactory ivyMetadataFactory;
-    private final IsolatableFactory isolatableFactory;
-    private final ObjectFactory objectFactory;
-    private final CollectionCallbackActionDecorator callbackActionDecorator;
-    private final DefaultUrlArtifactRepository.Factory urlArtifactRepositoryFactory;
-    private final ChecksumService checksumService;
-    private final ProviderFactory providerFactory;
-    private final VersionParser versionParser;
-
-    public DefaultBaseRepositoryFactory(LocalMavenRepositoryLocator localMavenRepositoryLocator,
-                                        FileResolver fileResolver,
-                                        FileCollectionFactory fileCollectionFactory,
-                                        RepositoryTransportFactory transportFactory,
-                                        LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-                                        FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
-                                        FileStore<String> externalResourcesFileStore,
-                                        MetaDataParser<MutableMavenModuleResolveMetadata> pomParser,
-                                        GradleModuleMetadataParser metadataParser,
-                                        AuthenticationSchemeRegistry authenticationSchemeRegistry,
-                                        IvyContextManager ivyContextManager,
-                                        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-                                        InstantiatorFactory instantiatorFactory,
-                                        FileResourceRepository fileResourceRepository,
-                                        MavenMutableModuleMetadataFactory mavenMetadataFactory,
-                                        IvyMutableModuleMetadataFactory ivyMetadataFactory,
-                                        IsolatableFactory isolatableFactory,
-                                        ObjectFactory objectFactory,
-                                        CollectionCallbackActionDecorator callbackActionDecorator,
-                                        DefaultUrlArtifactRepository.Factory urlArtifactRepositoryFactory,
-                                        ChecksumService checksumService,
-                                        ProviderFactory providerFactory,
-                                        VersionParser versionParser
-    ) {
-        this.localMavenRepositoryLocator = localMavenRepositoryLocator;
-        this.fileResolver = fileResolver;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.metadataParser = metadataParser;
-        this.instantiator = instantiatorFactory.decorateLenient();
-        this.transportFactory = transportFactory;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.artifactFileStore = artifactFileStore;
-        this.externalResourcesFileStore = externalResourcesFileStore;
-        this.pomParser = pomParser;
-        this.authenticationSchemeRegistry = authenticationSchemeRegistry;
-        this.ivyContextManager = ivyContextManager;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.instantiatorFactory = instantiatorFactory;
-        this.fileResourceRepository = fileResourceRepository;
-        this.mavenMetadataFactory = mavenMetadataFactory;
-        this.ivyMetadataFactory = ivyMetadataFactory;
-        this.isolatableFactory = isolatableFactory;
-        this.objectFactory = objectFactory;
-        this.callbackActionDecorator = callbackActionDecorator;
-        this.urlArtifactRepositoryFactory = urlArtifactRepositoryFactory;
-        this.checksumService = checksumService;
-        this.providerFactory = providerFactory;
-        this.versionParser = versionParser;
+    init {
+        this.instantiator = instantiatorFactory.decorateLenient()
     }
 
-    @Override
-    public FlatDirectoryArtifactRepository createFlatDirRepository() {
-        return objectFactory.newInstance(DefaultFlatDirArtifactRepository.class, fileCollectionFactory, transportFactory, locallyAvailableResourceFinder, artifactFileStore, ivyMetadataFactory, instantiatorFactory, objectFactory, checksumService, versionParser);
+    override fun createFlatDirRepository(): FlatDirectoryArtifactRepository {
+        return objectFactory.newInstance<DefaultFlatDirArtifactRepository>(
+            DefaultFlatDirArtifactRepository::class.java,
+            fileCollectionFactory,
+            transportFactory,
+            locallyAvailableResourceFinder,
+            artifactFileStore,
+            ivyMetadataFactory,
+            instantiatorFactory,
+            objectFactory,
+            checksumService,
+            versionParser
+        )
     }
 
-    @Override
-    public ArtifactRepository createGradlePluginPortal() {
-        MavenArtifactRepository mavenRepository = createMavenRepository(new NamedMavenRepositoryDescriber(PLUGIN_PORTAL_DEFAULT_URL));
-        mavenRepository.setUrl(System.getProperty(PLUGIN_PORTAL_OVERRIDE_URL_PROPERTY, PLUGIN_PORTAL_DEFAULT_URL));
-        mavenRepository.metadataSources(MavenArtifactRepository.MetadataSources::mavenPom);
-        return mavenRepository;
+    override fun createGradlePluginPortal(): ArtifactRepository {
+        val mavenRepository = createMavenRepository(NamedMavenRepositoryDescriber(BaseRepositoryFactory.PLUGIN_PORTAL_DEFAULT_URL))
+        mavenRepository.setUrl(System.getProperty(BaseRepositoryFactory.PLUGIN_PORTAL_OVERRIDE_URL_PROPERTY, BaseRepositoryFactory.PLUGIN_PORTAL_DEFAULT_URL))
+        mavenRepository.metadataSources(Action { MavenArtifactRepository.MetadataSources.mavenPom() })
+        return mavenRepository
     }
 
-    @Override
-    public MavenArtifactRepository createMavenLocalRepository() {
-        MavenArtifactRepository mavenRepository = objectFactory.newInstance(DefaultMavenLocalArtifactRepository.class, fileResolver, transportFactory, locallyAvailableResourceFinder, instantiatorFactory, artifactFileStore, pomParser, metadataParser, createAuthenticationContainer(), fileResourceRepository, mavenMetadataFactory, isolatableFactory, objectFactory, urlArtifactRepositoryFactory, checksumService, versionParser);
-        File localMavenRepository = localMavenRepositoryLocator.getLocalMavenRepository();
-        mavenRepository.setUrl(localMavenRepository);
-        return mavenRepository;
+    override fun createMavenLocalRepository(): MavenArtifactRepository {
+        val mavenRepository: MavenArtifactRepository = objectFactory.newInstance<DefaultMavenLocalArtifactRepository>(
+            DefaultMavenLocalArtifactRepository::class.java,
+            fileResolver,
+            transportFactory,
+            locallyAvailableResourceFinder,
+            instantiatorFactory,
+            artifactFileStore,
+            pomParser,
+            metadataParser,
+            createAuthenticationContainer(),
+            fileResourceRepository,
+            mavenMetadataFactory,
+            isolatableFactory,
+            objectFactory,
+            urlArtifactRepositoryFactory,
+            checksumService,
+            versionParser
+        )
+        val localMavenRepository = localMavenRepositoryLocator.localMavenRepository
+        mavenRepository.setUrl(localMavenRepository)
+        return mavenRepository
     }
 
-    @Override
-    public MavenArtifactRepository createMavenCentralRepository() {
-        MavenArtifactRepository mavenRepository = createMavenRepository(new NamedMavenRepositoryDescriber(RepositoryHandler.MAVEN_CENTRAL_URL));
-        mavenRepository.setUrl(RepositoryHandler.MAVEN_CENTRAL_URL);
-        mavenRepository.mavenContent(MavenRepositoryContentDescriptor::releasesOnly);
-        return mavenRepository;
+    override fun createMavenCentralRepository(): MavenArtifactRepository {
+        val mavenRepository = createMavenRepository(NamedMavenRepositoryDescriber(RepositoryHandler.MAVEN_CENTRAL_URL))
+        mavenRepository.setUrl(RepositoryHandler.MAVEN_CENTRAL_URL)
+        mavenRepository.mavenContent(Action { obj: MavenRepositoryContentDescriptor? -> obj!!.releasesOnly() })
+        return mavenRepository
     }
 
-    @Override
-    public MavenArtifactRepository createGoogleRepository() {
-        MavenArtifactRepository mavenRepository = createMavenRepository(new NamedMavenRepositoryDescriber(RepositoryHandler.GOOGLE_URL));
-        mavenRepository.setUrl(RepositoryHandler.GOOGLE_URL);
-        return mavenRepository;
+    override fun createGoogleRepository(): MavenArtifactRepository {
+        val mavenRepository = createMavenRepository(NamedMavenRepositoryDescriber(RepositoryHandler.GOOGLE_URL))
+        mavenRepository.setUrl(RepositoryHandler.GOOGLE_URL)
+        return mavenRepository
     }
 
-    @Override
-    public IvyArtifactRepository createIvyRepository() {
-        IvyArtifactRepository repository = objectFactory.newInstance(DefaultIvyArtifactRepository.class, fileResolver, transportFactory, locallyAvailableResourceFinder, artifactFileStore, externalResourcesFileStore, createAuthenticationContainer(), ivyContextManager, moduleIdentifierFactory, instantiatorFactory, fileResourceRepository, metadataParser, ivyMetadataFactory, isolatableFactory, objectFactory, urlArtifactRepositoryFactory, checksumService, providerFactory, versionParser);
-        repository.getAllowInsecureContinueWhenDisabled().convention(false);
-        return repository;
+    override fun createIvyRepository(): IvyArtifactRepository {
+        val repository: IvyArtifactRepository = objectFactory.newInstance<DefaultIvyArtifactRepository>(
+            DefaultIvyArtifactRepository::class.java,
+            fileResolver,
+            transportFactory,
+            locallyAvailableResourceFinder,
+            artifactFileStore,
+            externalResourcesFileStore,
+            createAuthenticationContainer(),
+            ivyContextManager,
+            moduleIdentifierFactory,
+            instantiatorFactory,
+            fileResourceRepository,
+            metadataParser,
+            ivyMetadataFactory,
+            isolatableFactory,
+            objectFactory,
+            urlArtifactRepositoryFactory,
+            checksumService,
+            providerFactory,
+            versionParser
+        )
+        repository.getAllowInsecureContinueWhenDisabled().convention(false)
+        return repository
     }
 
-    @Override
-    public MavenArtifactRepository createMavenRepository() {
-        return createMavenRepository(new DefaultMavenArtifactRepository.DefaultDescriber());
+    override fun createMavenRepository(): MavenArtifactRepository {
+        return createMavenRepository(DefaultMavenArtifactRepository.DefaultDescriber())
     }
 
-    public MavenArtifactRepository createMavenRepository(Transformer<String, MavenArtifactRepository> describer) {
-        MavenArtifactRepository repository = objectFactory.newInstance(DefaultMavenArtifactRepository.class, describer, fileResolver, transportFactory, locallyAvailableResourceFinder, instantiatorFactory, artifactFileStore, pomParser, metadataParser, createAuthenticationContainer(), externalResourcesFileStore, fileResourceRepository, mavenMetadataFactory, isolatableFactory, objectFactory, urlArtifactRepositoryFactory, checksumService, providerFactory, versionParser);
-        repository.getAllowInsecureContinueWhenDisabled().convention(false);
-        return repository;
+    fun createMavenRepository(describer: Transformer<String, MavenArtifactRepository>): MavenArtifactRepository {
+        val repository: MavenArtifactRepository = objectFactory.newInstance<DefaultMavenArtifactRepository>(
+            DefaultMavenArtifactRepository::class.java,
+            describer,
+            fileResolver,
+            transportFactory,
+            locallyAvailableResourceFinder,
+            instantiatorFactory,
+            artifactFileStore,
+            pomParser,
+            metadataParser,
+            createAuthenticationContainer(),
+            externalResourcesFileStore,
+            fileResourceRepository,
+            mavenMetadataFactory,
+            isolatableFactory,
+            objectFactory,
+            urlArtifactRepositoryFactory,
+            checksumService,
+            providerFactory,
+            versionParser
+        )
+        repository.getAllowInsecureContinueWhenDisabled().convention(false)
+        return repository
     }
 
-    protected AuthenticationContainer createAuthenticationContainer() {
-        DefaultAuthenticationContainer container = objectFactory.newInstance(DefaultAuthenticationContainer.class, instantiator, callbackActionDecorator);
+    protected fun createAuthenticationContainer(): AuthenticationContainer {
+        val container = objectFactory.newInstance<DefaultAuthenticationContainer>(DefaultAuthenticationContainer::class.java, instantiator, callbackActionDecorator)
 
-        for (Map.Entry<Class<Authentication>, Class<? extends Authentication>> e : authenticationSchemeRegistry.getRegisteredSchemes().entrySet()) {
-            container.registerBinding(e.getKey(), e.getValue());
+        for (e in authenticationSchemeRegistry.getRegisteredSchemes<Authentication?>()!!.entries) {
+            container.registerBinding<Authentication>(e.key, e.value!!)
         }
 
-        return container;
+        return container
     }
 
-    private static class NamedMavenRepositoryDescriber implements Transformer<String, MavenArtifactRepository> {
-        private final String defaultUrl;
-
-        private NamedMavenRepositoryDescriber(String defaultUrl) {
-            this.defaultUrl = defaultUrl;
-        }
-
-        @Override
-        public String transform(MavenArtifactRepository repository) {
-            URI url = repository.getUrl();
-            if (url == null || defaultUrl.equals(url.toString())) {
-                return repository.getName();
+    private class NamedMavenRepositoryDescriber(private val defaultUrl: String) : Transformer<String, MavenArtifactRepository> {
+        override fun transform(repository: MavenArtifactRepository): String {
+            val url = repository.getUrl()
+            if (url == null || defaultUrl == url.toString()) {
+                return repository.getName()
             }
-            return repository.getName() + '(' + url + ')';
+            return repository.getName() + '(' + url + ')'
         }
     }
 }

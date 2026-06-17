@@ -13,45 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.util.concurrent.ConcurrentHashMap
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+class InMemoryModuleArtifactsCache : AbstractArtifactsCache {
+    private val inMemoryCache: MutableMap<ArtifactsAtRepositoryKey?, ModuleArtifactsCacheEntry?> = ConcurrentHashMap<ArtifactsAtRepositoryKey?, ModuleArtifactsCacheEntry?>()
+    private val delegate: AbstractArtifactsCache?
 
-public class InMemoryModuleArtifactsCache extends AbstractArtifactsCache {
-    private final Map<ArtifactsAtRepositoryKey, ModuleArtifactsCacheEntry> inMemoryCache = new ConcurrentHashMap<>();
-    private final AbstractArtifactsCache delegate;
-
-    public InMemoryModuleArtifactsCache(BuildCommencedTimeProvider timeProvider) {
-        super(timeProvider);
-        this.delegate = null;
+    constructor(timeProvider: BuildCommencedTimeProvider?) : super(timeProvider) {
+        this.delegate = null
     }
 
-    public InMemoryModuleArtifactsCache(BuildCommencedTimeProvider timeProvider, AbstractArtifactsCache delegate) {
-        super(timeProvider);
-        this.delegate = delegate;
+    constructor(timeProvider: BuildCommencedTimeProvider?, delegate: AbstractArtifactsCache?) : super(timeProvider) {
+        this.delegate = delegate
     }
 
-    @Override
-    protected void store(ArtifactsAtRepositoryKey key, ModuleArtifactsCacheEntry entry) {
-        inMemoryCache.put(key, entry);
+    protected override fun store(key: ArtifactsAtRepositoryKey?, entry: ModuleArtifactsCacheEntry?) {
+        inMemoryCache.put(key, entry)
         if (delegate != null) {
-            delegate.store(key, entry);
+            delegate.store(key, entry)
         }
     }
 
-    @Override
-    protected ModuleArtifactsCacheEntry get(ArtifactsAtRepositoryKey key) {
-        ModuleArtifactsCacheEntry entry = inMemoryCache.get(key);
-        if (entry == null && delegate!=null) {
-            entry = delegate.get(key);
+    protected override fun get(key: ArtifactsAtRepositoryKey?): ModuleArtifactsCacheEntry? {
+        var entry = inMemoryCache.get(key)
+        if (entry == null && delegate != null) {
+            entry = delegate.get(key)
             if (entry != null) {
-                inMemoryCache.put(key, entry);
+                inMemoryCache.put(key, entry)
             }
         }
-        return entry;
+        return entry
     }
-
 }

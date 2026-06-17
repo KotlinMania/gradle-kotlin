@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.net.URI
 
-import java.net.URI;
-import java.util.List;
-
-@ServiceScope(Scope.Build.class)
-public interface SignatureVerificationServiceFactory {
-    SignatureVerificationService create(BuildTreeDefinedKeys keyrings, List<URI> keyServers, boolean useKeyServers);
+@ServiceScope(Scope.Build::class)
+interface SignatureVerificationServiceFactory {
+    fun create(keyrings: BuildTreeDefinedKeys?, keyServers: MutableList<URI?>?, useKeyServers: Boolean): SignatureVerificationService?
 }

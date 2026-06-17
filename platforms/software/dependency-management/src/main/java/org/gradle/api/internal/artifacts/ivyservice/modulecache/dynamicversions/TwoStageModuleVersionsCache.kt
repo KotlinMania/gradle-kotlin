@@ -13,36 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import com.google.common.collect.Sets;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.collect.Sets
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-public class TwoStageModuleVersionsCache extends AbstractModuleVersionsCache {
-    private final AbstractModuleVersionsCache readOnlyCache;
-    private final AbstractModuleVersionsCache writableCache;
-
-    public TwoStageModuleVersionsCache(BuildCommencedTimeProvider timeProvider, AbstractModuleVersionsCache readOnlyCache, AbstractModuleVersionsCache writableCache) {
-        super(timeProvider);
-        this.readOnlyCache = readOnlyCache;
-        this.writableCache = writableCache;
+class TwoStageModuleVersionsCache(timeProvider: BuildCommencedTimeProvider?, private val readOnlyCache: AbstractModuleVersionsCache, private val writableCache: AbstractModuleVersionsCache) :
+    AbstractModuleVersionsCache(timeProvider) {
+    protected override fun store(key: ModuleAtRepositoryKey?, entry: ModuleVersionsCacheEntry?) {
+        writableCache.store(key, entry)
     }
 
-    @Override
-    protected void store(ModuleAtRepositoryKey key, ModuleVersionsCacheEntry entry) {
-        writableCache.store(key, entry);
-    }
-
-    @Override
-    protected ModuleVersionsCacheEntry get(ModuleAtRepositoryKey key) {
-        ModuleVersionsCacheEntry roEntry = readOnlyCache.get(key);
-        ModuleVersionsCacheEntry writableEntry = writableCache.get(key);
+    protected override fun get(key: ModuleAtRepositoryKey?): ModuleVersionsCacheEntry? {
+        val roEntry = readOnlyCache.get(key)
+        val writableEntry = writableCache.get(key)
         if (roEntry == null) {
-            return writableEntry;
+            return writableEntry
         }
         if (writableEntry == null) {
-            return roEntry;
+            return roEntry
         }
-        return new ModuleVersionsCacheEntry(Sets.union(roEntry.moduleVersionListing, writableEntry.moduleVersionListing), writableEntry.createTimestamp);
+        return ModuleVersionsCacheEntry(Sets.union<String?>(roEntry.moduleVersionListing, writableEntry.moduleVersionListing), writableEntry.createTimestamp)
     }
 }

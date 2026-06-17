@@ -13,29 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
-import java.util.List;
+class ImmutableComponentVerificationMetadata(private val component: ModuleComponentIdentifier?, verifications: MutableList<ArtifactVerificationMetadata?>) : ComponentVerificationMetadata {
+    private val verifications: MutableList<ArtifactVerificationMetadata?>
 
-public class ImmutableComponentVerificationMetadata implements ComponentVerificationMetadata {
-    private final ModuleComponentIdentifier component;
-    private final List<ArtifactVerificationMetadata> verifications;
-
-    public ImmutableComponentVerificationMetadata(ModuleComponentIdentifier component, List<ArtifactVerificationMetadata> verifications) {
-        this.component = component;
-        this.verifications = ImmutableList.copyOf(verifications);
+    init {
+        this.verifications = ImmutableList.copyOf<ArtifactVerificationMetadata?>(verifications)
     }
 
-    @Override
-    public ModuleComponentIdentifier getComponentId() {
-        return component;
+    override fun getComponentId(): ModuleComponentIdentifier? {
+        return component
     }
 
-    @Override
-    public List<ArtifactVerificationMetadata> getArtifactVerifications() {
-        return verifications;
+    override fun getArtifactVerifications(): MutableList<ArtifactVerificationMetadata?> {
+        return verifications
     }
 }

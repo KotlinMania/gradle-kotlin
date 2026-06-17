@@ -63,8 +63,8 @@ class DependencyConstraintNotationParser private constructor(
                 val dependencyVariant = notation as DependencyVariant
                 dependencyConstraint.attributes(Action { attributes: AttributeContainer? -> dependencyVariant.mutateAttributes(attributes!!) })
                 dependencyVariant.mutateCapabilities(UnsupportedCapabilitiesHandler.Companion.INSTANCE)
-                val classifier = dependencyVariant.getClassifier()
-                val artifactType = dependencyVariant.getArtifactType()
+                val classifier = dependencyVariant.classifier
+                val artifactType = dependencyVariant.artifactType
                 if (classifier != null || artifactType != null) {
                     throw InvalidUserDataException("Classifier and artifact types aren't supported by dependency constraints")
                 }

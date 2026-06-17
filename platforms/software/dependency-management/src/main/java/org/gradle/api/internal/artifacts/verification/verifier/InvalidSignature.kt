@@ -13,34 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.jspecify.annotations.NullMarked;
-
-import java.io.File;
+import org.gradle.internal.logging.text.TreeFormatter
+import org.jspecify.annotations.NullMarked
+import java.io.File
 
 @NullMarked
-public class InvalidSignature extends AbstractVerificationFailure {
-    private final File signatureFile;
-
-    public InvalidSignature(File affectedFile, File signatureFile) {
-        super(affectedFile);
-        this.signatureFile = signatureFile;
+class InvalidSignature(affectedFile: File, private val signatureFile: File) : AbstractVerificationFailure(affectedFile) {
+    override fun isFatal(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isFatal() {
-        return false;
+    override fun getSignatureFile(): File {
+        return signatureFile
     }
 
-    @Override
-    public File getSignatureFile() {
-        return signatureFile;
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        formatter.append("artifact has signature file, but it contains no valid signatures");
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("artifact has signature file, but it contains no valid signatures")
     }
 }

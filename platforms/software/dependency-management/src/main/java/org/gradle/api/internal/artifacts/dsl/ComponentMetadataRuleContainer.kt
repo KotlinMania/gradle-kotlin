@@ -13,89 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
-
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.NoOpDerivationStrategy;
-import org.gradle.internal.component.external.model.VariantDerivationStrategy;
-import org.gradle.internal.rules.SpecRuleAction;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.function.Consumer;
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.NoOpDerivationStrategy
+import org.gradle.internal.component.external.model.VariantDerivationStrategy
+import org.gradle.internal.rules.SpecRuleAction
+import java.util.function.Consumer
 
 /**
  * Container for registered ComponentMetadataRules, either class based or closure / action based.
  */
-class ComponentMetadataRuleContainer implements Iterable<MetadataRuleWrapper> {
-    private final List<MetadataRuleWrapper> rules = new ArrayList<>(10);
-    private MetadataRuleWrapper lastAdded;
-    private boolean classBasedRulesOnly = true;
-    private VariantDerivationStrategy variantDerivationStrategy = NoOpDerivationStrategy.getInstance();
-    private int rulesHash = 0;
-    private Consumer<DisplayName> onAdd;
+internal class ComponentMetadataRuleContainer : Iterable<MetadataRuleWrapper> {
+    private val rules: MutableList<MetadataRuleWrapper> = ArrayList<MetadataRuleWrapper>(10)
+    private var lastAdded: MetadataRuleWrapper? = null
+    var isClassBasedRulesOnly: Boolean = true
+        private set
+    var variantDerivationStrategy: VariantDerivationStrategy = NoOpDerivationStrategy.getInstance()
+    private var rulesHash = 0
+    private var onAdd: Consumer<DisplayName>? = null
 
-    void addRule(SpecRuleAction<? super ComponentMetadataDetails> ruleAction) {
-        lastAdded = new ActionBasedMetadataRuleWrapper(ruleAction);
-        addRule();
-        classBasedRulesOnly = false;
-        rulesHash = 31 * rulesHash + ruleAction.hashCode();
+    fun addRule(ruleAction: SpecRuleAction<in ComponentMetadataDetails?>) {
+        lastAdded = ActionBasedMetadataRuleWrapper(ruleAction)
+        addRule()
+        this.isClassBasedRulesOnly = false
+        rulesHash = 31 * rulesHash + ruleAction.hashCode()
     }
 
-    private void addRule() {
+    private fun addRule() {
         if (onAdd != null) {
-            onAdd.accept(lastAdded.getDisplayName());
+            onAdd!!.accept(lastAdded!!.getDisplayName())
         }
-        rules.add(lastAdded);
+        rules.add(lastAdded!!)
     }
 
-    void addClassRule(SpecConfigurableRule ruleAction) {
-        if (lastAdded != null && lastAdded.isClassBased()) {
-            lastAdded.addClassRule(ruleAction);
+    fun addClassRule(ruleAction: SpecConfigurableRule) {
+        if (lastAdded != null && lastAdded!!.isClassBased()) {
+            lastAdded!!.addClassRule(ruleAction)
         } else {
-            lastAdded = new ClassBasedMetadataRuleWrapper(ruleAction);
-            addRule();
+            lastAdded = ClassBasedMetadataRuleWrapper(ruleAction)
+            addRule()
         }
-        rulesHash = 31 * rulesHash + ruleAction.getConfigurableRule().hashCode();
+        rulesHash = 31 * rulesHash + ruleAction.getConfigurableRule().hashCode()
     }
 
-    boolean isClassBasedRulesOnly() {
-        return classBasedRulesOnly;
+    val isEmpty: Boolean
+        get() = rules.isEmpty()
+
+    override fun iterator(): MutableIterator<MetadataRuleWrapper> {
+        return rules.iterator()
     }
 
-    boolean isEmpty() {
-        return rules.isEmpty();
-    }
-
-    @Override
-    public Iterator<MetadataRuleWrapper> iterator() {
-        return rules.iterator();
-    }
-
-    Collection<SpecConfigurableRule> getOnlyClassRules() {
-        if (!isClassBasedRulesOnly() || isEmpty()) {
-            throw new IllegalStateException("This method cannot be used unless there is at least one rule and they are all class based");
+    val onlyClassRules: MutableCollection<SpecConfigurableRule>
+        get() {
+            check(!(!this.isClassBasedRulesOnly || this.isEmpty)) { "This method cannot be used unless there is at least one rule and they are all class based" }
+            return rules.get(0).getClassRules()
         }
-        return rules.get(0).getClassRules();
+
+    fun getRulesHash(): Int {
+        return 31 * variantDerivationStrategy.hashCode() + rulesHash
     }
 
-    public VariantDerivationStrategy getVariantDerivationStrategy() {
-        return variantDerivationStrategy;
-    }
-
-    public void setVariantDerivationStrategy(VariantDerivationStrategy variantDerivationStrategy) {
-        this.variantDerivationStrategy = variantDerivationStrategy;
-    }
-
-    public int getRulesHash() {
-        return 31 * variantDerivationStrategy.hashCode() + rulesHash;
-    }
-
-    void onAddRule(Consumer<DisplayName> consumer) {
-        this.onAdd = consumer;
+    fun onAddRule(consumer: Consumer<DisplayName>) {
+        this.onAdd = consumer
     }
 }

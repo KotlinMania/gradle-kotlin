@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DependencyConstraintMetadata
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
 
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-
-public class DependencyConstraintMetadataAdapter extends AbstractDependencyMetadataAdapter<DependencyConstraintMetadata> implements DependencyConstraintMetadata {
-
-    public DependencyConstraintMetadataAdapter(AttributesFactory attributesFactory, ModuleDependencyMetadata metadata) {
-        super(attributesFactory, metadata);
-    }
-}
+class DependencyConstraintMetadataAdapter(attributesFactory: AttributesFactory, metadata: ModuleDependencyMetadata) :
+    AbstractDependencyMetadataAdapter<DependencyConstraintMetadata?>(attributesFactory, metadata), DependencyConstraintMetadata

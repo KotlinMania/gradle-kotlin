@@ -13,75 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.operations.dependencies.variants.ComponentIdentifier
+import org.gradle.operations.dependencies.variants.OpaqueComponentIdentifier
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.operations.dependencies.variants.ComponentIdentifier;
-import org.gradle.operations.dependencies.variants.OpaqueComponentIdentifier;
+object ComponentToOperationConverter {
+    fun convertComponentIdentifier(componentId: org.gradle.api.artifacts.component.ComponentIdentifier): ComponentIdentifier {
+        if (componentId is ProjectComponentIdentifier) {
+            val projectComponentIdentifier = componentId
+            return object : org.gradle.operations.dependencies.variants.ProjectComponentIdentifier {
+                val buildPath: String
+                    get() = projectComponentIdentifier.getBuild().getBuildPath()
 
-public class ComponentToOperationConverter {
+                val projectPath: String
+                    get() = projectComponentIdentifier.getProjectPath()
 
-    public static ComponentIdentifier convertComponentIdentifier(org.gradle.api.artifacts.component.ComponentIdentifier componentId) {
-        if (componentId instanceof ProjectComponentIdentifier) {
-            ProjectComponentIdentifier projectComponentIdentifier = (ProjectComponentIdentifier) componentId;
-            return new org.gradle.operations.dependencies.variants.ProjectComponentIdentifier() {
-                @Override
-                public String getBuildPath() {
-                    return projectComponentIdentifier.getBuild().getBuildPath();
+                override fun toString(): String {
+                    return projectComponentIdentifier.getDisplayName()
                 }
+            }
+        } else if (componentId is ModuleComponentIdentifier) {
+            val moduleComponentIdentifier = componentId
+            return object : org.gradle.operations.dependencies.variants.ModuleComponentIdentifier {
+                val group: String
+                    get() = moduleComponentIdentifier.getGroup()
 
-                @Override
-                public String getProjectPath() {
-                    return projectComponentIdentifier.getProjectPath();
-                }
+                val module: String
+                    get() = moduleComponentIdentifier.getModule()
 
-                @Override
-                public String toString() {
-                    return projectComponentIdentifier.getDisplayName();
-                }
-            };
-        } else if (componentId instanceof ModuleComponentIdentifier) {
-            ModuleComponentIdentifier moduleComponentIdentifier = (ModuleComponentIdentifier) componentId;
-            return new org.gradle.operations.dependencies.variants.ModuleComponentIdentifier() {
-                @Override
-                public String getGroup() {
-                    return moduleComponentIdentifier.getGroup();
-                }
+                val version: String
+                    get() = moduleComponentIdentifier.getVersion()
 
-                @Override
-                public String getModule() {
-                    return moduleComponentIdentifier.getModule();
+                override fun toString(): String {
+                    return moduleComponentIdentifier.getDisplayName()
                 }
-
-                @Override
-                public String getVersion() {
-                    return moduleComponentIdentifier.getVersion();
-                }
-
-                @Override
-                public String toString() {
-                    return moduleComponentIdentifier.getDisplayName();
-                }
-            };
+            }
         } else {
-            return new OpaqueComponentIdentifier() {
-                @Override
-                public String getDisplayName() {
-                    return componentId.getDisplayName();
-                }
+            return object : OpaqueComponentIdentifier {
+                val displayName: String
+                    get() = componentId.getDisplayName()
 
-                @Override
-                public String getClassName() {
-                    return componentId.getClass().getName();
-                }
+                val className: String
+                    get() = componentId.javaClass.getName()
 
-                @Override
-                public String toString() {
-                    return componentId.getDisplayName();
+                override fun toString(): String {
+                    return componentId.getDisplayName()
                 }
-            };
+            }
         }
     }
 }

@@ -13,32 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.layout;
+package org.gradle.api.internal.artifacts.repositories.layout
 
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import java.net.URI
 
 /**
  * A Repository Layout that applies the following patterns:
- * <ul>
- *     <li>Artifacts: $baseUri/{@value IvyArtifactRepository#MAVEN_ARTIFACT_PATTERN}</li>
- *     <li>Ivy: $baseUri/{@value IvyArtifactRepository#MAVEN_IVY_PATTERN}</li>
- * </ul>
+ *
+ *  * Artifacts: $baseUri/{@value IvyArtifactRepository#MAVEN_ARTIFACT_PATTERN}
+ *  * Ivy: $baseUri/{@value IvyArtifactRepository#MAVEN_IVY_PATTERN}
+ *
  *
  * Following the Maven convention, the 'organisation' value is further processed by replacing '.' with '/'.
- * Note that the resolver will follow the layout only, but will <em>not</em> use .pom files for meta data. Ivy metadata files are required/published.
+ * Note that the resolver will follow the layout only, but will *not* use .pom files for meta data. Ivy metadata files are required/published.
  */
-public class MavenRepositoryLayout extends AbstractRepositoryLayout {
-    @Override
-    public void apply(@Nullable URI baseUri, IvyRepositoryDescriptor.Builder builder) {
-        builder.setLayoutType("Maven");
-        builder.setM2Compatible(true); // Replace '.' with '/' in organisation
-        builder.addIvyPattern(IvyArtifactRepository.MAVEN_IVY_PATTERN);
-        builder.addIvyResource(baseUri, IvyArtifactRepository.MAVEN_IVY_PATTERN);
-        builder.addArtifactPattern(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN);
-        builder.addArtifactResource(baseUri, IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN);
+class MavenRepositoryLayout : AbstractRepositoryLayout() {
+    override fun apply(baseUri: URI?, builder: IvyRepositoryDescriptor.Builder) {
+        builder.setLayoutType("Maven")
+        builder.setM2Compatible(true) // Replace '.' with '/' in organisation
+        builder.addIvyPattern(IvyArtifactRepository.MAVEN_IVY_PATTERN)
+        builder.addIvyResource(baseUri, IvyArtifactRepository.MAVEN_IVY_PATTERN)
+        builder.addArtifactPattern(IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
+        builder.addArtifactResource(baseUri, IvyArtifactRepository.MAVEN_ARTIFACT_PATTERN)
     }
 }

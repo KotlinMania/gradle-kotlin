@@ -13,57 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import com.google.common.annotations.VisibleForTesting
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.resolve.ResolveExceptionAnalyzer.isCriticalFailure
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.annotations.VisibleForTesting;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.BuildTree::class)
+class ConnectionFailureRepositoryDisabler : RepositoryDisabler {
+    private val disabledRepositories: MutableMap<String?, Throwable?> = ConcurrentHashMap<String?, Throwable?>()
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.gradle.internal.resolve.ResolveExceptionAnalyzer.isCriticalFailure;
-
-@ServiceScope(Scope.BuildTree.class)
-public class ConnectionFailureRepositoryDisabler implements RepositoryDisabler {
-    private static final Logger LOGGER = Logging.getLogger(ConnectionFailureRepositoryDisabler.class);
-
-    private final Map<String, Throwable> disabledRepositories = new ConcurrentHashMap<>();
-
-    @Override
-    public boolean isDisabled(String repositoryId) {
-        return disabledRepositories.containsKey(repositoryId);
+    override fun isDisabled(repositoryId: String?): Boolean {
+        return disabledRepositories.containsKey(repositoryId)
     }
 
-    @Override
-    public Optional<Throwable> getDisabledReason(String repositoryId) {
-        return Optional.ofNullable(disabledRepositories.get(repositoryId));
+    override fun getDisabledReason(repositoryId: String?): Optional<Throwable?>? {
+        return Optional.ofNullable<Throwable?>(disabledRepositories.get(repositoryId))
     }
 
-    @Override
-    public boolean tryDisableRepository(String repositoryId, Throwable reason, boolean maxRetriesExceeded) {
-        boolean disabled = isDisabled(repositoryId);
+    override fun tryDisableRepository(repositoryId: String?, reason: Throwable, maxRetriesExceeded: Boolean): Boolean {
+        val disabled = isDisabled(repositoryId)
 
         if (disabled) {
-            return true;
+            return true
         }
 
         if (isCriticalFailure(reason) || maxRetriesExceeded) {
-            LOGGER.debug("Repository {} has been disabled for this build due to connectivity issues", repositoryId);
-            disabledRepositories.put(repositoryId, reason);
-            return true;
+            LOGGER!!.debug("Repository {} has been disabled for this build due to connectivity issues", repositoryId)
+            disabledRepositories.put(repositoryId, reason)
+            return true
         }
 
-        return false;
+        return false
     }
 
     @VisibleForTesting
-    public Set<String> getDisabledRepositories() {
-        return disabledRepositories.keySet();
+    fun getDisabledRepositories(): MutableSet<String?> {
+        return disabledRepositories.keys
+    }
+
+    companion object {
+        private val LOGGER = getLogger(ConnectionFailureRepositoryDisabler::class.java)
     }
 }

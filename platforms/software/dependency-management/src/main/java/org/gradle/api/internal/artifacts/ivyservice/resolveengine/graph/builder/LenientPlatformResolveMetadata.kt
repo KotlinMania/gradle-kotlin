@@ -13,56 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.external.model.VirtualComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.external.model.VirtualComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata
 
 /**
  * Metadata for a lenient platform component.
  */
-public class LenientPlatformResolveMetadata implements ComponentGraphResolveMetadata {
-
-    private final ModuleComponentIdentifier moduleComponentIdentifier;
-    private final ModuleVersionIdentifier moduleVersionIdentifier;
-
-    LenientPlatformResolveMetadata(ModuleComponentIdentifier moduleComponentIdentifier, ModuleVersionIdentifier moduleVersionIdentifier) {
-        this.moduleComponentIdentifier = moduleComponentIdentifier;
-        this.moduleVersionIdentifier = moduleVersionIdentifier;
+class LenientPlatformResolveMetadata internal constructor(private val moduleComponentIdentifier: ModuleComponentIdentifier, private val moduleVersionIdentifier: ModuleVersionIdentifier) :
+    ComponentGraphResolveMetadata {
+    override fun getId(): ModuleComponentIdentifier {
+        return moduleComponentIdentifier
     }
 
-    @Override
-    public ModuleComponentIdentifier getId() {
-        return moduleComponentIdentifier;
+    override fun getModuleVersionId(): ModuleVersionIdentifier {
+        return moduleVersionIdentifier
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        return moduleVersionIdentifier;
+    override fun getAttributesSchema(): ImmutableAttributesSchema {
+        return ImmutableAttributesSchema.EMPTY
     }
 
-    @Override
-    public ImmutableAttributesSchema getAttributesSchema() {
-        return ImmutableAttributesSchema.EMPTY;
+    override fun isChanging(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isChanging() {
-        return false;
+    override fun getStatus(): String {
+        return null
     }
 
-    @Override
-    public String getStatus() {
-        return null;
+    override fun getPlatformOwners(): ImmutableList<out VirtualComponentIdentifier> {
+        return ImmutableList.of<VirtualComponentIdentifier>()
     }
-
-    @Override
-    public ImmutableList<? extends VirtualComponentIdentifier> getPlatformOwners() {
-        return ImmutableList.of();
-    }
-
 }

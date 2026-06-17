@@ -71,7 +71,7 @@ public abstract class AbstractCompositeParticipantBuildState extends AbstractBui
         ProjectInternal project
     ) {
         ProjectComponentIdentifier projectIdentifier = projectState.getComponentIdentifier();
-        ModuleVersionIdentifier moduleId = DefaultModuleVersionIdentifier.newId(project.getServices().get(DependencyMetaDataProvider.class).getModule());
+        ModuleVersionIdentifier moduleId = DefaultModuleVersionIdentifier.newId(project.getServices().get(DependencyMetaDataProvider.class).module);
         LOGGER.info("Registering {} in composite build. Will substitute for module '{}'.", projectState, moduleId.getModule());
         availableModules.add(Pair.of(moduleId, projectIdentifier));
     }

@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
 
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-
-class ModuleComponentGraphSpecificResolveState implements ComponentGraphSpecificResolveState {
-    private final String repositoryName;
-
-    public ModuleComponentGraphSpecificResolveState(String repositoryName) {
-        this.repositoryName = repositoryName;
-    }
-
-    @Override
-    public String getRepositoryName() {
-        return repositoryName;
+internal class ModuleComponentGraphSpecificResolveState(private val repositoryName: String?) : ComponentGraphSpecificResolveState {
+    override fun getRepositoryName(): String? {
+        return repositoryName
     }
 }

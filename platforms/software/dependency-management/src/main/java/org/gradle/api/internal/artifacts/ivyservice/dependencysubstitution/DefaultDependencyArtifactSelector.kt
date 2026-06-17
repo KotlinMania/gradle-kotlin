@@ -13,36 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-import org.gradle.api.artifacts.DependencyArtifactSelector;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.DependencyArtifactSelector
 
-public class DefaultDependencyArtifactSelector implements DependencyArtifactSelector {
-    private final String type;
-    private final String extension;
-    private final String classifier;
-
-    public DefaultDependencyArtifactSelector(String type, @Nullable String extension, @Nullable String classifier) {
-        this.type = type;
-        this.classifier = classifier;
-        this.extension = extension;
+class DefaultDependencyArtifactSelector(private val type: String, private val extension: String?, private val classifier: String?) : DependencyArtifactSelector {
+    override fun getType(): String {
+        return type
     }
 
-    @Override
-    public String getType() {
-        return type;
+    override fun getExtension(): String? {
+        return extension
     }
 
-    @Nullable
-    @Override
-    public String getExtension() {
-        return extension;
-    }
-
-    @Nullable
-    @Override
-    public String getClassifier() {
-        return classifier;
+    override fun getClassifier(): String? {
+        return classifier
     }
 }

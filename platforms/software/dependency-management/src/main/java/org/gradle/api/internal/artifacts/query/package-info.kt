@@ -13,8 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.query
 
-@NullMarked
-package org.gradle.api.internal.artifacts.query;
+import org.gradle.util.internal.CollectionUtils.addAll
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver.resolve
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata.getId
+import org.gradle.internal.resolve.resolver.ArtifactResolver.resolveArtifactsWithType
+import org.gradle.internal.resolve.resolver.ArtifactResolver.resolveArtifact
+import org.gradle.api.internal.artifacts.result.DefaultComponentArtifactsResult.addArtifact
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getId
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult.getResult
 
-import org.jspecify.annotations.NullMarked;

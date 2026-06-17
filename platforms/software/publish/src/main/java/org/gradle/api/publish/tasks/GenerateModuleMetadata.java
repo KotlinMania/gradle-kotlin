@@ -312,11 +312,11 @@ public abstract class GenerateModuleMetadata extends DefaultTask {
     }
 
     private String publicationName() {
-        return publication().getDisplayName().toString();
+        return publication().displayName.toString();
     }
 
     private SoftwareComponentInternal component() {
-        return publication().getComponent().getOrNull();
+        return publication().component.getOrNull();
     }
 
     private PublicationInternal<?> publication() {

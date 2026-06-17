@@ -13,38 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.Action;
-import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate
+import org.gradle.internal.DisplayName
 
 /**
  * A set of artifacts that may be selected from a variant. This would be better named
- * {@code ResolvedVariantArtifactCollection}.
+ * `ResolvedVariantArtifactCollection`.
  */
-public interface ResolvedVariant extends AttributeMatchingCandidate {
-
-    DisplayName asDescribable();
+interface ResolvedVariant : AttributeMatchingCandidate {
+    fun asDescribable(): DisplayName?
 
     /**
      * An identifier for this variant, if available. A variant may not have an identifier when it represents some ad hoc set of artifacts, for example artifacts declared on a dependency
-     * using {@link org.gradle.api.artifacts.ModuleDependency#artifact(Action)} or where individual artifacts have been excluded from the variant.
+     * using [org.gradle.api.artifacts.ModuleDependency.artifact] or where individual artifacts have been excluded from the variant.
      */
-    VariantResolveMetadata.@Nullable Identifier getIdentifier();
+    val identifier: VariantResolveMetadata.Identifier?
 
     /**
      * Get the ID of the variant in the graph that produces this artifact collection.
      */
-    VariantIdentifier getSourceVariantId();
+    val sourceVariantId: VariantIdentifier?
 
-    ResolvedArtifactSet getArtifacts();
+    val artifacts: ResolvedArtifactSet?
 
-    ImmutableCapabilities getCapabilities();
-
+    val capabilities: ImmutableCapabilities?
 }

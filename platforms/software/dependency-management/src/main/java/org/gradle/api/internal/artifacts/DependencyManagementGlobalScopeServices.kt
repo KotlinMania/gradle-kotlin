@@ -13,150 +13,153 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.transform.InputArtifact
+import org.gradle.api.artifacts.transform.InputArtifactDependencies
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyContextManager
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultDependencyMetadataFactory
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultExcludeRuleConverter
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DependencyMetadataFactory
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExcludeRuleConverter
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExternalModuleDependencyMetadataConverter
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ProjectDependencyMetadataConverter
+import org.gradle.api.internal.artifacts.transform.CacheableTransformTypeAnnotationHandler
+import org.gradle.api.internal.artifacts.transform.InputArtifactAnnotationHandler
+import org.gradle.api.internal.artifacts.transform.InputArtifactDependenciesAnnotationHandler
+import org.gradle.api.internal.artifacts.transform.TransformActionScheme
+import org.gradle.api.internal.artifacts.transform.TransformParameterScheme
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.api.internal.tasks.properties.InspectionSchemeFactory
+import org.gradle.api.model.ReplacedBy
+import org.gradle.api.services.ServiceReference
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.CompileClasspath
+import org.gradle.api.tasks.Console
+import org.gradle.api.tasks.IgnoreEmptyDirectories
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.cache.internal.ProducerGuard
+import org.gradle.internal.instantiation.InjectAnnotationHandler
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.properties.annotations.PropertyAnnotationHandler
+import org.gradle.internal.properties.annotations.TypeAnnotationHandler
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.transport.file.FileConnectorFactory
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.work.Incremental
+import org.gradle.work.NormalizeLineEndings
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.transform.InputArtifact;
-import org.gradle.api.artifacts.transform.InputArtifactDependencies;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyContextManager;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultDependencyMetadataFactory;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultExcludeRuleConverter;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DependencyMetadataFactory;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExcludeRuleConverter;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExternalModuleDependencyMetadataConverter;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ProjectDependencyMetadataConverter;
-import org.gradle.api.internal.artifacts.transform.CacheableTransformTypeAnnotationHandler;
-import org.gradle.api.internal.artifacts.transform.InputArtifactAnnotationHandler;
-import org.gradle.api.internal.artifacts.transform.InputArtifactDependenciesAnnotationHandler;
-import org.gradle.api.internal.artifacts.transform.TransformActionScheme;
-import org.gradle.api.internal.artifacts.transform.TransformParameterScheme;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.api.internal.tasks.properties.InspectionScheme;
-import org.gradle.api.internal.tasks.properties.InspectionSchemeFactory;
-import org.gradle.api.model.ReplacedBy;
-import org.gradle.api.services.ServiceReference;
-import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.CompileClasspath;
-import org.gradle.api.tasks.Console;
-import org.gradle.api.tasks.IgnoreEmptyDirectories;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.instantiation.InjectAnnotationHandler;
-import org.gradle.internal.instantiation.InstantiationScheme;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.properties.annotations.PropertyAnnotationHandler;
-import org.gradle.internal.properties.annotations.TypeAnnotationHandler;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.transport.file.FileConnectorFactory;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.work.Incremental;
-import org.gradle.work.NormalizeLineEndings;
-
-class DependencyManagementGlobalScopeServices implements ServiceRegistrationProvider {
-    void configure(ServiceRegistration registration) {
-        registration.add(VersionParser.class);
-        registration.<DefaultIvyContextManager>add(IvyContextManager.class, DefaultIvyContextManager.class);
-        registration.<DefaultImmutableModuleIdentifierFactory>add(ImmutableModuleIdentifierFactory.class, DefaultImmutableModuleIdentifierFactory.class);
-        registration.<DefaultExcludeRuleConverter>add(ExcludeRuleConverter.class, DefaultExcludeRuleConverter.class);
-        registration.<InputArtifactAnnotationHandler>add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactAnnotationHandler.class);
-        registration.<InputArtifactDependenciesAnnotationHandler>add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactDependenciesAnnotationHandler.class);
+internal class DependencyManagementGlobalScopeServices : ServiceRegistrationProvider {
+    fun configure(registration: ServiceRegistration) {
+        registration.add(VersionParser::class.java)
+        registration.add<DefaultIvyContextManager?>(IvyContextManager::class.java, DefaultIvyContextManager::class.java)
+        registration.add<DefaultImmutableModuleIdentifierFactory?>(ImmutableModuleIdentifierFactory::class.java, DefaultImmutableModuleIdentifierFactory::class.java)
+        registration.add<DefaultExcludeRuleConverter?>(ExcludeRuleConverter::class.java, DefaultExcludeRuleConverter::class.java)
+        registration.add<InputArtifactAnnotationHandler?>(PropertyAnnotationHandler::class.java, InjectAnnotationHandler::class.java, InputArtifactAnnotationHandler::class.java)
+        registration.add<InputArtifactDependenciesAnnotationHandler?>(
+            PropertyAnnotationHandler::class.java,
+            InjectAnnotationHandler::class.java,
+            InputArtifactDependenciesAnnotationHandler::class.java
+        )
     }
 
     @Provides
-    DependencyMetadataFactory createDependencyMetadataFactory(ExcludeRuleConverter excludeRuleConverter) {
-        return new DefaultDependencyMetadataFactory(
-            new ProjectDependencyMetadataConverter(excludeRuleConverter),
-            new ExternalModuleDependencyMetadataConverter(excludeRuleConverter)
-        );
+    fun createDependencyMetadataFactory(excludeRuleConverter: ExcludeRuleConverter): DependencyMetadataFactory {
+        return DefaultDependencyMetadataFactory(
+            ProjectDependencyMetadataConverter(excludeRuleConverter),
+            ExternalModuleDependencyMetadataConverter(excludeRuleConverter)
+        )
     }
 
     @Provides
-    ResourceConnectorFactory createFileConnectorFactory() {
-        return new FileConnectorFactory();
+    fun createFileConnectorFactory(): ResourceConnectorFactory {
+        return FileConnectorFactory()
     }
 
     @Provides
-    ProducerGuard<ExternalResourceName> createProducerAccess() {
-        return ProducerGuard.<ExternalResourceName>adaptive();
+    fun createProducerAccess(): ProducerGuard<ExternalResourceName?> {
+        return ProducerGuard.adaptive<ExternalResourceName?>()
     }
 
     @Provides
-    TypeAnnotationHandler createCacheableTransformAnnotationHandler() {
-        return new CacheableTransformTypeAnnotationHandler();
+    fun createCacheableTransformAnnotationHandler(): TypeAnnotationHandler {
+        return CacheableTransformTypeAnnotationHandler()
     }
 
     @Provides
-    PlatformSupport createPlatformSupport(NamedObjectInstantiator instantiator) {
-        return new PlatformSupport(instantiator);
+    fun createPlatformSupport(instantiator: NamedObjectInstantiator): PlatformSupport {
+        return PlatformSupport(instantiator)
     }
 
     @Provides
-    TransformParameterScheme createTransformParameterScheme(InspectionSchemeFactory inspectionSchemeFactory, InstantiatorFactory instantiatorFactory) {
-        InstantiationScheme instantiationScheme = instantiatorFactory.decorateScheme();
-        InspectionScheme inspectionScheme = inspectionSchemeFactory.inspectionScheme(
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
-                Console.class,
-                Input.class,
-                InputDirectory.class,
-                InputFile.class,
-                InputFiles.class,
-                Internal.class,
-                Nested.class,
-                ReplacedBy.class,
-                ServiceReference.class
+    fun createTransformParameterScheme(inspectionSchemeFactory: InspectionSchemeFactory, instantiatorFactory: InstantiatorFactory): TransformParameterScheme {
+        val instantiationScheme = instantiatorFactory.decorateScheme()
+        val inspectionScheme = inspectionSchemeFactory.inspectionScheme(
+            ImmutableSet.of<Class<out Annotation?>?>(
+                Console::class.java,
+                Input::class.java,
+                InputDirectory::class.java,
+                InputFile::class.java,
+                InputFiles::class.java,
+                Internal::class.java,
+                Nested::class.java,
+                ReplacedBy::class.java,
+                ServiceReference::class.java
             ),
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
-                Classpath.class,
-                CompileClasspath.class,
-                Incremental.class,
-                Optional.class,
-                PathSensitive.class,
-                IgnoreEmptyDirectories.class,
-                NormalizeLineEndings.class
+            ImmutableSet.of<Class<out Annotation?>?>(
+                Classpath::class.java,
+                CompileClasspath::class.java,
+                Incremental::class.java,
+                Optional::class.java,
+                PathSensitive::class.java,
+                IgnoreEmptyDirectories::class.java,
+                NormalizeLineEndings::class.java
             ),
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(),
+            ImmutableSet.of<Class<out Annotation?>?>(),
             instantiationScheme
-        );
-        return new TransformParameterScheme(instantiationScheme, inspectionScheme);
+        )
+        return TransformParameterScheme(instantiationScheme, inspectionScheme)
     }
 
     @Provides
-    TransformActionScheme createTransformActionScheme(InspectionSchemeFactory inspectionSchemeFactory, InstantiatorFactory instantiatorFactory) {
-        InstantiationScheme instantiationScheme = instantiatorFactory.injectScheme(ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
-            InputArtifact.class,
-            InputArtifactDependencies.class
-        ));
-        InspectionScheme inspectionScheme = inspectionSchemeFactory.inspectionScheme(
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
-                InputArtifact.class,
-                InputArtifactDependencies.class
+    fun createTransformActionScheme(inspectionSchemeFactory: InspectionSchemeFactory, instantiatorFactory: InstantiatorFactory): TransformActionScheme {
+        val instantiationScheme = instantiatorFactory.injectScheme(
+            ImmutableSet.of<Class<out Annotation?>?>(
+                InputArtifact::class.java,
+                InputArtifactDependencies::class.java
+            )
+        )
+        val inspectionScheme = inspectionSchemeFactory.inspectionScheme(
+            ImmutableSet.of<Class<out Annotation?>?>(
+                InputArtifact::class.java,
+                InputArtifactDependencies::class.java
             ),
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
-                Classpath.class,
-                CompileClasspath.class,
-                Incremental.class,
-                Optional.class,
-                PathSensitive.class,
-                IgnoreEmptyDirectories.class,
-                NormalizeLineEndings.class
+            ImmutableSet.of<Class<out Annotation?>?>(
+                Classpath::class.java,
+                CompileClasspath::class.java,
+                Incremental::class.java,
+                Optional::class.java,
+                PathSensitive::class.java,
+                IgnoreEmptyDirectories::class.java,
+                NormalizeLineEndings::class.java
             ),
-            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(),
+            ImmutableSet.of<Class<out Annotation?>?>(),
             instantiationScheme
-        );
-        return new TransformActionScheme(instantiationScheme, inspectionScheme);
+        )
+        return TransformActionScheme(instantiationScheme, inspectionScheme)
     }
 }

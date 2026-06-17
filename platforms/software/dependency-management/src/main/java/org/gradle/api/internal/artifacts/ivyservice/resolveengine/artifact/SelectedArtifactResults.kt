@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-public interface SelectedArtifactResults {
+interface SelectedArtifactResults {
     /**
      * Returns all artifacts visited during graph traversal
      */
-    ResolvedArtifactSet getArtifacts();
+    @JvmField
+    val artifacts: ResolvedArtifactSet?
 
     /**
      * Returns the set of artifacts with the given id.
      */
-    ResolvedArtifactSet getArtifactsWithId(int id);
+    fun getArtifactsWithId(id: Int): ResolvedArtifactSet?
 }

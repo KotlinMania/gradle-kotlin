@@ -13,123 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.internal.taskgraph.NodeIdentity
+import org.gradle.operations.dependencies.configurations.ConfigurationIdentity
+import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity
+import org.gradle.operations.dependencies.variants.Capability
+import org.gradle.operations.dependencies.variants.ComponentIdentifier
+import java.util.Objects
 
-import org.gradle.operations.dependencies.configurations.ConfigurationIdentity;
-import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity;
-import org.gradle.operations.dependencies.variants.Capability;
-import org.gradle.operations.dependencies.variants.ComponentIdentifier;
-import org.jspecify.annotations.Nullable;
+class DefaultPlannedTransformStepIdentity(
+    val consumerBuildPath: String,
+    val consumerProjectPath: String,
+    val componentId: ComponentIdentifier,
+    val sourceAttributes: MutableMap<String, String>,
+    val targetAttributes: MutableMap<String, String>,
+    private val capabilities: MutableList<Capability>,
+    val artifactName: String,
+    private val dependenciesConfigurationIdentity: ConfigurationIdentity?,
+    val transformStepNodeId: Long
+) : PlannedTransformStepIdentity {
+    val nodeType: NodeIdentity.NodeType
+        get() = NodeIdentity.NodeType.TRANSFORM_STEP
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-public class DefaultPlannedTransformStepIdentity implements PlannedTransformStepIdentity {
-
-    private final String consumerBuildPath;
-    private final String consumerProjectPath;
-    private final ComponentIdentifier componentId;
-    private final Map<String, String> sourceAttributes;
-    private final Map<String, String> targetAttributes;
-    private final List<Capability> capabilities;
-    private final String artifactName;
-    private final ConfigurationIdentity dependenciesConfigurationIdentity;
-    private final long transformStepNodeId;
-
-    public DefaultPlannedTransformStepIdentity(
-        String consumerBuildPath,
-        String consumerProjectPath,
-        ComponentIdentifier componentId,
-        Map<String, String> sourceAttributes,
-        Map<String, String> targetAttributes,
-        List<Capability> capabilities,
-        String artifactName,
-        @Nullable
-        ConfigurationIdentity dependenciesConfigurationIdentity,
-        long transformStepNodeId
-    ) {
-        this.consumerBuildPath = consumerBuildPath;
-        this.consumerProjectPath = consumerProjectPath;
-        this.componentId = componentId;
-        this.sourceAttributes = sourceAttributes;
-        this.targetAttributes = targetAttributes;
-        this.capabilities = capabilities;
-        this.artifactName = artifactName;
-        this.dependenciesConfigurationIdentity = dependenciesConfigurationIdentity;
-        this.transformStepNodeId = transformStepNodeId;
+    override fun getCapabilities(): MutableList<out Capability> {
+        return capabilities
     }
 
-    @Override
-    public NodeType getNodeType() {
-        return NodeType.TRANSFORM_STEP;
+    override fun getDependenciesConfigurationIdentity(): ConfigurationIdentity {
+        return dependenciesConfigurationIdentity!!
     }
 
-    @Override
-    public String getConsumerBuildPath() {
-        return consumerBuildPath;
-    }
-
-    @Override
-    public String getConsumerProjectPath() {
-        return consumerProjectPath;
-    }
-
-    @Override
-    public ComponentIdentifier getComponentId() {
-        return componentId;
-    }
-
-    @Override
-    public Map<String, String> getSourceAttributes() {
-        return sourceAttributes;
-    }
-
-    @Override
-    public Map<String, String> getTargetAttributes() {
-        return targetAttributes;
-    }
-
-    @Override
-    public List<? extends Capability> getCapabilities() {
-        return capabilities;
-    }
-
-    @Override
-    public String getArtifactName() {
-        return artifactName;
-    }
-
-    @Override
-    public ConfigurationIdentity getDependenciesConfigurationIdentity() {
-        return dependenciesConfigurationIdentity;
-    }
-
-    @Override
-    public long getTransformStepNodeId() {
-        return transformStepNodeId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (!(o instanceof DefaultPlannedTransformStepIdentity)) {
-            return false;
+        if (o !is DefaultPlannedTransformStepIdentity) {
+            return false
         }
-        DefaultPlannedTransformStepIdentity that = (DefaultPlannedTransformStepIdentity) o;
-        return transformStepNodeId == that.transformStepNodeId;
+        val that = o
+        return transformStepNodeId == that.transformStepNodeId
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(transformStepNodeId);
+    override fun hashCode(): Int {
+        return Objects.hash(transformStepNodeId)
     }
 
-    @Override
-    public String toString() {
-        return "Transform '" + componentId + "' to " + targetAttributes;
+    override fun toString(): String {
+        return "Transform '" + componentId + "' to " + targetAttributes
     }
 }

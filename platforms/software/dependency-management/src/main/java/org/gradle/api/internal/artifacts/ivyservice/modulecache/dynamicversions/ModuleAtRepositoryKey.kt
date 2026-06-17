@@ -13,30 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.api.artifacts.ModuleIdentifier;
+import org.gradle.api.artifacts.ModuleIdentifier
 
-class ModuleAtRepositoryKey {
-    final String repositoryId;
-    final ModuleIdentifier moduleId;
-
-    ModuleAtRepositoryKey(String repositoryId, ModuleIdentifier moduleId) {
-        this.repositoryId = repositoryId;
-        this.moduleId = moduleId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof ModuleAtRepositoryKey)) {
-            return false;
+internal class ModuleAtRepositoryKey(val repositoryId: String, val moduleId: ModuleIdentifier) {
+    override fun equals(o: Any?): Boolean {
+        if (o !is ModuleAtRepositoryKey) {
+            return false
         }
-        ModuleAtRepositoryKey other = (ModuleAtRepositoryKey) o;
-        return repositoryId.equals(other.repositoryId) && moduleId.equals(other.moduleId);
+        val other = o
+        return repositoryId == other.repositoryId && moduleId == other.moduleId
     }
 
-    @Override
-    public int hashCode() {
-        return repositoryId.hashCode() ^ moduleId.hashCode();
+    override fun hashCode(): Int {
+        return repositoryId.hashCode() xor moduleId.hashCode()
     }
 }

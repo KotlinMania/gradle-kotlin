@@ -13,29 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.layout;
+package org.gradle.api.internal.artifacts.repositories.layout
 
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import java.net.URI
 
 /**
  * A Repository Layout that applies the following patterns:
- * <ul>
- *     <li>Artifacts: $baseUri/{@value IvyArtifactRepository#IVY_ARTIFACT_PATTERN}</li>
- *     <li>Ivy: $baseUri/{@value IvyArtifactRepository#IVY_ARTIFACT_PATTERN}</li>
- * </ul>
+ *
+ *  * Artifacts: $baseUri/{@value IvyArtifactRepository#IVY_ARTIFACT_PATTERN}
+ *  * Ivy: $baseUri/{@value IvyArtifactRepository#IVY_ARTIFACT_PATTERN}
+ *
  */
-public class IvyRepositoryLayout extends AbstractRepositoryLayout {
-    @Override
-    public void apply(@Nullable URI baseUri, IvyRepositoryDescriptor.Builder builder) {
-        builder.setLayoutType("Ivy");
-        builder.setM2Compatible(false);
-        builder.addIvyPattern(IvyArtifactRepository.IVY_ARTIFACT_PATTERN);
-        builder.addIvyResource(baseUri, IvyArtifactRepository.IVY_ARTIFACT_PATTERN);
-        builder.addArtifactPattern(IvyArtifactRepository.IVY_ARTIFACT_PATTERN);
-        builder.addArtifactResource(baseUri, IvyArtifactRepository.IVY_ARTIFACT_PATTERN);
+class IvyRepositoryLayout : AbstractRepositoryLayout() {
+    override fun apply(baseUri: URI?, builder: IvyRepositoryDescriptor.Builder) {
+        builder.setLayoutType("Ivy")
+        builder.setM2Compatible(false)
+        builder.addIvyPattern(IvyArtifactRepository.IVY_ARTIFACT_PATTERN)
+        builder.addIvyResource(baseUri, IvyArtifactRepository.IVY_ARTIFACT_PATTERN)
+        builder.addArtifactPattern(IvyArtifactRepository.IVY_ARTIFACT_PATTERN)
+        builder.addArtifactResource(baseUri, IvyArtifactRepository.IVY_ARTIFACT_PATTERN)
     }
 }

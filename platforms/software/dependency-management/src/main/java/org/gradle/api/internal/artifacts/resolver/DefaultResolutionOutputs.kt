@@ -13,99 +13,93 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.resolver
 
-package org.gradle.api.internal.artifacts.resolver;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ArtifactView;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.result.ResolutionResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ResolverResults;
-import org.gradle.api.internal.artifacts.configurations.ArtifactCollectionInternal;
-import org.gradle.api.internal.artifacts.configurations.DefaultArtifactCollection;
-import org.gradle.api.internal.artifacts.configurations.ResolutionResultProviderBackedSelectedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet;
-import org.gradle.api.internal.artifacts.result.DefaultResolutionResult;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributeDesugaring;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.specs.Spec;
-import org.gradle.api.specs.Specs;
-import org.gradle.internal.Actions;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-
-import javax.inject.Inject;
+import com.google.common.annotations.VisibleForTesting
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.result.ResolutionResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ResolverResults
+import org.gradle.api.internal.artifacts.configurations.ArtifactCollectionInternal
+import org.gradle.api.internal.artifacts.configurations.DefaultArtifactCollection
+import org.gradle.api.internal.artifacts.configurations.ResolutionResultProviderBackedSelectedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactSet
+import org.gradle.api.internal.artifacts.result.DefaultResolutionResult
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributeDesugaring
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.specs.Spec
+import org.gradle.api.specs.Specs
+import org.gradle.internal.Actions
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import java.util.function.Function
+import javax.inject.Inject
 
 /**
- * Default implementation of {@link ResolutionOutputsInternal}. This class is in charge of
- * converting internal results in the form of {@link ResolverResults} into public facing types like:
+ * Default implementation of [ResolutionOutputsInternal]. This class is in charge of
+ * converting internal results in the form of [ResolverResults] into public facing types like:
  *
- * <ul>
- *     <li>{@link org.gradle.api.file.FileCollection}</li>
- *     <li>{@link org.gradle.api.artifacts.ArtifactCollection}</li>
- *     <li>{@link org.gradle.api.artifacts.ArtifactView}</li>
- *     <li>{@link org.gradle.api.artifacts.result.ResolvedVariantResult}</li>
- *     <li>{@link org.gradle.api.artifacts.result.ResolvedComponentResult}</li>
- * </ul>
+ *
+ *  * [org.gradle.api.file.FileCollection]
+ *  * [org.gradle.api.artifacts.ArtifactCollection]
+ *  * [ArtifactView]
+ *  * [org.gradle.api.artifacts.result.ResolvedVariantResult]
+ *  * [org.gradle.api.artifacts.result.ResolvedComponentResult]
+ *
  */
-public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
+class DefaultResolutionOutputs(
+    resolutionAccess: ResolutionAccess,
+    taskDependencyFactory: TaskDependencyFactory,
+    calculatedValueContainerFactory: CalculatedValueContainerFactory,
+    attributesFactory: AttributesFactory,
+    attributeDesugaring: AttributeDesugaring,
+    objectFactory: ObjectFactory
+) : ResolutionOutputsInternal {
+    private val resolutionAccess: ResolutionAccess
+    private val taskDependencyFactory: TaskDependencyFactory
+    private val calculatedValueContainerFactory: CalculatedValueContainerFactory
+    private val attributesFactory: AttributesFactory
+    private val attributeDesugaring: AttributeDesugaring
+    private val objectFactory: ObjectFactory
 
-    private final ResolutionAccess resolutionAccess;
-    private final TaskDependencyFactory taskDependencyFactory;
-    private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-    private final AttributesFactory attributesFactory;
-    private final AttributeDesugaring attributeDesugaring;
-    private final ObjectFactory objectFactory;
-
-    public DefaultResolutionOutputs(
-        ResolutionAccess resolutionAccess,
-        TaskDependencyFactory taskDependencyFactory,
-        CalculatedValueContainerFactory calculatedValueContainerFactory,
-        AttributesFactory attributesFactory,
-        AttributeDesugaring attributeDesugaring,
-        ObjectFactory objectFactory
-    ) {
-        this.resolutionAccess = resolutionAccess;
-        this.taskDependencyFactory = taskDependencyFactory;
-        this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-        this.attributesFactory = attributesFactory;
-        this.attributeDesugaring = attributeDesugaring;
-        this.objectFactory = objectFactory;
+    init {
+        this.resolutionAccess = resolutionAccess
+        this.taskDependencyFactory = taskDependencyFactory
+        this.calculatedValueContainerFactory = calculatedValueContainerFactory
+        this.attributesFactory = attributesFactory
+        this.attributeDesugaring = attributeDesugaring
+        this.objectFactory = objectFactory
     }
 
-    @Override
-    public ResolutionResult getResolutionResult() {
-        return new DefaultResolutionResult(resolutionAccess, attributeDesugaring);
+    override fun getResolutionResult(): ResolutionResult {
+        return DefaultResolutionResult(resolutionAccess, attributeDesugaring)
     }
 
-    @Override
-    public FileCollectionInternal getFiles() {
-        return doGetArtifactView(Actions.doNothing()).getFiles();
+    override fun getFiles(): FileCollectionInternal {
+        return doGetArtifactView(Actions.doNothing<ArtifactView.ViewConfiguration>()).getFiles()
     }
 
-    @Override
-    public ArtifactCollectionInternal getArtifacts() {
-        return doGetArtifactView(Actions.doNothing()).getArtifacts();
+    override fun getArtifacts(): ArtifactCollectionInternal {
+        return doGetArtifactView(Actions.doNothing<ArtifactView.ViewConfiguration>()).getArtifacts()
     }
 
-    @Override
-    public ArtifactView artifactView(Action<? super ArtifactView.ViewConfiguration> action) {
-        return doGetArtifactView(action);
+    override fun artifactView(action: Action<in ArtifactView.ViewConfiguration>): ArtifactView {
+        return doGetArtifactView(action)
     }
 
-    private DefaultArtifactView doGetArtifactView(Action<? super ArtifactView.ViewConfiguration> action) {
+    private fun doGetArtifactView(action: Action<in ArtifactView.ViewConfiguration>): DefaultArtifactView {
         // We use the instantiator to generate closure-accepting methods.
-        DefaultArtifactViewConfiguration viewConfiguration = objectFactory.newInstance(DefaultArtifactViewConfiguration.class, attributesFactory);
-        action.execute(viewConfiguration);
+        val viewConfiguration = objectFactory.newInstance<DefaultArtifactViewConfiguration>(DefaultArtifactViewConfiguration::class.java, attributesFactory)
+        action.execute(viewConfiguration)
 
-        return new DefaultArtifactView(
+        return DefaultArtifactView(
             viewConfiguration.lenient,
             viewConfiguration.componentFilter,
             viewConfiguration.reselectVariants,
@@ -116,159 +110,135 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             calculatedValueContainerFactory,
             attributesFactory,
             attributeDesugaring
-        );
+        )
     }
 
     @VisibleForTesting
-    public static class DefaultArtifactView implements ArtifactView {
-
-        // View configuration
-        private final boolean lenient;
-        private final Spec<? super ComponentIdentifier> componentFilter;
-        private final boolean reselectVariants;
-        private final AttributeContainerInternal viewAttributes;
+    class DefaultArtifactView(// View configuration
+        private val lenient: Boolean,
+        private val componentFilter: Spec<in ComponentIdentifier?>,
+        private val reselectVariants: Boolean,
+        private val viewAttributes: AttributeContainerInternal,
 
         // Services
-        private final ResolutionAccess resolutionAccess;
-        private final TaskDependencyFactory taskDependencyFactory;
-        private final CalculatedValueContainerFactory calculatedValueContainerFactory;
-        private final AttributesFactory attributesFactory;
-        private final AttributeDesugaring attributeDesugaring;
+        private val resolutionAccess: ResolutionAccess,
+        taskDependencyFactory: TaskDependencyFactory,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory,
+        attributesFactory: AttributesFactory,
+        attributeDesugaring: AttributeDesugaring
+    ) : ArtifactView {
+        private val taskDependencyFactory: TaskDependencyFactory
+        private val calculatedValueContainerFactory: CalculatedValueContainerFactory
+        private val attributesFactory: AttributesFactory
+        private val attributeDesugaring: AttributeDesugaring
 
-        public DefaultArtifactView(
-            boolean lenient,
-            Spec<? super ComponentIdentifier> componentFilter,
-            boolean reselectVariants,
-            AttributeContainerInternal viewAttributes,
-
-            ResolutionAccess resolutionAccess,
-            TaskDependencyFactory taskDependencyFactory,
-            CalculatedValueContainerFactory calculatedValueContainerFactory,
-            AttributesFactory attributesFactory,
-            AttributeDesugaring attributeDesugaring
-        ) {
-            this.lenient = lenient;
-            this.componentFilter = componentFilter;
-            this.reselectVariants = reselectVariants;
-            this.viewAttributes = viewAttributes;
-
-            this.resolutionAccess = resolutionAccess;
-            this.taskDependencyFactory = taskDependencyFactory;
-            this.calculatedValueContainerFactory = calculatedValueContainerFactory;
-            this.attributesFactory = attributesFactory;
-            this.attributeDesugaring = attributeDesugaring;
+        init {
+            this.resolutionAccess = resolutionAccess
+            this.taskDependencyFactory = taskDependencyFactory
+            this.calculatedValueContainerFactory = calculatedValueContainerFactory
+            this.attributesFactory = attributesFactory
+            this.attributeDesugaring = attributeDesugaring
         }
 
-        @Override
-        public ArtifactCollectionInternal getArtifacts() {
-            SelectedArtifactSet selectedArtifacts = new ResolutionResultProviderBackedSelectedArtifactSet(
-                resolutionAccess.getResults().map(this::selectArtifacts)
-            );
+        override fun getArtifacts(): ArtifactCollectionInternal {
+            val selectedArtifacts: SelectedArtifactSet = ResolutionResultProviderBackedSelectedArtifactSet(
+                resolutionAccess.getResults().map<SelectedArtifactSet>(Function { results: ResolverResults? -> this.selectArtifacts(results!!) })
+            )
 
-            return new DefaultArtifactCollection(
+            return DefaultArtifactCollection(
                 selectedArtifacts,
                 lenient,
                 resolutionAccess.getHost(),
                 taskDependencyFactory,
                 calculatedValueContainerFactory,
                 attributeDesugaring
-            );
+            )
         }
 
-        @Override
-        public FileCollectionInternal getFiles() {
-            return getArtifacts().getArtifactFiles();
+        override fun getFiles(): FileCollectionInternal {
+            return getArtifacts().getArtifactFiles()
         }
 
-        private SelectedArtifactSet selectArtifacts(ResolverResults results) {
+        private fun selectArtifacts(results: ResolverResults): SelectedArtifactSet {
             // If the user set the view attributes, we allow variant matching to fail for no matching variants.
             // If we are using the original request attributes, variant matching should not fail.
             // TODO #27773: This is probably not desired behavior. It can be very confusing to request new attributes and
             // then have an ArtifactView silently return no results. We should add a switch specifying whether you
             // want 0 or 1 artifact result, 1 artifact result, or 1+ artifact results for each graph variant, and then
             // deprecate views that select no artifacts without the user specifying that switch.
-            boolean allowNoMatchingVariants = !viewAttributes.isEmpty();
+            val allowNoMatchingVariants = !viewAttributes.isEmpty()
 
-            return results.visitedArtifacts.select(new ArtifactSelectionSpec(
-                getAttributes(),
-                componentFilter,
-                reselectVariants,
-                allowNoMatchingVariants,
-                resolutionAccess.getDefaultSortOrder()
-            ));
+            return results.visitedArtifacts.select(
+                ArtifactSelectionSpec(
+                    getAttributes(),
+                    componentFilter,
+                    reselectVariants,
+                    allowNoMatchingVariants,
+                    resolutionAccess.getDefaultSortOrder()
+                )
+            )
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            ImmutableAttributes baseAttributes = resolutionAccess.getAttributes();
+        override fun getAttributes(): ImmutableAttributes {
+            val baseAttributes = resolutionAccess.getAttributes()
 
             // The user did not specify any attributes. Use the original request attributes.
             if (viewAttributes.isEmpty()) {
-                return baseAttributes;
+                return baseAttributes
             }
 
             // When re-selecting, we do not base the view attributes on the original request attributes.
             if (reselectVariants) {
-                return viewAttributes.asImmutable();
+                return viewAttributes.asImmutable()
             }
 
             // Otherwise, artifact views without re-selection are based on the original request attributes.
-            return attributesFactory.concat(baseAttributes, viewAttributes.asImmutable());
+            return attributesFactory.concat(baseAttributes, viewAttributes.asImmutable())
         }
     }
 
-    public static class DefaultArtifactViewConfiguration implements ArtifactView.ViewConfiguration {
-        private final AttributeContainerInternal viewAttributes;
-        private Spec<? super ComponentIdentifier> componentFilter = Specs.satisfyAll();
-        private boolean lenient;
-        private boolean reselectVariants;
+    class DefaultArtifactViewConfiguration @Inject constructor(attributesFactory: AttributesFactory) : ArtifactView.ViewConfiguration {
+        private val viewAttributes: AttributeContainerInternal
+        private var componentFilter: Spec<in ComponentIdentifier?> = Specs.satisfyAll<ComponentIdentifier>()
+        private var lenient = false
+        private var reselectVariants = false
 
-        @Inject
-        public DefaultArtifactViewConfiguration(AttributesFactory attributesFactory) {
-            this.viewAttributes = attributesFactory.mutable();
+        init {
+            this.viewAttributes = attributesFactory.mutable()
         }
 
-        @Override
-        public AttributeContainer getAttributes() {
-            return viewAttributes;
+        override fun getAttributes(): AttributeContainer {
+            return viewAttributes
         }
 
-        @Override
-        public ArtifactView.ViewConfiguration attributes(Action<? super AttributeContainer> action) {
-            action.execute(viewAttributes);
-            return this;
+        override fun attributes(action: Action<in AttributeContainer>): ArtifactView.ViewConfiguration {
+            action.execute(viewAttributes)
+            return this
         }
 
-        @Override
-        public ArtifactView.ViewConfiguration componentFilter(Spec<? super ComponentIdentifier> componentFilter) {
-            if (this.componentFilter != Specs.SATISFIES_ALL) {
-                throw new IllegalStateException("The component filter can only be set once before the view was computed");
-            }
-            this.componentFilter = componentFilter;
-            return this;
+        override fun componentFilter(componentFilter: Spec<in ComponentIdentifier?>): ArtifactView.ViewConfiguration {
+            check(this.componentFilter === Specs.SATISFIES_ALL) { "The component filter can only be set once before the view was computed" }
+            this.componentFilter = componentFilter
+            return this
         }
 
-        @Override
-        public boolean isLenient() {
-            return lenient;
+        override fun isLenient(): Boolean {
+            return lenient
         }
 
-        @Override
-        public void setLenient(boolean lenient) {
-            this.lenient = lenient;
+        override fun setLenient(lenient: Boolean) {
+            this.lenient = lenient
         }
 
         // TODO: Deprecate this in favor of setLenient(Boolean)
-        @Override
-        public ArtifactView.ViewConfiguration lenient(boolean lenient) {
-            this.lenient = lenient;
-            return this;
+        override fun lenient(lenient: Boolean): ArtifactView.ViewConfiguration {
+            this.lenient = lenient
+            return this
         }
 
-        @Override
-        public ArtifactView.ViewConfiguration withVariantReselection() {
-            this.reselectVariants = true;
-            return this;
+        override fun withVariantReselection(): ArtifactView.ViewConfiguration {
+            this.reselectVariants = true
+            return this
         }
     }
 }

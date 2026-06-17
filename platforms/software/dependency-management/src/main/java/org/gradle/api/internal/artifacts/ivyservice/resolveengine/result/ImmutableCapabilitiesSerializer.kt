@@ -13,37 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
+class ImmutableCapabilitiesSerializer : Serializer<ImmutableCapabilities?> {
+    private val capabilitySerializer = CapabilitySerializer()
 
-public class ImmutableCapabilitiesSerializer implements Serializer<ImmutableCapabilities> {
-
-    private final CapabilitySerializer capabilitySerializer = new CapabilitySerializer();
-
-    @Override
-    public ImmutableCapabilities read(Decoder decoder) throws Exception {
-        int size = decoder.readSmallInt();
-        ImmutableSet.Builder<ImmutableCapability> builder = ImmutableSet.builderWithExpectedSize(size);
-        for (int i = 0; i < size; i++) {
-            builder.add(capabilitySerializer.read(decoder));
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ImmutableCapabilities {
+        val size = decoder.readSmallInt()
+        val builder = ImmutableSet.builderWithExpectedSize<ImmutableCapability>(size)
+        for (i in 0..<size) {
+            builder.add(capabilitySerializer.read(decoder))
         }
-        return new ImmutableCapabilities(builder.build());
+        return ImmutableCapabilities(builder.build())
     }
 
-    @Override
-    public void write(Encoder encoder, ImmutableCapabilities value) throws Exception {
-        ImmutableSet<ImmutableCapability> set = value.asSet();
-        encoder.writeSmallInt(set.size());
-        for (ImmutableCapability capability : set) {
-            capabilitySerializer.write(encoder, capability);
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ImmutableCapabilities) {
+        val set: ImmutableSet<ImmutableCapability> = value.asSet()
+        encoder.writeSmallInt(set.size)
+        for (capability in set) {
+            capabilitySerializer.write(encoder, capability)
         }
     }
-
 }

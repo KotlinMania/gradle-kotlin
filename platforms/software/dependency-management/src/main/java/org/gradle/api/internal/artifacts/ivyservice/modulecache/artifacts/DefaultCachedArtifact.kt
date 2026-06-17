@@ -13,58 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+import org.gradle.internal.hash.HashCode
+import java.io.File
+import java.io.Serializable
 
-import org.gradle.internal.hash.HashCode;
+class DefaultCachedArtifact : CachedArtifact, Serializable {
+    val cachedFile: File?
+    val cachedAt: Long
+    private val descriptorHash: HashCode?
+    private val attemptedLocations: MutableList<String?>?
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.List;
-
-public class DefaultCachedArtifact implements CachedArtifact, Serializable {
-    private final File cachedFile;
-    private final long cachedAt;
-    private final HashCode descriptorHash;
-    private final List<String> attemptedLocations;
-
-    public DefaultCachedArtifact(File cachedFile, long cachedAt, HashCode descriptorHash) {
-        this.cachedFile = cachedFile;
-        this.cachedAt = cachedAt;
-        this.descriptorHash = descriptorHash;
-        this.attemptedLocations = Collections.emptyList();
+    constructor(cachedFile: File?, cachedAt: Long, descriptorHash: HashCode?) {
+        this.cachedFile = cachedFile
+        this.cachedAt = cachedAt
+        this.descriptorHash = descriptorHash
+        this.attemptedLocations = mutableListOf<String?>()
     }
 
-    public DefaultCachedArtifact(List<String> attemptedLocations, long cachedAt, HashCode descriptorHash) {
-        this.attemptedLocations = attemptedLocations;
-        this.cachedAt = cachedAt;
-        this.cachedFile = null;
-        this.descriptorHash = descriptorHash;
+    constructor(attemptedLocations: MutableList<String?>?, cachedAt: Long, descriptorHash: HashCode?) {
+        this.attemptedLocations = attemptedLocations
+        this.cachedAt = cachedAt
+        this.cachedFile = null
+        this.descriptorHash = descriptorHash
     }
 
-    @Override
-    public boolean isMissing() {
-        return cachedFile == null;
+    val isMissing: Boolean
+        get() = cachedFile == null
+
+    override fun getDescriptorHash(): HashCode? {
+        return descriptorHash
     }
 
-    @Override
-    public File getCachedFile() {
-        return cachedFile;
-    }
-
-    @Override
-    public long getCachedAt() {
-        return cachedAt;
-    }
-
-    @Override
-    public HashCode getDescriptorHash() {
-        return descriptorHash;
-    }
-
-    @Override
-    public List<String> attemptedLocations() {
-        return attemptedLocations;
+    override fun attemptedLocations(): MutableList<String?>? {
+        return attemptedLocations
     }
 }

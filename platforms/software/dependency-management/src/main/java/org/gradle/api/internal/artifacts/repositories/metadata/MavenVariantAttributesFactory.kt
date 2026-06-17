@@ -13,31 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.LibraryElements;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Creates attribute sets for derived variants of Maven components.
  */
-@ServiceScope(Scope.BuildSession.class)
-public interface MavenVariantAttributesFactory {
+@ServiceScope(Scope.BuildSession::class)
+interface MavenVariantAttributesFactory {
+    fun compileScope(original: ImmutableAttributes): ImmutableAttributes?
+    fun runtimeScope(original: ImmutableAttributes): ImmutableAttributes?
+    fun platformWithUsage(original: ImmutableAttributes, usage: String, enforced: Boolean): ImmutableAttributes?
+    fun sourcesVariant(original: ImmutableAttributes): ImmutableAttributes?
+    fun javadocVariant(original: ImmutableAttributes): ImmutableAttributes?
 
-    // We need to work with the 'String' version of the usage attribute, since this is expected for all providers by the `PreferJavaRuntimeVariant` schema
-    Attribute<String> USAGE_ATTRIBUTE = Attribute.of(Usage.USAGE_ATTRIBUTE.getName(), String.class);
-    Attribute<String> FORMAT_ATTRIBUTE = Attribute.of(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE.getName(), String.class);
-    Attribute<String> CATEGORY_ATTRIBUTE = Attribute.of(Category.CATEGORY_ATTRIBUTE.getName(), String.class);
-
-    ImmutableAttributes compileScope(ImmutableAttributes original);
-    ImmutableAttributes runtimeScope(ImmutableAttributes original);
-    ImmutableAttributes platformWithUsage(ImmutableAttributes original, String usage, boolean enforced);
-    ImmutableAttributes sourcesVariant(ImmutableAttributes original);
-    ImmutableAttributes javadocVariant(ImmutableAttributes original);
-
+    companion object {
+        // We need to work with the 'String' version of the usage attribute, since this is expected for all providers by the `PreferJavaRuntimeVariant` schema
+        val USAGE_ATTRIBUTE: Attribute<String> = Attribute.of<String>(Usage.USAGE_ATTRIBUTE.getName(), String::class.java)
+        val FORMAT_ATTRIBUTE: Attribute<String> = Attribute.of<String>(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE.getName(), String::class.java)
+        @JvmField
+        val CATEGORY_ATTRIBUTE: Attribute<String> = Attribute.of<String>(Category.CATEGORY_ATTRIBUTE.getName(), String::class.java)
+    }
 }

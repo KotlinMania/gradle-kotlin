@@ -13,48 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.execution.plan.PlannedNodeInternal;
-import org.gradle.internal.taskgraph.NodeIdentity;
-import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity;
-
-import java.util.List;
+import org.gradle.execution.plan.PlannedNodeInternal
+import org.gradle.internal.taskgraph.NodeIdentity
+import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity
 
 /**
- * A planned node for a {@link TransformStepNode}.
+ * A planned node for a [TransformStepNode].
  */
-public class DefaultPlannedTransformStep implements PlannedNodeInternal {
-
-    private final PlannedTransformStepIdentity identity;
-    private final List<? extends NodeIdentity> dependencies;
-
-    public DefaultPlannedTransformStep(
-        PlannedTransformStepIdentity identity,
-        List<? extends NodeIdentity> dependencies
-    ) {
-        this.identity = identity;
-        this.dependencies = dependencies;
+class DefaultPlannedTransformStep(
+    val nodeIdentity: PlannedTransformStepIdentity,
+    val nodeDependencies: MutableList<out NodeIdentity>
+) : PlannedNodeInternal {
+    override fun toString(): String {
+        return nodeIdentity.toString()
     }
 
-    @Override
-    public PlannedTransformStepIdentity getNodeIdentity() {
-        return identity;
-    }
-
-    @Override
-    public List<? extends NodeIdentity> getNodeDependencies() {
-        return dependencies;
-    }
-
-    @Override
-    public String toString() {
-        return identity.toString();
-    }
-
-    @Override
-    public DefaultPlannedTransformStep withNodeDependencies(List<? extends NodeIdentity> nodeDependencies) {
-        return new DefaultPlannedTransformStep(identity, nodeDependencies);
+    override fun withNodeDependencies(nodeDependencies: MutableList<out NodeIdentity>): DefaultPlannedTransformStep {
+        return DefaultPlannedTransformStep(this.nodeIdentity, nodeDependencies)
     }
 }

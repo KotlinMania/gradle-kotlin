@@ -13,45 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.internal.artifacts.ResolveExceptionMapper;
-import org.gradle.api.internal.artifacts.ivyservice.TypedResolveException;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.resolution.failure.ReportableAsProblem;
-import org.gradle.internal.exceptions.MultiCauseException;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+import org.gradle.api.internal.artifacts.ivyservice.TypedResolveException
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.resolution.failure.ReportableAsProblem
+import org.gradle.internal.exceptions.MultiCauseException
+import java.util.LinkedList
+import java.util.Optional
+import java.util.Queue
+import java.util.function.Consumer
 
 /**
  * The "Host" or owner of a resolution -- the thing in charge of the resolution, or the thing being resolved.
  *
- * <p>The purpose of this type is to be a configuration-cache compatible representation of the thing
- * being resolved. This type should remain as minimal as possible.</p>
+ *
+ * The purpose of this type is to be a configuration-cache compatible representation of the thing
+ * being resolved. This type should remain as minimal as possible.
  *
  * TODO: Split the interface into two: one for tracking what is doing the resolving and one for mapping resolution problems
- * We already have {@link ResolveExceptionMapper}, which might be perfect for this purpose, we'd just have to refactor to
+ * We already have [ResolveExceptionMapper], which might be perfect for this purpose, we'd just have to refactor to
  * pass that type alongside this one.
  */
-public interface ResolutionHost {
+interface ResolutionHost {
+    fun displayName(): DisplayName?
 
-    DisplayName displayName();
+    val displayName: String
+        get() = displayName()!!.getDisplayName()
 
-    default String getDisplayName() {
-        return displayName().getDisplayName();
-    }
-
-    default DisplayName displayName(String type) {
-        return Describables.of(displayName(), type);
+    fun displayName(type: String): DisplayName {
+        return Describables.of(displayName()!!, type)
     }
 
     /**
@@ -59,22 +51,23 @@ public interface ResolutionHost {
      *
      * @return the problems service
      */
-    ProblemsInternal getProblems();
+    val problems: ProblemsInternal?
 
     /**
      * Rethrows the provided failures, doing nothing if the list of failures is empty.
-     * <p>
-     * If any of the failures (or their ancestor causes) are {@link ReportableAsProblem}, they will all be reported to the problems
-     * service available on this type via {@link #getProblems()}.
+     *
+     *
+     * If any of the failures (or their ancestor causes) are [ReportableAsProblem], they will all be reported to the problems
+     * service available on this type via [.getProblems].
      *
      * @param resolutionType what was resolved, e.g. "dependencies", "artifacts", "files"
      * @param failures the exceptions encountered during resolution
      */
-    default void rethrowFailuresAndReportProblems(String resolutionType, Collection<Throwable> failures) {
-        reportProblems(failures);
-        consolidateFailures(resolutionType, failures).ifPresent(e -> {
-            throw e;
-        });
+    fun rethrowFailuresAndReportProblems(resolutionType: String, failures: MutableCollection<Throwable>) {
+        reportProblems(failures)
+        consolidateFailures(resolutionType, failures)!!.ifPresent(Consumer { e: TypedResolveException? ->
+            throw e
+        })
     }
 
     /**
@@ -82,49 +75,48 @@ public interface ResolutionHost {
      *
      * @param resolutionType what was resolved, e.g. "dependencies", "artifacts", "files"
      * @param failures the exceptions encountered during resolution
-     * @return a {@link TypedResolveException}, which is a {@link MultiCauseException} containing all the failures,
-     * or {@link Optional#empty()} if there are no failures
+     * @return a [TypedResolveException], which is a [MultiCauseException] containing all the failures,
+     * or [Optional.empty] if there are no failures
      */
-    Optional<TypedResolveException> consolidateFailures(String resolutionType, Collection<Throwable> failures);
+    fun consolidateFailures(resolutionType: String, failures: MutableCollection<Throwable>): Optional<TypedResolveException>?
 
     /**
-     * If the given failure (or their ancestor causes) are {@link ReportableAsProblem}, they will all be reported to the problems
-     * service available on this type via {@link #getProblems()}.
+     * If the given failure (or their ancestor causes) are [ReportableAsProblem], they will all be reported to the problems
+     * service available on this type via [.getProblems].
      *
      * @param failure the exception to inspect
      */
-    default void reportProblems(Throwable failure) {
-        reportProblems(Collections.singleton(failure));
+    fun reportProblems(failure: Throwable) {
+        reportProblems(mutableSetOf<Throwable>(failure))
     }
 
     /**
-     * If the given failures (or their ancestor causes) are {@link ReportableAsProblem}, they will all be reported to the problems
-     * service available on this type via {@link #getProblems()}.
+     * If the given failures (or their ancestor causes) are [ReportableAsProblem], they will all be reported to the problems
+     * service available on this type via [.getProblems].
      *
      * @param failures the exceptions to inspect
      */
-    @SuppressWarnings("ThrowableNotThrown")
-    default void reportProblems(Collection<Throwable> failures) {
-        Set<Throwable> seen = new HashSet<>(failures.size() * 2); // Assume every failure has a cause
-        Queue<Throwable> exceptionQueue = new LinkedList<>(failures);
+    fun reportProblems(failures: MutableCollection<Throwable>) {
+        val seen: MutableSet<Throwable> = HashSet<Throwable>(failures.size * 2) // Assume every failure has a cause
+        val exceptionQueue: Queue<Throwable> = LinkedList<Throwable>(failures)
 
         while (!exceptionQueue.isEmpty()) {
-            Throwable current = exceptionQueue.poll();
+            val current = exceptionQueue.poll()
 
             // If we have self-caused exceptions, or other circular references, we may encounter the same failure again, in which case we can skip processing
             if (!seen.add(current)) {
-                continue;
+                continue
             }
 
-            if (current instanceof ReportableAsProblem) {
-                ((ReportableAsProblem) current).reportAsProblem(getProblems());
+            if (current is ReportableAsProblem) {
+                (current as ReportableAsProblem).reportAsProblem(this.problems)
             }
 
-            if (current instanceof MultiCauseException) {
-                exceptionQueue.addAll(((MultiCauseException) current).causes);
+            if (current is MultiCauseException) {
+                exceptionQueue.addAll((current as MultiCauseException).causes!!)
             } else {
-                if (current.getCause() != null) {
-                    exceptionQueue.add(current.getCause());
+                if (current.cause != null) {
+                    exceptionQueue.add(current.cause)
                 }
             }
         }

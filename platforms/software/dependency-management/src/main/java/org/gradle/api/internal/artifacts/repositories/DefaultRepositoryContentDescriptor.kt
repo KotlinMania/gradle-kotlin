@@ -13,495 +13,414 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme;
-import org.gradle.internal.Actions;
-import org.gradle.internal.Cast;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Maps
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme
+import org.gradle.internal.Actions
+import org.gradle.internal.Cast.uncheckedCast
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Supplier
+import java.util.regex.Pattern
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
-
-class DefaultRepositoryContentDescriptor implements RepositoryContentDescriptorInternal {
-    private enum MatcherKind {
+internal open class DefaultRepositoryContentDescriptor(val repositoryNameSupplier: Supplier<String>, protected val versionParser: VersionParser) : RepositoryContentDescriptorInternal {
+    private enum class MatcherKind {
         SIMPLE,
         REGEX,
         SUB_GROUP,
     }
 
-    private Set<String> includedConfigurations;
-    private Set<String> excludedConfigurations;
-    private Set<ContentSpec> includeSpecs;
-    private Set<ContentSpec> excludeSpecs;
-    private Map<Attribute<Object>, Set<Object>> requiredAttributes;
-    private boolean locked;
+    private var includedConfigurations: MutableSet<String>? = null
+    private var excludedConfigurations: MutableSet<String>? = null
+    private var includeSpecs: MutableSet<ContentSpec>? = null
+    private var excludeSpecs: MutableSet<ContentSpec>? = null
+    private var requiredAttributes: MutableMap<Attribute<Any>, MutableSet<Any>>? = null
+    private var locked = false
 
-    private Action<? super ArtifactResolutionDetails> cachedAction;
-    private final Supplier<String> repositoryNameSupplier;
-    private final VersionSelectorScheme versionSelectorScheme;
-    private final ConcurrentHashMap<String, VersionSelector> versionSelectors = new ConcurrentHashMap<>();
+    private var cachedAction: Action<in ArtifactResolutionDetails>? = null
+    private val versionSelectorScheme: VersionSelectorScheme
+    private val versionSelectors = ConcurrentHashMap<String, VersionSelector>()
 
-    private final VersionParser versionParser;
-
-    public DefaultRepositoryContentDescriptor(Supplier<String> repositoryNameSupplier, VersionParser versionParser) {
-        this.versionSelectorScheme = new DefaultVersionSelectorScheme(new DefaultVersionComparator(), versionParser);
-        this.repositoryNameSupplier = repositoryNameSupplier;
-        this.versionParser = versionParser;
+    init {
+        this.versionSelectorScheme = DefaultVersionSelectorScheme(
+            DefaultVersionComparator(),
+            versionParser
+        )
     }
 
-    protected VersionParser getVersionParser() {
-        return versionParser;
-    }
-
-    private void assertMutable() {
-        if (locked) {
-            throw new IllegalStateException("Cannot mutate content repository descriptor '" +
-                repositoryNameSupplier.get() +
-                "' after repository has been used");
+    private fun assertMutable() {
+        check(!locked) {
+            "Cannot mutate content repository descriptor '" +
+                    repositoryNameSupplier.get() +
+                    "' after repository has been used"
         }
     }
 
-    @Override
-    public Action<? super ArtifactResolutionDetails> toContentFilter() {
+    override fun toContentFilter(): Action<in ArtifactResolutionDetails> {
         if (cachedAction != null) {
-            return cachedAction;
+            return cachedAction!!
         }
-        locked = true;
+        locked = true
         if (includeSpecs == null && excludeSpecs == null) {
             // no filtering in place
-            return Actions.doNothing();
+            return Actions.doNothing<ArtifactResolutionDetails>()
         }
-        cachedAction = new RepositoryFilterAction(createSpecMatchers(includeSpecs), createSpecMatchers(excludeSpecs));
-        return cachedAction;
+        cachedAction = RepositoryFilterAction(createSpecMatchers(includeSpecs), createSpecMatchers(excludeSpecs))
+        return cachedAction!!
     }
 
-    @Override
-    public RepositoryContentDescriptorInternal asMutableCopy() {
-        DefaultRepositoryContentDescriptor copy = new DefaultRepositoryContentDescriptor(repositoryNameSupplier, getVersionParser());
+    override fun asMutableCopy(): RepositoryContentDescriptorInternal {
+        val copy = DefaultRepositoryContentDescriptor(
+            repositoryNameSupplier,
+            this.versionParser
+        )
         if (includedConfigurations != null) {
-            copy.includedConfigurations = Sets.newHashSet(includedConfigurations);
+            copy.includedConfigurations = Sets.newHashSet<String>(includedConfigurations)
         }
         if (excludedConfigurations != null) {
-            copy.excludedConfigurations = Sets.newHashSet(excludedConfigurations);
+            copy.excludedConfigurations = Sets.newHashSet<String>(excludedConfigurations)
         }
         if (includeSpecs != null) {
-            copy.includeSpecs = Sets.newHashSet(includeSpecs);
+            copy.includeSpecs = Sets.newHashSet<ContentSpec>(includeSpecs)
         }
         if (excludeSpecs != null) {
-            copy.excludeSpecs = Sets.newHashSet(excludeSpecs);
+            copy.excludeSpecs = Sets.newHashSet<ContentSpec>(excludeSpecs)
         }
         if (requiredAttributes != null) {
-            copy.requiredAttributes = Maps.newHashMap(requiredAttributes);
+            copy.requiredAttributes = Maps.newHashMap<Attribute<Any>, MutableSet<Any>>(requiredAttributes)
         }
-        return copy;
+        return copy
     }
 
-    @Nullable
-    private static ImmutableList<SpecMatcher> createSpecMatchers(@Nullable Set<ContentSpec> specs) {
-        ImmutableList<SpecMatcher> matchers = null;
-        if (specs != null) {
-            ImmutableList.Builder<SpecMatcher> builder = ImmutableList.builderWithExpectedSize(specs.size());
-            for (ContentSpec spec : specs) {
-                builder.add(spec.toMatcher());
-            }
-            matchers = builder.build();
-        }
-        return matchers;
+    override fun includeGroup(group: String) {
+        checkNotNull(group, "Group cannot be null")
+        addInclude(group, null, null, MatcherKind.SIMPLE)
     }
 
-    private static void checkNotNull(@Nullable String value, String message) {
-        if (value == null) {
-            throw new IllegalArgumentException(message);
-        }
+    override fun includeGroupAndSubgroups(groupPrefix: String) {
+        checkNotNull(groupPrefix, "Group prefix cannot be null")
+        addInclude(groupPrefix, null, null, MatcherKind.SUB_GROUP)
     }
 
-    @Override
-    public void includeGroup(String group) {
-        checkNotNull(group, "Group cannot be null");
-        addInclude(group, null, null, MatcherKind.SIMPLE);
+    override fun includeGroupByRegex(groupRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        addInclude(groupRegex, null, null, MatcherKind.REGEX)
     }
 
-    @Override
-    public void includeGroupAndSubgroups(String groupPrefix) {
-        checkNotNull(groupPrefix, "Group prefix cannot be null");
-        addInclude(groupPrefix, null, null, MatcherKind.SUB_GROUP);
+    override fun includeModule(group: String, moduleName: String) {
+        checkNotNull(group, "Group cannot be null")
+        checkNotNull(moduleName, "Module name cannot be null")
+        addInclude(group, moduleName, null, MatcherKind.REGEX)
     }
 
-    @Override
-    public void includeGroupByRegex(String groupRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        addInclude(groupRegex, null, null, MatcherKind.REGEX);
+    override fun includeModuleByRegex(groupRegex: String, moduleNameRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        checkNotNull(moduleNameRegex, "Module name regex cannot be null")
+        addInclude(groupRegex, moduleNameRegex, null, MatcherKind.REGEX)
     }
 
-    @Override
-    public void includeModule(String group, String moduleName) {
-        checkNotNull(group, "Group cannot be null");
-        checkNotNull(moduleName, "Module name cannot be null");
-        addInclude(group, moduleName, null, MatcherKind.REGEX);
+    override fun includeVersion(group: String, moduleName: String, version: String) {
+        checkNotNull(group, "Group cannot be null")
+        checkNotNull(moduleName, "Module name cannot be null")
+        checkNotNull(version, "Version cannot be null")
+        addInclude(group, moduleName, version, MatcherKind.SIMPLE)
     }
 
-    @Override
-    public void includeModuleByRegex(String groupRegex, String moduleNameRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        checkNotNull(moduleNameRegex, "Module name regex cannot be null");
-        addInclude(groupRegex, moduleNameRegex, null, MatcherKind.REGEX);
+    override fun includeVersionByRegex(groupRegex: String, moduleNameRegex: String, versionRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        checkNotNull(moduleNameRegex, "Module name regex cannot be null")
+        checkNotNull(versionRegex, "Version regex cannot be null")
+        addInclude(groupRegex, moduleNameRegex, versionRegex, MatcherKind.REGEX)
     }
 
-    @Override
-    public void includeVersion(String group, String moduleName, String version) {
-        checkNotNull(group, "Group cannot be null");
-        checkNotNull(moduleName, "Module name cannot be null");
-        checkNotNull(version, "Version cannot be null");
-        addInclude(group, moduleName, version, MatcherKind.SIMPLE);
-    }
-
-    @Override
-    public void includeVersionByRegex(String groupRegex, String moduleNameRegex, String versionRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        checkNotNull(moduleNameRegex, "Module name regex cannot be null");
-        checkNotNull(versionRegex, "Version regex cannot be null");
-        addInclude(groupRegex, moduleNameRegex, versionRegex, MatcherKind.REGEX);
-    }
-
-    private void addInclude(String group, @Nullable String moduleName, @Nullable String version, MatcherKind matcherKind) {
-        assertMutable();
+    private fun addInclude(group: String, moduleName: String?, version: String?, matcherKind: MatcherKind) {
+        assertMutable()
         if (includeSpecs == null) {
-            includeSpecs = new HashSet<>();
+            includeSpecs = HashSet<ContentSpec>()
         }
-        includeSpecs.add(new ContentSpec(matcherKind, group, moduleName, version, versionSelectorScheme, versionSelectors, true));
+        includeSpecs!!.add(ContentSpec(matcherKind, group, moduleName, version, versionSelectorScheme, versionSelectors, true))
     }
 
-    @Override
-    public void excludeGroup(String group) {
-        checkNotNull(group, "Group cannot be null");
-        addExclude(group, null, null, MatcherKind.SIMPLE);
+    override fun excludeGroup(group: String) {
+        checkNotNull(group, "Group cannot be null")
+        addExclude(group, null, null, MatcherKind.SIMPLE)
     }
 
-    @Override
-    public void excludeGroupAndSubgroups(String groupPrefix) {
-        checkNotNull(groupPrefix, "Group prefix cannot be null");
-        addExclude(groupPrefix, null, null, MatcherKind.SUB_GROUP);
+    override fun excludeGroupAndSubgroups(groupPrefix: String) {
+        checkNotNull(groupPrefix, "Group prefix cannot be null")
+        addExclude(groupPrefix, null, null, MatcherKind.SUB_GROUP)
     }
 
-    @Override
-    public void excludeGroupByRegex(String groupRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        addExclude(groupRegex, null, null, MatcherKind.REGEX);
+    override fun excludeGroupByRegex(groupRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        addExclude(groupRegex, null, null, MatcherKind.REGEX)
     }
 
-    @Override
-    public void excludeModule(String group, String moduleName) {
-        checkNotNull(group, "Group cannot be null");
-        checkNotNull(moduleName, "Module name cannot be null");
-        addExclude(group, moduleName, null, MatcherKind.SIMPLE);
+    override fun excludeModule(group: String, moduleName: String) {
+        checkNotNull(group, "Group cannot be null")
+        checkNotNull(moduleName, "Module name cannot be null")
+        addExclude(group, moduleName, null, MatcherKind.SIMPLE)
     }
 
-    @Override
-    public void excludeModuleByRegex(String groupRegex, String moduleNameRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        checkNotNull(moduleNameRegex, "Module name regex cannot be null");
-        addExclude(groupRegex, moduleNameRegex, null, MatcherKind.REGEX);
+    override fun excludeModuleByRegex(groupRegex: String, moduleNameRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        checkNotNull(moduleNameRegex, "Module name regex cannot be null")
+        addExclude(groupRegex, moduleNameRegex, null, MatcherKind.REGEX)
     }
 
-    @Override
-    public void excludeVersion(String group, String moduleName, String version) {
-        checkNotNull(group, "Group cannot be null");
-        checkNotNull(moduleName, "Module name cannot be null");
-        checkNotNull(version, "Version cannot be null");
-        addExclude(group, moduleName, version, MatcherKind.SIMPLE);
+    override fun excludeVersion(group: String, moduleName: String, version: String) {
+        checkNotNull(group, "Group cannot be null")
+        checkNotNull(moduleName, "Module name cannot be null")
+        checkNotNull(version, "Version cannot be null")
+        addExclude(group, moduleName, version, MatcherKind.SIMPLE)
     }
 
-    @Override
-    public void excludeVersionByRegex(String groupRegex, String moduleNameRegex, String versionRegex) {
-        checkNotNull(groupRegex, "Group regex cannot be null");
-        checkNotNull(moduleNameRegex, "Module name regex cannot be null");
-        checkNotNull(versionRegex, "Version regex cannot be null");
-        addExclude(groupRegex, moduleNameRegex, versionRegex, MatcherKind.REGEX);
+    override fun excludeVersionByRegex(groupRegex: String, moduleNameRegex: String, versionRegex: String) {
+        checkNotNull(groupRegex, "Group regex cannot be null")
+        checkNotNull(moduleNameRegex, "Module name regex cannot be null")
+        checkNotNull(versionRegex, "Version regex cannot be null")
+        addExclude(groupRegex, moduleNameRegex, versionRegex, MatcherKind.REGEX)
     }
 
-    private void addExclude(String group, @Nullable String moduleName, @Nullable String version, MatcherKind matcherKind) {
-        assertMutable();
+    private fun addExclude(group: String, moduleName: String?, version: String?, matcherKind: MatcherKind) {
+        assertMutable()
         if (excludeSpecs == null) {
-            excludeSpecs = new HashSet<>();
+            excludeSpecs = HashSet<ContentSpec>()
         }
-        excludeSpecs.add(new ContentSpec(matcherKind, group, moduleName, version, versionSelectorScheme, versionSelectors, false));
+        excludeSpecs!!.add(ContentSpec(matcherKind, group, moduleName, version, versionSelectorScheme, versionSelectors, false))
     }
 
-    @Override
-    public void onlyForConfigurations(String... configurationNames) {
+    override fun onlyForConfigurations(vararg configurationNames: String) {
         if (includedConfigurations == null) {
-            includedConfigurations = new HashSet<>();
+            includedConfigurations = HashSet<String>()
         }
-        Collections.addAll(includedConfigurations, configurationNames);
+        Collections.addAll<String>(includedConfigurations, *configurationNames)
     }
 
-    @Override
-    public void notForConfigurations(String... configurationNames) {
+    override fun notForConfigurations(vararg configurationNames: String) {
         if (excludedConfigurations == null) {
-            excludedConfigurations = new HashSet<>();
+            excludedConfigurations = HashSet<String>()
         }
-        Collections.addAll(excludedConfigurations, configurationNames);
+        Collections.addAll<String>(excludedConfigurations, *configurationNames)
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> void onlyForAttribute(Attribute<T> attribute, T... validValues) {
+    override fun <T> onlyForAttribute(attribute: Attribute<T?>, vararg validValues: T?) {
         if (requiredAttributes == null) {
-            requiredAttributes = new HashMap<>();
+            requiredAttributes = HashMap<Attribute<Any>, MutableSet<Any>>()
         }
-        requiredAttributes.put(Cast.uncheckedCast(attribute), ImmutableSet.copyOf(validValues));
+        requiredAttributes!!.put(uncheckedCast<Attribute<Any>?>(attribute)!!, ImmutableSet.copyOf<Any>(validValues))
     }
 
-    Supplier<String> getRepositoryNameSupplier() {
-        return repositoryNameSupplier;
+    override fun getIncludedConfigurations(): MutableSet<String>? {
+        return includedConfigurations
     }
 
-    @Nullable
-    @Override
-    public Set<String> getIncludedConfigurations() {
-        return includedConfigurations;
+    fun setIncludedConfigurations(includedConfigurations: MutableSet<String>?) {
+        this.includedConfigurations = includedConfigurations
     }
 
-    void setIncludedConfigurations(@Nullable Set<String> includedConfigurations) {
-        this.includedConfigurations = includedConfigurations;
+    override fun getExcludedConfigurations(): MutableSet<String>? {
+        return excludedConfigurations
     }
 
-    @Nullable
-    @Override
-    public Set<String> getExcludedConfigurations() {
-        return excludedConfigurations;
+    fun setExcludedConfigurations(excludedConfigurations: MutableSet<String>?) {
+        this.excludedConfigurations = excludedConfigurations
     }
 
-    void setExcludedConfigurations(@Nullable Set<String> excludedConfigurations) {
-        this.excludedConfigurations = excludedConfigurations;
+    fun getIncludeSpecs(): MutableSet<ContentSpec>? {
+        return includeSpecs
     }
 
-    @Nullable
-    Set<ContentSpec> getIncludeSpecs() {
-        return includeSpecs;
+    fun setIncludeSpecs(includeSpecs: MutableSet<ContentSpec>?) {
+        this.includeSpecs = includeSpecs
     }
 
-    void setIncludeSpecs(@Nullable Set<ContentSpec> includeSpecs) {
-        this.includeSpecs = includeSpecs;
+    fun getExcludeSpecs(): MutableSet<ContentSpec>? {
+        return excludeSpecs
     }
 
-    @Nullable
-    Set<ContentSpec> getExcludeSpecs() {
-        return excludeSpecs;
+    fun setExcludeSpecs(excludeSpecs: MutableSet<ContentSpec>?) {
+        this.excludeSpecs = excludeSpecs
     }
 
-    void setExcludeSpecs(@Nullable Set<ContentSpec> excludeSpecs) {
-        this.excludeSpecs = excludeSpecs;
+    override fun getRequiredAttributes(): MutableMap<Attribute<Any>, MutableSet<Any>>? {
+        return requiredAttributes
     }
 
-    @Nullable
-    @Override
-    public Map<Attribute<Object>, Set<Object>> getRequiredAttributes() {
-        return requiredAttributes;
+    fun setRequiredAttributes(requiredAttributes: MutableMap<Attribute<Any>, MutableSet<Any>>?) {
+        this.requiredAttributes = requiredAttributes
     }
 
-    void setRequiredAttributes(@Nullable Map<Attribute<Object>, Set<Object>> requiredAttributes) {
-        this.requiredAttributes = requiredAttributes;
-    }
+    private class ContentSpec(
+        private val matcherKind: MatcherKind,
+        private val group: String,
+        private val module: String?,
+        private val version: String?,
+        private val versionSelectorScheme: VersionSelectorScheme,
+        private val versionSelectors: ConcurrentHashMap<String, VersionSelector>,
+        private val inclusive: Boolean
+    ) {
+        private val hashCode: Int
 
-    private static class ContentSpec {
-        private final MatcherKind matcherKind;
-        private final String group;
-        private final String module;
-        private final String version;
-        private final VersionSelectorScheme versionSelectorScheme;
-        private final ConcurrentHashMap<String, VersionSelector> versionSelectors;
-        private final boolean inclusive;
-        private final int hashCode;
-
-        private ContentSpec(MatcherKind matcherKind, String group, @Nullable String module, @Nullable String version, VersionSelectorScheme versionSelectorScheme, ConcurrentHashMap<String, VersionSelector> versionSelectors, boolean inclusive) {
-            this.matcherKind = matcherKind;
-            this.group = group;
-            this.module = module;
-            this.version = version;
-            this.versionSelectorScheme = versionSelectorScheme;
-            this.versionSelectors = versionSelectors;
-            this.inclusive = inclusive;
-            this.hashCode = Objects.hashCode(matcherKind, group, module, version, inclusive);
+        init {
+            this.hashCode = Objects.hashCode(matcherKind, group, module, version, inclusive)
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            ContentSpec that = (ContentSpec) o;
-            return matcherKind == that.matcherKind &&
-                hashCode == that.hashCode &&
-                Objects.equal(group, that.group) &&
-                Objects.equal(module, that.module) &&
-                Objects.equal(version, that.version) &&
-                inclusive == that.inclusive;
+            val that = o as ContentSpec
+            return matcherKind == that.matcherKind && hashCode == that.hashCode &&
+                    Objects.equal(group, that.group) &&
+                    Objects.equal(module, that.module) &&
+                    Objects.equal(version, that.version) && inclusive == that.inclusive
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
 
-        SpecMatcher toMatcher() {
-            switch (matcherKind) {
-                case SIMPLE:
-                case SUB_GROUP:
-                    return new SimpleSpecMatcher(
-                        group, module, version, versionSelectorScheme, versionSelectors, inclusive, matcherKind == MatcherKind.SUB_GROUP
-                    );
-                case REGEX:
-                    return new PatternSpecMatcher(group, module, version, inclusive);
-                default:
-                    throw new AssertionError("Unknown matcher kind: " + matcherKind);
+        fun toMatcher(): SpecMatcher {
+            when (matcherKind) {
+                MatcherKind.SIMPLE, MatcherKind.SUB_GROUP -> return SimpleSpecMatcher(
+                    group, module, version, versionSelectorScheme, versionSelectors, inclusive, matcherKind == MatcherKind.SUB_GROUP
+                )
+
+                MatcherKind.REGEX -> return PatternSpecMatcher(group, module, version, inclusive)
+                else -> throw AssertionError("Unknown matcher kind: " + matcherKind)
             }
         }
     }
 
     private interface SpecMatcher {
-        boolean matches(ModuleIdentifier id);
+        fun matches(id: ModuleIdentifier): Boolean
 
-        boolean matches(ModuleComponentIdentifier id);
+        fun matches(id: ModuleComponentIdentifier): Boolean
     }
 
-    private static class SimpleSpecMatcher implements SpecMatcher {
-        private final String group;
-        private final String module;
-        private final String version;
-        private final VersionSelector versionSelector;
-        private final boolean inclusive;
-        private final boolean includeSubGroups;
+    private class SimpleSpecMatcher(
+        private val group: String, private val module: String?, private val version: String?, versionSelectorScheme: VersionSelectorScheme,
+        versionSelectors: ConcurrentHashMap<String, VersionSelector>, private val inclusive: Boolean, private val includeSubGroups: Boolean
+    ) : SpecMatcher {
+        private val versionSelector: VersionSelector
 
-        private SimpleSpecMatcher(
-            String group, @Nullable String module, @Nullable String version, VersionSelectorScheme versionSelectorScheme,
-            ConcurrentHashMap<String, VersionSelector> versionSelectors, boolean inclusive, boolean includeSubGroups
-        ) {
-            this.group = group;
-            this.module = module;
-            this.version = version;
-            this.inclusive = inclusive;
-            this.includeSubGroups = includeSubGroups;
-            this.versionSelector = getVersionSelector(versionSelectors, versionSelectorScheme, version);
+        init {
+            this.versionSelector = getVersionSelector(versionSelectors, versionSelectorScheme, version)!!
         }
 
-        private boolean groupMatches(String checkTarget) {
+        fun groupMatches(checkTarget: String): Boolean {
             if (!checkTarget.startsWith(group)) {
-                return false;
+                return false
             }
             // Check if the group is simply equal
-            if (checkTarget.length() == group.length()) {
-                return true;
+            if (checkTarget.length == group.length) {
+                return true
             }
             // Check if the group is a subgroup
-            return includeSubGroups && checkTarget.charAt(group.length()) == '.';
+            return includeSubGroups && checkTarget.get(group.length) == '.'
         }
 
-        @Override
-        public boolean matches(ModuleIdentifier id) {
+        override fun matches(id: ModuleIdentifier): Boolean {
             return groupMatches(id.getGroup())
-                && (module == null || module.equals(id.getName()))
-                && (inclusive || version == null);
+                    && (module == null || module == id.getName())
+                    && (inclusive || version == null)
         }
 
-        @Override
-        public boolean matches(ModuleComponentIdentifier id) {
+        override fun matches(id: ModuleComponentIdentifier): Boolean {
             return groupMatches(id.getGroup())
-                && (module == null || module.equals(id.getModule()))
-                && (version == null || version.equals(id.getVersion()) || versionSelector.accept(id.getVersion()));
+                    && (module == null || module == id.getModule())
+                    && (version == null || version == id.getVersion() || versionSelector.accept(id.getVersion()))
         }
 
-        @Nullable
-        private VersionSelector getVersionSelector(ConcurrentHashMap<String, VersionSelector> versionSelectors, VersionSelectorScheme versionSelectorScheme, @Nullable String version) {
-            return version != null ? versionSelectors.computeIfAbsent(version, s -> versionSelectorScheme.parseSelector(version)) : null;
+        fun getVersionSelector(versionSelectors: ConcurrentHashMap<String, VersionSelector>, versionSelectorScheme: VersionSelectorScheme, version: String?): VersionSelector? {
+            return if (version != null) versionSelectors.computeIfAbsent(version) { s: String? -> versionSelectorScheme.parseSelector(version) } else null
         }
     }
 
-    private static class PatternSpecMatcher implements SpecMatcher {
-        private final Pattern groupPattern;
-        private final Pattern modulePattern;
-        private final Pattern versionPattern;
-        private final boolean inclusive;
+    private class PatternSpecMatcher(group: String, module: String?, version: String?, private val inclusive: Boolean) : SpecMatcher {
+        private val groupPattern: Pattern
+        private val modulePattern: Pattern
+        private val versionPattern: Pattern
 
-        private PatternSpecMatcher(String group, @Nullable String module, @Nullable String version, boolean inclusive) {
-            this.groupPattern = Pattern.compile(group);
-            this.modulePattern = module == null ? null : Pattern.compile(module);
-            this.versionPattern = version == null ? null : Pattern.compile(version);
-            this.inclusive = inclusive;
+        init {
+            this.groupPattern = Pattern.compile(group)
+            this.modulePattern = (if (module == null) null else java.util.regex.Pattern.compile(module))!!
+            this.versionPattern = (if (version == null) null else java.util.regex.Pattern.compile(version))!!
         }
 
-        @Override
-        public boolean matches(ModuleIdentifier id) {
+        override fun matches(id: ModuleIdentifier): Boolean {
             return groupPattern.matcher(id.getGroup()).matches()
-                && (modulePattern == null || modulePattern.matcher(id.getName()).matches())
-                && (inclusive || versionPattern == null);
+                    && (modulePattern == null || modulePattern.matcher(id.getName()).matches())
+                    && (inclusive || versionPattern == null)
         }
 
-        @Override
-        public boolean matches(ModuleComponentIdentifier id) {
+        override fun matches(id: ModuleComponentIdentifier): Boolean {
             return groupPattern.matcher(id.getGroup()).matches()
-                && (modulePattern == null || modulePattern.matcher(id.getModule()).matches())
-                && (versionPattern == null || versionPattern.matcher(id.getVersion()).matches());
+                    && (modulePattern == null || modulePattern.matcher(id.getModule()).matches())
+                    && (versionPattern == null || versionPattern.matcher(id.getVersion()).matches())
         }
     }
 
-    private static class RepositoryFilterAction implements Action<ArtifactResolutionDetails> {
-        private final ImmutableList<SpecMatcher> includeMatchers;
-        private final ImmutableList<SpecMatcher> excludeMatchers;
-
-        public RepositoryFilterAction(@Nullable ImmutableList<SpecMatcher> includeMatchers, @Nullable ImmutableList<SpecMatcher> excludeMatchers) {
-            this.includeMatchers = includeMatchers;
-            this.excludeMatchers = excludeMatchers;
-        }
-
-        @Override
-        public void execute(ArtifactResolutionDetails details) {
+    private class RepositoryFilterAction(private val includeMatchers: ImmutableList<SpecMatcher>?, private val excludeMatchers: ImmutableList<SpecMatcher>?) : Action<ArtifactResolutionDetails> {
+        override fun execute(details: ArtifactResolutionDetails) {
             if (includeMatchers != null && !anyMatch(includeMatchers, details)) {
-                details.notFound();
-                return;
+                details.notFound()
+                return
             }
             if (excludeMatchers != null && anyMatch(excludeMatchers, details)) {
-                details.notFound();
-                return;
+                details.notFound()
+                return
             }
         }
 
-        private boolean anyMatch(ImmutableList<SpecMatcher> matchers, ArtifactResolutionDetails details) {
-            for (SpecMatcher matcher : matchers) {
-                boolean matches;
+        fun anyMatch(matchers: ImmutableList<SpecMatcher>, details: ArtifactResolutionDetails): Boolean {
+            for (matcher in matchers) {
+                val matches: Boolean
                 if (details.isVersionListing()) {
-                    matches = matcher.matches(details.getModuleId());
+                    matches = matcher.matches(details.getModuleId())
                 } else {
-                    matches = matcher.matches(details.getComponentId());
+                    matches = matcher.matches(details.getComponentId()!!)
                 }
                 if (matches) {
-                    return true;
+                    return true
                 }
             }
-            return false;
+            return false
+        }
+    }
+
+    companion object {
+        private fun createSpecMatchers(specs: MutableSet<ContentSpec>?): ImmutableList<SpecMatcher>? {
+            var matchers: ImmutableList<SpecMatcher>? = null
+            if (specs != null) {
+                val builder = ImmutableList.builderWithExpectedSize<SpecMatcher>(specs.size)
+                for (spec in specs) {
+                    builder.add(spec.toMatcher())
+                }
+                matchers = builder.build()
+            }
+            return matchers
+        }
+
+        private fun checkNotNull(value: String?, message: String) {
+            requireNotNull(value) { message }
         }
     }
 }

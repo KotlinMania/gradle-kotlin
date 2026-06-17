@@ -13,62 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-import org.gradle.api.JavaVersion;
-import org.gradle.api.attributes.java.TargetJvmVersion;
-import org.gradle.api.attributes.plugin.GradlePluginApiVersion;
-import org.gradle.internal.component.resolution.failure.describer.ResolutionFailureDescriber;
-import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException;
-import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
-import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure;
-
-import java.util.List;
+import org.gradle.api.JavaVersion
+import org.gradle.api.JavaVersion.Companion.current
+import org.gradle.api.attributes.plugin.GradlePluginApiVersion
+import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException
+import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException
+import org.gradle.internal.component.resolution.failure.type.NoCompatibleVariantsFailure
+import java.util.function.Supplier
 
 /**
- * A {@link ResolutionFailureDescriber} that describes a {@link ResolutionFailure} caused by a requested <strong>plugin</strong>
+ * A [ResolutionFailureDescriber] that describes a [ResolutionFailure] caused by a requested **plugin**
  * requiring a higher JVM version than the current build is using.
  *
- * This is determined by assessing the incompatibility of the {@link TargetJvmVersion#TARGET_JVM_VERSION_ATTRIBUTE}
+ * This is determined by assessing the incompatibility of the [TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE]
  * attribute on the requested plugin and comparing the provided JVM version with the current JVM version.  Note that the requested
- * JVM version is <strong>NOT</strong> relevant to this failure - it's about an incompatibility
+ * JVM version is **NOT** relevant to this failure - it's about an incompatibility
  * due to the candidate plugin's JVM version being too high to work on this JVM, regardless of the requested version.
  *
- * Whether a request is a plugin request or not is determined by the presence of the {@link GradlePluginApiVersion#GRADLE_PLUGIN_API_VERSION_ATTRIBUTE}
+ * Whether a request is a plugin request or not is determined by the presence of the [GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE]
  * attribute.
  */
-public abstract class TargetJVMVersionOnPluginTooNewFailureDescriber extends AbstractJVMVersionTooNewFailureDescriber {
-    @SuppressWarnings("InlineFormatString")
-    private static final String JVM_VERSION_TOO_HIGH_TEMPLATE = "Dependency requires at least JVM runtime version %s. This build uses a Java %s JVM.";
+abstract class TargetJVMVersionOnPluginTooNewFailureDescriber : AbstractJVMVersionTooNewFailureDescriber() {
+    private val currentJVMVersion: JavaVersion = current()!!
 
-    private final JavaVersion currentJVMVersion = JavaVersion.current();
-
-    @Override
-    protected JavaVersion getJVMVersion(NoCompatibleVariantsFailure failure) {
-        return currentJVMVersion;
+    override fun getJVMVersion(failure: NoCompatibleVariantsFailure): JavaVersion {
+        return currentJVMVersion
     }
 
-    @Override
-    public boolean canDescribeFailure(NoCompatibleVariantsFailure failure) {
-        boolean isPluginRequest = failure.getRequestedAttributes().contains(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE);
-        return isPluginRequest && isDueToJVMVersionTooNew(failure);
+    override fun canDescribeFailure(failure: NoCompatibleVariantsFailure): Boolean {
+        val isPluginRequest = failure.getRequestedAttributes().contains(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE)
+        return isPluginRequest && isDueToJVMVersionTooNew(failure)
     }
 
-    @Override
-    public AbstractResolutionFailureException describeFailure(NoCompatibleVariantsFailure failure) {
-        JavaVersion minJVMVersionSupported = findMinJVMSupported(failure.candidates).orElseThrow(IllegalStateException::new);
-        String message = buildNeedsNewerJDKFailureMsg(minJVMVersionSupported);
-        List<String> resolutions = buildResolutions(suggestUpdateJVM(minJVMVersionSupported));
-        return new VariantSelectionByAttributesException(message, failure, resolutions);
+    override fun describeFailure(failure: NoCompatibleVariantsFailure): AbstractResolutionFailureException {
+        val minJVMVersionSupported = findMinJVMSupported(failure.candidates).orElseThrow<java.lang.IllegalStateException>(Supplier { IllegalStateException() })
+        val message = buildNeedsNewerJDKFailureMsg(minJVMVersionSupported)
+        val resolutions = buildResolutions(suggestUpdateJVM(minJVMVersionSupported))
+        return VariantSelectionByAttributesException(message, failure, resolutions)
     }
 
-    private String buildNeedsNewerJDKFailureMsg(JavaVersion minRequiredJVMVersion) {
-        return String.format(JVM_VERSION_TOO_HIGH_TEMPLATE, minRequiredJVMVersion.getMajorVersion(), currentJVMVersion.getMajorVersion());
+    private fun buildNeedsNewerJDKFailureMsg(minRequiredJVMVersion: JavaVersion): String {
+        return String.format(JVM_VERSION_TOO_HIGH_TEMPLATE, minRequiredJVMVersion.majorVersion, currentJVMVersion.majorVersion)
     }
 
-    private String suggestUpdateJVM(JavaVersion minRequiredJVMVersion) {
-        return "Run this build using a Java " + minRequiredJVMVersion.getMajorVersion() + " or newer JVM.";
+    private fun suggestUpdateJVM(minRequiredJVMVersion: JavaVersion): String {
+        return "Run this build using a Java " + minRequiredJVMVersion.majorVersion + " or newer JVM."
+    }
+
+    companion object {
+        private const val JVM_VERSION_TOO_HIGH_TEMPLATE = "Dependency requires at least JVM runtime version %s. This build uses a Java %s JVM."
     }
 }

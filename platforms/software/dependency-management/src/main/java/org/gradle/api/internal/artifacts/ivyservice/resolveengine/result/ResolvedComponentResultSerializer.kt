@@ -13,101 +13,80 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.result.DependencyResult;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedDependencyResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.internal.artifacts.result.DefaultResolvedComponentResult;
-import org.gradle.api.internal.artifacts.result.DefaultResolvedDependencyResult;
-import org.gradle.api.internal.artifacts.result.DefaultUnresolvedDependencyResult;
-import org.gradle.api.internal.artifacts.result.ResolvedComponentResultInternal;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.internal.artifacts.result.DefaultResolvedComponentResult
+import org.gradle.api.internal.artifacts.result.DefaultResolvedDependencyResult
+import org.gradle.api.internal.artifacts.result.DefaultUnresolvedDependencyResult
+import org.gradle.api.internal.artifacts.result.ResolvedComponentResultInternal
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import javax.annotation.concurrent.NotThreadSafe
 
 /**
- * A serializer for {@link ResolvedComponentResult} that is not thread-safe and not reusable.
+ * A serializer for [ResolvedComponentResult] that is not thread-safe and not reusable.
  */
 @NotThreadSafe
-public class ResolvedComponentResultSerializer implements Serializer<ResolvedComponentResult> {
-    private final Serializer<ModuleVersionIdentifier> moduleVersionIdSerializer;
-    private final Serializer<ComponentIdentifier> componentIdSerializer;
-    private final Serializer<ComponentSelector> componentSelectorSerializer;
-    private final Serializer<ResolvedVariantResult> resolvedVariantResultSerializer;
-    private final Serializer<ComponentSelectionReasonInternal> componentSelectionReasonSerializer;
-
-    public ResolvedComponentResultSerializer(
-        Serializer<ModuleVersionIdentifier> moduleVersionIdSerializer,
-        Serializer<ComponentIdentifier> componentIdSerializer,
-        Serializer<ComponentSelector> componentSelectorSerializer,
-        Serializer<ResolvedVariantResult> resolvedVariantResultSerializer,
-        Serializer<ComponentSelectionReasonInternal> componentSelectionReasonSerializer
-    ) {
-        this.moduleVersionIdSerializer = moduleVersionIdSerializer;
-        this.componentIdSerializer = componentIdSerializer;
-        this.componentSelectorSerializer = componentSelectorSerializer;
-        this.resolvedVariantResultSerializer = resolvedVariantResultSerializer;
-        this.componentSelectionReasonSerializer = componentSelectionReasonSerializer;
+class ResolvedComponentResultSerializer(
+    private val moduleVersionIdSerializer: Serializer<ModuleVersionIdentifier?>,
+    private val componentIdSerializer: Serializer<ComponentIdentifier?>,
+    private val componentSelectorSerializer: Serializer<ComponentSelector?>,
+    private val resolvedVariantResultSerializer: Serializer<ResolvedVariantResult?>,
+    private val componentSelectionReasonSerializer: Serializer<ComponentSelectionReasonInternal?>
+) : Serializer<ResolvedComponentResult?> {
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ResolvedComponentResult? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public ResolvedComponentResult read(Decoder decoder) throws Exception {
-        throw new UnsupportedOperationException();
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ResolvedComponentResult) {
+        val root = value as DefaultResolvedComponentResult
+        val components: MutableMap<ResolvedComponentResult, Int> = HashMap<ResolvedComponentResult, Int>()
+        writeComponent(encoder, root, components)
     }
 
-    @Override
-    public void write(Encoder encoder, ResolvedComponentResult value) throws Exception {
-        DefaultResolvedComponentResult root = (DefaultResolvedComponentResult) value;
-        Map<ResolvedComponentResult, Integer> components = new HashMap<>();
-        writeComponent(encoder, root, components);
-    }
-
-    private void writeComponent(Encoder encoder, ResolvedComponentResult component, Map<ResolvedComponentResult, Integer> components) throws Exception {
-        Integer id = components.get(component);
+    @Throws(Exception::class)
+    private fun writeComponent(encoder: Encoder, component: ResolvedComponentResult, components: MutableMap<ResolvedComponentResult, Int>) {
+        var id = components.get(component)
         if (id != null) {
             // Already seen
-            encoder.writeSmallInt(id);
-            return;
+            encoder.writeSmallInt(id)
+            return
         }
-        id = components.size();
-        components.put(component, id);
+        id = components.size
+        components.put(component, id)
 
-        encoder.writeSmallInt(id);
-        moduleVersionIdSerializer.write(encoder, component.getModuleVersion());
-        componentIdSerializer.write(encoder, component.getId());
-        componentSelectionReasonSerializer.write(encoder, ((ResolvedComponentResultInternal) component).getSelectionReason());
-        List<ResolvedVariantResult> allVariants = ((ResolvedComponentResultInternal) component).getAvailableVariants();
-        Set<ResolvedVariantResult> resolvedVariants = new HashSet<>(component.getVariants());
-        encoder.writeSmallInt(allVariants.size());
-        for (ResolvedVariantResult variant : allVariants) {
-            resolvedVariantResultSerializer.write(encoder, variant);
-            encoder.writeBoolean(resolvedVariants.contains(variant));
+        encoder.writeSmallInt(id)
+        moduleVersionIdSerializer.write(encoder, component.getModuleVersion())
+        componentIdSerializer.write(encoder, component.getId())
+        componentSelectionReasonSerializer.write(encoder, (component as ResolvedComponentResultInternal).getSelectionReason())
+        val allVariants: MutableList<ResolvedVariantResult> = component.availableVariants
+        val resolvedVariants: MutableSet<ResolvedVariantResult> = HashSet<ResolvedVariantResult>(component.getVariants())
+        encoder.writeSmallInt(allVariants.size)
+        for (variant in allVariants) {
+            resolvedVariantResultSerializer.write(encoder, variant)
+            encoder.writeBoolean(resolvedVariants.contains(variant))
         }
-        Set<? extends DependencyResult> dependencies = component.getDependencies();
-        encoder.writeSmallInt(dependencies.size());
-        for (DependencyResult dependency : dependencies) {
-            boolean successful = dependency instanceof ResolvedDependencyResult;
-            encoder.writeBoolean(successful);
+        val dependencies = component.getDependencies()
+        encoder.writeSmallInt(dependencies.size)
+        for (dependency in dependencies) {
+            val successful = dependency is ResolvedDependencyResult
+            encoder.writeBoolean(successful)
             if (successful) {
-                DefaultResolvedDependencyResult dependencyResult = (DefaultResolvedDependencyResult) dependency;
-                componentSelectorSerializer.write(encoder, dependencyResult.getRequested());
-                writeComponent(encoder, dependencyResult.getSelected(), components);
+                val dependencyResult = dependency as DefaultResolvedDependencyResult
+                componentSelectorSerializer.write(encoder, dependencyResult.getRequested())
+                writeComponent(encoder, dependencyResult.getSelected(), components)
             } else {
-                DefaultUnresolvedDependencyResult dependencyResult = (DefaultUnresolvedDependencyResult) dependency;
-                componentSelectorSerializer.write(encoder, dependencyResult.getRequested());
+                val dependencyResult = dependency as DefaultUnresolvedDependencyResult
+                componentSelectorSerializer.write(encoder, dependencyResult.getRequested())
             }
         }
     }

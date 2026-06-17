@@ -13,35 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
-import java.time.Duration;
+interface ModuleMetadataCache {
+    fun cacheMissing(repository: ModuleComponentRepository<*>?, id: ModuleComponentIdentifier?): CachedMetadata?
 
-public interface ModuleMetadataCache {
-    CachedMetadata cacheMissing(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id);
+    fun cacheMetaData(repository: ModuleComponentRepository<*>?, id: ModuleComponentIdentifier?, metaData: ModuleComponentResolveMetadata?): CachedMetadata?
 
-    CachedMetadata cacheMetaData(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id, ModuleComponentResolveMetadata metaData);
-
-    CachedMetadata getCachedModuleDescriptor(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id);
+    fun getCachedModuleDescriptor(repository: ModuleComponentRepository<*>?, id: ModuleComponentIdentifier?): CachedMetadata?
 
     interface CachedMetadata {
-        ResolvedModuleVersion getModuleVersion();
+        val moduleVersion: ResolvedModuleVersion?
 
-        ModuleComponentResolveMetadata getMetadata();
+        val metadata: ModuleComponentResolveMetadata?
 
-        Duration getAge();
+        val age: Duration?
 
-        boolean isMissing();
+        val isMissing: Boolean
 
-        ModuleSources getModuleSources();
+        val moduleSources: ModuleSources?
 
         /**
          * The metadata after being processed by component metadata rules.
@@ -49,19 +44,18 @@ public interface ModuleMetadataCache {
          *
          * @param key the hash of the rules
          */
-        @Nullable
-        ExternalModuleComponentGraphResolveState getProcessedMetadata(int key);
+        fun getProcessedMetadata(key: Int): ExternalModuleComponentGraphResolveState?
 
         /**
          * Set the processed metadata to be cached in-memory only.
          */
-        void putProcessedMetadata(int key, ExternalModuleComponentGraphResolveState state);
+        fun putProcessedMetadata(key: Int, state: ExternalModuleComponentGraphResolveState?)
 
         /**
          * Returns a copy of this cached metadata where the module metadata is safe to store
          * in-memory, cross-build. That is to say it shouldn't contain any reference to projects,
          * for example.
          */
-        ModuleMetadataCache.CachedMetadata dehydrate();
+        fun dehydrate(): CachedMetadata?
     }
 }

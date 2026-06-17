@@ -13,52 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
 /**
  * The final representation of a component in the resolved dependency graph.
  * This is the type that is serialized on resolve and deserialized when we later need to build a `ResolutionResult`.
  */
-public interface ResolvedGraphComponent {
+interface ResolvedGraphComponent {
     /**
      * Returns a simple id for this component, unique across components in the same graph.
      * This id cannot be used across graphs.
      */
-    long getResultId();
+    val resultId: Long
 
-    ComponentGraphResolveState getResolveState();
+    val resolveState: ComponentGraphResolveState?
 
-    @Nullable
-    String getRepositoryName();
+    val repositoryName: String?
 
     /**
      * Returns a unique id for this component.
      */
-    ComponentIdentifier getComponentId();
+    val componentId: ComponentIdentifier?
 
     /**
      * Returns the module version for this component.
      */
-    ModuleVersionIdentifier getModuleVersion();
+    val moduleVersion: ModuleVersionIdentifier?
 
     /**
      * The reason this component was selected in the graph.
      */
-    ComponentSelectionReasonInternal getSelectionReason();
+    val selectionReason: ComponentSelectionReasonInternal?
 
     /**
      * Returns the resolved/selected variant(s) for this component.
      *
      * @return the resolved/selected variant(s) for this component
      */
-    List<ResolvedGraphVariant> getSelectedVariants();
+    val selectedVariants: MutableList<ResolvedGraphVariant>?
 }

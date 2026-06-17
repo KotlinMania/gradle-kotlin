@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.UnknownConfigurationException;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.UnknownConfigurationException
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Project.class)
-public interface ConfigurationContainerInternal extends RoleBasedConfigurationContainerInternal, ConfigurationsProvider {
-    @Override
-    ConfigurationInternal getByName(String name) throws UnknownConfigurationException;
-    @Override
-    ConfigurationInternal detachedConfiguration(Dependency... dependencies);
+@ServiceScope(Scope.Project::class)
+interface ConfigurationContainerInternal : RoleBasedConfigurationContainerInternal, ConfigurationsProvider {
+    @Throws(UnknownConfigurationException::class)
+    override fun getByName(name: String): ConfigurationInternal?
+    override fun detachedConfiguration(vararg dependencies: Dependency): ConfigurationInternal?
 }

@@ -13,45 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import com.google.common.collect.Interner;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.collect.Interner
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-public class ReadOnlyModuleMetadataCache extends PersistentModuleMetadataCache {
-    public ReadOnlyModuleMetadataCache(BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, ArtifactCacheMetadata artifactCacheMetadata, ImmutableModuleIdentifierFactory moduleIdentifierFactory, AttributeContainerSerializer attributeContainerSerializer, CapabilitySelectorSerializer capabilitySelectorSerializer, MavenMutableModuleMetadataFactory mavenMetadataFactory, IvyMutableModuleMetadataFactory ivyMetadataFactory, Interner<String> stringInterner, ModuleSourcesSerializer moduleSourcesSerializer, ChecksumService checksumService) {
-        super(timeProvider, cacheAccessCoordinator, artifactCacheMetadata, moduleIdentifierFactory, attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, stringInterner, moduleSourcesSerializer, checksumService);
+class ReadOnlyModuleMetadataCache(
+    timeProvider: BuildCommencedTimeProvider?,
+    cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator?,
+    artifactCacheMetadata: ArtifactCacheMetadata,
+    moduleIdentifierFactory: ImmutableModuleIdentifierFactory?,
+    attributeContainerSerializer: AttributeContainerSerializer?,
+    capabilitySelectorSerializer: CapabilitySelectorSerializer?,
+    mavenMetadataFactory: MavenMutableModuleMetadataFactory?,
+    ivyMetadataFactory: IvyMutableModuleMetadataFactory?,
+    stringInterner: Interner<String?>?,
+    moduleSourcesSerializer: ModuleSourcesSerializer?,
+    checksumService: ChecksumService?
+) : PersistentModuleMetadataCache(
+    timeProvider,
+    cacheAccessCoordinator,
+    artifactCacheMetadata,
+    moduleIdentifierFactory,
+    attributeContainerSerializer,
+    capabilitySelectorSerializer,
+    mavenMetadataFactory,
+    ivyMetadataFactory,
+    stringInterner,
+    moduleSourcesSerializer,
+    checksumService
+) {
+    override fun store(key: ModuleComponentAtRepositoryKey?, entry: ModuleMetadataCacheEntry?, cachedMetadata: ModuleMetadataCache.CachedMetadata?): ModuleMetadataCache.CachedMetadata? {
+        Object > operationShouldNotHaveBeenCalled<Any?>()
+        return cachedMetadata
     }
 
-    @Override
-    protected CachedMetadata store(ModuleComponentAtRepositoryKey key, ModuleMetadataCacheEntry entry, CachedMetadata cachedMetadata) {
-        operationShouldNotHaveBeenCalled();
-        return cachedMetadata;
+    override fun cacheMissing(repository: ModuleComponentRepository<*>?, id: ModuleComponentIdentifier?): ModuleMetadataCache.CachedMetadata {
+        return
+        CachedMetadata > operationShouldNotHaveBeenCalled<Any?>()
     }
 
-    @Override
-    public CachedMetadata cacheMissing(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id) {
-        return operationShouldNotHaveBeenCalled();
+    override fun cacheMetaData(repository: ModuleComponentRepository<*>?, id: ModuleComponentIdentifier?, metadata: ModuleComponentResolveMetadata?): ModuleMetadataCache.CachedMetadata {
+        return
+        CachedMetadata > operationShouldNotHaveBeenCalled<Any?>()
     }
 
-    @Override
-    public CachedMetadata cacheMetaData(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id, ModuleComponentResolveMetadata metadata) {
-        return operationShouldNotHaveBeenCalled();
-    }
-
-    @SuppressWarnings("TypeParameterUnusedInFormals") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private static <T> T operationShouldNotHaveBeenCalled() {
-        throw new UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache");
+    companion object {
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        private fun <T> operationShouldNotHaveBeenCalled(): T? {
+            throw UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache")
+        }
     }
 }

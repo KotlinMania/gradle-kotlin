@@ -13,41 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.query;
+package org.gradle.api.internal.artifacts.query
 
-import org.gradle.api.artifacts.query.ArtifactResolutionQuery;
-import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory;
-import org.gradle.api.internal.artifacts.RepositoriesSupplier;
-import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyFactory;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ExternalModuleComponentResolverFactory;
-import org.gradle.api.internal.component.ComponentTypeRegistry;
+import org.gradle.api.artifacts.query.ArtifactResolutionQuery
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory
+import org.gradle.api.internal.artifacts.RepositoriesSupplier
+import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyFactory
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ExternalModuleComponentResolverFactory
+import org.gradle.api.internal.component.ComponentTypeRegistry
+import javax.inject.Inject
 
-import javax.inject.Inject;
-
-public class DefaultArtifactResolutionQueryFactory implements ArtifactResolutionQueryFactory {
-    private final ResolutionStrategyFactory resolutionStrategyFactory;
-    private final RepositoriesSupplier repositoriesSupplier;
-    private final ExternalModuleComponentResolverFactory ivyFactory;
-    private final ComponentMetadataProcessorFactory componentMetadataProcessorFactory;
-    private final ComponentTypeRegistry componentTypeRegistry;
-
-    @Inject
-    public DefaultArtifactResolutionQueryFactory(
-        ResolutionStrategyFactory resolutionStrategyFactory,
-        RepositoriesSupplier repositoriesSupplier,
-        ExternalModuleComponentResolverFactory ivyFactory,
-        ComponentMetadataProcessorFactory componentMetadataProcessorFactory,
-        ComponentTypeRegistry componentTypeRegistry
-    ) {
-        this.resolutionStrategyFactory = resolutionStrategyFactory;
-        this.repositoriesSupplier = repositoriesSupplier;
-        this.ivyFactory = ivyFactory;
-        this.componentMetadataProcessorFactory = componentMetadataProcessorFactory;
-        this.componentTypeRegistry = componentTypeRegistry;
-    }
-
-    @Override
-    public ArtifactResolutionQuery createArtifactResolutionQuery() {
-        return new DefaultArtifactResolutionQuery(resolutionStrategyFactory, repositoriesSupplier, ivyFactory, componentMetadataProcessorFactory, componentTypeRegistry);
+class DefaultArtifactResolutionQueryFactory @Inject constructor(
+    private val resolutionStrategyFactory: ResolutionStrategyFactory,
+    private val repositoriesSupplier: RepositoriesSupplier,
+    private val ivyFactory: ExternalModuleComponentResolverFactory,
+    private val componentMetadataProcessorFactory: ComponentMetadataProcessorFactory,
+    private val componentTypeRegistry: ComponentTypeRegistry
+) : ArtifactResolutionQueryFactory {
+    override fun createArtifactResolutionQuery(): ArtifactResolutionQuery {
+        return DefaultArtifactResolutionQuery(resolutionStrategyFactory, repositoriesSupplier, ivyFactory, componentMetadataProcessorFactory, componentTypeRegistry)
     }
 }

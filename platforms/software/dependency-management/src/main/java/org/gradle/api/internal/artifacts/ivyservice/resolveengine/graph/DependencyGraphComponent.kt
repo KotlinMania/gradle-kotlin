@@ -13,26 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
 /**
- * A {@link ResolvedGraphComponent} that is used during the resolution of the dependency graph.
+ * A [ResolvedGraphComponent] that is used during the resolution of the dependency graph.
  * Additional fields in this interface are not required to reconstitute the serialized graph.
  */
-public interface DependencyGraphComponent extends ResolvedGraphComponent {
+interface DependencyGraphComponent : ResolvedGraphComponent {
     /**
      * Returns the meta-data for the component. Resolves if not already resolved.
      *
      * @return null if the meta-data is not available due to some failure.
      */
-    @Nullable
-    ComponentGraphResolveMetadata getMetadataOrNull();
+    val metadataOrNull: ComponentGraphResolveMetadata?
 
-    Collection<? extends DependencyGraphComponent> getDependents();
+    val dependents: MutableCollection<out DependencyGraphComponent>?
 }

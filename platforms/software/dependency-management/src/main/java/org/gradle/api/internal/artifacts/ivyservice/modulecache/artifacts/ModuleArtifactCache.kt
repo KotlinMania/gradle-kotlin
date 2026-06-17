@@ -13,50 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+import org.gradle.internal.hash.HashCode
+import java.io.File
 
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.resource.cached.CachedExternalResource;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.util.List;
-
-public interface ModuleArtifactCache {
+interface ModuleArtifactCache {
     /**
      * Adds a resolution to the index.
-     * <p>
+     *
+     *
      * The incoming file is expected to be in the persistent local. This method will not move/copy the file there.
      *
      * @param key The key to cache this resolution under in the index. Cannot be null.
      * @param artifactFile The artifact file in the persistent file store. Cannot be null
      * @param moduleDescriptorHash The checksum (SHA1) of the related moduledescriptor.
      */
-    void store(ArtifactAtRepositoryKey key, File artifactFile, HashCode moduleDescriptorHash);
+    fun store(key: ArtifactAtRepositoryKey?, artifactFile: File?, moduleDescriptorHash: HashCode?)
 
     /**
      * Record that the artifact with the given key was missing.
-     *  @param key The key to cache this resolution under in the index.
+     * @param key The key to cache this resolution under in the index.
      * @param descriptorHash The SHA1 hash of the related moduleDescriptor
      */
-    void storeMissing(ArtifactAtRepositoryKey key, List<String> attemptedLocations, HashCode descriptorHash);
+    fun storeMissing(key: ArtifactAtRepositoryKey?, attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?)
 
     /**
      * Lookup a cached resolution.
      *
-     * The {@link CachedExternalResource#getCachedFile()} is guaranteed to exist at the time that the entry is returned from this method.
+     * The [CachedExternalResource.getCachedFile] is guaranteed to exist at the time that the entry is returned from this method.
      *
      * @param key The key to search the index for
      * @return The cached artifact resolution if one exists, otherwise null.
      */
-    @Nullable
-    CachedArtifact lookup(ArtifactAtRepositoryKey key);
+    fun lookup(key: ArtifactAtRepositoryKey?): CachedArtifact?
 
     /**
      * Remove the entry for the given key if it exists.
      *
      * @param key The key of the item to remove.
      */
-    void clear(ArtifactAtRepositoryKey key);
+    fun clear(key: ArtifactAtRepositoryKey?)
 }

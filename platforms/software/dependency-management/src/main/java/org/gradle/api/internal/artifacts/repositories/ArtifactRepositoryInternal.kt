@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import org.gradle.api.Describable;
-import org.gradle.api.NamedDomainObjectCollection;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
+import org.gradle.api.Describable
+import org.gradle.api.NamedDomainObjectCollection
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 
-public interface ArtifactRepositoryInternal extends ArtifactRepository, Describable {
+interface ArtifactRepositoryInternal : ArtifactRepository, Describable {
+    fun onAddToContainer(container: NamedDomainObjectCollection<ArtifactRepository>)
 
-    void onAddToContainer(NamedDomainObjectCollection<ArtifactRepository> container);
+    fun createRepositoryDescriptor(versionParser: VersionParser): RepositoryContentDescriptorInternal?
 
-    RepositoryContentDescriptorInternal createRepositoryDescriptor(VersionParser versionParser);
-
-    RepositoryContentDescriptorInternal getRepositoryDescriptorCopy();
+    val repositoryDescriptorCopy: RepositoryContentDescriptorInternal?
 }

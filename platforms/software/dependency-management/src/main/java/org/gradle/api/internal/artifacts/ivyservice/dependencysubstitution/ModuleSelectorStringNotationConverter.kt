@@ -13,55 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.typeconversion.TypedNotationConverter
+import org.gradle.internal.typeconversion.UnsupportedNotationException
+import org.gradle.util.internal.GUtil
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.typeconversion.TypedNotationConverter;
-import org.gradle.internal.typeconversion.UnsupportedNotationException;
-import org.gradle.util.internal.GUtil;
-
-import static org.gradle.api.internal.notations.ModuleNotationValidation.*;
-
-public class ModuleSelectorStringNotationConverter extends TypedNotationConverter<String, ComponentSelector> {
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    public ModuleSelectorStringNotationConverter(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        super(String.class);
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-    }
-
+class ModuleSelectorStringNotationConverter(private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : TypedNotationConverter<String, ComponentSelector>(String::class.java) {
     /**
      * Empty String for either group or module name is not allowed.
      */
-    @Override
-    protected ComponentSelector parseType(String notation) {
-        assert notation != null;
-        String[] split = notation.split(":");
+    override fun parseType(notation: String): ComponentSelector {
+        checkNotNull(notation)
+        val split = notation.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
-        if (split.length < 2 || split.length > 3) {
-            throw new UnsupportedNotationException(notation);
+        if (split.size < 2 || split.size > 3) {
+            throw UnsupportedNotationException(notation)
         }
-        String group = validate(split[0].trim(), notation);
-        String name = validate(split[1].trim(), notation);
+        val group: String = validate(split[0].trim { it <= ' ' }, notation)
+        val name: String = validate(split[1].trim { it <= ' ' }, notation)
 
-        if (split.length == 2) {
-            return new UnversionedModuleComponentSelector(moduleIdentifierFactory.module(group, name));
+        if (split.size == 2) {
+            return UnversionedModuleComponentSelector(moduleIdentifierFactory.module(group, name)!!)
         }
-        String version = split[2].trim();
+        val version = split[2].trim { it <= ' ' }
         if (!GUtil.isTrue(version)) {
-            throw new UnsupportedNotationException(notation);
+            throw UnsupportedNotationException(notation)
         }
-        return DefaultModuleComponentSelector.newSelector(moduleIdentifierFactory.module(group, name), DefaultImmutableVersionConstraint.of(version));
+        return DefaultModuleComponentSelector.newSelector(moduleIdentifierFactory.module(group, name)!!, DefaultImmutableVersionConstraint.of(version))
     }
 
-    @Override
-    public void describe(DiagnosticsVisitor visitor) {
-        visitor.candidate("String describing the module in 'group:name' format").example("'org.gradle:gradle-core'.");
-        visitor.candidate("String describing the selector in 'group:name:version' format").example("'org.gradle:gradle-core:1.+'.");
+    override fun describe(visitor: DiagnosticsVisitor) {
+        visitor.candidate("String describing the module in 'group:name' format").example("'org.gradle:gradle-core'.")
+        visitor.candidate("String describing the selector in 'group:name:version' format").example("'org.gradle:gradle-core:1.+'.")
     }
 }

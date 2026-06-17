@@ -13,98 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.cache.IndexedCache;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.cache.IndexedCache
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class DefaultModuleVersionsCache extends AbstractModuleVersionsCache {
-
-    private final ArtifactCacheLockingAccessCoordinator artifactCacheLockingManager;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    private IndexedCache<ModuleAtRepositoryKey, ModuleVersionsCacheEntry> cache;
-
-    public DefaultModuleVersionsCache(BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        super(timeProvider);
-        this.artifactCacheLockingManager = cacheAccessCoordinator;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-    }
-
-    private IndexedCache<ModuleAtRepositoryKey, ModuleVersionsCacheEntry> getCache() {
-        if (cache == null) {
-            cache = initCache();
-        }
-        return cache;
-    }
-
-    private IndexedCache<ModuleAtRepositoryKey, ModuleVersionsCacheEntry> initCache() {
-        return artifactCacheLockingManager.createCache("module-versions", new ModuleKeySerializer(moduleIdentifierFactory), new ModuleVersionsCacheEntrySerializer());
-    }
-
-    @Override
-    protected void store(ModuleAtRepositoryKey key, ModuleVersionsCacheEntry entry) {
-        getCache().put(key, entry);
-    }
-
-    @Override
-    protected ModuleVersionsCacheEntry get(ModuleAtRepositoryKey key) {
-        return getCache().getIfPresent(key);
-    }
-
-    private static class ModuleKeySerializer extends AbstractSerializer<ModuleAtRepositoryKey> {
-        private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-        private ModuleKeySerializer(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-            this.moduleIdentifierFactory = moduleIdentifierFactory;
-        }
-
-        @Override
-        public void write(Encoder encoder, ModuleAtRepositoryKey value) throws Exception {
-            encoder.writeString(value.repositoryId);
-            encoder.writeString(value.moduleId.getGroup());
-            encoder.writeString(value.moduleId.getName());
-        }
-
-        @Override
-        public ModuleAtRepositoryKey read(Decoder decoder) throws Exception {
-            String resolverId = decoder.readString();
-            String group = decoder.readString();
-            String module = decoder.readString();
-            return new ModuleAtRepositoryKey(resolverId, moduleIdentifierFactory.module(group, module));
-        }
-    }
-
-    private static class ModuleVersionsCacheEntrySerializer extends AbstractSerializer<ModuleVersionsCacheEntry> {
-
-        @Override
-        public void write(Encoder encoder, ModuleVersionsCacheEntry value) throws Exception {
-            Set<String> versions = value.moduleVersionListing;
-            encoder.writeInt(versions.size());
-            for (String version : versions) {
-                encoder.writeString(version);
+open class DefaultModuleVersionsCache(
+    timeProvider: BuildCommencedTimeProvider?,
+    private val artifactCacheLockingManager: ArtifactCacheLockingAccessCoordinator,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+) : AbstractModuleVersionsCache(timeProvider) {
+    private var cache: IndexedCache<ModuleAtRepositoryKey?, ModuleVersionsCacheEntry?>? = null
+        get() {
+            if (field == null) {
+                field = initCache()
             }
-            encoder.writeLong(value.createTimestamp);
+            return field
         }
 
-        @Override
-        public ModuleVersionsCacheEntry read(Decoder decoder) throws Exception {
-            int size = decoder.readInt();
-            Set<String> versions = new LinkedHashSet<>();
-            for (int i = 0; i < size; i++) {
-                versions.add(decoder.readString());
-            }
-            long createTimestamp = decoder.readLong();
-            return new ModuleVersionsCacheEntry(versions, createTimestamp);
+    private fun initCache(): IndexedCache<ModuleAtRepositoryKey?, ModuleVersionsCacheEntry?>? {
+        return artifactCacheLockingManager.createCache<ModuleAtRepositoryKey?, ModuleVersionsCacheEntry?>(
+            "module-versions",
+            ModuleKeySerializer(moduleIdentifierFactory),
+            ModuleVersionsCacheEntrySerializer()
+        )
+    }
+
+    protected override fun store(key: ModuleAtRepositoryKey, entry: ModuleVersionsCacheEntry) {
+        this.cache!!.put(key, entry)
+    }
+
+    protected override fun get(key: ModuleAtRepositoryKey): ModuleVersionsCacheEntry? {
+        return this.cache!!.getIfPresent(key)
+    }
+
+    private class ModuleKeySerializer(private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : AbstractSerializer<ModuleAtRepositoryKey?>() {
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ModuleAtRepositoryKey) {
+            encoder.writeString(value.repositoryId)
+            encoder.writeString(value.moduleId.getGroup())
+            encoder.writeString(value.moduleId.getName())
+        }
+
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ModuleAtRepositoryKey {
+            val resolverId = decoder.readString()
+            val group = decoder.readString()
+            val module = decoder.readString()
+            return ModuleAtRepositoryKey(resolverId, moduleIdentifierFactory.module(group!!, module!!))
         }
     }
 
+    private class ModuleVersionsCacheEntrySerializer : AbstractSerializer<ModuleVersionsCacheEntry?>() {
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: ModuleVersionsCacheEntry) {
+            val versions = value.moduleVersionListing
+            encoder.writeInt(versions.size)
+            for (version in versions) {
+                encoder.writeString(version)
+            }
+            encoder.writeLong(value.createTimestamp)
+        }
+
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): ModuleVersionsCacheEntry {
+            val size = decoder.readInt()
+            val versions: MutableSet<String?> = LinkedHashSet<String?>()
+            for (i in 0..<size) {
+                versions.add(decoder.readString())
+            }
+            val createTimestamp = decoder.readLong()
+            return ModuleVersionsCacheEntry(versions, createTimestamp)
+        }
+    }
 }

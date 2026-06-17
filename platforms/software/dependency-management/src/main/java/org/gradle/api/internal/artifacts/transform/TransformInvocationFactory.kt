@@ -13,29 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.Deferrable
+import org.gradle.internal.Try
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
+import javax.annotation.concurrent.ThreadSafe
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.Deferrable;
-import org.gradle.internal.Try;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.io.File;
-
-@ServiceScope(Scope.Project.class)
+@ServiceScope(Scope.Project::class)
 @ThreadSafe
-public interface TransformInvocationFactory {
+interface TransformInvocationFactory {
     /**
      * Returns an invocation which allows invoking the actual transformer.
      */
-    Deferrable<Try<ImmutableList<File>>> createInvocation(
-        Transform transform,
-        File inputArtifact,
-        TransformDependencies dependencies,
-        TransformStepSubject subject,
-        InputFingerprinter inputFingerprinter);
+    fun createInvocation(
+        transform: Transform,
+        inputArtifact: File,
+        dependencies: TransformDependencies,
+        subject: TransformStepSubject,
+        inputFingerprinter: InputFingerprinter
+    ): Deferrable<Try<ImmutableList<File>>?>?
 }

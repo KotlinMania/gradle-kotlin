@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler;
-import org.gradle.api.attributes.AttributeContainer;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler
+import org.gradle.api.attributes.AttributeContainer
 
-public interface DependencyVariant {
-    void mutateAttributes(AttributeContainer attributes);
-    void mutateCapabilities(ModuleDependencyCapabilitiesHandler capabilitiesHandler);
+interface DependencyVariant {
+    fun mutateAttributes(attributes: AttributeContainer)
+    fun mutateCapabilities(capabilitiesHandler: ModuleDependencyCapabilitiesHandler)
 
-    @Nullable
-    String getClassifier();
+    val classifier: String?
 
-    @Nullable
-    String getArtifactType();
+    val artifactType: String?
 }

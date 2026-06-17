@@ -13,22 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.component;
+package org.gradle.api.internal.artifacts.component
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
- * Internal counterpart to {@link ComponentSelector}
+ * Internal counterpart to [ComponentSelector]
  */
-public interface ComponentSelectorInternal extends ComponentSelector {
+interface ComponentSelectorInternal : ComponentSelector {
+    override fun getAttributes(): ImmutableAttributes?
 
-    @Override
-    ImmutableAttributes getAttributes();
-
-    @Override
-    ImmutableSet<CapabilitySelector> getCapabilitySelectors();
-
+    override fun getCapabilitySelectors(): ImmutableSet<CapabilitySelector>?
 }

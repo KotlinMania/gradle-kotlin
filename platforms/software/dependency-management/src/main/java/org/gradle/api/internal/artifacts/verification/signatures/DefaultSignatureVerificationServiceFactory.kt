@@ -13,101 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import com.google.common.collect.ImmutableList;
-import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPSignature;
-import org.bouncycastle.openpgp.PGPSignatureList;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.scopes.BuildScopedCacheBuilderFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.hash.FileHasher;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.local.FileResourceListener;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.security.internal.EmptyPublicKeyService;
-import org.gradle.security.internal.Fingerprint;
-import org.gradle.security.internal.InvalidSignatureFileException;
-import org.gradle.security.internal.PublicKeyDownloadService;
-import org.gradle.security.internal.PublicKeyResultBuilder;
-import org.gradle.security.internal.PublicKeyService;
-import org.gradle.security.internal.SecuritySupport;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import com.google.common.collect.ImmutableList
+import org.bouncycastle.openpgp.PGPException
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPSignatureList
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.authentication.Authentication
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.scopes.BuildScopedCacheBuilderFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.hash.FileHasher
+import org.gradle.internal.hash.Hashing
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.resource.local.FileResourceListener
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import org.gradle.security.internal.EmptyPublicKeyService
+import org.gradle.security.internal.Fingerprint.Companion.of
+import org.gradle.security.internal.InvalidSignatureFileException
+import org.gradle.security.internal.PublicKeyDownloadService
+import org.gradle.security.internal.PublicKeyResultBuilder
+import org.gradle.security.internal.PublicKeyService
+import org.gradle.security.internal.SecuritySupport.readSignatures
+import org.gradle.security.internal.SecuritySupport.toLongIdHexString
+import org.gradle.security.internal.SecuritySupport.verify
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
+import java.io.IOException
+import java.net.URI
+import java.util.concurrent.atomic.AtomicBoolean
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.gradle.security.internal.SecuritySupport.toLongIdHexString;
-
-@ServiceScope(Scope.Build.class)
-public class DefaultSignatureVerificationServiceFactory implements SignatureVerificationServiceFactory {
-
-    private static final HashCode NO_KEYRING_FILE_HASH = Hashing.signature(DefaultSignatureVerificationServiceFactory.class);
-
-    private final RepositoryTransportFactory transportFactory;
-    private final GlobalScopedCacheBuilderFactory globalScopedCacheBuilderFactory;
-    private final InMemoryCacheDecoratorFactory decoratorFactory;
-    private final BuildOperationRunner buildOperationRunner;
-    private final FileHasher fileHasher;
-    private final BuildScopedCacheBuilderFactory buildScopedCacheBuilderFactory;
-    private final BuildCommencedTimeProvider timeProvider;
-    private final boolean refreshKeys;
-    private final FileResourceListener fileResourceListener;
-
-    public DefaultSignatureVerificationServiceFactory(
-        RepositoryTransportFactory transportFactory,
-        GlobalScopedCacheBuilderFactory globalScopedCacheBuilderFactory,
-        InMemoryCacheDecoratorFactory decoratorFactory,
-        BuildOperationRunner buildOperationRunner,
-        FileHasher fileHasher,
-        BuildScopedCacheBuilderFactory buildScopedCacheBuilderFactory,
-        BuildCommencedTimeProvider timeProvider,
-        boolean refreshKeys,
-        FileResourceListener fileResourceListener
-    ) {
-        this.transportFactory = transportFactory;
-        this.globalScopedCacheBuilderFactory = globalScopedCacheBuilderFactory;
-        this.decoratorFactory = decoratorFactory;
-        this.buildOperationRunner = buildOperationRunner;
-        this.fileHasher = fileHasher;
-        this.buildScopedCacheBuilderFactory = buildScopedCacheBuilderFactory;
-        this.timeProvider = timeProvider;
-        this.refreshKeys = refreshKeys;
-        this.fileResourceListener = fileResourceListener;
-    }
-
-    @Override
-    public SignatureVerificationService create(BuildTreeDefinedKeys keyrings, List<URI> keyServers, boolean useKeyServers) {
-        boolean refreshKeys = this.refreshKeys || !useKeyServers;
-        ExternalResourceRepository repository = transportFactory.createTransport("https", "https", Collections.emptyList(), redirectLocations -> {}).getRepository();
-        PublicKeyService keyService;
+@ServiceScope(Scope.Build::class)
+class DefaultSignatureVerificationServiceFactory(
+    private val transportFactory: RepositoryTransportFactory,
+    private val globalScopedCacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    private val decoratorFactory: InMemoryCacheDecoratorFactory,
+    private val buildOperationRunner: BuildOperationRunner?,
+    private val fileHasher: FileHasher,
+    private val buildScopedCacheBuilderFactory: BuildScopedCacheBuilderFactory,
+    private val timeProvider: BuildCommencedTimeProvider?,
+    private val refreshKeys: Boolean,
+    private val fileResourceListener: FileResourceListener
+) : SignatureVerificationServiceFactory {
+    override fun create(keyrings: BuildTreeDefinedKeys, keyServers: MutableList<URI?>, useKeyServers: Boolean): SignatureVerificationService {
+        val refreshKeys = this.refreshKeys || !useKeyServers
+        val repository = transportFactory.createTransport("https", "https", mutableListOf<Authentication?>(), HttpRedirectVerifier { redirectLocations: MutableCollection<URI?>? -> }).repository
+        var keyService: PublicKeyService
         if (useKeyServers) {
-            PublicKeyDownloadService keyDownloadService = new PublicKeyDownloadService(ImmutableList.copyOf(keyServers), repository);
-            keyService = new CrossBuildCachingKeyService(globalScopedCacheBuilderFactory, decoratorFactory, buildOperationRunner, keyDownloadService, timeProvider, refreshKeys);
+            val keyDownloadService = PublicKeyDownloadService(ImmutableList.copyOf<URI?>(keyServers), repository)
+            keyService = CrossBuildCachingKeyService(globalScopedCacheBuilderFactory, decoratorFactory, buildOperationRunner, keyDownloadService, timeProvider, refreshKeys)
         } else {
-            keyService = EmptyPublicKeyService.getInstance();
+            keyService = EmptyPublicKeyService.getInstance()
         }
-        keyService = keyrings.applyTo(keyService);
-        File effectiveKeyringsFile = keyrings.getEffectiveKeyringsFile();
-        HashCode keyringFileHash = observed(effectiveKeyringsFile).exists()
-            ? fileHasher.hash(effectiveKeyringsFile)
-            : NO_KEYRING_FILE_HASH;
-        DefaultSignatureVerificationService delegate = new DefaultSignatureVerificationService(keyService);
-        return new CrossBuildSignatureVerificationService(
+        keyService = keyrings.applyTo(keyService)
+        val effectiveKeyringsFile = keyrings.getEffectiveKeyringsFile()
+        val keyringFileHash = if (observed(effectiveKeyringsFile)!!.exists())
+            fileHasher.hash(effectiveKeyringsFile!!)
+        else
+            NO_KEYRING_FILE_HASH
+        val delegate = DefaultSignatureVerificationService(keyService)
+        return CrossBuildSignatureVerificationService(
             delegate,
             fileHasher,
             buildScopedCacheBuilderFactory,
@@ -116,87 +86,79 @@ public class DefaultSignatureVerificationServiceFactory implements SignatureVeri
             refreshKeys,
             useKeyServers,
             keyringFileHash
-        );
+        )
     }
 
-    private File observed(File file) {
-        fileResourceListener.fileObserved(file);
-        return file;
+    private fun observed(file: File?): File? {
+        fileResourceListener.fileObserved(file)
+        return file
     }
 
-    private static class DefaultSignatureVerificationService implements SignatureVerificationService {
-        private final PublicKeyService keyService;
-
-        public DefaultSignatureVerificationService(PublicKeyService keyService) {
-            this.keyService = keyService;
-        }
-
-        @Override
-        public void verify(File origin, File signature, Set<String> trustedKeys, Set<String> ignoredKeys, SignatureVerificationResultBuilder result) {
-            PGPSignatureList pgpSignatures;
+    private class DefaultSignatureVerificationService(private val keyService: PublicKeyService) : SignatureVerificationService {
+        override fun verify(origin: File, signature: File, trustedKeys: MutableSet<String?>, ignoredKeys: MutableSet<String?>, result: SignatureVerificationResultBuilder) {
+            val pgpSignatures: PGPSignatureList?
             try {
-                pgpSignatures = SecuritySupport.readSignatures(signature);
-            } catch (InvalidSignatureFileException e) {
-                Throwable cause = e.getCause() != null ? e.getCause() : e;
-                result.failedToReadSignatureFile(cause.getClass().getSimpleName() + ": " + cause.getMessage());
-                return;
+                pgpSignatures = readSignatures(signature)
+            } catch (e: InvalidSignatureFileException) {
+                val cause: Throwable = (if (e.cause != null) e.cause else e)!!
+                result.failedToReadSignatureFile(cause.javaClass.getSimpleName() + ": " + cause.message)
+                return
             }
             if (pgpSignatures == null) {
-                result.noSignatures();
-                return;
+                result.noSignatures()
+                return
             }
-            for (PGPSignature pgpSignature : pgpSignatures) {
-                String longIdKey = toLongIdHexString(pgpSignature.getKeyID());
+            for (pgpSignature in pgpSignatures) {
+                val longIdKey = toLongIdHexString(pgpSignature.getKeyID())
                 if (ignoredKeys.contains(longIdKey)) {
-                    result.ignored(longIdKey);
-                    continue;
+                    result.ignored(longIdKey)
+                    continue
                 }
-                AtomicBoolean missing = new AtomicBoolean(true);
-                keyService.findByLongId(pgpSignature.getKeyID(), new PublicKeyResultBuilder() {
-                    @Override
-                    public void keyRing(PGPPublicKeyRing keyring) {
-
+                val missing = AtomicBoolean(true)
+                keyService.findByLongId(pgpSignature.getKeyID(), object : PublicKeyResultBuilder {
+                    override fun keyRing(keyring: PGPPublicKeyRing?) {
                     }
 
-                    @Override
-                    public void publicKey(PGPPublicKey pgpPublicKey) {
-                        missing.set(false);
-                        String fingerprint = Fingerprint.of(pgpPublicKey).toString();
+                    override fun publicKey(pgpPublicKey: PGPPublicKey) {
+                        missing.set(false)
+                        val fingerprint = of(pgpPublicKey).toString()
                         if (ignoredKeys.contains(fingerprint)) {
-                            result.ignored(fingerprint);
-                            return;
+                            result.ignored(fingerprint)
+                            return
                         }
                         try {
-                            boolean verified = SecuritySupport.verify(origin, pgpSignature, pgpPublicKey);
+                            val verified = verify(origin, pgpSignature, pgpPublicKey)
                             if (!verified) {
-                                result.failed(pgpPublicKey);
+                                result.failed(pgpPublicKey)
                             } else {
-                                boolean trusted = trustedKeys.contains(fingerprint) || trustedKeys.contains(toLongIdHexString(pgpPublicKey.getKeyID()));
-                                result.verified(pgpPublicKey, trusted);
+                                val trusted = trustedKeys.contains(fingerprint) || trustedKeys.contains(toLongIdHexString(pgpPublicKey.getKeyID()))
+                                result.verified(pgpPublicKey, trusted)
                             }
-                        } catch (PGPException e) {
-                            throw UncheckedException.throwAsUncheckedException(e);
+                        } catch (e: PGPException) {
+                            throw throwAsUncheckedException(e)
                         }
                     }
-                });
+                })
                 if (missing.get()) {
-                    result.missingKey(longIdKey);
+                    result.missingKey(longIdKey)
                 }
             }
         }
 
-        @Override
-        public PublicKeyService getPublicKeyService() {
-            return keyService;
+        override fun getPublicKeyService(): PublicKeyService {
+            return keyService
         }
 
-        @Override
-        public void stop() {
+        override fun stop() {
             try {
-                keyService.close();
-            } catch (IOException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+                keyService.close()
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
             }
         }
+    }
+
+    companion object {
+        private val NO_KEYRING_FILE_HASH = Hashing.signature(DefaultSignatureVerificationServiceFactory::class.java)
     }
 }

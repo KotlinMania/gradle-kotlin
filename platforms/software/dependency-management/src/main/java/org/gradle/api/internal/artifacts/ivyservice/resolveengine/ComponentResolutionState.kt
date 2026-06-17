@@ -13,43 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.StringVersioned;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.VirtualPlatformState;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts.CandidateModule;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.StringVersioned
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
 
-import java.util.Set;
+interface ComponentResolutionState : StringVersioned {
+    val componentId: ComponentIdentifier?
 
-public interface ComponentResolutionState extends StringVersioned {
+    @JvmField
+    val id: ModuleVersionIdentifier?
 
-    ComponentIdentifier getComponentId();
-
-    ModuleVersionIdentifier getId();
-
-    CandidateModule getModule();
+    @JvmField
+    val module: CandidateModule?
 
     /**
      * Returns the meta-data for the component. Resolves if not already resolved.
      *
      * @return null if the meta-data is not available due to some failure.
      */
-    @Nullable
-    ComponentGraphResolveMetadata getMetadataOrNull();
+    val metadataOrNull: ComponentGraphResolveMetadata?
 
-    void addCause(ComponentSelectionDescriptorInternal componentSelectionDescriptor);
+    fun addCause(componentSelectionDescriptor: ComponentSelectionDescriptorInternal)
 
-    void reject();
+    fun reject()
 
-    boolean isRejected();
+    val isRejected: Boolean
 
-    Set<VirtualPlatformState> getPlatformOwners();
+    @JvmField
+    val platformOwners: MutableSet<VirtualPlatformState>?
 
-    VirtualPlatformState getPlatformState();
-
+    @JvmField
+    val platformState: VirtualPlatformState?
 }

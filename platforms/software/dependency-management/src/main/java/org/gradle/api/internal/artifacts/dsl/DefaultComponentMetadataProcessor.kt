@@ -13,388 +13,385 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataDetails
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.VariantMetadata
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessor
+import org.gradle.api.internal.artifacts.MetadataResolutionContext
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.UserProvidedMetadata
+import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataDetailsAdapter
+import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataImpl
+import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataImpl
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.Actions
+import org.gradle.internal.action.ConfigurableRule
+import org.gradle.internal.action.DefaultConfigurableRules
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.ivy.DefaultIvyModuleResolveMetadata
+import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadata.Companion.transform
+import org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadata.Companion.transform
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.caching.ComponentMetadataRuleExecutor
+import org.gradle.internal.rules.RuleAction
+import org.gradle.internal.rules.SpecRuleAction
+import org.gradle.internal.serialize.InputStreamBackedDecoder
+import org.gradle.internal.serialize.OutputStreamBackedEncoder
+import org.gradle.internal.typeconversion.NotationParser
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.lang.Boolean
+import java.lang.String
+import kotlin.Any
+import kotlin.Exception
+import kotlin.IllegalStateException
+import kotlin.Int
+import kotlin.RuntimeException
+import kotlin.Throwable
+import kotlin.synchronized
+import kotlin.text.format
 
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ComponentMetadataContext;
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.VariantMetadata;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ComponentMetadataProcessor;
-import org.gradle.api.internal.artifacts.MetadataResolutionContext;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.UserProvidedMetadata;
-import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataDetailsAdapter;
-import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataImpl;
-import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataImpl;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.Actions;
-import org.gradle.internal.action.ConfigurableRule;
-import org.gradle.internal.action.DefaultConfigurableRules;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.VariantDerivationStrategy;
-import org.gradle.internal.component.external.model.ivy.DefaultIvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.ivy.RealisedIvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.RealisedMavenModuleResolveMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.caching.ComponentMetadataRuleExecutor;
-import org.gradle.internal.rules.RuleAction;
-import org.gradle.internal.rules.SpecRuleAction;
-import org.gradle.internal.serialize.InputStreamBackedDecoder;
-import org.gradle.internal.serialize.OutputStreamBackedEncoder;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.typeconversion.NotationParser;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-public class DefaultComponentMetadataProcessor implements ComponentMetadataProcessor {
-
-    private final static boolean FORCE_REALIZE = Boolean.getBoolean("org.gradle.integtest.force.realize.metadata");
-
-    private static final Transformer<ModuleComponentResolveMetadata, WrappingComponentMetadataContext> DETAILS_TO_RESULT = componentMetadataContext -> {
-        ModuleComponentResolveMetadata metadata = componentMetadataContext
-            .getImmutableMetadataWithDerivationStrategy(componentMetadataContext.getVariantDerivationStrategy());
-        return realizeMetadata(metadata);
-    };
-
-    private ModuleComponentResolveMetadata maybeForceRealisation(ModuleComponentResolveMetadata metadata) {
+class DefaultComponentMetadataProcessor(
+    private val metadataRuleContainer: ComponentMetadataRuleContainer,
+    private val instantiator: Instantiator,
+    private val dependencyMetadataNotationParser: NotationParser<Any, DirectDependencyMetadataImpl>,
+    private val dependencyConstraintMetadataNotationParser: NotationParser<Any, DependencyConstraintMetadataImpl>,
+    private val componentIdentifierNotationParser: NotationParser<Any, ComponentIdentifier>,
+    private val attributesFactory: AttributesFactory,
+    private val ruleExecutor: ComponentMetadataRuleExecutor,
+    private val platformSupport: PlatformSupport,
+    private val metadataResolutionContext: MetadataResolutionContext
+) : ComponentMetadataProcessor {
+    private fun maybeForceRealisation(metadata: ModuleComponentResolveMetadata): ModuleComponentResolveMetadata {
+        var metadata = metadata
         if (FORCE_REALIZE) {
-            metadata = realizeMetadata(metadata);
-            metadata = forceSerialization(metadata);
+            metadata = realizeMetadata(metadata)
+            metadata = forceSerialization(metadata)
         }
-        return metadata;
+        return metadata
     }
 
-    private static ModuleComponentResolveMetadata realizeMetadata(ModuleComponentResolveMetadata metadata) {
-        if (metadata instanceof DefaultIvyModuleResolveMetadata) {
-            metadata = RealisedIvyModuleResolveMetadata.transform((DefaultIvyModuleResolveMetadata) metadata);
-        } else if (metadata instanceof DefaultMavenModuleResolveMetadata) {
-            metadata = RealisedMavenModuleResolveMetadata.transform((DefaultMavenModuleResolveMetadata) metadata);
-        } else {
-            throw new IllegalStateException("Invalid type received: " + metadata.getClass());
+    private fun forceSerialization(metadata: ModuleComponentResolveMetadata): ModuleComponentResolveMetadata {
+        var metadata = metadata
+        val serializer = ruleExecutor.componentMetadataContextSerializer
+        try {
+            ByteArrayOutputStream().use { baos ->
+                serializer!!.write(OutputStreamBackedEncoder(baos), metadata)
+                // TODO: CC cannot enable this assertion because moduleSource is not serialized, so doesn't appear in the deserialized form
+                //assert metadata.equals(rereadMetadata);
+                metadata = serializer.read(InputStreamBackedDecoder(ByteArrayInputStream(baos.toByteArray())))!!
+            }
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
-        return metadata;
+        return metadata
     }
 
-    private ModuleComponentResolveMetadata forceSerialization(ModuleComponentResolveMetadata metadata) {
-        Serializer<ModuleComponentResolveMetadata> serializer = ruleExecutor.componentMetadataContextSerializer;
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            serializer.write(new OutputStreamBackedEncoder(baos), metadata);
-            // TODO: CC cannot enable this assertion because moduleSource is not serialized, so doesn't appear in the deserialized form
-            //assert metadata.equals(rereadMetadata);
-            metadata = serializer.read(new InputStreamBackedDecoder(new ByteArrayInputStream(baos.toByteArray())));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return metadata;
-    }
-
-    private final Instantiator instantiator;
-    private final NotationParser<Object, DirectDependencyMetadataImpl> dependencyMetadataNotationParser;
-    private final NotationParser<Object, DependencyConstraintMetadataImpl> dependencyConstraintMetadataNotationParser;
-    private final NotationParser<Object, ComponentIdentifier> componentIdentifierNotationParser;
-    private final AttributesFactory attributesFactory;
-    private final ComponentMetadataRuleExecutor ruleExecutor;
-    private final MetadataResolutionContext metadataResolutionContext;
-    private final ComponentMetadataRuleContainer metadataRuleContainer;
-    private final PlatformSupport platformSupport;
-
-    public DefaultComponentMetadataProcessor(ComponentMetadataRuleContainer metadataRuleContainer,
-                                             Instantiator instantiator,
-                                             NotationParser<Object, DirectDependencyMetadataImpl> dependencyMetadataNotationParser,
-                                             NotationParser<Object, DependencyConstraintMetadataImpl> dependencyConstraintMetadataNotationParser,
-                                             NotationParser<Object, ComponentIdentifier> componentIdentifierNotationParser,
-                                             AttributesFactory attributesFactory,
-                                             ComponentMetadataRuleExecutor ruleExecutor,
-                                             PlatformSupport platformSupport,
-                                             MetadataResolutionContext resolutionContext) {
-        this.metadataRuleContainer = metadataRuleContainer;
-        this.instantiator = instantiator;
-        this.dependencyMetadataNotationParser = dependencyMetadataNotationParser;
-        this.dependencyConstraintMetadataNotationParser = dependencyConstraintMetadataNotationParser;
-        this.componentIdentifierNotationParser = componentIdentifierNotationParser;
-        this.attributesFactory = attributesFactory;
-        this.ruleExecutor = ruleExecutor;
-        this.platformSupport = platformSupport;
-        this.metadataResolutionContext = resolutionContext;
-    }
-
-    @Override
-    public ModuleComponentResolveMetadata processMetadata(ModuleComponentResolveMetadata origin) {
-        VariantDerivationStrategy curStrategy = metadataRuleContainer.getVariantDerivationStrategy();
-        ModuleComponentResolveMetadata metadata = origin.withDerivationStrategy(curStrategy);
-        ModuleComponentResolveMetadata updatedMetadata;
+    override fun processMetadata(origin: ModuleComponentResolveMetadata): ModuleComponentResolveMetadata {
+        val curStrategy = metadataRuleContainer.getVariantDerivationStrategy()
+        val metadata = origin.withDerivationStrategy(curStrategy)
+        val updatedMetadata: ModuleComponentResolveMetadata
         if (metadataRuleContainer.isEmpty()) {
-            updatedMetadata = maybeForceRealisation(metadata);
+            updatedMetadata = maybeForceRealisation(metadata!!)
         } else if (metadataRuleContainer.isClassBasedRulesOnly()) {
-            Action<ComponentMetadataContext> action = collectRulesAndCreateAction(metadataRuleContainer.getOnlyClassRules(), metadata.moduleVersionId, metadataResolutionContext.injectingInstantiator);
-            if (action instanceof InstantiatingAction) {
-                InstantiatingAction<ComponentMetadataContext> ia = (InstantiatingAction<ComponentMetadataContext>) action;
+            val action = collectRulesAndCreateAction(metadataRuleContainer.getOnlyClassRules(), metadata!!.moduleVersionId, metadataResolutionContext.injectingInstantiator)
+            if (action is InstantiatingAction<*>) {
+                val ia = action as InstantiatingAction<ComponentMetadataContext>
                 if (shouldCacheComponentMetadataRule(ia, metadata)) {
-                    updatedMetadata = processClassRuleWithCaching(ia, metadata, metadataResolutionContext);
+                    updatedMetadata = processClassRuleWithCaching(ia, metadata, metadataResolutionContext)
                 } else {
-                    MutableModuleComponentResolveMetadata mutableMetadata = metadata.asMutable();
-                    processClassRule(action, metadata, createDetails(mutableMetadata));
-                    updatedMetadata = maybeForceRealisation(mutableMetadata.asImmutable());
+                    val mutableMetadata = metadata.asMutable()
+                    processClassRule(action, metadata, createDetails(mutableMetadata!!))
+                    updatedMetadata = maybeForceRealisation(mutableMetadata.asImmutable()!!)
                 }
             } else {
-                updatedMetadata = maybeForceRealisation(metadata);
+                updatedMetadata = maybeForceRealisation(metadata)
             }
         } else {
-            MutableModuleComponentResolveMetadata mutableMetadata = metadata.asMutable();
-            ComponentMetadataDetails details = createDetails(mutableMetadata);
-            processAllRules(metadata, details, metadata.moduleVersionId);
-            updatedMetadata = maybeForceRealisation(mutableMetadata.asImmutable());
+            val mutableMetadata = metadata!!.asMutable()
+            val details = createDetails(mutableMetadata!!)
+            processAllRules(metadata, details, metadata.moduleVersionId)
+            updatedMetadata = maybeForceRealisation(mutableMetadata.asImmutable()!!)
         }
 
-        if (!updatedMetadata.statusScheme.contains(updatedMetadata.status)) {
-            throw new ModuleVersionResolveException(updatedMetadata.moduleVersionId, () -> String.format("Unexpected status '%s' specified for %s. Expected one of: %s", updatedMetadata.status, updatedMetadata.getId().getDisplayName(), updatedMetadata.statusScheme));
+        if (!updatedMetadata.statusScheme!!.contains(updatedMetadata.status)) {
+            throw ModuleVersionResolveException(
+                updatedMetadata.moduleVersionId,
+                { String.format("Unexpected status '%s' specified for %s. Expected one of: %s", updatedMetadata.status, updatedMetadata.getId()!!.getDisplayName(), updatedMetadata.statusScheme) })
         }
-        return updatedMetadata;
+        return updatedMetadata
     }
 
-    private boolean shouldCacheComponentMetadataRule(InstantiatingAction<ComponentMetadataContext> action, ModuleComponentResolveMetadata metadata) {
-        return action.getRules().isCacheable() && metadata.isComponentMetadataRuleCachingEnabled();
+    private fun shouldCacheComponentMetadataRule(action: InstantiatingAction<ComponentMetadataContext>, metadata: ModuleComponentResolveMetadata): Boolean {
+        return action.getRules().isCacheable() && metadata.isComponentMetadataRuleCachingEnabled
     }
 
-    protected ComponentMetadataDetails createDetails(MutableModuleComponentResolveMetadata mutableMetadata) {
-        return instantiator.newInstance(ComponentMetadataDetailsAdapter.class, mutableMetadata, instantiator, dependencyMetadataNotationParser, dependencyConstraintMetadataNotationParser, componentIdentifierNotationParser, platformSupport);
+    protected fun createDetails(mutableMetadata: MutableModuleComponentResolveMetadata): ComponentMetadataDetails {
+        return instantiator.newInstance<ComponentMetadataDetailsAdapter>(
+            ComponentMetadataDetailsAdapter::class.java,
+            mutableMetadata,
+            instantiator,
+            dependencyMetadataNotationParser,
+            dependencyConstraintMetadataNotationParser,
+            componentIdentifierNotationParser,
+            platformSupport
+        )
     }
 
-    @Override
-    public ComponentMetadata processMetadata(ComponentMetadata metadata) {
-        ComponentMetadata updatedMetadata;
+    override fun processMetadata(metadata: ComponentMetadata): ComponentMetadata {
+        val updatedMetadata: ComponentMetadata
         if (metadataRuleContainer.isEmpty()) {
-            updatedMetadata = metadata;
+            updatedMetadata = metadata
         } else {
-            ShallowComponentMetadataAdapter details = new ShallowComponentMetadataAdapter(metadata, attributesFactory);
-            processAllRules(null, details, metadata.getId());
-            updatedMetadata = details.asImmutable();
+            val details = ShallowComponentMetadataAdapter(metadata, attributesFactory)
+            processAllRules(null, details, metadata.getId())
+            updatedMetadata = details.asImmutable()
         }
         if (!updatedMetadata.getStatusScheme().contains(updatedMetadata.getStatus())) {
-            throw new ModuleVersionResolveException(updatedMetadata.getId(), () -> String.format("Unexpected status '%s' specified for %s. Expected one of: %s", updatedMetadata.getStatus(), updatedMetadata.getId().toString(), updatedMetadata.getStatusScheme()));
+            throw ModuleVersionResolveException(
+                updatedMetadata.getId(),
+                org.gradle.internal.Factory {
+                    kotlin.String.format(
+                        "Unexpected status '%s' specified for %s. Expected one of: %s",
+                        updatedMetadata.getStatus(),
+                        updatedMetadata.getId().toString(),
+                        updatedMetadata.getStatusScheme()
+                    )
+                })
         }
-        return updatedMetadata;
+        return updatedMetadata
     }
 
-    @Override
-    public int getRulesHash() {
-        return metadataRuleContainer.getRulesHash();
-    }
+    val rulesHash: Int
+        get() = metadataRuleContainer.getRulesHash()
 
-    private void processAllRules(ModuleComponentResolveMetadata metadata, ComponentMetadataDetails details, ModuleVersionIdentifier id) {
-        for (MetadataRuleWrapper wrapper : metadataRuleContainer) {
+    private fun processAllRules(metadata: ModuleComponentResolveMetadata, details: ComponentMetadataDetails, id: ModuleVersionIdentifier) {
+        for (wrapper in metadataRuleContainer) {
             if (wrapper.isClassBased()) {
-                Collection<SpecConfigurableRule> rules = wrapper.getClassRules();
-                Action<ComponentMetadataContext> action = collectRulesAndCreateAction(rules, id, metadataResolutionContext.injectingInstantiator);
-                processClassRule(action, metadata, details);
+                val rules = wrapper.getClassRules()
+                val action = collectRulesAndCreateAction(rules, id, metadataResolutionContext.injectingInstantiator)
+                processClassRule(action, metadata, details)
             } else {
-                processRule(wrapper.getRule(), metadata, details);
+                processRule(wrapper.getRule(), metadata, details)
             }
         }
     }
 
-    private void processClassRule(Action<ComponentMetadataContext> action, final ModuleComponentResolveMetadata metadata, final ComponentMetadataDetails details) {
-        DefaultComponentMetadataContext componentMetadataContext = new DefaultComponentMetadataContext(details, metadata);
+    private fun processClassRule(action: Action<ComponentMetadataContext>, metadata: ModuleComponentResolveMetadata, details: ComponentMetadataDetails) {
+        val componentMetadataContext = DefaultComponentMetadataContext(details, metadata)
         try {
-            action.execute(componentMetadataContext);
-        } catch (InvalidUserCodeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new InvalidUserCodeException(String.format("There was an error while evaluating a component metadata rule for %s.", details.getId()), e);
+            action.execute(componentMetadataContext)
+        } catch (e: InvalidUserCodeException) {
+            throw e
+        } catch (e: Exception) {
+            throw InvalidUserCodeException(kotlin.String.format("There was an error while evaluating a component metadata rule for %s.", details.getId()), e)
         }
     }
 
-    private ModuleComponentResolveMetadata processClassRuleWithCaching(InstantiatingAction<ComponentMetadataContext> action, final ModuleComponentResolveMetadata metadata, MetadataResolutionContext metadataResolutionContext) {
+    private fun processClassRuleWithCaching(
+        action: InstantiatingAction<ComponentMetadataContext>,
+        metadata: ModuleComponentResolveMetadata,
+        metadataResolutionContext: MetadataResolutionContext
+    ): ModuleComponentResolveMetadata {
         try {
-            return ruleExecutor.execute(metadata, action, DETAILS_TO_RESULT,
-                moduleVersionIdentifier -> new WrappingComponentMetadataContext(metadata, instantiator, dependencyMetadataNotationParser, dependencyConstraintMetadataNotationParser, componentIdentifierNotationParser, platformSupport), metadataResolutionContext.cacheExpirationControl);
-        } catch (InvalidUserCodeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new InvalidUserCodeException(String.format("There was an error while evaluating a component metadata rule for %s.", metadata.moduleVersionId), e);
+            return ruleExecutor.execute<WrappingComponentMetadataContext?>(
+                metadata,
+                action,
+                org.gradle.api.internal.artifacts.dsl.DefaultComponentMetadataProcessor.Companion.DETAILS_TO_RESULT,
+                org.gradle.api.Transformer { moduleVersionIdentifier: org.gradle.internal.component.external.model.ModuleComponentResolveMetadata? ->
+                    org.gradle.api.internal.artifacts.dsl.WrappingComponentMetadataContext(
+                        metadata,
+                        instantiator,
+                        dependencyMetadataNotationParser,
+                        dependencyConstraintMetadataNotationParser,
+                        componentIdentifierNotationParser,
+                        platformSupport
+                    )
+                },
+                metadataResolutionContext.cacheExpirationControl
+            )!!
+        } catch (e: InvalidUserCodeException) {
+            throw e
+        } catch (e: Exception) {
+            throw InvalidUserCodeException(String.format("There was an error while evaluating a component metadata rule for %s.", metadata.moduleVersionId), e)
         }
     }
 
-    private Action<ComponentMetadataContext> collectRulesAndCreateAction(Collection<SpecConfigurableRule> rules, ModuleVersionIdentifier id, Instantiator instantiator) {
+    private fun collectRulesAndCreateAction(rules: MutableCollection<SpecConfigurableRule>, id: ModuleVersionIdentifier, instantiator: Instantiator): Action<ComponentMetadataContext> {
         if (rules.isEmpty()) {
-            return Actions.doNothing();
+            return Actions.doNothing<ComponentMetadataContext>()
         }
-        ArrayList<ConfigurableRule<ComponentMetadataContext>> collectedRules = new ArrayList<>();
-        for (SpecConfigurableRule classBasedRule : rules) {
+        val collectedRules = ArrayList<ConfigurableRule<ComponentMetadataContext>>()
+        for (classBasedRule in rules) {
             if (classBasedRule.getSpec().isSatisfiedBy(id)) {
-                collectedRules.add(classBasedRule.getConfigurableRule());
+                collectedRules.add(classBasedRule.getConfigurableRule())
             }
         }
-        return new InstantiatingAction<>(new DefaultConfigurableRules<>(collectedRules), instantiator, new ExceptionHandler());
+        return InstantiatingAction<ComponentMetadataContext>(DefaultConfigurableRules<ComponentMetadataContext?>(collectedRules), instantiator, ExceptionHandler())
     }
 
 
-    private void processRule(SpecRuleAction<? super ComponentMetadataDetails> specRuleAction, ModuleComponentResolveMetadata metadata, final ComponentMetadataDetails details) {
-        if (!specRuleAction.spec.isSatisfiedBy(details)) {
-            return;
+    private fun processRule(specRuleAction: SpecRuleAction<in ComponentMetadataDetails?>, metadata: ModuleComponentResolveMetadata, details: ComponentMetadataDetails) {
+        if (!specRuleAction.spec!!.isSatisfiedBy(details)) {
+            return
         }
-        final RuleAction<? super ComponentMetadataDetails> action = specRuleAction.action;
-        if (!shouldExecute(action, metadata)) {
-            return;
+        val action: RuleAction<in ComponentMetadataDetails?>? = specRuleAction.action
+        if (!shouldExecute(action!!, metadata)) {
+            return
         }
 
-        List<?> inputs = gatherAdditionalInputs(action, metadata);
-        executeAction(action, inputs, details);
+        val inputs = gatherAdditionalInputs(action, metadata)
+        executeAction(action, inputs, details)
     }
 
-    private void executeAction(RuleAction<? super ComponentMetadataDetails> action, List<?> inputs, ComponentMetadataDetails details) {
+    private fun executeAction(action: RuleAction<in ComponentMetadataDetails?>, inputs: MutableList<*>, details: ComponentMetadataDetails) {
         try {
-            synchronized (this) {
-                action.execute(details, inputs);
+            synchronized(this) {
+                action.execute(details, inputs)
             }
-        } catch (InvalidUserCodeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new InvalidUserCodeException(String.format("There was an error while evaluating a component metadata rule for %s.", details.getId()), e);
+        } catch (e: InvalidUserCodeException) {
+            throw e
+        } catch (e: Exception) {
+            throw InvalidUserCodeException(kotlin.String.format("There was an error while evaluating a component metadata rule for %s.", details.getId()), e)
         }
     }
 
-    private boolean shouldExecute(RuleAction<? super ComponentMetadataDetails> action, ModuleComponentResolveMetadata metadata) {
-        List<Class<?>> inputTypes = action.inputTypes;
+    private fun shouldExecute(action: RuleAction<in ComponentMetadataDetails?>, metadata: ModuleComponentResolveMetadata): Boolean {
+        val inputTypes: MutableList<Class<*>> = action.inputTypes
         if (!inputTypes.isEmpty()) {
-            return inputTypes.stream().anyMatch(input -> MetadataDescriptorFactory.isMatchingMetadata(input, metadata));
+            return inputTypes.stream().anyMatch { input: Class<*>? -> MetadataDescriptorFactory.Companion.isMatchingMetadata(input, metadata) }
         }
-        return true;
+        return true
     }
 
-    private List<?> gatherAdditionalInputs(RuleAction<? super ComponentMetadataDetails> action, ModuleComponentResolveMetadata metadata) {
-        final List<Object> inputs = new ArrayList<>();
-        for (Class<?> inputType : action.inputTypes) {
-            MetadataDescriptorFactory descriptorFactory = new MetadataDescriptorFactory(metadata);
-            Object descriptor = descriptorFactory.createDescriptor(inputType);
+    private fun gatherAdditionalInputs(action: RuleAction<in ComponentMetadataDetails?>, metadata: ModuleComponentResolveMetadata): MutableList<*> {
+        val inputs: MutableList<Any> = ArrayList<Any>()
+        for (inputType in action.inputTypes!!) {
+            val descriptorFactory = MetadataDescriptorFactory(metadata)
+            val descriptor: Any = descriptorFactory.createDescriptor(inputType)
             if (descriptor != null) {
-                inputs.add(descriptor);
+                inputs.add(descriptor)
             }
         }
-        return inputs;
+        return inputs
     }
 
-    private static class ExceptionHandler implements InstantiatingAction.ExceptionHandler<ComponentMetadataContext> {
-
-        @Override
-        public void handleException(ComponentMetadataContext context, Throwable throwable) {
-            throw new InvalidUserCodeException(String.format("There was an error while evaluating a component metadata rule for %s.", context.getDetails().getId()), throwable);
+    private class ExceptionHandler : InstantiatingAction.ExceptionHandler<ComponentMetadataContext> {
+        override fun handleException(context: ComponentMetadataContext, throwable: Throwable) {
+            throw InvalidUserCodeException(kotlin.String.format("There was an error while evaluating a component metadata rule for %s.", context.getDetails().getId()), throwable)
         }
     }
 
-    static class ShallowComponentMetadataAdapter implements ComponentMetadataDetails {
-        private final ModuleVersionIdentifier id;
-        private boolean changing;
-        private List<String> statusScheme;
-        private final AttributeContainerInternal attributes;
+    internal class ShallowComponentMetadataAdapter(source: ComponentMetadata, attributesFactory: AttributesFactory) : ComponentMetadataDetails {
+        private val id: ModuleVersionIdentifier
+        private var changing: Boolean
+        private var statusScheme: MutableList<kotlin.String>
+        private val attributes: AttributeContainerInternal
 
-        public ShallowComponentMetadataAdapter(ComponentMetadata source, AttributesFactory attributesFactory) {
-            id = source.getId();
-            changing = source.isChanging();
-            statusScheme = source.getStatusScheme();
-            attributes = attributesFactory.mutable((AttributeContainerInternal) source.getAttributes());
+        init {
+            id = source.getId()
+            changing = source.isChanging()
+            statusScheme = source.getStatusScheme()
+            attributes = attributesFactory.mutable(source.getAttributes() as AttributeContainerInternal)
         }
 
-        @Override
-        public void setChanging(boolean changing) {
-            this.changing = changing;
+        override fun setChanging(changing: Boolean) {
+            this.changing = changing
         }
 
-        @Override
-        public void setStatus(String status) {
-            this.attributes.attribute(ProjectInternal.STATUS_ATTRIBUTE, status);
+        override fun setStatus(status: kotlin.String) {
+            this.attributes.attribute<kotlin.String>(ProjectInternal.STATUS_ATTRIBUTE, status)
         }
 
-        @Override
-        public void setStatusScheme(List<String> statusScheme) {
-            this.statusScheme = statusScheme;
+        override fun setStatusScheme(statusScheme: MutableList<kotlin.String>) {
+            this.statusScheme = statusScheme
         }
 
-        @Override
-        public void withVariant(String name, Action<? super VariantMetadata> action) {
-
+        override fun withVariant(name: kotlin.String, action: Action<in VariantMetadata>) {
         }
 
-        @Override
-        public void allVariants(Action<? super VariantMetadata> action) {
-
+        override fun allVariants(action: Action<in VariantMetadata>) {
         }
 
-        @Override
-        public void addVariant(String name, Action<? super VariantMetadata> action) {
-
+        override fun addVariant(name: kotlin.String, action: Action<in VariantMetadata>) {
         }
 
-        @Override
-        public void addVariant(String name, String base, Action<? super VariantMetadata> action) {
-
+        override fun addVariant(name: kotlin.String, base: kotlin.String, action: Action<in VariantMetadata>) {
         }
 
-        @Override
-        public void maybeAddVariant(String name, String base, Action<? super VariantMetadata> action) {
-
+        override fun maybeAddVariant(name: kotlin.String, base: kotlin.String, action: Action<in VariantMetadata>) {
         }
 
-        @Override
-        public void belongsTo(Object notation) {
-
+        override fun belongsTo(notation: Any) {
         }
 
-        @Override
-        public void belongsTo(Object notation, boolean virtual) {
-
+        override fun belongsTo(notation: Any, virtual: Boolean) {
         }
 
-        @Override
-        public ModuleVersionIdentifier getId() {
-            return id;
+        override fun getId(): ModuleVersionIdentifier {
+            return id
         }
 
-        @Override
-        public boolean isChanging() {
-            return changing;
+        override fun isChanging(): Boolean {
+            return changing
         }
 
-        @Override
-        public String getStatus() {
-            return attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE);
+        override fun getStatus(): kotlin.String {
+            return attributes.getAttribute<kotlin.String>(ProjectInternal.STATUS_ATTRIBUTE)!!
         }
 
-        @Override
-        public List<String> getStatusScheme() {
-            return statusScheme;
+        override fun getStatusScheme(): MutableList<kotlin.String> {
+            return statusScheme
         }
 
-        @Override
-        public ComponentMetadataDetails attributes(Action<? super AttributeContainer> action) {
-            action.execute(attributes);
-            return this;
+        override fun attributes(action: Action<in AttributeContainer>): ComponentMetadataDetails {
+            action.execute(attributes)
+            return this
         }
 
-        @Override
-        public AttributeContainer getAttributes() {
-            return attributes;
+        override fun getAttributes(): AttributeContainer {
+            return attributes
         }
 
-        public ComponentMetadata asImmutable() {
-            return new UserProvidedMetadata(id, statusScheme, attributes.asImmutable());
+        fun asImmutable(): ComponentMetadata {
+            return UserProvidedMetadata(id, statusScheme, attributes.asImmutable())
+        }
+    }
+
+    companion object {
+        private val FORCE_REALIZE = Boolean.getBoolean("org.gradle.integtest.force.realize.metadata")
+
+        private val DETAILS_TO_RESULT: Transformer<ModuleComponentResolveMetadata, WrappingComponentMetadataContext> = Transformer { componentMetadataContext: WrappingComponentMetadataContext ->
+            val metadata = componentMetadataContext
+                .getImmutableMetadataWithDerivationStrategy(componentMetadataContext.getVariantDerivationStrategy())
+            realizeMetadata(metadata)
+        }
+
+        private fun realizeMetadata(metadata: ModuleComponentResolveMetadata): ModuleComponentResolveMetadata {
+            var metadata = metadata
+            if (metadata is DefaultIvyModuleResolveMetadata) {
+                metadata = transform(metadata)
+            } else if (metadata is DefaultMavenModuleResolveMetadata) {
+                metadata = transform(metadata)
+            } else {
+                throw IllegalStateException("Invalid type received: " + metadata.javaClass)
+            }
+            return metadata
         }
     }
 }

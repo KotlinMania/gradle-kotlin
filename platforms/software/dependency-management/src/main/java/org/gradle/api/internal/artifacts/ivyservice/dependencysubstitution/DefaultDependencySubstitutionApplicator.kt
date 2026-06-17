@@ -13,198 +13,183 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution;
+package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyArtifactSelector;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.internal.Try;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.instantiation.InstanceFactory;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryLoadingCache;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyArtifactSelector
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import org.gradle.internal.Try
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.instantiation.InstanceFactory
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryLoadingCache
+import java.util.function.Function
 
 /**
- * Default implementation of {@link DependencySubstitutionApplicator}, which caches results of
+ * Default implementation of [DependencySubstitutionApplicator], which caches results of
  * executing substitution rules.
  */
-public class DefaultDependencySubstitutionApplicator implements DependencySubstitutionApplicator {
+class DefaultDependencySubstitutionApplicator(
+    componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory,
+    rule: Action<in DependencySubstitutionInternal>,
+    instantiatorFactory: InstantiatorFactory,
+    cacheFactory: InMemoryCacheFactory
+) : DependencySubstitutionApplicator {
+    private val cache: InMemoryLoadingCache<SubstitutionCacheKey, Try<SubstitutionResult>>
 
-    private final InMemoryLoadingCache<SubstitutionCacheKey, Try<SubstitutionResult>> cache;
+    init {
+        val substitutionFactory =
+            instantiatorFactory.decorateScheme().forType<DefaultDependencySubstitution>(DefaultDependencySubstitution::class.java)
 
-    public DefaultDependencySubstitutionApplicator(
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory,
-        Action<? super DependencySubstitutionInternal> rule,
-        InstantiatorFactory instantiatorFactory,
-        InMemoryCacheFactory cacheFactory
-    ) {
-        InstanceFactory<DefaultDependencySubstitution> substitutionFactory =
-            instantiatorFactory.decorateScheme().forType(DefaultDependencySubstitution.class);
-
-        this.cache = cacheFactory.create(key -> Try.ofFailable(() -> executeSubstitutionRule(
-            substitutionFactory,
-            componentSelectionDescriptorFactory,
-            key,
-            rule
-        )));
+        this.cache = cacheFactory.create<SubstitutionCacheKey, Try<SubstitutionResult?>>(Function { key: SubstitutionCacheKey ->
+            Try.ofFailable({
+                executeSubstitutionRule(
+                    substitutionFactory,
+                    componentSelectionDescriptorFactory,
+                    key,
+                    rule
+                )
+            })
+        })
     }
 
-    @Override
-    public Try<SubstitutionResult> applySubstitutions(ComponentSelector selector, ImmutableList<IvyArtifactName> artifacts) {
-        return cache.get(new SubstitutionCacheKey(selector, artifacts));
-    }
-
-    private static SubstitutionResult executeSubstitutionRule(
-        InstanceFactory<DefaultDependencySubstitution> substitutionFactory,
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory,
-        SubstitutionCacheKey requested,
-        Action<? super DependencySubstitutionInternal> rule
-    ) {
-        DependencySubstitutionInternal details = substitutionFactory.newInstance(
-            componentSelectionDescriptorFactory,
-            requested.target,
-            requested.artifacts
-        );
-        rule.execute(details);
-
-        return DefaultSubstitutionResult.of(requested, details);
+    override fun applySubstitutions(selector: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): Try<SubstitutionResult?> {
+        return cache.get(SubstitutionCacheKey(selector, artifacts))
     }
 
     /**
      * Represents all information from a dependency metadata required for executing substitution rules.
      */
-    private static class SubstitutionCacheKey {
+    private class SubstitutionCacheKey(private val target: ComponentSelector, private val artifacts: ImmutableList<IvyArtifactName>) {
+        private val hashCode: Int
 
-        private final ComponentSelector target;
-        private final ImmutableList<IvyArtifactName> artifacts;
-        private final int hashCode;
-
-        public SubstitutionCacheKey(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-            this.target = target;
-            this.artifacts = artifacts;
-            this.hashCode = computeHashCode(artifacts, target);
+        init {
+            this.hashCode = computeHashCode(
+                artifacts,
+                target
+            )
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+        override fun equals(o: Any): Boolean {
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            SubstitutionCacheKey that = (SubstitutionCacheKey) o;
-            return target.equals(that.target) &&
-                artifacts.equals(that.artifacts);
+            val that = o as SubstitutionCacheKey
+            return target == that.target &&
+                    artifacts == that.artifacts
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
 
-        private static int computeHashCode(List<IvyArtifactName> artifacts, ComponentSelector selector) {
-            int result = selector.hashCode();
-            result = 31 * result + artifacts.hashCode();
-            return result;
+        companion object {
+            private fun computeHashCode(artifacts: MutableList<IvyArtifactName>, selector: ComponentSelector): Int {
+                var result = selector.hashCode()
+                result = 31 * result + artifacts.hashCode()
+                return result
+            }
         }
-
     }
 
-    public static class DefaultSubstitutionResult implements SubstitutionResult {
-
-        public static final SubstitutionResult NO_OP = new DefaultSubstitutionResult(null, null, ImmutableList.of());
-
-        private final @Nullable ComponentSelector target;
-        private final @Nullable ImmutableList<IvyArtifactName> artifacts;
-        private final ImmutableList<ComponentSelectionDescriptorInternal> ruleDescriptors;
-
-        public DefaultSubstitutionResult(
-            @Nullable ComponentSelector target,
-            @Nullable ImmutableList<IvyArtifactName> artifacts,
-            ImmutableList<ComponentSelectionDescriptorInternal> ruleDescriptors
-        ) {
-            this.target = target;
-            this.artifacts = artifacts;
-            this.ruleDescriptors = ruleDescriptors;
+    class DefaultSubstitutionResult(
+        private val target: ComponentSelector?,
+        private val artifacts: ImmutableList<IvyArtifactName>?,
+        private val ruleDescriptors: ImmutableList<ComponentSelectionDescriptorInternal>
+    ) : SubstitutionResult {
+        override fun getTarget(): ComponentSelector? {
+            return target
         }
 
-        @Override
-        public @Nullable ComponentSelector getTarget() {
-            return target;
+        override fun getArtifacts(): ImmutableList<IvyArtifactName>? {
+            return artifacts
         }
 
-        @Override
-        public @Nullable ImmutableList<IvyArtifactName> getArtifacts() {
-            return artifacts;
+        override fun getRuleDescriptors(): ImmutableList<ComponentSelectionDescriptorInternal> {
+            return ruleDescriptors
         }
 
-        @Override
-        public ImmutableList<ComponentSelectionDescriptorInternal> getRuleDescriptors() {
-            return ruleDescriptors;
-        }
+        companion object {
+            val NO_OP: SubstitutionResult = DefaultSubstitutionResult(null, null, ImmutableList.of<ComponentSelectionDescriptorInternal>())
 
-        /**
-         * Given a substitution details that has been configured by the user action, creates a
-         * substitution result representing the configured results of the action.
-         */
-        private static SubstitutionResult of(SubstitutionCacheKey requested, DependencySubstitutionInternal details) {
-            ComponentSelector target = details.getConfiguredTargetSelector();
-            ImmutableList<DependencyArtifactSelector> artifacts = details.getConfiguredArtifactSelectors();
+            /**
+             * Given a substitution details that has been configured by the user action, creates a
+             * substitution result representing the configured results of the action.
+             */
+            private fun of(requested: SubstitutionCacheKey, details: DependencySubstitutionInternal): SubstitutionResult {
+                val target: ComponentSelector = details.configuredTargetSelector
+                val artifacts: ImmutableList<DependencyArtifactSelector>? = details.configuredArtifactSelectors
 
-            if (target == null && artifacts == null) {
-                return DefaultSubstitutionResult.NO_OP;
+                if (target == null && artifacts == null) {
+                    return NO_OP
+                }
+
+                val descriptors: ImmutableList<ComponentSelectionDescriptorInternal> = details.ruleDescriptors
+                assert(descriptors != null && !descriptors.isEmpty())
+
+                var artifactNames: ImmutableList<IvyArtifactName>? = null
+                if (artifacts != null) {
+                    artifactNames = toIvyArtifactNames(target, requested.target, artifacts)
+                }
+
+                return DefaultSubstitutionResult(target, artifactNames, descriptors)
             }
 
-            ImmutableList<ComponentSelectionDescriptorInternal> descriptors = details.getRuleDescriptors();
-            assert descriptors != null && !descriptors.isEmpty();
+            private fun toIvyArtifactNames(
+                configuredTarget: ComponentSelector?,
+                requestedTarget: ComponentSelector,
+                artifacts: ImmutableList<DependencyArtifactSelector>
+            ): ImmutableList<IvyArtifactName> {
+                if (artifacts.isEmpty()) {
+                    return ImmutableList.of<IvyArtifactName>()
+                }
 
-            ImmutableList<IvyArtifactName> artifactNames = null;
-            if (artifacts != null) {
-                artifactNames = toIvyArtifactNames(target, requested.target, artifacts);
+                val actualTarget = if (configuredTarget != null) configuredTarget else requestedTarget
+                val targetModuleName: String = getModuleName(actualTarget)
+                val artifactsBuilder = ImmutableList.builderWithExpectedSize<IvyArtifactName>(artifacts.size)
+                for (das in artifacts) {
+                    artifactsBuilder.add(
+                        DefaultIvyArtifactName(
+                            targetModuleName,
+                            das.getType(),
+                            if (das.getExtension() != null) das.getExtension() else das.getType(),
+                            das.getClassifier()
+                        )
+                    )
+                }
+                return artifactsBuilder.build()
             }
 
-            return new DefaultSubstitutionResult(target, artifactNames, descriptors);
+            private fun getModuleName(target: ComponentSelector): String {
+                check(target is ModuleComponentSelector) { "Substitution with artifacts for something else than a module is not supported" }
+                return target.getModule()
+            }
         }
-
-        private static ImmutableList<IvyArtifactName> toIvyArtifactNames(
-            @Nullable ComponentSelector configuredTarget,
-            ComponentSelector requestedTarget,
-            ImmutableList<DependencyArtifactSelector> artifacts
-        ) {
-            if (artifacts.isEmpty()) {
-                return ImmutableList.of();
-            }
-
-            ComponentSelector actualTarget = configuredTarget != null ? configuredTarget : requestedTarget;
-            String targetModuleName = getModuleName(actualTarget);
-            ImmutableList.Builder<IvyArtifactName> artifactsBuilder = ImmutableList.builderWithExpectedSize(artifacts.size());
-            for (DependencyArtifactSelector das : artifacts) {
-                artifactsBuilder.add(new DefaultIvyArtifactName(
-                    targetModuleName,
-                    das.getType(),
-                    das.getExtension() != null ? das.getExtension() : das.getType(),
-                    das.getClassifier()
-                ));
-            }
-            return artifactsBuilder.build();
-        }
-
-        private static String getModuleName(ComponentSelector target) {
-            if (!(target instanceof ModuleComponentSelector)) {
-                throw new IllegalStateException("Substitution with artifacts for something else than a module is not supported");
-            }
-            return ((ModuleComponentSelector) target).getModule();
-        }
-
     }
 
+    companion object {
+        private fun executeSubstitutionRule(
+            substitutionFactory: InstanceFactory<DefaultDependencySubstitution>,
+            componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory,
+            requested: SubstitutionCacheKey,
+            rule: Action<in DependencySubstitutionInternal>
+        ): SubstitutionResult {
+            val details: DependencySubstitutionInternal = substitutionFactory.newInstance(
+                componentSelectionDescriptorFactory,
+                requested.target,
+                requested.artifacts
+            )
+            rule.execute(details)
+
+            return DefaultSubstitutionResult.Companion.of(requested, details)
+        }
+    }
 }

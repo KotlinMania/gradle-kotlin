@@ -204,7 +204,7 @@ public class DefaultDependencyCoordinateResolverFactory implements DependencyCoo
 
         @Override
         public ResolvedCoordinates resolveComponentCoordinates(DefaultProjectDependencyConstraint dependency) {
-            return resolveComponentCoordinates(dependency.getProjectDependency());
+            return resolveComponentCoordinates(dependency.projectDependency);
         }
     }
 }

@@ -13,35 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Factory for {@link org.gradle.api.artifacts.repositories.ArtifactRepository} implementations.
+ * Factory for [ArtifactRepository] implementations.
  */
-@ServiceScope(Scope.Project.class)
-public interface BaseRepositoryFactory {
+@ServiceScope(Scope.Project::class)
+interface BaseRepositoryFactory {
+    fun createFlatDirRepository(): FlatDirectoryArtifactRepository?
 
-    String PLUGIN_PORTAL_DEFAULT_URL = "https://plugins.gradle.org/m2";
-    String PLUGIN_PORTAL_OVERRIDE_URL_PROPERTY = "org.gradle.internal.plugins.portal.url.override";
+    fun createGradlePluginPortal(): ArtifactRepository?
 
-    FlatDirectoryArtifactRepository createFlatDirRepository();
+    fun createMavenLocalRepository(): MavenArtifactRepository?
 
-    ArtifactRepository createGradlePluginPortal();
+    fun createMavenCentralRepository(): MavenArtifactRepository?
 
-    MavenArtifactRepository createMavenLocalRepository();
+    fun createGoogleRepository(): MavenArtifactRepository?
 
-    MavenArtifactRepository createMavenCentralRepository();
+    fun createIvyRepository(): IvyArtifactRepository?
 
-    MavenArtifactRepository createGoogleRepository();
+    fun createMavenRepository(): MavenArtifactRepository?
 
-    IvyArtifactRepository createIvyRepository();
-
-    MavenArtifactRepository createMavenRepository();
+    companion object {
+        const val PLUGIN_PORTAL_DEFAULT_URL: String = "https://plugins.gradle.org/m2"
+        const val PLUGIN_PORTAL_OVERRIDE_URL_PROPERTY: String = "org.gradle.internal.plugins.portal.url.override"
+    }
 }

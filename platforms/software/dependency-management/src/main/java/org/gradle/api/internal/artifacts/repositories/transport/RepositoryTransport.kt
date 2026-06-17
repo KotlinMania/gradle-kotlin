@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.transport;
+package org.gradle.api.internal.artifacts.repositories.transport
 
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.ExternalResourceRepository;
+interface RepositoryTransport {
+    @JvmField
+    val repository: ExternalResourceRepository?
 
-public interface RepositoryTransport {
-    ExternalResourceRepository getRepository();
+    val resourceAccessor: CacheAwareExternalResourceAccessor?
 
-    CacheAwareExternalResourceAccessor getResourceAccessor();
-
-    boolean isLocal();
+    val isLocal: Boolean
 }

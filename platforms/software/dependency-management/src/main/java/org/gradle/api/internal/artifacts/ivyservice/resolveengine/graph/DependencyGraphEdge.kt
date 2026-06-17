@@ -13,56 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.DependencyMetadata;
-
-import java.util.List;
-import java.util.function.Consumer;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal
+import java.util.function.Consumer
 
 /**
- * A {@link ResolvedGraphDependency} that is used during the resolution of the dependency graph.
+ * A [ResolvedGraphDependency] that is used during the resolution of the dependency graph.
  * Additional fields in this interface are not required to reconstitute the serialized graph, but are using during construction of the graph.
  */
-public interface DependencyGraphEdge extends ResolvedGraphDependency {
+interface DependencyGraphEdge : ResolvedGraphDependency {
+    val from: DependencyGraphNode?
 
-    DependencyGraphNode getFrom();
+    val targetNodes: MutableList<out DependencyGraphNode>?
 
-    List<? extends DependencyGraphNode> getTargetNodes();
+    val isTransitive: Boolean
 
-    boolean isTransitive();
+    val isFromLock: Boolean
 
-    boolean isFromLock();
+    val exclusions: ExcludeSpec?
 
-    ExcludeSpec getExclusions();
-
-    DependencyMetadata getDependencyMetadata();
+    val dependencyMetadata: DependencyMetadata?
 
     /**
      * Get the attributes that are specific to this edge -- the attributes from any constraint
      * on the module that this edge points to, and any attributes attached directly to this edge.
      */
-    ImmutableAttributes getAttributes();
+    val attributes: ImmutableAttributes?
 
     /**
      * The reason this edge contributes to component selection.
      * Overridden to enforce non-nullability. All edges have reasons, however
      * the supertype only enforces those reasons to be present in failure cases,
      * in order to avoid the overhead of serializing reasons for successful edges.
-     * <p>
-     * Prefer {@link #visitSelectionReasons(Consumer)}, which avoids allocations.
+     *
+     *
+     * Prefer [.visitSelectionReasons], which avoids allocations.
      */
-    @Override
-    ComponentSelectionReasonInternal getReason();
+    override fun getReason(): ComponentSelectionReasonInternal?
 
     /**
      * Visits all reasons this edge contributes to component selection.
      */
-    void visitSelectionReasons(Consumer<ComponentSelectionDescriptorInternal> visitor);
-
+    fun visitSelectionReasons(visitor: Consumer<ComponentSelectionDescriptorInternal>)
 }

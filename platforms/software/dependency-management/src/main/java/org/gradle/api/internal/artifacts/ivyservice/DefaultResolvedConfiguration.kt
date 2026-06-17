@@ -13,73 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.gradle.api.artifacts.LenientConfiguration;
-import org.gradle.api.artifacts.ResolveException;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.ResolvedConfiguration;
-import org.gradle.api.artifacts.ResolvedDependency;
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
+import org.gradle.api.artifacts.LenientConfiguration
+import org.gradle.api.artifacts.ResolveException
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedConfiguration
+import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.internal.artifacts.configurations.ResolutionHost
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
+import java.util.function.Consumer
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-public class DefaultResolvedConfiguration implements ResolvedConfiguration {
-
-    private final VisitedGraphResults graphResults;
-    private final ResolutionHost resolutionHost;
-    private final VisitedArtifactSet visitedArtifacts;
-    private final LenientConfigurationInternal configuration;
-
-    public DefaultResolvedConfiguration(
-        VisitedGraphResults graphResults,
-        ResolutionHost resolutionHost,
-        VisitedArtifactSet visitedArtifacts,
-        LenientConfigurationInternal configuration
-    ) {
-        this.graphResults = graphResults;
-        this.resolutionHost = resolutionHost;
-        this.visitedArtifacts = visitedArtifacts;
-        this.configuration = configuration;
+class DefaultResolvedConfiguration(
+    private val graphResults: VisitedGraphResults,
+    private val resolutionHost: ResolutionHost,
+    private val visitedArtifacts: VisitedArtifactSet,
+    private val configuration: LenientConfigurationInternal
+) : ResolvedConfiguration {
+    override fun hasError(): Boolean {
+        return graphResults.hasAnyFailure()
     }
 
-    @Override
-    public boolean hasError() {
-        return graphResults.hasAnyFailure();
-    }
-
-    @Override
-    public void rethrowFailure() throws ResolveException {
+    @Throws(ResolveException::class)
+    override fun rethrowFailure() {
         if (!graphResults.hasAnyFailure()) {
-            return;
+            return
         }
 
-        List<Throwable> failures = new ArrayList<>();
-        graphResults.visitFailures(failures::add);
-        resolutionHost.rethrowFailuresAndReportProblems("dependencies", failures);
+        val failures: MutableList<Throwable?> = ArrayList<Throwable?>()
+        graphResults.visitFailures(Consumer { e: Throwable? -> failures.add(e) })
+        resolutionHost.rethrowFailuresAndReportProblems("dependencies", failures)
     }
 
-    @Override
-    public LenientConfiguration getLenientConfiguration() {
-        return configuration;
+    override fun getLenientConfiguration(): LenientConfiguration {
+        return configuration
     }
 
-    @Override
-    public Set<ResolvedDependency> getFirstLevelModuleDependencies() throws ResolveException {
-        rethrowFailure();
-        return configuration.getFirstLevelModuleDependencies();
+    @Throws(ResolveException::class)
+    override fun getFirstLevelModuleDependencies(): MutableSet<ResolvedDependency?> {
+        rethrowFailure()
+        return configuration.getFirstLevelModuleDependencies()
     }
 
-    @Override
-    public Set<ResolvedArtifact> getResolvedArtifacts() throws ResolveException {
-        ArtifactCollectingVisitor visitor = new ArtifactCollectingVisitor();
-        visitedArtifacts.select(configuration.getImplicitSelectionSpec()).visitArtifacts(visitor, false);
-        resolutionHost.rethrowFailuresAndReportProblems("artifacts", visitor.getFailures());
-        return visitor.getArtifacts();
+    @Throws(ResolveException::class)
+    override fun getResolvedArtifacts(): MutableSet<ResolvedArtifact?> {
+        val visitor = ArtifactCollectingVisitor()
+        visitedArtifacts.select(configuration.implicitSelectionSpec).visitArtifacts(visitor, false)
+        resolutionHost.rethrowFailuresAndReportProblems("artifacts", visitor.getFailures())
+        return visitor.getArtifacts()
     }
-
 }

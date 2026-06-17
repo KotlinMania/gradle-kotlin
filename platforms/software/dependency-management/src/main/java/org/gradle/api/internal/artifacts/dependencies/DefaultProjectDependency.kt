@@ -13,115 +13,97 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dependencies
 
-package org.gradle.api.internal.artifacts.dependencies;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector
+import org.gradle.api.internal.capabilities.CapabilityInternal
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectState
+import org.gradle.internal.component.external.model.ProjectDerivedCapability
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.internal.component.external.model.ProjectDerivedCapability;
-
-import java.util.List;
-
-public class DefaultProjectDependency extends AbstractModuleDependency implements ProjectDependencyInternal {
-
-    private final ProjectState projectState;
-
-    public DefaultProjectDependency(ProjectState projectState) {
-        this.projectState = projectState;
+class DefaultProjectDependency(private val projectState: ProjectState) : AbstractModuleDependency(), ProjectDependencyInternal {
+    override fun getPath(): String {
+        return getTargetProjectIdentity().getProjectPath().asString()
     }
 
-    @Override
-    public String getPath() {
-        return getTargetProjectIdentity().getProjectPath().asString();
+    override fun getGroup(): String {
+        return unsafeGetProject().getGroup().toString()
     }
 
-    @Override
-    public String getGroup() {
-        return unsafeGetProject().getGroup().toString();
+    override fun getName(): String {
+        return getTargetProjectIdentity().getProjectName()
     }
 
-    @Override
-    public String getName() {
-        return getTargetProjectIdentity().getProjectName();
+    override fun getVersion(): String {
+        return unsafeGetProject().getVersion().toString()
     }
 
-    @Override
-    public String getVersion() {
-        return unsafeGetProject().getVersion().toString();
+    override fun getTargetProjectIdentity(): ProjectIdentity {
+        return projectState.getIdentity()
     }
 
-    @Override
-    public ProjectIdentity getTargetProjectIdentity() {
-        return projectState.getIdentity();
+    override fun copy(): ProjectDependency {
+        val copiedProjectDependency = DefaultProjectDependency(projectState)
+        copyTo(copiedProjectDependency)
+        return copiedProjectDependency
     }
 
-    @Override
-    public ProjectDependency copy() {
-        DefaultProjectDependency copiedProjectDependency = new DefaultProjectDependency(projectState);
-        copyTo(copiedProjectDependency);
-        return copiedProjectDependency;
-    }
-
-    @Override
-    @SuppressWarnings("deprecation")
-    public List<Capability> getRequestedCapabilities() {
+    @Suppress("deprecation")
+    override fun getRequestedCapabilities(): MutableList<Capability> {
         return getCapabilitySelectors().stream()
-            .map(c -> {
-                if (c instanceof SpecificCapabilitySelector) {
-                    return ((DefaultSpecificCapabilitySelector) c).getBackingCapability();
-                } else if (c instanceof FeatureCapabilitySelector) {
-                    return new ProjectDerivedCapability(unsafeGetProject(), ((FeatureCapabilitySelector) c).getFeatureName());
+            .map<CapabilityInternal> { c: CapabilitySelector? ->
+                if (c is SpecificCapabilitySelector) {
+                    return@map (c as DefaultSpecificCapabilitySelector).getBackingCapability()
+                } else if (c is FeatureCapabilitySelector) {
+                    return@map ProjectDerivedCapability(unsafeGetProject(), c.getFeatureName())
                 } else {
-                    throw new UnsupportedOperationException("Unsupported capability selector type: " + c.getClass().getName());
+                    throw UnsupportedOperationException("Unsupported capability selector type: " + c!!.javaClass.getName())
                 }
-            })
-            .collect(ImmutableList.toImmutableList());
+            }
+            .collect(ImmutableList.toImmutableList<Capability>())
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultProjectDependency that = (DefaultProjectDependency) o;
-        return getTargetProjectIdentity().equals(that.getTargetProjectIdentity()) &&
-            isCommonContentEquals(that);
+        val that = o as DefaultProjectDependency
+        return getTargetProjectIdentity() == that.getTargetProjectIdentity() &&
+                isCommonContentEquals(that)
     }
 
-    @Override
-    public int hashCode() {
-        int hashCode = getTargetProjectIdentity().hashCode();
+    override fun hashCode(): Int {
+        var hashCode = getTargetProjectIdentity().hashCode()
         if (getTargetConfiguration() != null) {
-            hashCode = 31 * hashCode + getTargetConfiguration().hashCode();
+            hashCode = 31 * hashCode + getTargetConfiguration().hashCode()
         }
-        return hashCode;
+        return hashCode
     }
 
-    @Override
-    public String toString() {
-        return "project '" + getTargetProjectIdentity().getBuildTreePath() + "'";
+    override fun toString(): String {
+        return "project '" + getTargetProjectIdentity().getBuildTreePath() + "'"
     }
 
     /**
      * Any code which depends on this method should be deprecated and removed.
-     * <p>
+     *
+     *
      * A project dependency should be a simple wrapper around the _identity_ of a given
      * project, and should not retain any reference to the actual project instance.
      */
-    @Deprecated
-    private ProjectInternal unsafeGetProject() {
-        return projectState.getMutableModel();
+    @Deprecated("")
+    private fun unsafeGetProject(): ProjectInternal {
+        return projectState.getMutableModel()
     }
-
 }

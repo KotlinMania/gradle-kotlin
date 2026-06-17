@@ -13,40 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.result;
+package org.gradle.api.internal.artifacts.result
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.result.UnresolvedArtifactResult;
-import org.gradle.api.component.Artifact;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.result.UnresolvedArtifactResult
+import org.gradle.api.component.Artifact
 
-public class DefaultUnresolvedArtifactResult implements UnresolvedArtifactResult {
-    private final ComponentArtifactIdentifier identifier;
-    private final Class<? extends Artifact> type;
-    private final Throwable failure;
-
-    public DefaultUnresolvedArtifactResult(ComponentArtifactIdentifier identifier, Class<? extends Artifact> type, Throwable failure) {
-        this.identifier = identifier;
-        this.type = type;
-        this.failure = failure;
+class DefaultUnresolvedArtifactResult(private val identifier: ComponentArtifactIdentifier, private val type: Class<out Artifact>, private val failure: Throwable) : UnresolvedArtifactResult {
+    override fun toString(): String {
+        return identifier.getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return identifier.getDisplayName();
+    override fun getId(): ComponentArtifactIdentifier {
+        return identifier
     }
 
-    @Override
-    public ComponentArtifactIdentifier getId() {
-        return identifier;
+    override fun getType(): Class<out Artifact> {
+        return type
     }
 
-    @Override
-    public Class<? extends Artifact> getType() {
-        return type;
-    }
-
-    @Override
-    public Throwable getFailure() {
-        return failure;
+    override fun getFailure(): Throwable {
+        return failure
     }
 }

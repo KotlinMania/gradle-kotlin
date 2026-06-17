@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
 
-public class MavenMetadataArtifactProvider implements MetadataArtifactProvider {
-    public static final MavenMetadataArtifactProvider INSTANCE = new MavenMetadataArtifactProvider();
+class MavenMetadataArtifactProvider : MetadataArtifactProvider {
+    override fun getMetaDataArtifactName(moduleName: String): IvyArtifactName {
+        return DefaultIvyArtifactName(moduleName, "pom", "pom")
+    }
 
-    @Override
-    public IvyArtifactName getMetaDataArtifactName(String moduleName) {
-        return new DefaultIvyArtifactName(moduleName, "pom", "pom");
+    companion object {
+        val INSTANCE: MavenMetadataArtifactProvider = MavenMetadataArtifactProvider()
     }
 }

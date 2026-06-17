@@ -13,121 +13,107 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.Named
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.result.ResolvedComponentResultInternal
+import org.gradle.api.internal.artifacts.result.ResolvedGraphResult
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Actions
+import org.gradle.internal.lazy.Lazy
+import org.gradle.internal.lazy.Lazy.Companion.locking
+import org.gradle.internal.operations.trace.CustomOperationTraceSerialization
+import java.util.Collections
+import java.util.function.Supplier
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.Named;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.artifacts.result.ResolvedComponentResultInternal;
-import org.gradle.api.internal.artifacts.result.ResolvedGraphResult;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Actions;
-import org.gradle.internal.lazy.Lazy;
-import org.gradle.internal.operations.trace.CustomOperationTraceSerialization;
+internal class ResolveConfigurationResolutionBuildOperationResult(
+    private val graphSource: Supplier<ResolvedGraphResult>,
+    requestedAttributes: ImmutableAttributes,
+    attributesFactory: AttributesFactory
+) : ResolveConfigurationDependenciesBuildOperationType.Result, CustomOperationTraceSerialization {
+    private val lazyDesugaredAttributes: Lazy<AttributeContainer?>
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.function.Supplier;
-
-import static org.gradle.api.internal.artifacts.result.DefaultResolvedComponentResult.eachElement;
-
-class ResolveConfigurationResolutionBuildOperationResult implements ResolveConfigurationDependenciesBuildOperationType.Result, CustomOperationTraceSerialization {
-
-    private final Supplier<ResolvedGraphResult> graphSource;
-    private final Lazy<AttributeContainer> lazyDesugaredAttributes;
-
-    public ResolveConfigurationResolutionBuildOperationResult(
-        Supplier<ResolvedGraphResult> graphSource,
-        ImmutableAttributes requestedAttributes,
-        AttributesFactory attributesFactory
-    ) {
-        this.graphSource = graphSource;
-        this.lazyDesugaredAttributes = Lazy.locking().of(() -> desugarAttributes(attributesFactory, requestedAttributes));
+    init {
+        this.lazyDesugaredAttributes = locking().of<AttributeContainer?>(Supplier { desugarAttributes(attributesFactory, requestedAttributes) })
     }
 
-    @Override
-    public ResolvedComponentResult getRootComponent() {
-        ResolvedGraphResult graph = graphSource.get();
-        GraphStructure.Nodes nodes = graph.structure().nodes();
-        return graph.getComponent(nodes.owner(nodes.root()));
+    override fun getRootComponent(): ResolvedComponentResult {
+        val graph = graphSource.get()
+        val nodes = graph.structure().nodes()
+        return graph.getComponent(nodes!!.owner(nodes.root()))
     }
 
-    @Override
-    public String getRepositoryId(ResolvedComponentResult resolvedComponentResult) {
-        return ((ResolvedComponentResultInternal) resolvedComponentResult).getRepositoryId();
+    override fun getRepositoryId(resolvedComponentResult: ResolvedComponentResult): String {
+        return (resolvedComponentResult as ResolvedComponentResultInternal).repositoryId!!
     }
 
-    @Override
-    public Object getCustomOperationTraceSerializableModel() {
-        Map<String, Object> model = new HashMap<>();
-        model.put("resolvedDependenciesCount", getRootComponent().getDependencies().size());
+    override fun getCustomOperationTraceSerializableModel(): Any {
+        val model: MutableMap<String, Any> = HashMap<String, Any>()
+        model.put("resolvedDependenciesCount", getRootComponent().getDependencies().size)
 
-        final Map<String, Map<String, String>> components = new HashMap<>();
-        eachElement(getRootComponent(), component -> components.put(
-            component.getId().getDisplayName(),
-            Collections.singletonMap("repoId", getRepositoryId(component))
-        ), Actions.doNothing(), new HashSet<>());
-        model.put("components", components);
+        val components: MutableMap<String, MutableMap<String, String>> = HashMap<String, MutableMap<String, String>>()
+        eachElement(getRootComponent(), { component ->
+            components.put(
+                component.getId().getDisplayName(),
+                Collections.singletonMap<String, String>("repoId", getRepositoryId(component))
+            )
+        }, Actions.doNothing<T>(), HashSet<E?>())
+        model.put("components", components)
 
-        ImmutableList.Builder<Object> requestedAttributesBuilder = new ImmutableList.Builder<>();
-        AttributeContainer desugared = lazyDesugaredAttributes.get();
-        for (Attribute<?> att : desugared.keySet()) {
-            requestedAttributesBuilder.add(ImmutableMap.of("name", att.getName(), "value", desugared.getAttribute(att).toString()));
+        val requestedAttributesBuilder = ImmutableList.Builder<Any>()
+        val desugared: AttributeContainer = lazyDesugaredAttributes.get()!!
+        for (att in desugared.keySet()) {
+            requestedAttributesBuilder.add(ImmutableMap.of<String, String>("name", att.getName(), "value", desugared.getAttribute(att).toString()))
         }
-        model.put("requestedAttributes", requestedAttributesBuilder.build());
+        model.put("requestedAttributes", requestedAttributesBuilder.build())
 
-        return model;
+        return model
     }
 
-    @Override
-    public AttributeContainer getRequestedAttributes() {
-        return lazyDesugaredAttributes.get();
+    override fun getRequestedAttributes(): AttributeContainer {
+        return lazyDesugaredAttributes.get()!!
     }
 
-    // This does almost the same thing as passing through DesugaredAttributeContainerSerializer / DesugaringAttributeContainerSerializer.
-    // Those make some assumptions about allowed attribute value types that we can't - we serialize everything else to a string instead.
-    @SuppressWarnings("unchecked")
-    private static ImmutableAttributes desugarAttributes(
-        AttributesFactory attributesFactory,
-        AttributeContainer source
-    ) {
-        AttributeContainerInternal result = attributesFactory.mutable();
-        for (Attribute<?> attribute : source.keySet()) {
-            String name = attribute.getName();
-            Class<?> type = attribute.getType();
-            Object attributeValue = source.getAttribute(attribute);
-            if (type.equals(Boolean.class)) {
-                result.attribute((Attribute<Boolean>) attribute, (Boolean) attributeValue);
-            } else if (type.equals(String.class)) {
-                result.attribute((Attribute<String>) attribute, (String) attributeValue);
-            } else if (type.equals(Integer.class)) {
-                result.attribute((Attribute<Integer>) attribute, (Integer) attributeValue);
-            } else {
-                // just serialize as a String as best we can
-                Attribute<String> stringAtt = Attribute.of(name, String.class);
-                String stringValue;
-                if (attributeValue instanceof Named) {
-                    stringValue = ((Named) attributeValue).getName();
-                } else if (attributeValue instanceof Object[]) { // don't bother trying to handle primitive arrays specially
-                    stringValue = Arrays.toString((Object[]) attributeValue);
+    companion object {
+        // This does almost the same thing as passing through DesugaredAttributeContainerSerializer / DesugaringAttributeContainerSerializer.
+        // Those make some assumptions about allowed attribute value types that we can't - we serialize everything else to a string instead.
+        private fun desugarAttributes(
+            attributesFactory: AttributesFactory,
+            source: AttributeContainer
+        ): ImmutableAttributes {
+            val result = attributesFactory.mutable()
+            for (attribute in source.keySet()) {
+                val name = attribute.getName()
+                val type: Class<*> = attribute.getType()
+                val attributeValue: Any? = source.getAttribute(attribute)
+                if (type == Boolean::class.java) {
+                    result.attribute<Boolean>(attribute as Attribute<Boolean?>, (attributeValue as kotlin.Boolean?)!!)
+                } else if (type == String::class.java) {
+                    result.attribute<String>(attribute as Attribute<String?>, (attributeValue as kotlin.String?)!!)
+                } else if (type == Int::class.java) {
+                    result.attribute<Int>(attribute as Attribute<Int?>, (attributeValue as kotlin.Int?)!!)
                 } else {
-                    stringValue = attributeValue.toString();
+                    // just serialize as a String as best we can
+                    val stringAtt = Attribute.of<String>(name, String::class.java)
+                    val stringValue: String
+                    if (attributeValue is Named) {
+                        stringValue = attributeValue.getName()
+                    } else if (attributeValue is Array<Any>) { // don't bother trying to handle primitive arrays specially
+                        stringValue = (attributeValue as Array<Any?>).contentToString()
+                    } else {
+                        stringValue = attributeValue.toString()
+                    }
+                    result.attribute<String>(stringAtt, stringValue)
                 }
-                result.attribute(stringAtt, stringValue);
             }
+
+            return result.asImmutable()
         }
-
-        return result.asImmutable();
     }
-
 }

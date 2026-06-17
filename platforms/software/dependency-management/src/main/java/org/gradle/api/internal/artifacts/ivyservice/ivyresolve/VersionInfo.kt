@@ -13,29 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
 
-public class VersionInfo implements Versioned {
-    private final Version version;
-
-    public VersionInfo(Version version) {
-        this.version = version;
+class VersionInfo(private val version: Version) : Versioned {
+    override fun getVersion(): Version {
+        return version
     }
 
-    @Override
-    public Version getVersion() {
-        return version;
+    override fun equals(other: Any): Boolean {
+        return other is VersionInfo && version == other.getVersion()
     }
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof VersionInfo && version.equals(((VersionInfo) other).getVersion());
-    }
-
-    @Override
-    public int hashCode() {
-        return version.hashCode();
+    override fun hashCode(): Int {
+        return version.hashCode()
     }
 }

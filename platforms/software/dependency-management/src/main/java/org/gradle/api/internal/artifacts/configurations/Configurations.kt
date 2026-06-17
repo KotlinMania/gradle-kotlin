@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.capabilities.Capability;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.capabilities.Capability
 
-import java.util.Set;
-
-public class Configurations {
-
-    public static Set<Capability> collectCapabilities(Configuration configuration, Set<Capability> out, Set<Configuration> visited) {
+object Configurations {
+    fun collectCapabilities(configuration: Configuration, out: MutableSet<Capability>, visited: MutableSet<Configuration>): MutableSet<Capability> {
         if (visited.add(configuration)) {
-            out.addAll(configuration.getOutgoing().getCapabilities());
-            for (Configuration parent : configuration.getExtendsFrom()) {
-                collectCapabilities(parent, out, visited);
+            out.addAll(configuration.getOutgoing().getCapabilities())
+            for (parent in configuration.getExtendsFrom()) {
+                collectCapabilities(parent, out, visited)
             }
         }
-        return out;
+        return out
     }
-
 }

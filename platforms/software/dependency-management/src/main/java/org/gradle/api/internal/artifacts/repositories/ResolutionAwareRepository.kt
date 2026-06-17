@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository;
-import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor;
-
-public interface ResolutionAwareRepository {
+interface ResolutionAwareRepository {
     /**
      * Creates a resolver for this repository.
      */
-    ConfiguredModuleComponentRepository createResolver();
+    fun createResolver(): ConfiguredModuleComponentRepository?
 
     /**
      * Returns details about this repository, such as its name, type, and a map of properties used for reporting.
      */
-    RepositoryDescriptor getDescriptor();
-
+    @JvmField
+    val descriptor: RepositoryDescriptor?
 }

@@ -13,69 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
-import org.gradle.internal.UncheckedException;
+class TransformExecutionResultSerializer {
+    fun writeToFile(target: File, result: TransformExecutionResult) {
+        val resultFileContents: MutableList<String> = ArrayList<String>(result.size())
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.gradle.internal.UncheckedException.unchecked;
-
-public class TransformExecutionResultSerializer {
-    private static final String INPUT_FILE_PATH_PREFIX = "i/";
-    private static final String OUTPUT_FILE_PATH_PREFIX = "o/";
-
-    public void writeToFile(File target, TransformExecutionResult result) {
-        List<String> resultFileContents = new ArrayList<>(result.size());
-
-        result.visitOutputs(new TransformExecutionResult.OutputVisitor() {
-            @Override
-            public void visitEntireInputArtifact() {
-                resultFileContents.add(INPUT_FILE_PATH_PREFIX);
+        result.visitOutputs(object : TransformExecutionResult.OutputVisitor {
+            override fun visitEntireInputArtifact() {
+                resultFileContents.add(INPUT_FILE_PATH_PREFIX)
             }
 
-            @Override
-            public void visitPartOfInputArtifact(String relativePath) {
-                resultFileContents.add(INPUT_FILE_PATH_PREFIX + relativePath);
+            override fun visitPartOfInputArtifact(relativePath: String) {
+                resultFileContents.add(INPUT_FILE_PATH_PREFIX + relativePath)
             }
 
-            @Override
-            public void visitProducedOutput(String relativePath) {
-                resultFileContents.add(OUTPUT_FILE_PATH_PREFIX + relativePath);
+            override fun visitProducedOutput(relativePath: String) {
+                resultFileContents.add(OUTPUT_FILE_PATH_PREFIX + relativePath)
             }
-        });
-        unchecked(() -> Files.write(target.toPath(), resultFileContents));
+        })
+        unchecked({ Files.write(target.toPath(), resultFileContents) })
     }
 
-    public TransformExecutionResult readResultsFile(File resultsFile) {
-        Path transformerResultsPath = resultsFile.toPath();
+    fun readResultsFile(resultsFile: File): TransformExecutionResult {
+        val transformerResultsPath = resultsFile.toPath()
         try {
-            TransformExecutionResult.Builder builder = TransformExecutionResult.builder();
-            List<String> paths = Files.readAllLines(transformerResultsPath, StandardCharsets.UTF_8);
-            for (String path : paths) {
+            val builder: TransformExecutionResult.Builder = TransformExecutionResult.Companion.builder()
+            val paths = Files.readAllLines(transformerResultsPath, StandardCharsets.UTF_8)
+            for (path in paths) {
                 if (path.startsWith(OUTPUT_FILE_PATH_PREFIX)) {
-                    builder.addProducedOutput(path.substring(2));
+                    builder.addProducedOutput(path.substring(2))
                 } else if (path.startsWith(INPUT_FILE_PATH_PREFIX)) {
-                    String relativePathString = path.substring(2);
+                    val relativePathString = path.substring(2)
                     if (relativePathString.isEmpty()) {
-                        builder.addEntireInputArtifact();
+                        builder.addEntireInputArtifact()
                     } else {
-                        builder.addPartOfInputArtifact(relativePathString);
+                        builder.addPartOfInputArtifact(relativePathString)
                     }
                 } else {
-                    throw new IllegalStateException("Cannot parse result path string: " + path);
+                    throw IllegalStateException("Cannot parse result path string: " + path)
                 }
             }
-            return builder.build();
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            return builder.build()
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
+    }
+
+    companion object {
+        private const val INPUT_FILE_PATH_PREFIX = "i/"
+        private const val OUTPUT_FILE_PATH_PREFIX = "o/"
     }
 }

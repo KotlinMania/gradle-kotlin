@@ -232,7 +232,7 @@ public abstract class IvyPublishPlugin implements Plugin<Project> {
 
         @Override
         public IvyPublication create(String name) {
-            Module module = dependencyMetaDataProvider.getModule();
+            Module module = dependencyMetaDataProvider.module;
             IvyPublicationCoordinates publicationIdentity = objectFactory.newInstance(IvyPublicationCoordinates.class);
             publicationIdentity.getOrganisation().set(providerFactory.provider(module::getGroup));
             publicationIdentity.getModule().set(providerFactory.provider(module::getName));

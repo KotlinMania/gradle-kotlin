@@ -13,82 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import com.google.common.collect.Lists
+import org.gradle.api.Action
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
 
-import com.google.common.collect.Lists;
-import org.gradle.api.Action;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-public class CompositeResolvedArtifactSet implements ResolvedArtifactSet {
-
-    private final List<ResolvedArtifactSet> sets;
-
-    private CompositeResolvedArtifactSet(List<ResolvedArtifactSet> sets) {
-        this.sets = sets;
+class CompositeResolvedArtifactSet private constructor(private val sets: MutableList<ResolvedArtifactSet>) : ResolvedArtifactSet {
+    override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+        for (set in sets) {
+            set.visit(visitor)
+        }
     }
 
-    public static ResolvedArtifactSet of(Collection<? extends ResolvedArtifactSet> sets) {
-        List<ResolvedArtifactSet> filtered = new ArrayList<>(sets.size());
-        for (ResolvedArtifactSet set : sets) {
-            if (set instanceof CompositeResolvedArtifactSet composite) {
-                filtered.addAll(composite.sets);
-            } else if (set != ResolvedArtifactSet.EMPTY) {
-                filtered.add(set);
+    override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
+        for (set in sets) {
+            set.visitTransformSources(visitor)
+        }
+    }
+
+    override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact?>) {
+        for (set in sets) {
+            set.visitExternalArtifacts(visitor)
+        }
+    }
+
+    override fun visitDependencies(context: TaskDependencyResolveContext?) {
+        for (set in sets) {
+            set.visitDependencies(context)
+        }
+    }
+
+    companion object {
+        fun of(sets: MutableCollection<out ResolvedArtifactSet?>): ResolvedArtifactSet? {
+            val filtered: MutableList<ResolvedArtifactSet> = ArrayList<ResolvedArtifactSet>(sets.size)
+            for (set in sets) {
+                if (set is CompositeResolvedArtifactSet) {
+                    filtered.addAll(set.sets)
+                } else if (set !== ResolvedArtifactSet.EMPTY) {
+                    filtered.add(set!!)
+                }
+            }
+
+            if (filtered.isEmpty()) {
+                return ResolvedArtifactSet.EMPTY
+            }
+
+            if (filtered.size == 1) {
+                return filtered.get(0)
+            }
+
+            return CompositeResolvedArtifactSet(filtered)
+        }
+
+        fun reverse(artifacts: ResolvedArtifactSet?): ResolvedArtifactSet? {
+            if (artifacts === ResolvedArtifactSet.EMPTY) {
+                return artifacts
+            } else if (artifacts is CompositeResolvedArtifactSet) {
+                return CompositeResolvedArtifactSet(Lists.reverse<ResolvedArtifactSet?>(artifacts.sets))
+            } else {
+                return artifacts
             }
         }
-
-        if (filtered.isEmpty()) {
-            return EMPTY;
-        }
-
-        if (filtered.size() == 1) {
-            return filtered.get(0);
-        }
-
-        return new CompositeResolvedArtifactSet(filtered);
     }
-
-    public static ResolvedArtifactSet reverse(ResolvedArtifactSet artifacts) {
-        if (artifacts == EMPTY) {
-            return artifacts;
-        } else if (artifacts instanceof CompositeResolvedArtifactSet composite) {
-            return new CompositeResolvedArtifactSet(Lists.reverse(composite.sets));
-        } else {
-            return artifacts;
-        }
-    }
-
-    @Override
-    public void visit(Visitor visitor) {
-        for (ResolvedArtifactSet set : sets) {
-            set.visit(visitor);
-        }
-    }
-
-    @Override
-    public void visitTransformSources(TransformSourceVisitor visitor) {
-        for (ResolvedArtifactSet set : sets) {
-            set.visitTransformSources(visitor);
-        }
-    }
-
-    @Override
-    public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-        for (ResolvedArtifactSet set : sets) {
-            set.visitExternalArtifacts(visitor);
-        }
-    }
-
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        for (ResolvedArtifactSet set : sets) {
-            set.visitDependencies(context);
-        }
-    }
-
 }

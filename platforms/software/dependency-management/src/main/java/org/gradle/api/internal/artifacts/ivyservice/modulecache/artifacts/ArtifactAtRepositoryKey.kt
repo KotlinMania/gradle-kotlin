@@ -13,44 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-
-public class ArtifactAtRepositoryKey {
-    private final String repositoryId;
-    private final ComponentArtifactIdentifier artifactId;
-
-    public ArtifactAtRepositoryKey(String repositoryId, ComponentArtifactIdentifier artifactId) {
-        this.repositoryId = repositoryId;
-        this.artifactId = artifactId;
+class ArtifactAtRepositoryKey(val repositoryId: String, val artifactId: ComponentArtifactIdentifier) {
+    override fun toString(): String {
+        return repositoryId + ":" + artifactId
     }
 
-    public ComponentArtifactIdentifier getArtifactId() {
-        return artifactId;
-    }
-
-    public String getRepositoryId() {
-        return repositoryId;
-    }
-
-    @Override
-    public String toString() {
-        return repositoryId + ":" + artifactId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof ArtifactAtRepositoryKey)) {
-            return false;
+    override fun equals(o: Any?): Boolean {
+        if (o !is ArtifactAtRepositoryKey) {
+            return false
         }
-        ArtifactAtRepositoryKey other = (ArtifactAtRepositoryKey) o;
-        return repositoryId.equals(other.repositoryId) && artifactId.equals(other.artifactId);
+        val other = o
+        return repositoryId == other.repositoryId && artifactId == other.artifactId
     }
 
-    @Override
-    public int hashCode() {
-        return repositoryId.hashCode() ^ artifactId.hashCode();
+    override fun hashCode(): Int {
+        return repositoryId.hashCode() xor artifactId.hashCode()
     }
 }

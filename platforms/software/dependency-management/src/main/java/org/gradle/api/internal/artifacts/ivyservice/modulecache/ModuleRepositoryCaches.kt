@@ -13,22 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts.AbstractArtifactsCache;
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts.ModuleArtifactCache;
-import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.AbstractModuleVersionsCache;
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts.AbstractArtifactsCache
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts.ModuleArtifactCache
+import org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions.AbstractModuleVersionsCache
 
-public class ModuleRepositoryCaches {
-    public final AbstractModuleVersionsCache moduleVersionsCache;
-    public final AbstractModuleMetadataCache moduleMetadataCache;
-    public final AbstractArtifactsCache moduleArtifactsCache;
-    public final ModuleArtifactCache moduleArtifactCache;
-
-    public ModuleRepositoryCaches(AbstractModuleVersionsCache moduleVersionsCache, AbstractModuleMetadataCache moduleMetadataCache, AbstractArtifactsCache moduleArtifactsCache, ModuleArtifactCache moduleArtifactCache) {
-        this.moduleVersionsCache = moduleVersionsCache;
-        this.moduleMetadataCache = moduleMetadataCache;
-        this.moduleArtifactsCache = moduleArtifactsCache;
-        this.moduleArtifactCache = moduleArtifactCache;
-    }
-}
+class ModuleRepositoryCaches(
+    val moduleVersionsCache: AbstractModuleVersionsCache?,
+    val moduleMetadataCache: AbstractModuleMetadataCache?,
+    val moduleArtifactsCache: AbstractArtifactsCache?,
+    val moduleArtifactCache: ModuleArtifactCache?
+)

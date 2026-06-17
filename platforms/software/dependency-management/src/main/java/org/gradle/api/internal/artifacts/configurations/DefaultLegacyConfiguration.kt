@@ -13,58 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.DependencyResolutionListener;
-import org.gradle.api.artifacts.LegacyConfiguration;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.ConfigurationServicesBundle;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ConfigurationResolver;
-import org.gradle.internal.Factory;
-import org.gradle.internal.code.UserCodeApplicationContext;
-import org.gradle.internal.event.ListenerBroadcast;
-import org.gradle.internal.typeconversion.NotationParser;
-
-import javax.inject.Inject;
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.DependencyResolutionListener
+import org.gradle.api.artifacts.LegacyConfiguration
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.ConfigurationServicesBundle
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ConfigurationResolver
+import org.gradle.internal.Factory
+import org.gradle.internal.code.UserCodeApplicationContext
+import org.gradle.internal.event.ListenerBroadcast
+import org.gradle.internal.typeconversion.NotationParser
+import javax.inject.Inject
 
 /**
- * A concrete {@link DefaultConfiguration} implementation which can change roles.
+ * A concrete [DefaultConfiguration] implementation which can change roles.
  */
-public class DefaultLegacyConfiguration extends DefaultConfiguration implements LegacyConfiguration {
-
-    @Inject
-    public DefaultLegacyConfiguration(
-        ConfigurationServicesBundle configurationServices,
-        DomainObjectContext domainObjectContext,
-        String name,
-        boolean isDetached,
-        ConfigurationResolver resolver,
-        ListenerBroadcast<DependencyResolutionListener> dependencyResolutionListeners,
-        Factory<ResolutionStrategyInternal> resolutionStrategyFactory,
-        NotationParser<Object, ConfigurablePublishArtifact> artifactNotationParser,
-        NotationParser<Object, Capability> capabilityNotationParser,
-        UserCodeApplicationContext userCodeApplicationContext,
-        DefaultConfigurationFactory defaultConfigurationFactory,
-        ConfigurationRole roleAtCreation
-    ) {
-        super(
-            configurationServices,
-            domainObjectContext,
-            name,
-            isDetached,
-            resolver,
-            dependencyResolutionListeners,
-            resolutionStrategyFactory,
-            artifactNotationParser,
-            capabilityNotationParser,
-            userCodeApplicationContext,
-            defaultConfigurationFactory,
-            roleAtCreation,
-            false
-        );
-    }
-
-}
+class DefaultLegacyConfiguration @Inject constructor(
+    configurationServices: ConfigurationServicesBundle,
+    domainObjectContext: DomainObjectContext,
+    name: String,
+    isDetached: Boolean,
+    resolver: ConfigurationResolver,
+    dependencyResolutionListeners: ListenerBroadcast<DependencyResolutionListener?>,
+    resolutionStrategyFactory: Factory<ResolutionStrategyInternal?>,
+    artifactNotationParser: NotationParser<Any, ConfigurablePublishArtifact>,
+    capabilityNotationParser: NotationParser<Any, Capability>,
+    userCodeApplicationContext: UserCodeApplicationContext,
+    defaultConfigurationFactory: DefaultConfigurationFactory,
+    roleAtCreation: ConfigurationRole
+) : DefaultConfiguration(
+    configurationServices,
+    domainObjectContext,
+    name,
+    isDetached,
+    resolver,
+    dependencyResolutionListeners,
+    resolutionStrategyFactory,
+    artifactNotationParser,
+    capabilityNotationParser,
+    userCodeApplicationContext,
+    defaultConfigurationFactory,
+    roleAtCreation,
+    false
+), LegacyConfiguration

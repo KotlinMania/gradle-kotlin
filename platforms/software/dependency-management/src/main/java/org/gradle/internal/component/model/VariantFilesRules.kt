@@ -36,14 +36,14 @@ class VariantFilesRules {
 
     fun <T : ComponentVariant.File?> executeForFiles(variant: VariantResolveMetadata, declaredFiles: ImmutableList<T?>, componentIdentifier: ModuleComponentIdentifier): ImmutableList<T?> {
         val filesMetadata = execute(variant)
-        if (filesMetadata.getFiles().isEmpty()) {
+        if (filesMetadata.files.isEmpty()) {
             return declaredFiles
         }
         val builder = ImmutableList.Builder<T?>()
         if (!filesMetadata.isClearExistingFiles()) {
             builder.addAll(declaredFiles)
         }
-        for (file in filesMetadata.getFiles()) {
+        for (file in filesMetadata.files) {
             builder.add(uncheckedNonnullCast<T?>(AbstractMutableModuleComponentResolveMetadata.FileImpl(file.getName(), file.getUrl())))
         }
         return builder.build()
@@ -51,7 +51,7 @@ class VariantFilesRules {
 
     fun <T : ComponentArtifactMetadata?> executeForArtifacts(variant: VariantResolveMetadata, artifacts: ImmutableList<T?>, componentIdentifier: ModuleComponentIdentifier): ImmutableList<T?> {
         val filesMetadata = execute(variant)
-        if (filesMetadata.getFiles().isEmpty()) {
+        if (filesMetadata.files.isEmpty()) {
             return artifacts
         }
         val builder = ImmutableList.Builder<T?>()
@@ -62,7 +62,7 @@ class VariantFilesRules {
                 }
             }
         }
-        for (file in filesMetadata.getFiles()) {
+        for (file in filesMetadata.files) {
             builder.add(uncheckedNonnullCast<T?>(UrlBackedArtifactMetadata(componentIdentifier, file.getName(), file.getUrl())))
         }
         return builder.build()

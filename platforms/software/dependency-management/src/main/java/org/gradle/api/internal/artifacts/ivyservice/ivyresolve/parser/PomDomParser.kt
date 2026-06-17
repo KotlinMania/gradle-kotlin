@@ -13,162 +13,153 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import org.w3c.dom.Element
+import org.w3c.dom.Node
+import java.io.BufferedInputStream
+import java.io.FilterInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.LineNumberReader
+import java.nio.charset.StandardCharsets
+import java.util.LinkedList
+import kotlin.math.min
 
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+object PomDomParser {
+    fun getTextContent(element: Element): String {
+        val result = StringBuilder()
 
-import java.io.BufferedInputStream;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
-import java.util.LinkedList;
-import java.util.List;
+        val childNodes = element.getChildNodes()
+        for (i in 0..<childNodes.getLength()) {
+            val child = childNodes.item(i)
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-public final class PomDomParser {
-    private PomDomParser() {}
-
-    public static String getTextContent(Element element) {
-        StringBuilder result = new StringBuilder();
-
-        NodeList childNodes = element.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-            Node child = childNodes.item(i);
-
-            switch (child.getNodeType()) {
-                case Node.CDATA_SECTION_NODE:
-                case Node.TEXT_NODE:
-                    result.append(child.getNodeValue());
-                    break;
-                default:
-                    break;
+            when (child.getNodeType()) {
+                Node.CDATA_SECTION_NODE, Node.TEXT_NODE -> result.append(child.getNodeValue())
+                else -> {}
             }
         }
 
-        return result.toString();
+        return result.toString()
     }
 
-    public static String getFirstChildText(Element parentElem, String name) {
-        Element node = getFirstChildElement(parentElem, name);
+    fun getFirstChildText(parentElem: Element?, name: String): String? {
+        val node = getFirstChildElement(parentElem, name)
         if (node != null) {
-            return getTextContent(node);
+            return getTextContent(node)
         } else {
-            return null;
+            return null
         }
     }
 
-    public static Element getFirstChildElement(Element parentElem, String name) {
+    fun getFirstChildElement(parentElem: Element?, name: String): Element? {
         if (parentElem == null) {
-            return null;
+            return null
         }
-        NodeList childs = parentElem.getChildNodes();
-        for (int i = 0; i < childs.getLength(); i++) {
-            Node node = childs.item(i);
-            if (node instanceof Element && name.equals(node.getNodeName())) {
-                return (Element) node;
+        val childs = parentElem.getChildNodes()
+        for (i in 0..<childs.getLength()) {
+            val node = childs.item(i)
+            if (node is Element && name == node.getNodeName()) {
+                return node
             }
         }
-        return null;
+        return null
     }
 
-    public static List<Element> getAllChilds(Element parent) {
-        List<Element> r = new LinkedList<>();
+    fun getAllChilds(parent: Element?): MutableList<Element?> {
+        val r: MutableList<Element?> = LinkedList<Element?>()
         if (parent != null) {
-            NodeList childs = parent.getChildNodes();
-            for (int i = 0; i < childs.getLength(); i++) {
-                Node node = childs.item(i);
-                if (node instanceof Element) {
-                    r.add((Element) node);
+            val childs = parent.getChildNodes()
+            for (i in 0..<childs.getLength()) {
+                val node = childs.item(i)
+                if (node is Element) {
+                    r.add(node)
                 }
             }
         }
-        return r;
+        return r
     }
 
-    public static final class AddDTDFilterInputStream extends FilterInputStream {
-        private static final int MARK = 10000;
-        private static final String DOCTYPE = "<!DOCTYPE project SYSTEM \"m2-entities.ent\">\n";
+    class AddDTDFilterInputStream(`in`: InputStream) : FilterInputStream(BufferedInputStream(`in`)) {
+        private var count = 0
+        private var prefix = DOCTYPE.toByteArray(StandardCharsets.UTF_8)
 
-        private int count;
-        private byte[] prefix = DOCTYPE.getBytes(UTF_8);
-
-        public AddDTDFilterInputStream(InputStream in) throws IOException {
-            super(new BufferedInputStream(in));
-
-            this.in.mark(MARK);
+        init {
+            this.`in`.mark(MARK)
 
             // TODO: we should really find a better solution for this...
             // maybe we could use a FilterReader instead of a FilterInputStream?
-            int byte1 = this.in.read();
-            int byte2 = this.in.read();
-            int byte3 = this.in.read();
+            val byte1 = this.`in`.read()
+            val byte2 = this.`in`.read()
+            val byte3 = this.`in`.read()
 
             if (byte1 == 239 && byte2 == 187 && byte3 == 191) {
                 // skip the UTF-8 BOM
-                this.in.mark(MARK);
+                this.`in`.mark(MARK)
             } else {
-                this.in.reset();
+                this.`in`.reset()
             }
 
-            int bytesToSkip = 0;
-            LineNumberReader reader = new LineNumberReader(new InputStreamReader(this.in, UTF_8), 100);
-            String firstLine = reader.readLine();
+            var bytesToSkip = 0
+            val reader = LineNumberReader(InputStreamReader(this.`in`, StandardCharsets.UTF_8), 100)
+            val firstLine = reader.readLine()
             if (firstLine != null) {
-                String trimmed = firstLine.trim();
+                val trimmed = firstLine.trim { it <= ' ' }
                 if (trimmed.startsWith("<?xml ")) {
-                    int endIndex = trimmed.indexOf("?>");
-                    String xmlDecl = trimmed.substring(0, endIndex + 2);
-                    prefix = (xmlDecl + "\n" + DOCTYPE).getBytes(UTF_8);
-                    bytesToSkip = xmlDecl.getBytes(UTF_8).length;
+                    val endIndex = trimmed.indexOf("?>")
+                    val xmlDecl = trimmed.substring(0, endIndex + 2)
+                    prefix = (xmlDecl + "\n" + DOCTYPE).toByteArray(StandardCharsets.UTF_8)
+                    bytesToSkip = xmlDecl.toByteArray(StandardCharsets.UTF_8).size
                 }
             }
 
-            this.in.reset();
-            for (int i = 0; i < bytesToSkip; i++) {
-                this.in.read();
+            this.`in`.reset()
+            for (i in 0..<bytesToSkip) {
+                this.`in`.read()
             }
         }
 
-        @Override
-        public int read() throws IOException {
-            if (count < prefix.length) {
-                return prefix[count++];
+        @Throws(IOException::class)
+        override fun read(): Int {
+            if (count < prefix.size) {
+                return prefix[count++].toInt()
             }
 
-            return super.read();
+            return super.read()
         }
 
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
+        @Throws(IOException::class)
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
             if (b == null) {
-                throw new NullPointerException();
-            } else if ((off < 0) || (off > b.length) || (len < 0)
-                    || ((off + len) > b.length) || ((off + len) < 0)) {
-                throw new IndexOutOfBoundsException();
+                throw NullPointerException()
+            } else if ((off < 0) || (off > b.size) || (len < 0)
+                || ((off + len) > b.size) || ((off + len) < 0)
+            ) {
+                throw IndexOutOfBoundsException()
             } else if (len == 0) {
-                return 0;
+                return 0
             }
 
-            int nbrBytesCopied = 0;
+            var nbrBytesCopied = 0
 
-            if (count < prefix.length) {
-                int nbrBytesFromPrefix = Math.min(prefix.length - count, len);
-                System.arraycopy(prefix, count, b, off, nbrBytesFromPrefix);
-                nbrBytesCopied = nbrBytesFromPrefix;
+            if (count < prefix.size) {
+                val nbrBytesFromPrefix = min(prefix.size - count, len)
+                System.arraycopy(prefix, count, b, off, nbrBytesFromPrefix)
+                nbrBytesCopied = nbrBytesFromPrefix
             }
 
             if (nbrBytesCopied < len) {
-                nbrBytesCopied += in.read(b, off + nbrBytesCopied, len - nbrBytesCopied);
+                nbrBytesCopied += `in`.read(b, off + nbrBytesCopied, len - nbrBytesCopied)
             }
 
-            count += nbrBytesCopied;
-            return nbrBytesCopied;
+            count += nbrBytesCopied
+            return nbrBytesCopied
+        }
+
+        companion object {
+            private const val MARK = 10000
+            private const val DOCTYPE = "<!DOCTYPE project SYSTEM \"m2-entities.ent\">\n"
         }
     }
 }

@@ -13,40 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
 
 /**
  * Transforms a variant artifact set by applying a set of artifact transform
  * steps to a source variant, producing a set of transformed artifacts.
  */
-public class ResolvedVariantTransformer {
-
-    private final TransformedVariantFactory transformedVariantFactory;
-    private final TransformUpstreamDependenciesResolver dependenciesResolver;
-
-    public ResolvedVariantTransformer(
-        TransformedVariantFactory transformedVariantFactory,
-        TransformUpstreamDependenciesResolver dependenciesResolver
-    ) {
-        this.transformedVariantFactory = transformedVariantFactory;
-        this.dependenciesResolver = dependenciesResolver;
-    }
-
-    public ResolvedArtifactSet transform(
-        ComponentIdentifier componentId,
-        ResolvedVariant sourceVariant,
-        VariantDefinition variantDefinition
-    ) {
-        if (componentId instanceof ProjectComponentIdentifier) {
-            return transformedVariantFactory.transformedProjectArtifacts(componentId, sourceVariant, variantDefinition, dependenciesResolver);
+class ResolvedVariantTransformer(
+    private val transformedVariantFactory: TransformedVariantFactory,
+    private val dependenciesResolver: TransformUpstreamDependenciesResolver
+) {
+    fun transform(
+        componentId: ComponentIdentifier,
+        sourceVariant: ResolvedVariant,
+        variantDefinition: VariantDefinition
+    ): ResolvedArtifactSet {
+        if (componentId is ProjectComponentIdentifier) {
+            return transformedVariantFactory.transformedProjectArtifacts(componentId, sourceVariant, variantDefinition, dependenciesResolver)
         } else {
-            return transformedVariantFactory.transformedExternalArtifacts(componentId, sourceVariant, variantDefinition, dependenciesResolver);
+            return transformedVariantFactory.transformedExternalArtifacts(componentId, sourceVariant, variantDefinition, dependenciesResolver)
         }
     }
 }

@@ -13,331 +13,318 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.serializer;
+package org.gradle.api.internal.artifacts.verification.serializer
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.Checksum;
-import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.IgnoredKey;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.xml.SimpleMarkupWriter;
-import org.gradle.internal.xml.SimpleXmlWriter;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.Checksum
+import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.IgnoredKey
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerificationConfiguration
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.xml.SimpleMarkupWriter
+import org.gradle.internal.xml.SimpleXmlWriter
+import java.io.IOException
+import java.io.OutputStream
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.stream.Collectors
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
+class DependencyVerificationsXmlWriter private constructor(out: OutputStream?) {
+    private val writer: SimpleXmlWriter
 
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.ALSO_TRUST;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.ARTIFACT;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.COMPONENT;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.COMPONENTS;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.CONFIG;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.ENABLED;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.FILE;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.GROUP;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.ID;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.IGNORED_KEY;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.IGNORED_KEYS;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.KEYRING_FORMAT;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.KEY_SERVER;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.KEY_SERVERS;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.NAME;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.ORIGIN;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.PGP;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.REASON;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.REGEX;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.TRUST;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.TRUSTED_ARTIFACTS;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.TRUSTED_KEY;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.TRUSTED_KEYS;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.TRUSTING;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.URI;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.VALUE;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.VERIFICATION_METADATA;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.VERIFY_METADATA;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.VERIFY_SIGNATURES;
-import static org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationXmlTags.VERSION;
-
-public class DependencyVerificationsXmlWriter {
-    private static final String SPACES = "   ";
-    private final SimpleXmlWriter writer;
-
-    private DependencyVerificationsXmlWriter(OutputStream out) throws IOException {
-        this.writer = new SimpleXmlWriter(out, SPACES);
+    init {
+        this.writer = SimpleXmlWriter(out, SPACES)
     }
 
-    public static void serialize(DependencyVerifier verifier, OutputStream out) throws IOException {
-        try {
-            DependencyVerificationsXmlWriter writer = new DependencyVerificationsXmlWriter(out);
-            writer.write(verifier);
-        } finally {
-            out.close();
-        }
-    }
-
-    private void write(DependencyVerifier verifier) throws IOException {
-        verifier.getTopLevelComments().forEach(comment -> {
+    @Throws(IOException::class)
+    private fun write(verifier: DependencyVerifier) {
+        verifier.topLevelComments!!.forEach(Consumer { comment: String? ->
             try {
-                writer.comment(comment);
-            } catch (IOException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+                writer.comment(comment)
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
             }
-        });
-        writer.startElement(VERIFICATION_METADATA);
-        writeAttribute("xmlns", "https://schema.gradle.org/dependency-verification");
-        writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-        writeAttribute("xsi:schemaLocation", "https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd");
-        writeConfiguration(verifier.getConfiguration());
-        writeVerifications(verifier.getVerificationMetadata());
-        writer.endElement();
-        writer.close();
+        })
+        writer.startElement(DependencyVerificationXmlTags.VERIFICATION_METADATA)
+        writeAttribute("xmlns", "https://schema.gradle.org/dependency-verification")
+        writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+        writeAttribute("xsi:schemaLocation", "https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd")
+        writeConfiguration(verifier.configuration)
+        writeVerifications(verifier.getVerificationMetadata())
+        writer.endElement()
+        writer.close()
     }
 
-    private void writeConfiguration(DependencyVerificationConfiguration configuration) throws IOException {
-        writer.startElement(CONFIG);
-        writeVerifyMetadata(configuration);
-        writeSignatureCheck(configuration);
-        writeKeyRingFormat(configuration);
-        writeKeyServers(configuration);
-        writeTrustedArtifacts(configuration);
-        writIgnoredKeys(configuration);
-        writeGloballyTrustedKeys(configuration);
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeConfiguration(configuration: DependencyVerificationConfiguration) {
+        writer.startElement(DependencyVerificationXmlTags.CONFIG)
+        writeVerifyMetadata(configuration)
+        writeSignatureCheck(configuration)
+        writeKeyRingFormat(configuration)
+        writeKeyServers(configuration)
+        writeTrustedArtifacts(configuration)
+        writIgnoredKeys(configuration)
+        writeGloballyTrustedKeys(configuration)
+        writer.endElement()
     }
 
-    private void writeKeyRingFormat(DependencyVerificationConfiguration configuration) throws IOException {
-        DependencyVerificationConfiguration.KeyringFormat keyRingFormat = configuration.getKeyringFormat();
+    @Throws(IOException::class)
+    private fun writeKeyRingFormat(configuration: DependencyVerificationConfiguration) {
+        val keyRingFormat = configuration.keyringFormat
         if (keyRingFormat == null) {
-            return;
+            return
         }
-        writer.startElement(KEYRING_FORMAT);
-        writer.write(String.valueOf(keyRingFormat).toLowerCase(Locale.ROOT));
-        writer.endElement();
+        writer.startElement(DependencyVerificationXmlTags.KEYRING_FORMAT)
+        writer.write(keyRingFormat.toString().lowercase())
+        writer.endElement()
     }
 
-    private void writeGloballyTrustedKeys(DependencyVerificationConfiguration configuration) throws IOException {
-        final List<DependencyVerificationConfiguration.TrustedKey> keys = configuration.getTrustedKeys();
+    @Throws(IOException::class)
+    private fun writeGloballyTrustedKeys(configuration: DependencyVerificationConfiguration) {
+        val keys: MutableList<DependencyVerificationConfiguration.TrustedKey?> = configuration.trustedKeys
         if (keys.isEmpty()) {
-            return;
+            return
         }
-        writer.startElement(TRUSTED_KEYS);
-        Map<String, List<DependencyVerificationConfiguration.TrustedKey>> groupedByKeyId = keys
+        writer.startElement(DependencyVerificationXmlTags.TRUSTED_KEYS)
+        val groupedByKeyId = keys
             .stream()
-            .collect(Collectors.groupingBy(DependencyVerificationConfiguration.TrustedKey::getKeyId, TreeMap::new, Collectors.toList()));
-        for (Map.Entry<String, List<DependencyVerificationConfiguration.TrustedKey>> e : groupedByKeyId.entrySet()) {
-            String key = e.getKey();
-            List<DependencyVerificationConfiguration.TrustedKey> trustedKeys = e.getValue();
-            if (trustedKeys.size() == 1) {
-                writeTrustedKey(trustedKeys.get(0));
+            .collect(Collectors.groupingBy(DependencyVerificationConfiguration.TrustedKey::keyId, Supplier { TreeMap() }, Collectors.toList()))
+        for (e in groupedByKeyId.entries) {
+            val key = e.key
+            val trustedKeys: MutableList<DependencyVerificationConfiguration.TrustedKey?> = e.value
+            if (trustedKeys.size == 1) {
+                writeTrustedKey(trustedKeys.get(0)!!)
             } else {
-                writeGroupedTrustedKey(key, trustedKeys);
+                writeGroupedTrustedKey(key, trustedKeys)
             }
         }
-        writer.endElement();
+        writer.endElement()
     }
 
-    private void writeGroupedTrustedKey(String keyId, List<DependencyVerificationConfiguration.TrustedKey> trustedKeys) throws IOException {
-        writer.startElement(TRUSTED_KEY);
-        writeAttribute(ID, keyId);
-        trustedKeys.stream().sorted().forEach(trustedKey -> {
+    @Throws(IOException::class)
+    private fun writeGroupedTrustedKey(keyId: String?, trustedKeys: MutableList<DependencyVerificationConfiguration.TrustedKey?>) {
+        writer.startElement(DependencyVerificationXmlTags.TRUSTED_KEY)
+        writeAttribute(DependencyVerificationXmlTags.ID, keyId)
+        trustedKeys.stream().sorted().forEach { trustedKey: DependencyVerificationConfiguration.TrustedKey? ->
             try {
-                writer.startElement(TRUSTING);
-                writeTrustCoordinates(trustedKey);
-                writer.endElement();
-            } catch (IOException e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+                writer.startElement(DependencyVerificationXmlTags.TRUSTING)
+                writeTrustCoordinates(trustedKey!!)
+                writer.endElement()
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
             }
-        });
-        writer.endElement();
+        }
+        writer.endElement()
     }
 
-    private void writeTrustedKey(DependencyVerificationConfiguration.TrustedKey key) throws IOException {
-        writer.startElement(TRUSTED_KEY);
-        writeAttribute(ID, key.getKeyId());
-        writeTrustCoordinates(key);
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeTrustedKey(key: DependencyVerificationConfiguration.TrustedKey) {
+        writer.startElement(DependencyVerificationXmlTags.TRUSTED_KEY)
+        writeAttribute(DependencyVerificationXmlTags.ID, key.keyId)
+        writeTrustCoordinates(key)
+        writer.endElement()
     }
 
-    private void writIgnoredKeys(DependencyVerificationConfiguration configuration) throws IOException {
-        Set<IgnoredKey> ignoredKeys = configuration.getIgnoredKeys();
+    @Throws(IOException::class)
+    private fun writIgnoredKeys(configuration: DependencyVerificationConfiguration) {
+        val ignoredKeys: MutableSet<IgnoredKey?> = configuration.ignoredKeys
         if (!ignoredKeys.isEmpty()) {
-            writer.startElement(IGNORED_KEYS);
-            ignoredKeys.stream().sorted().forEach(ignoredKey -> {
+            writer.startElement(DependencyVerificationXmlTags.IGNORED_KEYS)
+            ignoredKeys.stream().sorted().forEach { ignoredKey: IgnoredKey? ->
                 try {
-                    writeIgnoredKey(ignoredKey);
-                } catch (IOException ex) {
-                    throw UncheckedException.throwAsUncheckedException(ex);
+                    writeIgnoredKey(ignoredKey!!)
+                } catch (ex: IOException) {
+                    throw throwAsUncheckedException(ex)
                 }
-            });
-            writer.endElement();
+            }
+            writer.endElement()
         }
     }
 
-    private void writeIgnoredKey(IgnoredKey ignoredKey) throws IOException {
-        writer.startElement(IGNORED_KEY);
-        writeAttribute(ID, ignoredKey.getKeyId());
-        writeNullableAttribute(REASON, ignoredKey.getReason());
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeIgnoredKey(ignoredKey: IgnoredKey) {
+        writer.startElement(DependencyVerificationXmlTags.IGNORED_KEY)
+        writeAttribute(DependencyVerificationXmlTags.ID, ignoredKey.getKeyId())
+        writeNullableAttribute(DependencyVerificationXmlTags.REASON, ignoredKey.getReason())
+        writer.endElement()
     }
 
-    private void writeTrustedArtifacts(DependencyVerificationConfiguration configuration) throws IOException {
-        List<DependencyVerificationConfiguration.TrustedArtifact> trustedArtifacts = configuration.getTrustedArtifacts();
+    @Throws(IOException::class)
+    private fun writeTrustedArtifacts(configuration: DependencyVerificationConfiguration) {
+        val trustedArtifacts: MutableList<DependencyVerificationConfiguration.TrustedArtifact?> = configuration.trustedArtifacts
         if (trustedArtifacts.isEmpty()) {
-            return;
+            return
         }
-        writer.startElement(TRUSTED_ARTIFACTS);
-        trustedArtifacts.stream().sorted().forEach(this::writeTrustedArtifact);
-        writer.endElement();
+        writer.startElement(DependencyVerificationXmlTags.TRUSTED_ARTIFACTS)
+        trustedArtifacts.stream().sorted().forEach { trustedArtifact: DependencyVerificationConfiguration.TrustedArtifact? -> this.writeTrustedArtifact(trustedArtifact!!) }
+        writer.endElement()
     }
 
-    private void writeTrustedArtifact(DependencyVerificationConfiguration.TrustedArtifact trustedArtifact) {
+    private fun writeTrustedArtifact(trustedArtifact: DependencyVerificationConfiguration.TrustedArtifact) {
         try {
-            writer.startElement(TRUST);
-            writeTrustCoordinates(trustedArtifact);
-            writer.endElement();
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            writer.startElement(DependencyVerificationXmlTags.TRUST)
+            writeTrustCoordinates(trustedArtifact)
+            writer.endElement()
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    private void writeTrustCoordinates(DependencyVerificationConfiguration.TrustCoordinates trustedArtifact) throws IOException {
-        writeNullableAttribute(GROUP, trustedArtifact.getGroup());
-        writeNullableAttribute(NAME, trustedArtifact.getName());
-        writeNullableAttribute(VERSION, trustedArtifact.getVersion());
-        writeNullableAttribute(FILE, trustedArtifact.getFileName());
-        if (trustedArtifact.isRegex()) {
-            writeAttribute(REGEX, "true");
+    @Throws(IOException::class)
+    private fun writeTrustCoordinates(trustedArtifact: DependencyVerificationConfiguration.TrustCoordinates) {
+        writeNullableAttribute(DependencyVerificationXmlTags.GROUP, trustedArtifact.group)
+        writeNullableAttribute(DependencyVerificationXmlTags.NAME, trustedArtifact.name)
+        writeNullableAttribute(DependencyVerificationXmlTags.VERSION, trustedArtifact.version)
+        writeNullableAttribute(DependencyVerificationXmlTags.FILE, trustedArtifact.fileName)
+        if (trustedArtifact.isRegex) {
+            writeAttribute(DependencyVerificationXmlTags.REGEX, "true")
         }
-        writeNullableAttribute(REASON, trustedArtifact.getReason());
+        writeNullableAttribute(DependencyVerificationXmlTags.REASON, trustedArtifact.reason)
     }
 
-    private void writeSignatureCheck(DependencyVerificationConfiguration configuration) throws IOException {
-        writer.startElement(VERIFY_SIGNATURES);
-        writer.write(String.valueOf(configuration.isVerifySignatures()));
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeSignatureCheck(configuration: DependencyVerificationConfiguration) {
+        writer.startElement(DependencyVerificationXmlTags.VERIFY_SIGNATURES)
+        writer.write(configuration.isVerifySignatures.toString())
+        writer.endElement()
     }
 
-    private void writeVerifyMetadata(DependencyVerificationConfiguration configuration) throws IOException {
-        writer.startElement(VERIFY_METADATA);
-        writer.write(String.valueOf(configuration.isVerifyMetadata()));
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeVerifyMetadata(configuration: DependencyVerificationConfiguration) {
+        writer.startElement(DependencyVerificationXmlTags.VERIFY_METADATA)
+        writer.write(configuration.isVerifyMetadata.toString())
+        writer.endElement()
     }
 
-    private void writeKeyServers(DependencyVerificationConfiguration configuration) throws IOException {
-        List<URI> keyServers = configuration.getKeyServers();
-        if (!keyServers.isEmpty() || !configuration.isUseKeyServers()) {
-            writer.startElement(KEY_SERVERS);
-            if (!configuration.isUseKeyServers()) {
-                writer.attribute(ENABLED, "false");
+    @Throws(IOException::class)
+    private fun writeKeyServers(configuration: DependencyVerificationConfiguration) {
+        val keyServers = configuration.keyServers
+        if (!keyServers.isEmpty() || !configuration.isUseKeyServers) {
+            writer.startElement(DependencyVerificationXmlTags.KEY_SERVERS)
+            if (!configuration.isUseKeyServers) {
+                writer.attribute(DependencyVerificationXmlTags.ENABLED, "false")
             }
-            for (URI keyServer : keyServers) {
-                writer.startElement(KEY_SERVER);
-                writeAttribute(URI, keyServer.toASCIIString());
-                writer.endElement();
+            for (keyServer in keyServers) {
+                writer.startElement(DependencyVerificationXmlTags.KEY_SERVER)
+                writeAttribute(DependencyVerificationXmlTags.URI, keyServer.toASCIIString())
+                writer.endElement()
             }
-            writer.endElement();
+            writer.endElement()
         }
     }
 
-    private SimpleMarkupWriter writeAttribute(String name, String value) throws IOException {
-        return writer.attribute(name, value);
+    @Throws(IOException::class)
+    private fun writeAttribute(name: String?, value: String?): SimpleMarkupWriter? {
+        return writer.attribute(name, value)
     }
 
-    private SimpleMarkupWriter writeNullableAttribute(String name, @Nullable String value) throws IOException {
+    @Throws(IOException::class)
+    private fun writeNullableAttribute(name: String?, value: String?): SimpleMarkupWriter? {
         if (value == null) {
-            return writer;
+            return writer
         }
-        return writeAttribute(name, value);
+        return writeAttribute(name, value)
     }
 
-    private void writeVerifications(Collection<ComponentVerificationMetadata> verifications) throws IOException {
-        writer.startElement(COMPONENTS);
-        for (ComponentVerificationMetadata verification : verifications) {
-            writeVerification(verification);
+    @Throws(IOException::class)
+    private fun writeVerifications(verifications: MutableCollection<ComponentVerificationMetadata>) {
+        writer.startElement(DependencyVerificationXmlTags.COMPONENTS)
+        for (verification in verifications) {
+            writeVerification(verification)
         }
-        writer.endElement();
+        writer.endElement()
     }
 
-    private void writeVerification(ComponentVerificationMetadata verification) throws IOException {
-        ModuleComponentIdentifier mci = verification.getComponentId();
-        writer.startElement(COMPONENT);
-        writeAttribute(GROUP, mci.getGroup());
-        writeAttribute(NAME, mci.getModule());
-        writeAttribute(VERSION, mci.getVersion());
-        writeArtifactVerifications(verification.getArtifactVerifications());
-        writer.endElement();
+    @Throws(IOException::class)
+    private fun writeVerification(verification: ComponentVerificationMetadata) {
+        val mci = verification.getComponentId()
+        writer.startElement(DependencyVerificationXmlTags.COMPONENT)
+        writeAttribute(DependencyVerificationXmlTags.GROUP, mci.getGroup())
+        writeAttribute(DependencyVerificationXmlTags.NAME, mci.getModule())
+        writeAttribute(DependencyVerificationXmlTags.VERSION, mci.getVersion())
+        writeArtifactVerifications(verification.getArtifactVerifications())
+        writer.endElement()
     }
 
-    private void writeArtifactVerifications(List<ArtifactVerificationMetadata> verifications) throws IOException {
-        for (ArtifactVerificationMetadata verification : verifications) {
-            writeArtifactVerification(verification);
+    @Throws(IOException::class)
+    private fun writeArtifactVerifications(verifications: MutableList<ArtifactVerificationMetadata>) {
+        for (verification in verifications) {
+            writeArtifactVerification(verification)
         }
     }
 
-    private void writeArtifactVerification(ArtifactVerificationMetadata verification) throws IOException {
-        String artifact = verification.getArtifactName();
-        writer.startElement(ARTIFACT);
-        writeAttribute(NAME, artifact);
-        writeTrustedKeys(verification.getTrustedPgpKeys());
-        writeIgnoredKeys(verification.getIgnoredPgpKeys());
-        writeChecksums(verification.getChecksums());
-        writer.endElement();
-
+    @Throws(IOException::class)
+    private fun writeArtifactVerification(verification: ArtifactVerificationMetadata) {
+        val artifact = verification.getArtifactName()
+        writer.startElement(DependencyVerificationXmlTags.ARTIFACT)
+        writeAttribute(DependencyVerificationXmlTags.NAME, artifact)
+        writeTrustedKeys(verification.getTrustedPgpKeys())
+        writeIgnoredKeys(verification.getIgnoredPgpKeys())
+        writeChecksums(verification.getChecksums())
+        writer.endElement()
     }
 
-    private void writeIgnoredKeys(Set<IgnoredKey> ignoredPgpKeys) throws IOException {
+    @Throws(IOException::class)
+    private fun writeIgnoredKeys(ignoredPgpKeys: MutableSet<IgnoredKey>) {
         if (ignoredPgpKeys.isEmpty()) {
-            return;
+            return
         }
-        writer.startElement(IGNORED_KEYS);
-        for (IgnoredKey ignoredPgpKey : ignoredPgpKeys) {
-            writeIgnoredKey(ignoredPgpKey);
+        writer.startElement(DependencyVerificationXmlTags.IGNORED_KEYS)
+        for (ignoredPgpKey in ignoredPgpKeys) {
+            writeIgnoredKey(ignoredPgpKey)
         }
-        writer.endElement();
+        writer.endElement()
     }
 
-    private void writeTrustedKeys(Set<String> trustedPgpKeys) throws IOException {
-        for (String key : trustedPgpKeys) {
-            writer.startElement(PGP);
-            writeAttribute(VALUE, key);
-            writer.endElement();
+    @Throws(IOException::class)
+    private fun writeTrustedKeys(trustedPgpKeys: MutableSet<String?>) {
+        for (key in trustedPgpKeys) {
+            writer.startElement(DependencyVerificationXmlTags.PGP)
+            writeAttribute(DependencyVerificationXmlTags.VALUE, key)
+            writer.endElement()
         }
     }
 
-    private void writeChecksums(List<Checksum> checksums) throws IOException {
-        for (Checksum checksum : checksums) {
-            String kind = checksum.getKind().name();
-            String value = checksum.getValue();
-            writer.startElement(kind);
-            writeAttribute(VALUE, value);
-            String origin = checksum.getOrigin();
+    @Throws(IOException::class)
+    private fun writeChecksums(checksums: MutableList<Checksum>) {
+        for (checksum in checksums) {
+            val kind = checksum.getKind().name
+            val value = checksum.getValue()
+            writer.startElement(kind)
+            writeAttribute(DependencyVerificationXmlTags.VALUE, value)
+            val origin = checksum.getOrigin()
             if (origin != null) {
-                writeAttribute(ORIGIN, origin);
+                writeAttribute(DependencyVerificationXmlTags.ORIGIN, origin)
             }
-            String reason = checksum.getReason();
+            val reason = checksum.getReason()
             if (reason != null) {
-                writeAttribute(REASON, reason);
+                writeAttribute(DependencyVerificationXmlTags.REASON, reason)
             }
-            Set<String> alternatives = checksum.getAlternatives();
+            val alternatives = checksum.getAlternatives()
             if (alternatives != null) {
-                for (String alternative : alternatives) {
-                    writer.startElement(ALSO_TRUST);
-                    writeAttribute(VALUE, alternative);
-                    writer.endElement();
+                for (alternative in alternatives) {
+                    writer.startElement(DependencyVerificationXmlTags.ALSO_TRUST)
+                    writeAttribute(DependencyVerificationXmlTags.VALUE, alternative)
+                    writer.endElement()
                 }
             }
-            writer.endElement();
+            writer.endElement()
+        }
+    }
+
+    companion object {
+        private const val SPACES = "   "
+
+        @JvmStatic
+        @Throws(IOException::class)
+        fun serialize(verifier: DependencyVerifier, out: OutputStream) {
+            try {
+                val writer = DependencyVerificationsXmlWriter(out)
+                writer.write(verifier)
+            } finally {
+                out.close()
+            }
         }
     }
 }

@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Scope.Global.class)
-public interface ExcludeRuleConverter {
-    ExcludeMetadata convertExcludeRule(ExcludeRule excludeRule);
-    ExcludeMetadata createExcludeRule(String group, String module);
+@ServiceScope(Scope.Global::class)
+interface ExcludeRuleConverter {
+    fun convertExcludeRule(excludeRule: ExcludeRule): ExcludeMetadata?
+    fun createExcludeRule(group: String, module: String): ExcludeMetadata?
 }

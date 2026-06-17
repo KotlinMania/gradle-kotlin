@@ -13,228 +13,224 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors
 
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.internal.artifacts.ResolvedVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.LatestVersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.VirtualPlatformState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.result.ComponentIdResolveResult;
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.LatestVersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.VirtualPlatformState
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.result.ComponentIdResolveResult
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+internal class SelectorStateResolverResults(versionComparator: Comparator<Version?>, versionParser: VersionParser, size: Int) {
+    private val versionComparator: Comparator<Version?>
+    private val versionParser: VersionParser
+    private val results: MutableList<Registration>
 
-class SelectorStateResolverResults {
-    private final Comparator<Version> versionComparator;
-    private final VersionParser versionParser;
-    private final List<Registration> results;
-
-    public SelectorStateResolverResults(Comparator<Version> versionComparator, VersionParser versionParser, int size) {
-        this.versionParser = versionParser;
-        this.results = new ArrayList<>(size);
-        this.versionComparator = versionComparator;
+    init {
+        this.versionParser = versionParser
+        this.results = ArrayList<Registration>(size)
+        this.versionComparator = versionComparator
     }
 
-    public <T extends ComponentResolutionState> List<T> getResolved(ComponentStateFactory<T> componentFactory) {
-        ModuleVersionResolveException failure = null;
-        List<T> resolved = null;
-        boolean hasSoftForce = hasSoftForce();
+    fun <T : ComponentResolutionState?> getResolved(componentFactory: ComponentStateFactory<T?>): MutableList<T?> {
+        val failure: ModuleVersionResolveException? = null
+        val resolved: MutableList<T?>? = null
+        val hasSoftForce = hasSoftForce()
 
-        int size = results.size();
-        //noinspection ForLoopReplaceableByForEach
-        for (int i = 0; i < size; i++) {
-            Registration entry = results.get(i);
-            ResolvableSelectorState selectorState = entry.selector;
-            ComponentIdResolveResult idResolveResult = entry.result;
+        val size = results.size
+        for (i in 0..<size) {
+            val entry = results.get(i)
+            val selectorState = entry.selector
+            val idResolveResult = entry.result
 
             if (selectorState.isForce() && !hasSoftForce) {
-                T forcedComponent = componentForIdResolveResult(componentFactory, idResolveResult, selectorState);
-                return Collections.singletonList(forcedComponent);
+                val forcedComponent: T?
+                T > componentForIdResolveResult<T?>(componentFactory, idResolveResult, selectorState)
+                return mutableListOf<T?>(forcedComponent)
             }
 
             if (idResolveResult.mark(this)) {
                 if (idResolveResult.getFailure() == null) {
-                    T componentState = componentForIdResolveResult(componentFactory, idResolveResult, selectorState);
+                    val componentState: T?
+                    T > componentForIdResolveResult<T?>(componentFactory, idResolveResult, selectorState)
                     if (resolved == null) {
-                        resolved = new ArrayList<>();
+                        resolved = ArrayList<T?>()
                     }
-                    resolved.add(componentState);
+                    resolved.add(componentState)
                 } else {
                     if (failure == null) {
-                        failure = idResolveResult.getFailure();
+                        failure = idResolveResult.getFailure()
                     }
                 }
             }
         }
 
         if (resolved == null && failure != null) {
-            throw failure;
+            throw failure
         }
 
-        return resolved == null ? Collections.emptyList() : resolved;
+        return if (resolved == null) mutableListOf<T?>() else resolved
     }
 
-    static <T extends ComponentResolutionState> boolean isVersionAllowedByPlatform(T componentState) {
-        Set<VirtualPlatformState> platformOwners = componentState.getPlatformOwners();
-        if (!platformOwners.isEmpty()) {
-            for (VirtualPlatformState platformOwner : platformOwners) {
-                if (platformOwner.isGreaterThanForcedVersion(componentState.getVersion())) {
-                    return false;
-                }
-            }
-        } else {
-            VirtualPlatformState platform = componentState.getPlatformState();
-            // the platform itself is greater than the forced version
-            return platform == null || !platform.isGreaterThanForcedVersion(componentState.getVersion());
-        }
-        return true;
-    }
-
-    private boolean hasSoftForce() {
-        int size = results.size();
-        //noinspection ForLoopReplaceableByForEach
-        for (int i = 0; i < size; i++) {
-            Registration entry = results.get(i);
-            ResolvableSelectorState selectorState = entry.selector;
+    private fun hasSoftForce(): Boolean {
+        val size = results.size
+        for (i in 0..<size) {
+            val entry = results.get(i)
+            val selectorState = entry.selector
             if (selectorState.isSoftForce()) {
-                return true;
+                return true
             }
         }
-        return false;
-    }
-
-    public static <T extends ComponentResolutionState> T componentForIdResolveResult(ComponentStateFactory<T> componentFactory, ComponentIdResolveResult idResolveResult, ResolvableSelectorState selector) {
-        T component = componentFactory.getRevision(idResolveResult.id, idResolveResult.moduleVersionId, idResolveResult.state, idResolveResult.graphState);
-        if (idResolveResult.isRejected) {
-            component.reject();
-        }
-        return component;
+        return false
     }
 
     /**
      * Check already resolved results for a compatible version, and use it for this dependency rather than re-resolving.
      */
-    boolean alreadyHaveResolutionForSelector(ResolvableSelectorState selector) {
-        int size = results.size();
-        ComponentIdResolveResult found = null;
-        //noinspection ForLoopReplaceableByForEach
-        for (int i = 0; i < size; i++) {
-            Registration registration = results.get(i);
-            ComponentIdResolveResult discovered = registration.result;
+    fun alreadyHaveResolutionForSelector(selector: ResolvableSelectorState): Boolean {
+        val size = results.size
+        var found: ComponentIdResolveResult? = null
+        for (i in 0..<size) {
+            val registration = results.get(i)
+            val discovered = registration.result
             if (selectorAcceptsCandidate(selector, discovered, registration.selector.isFromLock())) {
-                found = discovered;
-                selector.markResolved();
-                break;
+                found = discovered
+                selector.markResolved()
+                break
             }
         }
-        if (found!=null) {
-            register(selector, found);
-            return true;
+        if (found != null) {
+            register(selector, found)
+            return true
         }
-        return false;
+        return false
     }
 
-    boolean replaceExistingResolutionsWithBetterResult(ComponentIdResolveResult candidate, boolean isFromLock) {
+    fun replaceExistingResolutionsWithBetterResult(candidate: ComponentIdResolveResult, isFromLock: Boolean): Boolean {
         // Check already-resolved dependencies and use this version if it's compatible
-        boolean replaces = false;
-        int size = results.size();
-        //noinspection ForLoopReplaceableByForEach
-        for (int i = 0; i < size; i++) {
-            Registration registration = results.get(i);
-            ComponentIdResolveResult previous = registration.result;
-            ResolvableSelectorState previousSelector = registration.selector;
+        var replaces = false
+        val size = results.size
+        for (i in 0..<size) {
+            val registration = results.get(i)
+            val previous = registration.result
+            val previousSelector = registration.selector
             if (emptyVersion(previous) || sameVersion(previous, candidate) ||
-                (selectorAcceptsCandidate(previousSelector, candidate, isFromLock) && lowerVersion(previous, candidate))) {
-                registration.result = candidate;
-                replaces = true;
+                (selectorAcceptsCandidate(previousSelector, candidate, isFromLock) && lowerVersion(previous, candidate))
+            ) {
+                registration.result = candidate
+                replaces = true
             }
         }
-        return replaces;
+        return replaces
     }
 
-    void register(ResolvableSelectorState selector, ComponentIdResolveResult resolveResult) {
-        results.add(new Registration(selector, resolveResult));
+    fun register(selector: ResolvableSelectorState, resolveResult: ComponentIdResolveResult) {
+        results.add(Registration(selector, resolveResult))
     }
 
-    private static boolean emptyVersion(ComponentIdResolveResult existing) {
-        if (existing.getFailure() == null) {
-            return existing.moduleVersionId.getVersion().isEmpty();
-        }
-        return false;
-    }
-
-    private static boolean sameVersion(ComponentIdResolveResult existing, ComponentIdResolveResult resolveResult) {
+    private fun lowerVersion(existing: ComponentIdResolveResult, resolveResult: ComponentIdResolveResult): Boolean {
         if (existing.getFailure() == null && resolveResult.getFailure() == null) {
-            return existing.id.equals(resolveResult.id);
+            val existingVersion = versionParser.transform(existing.moduleVersionId.getVersion())
+            val candidateVersion = versionParser.transform(resolveResult.moduleVersionId.getVersion())
+
+            val comparison = versionComparator.compare(candidateVersion, existingVersion)
+            return comparison < 0
         }
-        return false;
+        return false
     }
 
-    private boolean lowerVersion(ComponentIdResolveResult existing, ComponentIdResolveResult resolveResult) {
-        if (existing.getFailure() == null && resolveResult.getFailure() == null) {
-            Version existingVersion = versionParser.transform(existing.moduleVersionId.getVersion());
-            Version candidateVersion = versionParser.transform(resolveResult.moduleVersionId.getVersion());
+    val isEmpty: Boolean
+        get() = results.isEmpty()
 
-            int comparison = versionComparator.compare(candidateVersion, existingVersion);
-            return comparison < 0;
+    private class Registration(selector: ResolvableSelectorState, result: ComponentIdResolveResult) {
+        private val selector: ResolvableSelectorState
+        private var result: ComponentIdResolveResult
+
+        init {
+            this.selector = selector
+            this.result = result
         }
-        return false;
+
+        override fun toString(): String {
+            return selector.toString() + " -> " + result.moduleVersionId
+        }
     }
 
-    private static boolean selectorAcceptsCandidate(ResolvableSelectorState dep, ComponentIdResolveResult candidate, boolean candidateIsFromLock) {
-        if (hasFailure(candidate)) {
-            return false;
-        }
-        ResolvedVersionConstraint versionConstraint = dep.getVersionConstraint();
-        if (versionConstraint == null) {
-            return dep.getSelector().matchesStrictly(candidate.id);
-        }
-        VersionSelector versionSelector = versionConstraint.requiredSelector;
-        if (versionSelector != null &&
-            (candidateIsFromLock || versionSelector.canShortCircuitWhenVersionAlreadyPreselected())) {
-
-            if (candidateIsFromLock && versionSelector instanceof LatestVersionSelector) {
-                // Always assume a candidate from a lock will satisfy the latest version selector
-                return true;
+    companion object {
+        fun <T : ComponentResolutionState?> isVersionAllowedByPlatform(componentState: T?): Boolean {
+            val platformOwners: MutableSet<VirtualPlatformState> = componentState!!.platformOwners
+            if (!platformOwners.isEmpty()) {
+                for (platformOwner in platformOwners) {
+                    if (platformOwner.isGreaterThanForcedVersion(componentState.version)) {
+                        return false
+                    }
+                }
+            } else {
+                val platform: VirtualPlatformState? = componentState.platformState
+                // the platform itself is greater than the forced version
+                return platform == null || !platform.isGreaterThanForcedVersion(componentState.version)
             }
+            return true
+        }
 
-            String version = candidate.moduleVersionId.getVersion();
-            if (StringUtils.isEmpty(version)) {
-                return false;
+        fun <T : ComponentResolutionState?> componentForIdResolveResult(
+            componentFactory: ComponentStateFactory<T?>,
+            idResolveResult: ComponentIdResolveResult,
+            selector: ResolvableSelectorState?
+        ): T? {
+            val component = componentFactory.getRevision(idResolveResult.id, idResolveResult.moduleVersionId, idResolveResult.state, idResolveResult.graphState)
+            if (idResolveResult.isRejected) {
+                component!!.reject()
             }
-            return versionSelector.accept(version);
-        }
-        return false;
-    }
-
-    private static boolean hasFailure(ComponentIdResolveResult candidate) {
-        return candidate.getFailure() != null;
-    }
-
-    public boolean isEmpty() {
-        return results.isEmpty();
-    }
-
-    private static class Registration {
-        private final ResolvableSelectorState selector;
-        private ComponentIdResolveResult result;
-
-        private Registration(ResolvableSelectorState selector, ComponentIdResolveResult result) {
-            this.selector = selector;
-            this.result = result;
+            return component
         }
 
-        @Override
-        public String toString() {
-            return selector.toString() + " -> " + result.moduleVersionId;
+        private fun emptyVersion(existing: ComponentIdResolveResult): Boolean {
+            if (existing.getFailure() == null) {
+                return existing.moduleVersionId.getVersion().isEmpty()
+            }
+            return false
+        }
+
+        private fun sameVersion(existing: ComponentIdResolveResult, resolveResult: ComponentIdResolveResult): Boolean {
+            if (existing.getFailure() == null && resolveResult.getFailure() == null) {
+                return existing.id.equals(resolveResult.id)
+            }
+            return false
+        }
+
+        private fun selectorAcceptsCandidate(dep: ResolvableSelectorState, candidate: ComponentIdResolveResult, candidateIsFromLock: Boolean): Boolean {
+            if (hasFailure(candidate)) {
+                return false
+            }
+            val versionConstraint = dep.getVersionConstraint()
+            if (versionConstraint == null) {
+                return dep.getSelector().matchesStrictly(candidate.id)
+            }
+            val versionSelector: VersionSelector? = versionConstraint.requiredSelector
+            if (versionSelector != null &&
+                (candidateIsFromLock || versionSelector.canShortCircuitWhenVersionAlreadyPreselected())
+            ) {
+                if (candidateIsFromLock && versionSelector is LatestVersionSelector) {
+                    // Always assume a candidate from a lock will satisfy the latest version selector
+                    return true
+                }
+
+                val version: String? = candidate.moduleVersionId.getVersion()
+                if (StringUtils.isEmpty(version)) {
+                    return false
+                }
+                return versionSelector.accept(version)
+            }
+            return false
+        }
+
+        private fun hasFailure(candidate: ComponentIdResolveResult): Boolean {
+            return candidate.getFailure() != null
         }
     }
 }

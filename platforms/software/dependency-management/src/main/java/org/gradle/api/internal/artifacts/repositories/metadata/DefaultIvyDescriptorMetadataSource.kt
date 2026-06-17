@@ -13,59 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.DescriptorParseContext;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister;
-import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.DescriptorParseContext
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister
+import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.MutableModuleSources.add
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.List;
-
-public class DefaultIvyDescriptorMetadataSource extends AbstractRepositoryMetadataSource<MutableIvyModuleResolveMetadata> {
-
-    private final MetaDataParser<MutableIvyModuleResolveMetadata> metaDataParser;
-    private final ChecksumService checksumService;
-
-    @Inject
-    public DefaultIvyDescriptorMetadataSource(MetadataArtifactProvider metadataArtifactProvider, MetaDataParser<MutableIvyModuleResolveMetadata> metaDataParser, FileResourceRepository fileResourceRepository, ChecksumService checksumService) {
-        super(metadataArtifactProvider, fileResourceRepository, checksumService);
-        this.metaDataParser = metaDataParser;
-        this.checksumService = checksumService;
-    }
-
-    @Override
-    protected MetaDataParser.ParseResult<MutableIvyModuleResolveMetadata> parseMetaDataFromResource(ModuleComponentIdentifier moduleComponentIdentifier, LocallyAvailableExternalResource cachedResource, ExternalResourceArtifactResolver artifactResolver, DescriptorParseContext context, String repoName) {
-        MetaDataParser.ParseResult<MutableIvyModuleResolveMetadata> parseResult = metaDataParser.parseMetaData(context, cachedResource);
-        MutableIvyModuleResolveMetadata metaData = parseResult.getResult();
+class DefaultIvyDescriptorMetadataSource @Inject constructor(
+    metadataArtifactProvider: MetadataArtifactProvider,
+    private val metaDataParser: MetaDataParser<MutableIvyModuleResolveMetadata>,
+    fileResourceRepository: FileResourceRepository,
+    private val checksumService: ChecksumService
+) : AbstractRepositoryMetadataSource<MutableIvyModuleResolveMetadata?>(
+    metadataArtifactProvider, fileResourceRepository,
+    checksumService
+) {
+    override fun parseMetaDataFromResource(
+        moduleComponentIdentifier: ModuleComponentIdentifier,
+        cachedResource: LocallyAvailableExternalResource,
+        artifactResolver: ExternalResourceArtifactResolver,
+        context: DescriptorParseContext,
+        repoName: String
+    ): MetaDataParser.ParseResult<MutableIvyModuleResolveMetadata> {
+        val parseResult = metaDataParser.parseMetaData(context, cachedResource)
+        val metaData = parseResult.result
         if (metaData != null) {
-            metaData.getSources().add(new ModuleDescriptorHashModuleSource(
-                checksumService.md5(cachedResource.getFile()),
-                metaData.isChanging()
-            ));
-            checkMetadataConsistency(moduleComponentIdentifier, metaData);
+            metaData.sources.add(
+                ModuleDescriptorHashModuleSource(
+                    checksumService.md5(cachedResource.getFile()),
+                    metaData.isChanging
+                )
+            )
+            checkMetadataConsistency(moduleComponentIdentifier, metaData)
         }
-        return parseResult;
+        return parseResult
     }
 
-    @Override
-    public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, List<ResourcePattern> ivyPatterns, List<ResourcePattern> artifactPatterns, VersionLister versionLister, BuildableModuleVersionListingResolveResult result) {
+    override fun listModuleVersions(
+        selector: ModuleComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata,
+        ivyPatterns: MutableList<ResourcePattern>,
+        artifactPatterns: MutableList<ResourcePattern>,
+        versionLister: VersionLister,
+        result: BuildableModuleVersionListingResolveResult
+    ) {
         // List modules based on metadata files (artifact version is not considered in listVersionsForAllPatterns())
-        ModuleIdentifier module = selector.getModuleIdentifier();
-        IvyArtifactName metaDataArtifact = metadataArtifactProvider.getMetaDataArtifactName(module.getName());
-        versionLister.listVersions(module, metaDataArtifact, ivyPatterns, result);
+        val module = selector.getModuleIdentifier()
+        val metaDataArtifact = metadataArtifactProvider.getMetaDataArtifactName(module.getName())
+        versionLister.listVersions(module, metaDataArtifact, ivyPatterns, result)
     }
 }

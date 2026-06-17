@@ -13,36 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-import java.util.List;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
 /**
- * Injecting parameterized types, like {@code List<ResolverProviderFactory>} is very expensive for the
+ * Injecting parameterized types, like `List<ResolverProviderFactory>` is very expensive for the
  * ServiceRegistry, since it needs to look up and parse the generic signature of a method or constructor,
  * which is a string, and then resolve the types.
- * <p>
+ *
+ *
  * When injecting generic parameters into constructors or method with very long signatures, this parsing
  * and loading step can take a non-negligible amount of time. This type acts as a proxy to loading a list
  * of resolver provider factories. Injecting this class is much cheaper, as the service registry only needs
  * to parse this short constructor, and the type that this class is injected into can remain generic-free.
  */
-@ServiceScope(Scope.Build.class)
-public class ResolverProviderFactories {
-
-    private final List<ResolverProviderFactory> factories;
-
-    @Inject
-    public ResolverProviderFactories(List<ResolverProviderFactory> factories) {
-        this.factories = factories;
-    }
-
-    public List<ResolverProviderFactory> getFactories() {
-        return factories;
-    }
-
-}
+@ServiceScope(Scope.Build::class)
+class ResolverProviderFactories @Inject constructor(val factories: MutableList<ResolverProviderFactory>)

@@ -13,162 +13,151 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
-
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-import org.gradle.api.artifacts.result.DependencyResult;
-import org.gradle.api.artifacts.result.ResolvedDependencyResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.internal.Describables;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.IntFunction;
+import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.ints.IntList
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure
+import org.gradle.internal.Describables
+import java.util.function.IntFunction
 
 /**
  * Shared state that all components and variants of a
- * {@link org.gradle.api.artifacts.result.ResolutionResult} share.
+ * [org.gradle.api.artifacts.result.ResolutionResult] share.
  */
-public class ResolvedGraphResult {
+class ResolvedGraphResult(
+    private val structure: GraphStructure,
+    private val availableVariantsByComponent: MutableList<MutableList<ResolvedVariantResult>>?
+) {
+    private val nodesByComponent: MutableList<IntList>
 
-    private final GraphStructure structure;
-    private final @Nullable List<List<ResolvedVariantResult>> availableVariantsByComponent;
+    private var components: Array<ResolvedComponentResultInternal?>?
+    private var variants: Array<ResolvedVariantResult?>?
+    private var resolvedEdgesByTarget: MutableList<MutableSet<ResolvedDependencyResult>>? = null
 
-    private final List<IntList> nodesByComponent;
-
-    private @Nullable ResolvedComponentResultInternal @Nullable [] components;
-    private @Nullable ResolvedVariantResult @Nullable [] variants;
-    private @Nullable List<Set<ResolvedDependencyResult>> resolvedEdgesByTarget;
-
-    public ResolvedGraphResult(
-        GraphStructure structure,
-        @Nullable List<List<ResolvedVariantResult>> availableVariantsByComponent
-    ) {
-        this.structure = structure;
-        this.availableVariantsByComponent = availableVariantsByComponent;
-
-        this.nodesByComponent = computeNodeIndices(structure);
+    init {
+        this.nodesByComponent = computeNodeIndices(structure)
     }
 
     /**
      * Get the underlying raw graph structure that this resolved graph is based on.
      */
-    public GraphStructure structure() {
-        return structure;
+    fun structure(): GraphStructure {
+        return structure
     }
 
     /**
      * Get the component at the given index.
      */
-    public synchronized ResolvedComponentResultInternal getComponent(int index) {
+    @Synchronized
+    fun getComponent(index: Int): ResolvedComponentResultInternal {
         if (components == null) {
-            components = new ResolvedComponentResultInternal[structure.components().count()];
+            components = arrayOfNulls<ResolvedComponentResultInternal>(structure.components().count())
         }
-        ResolvedComponentResultInternal component = components[index];
+        var component = components!![index]
         if (component == null) {
-            component = new DefaultResolvedComponentResult(
+            component = DefaultResolvedComponentResult(
                 index,
                 nodesByComponent.get(index),
                 this
-            );
-            components[index] = component;
+            )
+            components!![index] = component
         }
-        return component;
+        return component
     }
 
     /**
      * Get the variant at the given index.
      */
-    public synchronized ResolvedVariantResult getVariant(int index) {
+    @Synchronized
+    fun getVariant(index: Int): ResolvedVariantResult {
         if (variants == null) {
-            variants = new ResolvedVariantResult[structure.nodes().count()];
+            variants = arrayOfNulls<ResolvedVariantResult>(structure.nodes().count())
         }
-        ResolvedVariantResult variant = variants[index];
+        var variant = variants!![index]
         if (variant == null) {
-            GraphStructure.Nodes nodes = structure.nodes();
-            int externalVariantIndex = nodes.externalVariantIndex(index);
+            val nodes = structure.nodes()
+            val externalVariantIndex = nodes.externalVariantIndex(index)
 
-            ResolvedVariantResult externalVariant = null;
+            var externalVariant: ResolvedVariantResult? = null
             if (externalVariantIndex != -1) {
-                externalVariant = getVariant(externalVariantIndex);
+                externalVariant = getVariant(externalVariantIndex)
             }
 
-            variant = new DefaultResolvedVariantResult(
+            variant = DefaultResolvedVariantResult(
                 structure.components().id(nodes.owner(index)),
                 Describables.of(nodes.variantName(index)),
                 nodes.attributes(index),
                 nodes.capabilities(index).asSet().asList(),
                 externalVariant
-            );
-            variants[index] = variant;
+            )
+            variants!![index] = variant
         }
-        return variant;
-    }
-
-    private static List<IntList> computeNodeIndices(GraphStructure structure) {
-        int componentCount = structure.components().count();
-        List<IntList> nodesByComponent = new ArrayList<>(componentCount);
-        for (int i = 0; i < componentCount; i++) {
-            nodesByComponent.add(new IntArrayList());
-        }
-
-        GraphStructure.Nodes nodes = structure.nodes();
-        for (int i = 0; i < nodes.count(); i++) {
-            int ownerId = nodes.owner(i);
-            nodesByComponent.get(ownerId).add(i);
-        }
-        return nodesByComponent;
+        return variant
     }
 
     /**
      * Get all incoming edges for the component at the given index.
      */
-    public synchronized Set<ResolvedDependencyResult> getIncomingEdges(int targetComponentIndex) {
+    @Synchronized
+    fun getIncomingEdges(targetComponentIndex: Int): MutableSet<ResolvedDependencyResult> {
         if (resolvedEdgesByTarget == null) {
-            resolvedEdgesByTarget = computeResolvedEdgesByTarget(structure, this::getComponent);
+            resolvedEdgesByTarget = computeResolvedEdgesByTarget(structure, IntFunction { index: Int -> this.getComponent(index) })
         }
-        return resolvedEdgesByTarget.get(targetComponentIndex);
-    }
-
-    private static List<Set<ResolvedDependencyResult>> computeResolvedEdgesByTarget(
-        GraphStructure structure,
-        IntFunction<ResolvedComponentResultInternal> componentSource
-    ) {
-        int count = structure.components().count();
-        List<Set<ResolvedDependencyResult>> result = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            result.add(new LinkedHashSet<>());
-        }
-        for (int i = 0; i < count; i++) {
-            ResolvedComponentResultInternal component = componentSource.apply(i);
-            for (DependencyResult dependency : component.getDependencies()) {
-                if (dependency instanceof ResolvedDependencyResult resolved) {
-                    ResolvedComponentResultInternal targetComponent = (ResolvedComponentResultInternal) resolved.getSelected();
-                    result.get(targetComponent.index()).add(resolved);
-                }
-            }
-        }
-        return result;
+        return resolvedEdgesByTarget!!.get(targetComponentIndex)
     }
 
     /**
      * Get the available variants for the component at the given index, if any.
      */
-    public @Nullable List<ResolvedVariantResult> getAvailableVariants(int componentIndex) {
+    fun getAvailableVariants(componentIndex: Int): MutableList<ResolvedVariantResult>? {
         if (availableVariantsByComponent == null) {
-            return null;
+            return null
         }
-        return availableVariantsByComponent.get(componentIndex);
+        return availableVariantsByComponent.get(componentIndex)
     }
 
-    public @Nullable List<List<ResolvedVariantResult>> availableVariantsByComponent() {
-        return availableVariantsByComponent;
+    fun availableVariantsByComponent(): MutableList<MutableList<ResolvedVariantResult>>? {
+        return availableVariantsByComponent
     }
 
+    companion object {
+        private fun computeNodeIndices(structure: GraphStructure): MutableList<IntList> {
+            val componentCount = structure.components().count()
+            val nodesByComponent: MutableList<IntList> = ArrayList<IntList>(componentCount)
+            for (i in 0..<componentCount) {
+                nodesByComponent.add(IntArrayList())
+            }
+
+            val nodes = structure.nodes()
+            for (i in 0..<nodes.count()) {
+                val ownerId = nodes.owner(i)
+                nodesByComponent.get(ownerId).add(i)
+            }
+            return nodesByComponent
+        }
+
+        private fun computeResolvedEdgesByTarget(
+            structure: GraphStructure,
+            componentSource: IntFunction<ResolvedComponentResultInternal>
+        ): MutableList<MutableSet<ResolvedDependencyResult>> {
+            val count = structure.components().count()
+            val result: MutableList<MutableSet<ResolvedDependencyResult>> = ArrayList<MutableSet<ResolvedDependencyResult>>(count)
+            for (i in 0..<count) {
+                result.add(LinkedHashSet<ResolvedDependencyResult?>())
+            }
+            for (i in 0..<count) {
+                val component = componentSource.apply(i)
+                for (dependency in component.getDependencies()) {
+                    if (dependency is ResolvedDependencyResult) {
+                        val targetComponent = dependency.getSelected() as ResolvedComponentResultInternal
+                        result.get(targetComponent.index()).add(dependency)
+                    }
+                }
+            }
+            return result
+        }
+    }
 }

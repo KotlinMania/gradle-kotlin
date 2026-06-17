@@ -44,7 +44,7 @@ class ImmutableArtifactTypeRegistryFactory(
             ImmutableArtifactTypeRegistry(
                 attributesFactory,
                 artifactTypeMappings,
-                registry.getDefaultArtifactAttributes().asImmutable()
+                registry.defaultArtifactAttributes.asImmutable()
             )
         )
     }

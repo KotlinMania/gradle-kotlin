@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-public interface VisitedArtifactResults {
+interface VisitedArtifactResults {
     /**
      * Selects the artifacts for the matching variant of each node seen during traversal.
      * The implementation should attempt to select artifacts eagerly, but may be lazy where
@@ -26,9 +25,9 @@ public interface VisitedArtifactResults {
      * @param spec Governs how artifacts are selected
      * @param lenient If true, ignore artifacts that are resolved, but unavailable
      */
-    SelectedArtifactResults select(
-        ArtifactSelectionServices consumerServices,
-        ArtifactSelectionSpec spec,
-        boolean lenient
-    );
+    fun select(
+        consumerServices: ArtifactSelectionServices,
+        spec: ArtifactSelectionSpec,
+        lenient: Boolean
+    ): SelectedArtifactResults?
 }

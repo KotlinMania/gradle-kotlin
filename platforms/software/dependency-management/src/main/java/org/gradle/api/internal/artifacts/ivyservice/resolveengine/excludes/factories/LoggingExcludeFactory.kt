@@ -13,117 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.internal.Factory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.collect.PersistentSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.internal.Factory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.collect.PersistentSet
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.util.Arrays
+import java.util.stream.Collectors
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.stream.Collectors;
+class LoggingExcludeFactory internal constructor(delegate: ExcludeFactory?) : DelegatingExcludeFactory(delegate) {
+    private val subject: Subject
 
-public class LoggingExcludeFactory extends DelegatingExcludeFactory {
-    private final static Logger LOGGER = LoggerFactory.getLogger(LoggingExcludeFactory.class);
-
-    private final Subject subject;
-
-    LoggingExcludeFactory(ExcludeFactory delegate) {
-        super(delegate);
-        this.subject = computeWhatToLog();
+    init {
+        this.subject = computeWhatToLog()
     }
 
-    private static Subject computeWhatToLog() {
-        String subjectString = System.getProperty("org.gradle.internal.dm.trace.excludes", Subject.all.toString());
-        return Subject.valueOf(subjectString.toLowerCase(Locale.ROOT));
+    override fun anyOf(one: ExcludeSpec, two: ExcludeSpec?): ExcludeSpec? {
+        return log("anyOf", org.gradle.internal.Factory { super.anyOf(one, two) }, one, two)
     }
 
-    public static ExcludeFactory maybeLog(ExcludeFactory factory) {
-        if (LOGGER.isDebugEnabled()) {
-            return new LoggingExcludeFactory(factory);
-        }
-        return factory;
+    override fun allOf(one: ExcludeSpec, two: ExcludeSpec?): ExcludeSpec? {
+        return log("allOf", org.gradle.internal.Factory { super.allOf(one, two) }, one, two)
     }
 
-    @Override
-    public ExcludeSpec anyOf(ExcludeSpec one, ExcludeSpec two) {
-        return log("anyOf", () -> super.anyOf(one, two), one, two);
+    override fun anyOf(specs: PersistentSet<ExcludeSpec?>): ExcludeSpec? {
+        return log("anyOf", org.gradle.internal.Factory { super.anyOf(specs) }, specs)
     }
 
-    @Override
-    public ExcludeSpec allOf(ExcludeSpec one, ExcludeSpec two) {
-        return log("allOf", () -> super.allOf(one, two), one, two);
+    override fun allOf(specs: PersistentSet<ExcludeSpec?>): ExcludeSpec? {
+        return log("allOf", org.gradle.internal.Factory { super.allOf(specs) }, specs)
     }
 
-    @Override
-    public ExcludeSpec anyOf(PersistentSet<ExcludeSpec> specs) {
-        return log("anyOf", () -> super.anyOf(specs), specs);
-    }
-
-    @Override
-    public ExcludeSpec allOf(PersistentSet<ExcludeSpec> specs) {
-        return log("allOf", () -> super.allOf(specs), specs);
-    }
-
-    private ExcludeSpec log(String operationName, Factory<ExcludeSpec> factory, Object... operands) {
-        ExcludeSpec spec;
+    private fun log(operationName: String?, factory: Factory<ExcludeSpec?>, vararg operands: Any?): ExcludeSpec? {
+        val spec: ExcludeSpec?
         try {
-            spec = factory.create();
-        } catch (StackOverflowError e) {
-            if (subject.isTraceStackOverflows()) {
-                StringWriter sw = new StringWriter();
-                sw.append("{\"stackoverflow\": [");
-                PrintWriter printWriter = new PrintWriter(sw);
-                StackTraceElement[] stackTrace = e.getStackTrace();
-                printWriter.print(Arrays.stream(stackTrace)
-                    .limit(100)
-                    .map(d -> "\"" + d.toString() + "\"")
-                    .collect(Collectors.joining(", "))
-                );
-                sw.append("]}");
-                LOGGER.debug("{\"operation\": { \"name\": \"{}\", \"operands\": {}, \"result\": {} } }", operationName, toList(operands), sw.toString());
+            spec = factory.create()
+        } catch (e: StackOverflowError) {
+            if (subject.isTraceStackOverflows) {
+                val sw = StringWriter()
+                sw.append("{\"stackoverflow\": [")
+                val printWriter = PrintWriter(sw)
+                val stackTrace = e.getStackTrace()
+                printWriter.print(
+                    Arrays.stream<StackTraceElement?>(stackTrace)
+                        .limit(100)
+                        .map<String?> { d: StackTraceElement? -> "\"" + d.toString() + "\"" }
+                        .collect(Collectors.joining(", "))
+                )
+                sw.append("]}")
+                LOGGER.debug("{\"operation\": { \"name\": \"{}\", \"operands\": {}, \"result\": {} } }", operationName, Companion.toList(operands), sw.toString())
             }
-            throw UncheckedException.throwAsUncheckedException(e);
+            throw throwAsUncheckedException(e)
         }
-        if (subject.isTraceOperations()) {
-            LOGGER.debug("{\"operation\": { \"name\": \"{}\", \"operands\": {}, \"result\": {} } }", operationName, toList(operands), spec);
+        if (subject.isTraceOperations) {
+            LOGGER.debug("{\"operation\": { \"name\": \"{}\", \"operands\": {}, \"result\": {} } }", operationName, Companion.toList(operands), spec)
         }
-        return spec;
+        return spec
     }
 
-    private static Collection<?> toList(Object[] operands) {
-        return singleCollection(operands) ? (Collection<?>) operands[0] : Arrays.asList(operands);
-    }
-
-    private static boolean singleCollection(Object[] operands) {
-        return operands.length== 1 && operands[0] instanceof Collection;
-    }
-
-    private enum Subject {
+    private enum class Subject(val isTraceOperations: Boolean, val isTraceStackOverflows: Boolean) {
         all(true, true),
         stackoverflow(false, true),
-        operations(true, false);
+        operations(true, false)
+    }
 
-        private final boolean traceOperations;
-        private final boolean traceStackOverflows;
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(LoggingExcludeFactory::class.java)
 
-        Subject(boolean traceOperations, boolean traceStackOverflows) {
-            this.traceOperations = traceOperations;
-            this.traceStackOverflows = traceStackOverflows;
+        private fun computeWhatToLog(): Subject {
+            val subjectString = System.getProperty("org.gradle.internal.dm.trace.excludes", Subject.all.toString())
+            return Subject.valueOf(subjectString.lowercase())
         }
 
-        public boolean isTraceOperations() {
-            return traceOperations;
+        fun maybeLog(factory: ExcludeFactory?): ExcludeFactory? {
+            if (LOGGER.isDebugEnabled()) {
+                return LoggingExcludeFactory(factory)
+            }
+            return factory
         }
 
-        public boolean isTraceStackOverflows() {
-            return traceStackOverflows;
+        private fun toList(operands: Array<Any?>): MutableCollection<*>? {
+            return if (singleCollection(operands)) operands[0] as MutableCollection<*>? else Arrays.asList<Any?>(*operands)
+        }
+
+        private fun singleCollection(operands: Array<Any?>): Boolean {
+            return operands.size == 1 && operands[0] is MutableCollection<*>
         }
     }
 }

@@ -13,32 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import org.apache.ivy.Ivy;
-import org.gradle.api.Action;
-import org.gradle.api.Transformer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.annotation.concurrent.ThreadSafe;
+import org.apache.ivy.Ivy
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.annotation.concurrent.ThreadSafe
 
 @ThreadSafe
-@SuppressWarnings("overloads")
-@ServiceScope(Scope.Global.class)
-public interface IvyContextManager {
+@ServiceScope(Scope.Global::class)
+interface IvyContextManager {
     /**
      * Executes the given action against an Ivy instance. Sets up the Ivy context before the action and cleans up at the end.
      *
-     * <p>The Ivy instance of the calling thread is reused if the thread is already executing an action against an Ivy instance.
+     *
+     * The Ivy instance of the calling thread is reused if the thread is already executing an action against an Ivy instance.
      */
-    void withIvy(Action<? super Ivy> action);
+    fun withIvy(action: Action<in Ivy?>?)
 
     /**
      * Executes the given action against an Ivy instance and returns the result. Sets up the Ivy context before the action and cleans up at the end.
      *
-     * <p>The Ivy instance of the calling thread is reused if the thread is already executing an action against an Ivy instance.
+     *
+     * The Ivy instance of the calling thread is reused if the thread is already executing an action against an Ivy instance.
      */
-    <T> T withIvy(Transformer<? extends T, ? super Ivy> action);
+    fun <T> withIvy(action: Transformer<out T?, in Ivy?>?): T?
 }

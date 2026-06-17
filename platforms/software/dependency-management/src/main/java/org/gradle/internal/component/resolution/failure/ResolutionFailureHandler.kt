@@ -207,7 +207,7 @@ class ResolutionFailureHandler(instanceGenerator: InstanceGenerator, problemsSer
         transformedVariants: MutableCollection<TransformedVariant>
     ): AbstractResolutionFailureException {
         val transformationChainDatas = transformedVariantConverter.convert(transformedVariants)
-        val failure = AmbiguousArtifactTransformsFailure(targetVariantSet.getComponentIdentifier(), targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, transformationChainDatas)
+        val failure = AmbiguousArtifactTransformsFailure(targetVariantSet.componentIdentifier, targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, transformationChainDatas)
         return describeFailure<AmbiguousArtifactTransformsFailure>(failure)
     }
 
@@ -217,8 +217,8 @@ class ResolutionFailureHandler(instanceGenerator: InstanceGenerator, problemsSer
         requestedAttributes: ImmutableAttributes
     ): AbstractResolutionFailureException {
         val resolutionCandidateAssessor = ResolutionCandidateAssessor(requestedAttributes, matcher)
-        val assessedCandidates = resolutionCandidateAssessor.assessResolvedVariants(targetVariantSet.getCandidates())
-        val failure = NoCompatibleArtifactFailure(targetVariantSet.getComponentIdentifier(), targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, assessedCandidates)
+        val assessedCandidates = resolutionCandidateAssessor.assessResolvedVariants(targetVariantSet.candidates)
+        val failure = NoCompatibleArtifactFailure(targetVariantSet.componentIdentifier, targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, assessedCandidates)
         return describeFailure<NoCompatibleArtifactFailure>(failure)
     }
 
@@ -230,7 +230,7 @@ class ResolutionFailureHandler(instanceGenerator: InstanceGenerator, problemsSer
     ): AbstractResolutionFailureException {
         val resolutionCandidateAssessor = ResolutionCandidateAssessor(requestedAttributes, matcher)
         val assessedCandidates = resolutionCandidateAssessor.assessResolvedVariants(matchingVariants)
-        val failure = AmbiguousArtifactsFailure(targetVariantSet.getComponentIdentifier(), targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, assessedCandidates)
+        val failure = AmbiguousArtifactsFailure(targetVariantSet.componentIdentifier, targetVariantSet.asDescribable().getDisplayName(), requestedAttributes, assessedCandidates)
         return describeFailure<AmbiguousArtifactsFailure>(failure)
     }
 
@@ -239,7 +239,7 @@ class ResolutionFailureHandler(instanceGenerator: InstanceGenerator, problemsSer
         requestAttributes: ImmutableAttributes,
         cause: Exception
     ): AbstractResolutionFailureException {
-        val failure = UnknownArtifactSelectionFailure(targetVariantSet.getComponentIdentifier(), targetVariantSet.asDescribable().getDisplayName(), requestAttributes, cause)
+        val failure = UnknownArtifactSelectionFailure(targetVariantSet.componentIdentifier, targetVariantSet.asDescribable().getDisplayName(), requestAttributes, cause)
         return describeFailure<UnknownArtifactSelectionFailure>(failure)
     }
 

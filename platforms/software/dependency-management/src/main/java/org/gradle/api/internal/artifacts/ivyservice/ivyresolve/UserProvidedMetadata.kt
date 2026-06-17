@@ -13,48 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.project.ProjectInternal
 
-import java.util.List;
-
-public class UserProvidedMetadata implements ComponentMetadata {
-    private final ModuleVersionIdentifier id;
-    private final List<String> statusScheme;
-    private final ImmutableAttributes attributes;
-
-    public UserProvidedMetadata(ModuleVersionIdentifier id, List<String> statusScheme, ImmutableAttributes attributes) {
-        this.id = id;
-        this.statusScheme = statusScheme;
-        this.attributes = attributes;
+class UserProvidedMetadata(private val id: ModuleVersionIdentifier, private val statusScheme: MutableList<String>, private val attributes: ImmutableAttributes) : ComponentMetadata {
+    override fun getId(): ModuleVersionIdentifier {
+        return id
     }
 
-    @Override
-    public ModuleVersionIdentifier getId() {
-        return id;
+    override fun isChanging(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isChanging() {
-        return false;
+    override fun getStatus(): String {
+        return attributes.getAttribute<String>(ProjectInternal.STATUS_ATTRIBUTE)!!
     }
 
-    @Override
-    public String getStatus() {
-        return attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE);
+    override fun getStatusScheme(): MutableList<String> {
+        return statusScheme
     }
 
-    @Override
-    public List<String> getStatusScheme() {
-        return statusScheme;
-    }
-
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 }

@@ -13,53 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ivy.IvyModuleDescriptor
+import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor
+import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataAdapter
+import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor;
-import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataAdapter;
-import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
+internal class CachedMetadataProvider(private val cachedResult: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>) : MetadataProvider {
+    private val cachedComponentMetadata: ComponentMetadata?
+    private val usable: Boolean
 
-class CachedMetadataProvider implements MetadataProvider {
-    private final BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> cachedResult;
-    private final ComponentMetadata cachedComponentMetadata;
-    private final boolean usable;
-
-    CachedMetadataProvider(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-        cachedResult = result;
-        usable = cachedResult.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+    init {
+        usable = cachedResult.state === BuildableModuleComponentMetaDataResolveResult.State.Resolved
         if (usable) {
-            @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
-            cachedComponentMetadata = new ComponentMetadataAdapter(legacyMetadata);
+            @Suppress("deprecation") val legacyMetadata: ExternalComponentResolveMetadata = cachedResult.metaData.getLegacyMetadata()
+            cachedComponentMetadata = ComponentMetadataAdapter(legacyMetadata)
         } else {
-            cachedComponentMetadata = null;
+            cachedComponentMetadata = null
         }
     }
 
-    @Override
-    public ComponentMetadata getComponentMetadata() {
-        return cachedComponentMetadata;
+    override fun getComponentMetadata(): ComponentMetadata? {
+        return cachedComponentMetadata
     }
 
-    @Override
-    public IvyModuleDescriptor getIvyModuleDescriptor() {
-        @SuppressWarnings("deprecation")
-        ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
-        if (legacyMetadata instanceof IvyModuleResolveMetadata) {
-            IvyModuleResolveMetadata ivyMetadata = (IvyModuleResolveMetadata) legacyMetadata;
-            return new DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status);
+    override fun getIvyModuleDescriptor(): IvyModuleDescriptor? {
+        @Suppress("deprecation") val legacyMetadata: ExternalComponentResolveMetadata? = cachedResult.metaData.getLegacyMetadata()
+        if (legacyMetadata is IvyModuleResolveMetadata) {
+            val ivyMetadata = legacyMetadata
+            return DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status!!)
         }
-        return null;
+        return null
     }
 
-    @Override
-    public boolean isUsable() {
-        return usable;
+    override fun isUsable(): Boolean {
+        return usable
     }
 }

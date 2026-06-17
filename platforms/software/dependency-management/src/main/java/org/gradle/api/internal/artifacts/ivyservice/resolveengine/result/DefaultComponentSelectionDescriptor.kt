@@ -13,100 +13,80 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import com.google.common.base.Objects;
-import org.gradle.api.Describable;
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.internal.Describables;
+import com.google.common.base.Objects
+import org.gradle.api.Describable
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.internal.Describables
 
-public class DefaultComponentSelectionDescriptor implements ComponentSelectionDescriptorInternal {
-    private final ComponentSelectionCause cause;
-    private final Describable description;
-    private final boolean hasCustomDescription;
-    private final int hashCode;
-    private final boolean isEquivalentToForce;
+class DefaultComponentSelectionDescriptor private constructor(
+    private val cause: ComponentSelectionCause,
+    private val description: Describable,
+    private val hasCustomDescription: Boolean,
+    private val isEquivalentToForce: Boolean
+) : ComponentSelectionDescriptorInternal {
+    private val hashCode: Int
 
-    public DefaultComponentSelectionDescriptor(ComponentSelectionCause cause) {
-        this(cause, Describables.of(cause.getDefaultReason()), false, cause == ComponentSelectionCause.FORCED);
-    }
+    constructor(cause: ComponentSelectionCause) : this(cause, Describables.of(cause.getDefaultReason()), false, cause == ComponentSelectionCause.FORCED)
 
-    public DefaultComponentSelectionDescriptor(ComponentSelectionCause cause, Describable description) {
-        this(cause, description, true, cause == ComponentSelectionCause.FORCED);
-    }
+    constructor(cause: ComponentSelectionCause, description: Describable) : this(cause, description, true, cause == ComponentSelectionCause.FORCED)
 
-    private DefaultComponentSelectionDescriptor(ComponentSelectionCause cause, Describable description, boolean hasCustomDescription, boolean isEquivalentToForce) {
-        this.cause = cause;
-        this.description = description;
-        this.hasCustomDescription = hasCustomDescription;
-        this.isEquivalentToForce = isEquivalentToForce;
+    init {
         if (hasCustomDescription) {
-            this.hashCode = 31 * (31 * cause.hashCode() + description.hashCode()) + (isEquivalentToForce ? 1 : 0);
+            this.hashCode = 31 * (31 * cause.hashCode() + description.hashCode()) + (if (isEquivalentToForce) 1 else 0)
         } else {
-            this.hashCode = 31 * cause.hashCode() + (isEquivalentToForce ? 1 : 0);
+            this.hashCode = 31 * cause.hashCode() + (if (isEquivalentToForce) 1 else 0)
         }
     }
 
-    @Override
-    public ComponentSelectionCause getCause() {
-        return cause;
+    override fun getCause(): ComponentSelectionCause {
+        return cause
     }
 
-    @Override
-    public String getDescription() {
-        return description.getDisplayName();
+    override fun getDescription(): String {
+        return description.getDisplayName()
     }
 
-    @Override
-    public boolean hasCustomDescription() {
-        return hasCustomDescription;
+    override fun hasCustomDescription(): Boolean {
+        return hasCustomDescription
     }
 
-    @Override
-    public Describable getDescribable() {
-        return description;
+    override fun getDescribable(): Describable {
+        return description
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultComponentSelectionDescriptor that = (DefaultComponentSelectionDescriptor) o;
-        return hashCode == that.hashCode
-            && cause == that.cause
-            && isEquivalentToForce == that.isEquivalentToForce
-            && Objects.equal(description, that.description);
+        val that = o as DefaultComponentSelectionDescriptor
+        return hashCode == that.hashCode && cause == that.cause && isEquivalentToForce == that.isEquivalentToForce && Objects.equal(description, that.description)
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public String toString() {
-        return description.getDisplayName();
+    override fun toString(): String {
+        return description.getDisplayName()
     }
 
-    @Override
-    public ComponentSelectionDescriptorInternal withDescription(Describable description) {
-        if (this.description.equals(description)) {
-            return this;
+    override fun withDescription(description: Describable): ComponentSelectionDescriptorInternal {
+        if (this.description == description) {
+            return this
         }
-        return new DefaultComponentSelectionDescriptor(cause, description, true, isEquivalentToForce);
+        return DefaultComponentSelectionDescriptor(cause, description, true, isEquivalentToForce)
     }
 
-    @Override
-    public ComponentSelectionDescriptorInternal markAsEquivalentToForce() {
-        return new DefaultComponentSelectionDescriptor(cause, description, hasCustomDescription, true);
+    override fun markAsEquivalentToForce(): ComponentSelectionDescriptorInternal {
+        return DefaultComponentSelectionDescriptor(cause, description, hasCustomDescription, true)
     }
 
-    @Override
-    public boolean isEquivalentToForce() {
-        return isEquivalentToForce;
+    override fun isEquivalentToForce(): Boolean {
+        return isEquivalentToForce
     }
 }

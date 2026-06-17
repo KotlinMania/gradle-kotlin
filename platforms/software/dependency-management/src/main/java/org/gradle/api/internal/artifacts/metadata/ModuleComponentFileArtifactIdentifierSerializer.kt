@@ -13,32 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.metadata
 
-package org.gradle.api.internal.artifacts.metadata;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
 
 /**
- * A thread-safe and reusable serializer for {@link ModuleComponentFileArtifactIdentifier}.
+ * A thread-safe and reusable serializer for [ModuleComponentFileArtifactIdentifier].
  */
-public class ModuleComponentFileArtifactIdentifierSerializer implements Serializer<ModuleComponentFileArtifactIdentifier> {
-    private final ComponentIdentifierSerializer componentIdentifierSerializer = new ComponentIdentifierSerializer();
+class ModuleComponentFileArtifactIdentifierSerializer : Serializer<ModuleComponentFileArtifactIdentifier?> {
+    private val componentIdentifierSerializer = ComponentIdentifierSerializer()
 
-    @Override
-    public ModuleComponentFileArtifactIdentifier read(Decoder decoder) throws Exception {
-        ModuleComponentIdentifier componentIdentifier = (ModuleComponentIdentifier) componentIdentifierSerializer.read(decoder);
-        String fileName = decoder.readString();
-        return new ModuleComponentFileArtifactIdentifier(componentIdentifier, fileName);
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ModuleComponentFileArtifactIdentifier {
+        val componentIdentifier = componentIdentifierSerializer.read(decoder) as ModuleComponentIdentifier
+        val fileName = decoder.readString()
+        return ModuleComponentFileArtifactIdentifier(componentIdentifier, fileName!!)
     }
 
-    @Override
-    public void write(Encoder encoder, ModuleComponentFileArtifactIdentifier value) throws Exception {
-        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier());
-        encoder.writeString(value.getFileName());
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ModuleComponentFileArtifactIdentifier) {
+        componentIdentifierSerializer.write(encoder, value.getComponentIdentifier())
+        encoder.writeString(value.fileName)
     }
 }

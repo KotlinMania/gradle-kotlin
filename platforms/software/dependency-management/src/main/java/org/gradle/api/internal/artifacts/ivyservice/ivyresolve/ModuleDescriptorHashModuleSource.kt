@@ -13,36 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.component.model.PersistentModuleSource;
-import org.gradle.internal.hash.HashCode;
+import org.gradle.internal.component.model.PersistentModuleSource
+import org.gradle.internal.hash.HashCode
 
-public class ModuleDescriptorHashModuleSource implements PersistentModuleSource {
-    public static final int CODEC_ID = 2;
-    private final HashCode descriptorHash;
-    private final boolean changingModule;
-
-    public ModuleDescriptorHashModuleSource(HashCode descriptorHash, boolean changingModule) {
-        this.descriptorHash = descriptorHash;
-        this.changingModule = changingModule;
+class ModuleDescriptorHashModuleSource(@JvmField val descriptorHash: HashCode, val isChangingModule: Boolean) : PersistentModuleSource {
+    override fun toString(): String {
+        return "{descriptor: " + descriptorHash + ", changing: " + this.isChangingModule + "}"
     }
 
-    @Override
-    public String toString() {
-        return "{descriptor: " + descriptorHash + ", changing: " + changingModule + "}";
-    }
-
-    public HashCode getDescriptorHash() {
-        return descriptorHash;
-    }
-
-    public boolean isChangingModule() {
-        return changingModule;
-    }
-
-    @Override
-    public int getCodecId() {
-        return CODEC_ID;
+    companion object {
+        val codecId: Int = 2
+            get() = Companion.field
     }
 }

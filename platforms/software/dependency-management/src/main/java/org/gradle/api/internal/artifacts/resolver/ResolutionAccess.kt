@@ -13,46 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.resolver;
-
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.internal.artifacts.ResolverResults;
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.configurations.ResolutionResultProvider;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+package org.gradle.api.internal.artifacts.resolver
 
 /**
  * An internal lazy reference to a graph resolution. Provides access to the inputs and
  * outputs of a graph resolution.
  */
-public interface ResolutionAccess {
-
+interface ResolutionAccess {
     /**
      * Get the owner of the resolution.
      */
-    ResolutionHost getHost();
+    @JvmField
+    val host: ResolutionHost?
 
     /**
      * Get the request attributes for this resolution. Calling this method will lock-in the
      * request attributes from further mutation but will not perform resolution.
      */
-    ImmutableAttributes getAttributes();
+    val attributes: ImmutableAttributes?
 
     /**
      * Get the default artifact sort order for this resolution.
      */
-    ResolutionStrategy.SortOrder getDefaultSortOrder();
+    val defaultSortOrder: ResolutionStrategy.SortOrder?
 
     /**
      * Get the raw results of the resolution. The returned results are lazy. Calling
      * this method will not perform resolution.
      */
-    ResolutionResultProvider<ResolverResults> getResults();
+    @JvmField
+    val results: ResolutionResultProvider<ResolverResults>?
 
     /**
-     * Get the public representation of {@link #getResults()}, which exposes the raw
-     * results as well-known user-facing types like {@link org.gradle.api.file.FileCollection}.
+     * Get the public representation of [.getResults], which exposes the raw
+     * results as well-known user-facing types like [org.gradle.api.file.FileCollection].
      */
-    ResolutionOutputsInternal getPublicView();
+    @JvmField
+    val publicView: ResolutionOutputsInternal?
 }

@@ -13,149 +13,123 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.internal.artifacts.ResolvedVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.UnionVersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme;
-import org.jspecify.annotations.Nullable;
+import com.google.common.annotations.VisibleForTesting
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.internal.artifacts.ResolvedVersionConstraint
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.UnionVersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme
 
-import java.util.List;
+class DefaultResolvedVersionConstraint @VisibleForTesting constructor(
+    requiredVersion: String,
+    preferredVersion: String,
+    strictVersion: String,
+    rejectedVersions: MutableList<String>,
+    scheme: VersionSelectorScheme
+) : ResolvedVersionConstraint {
+    val preferredSelector: VersionSelector?
+    val requiredSelector: VersionSelector
+    val rejectedSelector: VersionSelector
+    val isStrict: Boolean
+    val isRejectAll: Boolean
+    val isDynamic: Boolean
 
-public class DefaultResolvedVersionConstraint implements ResolvedVersionConstraint {
-    @Nullable
-    private final VersionSelector preferredVersionSelector;
-    private final VersionSelector requiredVersionSelector;
-    private final VersionSelector rejectedVersionsSelector;
-    private final boolean isStrict;
-    private final boolean rejectAll;
-    private final boolean isDynamic;
+    constructor(parent: VersionConstraint, scheme: VersionSelectorScheme) : this(
+        parent.getRequiredVersion(),
+        parent.getPreferredVersion(),
+        parent.getStrictVersion(),
+        parent.getRejectedVersions(),
+        scheme
+    )
 
-    public DefaultResolvedVersionConstraint(VersionConstraint parent, VersionSelectorScheme scheme) {
-        this(parent.getRequiredVersion(), parent.getPreferredVersion(), parent.getStrictVersion(), parent.getRejectedVersions(), scheme);
-    }
-
-    @VisibleForTesting
-    public DefaultResolvedVersionConstraint(String requiredVersion, String preferredVersion, String strictVersion, List<String> rejectedVersions, VersionSelectorScheme scheme) {
+    init {
         // For now, required and preferred are treated the same
 
-        isStrict = !strictVersion.isEmpty();
-        String version = isStrict ? strictVersion : requiredVersion;
-        this.requiredVersionSelector = scheme.parseSelector(version);
-        this.preferredVersionSelector = preferredVersion.isEmpty() ? null : scheme.parseSelector(preferredVersion);
+        isStrict = !strictVersion.isEmpty()
+        val version = if (isStrict) strictVersion else requiredVersion
+        this.requiredSelector = scheme.parseSelector(version)!!
+        this.preferredSelector = if (preferredVersion.isEmpty()) null else scheme.parseSelector(preferredVersion)
 
         if (isStrict) {
-            VersionSelector rejectionForStrict = getRejectionForStrict(version, scheme);
+            val rejectionForStrict: VersionSelector = getRejectionForStrict(version, scheme)
             if (!rejectedVersions.isEmpty()) {
-                VersionSelector explicitRejected = toRejectSelector(scheme, rejectedVersions);
-                this.rejectedVersionsSelector = new UnionVersionSelector(ImmutableList.of(rejectionForStrict, explicitRejected));
+                val explicitRejected: VersionSelector = toRejectSelector(scheme, rejectedVersions)
+                this.rejectedSelector = UnionVersionSelector(ImmutableList.of<VersionSelector>(rejectionForStrict, explicitRejected))
             } else {
-                this.rejectedVersionsSelector = rejectionForStrict;
+                this.rejectedSelector = rejectionForStrict
             }
-            rejectAll = false;
+            this.isRejectAll = false
         } else {
-            this.rejectedVersionsSelector = toRejectSelector(scheme, rejectedVersions);
-            rejectAll = isRejectAll(version, rejectedVersions);
+            this.rejectedSelector = toRejectSelector(scheme, rejectedVersions)
+            this.isRejectAll = isRejectAll(version, rejectedVersions)
         }
-        this.isDynamic = doComputeIsDynamic();
+        this.isDynamic = doComputeIsDynamic()
     }
 
-    private static VersionSelector getRejectionForStrict(String version, VersionSelectorScheme versionSelectorScheme) {
-        VersionSelector preferredSelector = versionSelectorScheme.parseSelector(version);
-        return versionSelectorScheme.complementForRejection(preferredSelector);
-    }
-
-    private static VersionSelector toRejectSelector(VersionSelectorScheme scheme, List<String> rejectedVersions) {
-        if (rejectedVersions.size()>1) {
-            return UnionVersionSelector.of(rejectedVersions, scheme);
+    override fun accepts(candidate: String): Boolean {
+        var accepted = true
+        if (this.requiredSelector != null) {
+            accepted = requiredSelector.accept(candidate)
+        } else if (this.preferredSelector != null) {
+            accepted = preferredSelector.accept(candidate)
         }
-        return rejectedVersions.isEmpty() ? null : scheme.parseSelector(rejectedVersions.get(0));
-    }
-
-    @Nullable
-    @Override
-    public VersionSelector getPreferredSelector() {
-        return preferredVersionSelector;
-    }
-
-    @Override
-    public VersionSelector getRequiredSelector() {
-        return requiredVersionSelector;
-    }
-
-    @Override
-    public VersionSelector getRejectedSelector() {
-        return rejectedVersionsSelector;
-    }
-
-    @Override
-    public boolean isRejectAll() {
-        return rejectAll;
-    }
-
-    @Override
-    public boolean isDynamic() {
-        return isDynamic;
-    }
-
-    @Override
-    public boolean isStrict() {
-        return isStrict;
-    }
-
-    @Override
-    public boolean accepts(String candidate) {
-        boolean accepted = true;
-        if (requiredVersionSelector != null) {
-            accepted = requiredVersionSelector.accept(candidate);
-        } else if (preferredVersionSelector != null) {
-            accepted = preferredVersionSelector.accept(candidate);
+        if (accepted && this.rejectedSelector != null) {
+            accepted = !rejectedSelector.accept(candidate)
         }
-        if (accepted && rejectedVersionsSelector != null) {
-            accepted = !rejectedVersionsSelector.accept(candidate);
+        return accepted
+    }
+
+    override fun canBeStable(): Boolean {
+        return Companion.canBeStable(this.preferredSelector!!)
+                && canBeStable(this.requiredSelector)
+                && canBeStable(this.rejectedSelector)
+    }
+
+    private fun doComputeIsDynamic(): Boolean {
+        if (this.requiredSelector != null) {
+            return requiredSelector.isDynamic
         }
-        return accepted;
-    }
-
-    @Override
-    public boolean canBeStable() {
-        return canBeStable(preferredVersionSelector)
-            && canBeStable(requiredVersionSelector)
-            && canBeStable(rejectedVersionsSelector);
-    }
-
-    private static boolean canBeStable(VersionSelector vs) {
-        if (vs == null) {
-            return true;
+        if (this.preferredSelector != null) {
+            return preferredSelector.isDynamic
         }
-        return vs.canShortCircuitWhenVersionAlreadyPreselected();
+        return false
     }
 
-    private boolean doComputeIsDynamic() {
-        if (requiredVersionSelector != null) {
-            return requiredVersionSelector.isDynamic();
+    companion object {
+        private fun getRejectionForStrict(version: String, versionSelectorScheme: VersionSelectorScheme): VersionSelector {
+            val preferredSelector: VersionSelector = versionSelectorScheme.parseSelector(version)!!
+            return versionSelectorScheme.complementForRejection(preferredSelector)!!
         }
-        if (preferredVersionSelector != null) {
-            return preferredVersionSelector.isDynamic();
-        }
-        return false;
-    }
 
-    private static boolean isRejectAll(String preferredVersion, List<String> rejectedVersions) {
-        return "".equals(preferredVersion)
-            && hasMatchAllSelector(rejectedVersions);
-    }
-
-    private static boolean hasMatchAllSelector(List<String> rejectedVersions) {
-        for (String version : rejectedVersions) {
-            if ("+".equals(version)) {
-                return true;
+        private fun toRejectSelector(scheme: VersionSelectorScheme, rejectedVersions: MutableList<String>): VersionSelector {
+            if (rejectedVersions.size > 1) {
+                return UnionVersionSelector.of(rejectedVersions, scheme)
             }
+            return (if (rejectedVersions.isEmpty()) null else scheme.parseSelector(rejectedVersions.get(0)))!!
         }
-        return false;
+
+        private fun canBeStable(vs: VersionSelector): Boolean {
+            if (vs == null) {
+                return true
+            }
+            return vs.canShortCircuitWhenVersionAlreadyPreselected()
+        }
+
+        private fun isRejectAll(preferredVersion: String, rejectedVersions: MutableList<String>): Boolean {
+            return "" == preferredVersion
+                    && hasMatchAllSelector(rejectedVersions)
+        }
+
+        private fun hasMatchAllSelector(rejectedVersions: MutableList<String>): Boolean {
+            for (version in rejectedVersions) {
+                if ("+" == version) {
+                    return true
+                }
+            }
+            return false
+        }
     }
 }

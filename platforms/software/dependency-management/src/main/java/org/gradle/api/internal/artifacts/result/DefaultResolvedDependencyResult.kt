@@ -13,107 +13,88 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.result
 
-package org.gradle.api.internal.artifacts.result;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import java.lang.Boolean
+import kotlin.Any
+import kotlin.Int
+import kotlin.String
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedDependencyResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.jspecify.annotations.Nullable;
+class DefaultResolvedDependencyResult(
+    private val requested: ComponentSelector,
+    private val constraint: Boolean,
+    private val from: ResolvedComponentResult,
+    private val selectedComponent: ResolvedComponentResult,
+    private val selectedVariant: ResolvedVariantResult
+) : ResolvedDependencyResult {
+    private val hashCode: Int
 
-public class DefaultResolvedDependencyResult implements ResolvedDependencyResult {
-
-    private final ComponentSelector requested;
-    private final ResolvedComponentResult from;
-    private final boolean constraint;
-    private final ResolvedComponentResult selectedComponent;
-    private final ResolvedVariantResult selectedVariant;
-
-    private final int hashCode;
-
-    public DefaultResolvedDependencyResult(
-        ComponentSelector requested,
-        boolean constraint,
-        ResolvedComponentResult from,
-        ResolvedComponentResult selectedComponent,
-        ResolvedVariantResult selectedVariant
-    ) {
-        this.requested = requested;
-        this.from = from;
-        this.constraint = constraint;
-        this.selectedComponent = selectedComponent;
-        this.selectedVariant = selectedVariant;
-
-        this.hashCode = computeHashCode(requested, from, constraint, selectedComponent, selectedVariant);
+    init {
+        this.hashCode = computeHashCode(requested, from, constraint, selectedComponent, selectedVariant)
     }
 
-    @Override
-    public ComponentSelector getRequested() {
-        return requested;
+    override fun getRequested(): ComponentSelector {
+        return requested
     }
 
-    @Override
-    public ResolvedComponentResult getFrom() {
-        return from;
+    override fun getFrom(): ResolvedComponentResult {
+        return from
     }
 
-    @Override
-    public boolean isConstraint() {
-        return constraint;
+    override fun isConstraint(): Boolean {
+        return constraint
     }
 
-    @Override
-    public ResolvedComponentResult getSelected() {
-        return selectedComponent;
+    override fun getSelected(): ResolvedComponentResult {
+        return selectedComponent
     }
 
-    @Override
-    public ResolvedVariantResult getResolvedVariant() {
-        return selectedVariant;
+    override fun getResolvedVariant(): ResolvedVariantResult {
+        return selectedVariant
     }
 
-    @Override
-    public String toString() {
+    override fun toString(): String {
         if (getRequested().matchesStrictly(getSelected().getId())) {
-            return getRequested().toString();
+            return getRequested().toString()
         } else {
-            return getRequested() + " -> " + getSelected().getId();
+            return getRequested().toString() + " -> " + getSelected().getId()
         }
     }
 
-    @Override
-    public boolean equals(@Nullable Object o) {
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+    override fun equals(o: Any?): Boolean {
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultResolvedDependencyResult that = (DefaultResolvedDependencyResult) o;
-        return requested.equals(that.requested) &&
-            from.equals(that.from) &&
-            constraint == that.constraint &&
-            selectedComponent.equals(that.selectedComponent) &&
-            selectedVariant.equals(that.selectedVariant);
+        val that = o as DefaultResolvedDependencyResult
+        return requested == that.requested &&
+                from == that.from && constraint == that.constraint &&
+                selectedComponent == that.selectedComponent &&
+                selectedVariant == that.selectedVariant
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private static int computeHashCode(
-        ComponentSelector requested,
-        ResolvedComponentResult from,
-        boolean constraint,
-        ResolvedComponentResult selectedComponent,
-        ResolvedVariantResult selectedVariant
-    ) {
-        int result = requested.hashCode();
-        result = 31 * result + from.hashCode();
-        result = 31 * result + Boolean.hashCode(constraint);
-        result = 31 * result + selectedComponent.hashCode();
-        result = 31 * result + selectedVariant.hashCode();
-        return result;
+    companion object {
+        private fun computeHashCode(
+            requested: ComponentSelector,
+            from: ResolvedComponentResult,
+            constraint: Boolean,
+            selectedComponent: ResolvedComponentResult,
+            selectedVariant: ResolvedVariantResult
+        ): Int {
+            var result = requested.hashCode()
+            result = 31 * result + from.hashCode()
+            result = 31 * result + Boolean.hashCode(constraint)
+            result = 31 * result + selectedComponent.hashCode()
+            result = 31 * result + selectedVariant.hashCode()
+            return result
+        }
     }
-
 }

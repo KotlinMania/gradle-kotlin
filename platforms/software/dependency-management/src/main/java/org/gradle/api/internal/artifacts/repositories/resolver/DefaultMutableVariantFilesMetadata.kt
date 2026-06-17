@@ -13,47 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.MutableVariantFilesMetadata
+import org.gradle.api.artifacts.VariantFileMetadata
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.MutableVariantFilesMetadata;
-import org.gradle.api.artifacts.VariantFileMetadata;
+class DefaultMutableVariantFilesMetadata : MutableVariantFilesMetadata {
+    var isClearExistingFiles: Boolean = false
+        private set
+    val files: MutableList<VariantFileMetadata> = ArrayList<VariantFileMetadata>()
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class DefaultMutableVariantFilesMetadata implements MutableVariantFilesMetadata {
-
-    private boolean clearExistingFiles = false;
-    private final List<VariantFileMetadata> files = new ArrayList<>();
-
-    @Override
-    public void removeAllFiles() {
-        clearExistingFiles = true;
-        files.clear();
+    override fun removeAllFiles() {
+        this.isClearExistingFiles = true
+        files.clear()
     }
 
-    @Override
-    public void addFile(String name) {
-        addFile(name, name);
+    override fun addFile(name: String) {
+        addFile(name, name)
     }
 
-    @Override
-    public void addFile(String name, String url) {
-        for (VariantFileMetadata file : files) {
-            if (file.getName().equals(name)) {
-                throw new InvalidUserDataException("Cannot add file " + name + " (url: " + url + ") because it is already defined (url: " + file.getUrl() + ")");
+    override fun addFile(name: String, url: String) {
+        for (file in files) {
+            if (file.getName() == name) {
+                throw InvalidUserDataException("Cannot add file " + name + " (url: " + url + ") because it is already defined (url: " + file.getUrl() + ")")
             }
         }
-        files.add(new DefaultVariantFileMetadata(name, url));
-    }
-
-    public boolean isClearExistingFiles() {
-        return clearExistingFiles;
-    }
-
-    public List<VariantFileMetadata> getFiles() {
-        return files;
+        files.add(DefaultVariantFileMetadata(name, url))
     }
 }

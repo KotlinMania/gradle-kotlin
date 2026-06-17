@@ -13,45 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.LibraryComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry;
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.util.internal.GUtil;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.LibraryComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry
+import org.gradle.internal.component.local.model.DefaultProjectComponentSelector
+import org.gradle.util.internal.GUtil
 
-public class DefaultComponentSelectorConverter implements ComponentSelectorConverter {
-
-    private final LocalComponentRegistry localComponentRegistry;
-
-    public DefaultComponentSelectorConverter(LocalComponentRegistry localComponentRegistry) {
-        this.localComponentRegistry = localComponentRegistry;
+class DefaultComponentSelectorConverter(private val localComponentRegistry: LocalComponentRegistry) : ComponentSelectorConverter {
+    override fun getModuleVersionId(selector: ComponentSelector?): ModuleVersionIdentifier {
+        if (selector is ModuleComponentSelector) {
+            val moduleSelector = selector
+            return DefaultModuleVersionIdentifier.Companion.newId(moduleSelector.getModuleIdentifier(), moduleSelector.getVersion())
+        }
+        if (selector is DefaultProjectComponentSelector) {
+            val projectSelector = selector
+            val projectId = projectSelector.toIdentifier()
+            val projectComponent = localComponentRegistry.getComponent(projectId)
+            val moduleVersionId: ModuleVersionIdentifier = projectComponent.moduleVersionId
+            return DefaultModuleVersionIdentifier.Companion.newId(moduleVersionId.getModule(), moduleVersionId.getVersion())
+        }
+        if (selector is LibraryComponentSelector) {
+            val libraryComponentSelector = selector
+            val libraryName = GUtil.elvis<String?>(libraryComponentSelector.getLibraryName(), "")
+            return DefaultModuleVersionIdentifier.Companion.newId(DefaultModuleIdentifier.Companion.newId(libraryComponentSelector.getProjectPath(), libraryName), "undefined")
+        }
+        throw IllegalArgumentException("Unrecognized component selector: " + selector)
     }
-
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId(ComponentSelector selector) {
-        if (selector instanceof ModuleComponentSelector) {
-            ModuleComponentSelector moduleSelector = (ModuleComponentSelector) selector;
-            return DefaultModuleVersionIdentifier.newId(moduleSelector.getModuleIdentifier(), moduleSelector.getVersion());
-        }
-        if (selector instanceof DefaultProjectComponentSelector) {
-            DefaultProjectComponentSelector projectSelector = (DefaultProjectComponentSelector) selector;
-            ProjectComponentIdentifier projectId = projectSelector.toIdentifier();
-            LocalComponentGraphResolveState projectComponent = localComponentRegistry.getComponent(projectId);
-            ModuleVersionIdentifier moduleVersionId = projectComponent.getModuleVersionId();
-            return DefaultModuleVersionIdentifier.newId(moduleVersionId.getModule(), moduleVersionId.getVersion());
-        }
-        if (selector instanceof LibraryComponentSelector) {
-            LibraryComponentSelector libraryComponentSelector = (LibraryComponentSelector) selector;
-            String libraryName = GUtil.elvis(libraryComponentSelector.getLibraryName(), "");
-            return DefaultModuleVersionIdentifier.newId(DefaultModuleIdentifier.newId(libraryComponentSelector.getProjectPath(), libraryName), "undefined");
-        }
-        throw new IllegalArgumentException("Unrecognized component selector: " + selector);
-    }
-
 }

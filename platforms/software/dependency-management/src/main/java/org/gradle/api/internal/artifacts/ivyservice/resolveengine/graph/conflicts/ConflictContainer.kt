@@ -13,149 +13,133 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
-
-import static java.util.Collections.singletonList;
+import com.google.common.base.Joiner
+import com.google.common.collect.LinkedHashMultimap
+import com.google.common.collect.Multimap
+import java.util.LinkedList
+import java.util.function.Predicate
 
 /**
  * Generic container for conflicts. It's generic so that hopefully it's easier to comprehend (and test).
  */
-class ConflictContainer<K, T> {
+internal class ConflictContainer<K, T> {
+    val conflicts: LinkedList<Conflict> = LinkedList<Conflict>()
+    private val conflictsByParticipant: MutableMap<K?, Conflict> = HashMap<K?, Conflict>()
 
-    final LinkedList<Conflict> conflicts = new LinkedList<>();
-    private final Map<K, Conflict> conflictsByParticipant = new HashMap<>();
-
-    private final Map<K, Collection<? extends T>> elements = new HashMap<>();
-    private final Multimap<K, K> targetToSource = LinkedHashMultimap.create();
+    private val elements: MutableMap<K?, MutableCollection<out T>> = HashMap<K?, MutableCollection<out T>>()
+    private val targetToSource: Multimap<K?, K?> = LinkedHashMultimap.create<K?, K?>()
 
     /**
      * Adds new element and returns a conflict instance if given element is conflicted. Element is conflicted when:
-     *  - has more than 1 candidate
-     *  - is in conflict with an existing element (via replacedBy relationship)
+     * - has more than 1 candidate
+     * - is in conflict with an existing element (via replacedBy relationship)
      *
      * @param target an element of some sort
      * @param candidates candidates for given element
      * @param replacedBy optional element that replaces the target
      */
-    @Nullable
-    public Conflict newElement(K target, Collection<? extends T> candidates, @Nullable K replacedBy) {
+    fun newElement(target: K?, candidates: MutableCollection<out T>, replacedBy: K?): Conflict? {
         if (candidates.isEmpty()) {
-            return null;
+            return null
         }
-        elements.put(target, candidates);
+        elements.put(target, candidates)
         if (replacedBy != null) {
-            targetToSource.put(replacedBy, target);
+            targetToSource.put(replacedBy, target)
             if (elements.containsKey(replacedBy)) {
                 //1) we've seen the replacement, register new conflict and return
-                return registerConflict(target, replacedBy);
+                return registerConflict(target, replacedBy)
             }
         }
 
-        Collection<K> replacementSource = targetToSource.get(target);
+        val replacementSource: MutableCollection<K?> = targetToSource.get(target)
         if (!replacementSource.isEmpty()) {
             //2) new module is a replacement to a module we've seen already, register conflict and return
-            return registerConflict(replacementSource, target);
+            return registerConflict(replacementSource, target)
         }
 
-        if (candidates.size() > 1) {
+        if (candidates.size > 1) {
             //3) new module has more than 1 version, register conflict and return
-            return registerConflict(target, target);
+            return registerConflict(target, target)
         }
-        return null;
+        return null
     }
 
-    private Conflict registerConflict(Collection<K> targets, K replacedBy) {
-        assert !targets.isEmpty();
+    private fun registerConflict(targets: MutableCollection<K?>, replacedBy: K?): Conflict {
+        assert(!targets.isEmpty())
 
         //replacement candidates are the only important candidates
-        Collection<? extends T> candidates = elements.get(replacedBy);
-        assert candidates != null;
-
-        Set<K> participants = new LinkedHashSet<>(targets);
-        participants.add(replacedBy);
+        val candidates = checkNotNull(elements.get(replacedBy))
+        val participants: MutableSet<K?> = LinkedHashSet<K?>(targets)
+        participants.add(replacedBy)
 
         //We need to ensure that the conflict is orderly injected to the list of conflicts
         //Brand new conflict goes to the end
         //If we find any matching conflict we have to hook up with it
 
         //Find an existing matching conflict
-        for (K participant : participants) {
-            Conflict c = conflictsByParticipant.get(participant);
+        for (participant in participants) {
+            val c: Conflict? = conflictsByParticipant.get(participant)
             if (c != null) {
                 //there is already registered conflict with at least one matching participant, hook up to this conflict
-                c.candidates = candidates;
-                c.participants.addAll(participants);
-                return c;
+                c.candidates = candidates
+                c.participants.addAll(participants)
+                return c
             }
         }
 
         //No conflict with matching participants found, create new
-        Conflict c = new Conflict(participants, candidates);
-        conflicts.add(c);
-        for (K participant : participants) {
-            conflictsByParticipant.put(participant, c);
+        val c: Conflict = ConflictContainer.Conflict(participants, candidates)
+        conflicts.add(c)
+        for (participant in participants) {
+            conflictsByParticipant.put(participant, c)
         }
-        return c;
+        return c
     }
 
-    private Conflict registerConflict(K target, K replacedBy) {
-        return registerConflict(singletonList(target), replacedBy);
+    private fun registerConflict(target: K?, replacedBy: K?): Conflict {
+        return registerConflict(TODO("Cannot convert element"))<K> kotlin . collections . mutableListOf < K ? > (target)
+        replacedBy
     }
 
-    public int getSize() {
-        return conflicts.size();
-    }
+    val size: Int
+        get() = conflicts.size
 
-    public Conflict popConflict() {
-        assert !conflicts.isEmpty();
-        Conflict conflict = conflicts.pop();
-        for (K participant : conflict.participants) {
-            conflictsByParticipant.remove(participant);
+    fun popConflict(): Conflict {
+        assert(!conflicts.isEmpty())
+        val conflict: Conflict = conflicts.pop()
+        for (participant in conflict.participants) {
+            conflictsByParticipant.remove(participant)
         }
-        return conflict;
+        return conflict
     }
 
-    public boolean isEmpty() {
-        return conflicts.isEmpty();
+    val isEmpty: Boolean
+        get() = conflicts.isEmpty()
+
+    fun hasConflictFor(participant: K?): Boolean {
+        return conflictsByParticipant.containsKey(participant)
     }
 
-    public boolean hasConflictFor(K participant) {
-        return conflictsByParticipant.containsKey(participant);
-    }
-
-    boolean hasMatchingConflict(Predicate<T> predicate) {
-        if (isEmpty()) {
-            return false;
+    fun hasMatchingConflict(predicate: Predicate<T?>): Boolean {
+        if (this.isEmpty) {
+            return false
         }
-        return conflicts.stream().flatMap(conflict -> conflict.candidates.stream()).anyMatch(predicate);
+        return conflicts.stream().flatMap { conflict: Conflict? -> conflict.candidates.stream() }.anyMatch(predicate)
     }
 
-    class Conflict {
-        final Set<K> participants;
-        Collection<? extends T> candidates;
+    internal inner class Conflict(participants: MutableSet<K?>, candidates: MutableCollection<out T>) {
+        val participants: MutableSet<K?>
+        var candidates: MutableCollection<out T>
 
-        public Conflict(Set<K> participants, Collection<? extends T> candidates) {
-            this.participants = participants;
-            this.candidates = candidates;
+        init {
+            this.participants = participants
+            this.candidates = candidates
         }
 
-        @Override
-        public String toString() {
-            return Joiner.on(",").join(participants) + ":" + Joiner.on(",").join(candidates);
+        override fun toString(): String {
+            return Joiner.on(",").join(participants) + ":" + Joiner.on(",").join(candidates)
         }
     }
 }

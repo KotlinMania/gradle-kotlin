@@ -13,50 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import java.io.File
 
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
+class ResolvedFilesCollectingVisitor : ArtifactVisitor {
+    val files: MutableSet<File> = LinkedHashSet<File>()
+    private val failures: MutableSet<Throwable> = LinkedHashSet<Throwable>()
 
-import java.io.File;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class ResolvedFilesCollectingVisitor implements ArtifactVisitor {
-    private final Set<File> files = new LinkedHashSet<>();
-    private final Set<Throwable> failures = new LinkedHashSet<>();
-
-    @Override
-    public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact) {
+    override fun visitArtifact(artifactSetName: DisplayName, sourceVariantId: VariantIdentifier, attributes: ImmutableAttributes, capabilities: ImmutableCapabilities, artifact: ResolvableArtifact) {
         try {
-            File file = artifact.getFile();
-            this.files.add(file);
-        } catch (Exception t) {
-            failures.add(t);
+            val file = artifact.file
+            this.files.add(file)
+        } catch (t: Exception) {
+            failures.add(t)
         }
     }
 
-    @Override
-    public boolean requireArtifactFiles() {
-        return true;
+    override fun requireArtifactFiles(): Boolean {
+        return true
     }
 
-    @Override
-    public void visitFailure(Throwable failure) {
-        failures.add(failure);
+    override fun visitFailure(failure: Throwable) {
+        failures.add(failure)
     }
 
-    public Set<File> getFiles() {
-        return files;
-    }
-
-    public Collection<Throwable> getFailures() {
-        return failures;
+    fun getFailures(): MutableCollection<Throwable> {
+        return failures
     }
 }

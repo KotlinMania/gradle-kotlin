@@ -13,208 +13,130 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.DownloadArtifactBuildOperationType
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.resolve.resolver.ComponentArtifactResolver
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.DownloadArtifactBuildOperationType;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.resolve.resolver.ComponentArtifactResolver;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import static org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet.EMPTY;
-
-public class ArtifactBackedResolvedVariant implements ResolvedVariant {
-
-    private final VariantResolveMetadata.Identifier identifier;
-    private final VariantIdentifier sourceVariantId;
-    private final DisplayName displayName;
-    private final ImmutableAttributes attributes;
-    private final ImmutableCapabilities capabilities;
-    private final List<? extends ComponentArtifactMetadata> artifacts;
-    private final ComponentArtifactResolver componentArtifactResolver;
-
-    public ArtifactBackedResolvedVariant(
-        VariantResolveMetadata.@Nullable Identifier identifier,
-        VariantIdentifier sourceVariantId,
-        DisplayName displayName,
-        ImmutableAttributes attributes,
-        ImmutableCapabilities capabilities,
-        List<? extends ComponentArtifactMetadata> artifacts,
-        ComponentArtifactResolver componentArtifactResolver
-    ) {
-        this.identifier = identifier;
-        this.sourceVariantId = sourceVariantId;
-        this.displayName = displayName;
-        this.attributes = attributes;
-        this.capabilities = capabilities;
-        this.artifacts = artifacts;
-        this.componentArtifactResolver = componentArtifactResolver;
-    }
-
-    @Override
-    public VariantIdentifier getSourceVariantId() {
-        return sourceVariantId;
-    }
-
-    @Override
-    public ResolvedArtifactSet getArtifacts() {
-        Collection<? extends ResolvableArtifact> resolvedArtifacts;
+class ArtifactBackedResolvedVariant(
+    private val identifier: VariantResolveMetadata.Identifier?,
+    val sourceVariantId: VariantIdentifier,
+    private val displayName: DisplayName,
+    val attributes: ImmutableAttributes,
+    val capabilities: ImmutableCapabilities,
+    private val artifacts: MutableList<out ComponentArtifactMetadata?>,
+    private val componentArtifactResolver: ComponentArtifactResolver
+) : ResolvedVariant {
+    override fun getArtifacts(): ResolvedArtifactSet? {
+        val resolvedArtifacts: MutableCollection<out ResolvableArtifact>?
         try {
-            resolvedArtifacts = componentArtifactResolver.resolveArtifacts(artifacts);
-        } catch (Exception e) {
-            return new UnavailableResolvedArtifactSet(e);
+            resolvedArtifacts = componentArtifactResolver.resolveArtifacts(artifacts)
+        } catch (e: Exception) {
+            return UnavailableResolvedArtifactSet(e)
         }
-        if (resolvedArtifacts.isEmpty()) {
-            return EMPTY;
+        if (resolvedArtifacts!!.isEmpty()) {
+            return ResolvedArtifactSet.EMPTY
         }
-        if (resolvedArtifacts.size() == 1) {
-            return new SingleArtifactSet(displayName, sourceVariantId, attributes, capabilities, resolvedArtifacts.iterator().next());
-        }
-
-        List<SingleArtifactSet> artifactSets = new ArrayList<>(resolvedArtifacts.size());
-        for (ResolvableArtifact artifact : resolvedArtifacts) {
-            artifactSets.add(new SingleArtifactSet(displayName, sourceVariantId, attributes, capabilities, artifact));
-        }
-        return CompositeResolvedArtifactSet.of(artifactSets);
-    }
-
-    @Override
-    public VariantResolveMetadata.Identifier getIdentifier() {
-        return identifier;
-    }
-
-    @Override
-    public String toString() {
-        return displayName.getDisplayName();
-    }
-
-    @Override
-    public DisplayName asDescribable() {
-        return displayName;
-    }
-
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
-    }
-
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return capabilities;
-    }
-
-    private static class SingleArtifactSet implements ResolvedArtifactSet, ResolvedArtifactSet.Artifacts {
-
-        private final DisplayName artifactSetName;
-        private final VariantIdentifier sourceVariantId;
-        private final ImmutableAttributes variantAttributes;
-        private final ImmutableCapabilities capabilities;
-        private final ResolvableArtifact artifact;
-
-        SingleArtifactSet(
-            DisplayName artifactSetName,
-            VariantIdentifier sourceVariantId,
-            ImmutableAttributes variantAttributes,
-            ImmutableCapabilities capabilities,
-            ResolvableArtifact artifact
-        ) {
-            this.artifactSetName = artifactSetName;
-            this.sourceVariantId = sourceVariantId;
-            this.variantAttributes = variantAttributes;
-            this.capabilities = capabilities;
-            this.artifact = artifact;
+        if (resolvedArtifacts.size == 1) {
+            return SingleArtifactSet(displayName, sourceVariantId, attributes, capabilities, resolvedArtifacts.iterator().next())
         }
 
-        @Override
-        public void visit(Visitor visitor) {
-            visitor.visitArtifacts(this);
+        val artifactSets: MutableList<SingleArtifactSet?> = ArrayList<SingleArtifactSet?>(resolvedArtifacts.size)
+        for (artifact in resolvedArtifacts) {
+            artifactSets.add(SingleArtifactSet(displayName, sourceVariantId, attributes, capabilities, artifact))
+        }
+        return CompositeResolvedArtifactSet.Companion.of(artifactSets)
+    }
+
+    override fun getIdentifier(): VariantResolveMetadata.Identifier {
+        return identifier!!
+    }
+
+    override fun toString(): String {
+        return displayName.getDisplayName()
+    }
+
+    override fun asDescribable(): DisplayName {
+        return displayName
+    }
+
+    private class SingleArtifactSet(
+        private val artifactSetName: DisplayName?,
+        private val sourceVariantId: VariantIdentifier?,
+        private val variantAttributes: ImmutableAttributes?,
+        private val capabilities: ImmutableCapabilities?,
+        private val artifact: ResolvableArtifact
+    ) : ResolvedArtifactSet, ResolvedArtifactSet.Artifacts {
+        override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+            visitor.visitArtifacts(this)
         }
 
-        @Override
-        public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
+        override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation?>, requireFiles: Boolean) {
             if (requireFiles) {
-                if (artifact.isResolveSynchronously()) {
+                if (artifact.isResolveSynchronously) {
                     // Resolve it now
-                    artifact.getFileSource().finalizeIfNotAlready();
+                    artifact.fileSource.finalizeIfNotAlready()
                 } else {
                     // Resolve it later
-                    actions.add(new DownloadArtifactFile(artifact));
+                    actions.add(DownloadArtifactFile(artifact))
                 }
             }
         }
 
-        @Override
-        public void visit(ArtifactVisitor visitor) {
-            if (visitor.requireArtifactFiles() && !artifact.getFileSource().getValue().isSuccessful) {
-                visitor.visitFailure(artifact.getFileSource().getValue().failure.get());
+        override fun visit(visitor: ArtifactVisitor) {
+            if (visitor.requireArtifactFiles() && !artifact.fileSource.getValue().isSuccessful) {
+                visitor.visitFailure(artifact.fileSource.getValue().failure.get())
             } else {
-                visitor.visitArtifact(artifactSetName, sourceVariantId, variantAttributes, capabilities, artifact);
-                visitor.endVisitCollection(FileCollectionInternal.OTHER);
+                visitor.visitArtifact(artifactSetName, sourceVariantId, variantAttributes, capabilities, artifact)
+                visitor.endVisitCollection(FileCollectionInternal.OTHER)
             }
         }
 
-        @Override
-        public void visitTransformSources(TransformSourceVisitor visitor) {
-            if (artifact.getId().getComponentIdentifier() instanceof ProjectComponentIdentifier) {
-                visitor.visitArtifact(artifact);
+        override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
+            if (artifact.id.getComponentIdentifier() is ProjectComponentIdentifier) {
+                visitor.visitArtifact(artifact)
             }
         }
 
-        @Override
-        public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-            if (!(artifact.getId().getComponentIdentifier() instanceof ProjectComponentIdentifier)) {
-                visitor.execute(artifact);
+        override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact?>) {
+            if (artifact.id.getComponentIdentifier() !is ProjectComponentIdentifier) {
+                visitor.execute(artifact)
             }
         }
 
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-            context.add(artifact);
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
+            context.add(artifact)
         }
 
-        @Override
-        public String toString() {
-            return artifact.getId().getDisplayName();
+        override fun toString(): String {
+            return artifact.id.getDisplayName()
         }
-
     }
 
-    private static class DownloadArtifactFile implements RunnableBuildOperation {
-        private final ResolvableArtifact artifact;
-
-        DownloadArtifactFile(ResolvableArtifact artifact) {
-            this.artifact = artifact;
+    private class DownloadArtifactFile(private val artifact: ResolvableArtifact) : RunnableBuildOperation {
+        override fun run(context: BuildOperationContext) {
+            artifact.fileSource.finalizeIfNotAlready()
+            context.setResult(DownloadArtifactBuildOperationType.RESULT)
         }
 
-        @Override
-        public void run(BuildOperationContext context) {
-            artifact.getFileSource().finalizeIfNotAlready();
-            context.setResult(DownloadArtifactBuildOperationType.RESULT);
-        }
-
-        @Override
-        public BuildOperationDescriptor.Builder description() {
-            String displayName = artifact.getId().getDisplayName();
+        override fun description(): BuildOperationDescriptor.Builder {
+            val displayName: String? = artifact.id.getDisplayName()
             return BuildOperationDescriptor.displayName("Resolve " + displayName)
-                .details(new DownloadArtifactBuildOperationType.DetailsImpl(displayName));
+                .details(DownloadArtifactBuildOperationType.DetailsImpl(displayName))
         }
     }
-
 }

@@ -13,48 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report
 
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.internal.logging.text.TreeFormatter;
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.internal.logging.text.TreeFormatter
+import java.nio.file.Path
 
-import java.nio.file.Path;
+internal abstract class AbstractTextDependencyVerificationReportRenderer(protected val gradleUserHome: Path, protected val documentationRegistry: DocumentationRegistry) :
+    DependencyVerificationReportRenderer {
+    protected var formatter: TreeFormatter? = null
 
-abstract class AbstractTextDependencyVerificationReportRenderer implements DependencyVerificationReportRenderer {
-    protected final Path gradleUserHome;
-    protected final DocumentationRegistry documentationRegistry;
-    protected TreeFormatter formatter;
-
-    public AbstractTextDependencyVerificationReportRenderer(Path gradleUserHome, DocumentationRegistry documentationRegistry) {
-        this.gradleUserHome = gradleUserHome;
-        this.documentationRegistry = documentationRegistry;
+    protected fun legend(legendItem: String) {
+        formatter!!.node(legendItem)
     }
 
-    protected void legend(String legendItem) {
-        formatter.node(legendItem);
-    }
-
-    @Override
-    public void finish(VerificationHighLevelErrors highLevelErrors) {
+    override fun finish(highLevelErrors: VerificationHighLevelErrors) {
         if (highLevelErrors.isMaybeCompromised()) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("This can indicate that a dependency has been compromised. Please carefully verify the ");
+            val sb = StringBuilder()
+            sb.append("This can indicate that a dependency has been compromised. Please carefully verify the ")
             if (highLevelErrors.hasFailedSignatures()) {
-                sb.append("signatures and ");
+                sb.append("signatures and ")
             }
-            sb.append("checksums.");
+            sb.append("checksums.")
             if (highLevelErrors.hasFailedSignatures() && highLevelErrors.isKeyServersDisabled()) {
-                sb.append(" Key servers are disabled, this can indicate that you need to update the local keyring with the missing keys.");
+                sb.append(" Key servers are disabled, this can indicate that you need to update the local keyring with the missing keys.")
             }
-            legend(sb.toString());
+            legend(sb.toString())
         }
         if (highLevelErrors.canSuggestWriteMetadata()) {
             // the else is just to avoid telling people to use `--write-verification-metadata` if we suspect compromised dependencies
-            legend("If the artifacts are trustworthy, you will need to update the gradle/verification-metadata.xml file. " +  documentationRegistry.getDocumentationRecommendationFor("on how to do this", "dependency_verification", "sec:troubleshooting-verification"));
+            legend(
+                "If the artifacts are trustworthy, you will need to update the gradle/verification-metadata.xml file. " + documentationRegistry.getDocumentationRecommendationFor(
+                    "on how to do this",
+                    "dependency_verification",
+                    "sec:troubleshooting-verification"
+                )
+            )
         }
     }
 
-    String render() {
-        return formatter.toString();
+    fun render(): String {
+        return formatter.toString()
     }
 }

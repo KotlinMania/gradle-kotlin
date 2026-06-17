@@ -13,104 +13,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.CapabilityResolutionDetails;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Supplier;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.CapabilityResolutionDetails
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser
+import org.gradle.api.provider.Provider
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
+import org.gradle.internal.component.external.model.DefaultImmutableCapability.Companion.of
+import java.util.function.Supplier
 
 /**
- * Default implementation of {@link CapabilitiesResolutionInternal}.
+ * Default implementation of [CapabilitiesResolutionInternal].
  */
-public class DefaultCapabilitiesResolution implements CapabilitiesResolutionInternal {
+class DefaultCapabilitiesResolution(private val capabilityNotationParser: CapabilityNotationParser) : CapabilitiesResolutionInternal {
+    private var actions: MutableList<RegisteredAction>? = null
 
-    private final CapabilityNotationParser capabilityNotationParser;
-
-    private @Nullable List<RegisteredAction> actions;
-
-    public DefaultCapabilitiesResolution(CapabilityNotationParser capabilityNotationParser) {
-        this.capabilityNotationParser = capabilityNotationParser;
+    override fun all(action: Action<in CapabilityResolutionDetails>) {
+        doAddAction(null, action)
     }
 
-    @Override
-    public void all(Action<? super CapabilityResolutionDetails> action) {
-        doAddAction(null, action);
+    override fun withCapability(capability: Capability, action: Action<in CapabilityResolutionDetails>) {
+        doAddAction(Supplier? { capability }, action)
     }
 
-    @Override
-    public void withCapability(Capability capability, Action<? super CapabilityResolutionDetails> action) {
-        doAddAction(() -> capability, action);
+    override fun withCapability(group: String, name: String, action: Action<in CapabilityResolutionDetails>) {
+        doAddAction(Supplier? { DefaultImmutableCapability(group, name, null) }, action)
     }
 
-    @Override
-    public void withCapability(String group, String name, Action<? super CapabilityResolutionDetails> action) {
-        doAddAction(() -> new DefaultImmutableCapability(group, name, null), action);
+    override fun withCapability(notation: Any, action: Action<in CapabilityResolutionDetails>) {
+        val capabilitySupplier = if (notation is Provider<*>)
+            Supplier { notation.map<Capability>({ notation: N? -> capabilityNotationParser.parseNotation(notation) }).get() }
+        else
+            Supplier { capabilityNotationParser.parseNotation(notation) }
+        doAddAction(capabilitySupplier, action)
     }
 
-    @Override
-    public void withCapability(Object notation, Action<? super CapabilityResolutionDetails> action) {
-        Supplier<Capability> capabilitySupplier = notation instanceof Provider
-            ? () -> ((Provider<?>) notation).map(capabilityNotationParser::parseNotation).get()
-            : () -> capabilityNotationParser.parseNotation(notation);
-        doAddAction(capabilitySupplier, action);
-    }
-
-    void doAddAction(
-        @Nullable Supplier<Capability> notation,
-        Action<? super CapabilityResolutionDetails> action
+    fun doAddAction(
+        notation: Supplier<Capability>?,
+        action: Action<in CapabilityResolutionDetails>
     ) {
         if (actions == null) {
-            actions = new ArrayList<>();
+            actions = ArrayList<RegisteredAction>()
         }
-        actions.add(new RegisteredAction(notation, action));
+        actions!!.add(RegisteredAction(notation, action))
     }
 
-    @Override
-    public ImmutableList<CapabilityResolutionRule> getRules() {
-        if (actions == null || actions.isEmpty()) {
-            return ImmutableList.of();
+    override fun getRules(): ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule> {
+        if (actions == null || actions!!.isEmpty()) {
+            return ImmutableList.of<CapabilitiesResolutionInternal.CapabilityResolutionRule>()
         }
 
-        ImmutableList.Builder<CapabilityResolutionRule> builder = ImmutableList.builderWithExpectedSize(actions.size());
-        for (RegisteredAction registeredAction : actions) {
-            builder.add(registeredAction.asCapabilityResolutionAction());
+        val builder = ImmutableList.builderWithExpectedSize<CapabilitiesResolutionInternal.CapabilityResolutionRule>(actions!!.size)
+        for (registeredAction in actions) {
+            builder.add(registeredAction.asCapabilityResolutionAction())
         }
-        return builder.build();
+        return builder.build()
     }
 
     /**
      * Holds a supplier to the capability notation, allowing us to defer
      * parsing it until we actually need it.
      */
-    private static class RegisteredAction {
-
-        private final @Nullable Supplier<Capability> notation;
-        private final Action<? super CapabilityResolutionDetails> action;
-
-        RegisteredAction(
-            @Nullable Supplier<Capability> notation,
-            Action<? super CapabilityResolutionDetails> action
-        ) {
-            this.notation = notation;
-            this.action = action;
-        }
-
-        public CapabilityResolutionRule asCapabilityResolutionAction() {
+    private class RegisteredAction(
+        private val notation: Supplier<Capability>?,
+        private val action: Action<in CapabilityResolutionDetails>
+    ) {
+        fun asCapabilityResolutionAction(): CapabilitiesResolutionInternal.CapabilityResolutionRule {
             if (notation == null) {
-                return new CapabilityResolutionRule(null, action);
+                return CapabilitiesResolutionInternal.CapabilityResolutionRule(null, action)
             }
-            return new CapabilityResolutionRule(DefaultImmutableCapability.of(notation.get()), action);
+            return CapabilitiesResolutionInternal.CapabilityResolutionRule(of(notation.get()), action)
         }
-
     }
-
 }

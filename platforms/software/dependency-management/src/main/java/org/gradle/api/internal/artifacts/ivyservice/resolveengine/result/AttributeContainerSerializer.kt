@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
+interface AttributeContainerSerializer : Serializer<AttributeContainer?> {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ImmutableAttributes?
 
-import java.io.IOException;
-
-public interface AttributeContainerSerializer extends Serializer<AttributeContainer> {
-    @Override
-    ImmutableAttributes read(Decoder decoder) throws IOException;
-
-    @Override
-    void write(Encoder encoder, AttributeContainer container) throws IOException;
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, container: AttributeContainer)
 }

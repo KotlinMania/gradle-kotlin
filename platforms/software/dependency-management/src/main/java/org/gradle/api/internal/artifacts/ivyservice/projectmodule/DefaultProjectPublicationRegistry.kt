@@ -13,97 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+import com.google.common.collect.LinkedHashMultimap
+import com.google.common.collect.SetMultimap
+import org.gradle.api.artifacts.component.BuildIdentifier
+import org.gradle.api.internal.artifacts.DefaultBuildIdentifier
+import org.gradle.api.internal.project.HoldsProjectState
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.util.Path
 
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
-import org.gradle.api.artifacts.component.BuildIdentifier;
-import org.gradle.api.internal.artifacts.DefaultBuildIdentifier;
-import org.gradle.api.internal.project.HoldsProjectState;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.internal.Cast;
-import org.gradle.util.Path;
+class DefaultProjectPublicationRegistry : ProjectPublicationRegistry, HoldsProjectState {
+    private val publicationsByProjectId: SetMultimap<Path, ProjectPublication> = LinkedHashMultimap.create<Path, ProjectPublication>()
+    private val publicationsByBuildId: SetMultimap<BuildIdentifier, ProjectPublicationRegistry.PublicationForProject<*>> =
+        LinkedHashMultimap.create<BuildIdentifier, ProjectPublicationRegistry.PublicationForProject<*>>()
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-public class DefaultProjectPublicationRegistry implements ProjectPublicationRegistry, HoldsProjectState {
-    private final SetMultimap<Path, ProjectPublication> publicationsByProjectId = LinkedHashMultimap.create();
-    private final SetMultimap<BuildIdentifier, PublicationForProject<?>> publicationsByBuildId = LinkedHashMultimap.create();
-
-    @Override
-    @SuppressWarnings("MixedMutabilityReturnType")
-    public <T extends ProjectPublication> Collection<T> getPublicationsForProject(Class<T> type, Path projectIdentityPath) {
-        synchronized (publicationsByProjectId) {
-            Collection<ProjectPublication> projectPublications = publicationsByProjectId.get(projectIdentityPath);
+    override fun <T : ProjectPublication?> getPublicationsForProject(type: Class<T?>, projectIdentityPath: Path): MutableCollection<T?> {
+        synchronized(publicationsByProjectId) {
+            val projectPublications: MutableCollection<ProjectPublication> = publicationsByProjectId.get(projectIdentityPath)
             if (projectPublications.isEmpty()) {
-                return Collections.emptyList();
+                return mutableListOf<T?>()
             }
-            List<T> result = new ArrayList<>(projectPublications.size());
-            for (ProjectPublication publication : projectPublications) {
+            val result: MutableList<T?> = ArrayList<T?>(projectPublications.size)
+            for (publication in projectPublications) {
                 if (type.isInstance(publication)) {
-                    result.add(type.cast(publication));
+                    result.add(type.cast(publication))
                 }
             }
-            return result;
+            return result
         }
     }
 
-    @Override
-    @SuppressWarnings("MixedMutabilityReturnType")
-    public <T extends ProjectPublication> Collection<PublicationForProject<T>> getPublicationsForBuild(Class<T> type, BuildIdentifier buildIdentity) {
-        synchronized (publicationsByBuildId) {
-            Collection<PublicationForProject<?>> buildPublications = publicationsByBuildId.get(buildIdentity);
+    override fun <T : ProjectPublication?> getPublicationsForBuild(type: Class<T?>, buildIdentity: BuildIdentifier): MutableCollection<ProjectPublicationRegistry.PublicationForProject<T?>> {
+        synchronized(publicationsByBuildId) {
+            val buildPublications: MutableCollection<ProjectPublicationRegistry.PublicationForProject<*>> = publicationsByBuildId.get(buildIdentity)
             if (buildPublications.isEmpty()) {
-                return Collections.emptyList();
+                return mutableListOf<ProjectPublicationRegistry.PublicationForProject<T?>>()
             }
-            List<PublicationForProject<T>> result = new ArrayList<>(buildPublications.size());
-            for (PublicationForProject<?> reference : buildPublications) {
+            val result: MutableList<ProjectPublicationRegistry.PublicationForProject<T?>> = ArrayList<ProjectPublicationRegistry.PublicationForProject<T?>>(buildPublications.size)
+            for (reference in buildPublications) {
                 if (type.isInstance(reference.getPublication())) {
-                    result.add(Cast.uncheckedCast(reference));
+                    result.add(uncheckedCast<ProjectPublicationRegistry.PublicationForProject<T?>?>(reference)!!)
                 }
             }
-            return result;
+            return result
         }
     }
 
-    @Override
-    public void registerPublication(ProjectIdentity projectIdentity, ProjectPublication publication) {
-        synchronized (publicationsByProjectId) {
-            publicationsByProjectId.put(projectIdentity.getBuildTreePath(), publication);
+    override fun registerPublication(projectIdentity: ProjectIdentity, publication: ProjectPublication) {
+        synchronized(publicationsByProjectId) {
+            publicationsByProjectId.put(projectIdentity.getBuildTreePath(), publication)
         }
-        synchronized (publicationsByBuildId) {
-            DefaultPublicationForProject publicationReference = new DefaultPublicationForProject(publication, projectIdentity);
-            publicationsByBuildId.put(new DefaultBuildIdentifier(projectIdentity.getBuildPath()), publicationReference);
+        synchronized(publicationsByBuildId) {
+            val publicationReference = DefaultPublicationForProject(publication, projectIdentity)
+            publicationsByBuildId.put(DefaultBuildIdentifier(projectIdentity.getBuildPath()), publicationReference)
         }
     }
 
-    @Override
-    public void discardAll() {
-        publicationsByProjectId.clear();
-        publicationsByBuildId.clear();
+    override fun discardAll() {
+        publicationsByProjectId.clear()
+        publicationsByBuildId.clear()
     }
 
-    private static class DefaultPublicationForProject implements PublicationForProject<ProjectPublication> {
-        private final ProjectPublication publication;
-        private final ProjectIdentity projectId;
-
-        DefaultPublicationForProject(ProjectPublication publication, ProjectIdentity projectId) {
-            this.publication = publication;
-            this.projectId = projectId;
+    private class DefaultPublicationForProject(private val publication: ProjectPublication, private val projectId: ProjectIdentity) :
+        ProjectPublicationRegistry.PublicationForProject<ProjectPublication?> {
+        override fun getPublication(): ProjectPublication {
+            return publication
         }
 
-        @Override
-        public ProjectPublication getPublication() {
-            return publication;
-        }
-
-        @Override
-        public ProjectIdentity getProducingProjectId() {
-            return projectId;
+        override fun getProducingProjectId(): ProjectIdentity {
+            return projectId
         }
     }
 }

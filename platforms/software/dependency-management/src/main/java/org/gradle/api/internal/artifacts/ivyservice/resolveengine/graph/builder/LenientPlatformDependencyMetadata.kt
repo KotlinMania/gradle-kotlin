@@ -13,127 +13,93 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.ForcingDependencyMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.ForcingDependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
 /**
  * Dependency metadata for edges involving a virtual platform. Used in two cases:
- * <ol>
- *     <li>A hard edge from a node to its owning virtual platform.</li>
- *     <li>A constraint edge from a virtual platform to a node of a participating module.</li>
- * </ol>
+ *
+ *  1. A hard edge from a node to its owning virtual platform.
+ *  1. A constraint edge from a virtual platform to a node of a participating module.
+ *
  */
-class LenientPlatformDependencyMetadata implements ModuleDependencyMetadata, ForcingDependencyMetadata {
+internal class LenientPlatformDependencyMetadata(
+    val selector: ModuleComponentSelector,
+// just for reporting
+    private val platformId: ComponentIdentifier,
+    force: Boolean,
+    constraint: Boolean
+) : ModuleDependencyMetadata, ForcingDependencyMetadata {
+    private val force: Boolean
+    val isConstraint: Boolean
 
-    private final ModuleComponentSelector selector;
-    private final ComponentIdentifier platformId; // just for reporting
-    private final boolean force;
-    private final boolean constraint;
-
-    LenientPlatformDependencyMetadata(
-        ModuleComponentSelector selector,
-        ComponentIdentifier platformId,
-        boolean force,
-        boolean constraint
-    ) {
-        this.selector = selector;
-        this.platformId = platformId;
-        this.force = force;
-        this.constraint = constraint;
+    init {
+        this.platformId = platformId
+        this.force = force
+        this.isConstraint = constraint
     }
 
-    @Override
-    public ModuleComponentSelector getSelector() {
-        return selector;
+    override fun withRequestedVersion(requestedVersion: VersionConstraint): ModuleDependencyMetadata? {
+        throw UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.")
     }
 
-    @Override
-    public ModuleDependencyMetadata withRequestedVersion(VersionConstraint requestedVersion) {
-        throw new UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.");
+    override fun withReason(reason: String): ModuleDependencyMetadata? {
+        throw UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.")
     }
 
-    @Override
-    public ModuleDependencyMetadata withReason(String reason) {
-        throw new UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.");
+    override fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata? {
+        throw UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.")
     }
 
-    @Override
-    public ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse) {
-        throw new UnsupportedOperationException("Applying component metadata rules to lenient platform dependencies is not supported.");
-    }
+    val excludes: ImmutableList<ExcludeMetadata>
+        get() = ImmutableList.of<ExcludeMetadata>()
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return ImmutableList.of();
-    }
+    val artifacts: ImmutableList<IvyArtifactName>
+        get() = ImmutableList.of<IvyArtifactName>()
 
-    @Override
-    public ImmutableList<IvyArtifactName> getArtifacts() {
-        return ImmutableList.of();
-    }
-
-    @Override
-    public DependencyMetadata withTarget(ComponentSelector target) {
+    override fun withTarget(target: ComponentSelector): DependencyMetadata {
         // TODO: This gets called when performing substitutions.
         //       We probably shouldn't ignore this.
-        return this;
+        return this
     }
 
-    @Override
-    public DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): DependencyMetadata {
         // TODO: This gets called when performing substitutions.
         //       We probably shouldn't ignore this.
-        return this;
+        return this
     }
 
-    @Override
-    public boolean isChanging() {
-        return false;
+    val isChanging: Boolean
+        get() = false
+
+    val isTransitive: Boolean
+        get() = !this.isConstraint
+
+    val isEndorsingStrictVersions: Boolean
+        get() = false
+
+    val reason: String
+        get() = "belongs to platform " + platformId
+
+    override fun toString(): String {
+        return selector.getDisplayName()
     }
 
-    @Override
-    public boolean isTransitive() {
-        return !constraint;
+    override fun isForce(): Boolean {
+        return force
     }
 
-    @Override
-    public boolean isConstraint() {
-        return constraint;
+    override fun forced(): ForcingDependencyMetadata {
+        return LenientPlatformDependencyMetadata(selector, platformId, true, this.isConstraint)
     }
-
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return false;
-    }
-
-    @Override
-    public String getReason() {
-        return "belongs to platform " + platformId;
-    }
-
-    @Override
-    public String toString() {
-        return selector.getDisplayName();
-    }
-
-    @Override
-    public boolean isForce() {
-        return force;
-    }
-
-    @Override
-    public ForcingDependencyMetadata forced() {
-        return new LenientPlatformDependencyMetadata(selector, platformId, true, constraint);
-    }
-
 }

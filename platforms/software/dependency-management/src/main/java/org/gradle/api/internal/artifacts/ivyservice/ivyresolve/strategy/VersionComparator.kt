@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.Versioned;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.Versioned
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import java.util.Comparator;
-
-@ServiceScope(Scope.Build.class)
-public interface VersionComparator extends Comparator<Versioned> {
+@ServiceScope(Scope.Build::class)
+interface VersionComparator : Comparator<Versioned?> {
     /**
      * Compares two versioned elements to see which is the 'latest'.
      */
-    @Override
-    int compare(Versioned element1, Versioned element2);
+    override fun compare(element1: Versioned?, element2: Versioned?): Int
 
-    Comparator<Version> asVersionComparator();
+    fun asVersionComparator(): Comparator<Version?>?
 }

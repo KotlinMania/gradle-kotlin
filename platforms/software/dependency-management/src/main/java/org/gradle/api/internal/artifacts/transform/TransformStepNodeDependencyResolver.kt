@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.Action;
-import org.gradle.api.Task;
-import org.gradle.execution.plan.DependencyResolver;
-import org.gradle.execution.plan.Node;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.Action
+import org.gradle.api.Task
+import org.gradle.execution.plan.DependencyResolver
+import org.gradle.execution.plan.Node
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Resolves dependencies to {@link TransformStepNode} objects.
+ * Resolves dependencies to [TransformStepNode] objects.
  */
-@ServiceScope({Scope.Build.class, Scope.Project.class})
-public class TransformStepNodeDependencyResolver implements DependencyResolver {
-    @Override
-    public boolean resolve(Task task, Object node, Action<? super Node> resolveAction) {
-        if (node instanceof DefaultTransformNodeDependency) {
-            DefaultTransformNodeDependency transformNodeDependency = (DefaultTransformNodeDependency) node;
-            for (TransformStepNode transformStepNode : transformNodeDependency.getNodes()) {
-                resolveAction.execute(transformStepNode);
+@ServiceScope([Scope.Build::class, Scope.Project::class])
+class TransformStepNodeDependencyResolver : DependencyResolver {
+    override fun resolve(task: Task, node: Any, resolveAction: Action<in Node>): Boolean {
+        if (node is DefaultTransformNodeDependency) {
+            val transformNodeDependency = node
+            for (transformStepNode in transformNodeDependency.getNodes()) {
+                resolveAction.execute(transformStepNode)
             }
-            return true;
+            return true
         }
-        return false;
+        return false
     }
 }

@@ -13,50 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeEverything
+import org.gradle.internal.component.model.IvyArtifactName
 
-final class DefaultExcludeEverything implements ExcludeEverything {
-    private static final ExcludeEverything INSTANCE = new DefaultExcludeEverything();
-
-    public static ExcludeEverything get() {
-        return INSTANCE;
+internal class DefaultExcludeEverything private constructor() : ExcludeEverything {
+    override fun excludes(module: ModuleIdentifier?): Boolean {
+        return true
     }
 
-    private DefaultExcludeEverything() {
-    }
-
-    @Override
-    public boolean excludes(ModuleIdentifier module) {
-        return true;
-    }
-
-    @Override
-    public boolean excludesArtifact(ModuleIdentifier module, IvyArtifactName artifactName) {
+    override fun excludesArtifact(module: ModuleIdentifier?, artifactName: IvyArtifactName?): Boolean {
         // everything excluded **only** applies to modules, not artifacts!
-        return false;
+        return false
     }
 
-    @Override
-    public boolean mayExcludeArtifacts() {
-        return false; // an exclude all is for modules, not artifacts
+    override fun mayExcludeArtifacts(): Boolean {
+        return false // an exclude all is for modules, not artifacts
     }
 
-    @Override
-    public String toString() {
-        return "\"excludes everything\"";
+    override fun toString(): String {
+        return "\"excludes everything\""
     }
 
-    @Override
-    public int hashCode() {
-        return 1;
+    override fun hashCode(): Int {
+        return 1
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        return this == obj;
+    override fun equals(obj: Any?): Boolean {
+        return this === obj
+    }
+
+    companion object {
+        private val INSTANCE: ExcludeEverything = DefaultExcludeEverything()
+
+        fun get(): ExcludeEverything {
+            return INSTANCE
+        }
     }
 }

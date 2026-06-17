@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+interface MetadataProvider {
+    val componentMetadata: ComponentMetadata?
 
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.jspecify.annotations.Nullable;
+    val ivyModuleDescriptor: IvyModuleDescriptor?
 
-public interface MetadataProvider {
-    @Nullable
-    ComponentMetadata getComponentMetadata();
-
-    @Nullable
-    IvyModuleDescriptor getIvyModuleDescriptor();
-
-    boolean isUsable();
+    val isUsable: Boolean
 }

@@ -13,21 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
 
-class RepositoryChainModuleResolution implements StringVersioned {
-    public final ModuleComponentRepository<?> repository;
-    public final ExternalModuleComponentGraphResolveState component;
-
-    public RepositoryChainModuleResolution(ModuleComponentRepository<?> repository, ExternalModuleComponentGraphResolveState component) {
-        this.repository = repository;
-        this.component = component;
-    }
-
-    @Override
-    public String getVersion() {
-        return component.getId().getVersion();
+internal class RepositoryChainModuleResolution(@JvmField val repository: ModuleComponentRepository<*>, @JvmField val component: ExternalModuleComponentGraphResolveState) : StringVersioned {
+    override fun getVersion(): String {
+        return component.getId()!!.getVersion()
     }
 }

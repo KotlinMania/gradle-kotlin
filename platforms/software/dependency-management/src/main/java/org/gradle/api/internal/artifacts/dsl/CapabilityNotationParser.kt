@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
-
-import org.gradle.api.capabilities.Capability;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.typeconversion.NotationParser;
+import org.gradle.api.capabilities.Capability
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.typeconversion.NotationParser
 
 /**
- * A concrete type for a generic {@link NotationParser} that parses {@link Capability}s.
- * <p>
+ * A concrete type for a generic [NotationParser] that parses [Capability]s.
+ *
+ *
  * This concrete type is necessary so that it can be injected into version catalog generated sources.
  */
-@ServiceScope(Scope.Build.class)
-public interface CapabilityNotationParser extends NotationParser<Object, Capability> {
-}
+@ServiceScope(Scope.Build::class)
+interface CapabilityNotationParser : NotationParser<Any?, Capability?>

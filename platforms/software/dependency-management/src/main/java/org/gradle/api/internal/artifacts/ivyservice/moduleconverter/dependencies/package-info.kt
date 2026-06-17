@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-@NullMarked
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory.module
+import org.gradle.internal.component.external.model.ImmutableCapabilities.Companion.of
+import org.gradle.internal.component.model.ComponentIdGenerator.nextVariantId
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata.forced
+import org.gradle.api.internal.artifacts.VersionConstraintInternal.asImmutable
 
-import org.jspecify.annotations.NullMarked;

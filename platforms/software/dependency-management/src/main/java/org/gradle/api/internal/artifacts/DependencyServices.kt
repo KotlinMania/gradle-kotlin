@@ -13,42 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSetToFileCollectionFactory
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSetToFileCollectionFactory;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-
-public class DependencyServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.addProvider(new DependencyManagementGlobalScopeServices());
+class DependencyServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.addProvider(DependencyManagementGlobalScopeServices())
     }
 
-    @Override
-    public void registerGradleUserHomeServices(ServiceRegistration registration) {
-        registration.addProvider(new DependencyManagementGradleUserHomeScopeServices());
+    public override fun registerGradleUserHomeServices(registration: ServiceRegistration) {
+        registration.addProvider(DependencyManagementGradleUserHomeScopeServices())
     }
 
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.addProvider(new DependencyManagementBuildScopeServices());
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.addProvider(DependencyManagementBuildScopeServices())
     }
 
-    @Override
-    public void registerProjectServices(ServiceRegistration registration) {
-        registration.addProvider(new DependencyManagementProjectScopeServices());
+    public override fun registerProjectServices(registration: ServiceRegistration) {
+        registration.addProvider(DependencyManagementProjectScopeServices())
     }
 
-    @Override
-    public void registerBuildSessionServices(ServiceRegistration registration) {
-        registration.addProvider(new DependencyManagementBuildSessionScopeServices());
+    public override fun registerBuildSessionServices(registration: ServiceRegistration) {
+        registration.addProvider(DependencyManagementBuildSessionScopeServices())
     }
 
-    @Override
-    public void registerBuildTreeServices(ServiceRegistration registration) {
-        registration.add(ArtifactSetToFileCollectionFactory.class);
-        registration.addProvider(new DependencyManagementBuildTreeScopeServices());
+    public override fun registerBuildTreeServices(registration: ServiceRegistration) {
+        registration.add(ArtifactSetToFileCollectionFactory::class.java)
+        registration.addProvider(DependencyManagementBuildTreeScopeServices())
     }
 }

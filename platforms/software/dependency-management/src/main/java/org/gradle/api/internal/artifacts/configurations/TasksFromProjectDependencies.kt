@@ -13,68 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
+import org.gradle.api.Task
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.project.ProjectStateRegistry
+import org.gradle.api.internal.tasks.TaskDependencyContainerInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import java.util.function.Consumer
+import java.util.function.Supplier
 
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.api.internal.project.ProjectStateRegistry;
-import org.gradle.api.internal.tasks.TaskDependencyContainerInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
+@Deprecated("")
+class TasksFromProjectDependencies(
+    taskName: String,
+    projectDependencies: Supplier<MutableSet<ProjectDependency>>,
+    taskDependencyFactory: TaskDependencyFactory,
+    projectStateRegistry: ProjectStateRegistry
+) : TaskDependencyContainerInternal {
+    private val taskDependencyDelegate: TaskDependencyContainerInternal
 
-import java.util.Set;
-import java.util.function.Supplier;
-
-@Deprecated
-public class TasksFromProjectDependencies implements TaskDependencyContainerInternal {
-    private final TaskDependencyContainerInternal taskDependencyDelegate;
-
-    public TasksFromProjectDependencies(
-        String taskName,
-        Supplier<Set<ProjectDependency>> projectDependencies,
-        TaskDependencyFactory taskDependencyFactory,
-        ProjectStateRegistry projectStateRegistry
-    ) {
+    init {
         this.taskDependencyDelegate = taskDependencyFactory.visitingDependencies(
-            context -> resolveProjectDependencies(context, projectDependencies.get(), projectStateRegistry, taskName)
-        );
+            Consumer { context: TaskDependencyResolveContext? -> Companion.resolveProjectDependencies(context!!, projectDependencies.get(), projectStateRegistry, taskName) }
+        )
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        taskDependencyDelegate.visitDependencies(context);
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        taskDependencyDelegate.visitDependencies(context)
     }
 
-    private static void resolveProjectDependencies(
-        TaskDependencyResolveContext context,
-        Set<ProjectDependency> projectDependencies,
-        ProjectStateRegistry projectStateRegistry,
-        String taskName
-    ) {
-        for (ProjectDependency projectDependency : projectDependencies) {
-            Path identityPath = ((ProjectDependencyInternal) projectDependency).getTargetProjectIdentity().getBuildTreePath();
-            ProjectState projectState = projectStateRegistry.stateFor(identityPath);
-            projectState.ensureTasksDiscovered();
+    override fun getDependencies(task: Task?): MutableSet<out Task> {
+        return taskDependencyDelegate.getDependencies(task)
+    }
 
-            Task nextTask = projectState.getMutableModel().getTasks().findByName(taskName);
-            if (nextTask != null && context.getTask() != nextTask) {
-                context.add(nextTask);
+    override fun getDependenciesForInternalUse(task: Task?): MutableSet<out Task> {
+        return taskDependencyDelegate.getDependenciesForInternalUse(task)
+    }
+
+    companion object {
+        private fun resolveProjectDependencies(
+            context: TaskDependencyResolveContext,
+            projectDependencies: MutableSet<ProjectDependency>,
+            projectStateRegistry: ProjectStateRegistry,
+            taskName: String
+        ) {
+            for (projectDependency in projectDependencies) {
+                val identityPath = (projectDependency as ProjectDependencyInternal).getTargetProjectIdentity().getBuildTreePath()
+                val projectState = projectStateRegistry.stateFor(identityPath)
+                projectState.ensureTasksDiscovered()
+
+                val nextTask = projectState.getMutableModel().getTasks().findByName(taskName)
+                if (nextTask != null && context.getTask() !== nextTask) {
+                    context.add(nextTask)
+                }
             }
         }
-    }
-
-    @Override
-    public Set<? extends Task> getDependencies(@Nullable Task task) {
-        return taskDependencyDelegate.getDependencies(task);
-    }
-
-    @Override
-    public Set<? extends Task> getDependenciesForInternalUse(@Nullable Task task) {
-        return taskDependencyDelegate.getDependenciesForInternalUse(task);
     }
 }

@@ -13,22 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.jspecify.annotations.NullMarked;
-
-import java.util.Collection;
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class DefaultTransformNodeDependency implements TransformNodeDependency {
-    private final Collection<TransformStepNode> nodes;
-
-    public DefaultTransformNodeDependency(Collection<TransformStepNode> nodes) {
-        this.nodes = nodes;
-    }
-
-    public Collection<TransformStepNode> getNodes() {
-        return nodes;
-    }
-}
+class DefaultTransformNodeDependency(val nodes: MutableCollection<TransformStepNode>) : TransformNodeDependency

@@ -13,211 +13,193 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.transport;
+package org.gradle.api.internal.artifacts.repositories.transport
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.credentials.Credentials;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.StartParameterResolutionOverride;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultExternalResourceCachePolicy;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.authentication.Authentication;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.authentication.AuthenticationInternal;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.cached.CachedExternalResourceIndex;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-import org.gradle.internal.resource.transport.ResourceConnectorRepositoryTransport;
-import org.gradle.internal.resource.transport.file.FileTransport;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.verifier.HttpRedirectVerifier;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.StartParameterResolutionOverride
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultExternalResourceCachePolicy
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.authentication.Authentication
+import org.gradle.cache.internal.ProducerGuard
+import org.gradle.internal.authentication.AuthenticationInternal
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.cached.CachedExternalResourceIndex
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.transport.ResourceConnectorRepositoryTransport
+import org.gradle.internal.resource.transport.file.FileTransport
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+@ServiceScope(Scope.Build::class)
+class RepositoryTransportFactory(
+    resourceConnectorFactory: MutableCollection<ResourceConnectorFactory?>,
+    private val temporaryFileProvider: TemporaryFileProvider,
+    private val cachedExternalResourceIndex: CachedExternalResourceIndex<String?>,
+    private val timeProvider: BuildCommencedTimeProvider,
+    private val artifactCacheLockingManager: ArtifactCacheLockingAccessCoordinator,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val startParameterResolutionOverride: StartParameterResolutionOverride,
+    private val producerGuard: ProducerGuard<ExternalResourceName?>,
+    private val fileRepository: FileResourceRepository,
+    private val checksumService: ChecksumService
+) {
+    private val registeredProtocols: MutableList<ResourceConnectorFactory> = ArrayList<ResourceConnectorFactory>()
 
-@ServiceScope(Scope.Build.class)
-public class RepositoryTransportFactory {
-    private final List<ResourceConnectorFactory> registeredProtocols = new ArrayList<>();
-
-    private final TemporaryFileProvider temporaryFileProvider;
-    private final CachedExternalResourceIndex<String> cachedExternalResourceIndex;
-    private final BuildCommencedTimeProvider timeProvider;
-    private final ArtifactCacheLockingAccessCoordinator artifactCacheLockingManager;
-    private final BuildOperationRunner buildOperationRunner;
-    private final StartParameterResolutionOverride startParameterResolutionOverride;
-    private final ProducerGuard<ExternalResourceName> producerGuard;
-    private final FileResourceRepository fileRepository;
-    private final ChecksumService checksumService;
-
-    public RepositoryTransportFactory(Collection<ResourceConnectorFactory> resourceConnectorFactory,
-                                      TemporaryFileProvider temporaryFileProvider,
-                                      CachedExternalResourceIndex<String> cachedExternalResourceIndex,
-                                      BuildCommencedTimeProvider timeProvider,
-                                      ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator,
-                                      BuildOperationRunner buildOperationRunner,
-                                      StartParameterResolutionOverride startParameterResolutionOverride,
-                                      ProducerGuard<ExternalResourceName> producerGuard,
-                                      FileResourceRepository fileRepository,
-                                      ChecksumService checksumService) {
-        this.temporaryFileProvider = temporaryFileProvider;
-        this.cachedExternalResourceIndex = cachedExternalResourceIndex;
-        this.timeProvider = timeProvider;
-        this.artifactCacheLockingManager = cacheAccessCoordinator;
-        this.buildOperationRunner = buildOperationRunner;
-        this.startParameterResolutionOverride = startParameterResolutionOverride;
-        this.producerGuard = producerGuard;
-        this.fileRepository = fileRepository;
-        this.checksumService = checksumService;
-
-        registeredProtocols.addAll(resourceConnectorFactory);
+    init {
+        registeredProtocols.addAll(resourceConnectorFactory)
     }
 
-    public Set<String> getRegisteredProtocols() {
-        Set<String> validSchemes = new LinkedHashSet<>();
-        for (ResourceConnectorFactory registeredProtocol : registeredProtocols) {
-            validSchemes.addAll(registeredProtocol.getSupportedProtocols());
+    fun getRegisteredProtocols(): MutableSet<String?> {
+        val validSchemes: MutableSet<String?> = LinkedHashSet<String?>()
+        for (registeredProtocol in registeredProtocols) {
+            validSchemes.addAll(registeredProtocol.getSupportedProtocols())
         }
-        return validSchemes;
+        return validSchemes
     }
 
-    public RepositoryTransport createFileTransport(String name) {
-        return new FileTransport(name, fileRepository, cachedExternalResourceIndex, temporaryFileProvider, timeProvider, artifactCacheLockingManager, producerGuard, checksumService);
+    fun createFileTransport(name: String?): RepositoryTransport {
+        return FileTransport(name, fileRepository, cachedExternalResourceIndex, temporaryFileProvider, timeProvider, artifactCacheLockingManager, producerGuard, checksumService)
     }
 
-    public RepositoryTransport createTransport(String scheme, String name, Collection<Authentication> authentications, HttpRedirectVerifier redirectVerifier) {
-        return createTransport(Collections.singleton(scheme), name, authentications, redirectVerifier);
+    fun createTransport(scheme: String?, name: String?, authentications: MutableCollection<Authentication?>, redirectVerifier: HttpRedirectVerifier?): RepositoryTransport? {
+        return createTransport(mutableSetOf<String?>(scheme), name, authentications, redirectVerifier)
     }
 
-    public RepositoryTransport createTransport(Set<String> schemes, String name, Collection<Authentication> authentications, HttpRedirectVerifier redirectVerifier) {
-        validateSchemes(schemes);
+    fun createTransport(schemes: MutableSet<String?>, name: String?, authentications: MutableCollection<Authentication?>, redirectVerifier: HttpRedirectVerifier?): RepositoryTransport? {
+        validateSchemes(schemes)
 
-        ResourceConnectorFactory connectorFactory = findConnectorFactory(schemes);
+        val connectorFactory = findConnectorFactory(schemes)
 
         // Ensure resource transport protocol, authentication types and credentials are all compatible
-        validateConnectorFactoryCredentials(schemes, connectorFactory, authentications);
+        validateConnectorFactoryCredentials(schemes, connectorFactory, authentications)
 
         // File resources are handled slightly differently at present.
         // file:// repos are treated differently
         // 1) we don't cache their files
         // 2) we don't do progress logging for "downloading"
-        if (schemes.equals(Collections.singleton("file"))) {
-            return createFileTransport(name);
+        if (schemes == mutableSetOf<String?>("file")) {
+            return createFileTransport(name)
         }
-        ResourceConnectorSpecification connectionDetails = new DefaultResourceConnectorSpecification(authentications, redirectVerifier);
+        val connectionDetails: ResourceConnectorSpecification = DefaultResourceConnectorSpecification(authentications, redirectVerifier)
 
-        ExternalResourceConnector resourceConnector = connectorFactory.createResourceConnector(connectionDetails);
-        resourceConnector = startParameterResolutionOverride.overrideExternalResourceConnector(resourceConnector);
+        var resourceConnector = connectorFactory.createResourceConnector(connectionDetails)
+        resourceConnector = startParameterResolutionOverride.overrideExternalResourceConnector(resourceConnector)
 
-        ExternalResourceCachePolicy cachePolicy = new DefaultExternalResourceCachePolicy();
-        cachePolicy = startParameterResolutionOverride.overrideExternalResourceCachePolicy(cachePolicy);
+        var cachePolicy: ExternalResourceCachePolicy = DefaultExternalResourceCachePolicy()
+        cachePolicy = startParameterResolutionOverride.overrideExternalResourceCachePolicy(cachePolicy)
 
-        return new ResourceConnectorRepositoryTransport(name, temporaryFileProvider, cachedExternalResourceIndex, timeProvider, artifactCacheLockingManager, resourceConnector, buildOperationRunner, cachePolicy, producerGuard, fileRepository, checksumService);
+        return ResourceConnectorRepositoryTransport(
+            name,
+            temporaryFileProvider,
+            cachedExternalResourceIndex,
+            timeProvider,
+            artifactCacheLockingManager,
+            resourceConnector,
+            buildOperationRunner,
+            cachePolicy,
+            producerGuard,
+            fileRepository,
+            checksumService
+        )
     }
 
-    private void validateSchemes(Set<String> schemes) {
-        Set<String> validSchemes = getRegisteredProtocols();
-        for (String scheme : schemes) {
+    private fun validateSchemes(schemes: MutableSet<String?>) {
+        val validSchemes = getRegisteredProtocols()
+        for (scheme in schemes) {
             if (!validSchemes.contains(scheme)) {
-                throw new InvalidUserDataException(String.format("Not a supported repository protocol '%s': valid protocols are %s", scheme, validSchemes));
+                throw InvalidUserDataException(String.format("Not a supported repository protocol '%s': valid protocols are %s", scheme, validSchemes))
             }
         }
     }
 
-    private void validateConnectorFactoryCredentials(Set<String> schemes, ResourceConnectorFactory factory, Collection<Authentication> authentications) {
-        Set<Class<? extends Authentication>> configuredAuthenticationTypes = new HashSet<>();
+    private fun validateConnectorFactoryCredentials(schemes: MutableSet<String?>, factory: ResourceConnectorFactory, authentications: MutableCollection<Authentication?>) {
+        val configuredAuthenticationTypes: MutableSet<Class<out Authentication?>?> = HashSet<Class<out Authentication?>?>()
 
-        for (Authentication authentication : authentications) {
-            AuthenticationInternal authenticationInternal = (AuthenticationInternal) authentication;
-            boolean isAuthenticationSupported = false;
-            Credentials credentials = authenticationInternal.credentials;
-            boolean needCredentials = authenticationInternal.requiresCredentials();
+        for (authentication in authentications) {
+            val authenticationInternal = authentication as AuthenticationInternal
+            var isAuthenticationSupported = false
+            val credentials = authenticationInternal.credentials
+            val needCredentials = authenticationInternal.requiresCredentials()
 
-            for (Class<?> authenticationType : factory.getSupportedAuthentication()) {
-                if (authenticationType.isAssignableFrom(authentication.getClass())) {
-                    isAuthenticationSupported = true;
-                    break;
+            for (authenticationType in factory.getSupportedAuthentication()) {
+                if (authenticationType.isAssignableFrom(authentication.javaClass)) {
+                    isAuthenticationSupported = true
+                    break
                 }
             }
 
             if (!isAuthenticationSupported) {
-                throw new InvalidUserDataException(String.format("Authentication scheme %s is not supported by protocol '%s'",
-                    authentication, schemes.iterator().next()));
+                throw InvalidUserDataException(
+                    String.format(
+                        "Authentication scheme %s is not supported by protocol '%s'",
+                        authentication, schemes.iterator().next()
+                    )
+                )
             }
 
             if (credentials != null) {
-                if (!((AuthenticationInternal) authentication).supports(credentials)) {
-                    throw new InvalidUserDataException(String.format("Credentials type of '%s' is not supported by authentication scheme %s",
-                        credentials.getClass().getSimpleName(), authentication));
+                if (!authentication.supports(credentials)) {
+                    throw InvalidUserDataException(
+                        String.format(
+                            "Credentials type of '%s' is not supported by authentication scheme %s",
+                            credentials.javaClass.getSimpleName(), authentication
+                        )
+                    )
                 }
             } else {
                 if (needCredentials) {
-                    throw new InvalidUserDataException("You cannot configure authentication schemes for this repository type if no credentials are provided.");
+                    throw InvalidUserDataException("You cannot configure authentication schemes for this repository type if no credentials are provided.")
                 }
             }
 
             if (!configuredAuthenticationTypes.add(authenticationInternal.type)) {
-                throw new InvalidUserDataException(String.format("You cannot configure multiple authentication schemes of the same type.  The duplicate one is %s.", authentication));
+                throw InvalidUserDataException(String.format("You cannot configure multiple authentication schemes of the same type.  The duplicate one is %s.", authentication))
             }
         }
     }
 
-    private ResourceConnectorFactory findConnectorFactory(Set<String> schemes) {
-        for (ResourceConnectorFactory protocolRegistration : registeredProtocols) {
+    private fun findConnectorFactory(schemes: MutableSet<String?>): ResourceConnectorFactory {
+        for (protocolRegistration in registeredProtocols) {
             if (protocolRegistration.getSupportedProtocols().containsAll(schemes)) {
-                return protocolRegistration;
+                return protocolRegistration
             }
         }
-        throw new InvalidUserDataException("You cannot mix different URL schemes for a single repository. Please declare separate repositories.");
+        throw InvalidUserDataException("You cannot mix different URL schemes for a single repository. Please declare separate repositories.")
     }
 
-    private static class DefaultResourceConnectorSpecification implements ResourceConnectorSpecification {
-        private final Collection<Authentication> authentications;
-        private final HttpRedirectVerifier redirectVerifier;
-
-        private DefaultResourceConnectorSpecification(Collection<Authentication> authentications, HttpRedirectVerifier redirectVerifier) {
-            this.authentications = authentications;
-            this.redirectVerifier = redirectVerifier;
-        }
-
-        @Override
-        public <T> T getCredentials(Class<T> type) {
-            if (authentications == null || authentications.size() < 1) {
-                return null;
+    private class DefaultResourceConnectorSpecification(private val authentications: MutableCollection<Authentication?>?, private val redirectVerifier: HttpRedirectVerifier?) :
+        ResourceConnectorSpecification {
+        override fun <T> getCredentials(type: Class<T?>): T? {
+            if (authentications == null || authentications.size < 1) {
+                return null
             }
 
-            Credentials credentials = ((AuthenticationInternal) authentications.iterator().next()).credentials;
+            val credentials = (authentications.iterator().next() as AuthenticationInternal).credentials
 
             if (credentials == null) {
-                return null;
+                return null
             }
-            if (type.isAssignableFrom(credentials.getClass())) {
-                return type.cast(credentials);
+            if (type.isAssignableFrom(credentials.javaClass)) {
+                return type.cast(credentials)
             } else {
-                throw new IllegalArgumentException(String.format("Credentials must be an instance of '%s'.", type.getCanonicalName()));
+                throw IllegalArgumentException(String.format("Credentials must be an instance of '%s'.", type.getCanonicalName()))
             }
         }
 
-        @Override
-        public Collection<Authentication> getAuthentications() {
-            return authentications;
+        override fun getAuthentications(): MutableCollection<Authentication?>? {
+            return authentications
         }
 
-        @Override
-        public HttpRedirectVerifier getRedirectVerifier() {
-            return redirectVerifier;
+        override fun getRedirectVerifier(): HttpRedirectVerifier? {
+            return redirectVerifier
         }
     }
 }

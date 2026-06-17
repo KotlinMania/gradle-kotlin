@@ -13,179 +13,156 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository;
-import org.gradle.api.artifacts.repositories.RepositoryResourceAccessor;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.descriptor.FlatDirRepositoryDescriptor;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMetadataArtifactProvider;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource;
-import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.caching.ImplicitInputRecorder;
-import org.gradle.internal.resolve.caching.ImplicitInputsProvidingService;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
-import org.gradle.util.internal.CollectionUtils;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Joiner
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.RepositoryResourceAccessor
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.descriptor.FlatDirRepositoryDescriptor
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMetadataArtifactProvider
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource
+import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.caching.ImplicitInputRecorder
+import org.gradle.internal.resolve.caching.ImplicitInputsProvidingService
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
+import org.gradle.util.internal.CollectionUtils
+import java.io.File
+import java.io.InputStream
+import java.net.URI
+import java.util.Arrays
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.io.File;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+abstract class DefaultFlatDirArtifactRepository @Inject constructor(
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val transportFactory: RepositoryTransportFactory,
+    private val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    private val artifactFileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    private val metadataFactory: IvyMutableModuleMetadataFactory,
+    private val instantiatorFactory: InstantiatorFactory,
+    objectFactory: ObjectFactory,
+    private val checksumService: ChecksumService,
+    versionParser: VersionParser
+) : AbstractResolutionAwareArtifactRepository<FlatDirRepositoryDescriptor>(objectFactory, versionParser), FlatDirectoryArtifactRepository, ResolutionAwareRepository {
+    private val dirs: MutableList<Any> = ArrayList<Any>()
 
-public abstract class DefaultFlatDirArtifactRepository extends AbstractResolutionAwareArtifactRepository<FlatDirRepositoryDescriptor> implements FlatDirectoryArtifactRepository, ResolutionAwareRepository {
-    private final FileCollectionFactory fileCollectionFactory;
-    private final List<Object> dirs = new ArrayList<>();
-    private final RepositoryTransportFactory transportFactory;
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
-    private final IvyMutableModuleMetadataFactory metadataFactory;
-    private final InstantiatorFactory instantiatorFactory;
-    private final ChecksumService checksumService;
-
-    @Inject
-    public DefaultFlatDirArtifactRepository(FileCollectionFactory fileCollectionFactory,
-                                            RepositoryTransportFactory transportFactory,
-                                            LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-                                            FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
-                                            IvyMutableModuleMetadataFactory metadataFactory,
-                                            InstantiatorFactory instantiatorFactory,
-                                            ObjectFactory objectFactory,
-                                            ChecksumService checksumService,
-                                            VersionParser versionParser
-    ) {
-        super(objectFactory, versionParser);
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.transportFactory = transportFactory;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.artifactFileStore = artifactFileStore;
-        this.metadataFactory = metadataFactory;
-        this.instantiatorFactory = instantiatorFactory;
-        this.checksumService = checksumService;
-    }
-
-    @Override
-    public String getDisplayName() {
-        Set<File> dirs = getDirs();
+    override fun getDisplayName(): String {
+        val dirs = getDirs()
         if (dirs.isEmpty()) {
-            return super.getDisplayName();
+            return super.getDisplayName()
         }
-        return super.getDisplayName() + '(' + Joiner.on(", ").join(dirs) + ')';
+        return super.getDisplayName() + '(' + Joiner.on(", ").join(dirs) + ')'
     }
 
-    @Override
-    public Set<File> getDirs() {
-        return fileCollectionFactory.resolving(dirs).getFiles();
+    override fun getDirs(): MutableSet<File> {
+        return fileCollectionFactory.resolving(dirs).getFiles()
     }
 
-    @Override
-    public void setDirs(Set<File> dirs) {
-        setDirs((Iterable<?>) dirs);
+    override fun setDirs(dirs: MutableSet<File>) {
+        setDirs(dirs as Iterable<*>)
     }
 
-    @Override
-    public void setDirs(Iterable<?> dirs) {
-        invalidateDescriptor();
-        this.dirs.clear();
-        CollectionUtils.addAll(this.dirs, dirs);
+    override fun setDirs(dirs: Iterable<*>) {
+        invalidateDescriptor()
+        this.dirs.clear()
+        CollectionUtils.addAll(this.dirs, dirs)
     }
 
-    @Override
-    public void dir(Object dir) {
-        dirs(dir);
+    override fun dir(dir: Any) {
+        dirs(dir)
     }
 
-    @Override
-    public void dirs(Object... dirs) {
-        invalidateDescriptor();
-        this.dirs.addAll(Arrays.asList(dirs));
+    override fun dirs(vararg dirs: Any) {
+        invalidateDescriptor()
+        this.dirs.addAll(Arrays.asList<Any>(*dirs))
     }
 
-    @Override
-    public ConfiguredModuleComponentRepository createResolver() {
-        return createRealResolver();
+    override fun createResolver(): ConfiguredModuleComponentRepository {
+        return createRealResolver()
     }
 
-    @Override
-    protected FlatDirRepositoryDescriptor createDescriptor() {
-        IvyRepositoryDescriptor.Builder builder = new IvyRepositoryDescriptor.Builder(getName(), null);
-        builder.setM2Compatible(false);
-        builder.setLayoutType("Unknown");
-        builder.setMetadataSources(ImmutableList.of());
-        builder.setAuthenticated(false);
-        builder.setAuthenticationSchemes(ImmutableList.of());
-        for (File root : getDirs()) {
-            builder.addArtifactResource(root.toURI(), "/[artifact]-[revision](-[classifier]).[ext]");
-            builder.addArtifactResource(root.toURI(), "/[artifact](-[classifier]).[ext]");
+    override fun createDescriptor(): FlatDirRepositoryDescriptor {
+        val builder = IvyRepositoryDescriptor.Builder(getName(), null)
+        builder.setM2Compatible(false)
+        builder.setLayoutType("Unknown")
+        builder.setMetadataSources(ImmutableList.of<String>())
+        builder.setAuthenticated(false)
+        builder.setAuthenticationSchemes(ImmutableList.of<String>())
+        for (root in getDirs()) {
+            builder.addArtifactResource(root.toURI(), "/[artifact]-[revision](-[classifier]).[ext]")
+            builder.addArtifactResource(root.toURI(), "/[artifact](-[classifier]).[ext]")
         }
-        IvyRepositoryDescriptor ivyDescriptor = builder.create();
-        return new FlatDirRepositoryDescriptor(getName(), getDirs(), ivyDescriptor);
+        val ivyDescriptor = builder.create()
+        return FlatDirRepositoryDescriptor(getName(), getDirs(), ivyDescriptor)
     }
 
-    @Override
-    protected RepositoryResourceAccessor createRepositoryAccessor(RepositoryTransport transport, @Nullable URI rootUri, FileStore<String> externalResourcesFileStore) {
-        return new NoOpRepositoryResourceAccessor();
+    override fun createRepositoryAccessor(transport: RepositoryTransport, rootUri: URI?, externalResourcesFileStore: FileStore<String>): RepositoryResourceAccessor {
+        return NoOpRepositoryResourceAccessor()
     }
 
-    private IvyResolver createRealResolver() {
-        FlatDirRepositoryDescriptor descriptor = getDescriptor();
-        List<File> dirs = descriptor.getDirs();
+    private fun createRealResolver(): IvyResolver {
+        val descriptor = getDescriptor()
+        val dirs: MutableList<File> = descriptor.getDirs()
         if (dirs.isEmpty()) {
-            throw new InvalidUserDataException("You must specify at least one directory for a flat directory repository.");
+            throw InvalidUserDataException("You must specify at least one directory for a flat directory repository.")
         }
 
-        RepositoryTransport transport = transportFactory.createFileTransport(getName());
-        Instantiator injector = createInjectorForMetadataSuppliers(transport, instantiatorFactory, null, null);
-        return new IvyResolver(descriptor.getBackingDescriptor(), transport, locallyAvailableResourceFinder, false, artifactFileStore, null, null, createMetadataSources(), IvyMetadataArtifactProvider.INSTANCE, injector, checksumService, false);
+        val transport = transportFactory.createFileTransport(getName())
+        val injector: Instantiator = createInjectorForMetadataSuppliers(transport, instantiatorFactory, null, null)
+        return IvyResolver(
+            descriptor.getBackingDescriptor(),
+            transport,
+            locallyAvailableResourceFinder,
+            false,
+            artifactFileStore,
+            null,
+            null,
+            createMetadataSources(),
+            IvyMetadataArtifactProvider.Companion.INSTANCE,
+            injector,
+            checksumService,
+            false
+        )
     }
 
-    private ImmutableMetadataSources createMetadataSources() {
-        MetadataSource<MutableModuleComponentResolveMetadata> artifactMetadataSource = new DefaultArtifactMetadataSource(metadataFactory);
-        return new DefaultImmutableMetadataSources(Collections.singletonList(artifactMetadataSource));
+    private fun createMetadataSources(): ImmutableMetadataSources {
+        val artifactMetadataSource: MetadataSource<MutableModuleComponentResolveMetadata> = DefaultArtifactMetadataSource(metadataFactory)
+        return DefaultImmutableMetadataSources(mutableListOf<MetadataSource<*>>(artifactMetadataSource))
     }
 
-    private static class NoOpRepositoryResourceAccessor implements RepositoryResourceAccessor, ImplicitInputsProvidingService<String, Long, RepositoryResourceAccessor> {
-        @Override
-        public void withResource(String relativePath, Action<? super InputStream> action) {
+    private class NoOpRepositoryResourceAccessor : RepositoryResourceAccessor, ImplicitInputsProvidingService<String?, Long?, RepositoryResourceAccessor?> {
+        override fun withResource(relativePath: String, action: Action<in InputStream>) {
             // No-op
         }
 
-        @Override
-        public RepositoryResourceAccessor withImplicitInputRecorder(ImplicitInputRecorder registrar) {
+        override fun withImplicitInputRecorder(registrar: ImplicitInputRecorder): RepositoryResourceAccessor {
             // Service calls have no effect, no need to register them
-            return this;
+            return this
         }
 
-        @Override
-        public boolean isUpToDate(String s, @Nullable Long oldValue) {
+        override fun isUpToDate(s: String, oldValue: Long?): Boolean {
             // Nothing accessible, always up to date
-            return true;
+            return true
         }
     }
 }

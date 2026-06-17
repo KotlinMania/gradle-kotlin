@@ -13,43 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.layout;
+package org.gradle.api.internal.artifacts.repositories.layout
 
-import org.gradle.api.internal.file.FileResolver;
+import org.gradle.api.internal.file.FileResolver
+import java.net.URI
 
-import java.net.URI;
-import java.util.Locale;
+class ResolvedPattern {
+    val scheme: String
+    val baseUri: URI?
+    val pattern: String?
+    val absolutePattern: String
 
-public class ResolvedPattern {
-    public final String scheme;
-    public final URI baseUri;
-    public final String pattern;
-    public final String absolutePattern;
-
-    public ResolvedPattern(String rawPattern, FileResolver fileResolver) {
+    constructor(rawPattern: String, fileResolver: FileResolver) {
         // get rid of the ivy [] token, as [ ] are not valid URI characters
-        int pos = rawPattern.indexOf('[');
-        String basePath = pos < 0 ? rawPattern : rawPattern.substring(0, pos);
+        val pos = rawPattern.indexOf('[')
+        val basePath = if (pos < 0) rawPattern else rawPattern.substring(0, pos)
         if (basePath.isEmpty()) {
-            this.baseUri = fileResolver.resolveUri(".");
+            this.baseUri = fileResolver.resolveUri(".")
         } else {
-            this.baseUri = fileResolver.resolveUri(basePath);
+            this.baseUri = fileResolver.resolveUri(basePath)
         }
-        this.pattern = pos < 0 ? "" : rawPattern.substring(pos);
-        scheme = baseUri.getScheme().toLowerCase(Locale.ROOT);
-        absolutePattern = constructAbsolutePattern(baseUri, pattern);
+        this.pattern = if (pos < 0) "" else rawPattern.substring(pos)
+        scheme = baseUri.getScheme().lowercase()
+        absolutePattern = constructAbsolutePattern(baseUri, pattern)
     }
 
-    public ResolvedPattern(URI baseUri, String pattern) {
-        this.baseUri = baseUri;
-        this.pattern = pattern;
-        scheme = baseUri.getScheme().toLowerCase(Locale.ROOT);
-        absolutePattern = constructAbsolutePattern(baseUri, pattern);
+    constructor(baseUri: URI, pattern: String) {
+        this.baseUri = baseUri
+        this.pattern = pattern
+        scheme = baseUri.getScheme().lowercase()
+        absolutePattern = constructAbsolutePattern(baseUri, pattern)
     }
 
-    private String constructAbsolutePattern(URI baseUri, String patternPart) {
-        String uriPart = baseUri.toString();
-        String join = uriPart.endsWith("/") || patternPart.length() == 0 ? "" : "/";
-        return uriPart + join + patternPart;
+    private fun constructAbsolutePattern(baseUri: URI, patternPart: String): String {
+        val uriPart = baseUri.toString()
+        val join = if (uriPart.endsWith("/") || patternPart.length == 0) "" else "/"
+        return uriPart + join + patternPart
     }
 }

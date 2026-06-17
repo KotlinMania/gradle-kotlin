@@ -13,10 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.artifacts.ModuleIdentifier
 
-import org.gradle.api.internal.file.FileCollectionInternal;
+interface ArtifactExclude : ExcludeSpec {
+    override fun excludes(module: ModuleIdentifier?): Boolean {
+        return false
+    }
 
-public interface LocalDependencyFiles extends FileCollectionInternal.Source {
+    override fun mayExcludeArtifacts(): Boolean {
+        return true
+    }
+
+    val artifact: IvyArtifactName?
 }

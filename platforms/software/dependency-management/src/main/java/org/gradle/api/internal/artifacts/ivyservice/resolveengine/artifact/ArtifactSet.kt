@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
 /**
  * Represents a container of artifacts, each corresponding to a single node in the graph.
  *
  * Instances are retained during the lifetime of a build, so should avoid retaining unnecessary state.
  */
-public interface ArtifactSet {
-
-    ArtifactSet EMPTY = (consumerServices, spec) -> ResolvedArtifactSet.EMPTY;
-
+interface ArtifactSet {
     /**
      * Selects the artifacts of this set that meet the given criteria.
      * Implementation should be eager where possible, so that selection happens
      * immediately, but may be lazy.
      */
-    ResolvedArtifactSet select(
-        ArtifactSelectionServices consumerServices,
-        ArtifactSelectionSpec spec
-    );
+    fun select(
+        consumerServices: ArtifactSelectionServices?,
+        spec: ArtifactSelectionSpec?
+    ): ResolvedArtifactSet?
 
+    companion object {
+        val EMPTY: ArtifactSet =
+            org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSet { consumerServices: ArtifactSelectionServices?, spec: ArtifactSelectionSpec? -> ResolvedArtifactSet.EMPTY }
+    }
 }

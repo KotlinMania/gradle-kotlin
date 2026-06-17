@@ -13,36 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ComponentResolutionState;
-import org.gradle.internal.component.local.model.LocalFileDependencyMetadata;
-import org.gradle.internal.component.model.VariantGraphResolveMetadata;
-
-import java.util.Collection;
-import java.util.Set;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
 /**
  * A node in the dependency graph. Represents a variant.
  */
-public interface DependencyGraphNode extends ResolvedGraphVariant {
-    boolean isRoot();
+interface DependencyGraphNode : ResolvedGraphVariant {
+    val isRoot: Boolean
 
-    DependencyGraphComponent getOwner();
+    val owner: DependencyGraphComponent?
 
-    Collection<? extends DependencyGraphEdge> getIncomingEdges();
+    val incomingEdges: MutableCollection<out DependencyGraphEdge>?
 
-    Collection<? extends DependencyGraphEdge> getOutgoingEdges();
+    val outgoingEdges: MutableCollection<out DependencyGraphEdge>?
 
     /**
      * The outgoing file dependencies of this node. Should be modelled edges to another node, but are treated separately for now.
      */
-    Set<? extends LocalFileDependencyMetadata> getOutgoingFileEdges();
+    val outgoingFileEdges: MutableSet<out LocalFileDependencyMetadata>?
 
-    VariantGraphResolveMetadata getMetadata();
+    val metadata: VariantGraphResolveMetadata?
 
-    boolean isSelected();
+    val isSelected: Boolean
 
-    ComponentResolutionState getComponent();
+    val component: ComponentResolutionState?
 }

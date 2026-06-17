@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.model;
+package org.gradle.api.internal.artifacts.verification.model
 
-import java.util.List;
-import java.util.Set;
+interface ArtifactVerificationMetadata {
+    val artifactName: String?
 
-public interface ArtifactVerificationMetadata {
-    String getArtifactName();
+    val checksums: MutableList<Checksum?>?
 
-    List<Checksum> getChecksums();
+    @JvmField
+    val trustedPgpKeys: MutableSet<String?>?
 
-    Set<String> getTrustedPgpKeys();
-
-    Set<IgnoredKey> getIgnoredPgpKeys();
+    @JvmField
+    val ignoredPgpKeys: MutableSet<IgnoredKey?>?
 }

@@ -13,34 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariantSet;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.GraphVariantSelector;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariantSet
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
  * Selects an artifact set from a set of candidate artifact sets. Each set of candidates artifacts is
  * provided by a variant in the dependency graph. Candidate artifact sets are selected based on
  * attribute matching.
  *
- * This class is intentionally named similarly to {@link GraphVariantSelector}, as it has a
+ * This class is intentionally named similarly to [GraphVariantSelector], as it has a
  * similar purpose. While the graph selector selects between variants of a component, the
  * artifact selector selects between artifact sets of a variant.
  */
-public interface ArtifactVariantSelector {
-
+interface ArtifactVariantSelector {
     /**
      * Selects a matching artifact set from a given set of candidate artifact sets.
      *
-     * On failure, returns a set that forwards the failure to the {@link org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor}.
+     * On failure, returns a set that forwards the failure to the [org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor].
      */
-    ResolvedArtifactSet select(
-        ResolvedVariantSet candidates,
-        ImmutableAttributes requestAttributes,
-        boolean allowNoMatchingVariants
-    );
-
+    fun select(
+        candidates: ResolvedVariantSet,
+        requestAttributes: ImmutableAttributes,
+        allowNoMatchingVariants: Boolean
+    ): ResolvedArtifactSet?
 }

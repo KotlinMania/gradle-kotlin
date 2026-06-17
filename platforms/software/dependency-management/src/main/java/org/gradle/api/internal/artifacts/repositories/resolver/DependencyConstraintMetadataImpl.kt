@@ -13,14 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.api.artifacts.DependencyConstraintMetadata
 
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-
-public class DependencyConstraintMetadataImpl extends AbstractDependencyImpl<DependencyConstraintMetadata> implements DependencyConstraintMetadata {
-
-    public DependencyConstraintMetadataImpl(String group, String name, String version) {
-        super(group, name, version);
-    }
-}
+class DependencyConstraintMetadataImpl(group: String, name: String, version: String) : AbstractDependencyImpl<DependencyConstraintMetadata?>(group, name, version), DependencyConstraintMetadata

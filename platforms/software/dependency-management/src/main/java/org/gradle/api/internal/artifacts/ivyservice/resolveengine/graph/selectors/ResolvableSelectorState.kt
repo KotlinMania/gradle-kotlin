@@ -13,61 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.selectors
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.api.internal.artifacts.ResolvedVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resolve.result.ComponentIdResolveResult;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.internal.resolve.result.ComponentIdResolveResult
 
-public interface ResolvableSelectorState {
+interface ResolvableSelectorState {
     /**
      * The raw component selector being resolved, after any substitution.
      */
-    ComponentSelector getSelector();
+    val selector: ComponentSelector?
 
     /**
      * The version constraint that applies to this selector, if any.
      * Will return null for a project selector.
      */
-    @Nullable
-    ResolvedVersionConstraint getVersionConstraint();
+    val versionConstraint: ResolvedVersionConstraint?
 
     /**
      * Resolve the selector to a component identifier.
      */
-    ComponentIdResolveResult resolve(VersionSelector allRejects);
+    fun resolve(allRejects: VersionSelector?): ComponentIdResolveResult?
 
     /**
      * Resolve the prefer constraint of the selector to a component identifier.
      */
-    @Nullable
-    ComponentIdResolveResult resolvePrefer(VersionSelector allRejects);
+    fun resolvePrefer(allRejects: VersionSelector?): ComponentIdResolveResult?
 
     /**
      * Mark the selector as resolved.
      * This is used when another selector resolved to a component identifier that satisfies this selector.
-     * In that case, a call to {@link #resolve(VersionSelector)} is not required.
+     * In that case, a call to [.resolve] is not required.
      */
-    void markResolved();
+    fun markResolved()
 
-    boolean isForce();
+    val isForce: Boolean
 
-    boolean isSoftForce();
+    val isSoftForce: Boolean
 
-    boolean isFromLock();
+    val isFromLock: Boolean
 
-    boolean hasStrongOpinion();
+    fun hasStrongOpinion(): Boolean
 
-    @Nullable
-    IvyArtifactName getFirstDependencyArtifact();
+    val firstDependencyArtifact: IvyArtifactName?
 
-    boolean isChanging();
+    val isChanging: Boolean
 
-    default boolean isProject() {
-        return getSelector() instanceof ProjectComponentSelector;
-    }
+    val isProject: Boolean
+        get() = this.selector is ProjectComponentSelector
 }

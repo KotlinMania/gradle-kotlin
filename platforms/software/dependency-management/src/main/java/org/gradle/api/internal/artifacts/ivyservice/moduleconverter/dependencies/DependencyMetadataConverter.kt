@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
 
-public interface DependencyMetadataConverter {
-    LocalOriginDependencyMetadata createDependencyMetadata(ModuleDependency dependency);
+interface DependencyMetadataConverter {
+    fun createDependencyMetadata(dependency: ModuleDependency): LocalOriginDependencyMetadata?
 
-    boolean canConvert(ModuleDependency dependency);
+    fun canConvert(dependency: ModuleDependency): Boolean
 }

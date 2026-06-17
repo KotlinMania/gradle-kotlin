@@ -67,7 +67,7 @@ class ComponentMetadataRuleExecutor(
                     ModuleDescriptorHashModuleSource::class.java,
                     Function { source: Optional<ModuleDescriptorHashModuleSource?>? ->
                         source!!.map<String?>(Function { metadataFileSource: ModuleDescriptorHashModuleSource? ->
-                            metadataFileSource!!.getDescriptorHash().toString() + moduleMetadata.getVariantDerivationStrategy().javaClass.getName()
+                            metadataFileSource!!.descriptorHash.toString() + moduleMetadata.getVariantDerivationStrategy().javaClass.getName()
                         })
                             .orElseThrow<RuntimeException?>(Supplier { RuntimeException("Cannot find original content hash") })
                     })

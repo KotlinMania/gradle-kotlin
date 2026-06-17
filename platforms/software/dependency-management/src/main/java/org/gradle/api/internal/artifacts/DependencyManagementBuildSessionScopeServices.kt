@@ -13,87 +13,84 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ComponentSelectorNotationConverter;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ModuleSelectorStringNotationConverter;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.CachingComponentSelectionDescriptorFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.DesugaredAttributeContainerSerializer;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMavenVariantAttributesFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenVariantAttributesFactory;
-import org.gradle.api.internal.attributes.AttributeSchemaServices;
-import org.gradle.api.internal.attributes.AttributeValueIsolator;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.DefaultAttributesFactory;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistryFactory;
-import org.gradle.api.internal.catalog.DependenciesAccessorsWorkspaceProvider;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.component.external.model.PreferJavaRuntimeVariant;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.snapshot.impl.ValueSnapshotterSerializerRegistry;
-import org.gradle.internal.typeconversion.CachingNotationConverter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypeConversionException;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ComponentSelectorNotationConverter
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.ModuleSelectorStringNotationConverter
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.CachingComponentSelectionDescriptorFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.DesugaredAttributeContainerSerializer
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMavenVariantAttributesFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenVariantAttributesFactory
+import org.gradle.api.internal.attributes.AttributeSchemaServices
+import org.gradle.api.internal.attributes.AttributeValueIsolator
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.DefaultAttributesFactory
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistryFactory
+import org.gradle.api.internal.catalog.DependenciesAccessorsWorkspaceProvider
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.component.external.model.PreferJavaRuntimeVariant
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.snapshot.impl.ValueSnapshotterSerializerRegistry
+import org.gradle.internal.typeconversion.CachingNotationConverter
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypeConversionException
 
-public class DependencyManagementBuildSessionScopeServices implements ServiceRegistrationProvider {
-
-    void configure(ServiceRegistration registration) {
-        registration.add(DependenciesAccessorsWorkspaceProvider.class);
-        registration.add(AttributeValueIsolator.class);
-        registration.<DefaultAttributesFactory>add(AttributesFactory.class, DefaultAttributesFactory.class);
-        registration.<DefaultMavenVariantAttributesFactory>add(MavenVariantAttributesFactory.class, DefaultMavenVariantAttributesFactory.class);
-        registration.add(DesugaredAttributeContainerSerializer.class);
-        registration.add(MavenMutableModuleMetadataFactory.class);
-        registration.add(IvyMutableModuleMetadataFactory.class);
-        registration.add(PreferJavaRuntimeVariant.class);
-        registration.add(ImmutableAttributesSchemaFactory.class);
-        registration.add(ImmutableArtifactTypeRegistryFactory.class);
-        registration.add(AttributeSchemaServices.class);
-        registration.<CachingComponentSelectionDescriptorFactory>add(ComponentSelectionDescriptorFactory.class, CachingComponentSelectionDescriptorFactory.class);
+class DependencyManagementBuildSessionScopeServices : ServiceRegistrationProvider {
+    fun configure(registration: ServiceRegistration) {
+        registration.add(DependenciesAccessorsWorkspaceProvider::class.java)
+        registration.add(AttributeValueIsolator::class.java)
+        registration.add<DefaultAttributesFactory?>(AttributesFactory::class.java, DefaultAttributesFactory::class.java)
+        registration.add<DefaultMavenVariantAttributesFactory?>(MavenVariantAttributesFactory::class.java, DefaultMavenVariantAttributesFactory::class.java)
+        registration.add(DesugaredAttributeContainerSerializer::class.java)
+        registration.add(MavenMutableModuleMetadataFactory::class.java)
+        registration.add(IvyMutableModuleMetadataFactory::class.java)
+        registration.add(PreferJavaRuntimeVariant::class.java)
+        registration.add(ImmutableAttributesSchemaFactory::class.java)
+        registration.add(ImmutableArtifactTypeRegistryFactory::class.java)
+        registration.add(AttributeSchemaServices::class.java)
+        registration.add<CachingComponentSelectionDescriptorFactory?>(ComponentSelectionDescriptorFactory::class.java, CachingComponentSelectionDescriptorFactory::class.java)
     }
 
     @Provides
-    ValueSnapshotterSerializerRegistry createDependencyManagementValueSnapshotterSerializerRegistry(
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        AttributesFactory attributesFactory,
-        NamedObjectInstantiator namedObjectInstantiator,
-        ComponentSelectionDescriptorFactory componentSelectionDescriptorFactory
-    ) {
-        return new DependencyManagementValueSnapshotterSerializerRegistry(
+    fun createDependencyManagementValueSnapshotterSerializerRegistry(
+        moduleIdentifierFactory: ImmutableModuleIdentifierFactory?,
+        attributesFactory: AttributesFactory?,
+        namedObjectInstantiator: NamedObjectInstantiator?,
+        componentSelectionDescriptorFactory: ComponentSelectionDescriptorFactory?
+    ): ValueSnapshotterSerializerRegistry {
+        return DependencyManagementValueSnapshotterSerializerRegistry(
             moduleIdentifierFactory,
             attributesFactory,
             namedObjectInstantiator,
             componentSelectionDescriptorFactory
-        );
+        )
     }
 
     @Provides
-    ComponentSelectorNotationConverter createComponentSelectorFactory(ImmutableModuleIdentifierFactory moduleIdentifierFactory, InMemoryCacheFactory cacheFactory) {
-        NotationParser<Object, ComponentSelector> delegate = NotationParserBuilder
-            .<ComponentSelector>toType(ComponentSelector.class)
-            .converter(new CachingNotationConverter<>(new ModuleSelectorStringNotationConverter(moduleIdentifierFactory), cacheFactory))
-            .toComposite();
+    fun createComponentSelectorFactory(moduleIdentifierFactory: ImmutableModuleIdentifierFactory, cacheFactory: InMemoryCacheFactory): ComponentSelectorNotationConverter {
+        val delegate = NotationParserBuilder
+            .toType<ComponentSelector?>(ComponentSelector::class.java)
+            .converter(CachingNotationConverter<ComponentSelector?>(ModuleSelectorStringNotationConverter(moduleIdentifierFactory), cacheFactory))
+            .toComposite()
 
-        return new ComponentSelectorNotationConverter() {
-            @Override
-            public ComponentSelector parseNotation(Object notation) throws TypeConversionException {
-                return delegate.parseNotation(notation);
+        return object : ComponentSelectorNotationConverter {
+            @Throws(TypeConversionException::class)
+            override fun parseNotation(notation: Any?): ComponentSelector? {
+                return delegate.parseNotation(notation)
             }
 
-            @Override
-            public void describe(DiagnosticsVisitor visitor) {
-                delegate.describe(visitor);
+            override fun describe(visitor: DiagnosticsVisitor?) {
+                delegate.describe(visitor)
             }
-        };
+        }
     }
 }

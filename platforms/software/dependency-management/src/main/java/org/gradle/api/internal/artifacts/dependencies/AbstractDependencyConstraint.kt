@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dependencies
 
-package org.gradle.api.internal.artifacts.dependencies;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.internal.ImmutableActionSet
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.internal.ImmutableActionSet;
+abstract class AbstractDependencyConstraint : DependencyConstraintInternal {
+    private var onMutate = ImmutableActionSet.empty<DependencyConstraint>()
 
-public abstract class AbstractDependencyConstraint implements DependencyConstraintInternal {
-    private ImmutableActionSet<DependencyConstraint> onMutate = ImmutableActionSet.empty();
-
-    @Override
-    public void addMutationValidator(Action<? super DependencyConstraint> action) {
-        this.onMutate = onMutate.add(action);
+    override fun addMutationValidator(action: Action<in DependencyConstraint>) {
+        this.onMutate = onMutate.add(action)
     }
 
-    protected void validateMutation() {
-        onMutate.execute(this);
+    protected fun validateMutation() {
+        onMutate.execute(this)
     }
 }

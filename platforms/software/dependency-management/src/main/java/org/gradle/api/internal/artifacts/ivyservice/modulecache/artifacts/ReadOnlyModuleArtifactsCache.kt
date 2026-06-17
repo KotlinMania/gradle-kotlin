@@ -13,35 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.hash.HashCode
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import java.util.Collection;
-
-public class ReadOnlyModuleArtifactsCache extends DefaultModuleArtifactsCache {
-    public ReadOnlyModuleArtifactsCache(BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator) {
-        super(timeProvider, cacheAccessCoordinator);
+class ReadOnlyModuleArtifactsCache(timeProvider: BuildCommencedTimeProvider?, cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator?) :
+    DefaultModuleArtifactsCache(timeProvider, cacheAccessCoordinator) {
+    override fun store(key: ArtifactsAtRepositoryKey?, entry: ModuleArtifactsCacheEntry?) {
+        Object > operationShouldNotHaveBeenCalled<Any?>()
     }
 
-    @Override
-    protected void store(ArtifactsAtRepositoryKey key, ModuleArtifactsCacheEntry entry) {
-        operationShouldNotHaveBeenCalled();
+    override fun cacheArtifacts(
+        repository: ModuleComponentRepository<*>?,
+        componentId: ComponentIdentifier?,
+        context: String?,
+        descriptorHash: HashCode?,
+        artifacts: MutableCollection<out ComponentArtifactMetadata?>?
+    ): CachedArtifacts {
+        return
+        CachedArtifacts > operationShouldNotHaveBeenCalled<Any?>()
     }
 
-    @Override
-    public CachedArtifacts cacheArtifacts(ModuleComponentRepository<?> repository, ComponentIdentifier componentId, String context, HashCode descriptorHash, Collection<? extends ComponentArtifactMetadata> artifacts) {
-        return operationShouldNotHaveBeenCalled();
+    companion object {
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        private fun <T> operationShouldNotHaveBeenCalled(): T? {
+            throw UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache")
+        }
     }
-
-    @SuppressWarnings("TypeParameterUnusedInFormals") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private static <T> T operationShouldNotHaveBeenCalled() {
-        throw new UnsupportedOperationException("A write operation shouldn't have been called in a read-only cache");
-    }
-
 }

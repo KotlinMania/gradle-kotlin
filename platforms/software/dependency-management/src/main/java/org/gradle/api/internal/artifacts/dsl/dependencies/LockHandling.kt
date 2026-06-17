@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-public enum LockHandling {
+enum class LockHandling {
     VALIDATE,
     CREATE,
     UPDATE_ALL

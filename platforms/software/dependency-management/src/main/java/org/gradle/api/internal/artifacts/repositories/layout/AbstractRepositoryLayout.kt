@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.layout;
+package org.gradle.api.internal.artifacts.repositories.layout
 
-import org.gradle.api.artifacts.repositories.RepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.Set;
+import org.gradle.api.artifacts.repositories.RepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import java.net.URI
 
 /**
  * Represents the directory structure for a repository.
  */
-public abstract class AbstractRepositoryLayout implements RepositoryLayout {
+abstract class AbstractRepositoryLayout : RepositoryLayout {
     /**
      * Given the base URI, apply the patterns and other configuration for this layout to the supplied resolver.
      *
      * @param baseUri The base URI for the repository.
      * @param builder The configuration builder to apply the changes to.
      */
-    public abstract void apply(@Nullable URI baseUri, IvyRepositoryDescriptor.Builder builder);
+    abstract fun apply(baseUri: URI?, builder: IvyRepositoryDescriptor.Builder?)
 
     /**
      * Add any schemes registered as patterns in this layout, given the supplied base URI.
@@ -41,9 +38,9 @@ public abstract class AbstractRepositoryLayout implements RepositoryLayout {
      * @param baseUri The baseUri of the repository.
      * @param schemes The set of schemes to add to.
      */
-    public void addSchemes(@Nullable URI baseUri, Set<String> schemes) {
+    open fun addSchemes(baseUri: URI?, schemes: MutableSet<String?>) {
         if (baseUri != null) {
-            schemes.add(baseUri.getScheme());
+            schemes.add(baseUri.getScheme())
         }
     }
 }

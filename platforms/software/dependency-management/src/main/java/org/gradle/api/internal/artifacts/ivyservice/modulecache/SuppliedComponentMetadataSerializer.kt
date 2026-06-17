@@ -13,78 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.ModuleVersionIdentifierSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.UserProvidedMetadata;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.IOException;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.internal.artifacts.ModuleVersionIdentifierSerializer
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.UserProvidedMetadata
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.IOException
 
 /**
  * This component metadata serializer is responsible for serializing metadata that comes out
- * of a {@link org.gradle.api.artifacts.ComponentMetadataSupplier component metadata supplier} rule.
+ * of a [component metadata supplier][org.gradle.api.artifacts.ComponentMetadataSupplier] rule.
  * It does NOT contain full metadata, which can be confusing given the name of the class it's
  * supposed to serialize. This is, therefore, limited to the metadata necessary to perform selection
  * in a dynamic version resolver.
  */
-@ServiceScope(Scope.Build.class)
-public class SuppliedComponentMetadataSerializer extends AbstractSerializer<ComponentMetadata> {
-    private final ModuleVersionIdentifierSerializer moduleVersionIdentifierSerializer;
-    private final AttributeContainerSerializer attributeContainerSerializer;
-
-    public SuppliedComponentMetadataSerializer(ModuleVersionIdentifierSerializer moduleVersionIdentifierSerializer, AttributeContainerSerializer attributeContainerSerializer) {
-        this.moduleVersionIdentifierSerializer = moduleVersionIdentifierSerializer;
-        this.attributeContainerSerializer = attributeContainerSerializer;
+@ServiceScope(Scope.Build::class)
+class SuppliedComponentMetadataSerializer(private val moduleVersionIdentifierSerializer: ModuleVersionIdentifierSerializer, private val attributeContainerSerializer: AttributeContainerSerializer) :
+    AbstractSerializer<ComponentMetadata?>() {
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ComponentMetadata? {
+        val id = moduleVersionIdentifierSerializer.read(decoder)
+        val attributes: AttributeContainerInternal? = attributeContainerSerializer.read(decoder)
+        val statusScheme = readStatusScheme(decoder)
+        return UserProvidedMetadata(id, statusScheme, attributes!!.asImmutable())
     }
 
-    @Override
-    public ComponentMetadata read(Decoder decoder) throws Exception {
-        ModuleVersionIdentifier id = moduleVersionIdentifierSerializer.read(decoder);
-        AttributeContainerInternal attributes = attributeContainerSerializer.read(decoder);
-        List<String> statusScheme = readStatusScheme(decoder);
-        return new UserProvidedMetadata(id, statusScheme, attributes.asImmutable());
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, md: ComponentMetadata) {
+        moduleVersionIdentifierSerializer.write(encoder, md.getId())
+        attributeContainerSerializer.write(encoder, md.getAttributes())
+        checkChangingFlag(md)
+        writeStatusScheme(encoder, md)
     }
 
-    @Override
-    public void write(Encoder encoder, ComponentMetadata md) throws Exception {
-        moduleVersionIdentifierSerializer.write(encoder, md.getId());
-        attributeContainerSerializer.write(encoder, md.getAttributes());
-        checkChangingFlag(md);
-        writeStatusScheme(encoder, md);
-    }
-
-    private void checkChangingFlag(ComponentMetadata md) {
-        boolean changing = md.isChanging();
+    private fun checkChangingFlag(md: ComponentMetadata) {
+        val changing = md.isChanging()
         if (changing) {
-            throw new UnsupportedOperationException("User-supplied metadata shouldn't have changing=true");
+            throw UnsupportedOperationException("User-supplied metadata shouldn't have changing=true")
         }
     }
 
-    private void writeStatusScheme(Encoder encoder, ComponentMetadata md) throws IOException {
-        List<String> statusScheme = md.getStatusScheme();
-        encoder.writeSmallInt(statusScheme.size());
-        for (String s : statusScheme) {
-            encoder.writeString(s);
+    @Throws(IOException::class)
+    private fun writeStatusScheme(encoder: Encoder, md: ComponentMetadata) {
+        val statusScheme: MutableList<String?> = md.getStatusScheme()
+        encoder.writeSmallInt(statusScheme.size)
+        for (s in statusScheme) {
+            encoder.writeString(s)
         }
     }
 
-    private List<String> readStatusScheme(Decoder decoder) throws IOException {
-        int size = decoder.readSmallInt();
-        ImmutableList.Builder<String> scheme = ImmutableList.builder();
-        for (int i=0; i<size; i++) {
-            scheme.add(decoder.readString());
+    @Throws(IOException::class)
+    private fun readStatusScheme(decoder: Decoder): MutableList<String?> {
+        val size = decoder.readSmallInt()
+        val scheme = ImmutableList.builder<String?>()
+        for (i in 0..<size) {
+            scheme.add(decoder.readString())
         }
-        return scheme.build();
+        return scheme.build()
     }
 }

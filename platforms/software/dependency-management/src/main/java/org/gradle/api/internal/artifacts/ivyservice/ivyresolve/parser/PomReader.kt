@@ -13,180 +13,86 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-import com.google.common.collect.ImmutableList;
-import org.apache.commons.io.IOUtils;
-import org.apache.ivy.core.IvyPatternHelper;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomProfile;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.classloader.ClassLoaderUtils;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.xml.XmlFactories;
-import org.jspecify.annotations.NonNull;
-import org.w3c.dom.Comment;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.EntityResolver;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-
-import static org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomDomParser.AddDTDFilterInputStream;
-import static org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomDomParser.getAllChilds;
-import static org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomDomParser.getFirstChildElement;
-import static org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomDomParser.getFirstChildText;
-import static org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.PomDomParser.getTextContent;
+import com.google.common.collect.ImmutableList
+import org.apache.commons.io.IOUtils
+import org.apache.ivy.core.IvyPatternHelper
+import org.apache.ivy.plugins.parser.m2.PomReader
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.MavenDependencyKey
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomDependencyMgt
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data.PomProfile
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.classloader.ClassLoaderUtils
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.xml.XmlFactories
+import org.w3c.dom.Comment
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.xml.sax.EntityResolver
+import org.xml.sax.InputSource
+import org.xml.sax.SAXException
+import org.xml.sax.SAXParseException
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.util.regex.Pattern
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.parsers.ParserConfigurationException
 
 /**
  * Copied from org.apache.ivy.plugins.parser.m2.PomReader.
  */
-public class PomReader implements PomParent {
+class PomReader @JvmOverloads constructor(
+    resource: LocallyAvailableExternalResource,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    childPomProperties: MutableMap<String?, String?> = mutableMapOf<String?, String?>()
+) : PomParent {
+    private var pomParent: PomParent = RootPomParent()
 
-    private static final String PACKAGING = "packaging";
-    private static final String DEPENDENCY = "dependency";
-    private static final String DEPENDENCIES = "dependencies";
-    private static final String DEPENDENCY_MGT = "dependencyManagement";
-    private static final String PROJECT = "project";
-    private static final String MODEL = "model";
-    private static final String GROUP_ID = "groupId";
-    private static final String ARTIFACT_ID = "artifactId";
-    private static final String VERSION = "version";
-    private static final String PARENT = "parent";
-    private static final String SCOPE = "scope";
-    private static final String CLASSIFIER = "classifier";
-    private static final String OPTIONAL = "optional";
-    private static final String EXCLUSIONS = "exclusions";
-    private static final String EXCLUSION = "exclusion";
-    private static final String DISTRIBUTION_MGT = "distributionManagement";
-    private static final String RELOCATION = "relocation";
-    private static final String PROPERTIES = "properties";
-    private static final String TYPE = "type";
-    private static final String PROFILES = "profiles";
-    private static final String PROFILE = "profile";
-    private static final String PROFILE_ID = "id";
-    private static final String PROFILE_ACTIVATION = "activation";
-    private static final String PROFILE_ACTIVATION_ACTIVE_BY_DEFAULT = "activeByDefault";
-    private static final String PROFILE_ACTIVATION_PROPERTY = "property";
-    private static final byte[] M2_ENTITIES_RESOURCE;
-    private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;
+    /**
+     * @return properties of both current and children poms.
+     */
+    val allPomProperties: MutableMap<String?, String?> = HashMap<String?, String?>()
+    private val effectiveProperties: MutableMap<String?, String?> = HashMap<String?, String?>()
+    private var declaredDependencyMgts: MutableList<PomDependencyMgt>? = null
+    private var declaredActivePomProfiles: MutableList<PomProfile>? = null
+    private var resolvedDependencyMgts: MutableMap<MavenDependencyKey?, PomDependencyMgt?>? = null
+    private val importedDependencyMgts: MutableMap<MavenDependencyKey?, PomDependencyMgt?> = LinkedHashMap<MavenDependencyKey?, PomDependencyMgt?>()
+    private var resolvedDependencies: MutableMap<MavenDependencyKey?, PomDependencyData?>? = null
 
-    static {
-        byte[] bytes;
-        try {
-            bytes = IOUtils.toByteArray(org.apache.ivy.plugins.parser.m2.PomReader.class.getResourceAsStream("m2-entities.ent"));
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
-        M2_ENTITIES_RESOURCE = bytes;
+    private val projectElement: Element
+    private val parentElement: Element?
 
-        // Set the context classloader the bootstrap classloader, to work around the way that JAXP locates implementation classes
-        // This should ensure that the JAXP classes provided by the JVM are used, rather than some other implementation
-        ClassLoader original = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(ClassLoaderUtils.getPlatformClassLoader());
-        try {
-            DOCUMENT_BUILDER_FACTORY = XmlFactories.newDocumentBuilderFactory();
-            DOCUMENT_BUILDER_FACTORY.setValidating(false);
-        } finally {
-            Thread.currentThread().setContextClassLoader(original);
+    fun setPomParent(pomParent: PomParent) {
+        this.pomParent = pomParent
+        for (entry in pomParent.getProperties().entries) {
+            maybeSetEffectiveProperty(entry.key, entry.value)
         }
     }
 
-    private static final EntityResolver M2_ENTITY_RESOLVER = new EntityResolver() {
-        @Override
-        public InputSource resolveEntity(String publicId, String systemId) {
-            if ((systemId != null) && systemId.endsWith("m2-entities.ent")) {
-                return new InputSource(new ByteArrayInputStream(M2_ENTITIES_RESOURCE));
-            }
-            return null;
-        }
-    };
-
-    private PomParent pomParent = new RootPomParent();
-    private final Map<String, String> pomProperties = new HashMap<>();
-    private final Map<String, String> effectiveProperties = new HashMap<>();
-    private List<PomDependencyMgt> declaredDependencyMgts;
-    private List<PomProfile> declaredActivePomProfiles;
-    private Map<MavenDependencyKey, PomDependencyMgt> resolvedDependencyMgts;
-    private final Map<MavenDependencyKey, PomDependencyMgt> importedDependencyMgts = new LinkedHashMap<>();
-    private Map<MavenDependencyKey, PomDependencyData> resolvedDependencies;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    private final Element projectElement;
-    private final Element parentElement;
-
-    public PomReader(final LocallyAvailableExternalResource resource, ImmutableModuleIdentifierFactory moduleIdentifierFactory, Map<String, String> childPomProperties) throws SAXException {
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        setPomProperties(childPomProperties);
-        final String systemId = resource.getFile().toURI().toASCIIString();
-        Document pomDomDoc = resource.withContent(inputStream -> {
-            try {
-                return parseToDom(inputStream, systemId);
-            } catch (Exception e) {
-                throw new MetaDataParseException("POM", resource, e);
-            }
-        }).getResult();
-        projectElement = pomDomDoc.getDocumentElement();
-        if (!PROJECT.equals(projectElement.getNodeName()) && !MODEL.equals(projectElement.getNodeName())) {
-            throw new SAXParseException("project must be the root tag", systemId, systemId, 0, 0);
-        }
-        parentElement = getFirstChildElement(projectElement, PARENT);
-
-        setDefaultParentGavProperties();
-        setPomProperties(parseProperties(projectElement));
-        setActiveProfileProperties();
+    private fun setDefaultParentGavProperties() {
+        maybeSetGavProperties(GavProperty.PARENT_GROUP_ID, this.parentGroupId)
+        maybeSetGavProperties(GavProperty.PARENT_VERSION, this.parentVersion)
+        maybeSetGavProperties(GavProperty.PARENT_ARTIFACT_ID, this.parentArtifactId)
     }
 
-    public PomReader(final LocallyAvailableExternalResource resource, ImmutableModuleIdentifierFactory moduleIdentifierFactory) throws SAXException {
-        this(resource, moduleIdentifierFactory, Collections.emptyMap());
-    }
-
-    public void setPomParent(PomParent pomParent) {
-        this.pomParent = pomParent;
-        for (Map.Entry<String, String> entry : pomParent.getProperties().entrySet()) {
-            maybeSetEffectiveProperty(entry.getKey(), entry.getValue());
+    private fun maybeSetGavProperties(gavProperty: GavProperty, propertyValue: String?) {
+        for (name in gavProperty.names) {
+            maybeSetEffectiveProperty(name, propertyValue)
         }
     }
 
-    private void setDefaultParentGavProperties() {
-        maybeSetGavProperties(GavProperty.PARENT_GROUP_ID, getParentGroupId());
-        maybeSetGavProperties(GavProperty.PARENT_VERSION, getParentVersion());
-        maybeSetGavProperties(GavProperty.PARENT_ARTIFACT_ID, getParentArtifactId());
-    }
-
-    private void maybeSetGavProperties(GavProperty gavProperty, String propertyValue) {
-        for (String name : gavProperty.getNames()) {
-            maybeSetEffectiveProperty(name, propertyValue);
-        }
-    }
-
-    private void setPomProperties(Map<String, String> pomProperties) {
+    private fun setPomProperties(pomProperties: MutableMap<String?, String?>) {
         if (!pomProperties.isEmpty()) {
-            this.pomProperties.putAll(pomProperties);
-            for (Map.Entry<String, String> pomProperty : pomProperties.entrySet()) {
-                maybeSetEffectiveProperty(pomProperty.getKey(), pomProperty.getValue());
+            this.allPomProperties.putAll(pomProperties)
+            for (pomProperty in pomProperties.entries) {
+                maybeSetEffectiveProperty(pomProperty.key, pomProperty.value)
             }
         }
     }
@@ -194,10 +100,10 @@ public class PomReader implements PomParent {
     /**
      * Sets properties for all active profiles. Properties from an active profile override existing POM properties.
      */
-    private void setActiveProfileProperties() {
-        for (PomProfile activePomProfile : parseActivePomProfiles()) {
-            for (Map.Entry<String, String> property : activePomProfile.getProperties().entrySet()) {
-                effectiveProperties.put(property.getKey(), property.getValue());
+    private fun setActiveProfileProperties() {
+        for (activePomProfile in parseActivePomProfiles()!!) {
+            for (property in activePomProfile.properties.entries) {
+                effectiveProperties.put(property.key, property.value)
             }
         }
     }
@@ -207,13 +113,13 @@ public class PomReader implements PomParent {
      * This guarantee that property keep the first value that is put on it and that the properties
      * are never null.
      */
-    private void maybeSetEffectiveProperty(String prop, String val) {
-        if (!effectiveProperties.containsKey(prop) && val != null) {
-            effectiveProperties.put(prop, val);
+    private fun maybeSetEffectiveProperty(prop: String?, `val`: String?) {
+        if (!effectiveProperties.containsKey(prop) && `val` != null) {
+            effectiveProperties.put(prop, `val`)
         }
     }
 
-    private enum GavProperty {
+    private enum class GavProperty(vararg names: String?) {
         PARENT_GROUP_ID("parent.groupId", "project.parent.groupId"),
         PARENT_ARTIFACT_ID("parent.artifactId", "project.parent.artifactId"),
         PARENT_VERSION("parent.version", "project.parent.version"),
@@ -221,234 +127,256 @@ public class PomReader implements PomParent {
         ARTIFACT_ID("project.artifactId", "pom.artifactId", "artifactId"),
         VERSION("project.version", "pom.version", "version");
 
-        private final ImmutableList<String> names;
+        val names: ImmutableList<String?>
 
-        GavProperty(String... names) {
-            this.names = ImmutableList.copyOf(names);
-        }
-
-        public ImmutableList<String> getNames() {
-            return names;
+        init {
+            this.names = ImmutableList.copyOf<String?>(names)
         }
     }
 
-    @Override
-    public String toString() {
-        return projectElement.getOwnerDocument().getDocumentURI();
+    override fun toString(): String {
+        return projectElement.getOwnerDocument().getDocumentURI()
     }
 
-    private static DocumentBuilder getDocBuilder(EntityResolver entityResolver) {
-        try {
-            DocumentBuilder docBuilder = DOCUMENT_BUILDER_FACTORY.newDocumentBuilder();
-            if (entityResolver != null) {
-                docBuilder.setEntityResolver(entityResolver);
-            }
-            return docBuilder;
-        } catch (ParserConfigurationException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
+    fun hasParent(): Boolean {
+        return parentElement != null
     }
 
-    private static Document parseToDom(InputStream stream, String systemId) throws IOException, SAXException {
-        // Set the context classloader the bootstrap classloader, to work around the way that JAXP locates implementation classes
-        // This should ensure that the JAXP classes provided by the JVM are used, rather than some other implementation
-        ClassLoader original = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(ClassLoaderUtils.getPlatformClassLoader());
-        try {
-            InputStream dtdStream = new AddDTDFilterInputStream(stream);
-            return getDocBuilder(M2_ENTITY_RESOLVER).parse(dtdStream, systemId);
-        } finally {
-            Thread.currentThread().setContextClassLoader(original);
-        }
+    override fun getProperties(): MutableMap<String?, String?> {
+        return effectiveProperties
     }
 
-    public boolean hasParent() {
-        return parentElement != null;
+    fun addImportedDependencyMgts(inherited: MutableMap<MavenDependencyKey?, PomDependencyMgt?>) {
+        check(resolvedDependencyMgts == null) { "Cannot add imported dependency management elements after dependency management elements have been resolved for this POM." }
+        importedDependencyMgts.putAll(inherited)
     }
 
-    @Override
-    public Map<String, String> getProperties() {
-        return effectiveProperties;
-    }
-
-    public void addImportedDependencyMgts(Map<MavenDependencyKey, PomDependencyMgt> inherited) {
-        if (resolvedDependencyMgts != null) {
-            throw new IllegalStateException("Cannot add imported dependency management elements after dependency management elements have been resolved for this POM.");
-        }
-        importedDependencyMgts.putAll(inherited);
-    }
-
-    private void checkNotNull(String value, String name) {
-        checkNotNull(value, name, null);
-    }
-
-    private void checkNotNull(String value, String name, String element) {
+    private fun checkNotNull(value: String?, name: String?, element: String? = null) {
         if (value == null) {
-            String attributeName = element == null ? name : element + " " + name;
-            throw new RuntimeException("Missing required attribute: " + attributeName);
+            val attributeName = if (element == null) name else element + " " + name
+            throw RuntimeException("Missing required attribute: " + attributeName)
         }
     }
 
-    public String getGroupId() {
-        String groupId = getFirstChildText(projectElement, GROUP_ID);
-        if (groupId == null) {
-            groupId = getFirstChildText(parentElement, GROUP_ID);
+    val groupId: String
+        get() {
+            var groupId = PomDomParser.getFirstChildText(
+                projectElement,
+                GROUP_ID
+            )
+            if (groupId == null) {
+                groupId = PomDomParser.getFirstChildText(
+                    parentElement,
+                    GROUP_ID
+                )
+            }
+            checkNotNull(groupId, GROUP_ID)
+            return replaceProps(groupId)
         }
-        checkNotNull(groupId, GROUP_ID);
-        return replaceProps(groupId);
-    }
 
-    public String getParentGroupId() {
-        String groupId = getFirstChildText(parentElement, GROUP_ID);
-        if (groupId == null) {
-            groupId = getFirstChildText(projectElement, GROUP_ID);
+    val parentGroupId: String
+        get() {
+            var groupId = PomDomParser.getFirstChildText(
+                parentElement,
+                GROUP_ID
+            )
+            if (groupId == null) {
+                groupId = PomDomParser.getFirstChildText(
+                    projectElement,
+                    GROUP_ID
+                )
+            }
+            checkNotNull(groupId, GROUP_ID)
+            return replaceProps(groupId)
         }
-        checkNotNull(groupId, GROUP_ID);
-        return replaceProps(groupId);
-    }
 
-    public String getArtifactId() {
-        String val = getFirstChildText(projectElement, ARTIFACT_ID);
-        if (val == null) {
-            val = getFirstChildText(parentElement, ARTIFACT_ID);
+    val artifactId: String
+        get() {
+            var `val` = PomDomParser.getFirstChildText(
+                projectElement,
+                ARTIFACT_ID
+            )
+            if (`val` == null) {
+                `val` = PomDomParser.getFirstChildText(
+                    parentElement,
+                    ARTIFACT_ID
+                )
+            }
+            checkNotNull(`val`, ARTIFACT_ID)
+            return replaceProps(`val`)
         }
-        checkNotNull(val, ARTIFACT_ID);
-        return replaceProps(val);
-    }
 
-    public String getParentArtifactId() {
-        String val = getFirstChildText(parentElement, ARTIFACT_ID);
-        if (val == null) {
-            val = getFirstChildText(projectElement, ARTIFACT_ID);
+    val parentArtifactId: String
+        get() {
+            var `val` = PomDomParser.getFirstChildText(
+                parentElement,
+                ARTIFACT_ID
+            )
+            if (`val` == null) {
+                `val` = PomDomParser.getFirstChildText(
+                    projectElement,
+                    ARTIFACT_ID
+                )
+            }
+            checkNotNull(`val`, ARTIFACT_ID)
+            return replaceProps(`val`)
         }
-        checkNotNull(val, ARTIFACT_ID);
-        return replaceProps(val);
-    }
 
-    public String getVersion() {
-        String val = getFirstChildText(projectElement, VERSION);
-        if (val == null) {
-            val = getFirstChildText(parentElement, VERSION);
+    val version: String?
+        get() {
+            var `val` = PomDomParser.getFirstChildText(
+                projectElement,
+                VERSION
+            )
+            if (`val` == null) {
+                `val` = PomDomParser.getFirstChildText(
+                    parentElement,
+                    VERSION
+                )
+            }
+            return replaceProps(`val`)
         }
-        return replaceProps(val);
-    }
 
-    public String getParentVersion() {
-        String val = getFirstChildText(parentElement, VERSION);
-        if (val == null) {
-            val = getFirstChildText(projectElement, VERSION);
+    val parentVersion: String?
+        get() {
+            var `val` = PomDomParser.getFirstChildText(
+                parentElement,
+                VERSION
+            )
+            if (`val` == null) {
+                `val` = PomDomParser.getFirstChildText(
+                    projectElement,
+                    VERSION
+                )
+            }
+            return replaceProps(`val`)
         }
-        return replaceProps(val);
-    }
 
-    @NonNull
-    public String getPackaging() {
-        String val = getFirstChildText(projectElement, PACKAGING);
-        if (val == null) {
-            val = "jar";
+    val packaging: String
+        get() {
+            var `val` = PomDomParser.getFirstChildText(
+                projectElement,
+                PACKAGING
+            )
+            if (`val` == null) {
+                `val` = "jar"
+            }
+            return replaceProps(`val`)
         }
-        return replaceProps(val);
-    }
 
-    public boolean hasGradleMetadataMarker() {
-        NodeList childNodes = projectElement.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-            Node node = childNodes.item(i);
-            if (node instanceof Comment) {
-                String comment = node.getNodeValue();
-                if (comment.contains(MetaDataParser.GRADLE_6_METADATA_MARKER) || comment.contains(MetaDataParser.GRADLE_METADATA_MARKER)) {
-                    return true;
+    fun hasGradleMetadataMarker(): Boolean {
+        val childNodes = projectElement.getChildNodes()
+        for (i in 0..<childNodes.getLength()) {
+            val node = childNodes.item(i)
+            if (node is Comment) {
+                val comment = node.getNodeValue()
+                if (comment.contains(MetaDataParser.Companion.GRADLE_6_METADATA_MARKER) || comment.contains(MetaDataParser.Companion.GRADLE_METADATA_MARKER)) {
+                    return true
                 }
             }
         }
-        return false;
+        return false
     }
 
-    public ModuleVersionIdentifier getRelocation() {
-        Element distrMgt = getFirstChildElement(projectElement, DISTRIBUTION_MGT);
-        Element relocation = getFirstChildElement(distrMgt, RELOCATION);
-        if (relocation == null) {
-            return null;
-        } else {
-            String relocGroupId = getFirstChildText(relocation, GROUP_ID);
-            String relocArtId = getFirstChildText(relocation, ARTIFACT_ID);
-            String relocVersion = getFirstChildText(relocation, VERSION);
-            relocGroupId = relocGroupId == null ? getGroupId() : replaceProps(relocGroupId);
-            relocArtId = relocArtId == null ? getArtifactId() : replaceProps(relocArtId);
-            relocVersion = relocVersion == null ? getVersion() : replaceProps(relocVersion);
-            return DefaultModuleVersionIdentifier.newId(relocGroupId, relocArtId, relocVersion);
+    val relocation: ModuleVersionIdentifier?
+        get() {
+            val distrMgt = PomDomParser.getFirstChildElement(
+                projectElement,
+                DISTRIBUTION_MGT
+            )
+            val relocation = PomDomParser.getFirstChildElement(
+                distrMgt,
+                RELOCATION
+            )
+            if (relocation == null) {
+                return null
+            } else {
+                var relocGroupId = PomDomParser.getFirstChildText(
+                    relocation,
+                    GROUP_ID
+                )
+                var relocArtId = PomDomParser.getFirstChildText(
+                    relocation,
+                    ARTIFACT_ID
+                )
+                var relocVersion = PomDomParser.getFirstChildText(
+                    relocation,
+                    VERSION
+                )
+                relocGroupId = if (relocGroupId == null) this.groupId else replaceProps(relocGroupId)
+                relocArtId = if (relocArtId == null) this.artifactId else replaceProps(relocArtId)
+                relocVersion = if (relocVersion == null) this.version else replaceProps(relocVersion)
+                return DefaultModuleVersionIdentifier.newId(relocGroupId, relocArtId, relocVersion!!)
+            }
         }
-    }
 
     /**
      * Returns all dependencies for this POM, including those inherited from parent POMs.
      */
-    @Override
-    public Map<MavenDependencyKey, PomDependencyData> getDependencies() {
+    override fun getDependencies(): MutableMap<MavenDependencyKey?, PomDependencyData?> {
         if (resolvedDependencies == null) {
-            resolvedDependencies = resolveDependencies();
+            resolvedDependencies = resolveDependencies()
         }
-        return resolvedDependencies;
+        return resolvedDependencies!!
     }
 
-    private Map<MavenDependencyKey, PomDependencyData> resolveDependencies() {
-        Map<MavenDependencyKey, PomDependencyData> dependencies = new LinkedHashMap<>();
+    private fun resolveDependencies(): MutableMap<MavenDependencyKey?, PomDependencyData?> {
+        val dependencies: MutableMap<MavenDependencyKey?, PomDependencyData?> = LinkedHashMap<MavenDependencyKey?, PomDependencyData?>()
 
-        for (PomDependencyData dependency : getDependencyData(projectElement)) {
-            dependencies.put(dependency.getId(), dependency);
+        for (dependency in getDependencyData(projectElement)) {
+            dependencies.put(dependency.getId(), dependency)
         }
 
         // Maven adds inherited dependencies last
-        for (Map.Entry<MavenDependencyKey, PomDependencyData> entry : pomParent.getDependencies().entrySet()) {
-            if (!dependencies.containsKey(entry.getKey())) {
-                dependencies.put(entry.getKey(), entry.getValue());
+        for (entry in pomParent.getDependencies().entries) {
+            if (!dependencies.containsKey(entry.key)) {
+                dependencies.put(entry.key, entry.value)
             }
         }
 
-        for (PomProfile pomProfile : parseActivePomProfiles()) {
-            for (PomDependencyData dependency : pomProfile.getDependencies()) {
-                dependencies.put(dependency.getId(), dependency);
+        for (pomProfile in parseActivePomProfiles()!!) {
+            for (dependency in pomProfile.dependencies) {
+                dependencies.put(dependency.getId(), dependency)
             }
         }
 
-        return dependencies;
+        return dependencies
     }
 
-    private List<PomDependencyData> getDependencyData(Element parentElement) {
-        List<PomDependencyData> depElements = new ArrayList<>();
-        Element dependenciesElement = getFirstChildElement(parentElement, DEPENDENCIES);
+    private fun getDependencyData(parentElement: Element?): MutableList<PomDependencyData> {
+        val depElements: MutableList<PomDependencyData> = ArrayList<PomDependencyData>()
+        val dependenciesElement = PomDomParser.getFirstChildElement(parentElement, DEPENDENCIES)
         if (dependenciesElement != null) {
-            NodeList childs = dependenciesElement.getChildNodes();
-            for (int i = 0; i < childs.getLength(); i++) {
-                Node node = childs.item(i);
-                if (node instanceof Element && DEPENDENCY.equals(node.getNodeName())) {
-                    depElements.add(new PomDependencyData((Element) node));
+            val childs = dependenciesElement.getChildNodes()
+            for (i in 0..<childs.getLength()) {
+                val node = childs.item(i)
+                if (node is Element && DEPENDENCY == node.getNodeName()) {
+                    depElements.add(PomReader.PomDependencyData(node))
                 }
             }
         }
 
-        return depElements;
+        return depElements
     }
 
     /**
      * Returns all dependency management elements for this POM, including those inherited from parent and imported POMs.
      */
-    @Override
-    public Map<MavenDependencyKey, PomDependencyMgt> getDependencyMgt() {
+    override fun getDependencyMgt(): MutableMap<MavenDependencyKey?, PomDependencyMgt?> {
         if (resolvedDependencyMgts == null) {
-            resolvedDependencyMgts = resolveDependencyMgt();
+            resolvedDependencyMgts = resolveDependencyMgt()
         }
-        return resolvedDependencyMgts;
+        return resolvedDependencyMgts!!
     }
 
-    private Map<MavenDependencyKey, PomDependencyMgt> resolveDependencyMgt() {
-        Map<MavenDependencyKey, PomDependencyMgt> dependencies = new LinkedHashMap<>();
-        dependencies.putAll(pomParent.getDependencyMgt());
-        dependencies.putAll(importedDependencyMgts);
-        for (PomDependencyMgt dependencyMgt : parseDependencyMgt()) {
-            dependencies.put(dependencyMgt.getId(), dependencyMgt);
+    private fun resolveDependencyMgt(): MutableMap<MavenDependencyKey?, PomDependencyMgt?> {
+        val dependencies: MutableMap<MavenDependencyKey?, PomDependencyMgt?> = LinkedHashMap<MavenDependencyKey?, PomDependencyMgt?>()
+        dependencies.putAll(pomParent.getDependencyMgt())
+        dependencies.putAll(importedDependencyMgts)
+        for (dependencyMgt in parseDependencyMgt()) {
+            dependencies.put(dependencyMgt.id, dependencyMgt)
         }
-        return dependencies;
+        return dependencies
     }
 
     /**
@@ -456,194 +384,168 @@ public class PomReader implements PomParent {
      *
      * @return Parsed dependency management elements
      */
-    public List<PomDependencyMgt> parseDependencyMgt() {
+    fun parseDependencyMgt(): MutableList<PomDependencyMgt> {
         if (declaredDependencyMgts == null) {
-            List<PomDependencyMgt> dependencyMgts = getDependencyMgt(projectElement);
+            val dependencyMgts = getDependencyMgt(projectElement)
 
-            for (PomProfile pomProfile : parseActivePomProfiles()) {
-                dependencyMgts.addAll(pomProfile.getDependencyMgts());
+            for (pomProfile in parseActivePomProfiles()!!) {
+                dependencyMgts.addAll(pomProfile.dependencyMgts)
             }
 
-            declaredDependencyMgts = dependencyMgts;
+            declaredDependencyMgts = dependencyMgts
         }
 
-        return declaredDependencyMgts;
+        return declaredDependencyMgts!!
     }
 
-    private List<PomDependencyMgt> getDependencyMgt(Element parentElement) {
-        List<PomDependencyMgt> depMgmtElements = new ArrayList<>();
-        Element dependenciesElement = getFirstChildElement(parentElement, DEPENDENCY_MGT);
-        dependenciesElement = getFirstChildElement(dependenciesElement, DEPENDENCIES);
+    private fun getDependencyMgt(parentElement: Element?): MutableList<PomDependencyMgt> {
+        val depMgmtElements: MutableList<PomDependencyMgt> = ArrayList<PomDependencyMgt>()
+        var dependenciesElement = PomDomParser.getFirstChildElement(parentElement, DEPENDENCY_MGT)
+        dependenciesElement = PomDomParser.getFirstChildElement(dependenciesElement, DEPENDENCIES)
 
         if (dependenciesElement != null) {
-            NodeList childs = dependenciesElement.getChildNodes();
-            for (int i = 0; i < childs.getLength(); i++) {
-                Node node = childs.item(i);
-                if (node instanceof Element && DEPENDENCY.equals(node.getNodeName())) {
-                    depMgmtElements.add(new PomDependencyMgtElement((Element) node));
+            val childs = dependenciesElement.getChildNodes()
+            for (i in 0..<childs.getLength()) {
+                val node = childs.item(i)
+                if (node is Element && DEPENDENCY == node.getNodeName()) {
+                    depMgmtElements.add(PomReader.PomDependencyMgtElement(node))
                 }
             }
         }
 
-        return depMgmtElements;
+        return depMgmtElements
     }
 
-    @Override
-    public PomDependencyMgt findDependencyDefaults(MavenDependencyKey dependencyKey) {
-        return getDependencyMgt().get(dependencyKey);
+    override fun findDependencyDefaults(dependencyKey: MavenDependencyKey?): PomDependencyMgt? {
+        return getDependencyMgt().get(dependencyKey)
     }
 
-    public void resolveGAV() {
-        setGavPropertyValue(GavProperty.GROUP_ID, getGroupId());
-        setGavPropertyValue(GavProperty.ARTIFACT_ID, getArtifactId());
-        setGavPropertyValue(GavProperty.VERSION, getVersion());
+    fun resolveGAV() {
+        setGavPropertyValue(GavProperty.GROUP_ID, this.groupId)
+        setGavPropertyValue(GavProperty.ARTIFACT_ID, this.artifactId)
+        setGavPropertyValue(GavProperty.VERSION, this.version)
     }
 
-    private void setGavPropertyValue(GavProperty gavProperty, String propertyValue) {
-        for (String name : gavProperty.getNames()) {
-            effectiveProperties.put(name, propertyValue);
+    private fun setGavPropertyValue(gavProperty: GavProperty, propertyValue: String?) {
+        for (name in gavProperty.names) {
+            effectiveProperties.put(name, propertyValue)
         }
     }
 
-    public class PomDependencyMgtElement implements PomDependencyMgt {
-        private final Element depElement;
-
-        PomDependencyMgtElement(Element depElement) {
-            this.depElement = depElement;
-        }
-
-        @Override
-        public MavenDependencyKey getId() {
-            return new MavenDependencyKey(getGroupId(), getArtifactId(), getType(), getClassifier());
+    open inner class PomDependencyMgtElement internal constructor(private val depElement: Element?) : PomDependencyMgt {
+        override fun getId(): MavenDependencyKey {
+            return MavenDependencyKey(getGroupId(), getArtifactId(), getType(), getClassifier())
         }
 
         /**
-         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt#getGroupId()
+         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt.getGroupId
          */
-        @Override
-        public String getGroupId() {
-            String val = getFirstChildText(depElement, GROUP_ID);
-            checkNotNull(val, GROUP_ID, DEPENDENCY);
-            return replaceProps(val);
+        override fun getGroupId(): String {
+            val `val` = PomDomParser.getFirstChildText(depElement, GROUP_ID)
+            checkNotNull(`val`, GROUP_ID, DEPENDENCY)
+            return replaceProps(`val`)
         }
 
         /**
-         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt#getArtifactId()
+         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt.getArtifactId
          */
-        @Override
-        public String getArtifactId() {
-            String val = getFirstChildText(depElement, ARTIFACT_ID);
-            checkNotNull(val, ARTIFACT_ID, DEPENDENCY);
-            return replaceProps(val);
+        override fun getArtifactId(): String {
+            val `val` = PomDomParser.getFirstChildText(depElement, ARTIFACT_ID)
+            checkNotNull(`val`, ARTIFACT_ID, DEPENDENCY)
+            return replaceProps(`val`)
         }
 
         /**
-         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt#getVersion()
+         * @see org.apache.ivy.plugins.parser.m2.PomDependencyMgt.getVersion
          */
-        @Override
-        public String getVersion() {
-            String val = getFirstChildText(depElement, VERSION);
-            return replaceProps(val);
+        override fun getVersion(): String {
+            val `val` = PomDomParser.getFirstChildText(depElement, VERSION)
+            return replaceProps(`val`)
         }
 
-        @Override
-        public String getScope() {
-            String val = getFirstChildText(depElement, SCOPE);
-            return replaceProps(val);
+        override fun getScope(): String {
+            val `val` = PomDomParser.getFirstChildText(depElement, SCOPE)
+            return replaceProps(`val`)
         }
 
-        @Override
-        public String getType() {
-            String val = getFirstChildText(depElement, TYPE);
-            val = replaceProps(val);
+        override fun getType(): String {
+            var `val` = PomDomParser.getFirstChildText(depElement, TYPE)
+            `val` = replaceProps(`val`)
 
-            if (val == null) {
-                val = "jar";
+            if (`val` == null) {
+                `val` = "jar"
             }
 
-            return val;
+            return `val`
         }
 
-        @Override
-        public String getClassifier() {
-            String val = getFirstChildText(depElement, CLASSIFIER);
-            return replaceProps(val);
+        override fun getClassifier(): String {
+            val `val` = PomDomParser.getFirstChildText(depElement, CLASSIFIER)
+            return replaceProps(`val`)
         }
 
-        @Override
-        @SuppressWarnings("MixedMutabilityReturnType")
-        public List<ModuleIdentifier> getExcludedModules() {
-            Element exclusionsElement = getFirstChildElement(depElement, EXCLUSIONS);
+        override fun getExcludedModules(): MutableList<ModuleIdentifier?> {
+            val exclusionsElement = PomDomParser.getFirstChildElement(depElement, EXCLUSIONS)
             if (exclusionsElement != null) {
-                NodeList childs = exclusionsElement.getChildNodes();
-                List<ModuleIdentifier> exclusions = new ArrayList<>();
-                for (int i = 0; i < childs.getLength(); i++) {
-                    Node node = childs.item(i);
-                    if (node instanceof Element && EXCLUSION.equals(node.getNodeName())) {
-                        String groupId = getFirstChildText((Element) node, GROUP_ID);
-                        String artifactId = getFirstChildText((Element) node, ARTIFACT_ID);
+                val childs = exclusionsElement.getChildNodes()
+                val exclusions: MutableList<ModuleIdentifier?> = ArrayList<ModuleIdentifier?>()
+                for (i in 0..<childs.getLength()) {
+                    val node = childs.item(i)
+                    if (node is Element && EXCLUSION == node.getNodeName()) {
+                        val groupId = PomDomParser.getFirstChildText(node, GROUP_ID)
+                        val artifactId = PomDomParser.getFirstChildText(node, ARTIFACT_ID)
                         if ((groupId != null) || (artifactId != null)) {
-                            String resolvedGroupId = groupId != null ? replaceProps(groupId) : "*";
-                            String resolvedArtifactId = artifactId != null ? replaceProps(artifactId) : "*";
-                            exclusions.add(moduleIdentifierFactory.module(resolvedGroupId, resolvedArtifactId));
+                            val resolvedGroupId = if (groupId != null) replaceProps(groupId) else "*"
+                            val resolvedArtifactId = if (artifactId != null) replaceProps(artifactId) else "*"
+                            exclusions.add(moduleIdentifierFactory.module(resolvedGroupId, resolvedArtifactId))
                         }
                     }
                 }
-                return exclusions;
+                return exclusions
             }
-            return Collections.emptyList();
+            return mutableListOf<ModuleIdentifier?>()
         }
     }
 
-    public class PomDependencyData extends PomDependencyMgtElement {
-        private final Element depElement;
-
-        PomDependencyData(Element depElement) {
-            super(depElement);
-            this.depElement = depElement;
-        }
-
-        public boolean isOptional() {
-            Element e = getFirstChildElement(depElement, OPTIONAL);
-            return (e != null) && "true".equalsIgnoreCase(getTextContent(e).trim());
-        }
+    inner class PomDependencyData internal constructor(private val depElement: Element?) : PomDependencyMgtElement(
+        depElement
+    ) {
+        val isOptional: Boolean
+            get() {
+                val e = PomDomParser.getFirstChildElement(
+                    depElement,
+                    OPTIONAL
+                )
+                return (e != null) && "true".equals(PomDomParser.getTextContent(e).trim { it <= ' ' }, ignoreCase = true)
+            }
     }
 
-    public class PomProfileElement implements PomProfile {
-        private final Element element;
-        private List<PomDependencyMgt> declaredDependencyMgts;
-        private List<PomDependencyData> declaredDependencies;
+    inner class PomProfileElement internal constructor(private val element: Element?) : PomProfile {
+        private var declaredDependencyMgts: MutableList<PomDependencyMgt>? = null
+        private var declaredDependencies: MutableList<PomDependencyData>? = null
 
-        PomProfileElement(Element element) {
-            this.element = element;
+        override fun getId(): String? {
+            return PomDomParser.getFirstChildText(element, PROFILE_ID)
         }
 
-        @Override
-        public String getId() {
-            return getFirstChildText(element, PROFILE_ID);
+        override fun getProperties(): MutableMap<String?, String?> {
+            return parseProperties(element)
         }
 
-        @Override
-        public Map<String, String> getProperties() {
-            return parseProperties(element);
-        }
-
-        @Override
-        public List<PomDependencyMgt> getDependencyMgts() {
+        override fun getDependencyMgts(): MutableList<PomDependencyMgt> {
             if (declaredDependencyMgts == null) {
-                declaredDependencyMgts = getDependencyMgt(element);
+                declaredDependencyMgts = getDependencyMgt(element)
             }
 
-            return declaredDependencyMgts;
+            return declaredDependencyMgts!!
         }
 
-        @Override
-        public List<PomDependencyData> getDependencies() {
+        override fun getDependencies(): MutableList<PomDependencyData> {
             if (declaredDependencies == null) {
-                declaredDependencies = getDependencyData(element);
+                declaredDependencies = getDependencyData(element)
             }
 
-            return declaredDependencies;
+            return declaredDependencies!!
         }
     }
 
@@ -652,28 +554,28 @@ public class PomReader implements PomParent {
      *
      * @return Active POM profiles
      */
-    private List<PomProfile> parseActivePomProfiles() {
+    private fun parseActivePomProfiles(): MutableList<PomProfile>? {
         if (declaredActivePomProfiles == null) {
-            List<PomProfile> activeByDefaultPomProfiles = new ArrayList<>();
-            List<PomProfile> activeByAbsenceOfPropertyPomProfiles = new ArrayList<>();
-            Element profilesElement = getFirstChildElement(projectElement, PROFILES);
+            val activeByDefaultPomProfiles: MutableList<PomProfile?> = ArrayList<PomProfile?>()
+            val activeByAbsenceOfPropertyPomProfiles: MutableList<PomProfile?> = ArrayList<PomProfile?>()
+            val profilesElement = PomDomParser.getFirstChildElement(projectElement, PROFILES)
 
             if (profilesElement != null) {
-                for (Element profileElement : getAllChilds(profilesElement)) {
-                    if (PROFILE.equals(profileElement.getNodeName())) {
-                        Element activationElement = getFirstChildElement(profileElement, PROFILE_ACTIVATION);
+                for (profileElement in PomDomParser.getAllChilds(profilesElement)) {
+                    if (PROFILE == profileElement.getNodeName()) {
+                        val activationElement = PomDomParser.getFirstChildElement(profileElement, PROFILE_ACTIVATION)
 
                         if (activationElement != null) {
-                            String activeByDefault = getFirstChildText(activationElement, PROFILE_ACTIVATION_ACTIVE_BY_DEFAULT);
+                            val activeByDefault = PomDomParser.getFirstChildText(activationElement, PROFILE_ACTIVATION_ACTIVE_BY_DEFAULT)
 
-                            if ("true".equals(activeByDefault)) {
-                                activeByDefaultPomProfiles.add(new PomProfileElement(profileElement));
+                            if ("true" == activeByDefault) {
+                                activeByDefaultPomProfiles.add(PomReader.PomProfileElement(profileElement))
                             } else {
-                                Element propertyElement = getFirstChildElement(activationElement, PROFILE_ACTIVATION_PROPERTY);
+                                val propertyElement = PomDomParser.getFirstChildElement(activationElement, PROFILE_ACTIVATION_PROPERTY)
 
                                 if (propertyElement != null) {
                                     if (isActivationPropertyActivated(propertyElement)) {
-                                        activeByAbsenceOfPropertyPomProfiles.add(new PomProfileElement(profileElement));
+                                        activeByAbsenceOfPropertyPomProfiles.add(PomReader.PomProfileElement(profileElement))
                                     }
                                 }
                             }
@@ -682,10 +584,10 @@ public class PomReader implements PomParent {
                 }
             }
 
-            declaredActivePomProfiles = determineActiveProfiles(activeByDefaultPomProfiles, activeByAbsenceOfPropertyPomProfiles);
+            declaredActivePomProfiles = determineActiveProfiles(activeByDefaultPomProfiles, activeByAbsenceOfPropertyPomProfiles)
         }
 
-        return declaredActivePomProfiles;
+        return declaredActivePomProfiles
     }
 
     /**
@@ -696,8 +598,8 @@ public class PomReader implements PomParent {
      * @param activeByAbsenceOfPropertyPomProfiles Parsed profiles that are activated by absence of property
      * @return List of active profiles that are not activeByDefault
      */
-    private List<PomProfile> determineActiveProfiles(List<PomProfile> activeByDefaultPomProfiles, List<PomProfile> activeByAbsenceOfPropertyPomProfiles) {
-        return !activeByAbsenceOfPropertyPomProfiles.isEmpty() ? activeByAbsenceOfPropertyPomProfiles : activeByDefaultPomProfiles;
+    private fun determineActiveProfiles(activeByDefaultPomProfiles: MutableList<PomProfile?>?, activeByAbsenceOfPropertyPomProfiles: MutableList<PomProfile?>): MutableList<PomProfile>? {
+        return if (!activeByAbsenceOfPropertyPomProfiles.isEmpty()) activeByAbsenceOfPropertyPomProfiles else activeByDefaultPomProfiles
     }
 
     /**
@@ -705,50 +607,150 @@ public class PomReader implements PomParent {
      *
      * @param propertyElement Property element
      * @return Activation indicator
-     * @see <a href="http://books.sonatype.com/mvnref-book/reference/profiles-sect-activation.html#profiles-sect-activation-config">Maven documentation</a>
+     * @see [Maven documentation](http://books.sonatype.com/mvnref-book/reference/profiles-sect-activation.html.profiles-sect-activation-config)
      */
-    private boolean isActivationPropertyActivated(Element propertyElement) {
-        String propertyName = getFirstChildText(propertyElement, "name");
-        return propertyName.startsWith("!");
+    private fun isActivationPropertyActivated(propertyElement: Element?): Boolean {
+        val propertyName = PomDomParser.getFirstChildText(propertyElement, "name")
+        return propertyName!!.startsWith("!")
     }
 
-    /**
-     * @return properties of both current and children poms.
-     */
-    Map<String, String> getAllPomProperties() {
-        return pomProperties;
-    }
-
-    private Map<String, String> parseProperties(Element parentElement) {
-        Map<String, String> pomProperties = new HashMap<>();
-        Element propsEl = getFirstChildElement(parentElement, PROPERTIES);
+    private fun parseProperties(parentElement: Element?): MutableMap<String?, String?> {
+        val pomProperties: MutableMap<String?, String?> = HashMap<String?, String?>()
+        val propsEl = PomDomParser.getFirstChildElement(parentElement, PROPERTIES)
         if (propsEl != null) {
-            propsEl.normalize();
+            propsEl.normalize()
         }
-        for (Element prop : getAllChilds(propsEl)) {
-            pomProperties.put(prop.getNodeName(), getTextContent(prop));
+        for (prop in PomDomParser.getAllChilds(propsEl)) {
+            pomProperties.put(prop.getNodeName(), PomDomParser.getTextContent(prop))
         }
-        return pomProperties;
+        return pomProperties
     }
 
-    private String replaceProps(String val) {
-        if (val == null) {
-            return null;
+    private fun replaceProps(`val`: String?): String {
+        if (`val` == null) {
+            return null
         } else {
-            return IvyPatternHelper.substituteVariables(val, effectiveProperties).trim();
+            return IvyPatternHelper.substituteVariables(`val`, effectiveProperties).trim { it <= ' ' }
         }
     }
 
-    /**
-     * Checks if the given value contains variable substitutions.
-     *
-     * @param value value to check
-     * @return true if the value contains substitutions, false otherwise.
-     */
-    public static boolean hasUnresolvedSubstitutions(String value) {
-        return value.contains("$") && PomReader.VAR_PATTERN.matcher(value).matches();
+    init {
+        setPomProperties(childPomProperties)
+        val systemId = resource.getFile().toURI().toASCIIString()
+        val pomDomDoc = resource.withContent<Document?>(ExternalResource.ContentAction { inputStream: InputStream? ->
+            try {
+                return@withContent parseToDom(inputStream, systemId)
+            } catch (e: Exception) {
+                throw MetaDataParseException("POM", resource, e)
+            }
+        }).getResult()
+        projectElement = pomDomDoc!!.getDocumentElement()
+        if (PROJECT != projectElement.getNodeName() && MODEL != projectElement.getNodeName()) {
+            throw SAXParseException("project must be the root tag", systemId, systemId, 0, 0)
+        }
+        parentElement = PomDomParser.getFirstChildElement(projectElement, PARENT)
+
+        setDefaultParentGavProperties()
+        setPomProperties(parseProperties(projectElement))
+        setActiveProfileProperties()
     }
 
-    // Copied from IvyPatternHelper
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(.*?)\\}");
+    companion object {
+        private const val PACKAGING = "packaging"
+        private const val DEPENDENCY = "dependency"
+        private const val DEPENDENCIES = "dependencies"
+        private const val DEPENDENCY_MGT = "dependencyManagement"
+        private const val PROJECT = "project"
+        private const val MODEL = "model"
+        private const val GROUP_ID = "groupId"
+        private const val ARTIFACT_ID = "artifactId"
+        private const val VERSION = "version"
+        private const val PARENT = "parent"
+        private const val SCOPE = "scope"
+        private const val CLASSIFIER = "classifier"
+        private const val OPTIONAL = "optional"
+        private const val EXCLUSIONS = "exclusions"
+        private const val EXCLUSION = "exclusion"
+        private const val DISTRIBUTION_MGT = "distributionManagement"
+        private const val RELOCATION = "relocation"
+        private const val PROPERTIES = "properties"
+        private const val TYPE = "type"
+        private const val PROFILES = "profiles"
+        private const val PROFILE = "profile"
+        private const val PROFILE_ID = "id"
+        private const val PROFILE_ACTIVATION = "activation"
+        private const val PROFILE_ACTIVATION_ACTIVE_BY_DEFAULT = "activeByDefault"
+        private const val PROFILE_ACTIVATION_PROPERTY = "property"
+        private val M2_ENTITIES_RESOURCE: ByteArray
+        private val DOCUMENT_BUILDER_FACTORY: DocumentBuilderFactory
+
+        init {
+            val bytes: ByteArray
+            try {
+                bytes = IOUtils.toByteArray(PomReader::class.java.getResourceAsStream("m2-entities.ent"))
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
+            }
+            M2_ENTITIES_RESOURCE = bytes
+
+            // Set the context classloader the bootstrap classloader, to work around the way that JAXP locates implementation classes
+            // This should ensure that the JAXP classes provided by the JVM are used, rather than some other implementation
+            val original = Thread.currentThread().getContextClassLoader()
+            Thread.currentThread().setContextClassLoader(ClassLoaderUtils.getPlatformClassLoader())
+            try {
+                DOCUMENT_BUILDER_FACTORY = XmlFactories.newDocumentBuilderFactory()
+                DOCUMENT_BUILDER_FACTORY.setValidating(false)
+            } finally {
+                Thread.currentThread().setContextClassLoader(original)
+            }
+        }
+
+        private val M2_ENTITY_RESOLVER: EntityResolver = object : EntityResolver {
+            override fun resolveEntity(publicId: String?, systemId: String?): InputSource? {
+                if ((systemId != null) && systemId.endsWith("m2-entities.ent")) {
+                    return InputSource(ByteArrayInputStream(M2_ENTITIES_RESOURCE))
+                }
+                return null
+            }
+        }
+
+        private fun getDocBuilder(entityResolver: EntityResolver?): DocumentBuilder {
+            try {
+                val docBuilder: DocumentBuilder = DOCUMENT_BUILDER_FACTORY.newDocumentBuilder()
+                if (entityResolver != null) {
+                    docBuilder.setEntityResolver(entityResolver)
+                }
+                return docBuilder
+            } catch (e: ParserConfigurationException) {
+                throw throwAsUncheckedException(e)
+            }
+        }
+
+        @Throws(IOException::class, SAXException::class)
+        private fun parseToDom(stream: InputStream?, systemId: String?): Document? {
+            // Set the context classloader the bootstrap classloader, to work around the way that JAXP locates implementation classes
+            // This should ensure that the JAXP classes provided by the JVM are used, rather than some other implementation
+            val original = Thread.currentThread().getContextClassLoader()
+            Thread.currentThread().setContextClassLoader(ClassLoaderUtils.getPlatformClassLoader())
+            try {
+                val dtdStream: InputStream = PomDomParser.AddDTDFilterInputStream(stream)
+                return getDocBuilder(M2_ENTITY_RESOLVER).parse(dtdStream, systemId)
+            } finally {
+                Thread.currentThread().setContextClassLoader(original)
+            }
+        }
+
+        /**
+         * Checks if the given value contains variable substitutions.
+         *
+         * @param value value to check
+         * @return true if the value contains substitutions, false otherwise.
+         */
+        fun hasUnresolvedSubstitutions(value: String): Boolean {
+            return value.contains("$") && VAR_PATTERN.matcher(value).matches()
+        }
+
+        // Copied from IvyPatternHelper
+        private val VAR_PATTERN: Pattern = Pattern.compile("\\$\\{(.*?)\\}")
+    }
 }

@@ -13,80 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.internal.artifacts.DefaultResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.Describables;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueFactory;
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableArtifactFileResolveResult;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.internal.artifacts.DefaultResolvableArtifact
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.Describables
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.model.CalculatedValueFactory
+import org.gradle.internal.resolve.resolver.ArtifactResolver
+import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableArtifactFileResolveResult
+import java.io.File
+import java.util.function.Supplier
 
-import java.io.File;
-import java.util.LinkedHashMap;
-import java.util.Map;
+internal class RepositoryChainArtifactResolver(private val calculatedValueFactory: CalculatedValueFactory) : ArtifactResolver {
+    private val repositories: MutableMap<String, ModuleComponentRepository<*>> = LinkedHashMap<String, ModuleComponentRepository<*>>()
 
-class RepositoryChainArtifactResolver implements ArtifactResolver {
-    private final Map<String, ModuleComponentRepository<?>> repositories = new LinkedHashMap<>();
-    private final CalculatedValueFactory calculatedValueFactory;
-
-    RepositoryChainArtifactResolver(CalculatedValueFactory calculatedValueFactory) {
-        this.calculatedValueFactory = calculatedValueFactory;
+    fun add(repository: ModuleComponentRepository<*>) {
+        repositories.put(repository.id, repository)
     }
 
-    void add(ModuleComponentRepository<?> repository) {
-        repositories.put(repository.getId(), repository);
-    }
-
-    @Override
-    public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-        ModuleComponentRepository<?> sourceRepository = findSourceRepository(component.getSources());
+    override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
+        val sourceRepository = findSourceRepository(component.getSources()!!)
         // First try to determine the artifacts locally before going remote
-        sourceRepository.getLocalAccess().resolveArtifactsWithType(component, artifactType, result);
+        sourceRepository.localAccess.resolveArtifactsWithType(component, artifactType, result)
         if (!result.hasResult()) {
-            sourceRepository.getRemoteAccess().resolveArtifactsWithType(component, artifactType, result);
+            sourceRepository.remoteAccess.resolveArtifactsWithType(component, artifactType, result)
         }
     }
 
-    @Override
-    public void resolveArtifact(ComponentArtifactResolveMetadata component, ComponentArtifactMetadata artifact, BuildableArtifactResolveResult result) {
-        ModuleComponentRepository<?> sourceRepository = findSourceRepository(component.getSources());
-        ResolvableArtifact resolvableArtifact = sourceRepository.getArtifactCache().computeIfAbsent(artifact.getId(), id -> {
-            CalculatedValue<File> artifactSource = calculatedValueFactory.create(Describables.of(artifact.getId()), () -> resolveArtifactLater(artifact, component.getSources(), sourceRepository));
-            return new DefaultResolvableArtifact(component.getModuleVersionId(), artifact.getName(), artifact.getId(), context -> context.add(artifact.getBuildDependencies()), artifactSource, calculatedValueFactory);
-        });
+    override fun resolveArtifact(component: ComponentArtifactResolveMetadata, artifact: ComponentArtifactMetadata, result: BuildableArtifactResolveResult) {
+        val sourceRepository = findSourceRepository(component.getSources()!!)
+        val resolvableArtifact = sourceRepository.artifactCache.computeIfAbsent(artifact.getId()!!) { id: ComponentArtifactIdentifier? ->
+            val artifactSource = calculatedValueFactory.create<File>(Describables.of(artifact.getId()!!), Supplier { resolveArtifactLater(artifact, component.getSources()!!, sourceRepository) })
+            DefaultResolvableArtifact(
+                component.getModuleVersionId(),
+                artifact.getName()!!,
+                artifact.getId()!!,
+                TaskDependencyContainer { context: TaskDependencyResolveContext? -> context!!.add(artifact.getBuildDependencies()) },
+                artifactSource,
+                calculatedValueFactory
+            )
+        }
 
-        result.resolved(resolvableArtifact);
+        result.resolved(resolvableArtifact)
     }
 
-    private File resolveArtifactLater(ComponentArtifactMetadata artifact, ModuleSources sources, ModuleComponentRepository<?> sourceRepository) {
+    private fun resolveArtifactLater(artifact: ComponentArtifactMetadata, sources: ModuleSources, sourceRepository: ModuleComponentRepository<*>): File {
         // First try to resolve the artifacts locally before going remote
-        BuildableArtifactFileResolveResult artifactFile = new DefaultBuildableArtifactFileResolveResult();
-        sourceRepository.getLocalAccess().resolveArtifact(artifact, sources, artifactFile);
+        val artifactFile: BuildableArtifactFileResolveResult = DefaultBuildableArtifactFileResolveResult()
+        sourceRepository.localAccess.resolveArtifact(artifact, sources, artifactFile)
         if (!artifactFile.hasResult()) {
-            sourceRepository.getRemoteAccess().resolveArtifact(artifact, sources, artifactFile);
+            sourceRepository.remoteAccess.resolveArtifact(artifact, sources, artifactFile)
         }
-        return artifactFile.getResult();
+        return artifactFile.getResult()!!
     }
 
-    private ModuleComponentRepository<?> findSourceRepository(ModuleSources sources) {
-        RepositoryChainModuleSource repositoryChainModuleSource =
-            sources.getSource(RepositoryChainModuleSource.class)
-                   .orElseThrow(() -> new IllegalArgumentException("No sources provided for artifact resolution"));
+    private fun findSourceRepository(sources: ModuleSources): ModuleComponentRepository<*> {
+        val repositoryChainModuleSource: RepositoryChainModuleSource =
+            sources.getSource<RepositoryChainModuleSource?>(RepositoryChainModuleSource::class.java)
+                .orElseThrow<IllegalArgumentException>(java.util.function.Supplier { java.lang.IllegalArgumentException("No sources provided for artifact resolution") })!!
 
-        ModuleComponentRepository<?> moduleVersionRepository = repositories.get(repositoryChainModuleSource.getRepositoryId());
-        if (moduleVersionRepository == null) {
-            throw new IllegalStateException("Attempting to resolve artifacts from invalid repository");
-        }
-        return moduleVersionRepository;
+        val moduleVersionRepository: ModuleComponentRepository<*> = repositories.get(repositoryChainModuleSource.getRepositoryId())!!
+        checkNotNull(moduleVersionRepository) { "Attempting to resolve artifacts from invalid repository" }
+        return moduleVersionRepository
     }
-
 }

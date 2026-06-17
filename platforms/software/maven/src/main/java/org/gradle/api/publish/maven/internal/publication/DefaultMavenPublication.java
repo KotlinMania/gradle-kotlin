@@ -149,7 +149,7 @@ public abstract class DefaultMavenPublication implements MavenPublicationInterna
                 })
         );
 
-        Module module = dependencyMetaDataProvider.getModule();
+        Module module = dependencyMetaDataProvider.module;
         MavenPublicationCoordinates coordinates = pom.getCoordinates();
         coordinates.getGroupId().convention(providerFactory.provider(module::getGroup));
         coordinates.getArtifactId().convention(providerFactory.provider(module::getName));

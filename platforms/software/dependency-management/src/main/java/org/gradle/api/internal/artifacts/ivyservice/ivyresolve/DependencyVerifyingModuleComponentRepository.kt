@@ -13,290 +13,270 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import com.google.common.io.Files;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMetadataFileSource;
-import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.api.internal.tasks.DefaultTaskDependency;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.Factory;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult;
-import org.jspecify.annotations.Nullable;
+import com.google.common.io.Files
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultMetadataFileSource
+import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.api.internal.tasks.DefaultTaskDependency
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.Factory
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentFileArtifactIdentifier
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.DefaultIvyArtifactName.Companion.forFileName
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableModuleComponentMetaDataResolveResult
+import java.io.File
+import java.util.Optional
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Consumer
+import java.util.function.Function
 
-import java.io.File;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+class DependencyVerifyingModuleComponentRepository(
+    private val delegate: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>,
+    private val operation: ArtifactVerificationOperation,
+    verifySignatures: Boolean
+) : ModuleComponentRepository<ExternalModuleComponentGraphResolveState?> {
+    private val localAccess: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>
+    private val remoteAccess: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>
 
-public class DependencyVerifyingModuleComponentRepository implements ModuleComponentRepository<ExternalModuleComponentGraphResolveState> {
-    private final ModuleComponentRepository<ExternalModuleComponentGraphResolveState> delegate;
-    private final ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> localAccess;
-    private final ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> remoteAccess;
-    private final ArtifactVerificationOperation operation;
-
-    public DependencyVerifyingModuleComponentRepository(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> delegate, ArtifactVerificationOperation operation, boolean verifySignatures) {
-        this.delegate = delegate;
-        this.localAccess = new VerifyingModuleComponentRepositoryAccess(delegate.getLocalAccess(), verifySignatures);
-        this.remoteAccess = new VerifyingModuleComponentRepositoryAccess(delegate.getRemoteAccess(), verifySignatures);
-        this.operation = operation;
+    init {
+        this.localAccess = DependencyVerifyingModuleComponentRepository.VerifyingModuleComponentRepositoryAccess(delegate.getLocalAccess(), verifySignatures)
+        this.remoteAccess = DependencyVerifyingModuleComponentRepository.VerifyingModuleComponentRepositoryAccess(delegate.getRemoteAccess(), verifySignatures)
     }
 
-    @Override
-    public String getId() {
-        return delegate.getId();
+    override fun getId(): String? {
+        return delegate.getId()
     }
 
-    @Override
-    public String getName() {
-        return delegate.getName();
+    override fun getName(): String? {
+        return delegate.getName()
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> getLocalAccess() {
-        return localAccess;
+    override fun getLocalAccess(): ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        return localAccess
     }
 
-    @Override
-    public ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> getRemoteAccess() {
-        return remoteAccess;
+    override fun getRemoteAccess(): ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        return remoteAccess
     }
 
-    @Override
-    public Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() {
-        return delegate.getArtifactCache();
+    override fun getArtifactCache(): MutableMap<ComponentArtifactIdentifier?, ResolvableArtifact?>? {
+        return delegate.getArtifactCache()
     }
 
-    @Override
-    @Nullable
-    public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
-        return delegate.getComponentMetadataSupplier();
+    override fun getComponentMetadataSupplier(): InstantiatingAction<ComponentMetadataSupplierDetails?>? {
+        return delegate.getComponentMetadataSupplier()
     }
 
-    @Override
-    public boolean isContinueOnConnectionFailure() {
-        return delegate.isContinueOnConnectionFailure();
+    override fun isContinueOnConnectionFailure(): Boolean {
+        return delegate.isContinueOnConnectionFailure()
     }
 
-    @Override
-    public boolean isRepositoryDisabled() {
-        return delegate.isRepositoryDisabled();
+    override fun isRepositoryDisabled(): Boolean {
+        return delegate.isRepositoryDisabled()
     }
 
-    private class VerifyingModuleComponentRepositoryAccess implements ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> {
-        private final ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> delegate;
-        private final boolean verifySignatures;
-
-        private VerifyingModuleComponentRepositoryAccess(ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> delegate, boolean verifySignatures) {
-            this.delegate = delegate;
-            this.verifySignatures = verifySignatures;
+    private inner class VerifyingModuleComponentRepositoryAccess(
+        private val delegate: ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?>,
+        private val verifySignatures: Boolean
+    ) : ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState?> {
+        override fun listModuleVersions(selector: ModuleComponentSelector?, overrideMetadata: ComponentOverrideMetadata?, result: BuildableModuleVersionListingResolveResult?) {
+            delegate.listModuleVersions(selector, overrideMetadata, result)
         }
 
-        @Override
-        public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-            delegate.listModuleVersions(selector, overrideMetadata, result);
+        fun hasUsableResult(result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>): Boolean {
+            return result.hasResult() && result.state === BuildableModuleComponentMetaDataResolveResult.State.Resolved
         }
 
-        private boolean hasUsableResult(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-            return result.hasResult() && result.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
-        }
-
-        @Override
-        public void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
+        override fun resolveComponentMetaData(
+            moduleComponentIdentifier: ModuleComponentIdentifier?,
+            requestMetaData: ComponentOverrideMetadata,
+            result: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>?
+        ) {
             // For metadata, because the local file can be deleted we have to proceed in two steps
             // First resolve with a tmp result, and if it's found and that the file is still present
             // we can perform verification. If it's missing, then we do nothing so that it's downloaded
             // and verified later.
-            BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> tmp = new DefaultBuildableModuleComponentMetaDataResolveResult<>();
-            delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, tmp);
-            AtomicBoolean ignore = new AtomicBoolean();
+            val tmp: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?> =
+                DefaultBuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>()
+            delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, tmp)
+            val ignore = AtomicBoolean()
             if (hasUsableResult(tmp)) {
-                ModuleSources sources = tmp.metaData.prepareForArtifactResolution().getArtifactMetadata().getSources();
-                sources.withSources(DefaultMetadataFileSource.class, metadataFileSource -> {
-                    ModuleComponentArtifactIdentifier artifact = metadataFileSource.getArtifactId();
+                val sources: ModuleSources = tmp.metaData!!.prepareForArtifactResolution()!!.getArtifactMetadata()!!.getSources()!!
+                sources.withSources<DefaultMetadataFileSource?>(DefaultMetadataFileSource::class.java, Consumer { metadataFileSource: DefaultMetadataFileSource? ->
+                    val artifact = metadataFileSource!!.getArtifactId()
                     if (isExternalArtifactId(artifact)) {
-                        sources.withSource(ModuleDescriptorHashModuleSource.class, hashSource -> {
-                            if (hashSource.isPresent()) {
-                                boolean changingModule = requestMetaData.isChanging() || hashSource.get().isChangingModule();
+                        sources.withSource<ModuleDescriptorHashModuleSource?, Any?>(ModuleDescriptorHashModuleSource::class.java, Function { hashSource: Optional<ModuleDescriptorHashModuleSource?>? ->
+                            if (hashSource!!.isPresent()) {
+                                val changingModule = requestMetaData.isChanging() || hashSource.get().isChangingModule
                                 if (!changingModule) {
-                                    File artifactFile = metadataFileSource.getArtifactFile();
+                                    val artifactFile = metadataFileSource.getArtifactFile()
                                     if (artifactFile != null && artifactFile.exists()) {
                                         // it's possible that the file is null if it has been removed from the cache for example
-                                        Factory<File> signatureFileFactory = () -> maybeFetchComponentMetadataSignatureFile(sources, artifact);
-                                        operation.onArtifact(ArtifactVerificationOperation.ArtifactKind.METADATA, artifact, artifactFile, signatureFileFactory, getName(), getId());
+                                        val signatureFileFactory: Factory<File?> = org.gradle.internal.Factory { maybeFetchComponentMetadataSignatureFile(sources, artifact) }
+                                        operation.onArtifact(ArtifactVerificationOperation.ArtifactKind.METADATA, artifact, artifactFile, signatureFileFactory, getName()!!, getId()!!)
                                     } else {
-                                        ignore.set(true);
+                                        ignore.set(true)
                                     }
                                 }
                             }
-                            return null;
-                        });
+                            null
+                        })
                     }
-                });
+                })
             }
 
             if (!ignore.get()) {
-                delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result);
+                delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result)
             }
         }
 
-        @Nullable
-        private File maybeFetchComponentMetadataSignatureFile(ModuleSources moduleSources, ModuleComponentArtifactIdentifier artifact) {
-            ModuleComponentArtifactIdentifier signatureArtifactId;
-            if (artifact instanceof DefaultModuleComponentArtifactIdentifier) {
-                signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), ((DefaultModuleComponentArtifactIdentifier) artifact).name);
+        fun maybeFetchComponentMetadataSignatureFile(moduleSources: ModuleSources?, artifact: ModuleComponentArtifactIdentifier): File? {
+            val signatureArtifactId: ModuleComponentArtifactIdentifier?
+            if (artifact is DefaultModuleComponentArtifactIdentifier) {
+                signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), artifact.name)
             } else {
-                signatureArtifactId = new ModuleComponentFileArtifactIdentifier(artifact.getComponentIdentifier(), artifact.fileName + ".asc");
+                signatureArtifactId = ModuleComponentFileArtifactIdentifier(artifact.getComponentIdentifier(), artifact.fileName + ".asc")
             }
-            SignatureArtifactMetadata signatureArtifactMetadata = new SignatureArtifactMetadata(signatureArtifactId);
-            return maybeFetchSignatureFile(moduleSources, signatureArtifactMetadata);
+            val signatureArtifactMetadata: SignatureArtifactMetadata = VerifyingModuleComponentRepositoryAccess.SignatureArtifactMetadata(signatureArtifactId)
+            return maybeFetchSignatureFile(moduleSources, signatureArtifactMetadata)
         }
 
-        @Nullable
-        private File maybeFetchArtifactSignatureFile(ModuleSources moduleSources, ModuleComponentArtifactIdentifier artifact, IvyArtifactName ivyArtifactName) {
-            ModuleComponentArtifactIdentifier signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), ivyArtifactName);
-            SignatureArtifactMetadata signatureArtifactMetadata = new SignatureArtifactMetadata(signatureArtifactId);
-            return maybeFetchSignatureFile(moduleSources, signatureArtifactMetadata);
+        fun maybeFetchArtifactSignatureFile(moduleSources: ModuleSources?, artifact: ModuleComponentArtifactIdentifier, ivyArtifactName: IvyArtifactName): File? {
+            val signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), ivyArtifactName)
+            val signatureArtifactMetadata: SignatureArtifactMetadata = VerifyingModuleComponentRepositoryAccess.SignatureArtifactMetadata(signatureArtifactId)
+            return maybeFetchSignatureFile(moduleSources, signatureArtifactMetadata)
         }
 
-        private ModuleComponentArtifactIdentifier createSignatureArtifactIdFromIvyArtifactName(ModuleComponentIdentifier moduleComponentIdentifier, IvyArtifactName ivyArtifactName) {
-            String extension = ivyArtifactName.extension != null ? ivyArtifactName.extension : ivyArtifactName.type;
-            return new DefaultModuleComponentArtifactIdentifier(moduleComponentIdentifier, ivyArtifactName.name, "asc", extension + ".asc", ivyArtifactName.classifier);
+        fun createSignatureArtifactIdFromIvyArtifactName(moduleComponentIdentifier: ModuleComponentIdentifier, ivyArtifactName: IvyArtifactName): ModuleComponentArtifactIdentifier {
+            val extension = if (ivyArtifactName.extension != null) ivyArtifactName.extension else ivyArtifactName.type
+            return DefaultModuleComponentArtifactIdentifier(moduleComponentIdentifier, ivyArtifactName.name!!, "asc", extension + ".asc", ivyArtifactName.classifier)
         }
 
-        @Nullable
-        private File maybeFetchSignatureFile(ModuleSources moduleSources, SignatureArtifactMetadata signatureArtifactMetadata) {
+        fun maybeFetchSignatureFile(moduleSources: ModuleSources?, signatureArtifactMetadata: SignatureArtifactMetadata?): File? {
             if (!verifySignatures) {
-                return null;
+                return null
             }
-            SignatureFileDefaultBuildableArtifactResolveResult signatureResult = new SignatureFileDefaultBuildableArtifactResolveResult();
-            getLocalAccess().resolveArtifact(signatureArtifactMetadata, moduleSources, signatureResult);
+            val signatureResult = SignatureFileDefaultBuildableArtifactResolveResult()
+            getLocalAccess().resolveArtifact(signatureArtifactMetadata, moduleSources, signatureResult)
             if (signatureResult.hasResult()) {
-                if (signatureResult.isSuccessful()) {
-                    return signatureResult.getResult();
+                if (signatureResult.isSuccessful) {
+                    return signatureResult.getResult()
                 }
-                return null;
+                return null
             } else {
-                getRemoteAccess().resolveArtifact(signatureArtifactMetadata, moduleSources, signatureResult);
+                getRemoteAccess().resolveArtifact(signatureArtifactMetadata, moduleSources, signatureResult)
             }
-            if (signatureResult.hasResult() && signatureResult.isSuccessful()) {
-                return signatureResult.getResult();
+            if (signatureResult.hasResult() && signatureResult.isSuccessful) {
+                return signatureResult.getResult()
             }
-            return null;
+            return null
         }
 
-        @Override
-        public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-            delegate.resolveArtifactsWithType(component, artifactType, result);
+        override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata?, artifactType: ArtifactType?, result: BuildableArtifactSetResolveResult?) {
+            delegate.resolveArtifactsWithType(component, artifactType, result)
         }
 
-        @Override
-        public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
-            delegate.resolveArtifact(artifact, moduleSources, result);
+        override fun resolveArtifact(artifact: ComponentArtifactMetadata, moduleSources: ModuleSources, result: BuildableArtifactFileResolveResult) {
+            delegate.resolveArtifact(artifact, moduleSources, result)
             if (result.hasResult() && result.isSuccessful) {
-                ComponentArtifactIdentifier id = artifact.getId();
+                val id = artifact.getId()
                 if (isExternalArtifactId(id) && isNotChanging(moduleSources)) {
-                    ModuleComponentArtifactIdentifier mcai = (ModuleComponentArtifactIdentifier) id;
-                    ArtifactVerificationOperation.ArtifactKind artifactKind = determineArtifactKind(artifact);
-                    if (!(result instanceof SignatureFileDefaultBuildableArtifactResolveResult)) {
+                    val mcai = id as ModuleComponentArtifactIdentifier
+                    val artifactKind = determineArtifactKind(artifact)
+                    if (result !is SignatureFileDefaultBuildableArtifactResolveResult) {
                         // signature files are fetched using resolveArtifact, but are checked alongside the main artifact
-                        Factory<File> signatureFileFactory = () -> maybeFetchArtifactSignatureFile(moduleSources, mcai, artifact.getName());
-                        operation.onArtifact(artifactKind, mcai, result.getResult(), signatureFileFactory, getName(), getId());
+                        val signatureFileFactory: Factory<File?> = org.gradle.internal.Factory { maybeFetchArtifactSignatureFile(moduleSources, mcai, artifact.getName()!!) }
+                        operation.onArtifact(artifactKind, mcai, result.getResult()!!, signatureFileFactory, getName()!!, getId()!!)
                     }
                 }
             }
         }
 
-        private ArtifactVerificationOperation.ArtifactKind determineArtifactKind(ComponentArtifactMetadata artifact) {
-            ArtifactVerificationOperation.ArtifactKind artifactKind = ArtifactVerificationOperation.ArtifactKind.REGULAR;
-            if (artifact instanceof ModuleDescriptorArtifactMetadata) {
-                artifactKind = ArtifactVerificationOperation.ArtifactKind.METADATA;
+        fun determineArtifactKind(artifact: ComponentArtifactMetadata?): ArtifactVerificationOperation.ArtifactKind {
+            var artifactKind = ArtifactVerificationOperation.ArtifactKind.REGULAR
+            if (artifact is ModuleDescriptorArtifactMetadata) {
+                artifactKind = ArtifactVerificationOperation.ArtifactKind.METADATA
             }
-            return artifactKind;
+            return artifactKind
         }
 
-        private boolean isNotChanging(ModuleSources moduleSources) {
-            return moduleSources.withSource(ModuleDescriptorHashModuleSource.class, source ->
-                source.map(cachingModuleSource -> !cachingModuleSource.isChangingModule()).orElse(true));
+        fun isNotChanging(moduleSources: ModuleSources): Boolean {
+            return moduleSources.withSource<ModuleDescriptorHashModuleSource?, Boolean?>(
+                org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource::class.java,
+                java.util.function.Function { source: java.util.Optional<org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource?>? ->
+                    source.map<kotlin.Boolean?>(java.util.function.Function { cachingModuleSource: org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource? -> !cachingModuleSource.isChangingModule })
+                        .orElse(true)
+                })!!
         }
 
-        private boolean isExternalArtifactId(ComponentArtifactIdentifier id) {
-            return id instanceof ModuleComponentArtifactIdentifier;
+        fun isExternalArtifactId(id: ComponentArtifactIdentifier?): Boolean {
+            return id is ModuleComponentArtifactIdentifier
         }
 
-        @Override
-        public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
-            return delegate.estimateMetadataFetchingCost(moduleComponentIdentifier);
+        override fun estimateMetadataFetchingCost(moduleComponentIdentifier: ModuleComponentIdentifier?): MetadataFetchingCost? {
+            return delegate.estimateMetadataFetchingCost(moduleComponentIdentifier)
         }
 
-        private class SignatureArtifactMetadata implements ModuleComponentArtifactMetadata {
+        private inner class SignatureArtifactMetadata(private val artifactIdentifier: ModuleComponentArtifactIdentifier) : ModuleComponentArtifactMetadata {
+            private val moduleComponentIdentifier: ModuleComponentIdentifier
 
-            private final ModuleComponentIdentifier moduleComponentIdentifier;
-            private final ModuleComponentArtifactIdentifier artifactIdentifier;
-
-            public SignatureArtifactMetadata(ModuleComponentArtifactIdentifier artifact) {
-                this.moduleComponentIdentifier = artifact.getComponentIdentifier();
-                this.artifactIdentifier = artifact;
+            init {
+                this.moduleComponentIdentifier = artifactIdentifier.getComponentIdentifier()
             }
 
-            @Override
-            public ModuleComponentArtifactIdentifier getId() {
-                return artifactIdentifier;
+            override fun getId(): ModuleComponentArtifactIdentifier {
+                return artifactIdentifier
             }
 
-            @Override
-            public ComponentIdentifier getComponentId() {
-                return moduleComponentIdentifier;
+            override fun getComponentId(): ComponentIdentifier {
+                return moduleComponentIdentifier
             }
 
-            @Override
-            public IvyArtifactName getName() {
-                if (artifactIdentifier instanceof DefaultModuleComponentArtifactIdentifier) {
-                    return ((DefaultModuleComponentArtifactIdentifier) artifactIdentifier).name;
+            override fun getName(): IvyArtifactName? {
+                if (artifactIdentifier is DefaultModuleComponentArtifactIdentifier) {
+                    return artifactIdentifier.name
                 }
                 // This is a bit hackish but the mapping from file names to ivy artifact names is completely broken
-                String fileName = artifactIdentifier.fileName.replace("-" + artifactIdentifier.getComponentIdentifier().getVersion(), "");
-                fileName = Files.getNameWithoutExtension(fileName); // removes the .asc
-                IvyArtifactName base = DefaultIvyArtifactName.forFileName(fileName, null);
-                return new DefaultIvyArtifactName(
-                    base.name,
+                var fileName = artifactIdentifier.fileName!!.replace("-" + artifactIdentifier.getComponentIdentifier().getVersion(), "")
+                fileName = Files.getNameWithoutExtension(fileName) // removes the .asc
+                val base: IvyArtifactName = forFileName(fileName, null)
+                return DefaultIvyArtifactName(
+                    base.name!!,
                     "asc",
                     base.extension + ".asc"
-                );
+                )
             }
 
-            @Override
-            public TaskDependency getBuildDependencies() {
-                return new DefaultTaskDependency();
+            override fun getBuildDependencies(): TaskDependency {
+                return DefaultTaskDependency()
             }
         }
     }
 
-    private static class SignatureFileDefaultBuildableArtifactResolveResult extends DefaultBuildableArtifactFileResolveResult {
-    }
+    private class SignatureFileDefaultBuildableArtifactResolveResult : DefaultBuildableArtifactFileResolveResult()
 }

@@ -73,7 +73,7 @@ class ResolveExceptionMapper(
             return resolveException
         }
 
-        return TypedResolveException(resolveException.getType(), contextDisplayName, mappedCauses, resolveException.getResolutions())
+        return TypedResolveException(resolveException.type, contextDisplayName, mappedCauses, resolveException.getResolutions())
     }
 
     // TODO: We should handle this exception at the source instead of using instanceof to detect it after it is thrown.

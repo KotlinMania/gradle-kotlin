@@ -13,72 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.result
 
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.internal.Describables;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryLoadingCache;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.internal.Describables
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryLoadingCache
+import java.util.Objects
+import java.util.function.Function
 
-import java.util.Objects;
+class CachingComponentSelectionDescriptorFactory(cacheFactory: InMemoryCacheFactory) : ComponentSelectionDescriptorFactory {
+    private val descriptors: InMemoryLoadingCache<Key, ComponentSelectionDescriptorInternal>
 
-public class CachingComponentSelectionDescriptorFactory implements ComponentSelectionDescriptorFactory {
-
-    private final InMemoryLoadingCache<Key, ComponentSelectionDescriptorInternal> descriptors;
-
-    public CachingComponentSelectionDescriptorFactory(InMemoryCacheFactory cacheFactory) {
-        this.descriptors = cacheFactory.create(k ->
-            k.description != null
-                ? new DefaultComponentSelectionDescriptor(k.cause, Describables.of(k.description))
-                : new DefaultComponentSelectionDescriptor(k.cause)
-        );
-    }
-
-    @Override
-    public ComponentSelectionDescriptorInternal newDescriptor(ComponentSelectionCause cause, String reason) {
-        return descriptors.get(new Key(cause, reason));
-    }
-
-    @Override
-    public ComponentSelectionDescriptorInternal newDescriptor(ComponentSelectionCause cause) {
-        return descriptors.get(new Key(cause, null));
-    }
-
-    private static class Key {
-
-        private final ComponentSelectionCause cause;
-        private final @Nullable String description;
-
-        private Key(ComponentSelectionCause cause, @Nullable String description) {
-            this.cause = cause;
-            this.description = description;
+    init {
+        this.descriptors = cacheFactory.create<Key, ComponentSelectionDescriptorInternal>(Function { k: Key ->
+            if (k.description != null)
+                DefaultComponentSelectionDescriptor(k.cause, Describables.of(k.description))
+            else
+                DefaultComponentSelectionDescriptor(k.cause)
         }
+        )
+    }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+    override fun newDescriptor(cause: ComponentSelectionCause, reason: String): ComponentSelectionDescriptorInternal {
+        return descriptors.get(Key(cause, reason))
+    }
+
+    override fun newDescriptor(cause: ComponentSelectionCause): ComponentSelectionDescriptorInternal {
+        return descriptors.get(Key(cause, null))
+    }
+
+    private class Key(private val cause: ComponentSelectionCause, private val description: String?) {
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            Key key = (Key) o;
+            val key = o as Key
 
             if (cause != key.cause) {
-                return false;
+                return false
             }
-            return Objects.equals(description, key.description);
+            return description == key.description
         }
 
-        @Override
-        public int hashCode() {
-            int result = cause.hashCode();
-            result = 31 * result + Objects.hashCode(description);
-            return result;
+        override fun hashCode(): Int {
+            var result = cause.hashCode()
+            result = 31 * result + Objects.hashCode(description)
+            return result
         }
-
     }
-
 }

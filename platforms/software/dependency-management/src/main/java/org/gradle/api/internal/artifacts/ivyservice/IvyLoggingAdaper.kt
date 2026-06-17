@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import org.apache.ivy.util.AbstractMessageLogger;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.logging.LogLevelMapping;
+import org.apache.ivy.util.AbstractMessageLogger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.logging.LogLevelMapping
 
 /**
  * This class is for integrating Ivy log statements into our logging system. We don't want to have a dependency on
@@ -26,41 +25,35 @@ import org.gradle.internal.logging.LogLevelMapping;
  * As we want to avoid the execution of if statements for each Ivy request, we use Map which delegates Ivy log
  * statements to Sl4j action classes.
  */
-public class IvyLoggingAdaper extends AbstractMessageLogger {
-    private final Logger logger = Logging.getLogger(IvyLoggingAdaper.class);
+class IvyLoggingAdaper : AbstractMessageLogger() {
+    private val logger = getLogger(IvyLoggingAdaper::class.java)
 
-    @Override
-    public void log(String msg, int level) {
-        logger.log(LogLevelMapping.ANT_IVY_2_SLF4J.get(level), msg);
+    override fun log(msg: String?, level: Int) {
+        logger!!.log(LogLevelMapping.ANT_IVY_2_SLF4J.get(level), msg)
     }
 
-    @Override
-    public void rawlog(String msg, int level) {
-        log(msg, level);
-    }
-
-    /**
-     * Overrides the default implementation, which doesn't delegate to {@link #log(String, int)}.
-     */
-    @Override
-    public void warn(String msg) {
-        logger.warn(msg);
+    override fun rawlog(msg: String?, level: Int) {
+        log(msg, level)
     }
 
     /**
-     * Overrides the default implementation, which doesn't delegate to {@link #log(String, int)}.
+     * Overrides the default implementation, which doesn't delegate to [.log].
      */
-    @Override
-    public void error(String msg) {
-        logger.error(msg);
+    override fun warn(msg: String?) {
+        logger!!.warn(msg)
     }
 
-    @Override
-    public void doProgress() {
+    /**
+     * Overrides the default implementation, which doesn't delegate to [.log].
+     */
+    override fun error(msg: String?) {
+        logger!!.error(msg)
     }
 
-    @Override
-    public void doEndProgress(String msg) {
-        logger.info(msg);
+    public override fun doProgress() {
+    }
+
+    public override fun doEndProgress(msg: String?) {
+        logger!!.info(msg)
     }
 }

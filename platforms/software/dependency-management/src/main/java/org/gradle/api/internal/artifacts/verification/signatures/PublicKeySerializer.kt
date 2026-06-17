@@ -13,37 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.signatures;
+package org.gradle.api.internal.artifacts.verification.signatures
 
-import org.bouncycastle.openpgp.PGPObjectFactory;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPUtil;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
+import org.bouncycastle.openpgp.PGPObjectFactory
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.ByteArrayInputStream
 
-import java.io.ByteArrayInputStream;
-
-class PublicKeySerializer extends AbstractSerializer<PGPPublicKey> {
-
-    @Override
-    public PGPPublicKey read(Decoder decoder) throws Exception {
-        byte[] encoded = decoder.readBinary();
-        PGPObjectFactory objectFactory = new PGPObjectFactory(
-            PGPUtil.getDecoderStream(new ByteArrayInputStream(encoded)), new BcKeyFingerprintCalculator());
-        Object object = objectFactory.nextObject();
-        if (object instanceof PGPPublicKey) {
-            return (PGPPublicKey) object;
-        } else if (object instanceof PGPPublicKeyRing) {
-            return ((PGPPublicKeyRing) object).getPublicKey();
+internal class PublicKeySerializer : AbstractSerializer<PGPPublicKey?>() {
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): PGPPublicKey? {
+        val encoded = decoder.readBinary()
+        val objectFactory = PGPObjectFactory(
+            PGPUtil.getDecoderStream(ByteArrayInputStream(encoded)), BcKeyFingerprintCalculator()
+        )
+        val `object` = objectFactory.nextObject()
+        if (`object` is PGPPublicKey) {
+            return `object`
+        } else if (`object` is PGPPublicKeyRing) {
+            return `object`.getPublicKey()
         }
-        throw new IllegalStateException("Unexpected key in cache: " + object.getClass());
+        throw IllegalStateException("Unexpected key in cache: " + `object`.javaClass)
     }
 
-    @Override
-    public void write(Encoder encoder, PGPPublicKey key) throws Exception {
-        encoder.writeBinary(key.getEncoded());
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, key: PGPPublicKey) {
+        encoder.writeBinary(key.getEncoded())
     }
 }

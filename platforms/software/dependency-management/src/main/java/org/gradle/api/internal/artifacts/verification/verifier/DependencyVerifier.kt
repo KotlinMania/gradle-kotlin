@@ -13,367 +13,364 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation;
-import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.Checksum;
-import org.gradle.api.internal.artifacts.verification.model.ChecksumKind;
-import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata;
-import org.gradle.api.internal.artifacts.verification.model.IgnoredKey;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.security.internal.Fingerprint;
-import org.gradle.security.internal.PublicKeyService;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.Sets
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.ArtifactVerificationOperation
+import org.gradle.api.internal.artifacts.verification.model.ArtifactVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.Checksum
+import org.gradle.api.internal.artifacts.verification.model.ChecksumKind
+import org.gradle.api.internal.artifacts.verification.model.ComponentVerificationMetadata
+import org.gradle.api.internal.artifacts.verification.model.IgnoredKey
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationResultBuilder
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.hash.HashCode
+import org.gradle.security.internal.Fingerprint.Companion.of
+import org.gradle.security.internal.PublicKeyService
+import java.io.File
+import java.util.Map
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.stream.Collectors
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+class DependencyVerifier internal constructor(
+    verificationMetadata: MutableMap<ModuleComponentIdentifier?, ComponentVerificationMetadata?>,
+    val configuration: DependencyVerificationConfiguration,
+    val topLevelComments: MutableList<String?>?
+) {
+    private val verificationMetadata: MutableMap<String?, ComponentVerificationMetadata?>
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-
-public class DependencyVerifier {
-    private final Map<String, ComponentVerificationMetadata> verificationMetadata;
-    private final DependencyVerificationConfiguration config;
-    private final List<String> topLevelComments;
-
-    DependencyVerifier(Map<ModuleComponentIdentifier, ComponentVerificationMetadata> verificationMetadata, DependencyVerificationConfiguration config, List<String> topLevelComments) {
-        this.verificationMetadata = verificationMetadata.entrySet().stream()
-            .collect(toImmutableMap(entry -> toStringKey(entry.getKey()), Map.Entry::getValue));
-        this.config = config;
-        this.topLevelComments = topLevelComments;
+    init {
+        this.verificationMetadata = verificationMetadata.entries.stream()
+            .collect(ImmutableMap.toImmutableMap<MutableMap.MutableEntry<ModuleComponentIdentifier?, ComponentVerificationMetadata?>?, String?, ComponentVerificationMetadata?>(Function { entry: MutableMap.MutableEntry<ModuleComponentIdentifier?, ComponentVerificationMetadata?>? ->
+                toStringKey(
+                    entry!!.key!!
+                )
+            }, Function { Map.Entry.value }))
     }
 
-    public void verify(ChecksumService checksumService,
-                       SignatureVerificationService signatureVerificationService,
-                       ArtifactVerificationOperation.ArtifactKind kind,
-                       ModuleComponentArtifactIdentifier foundArtifact,
-                       File artifactFile,
-                       File signatureFile,
-                       ArtifactVerificationResultBuilder builder) {
+    fun verify(
+        checksumService: ChecksumService,
+        signatureVerificationService: SignatureVerificationService,
+        kind: ArtifactVerificationOperation.ArtifactKind?,
+        foundArtifact: ModuleComponentArtifactIdentifier,
+        artifactFile: File,
+        signatureFile: File?,
+        builder: ArtifactVerificationResultBuilder
+    ) {
         if (shouldSkipVerification(kind)) {
-            return;
+            return
         }
-        performVerification(foundArtifact,
+        performVerification(
+            foundArtifact,
             checksumService,
             signatureVerificationService,
             artifactFile,
-            signatureFile, failure -> {
+            signatureFile, ArtifactVerificationResultBuilder { failure: VerificationFailure? ->
                 if (isTrustedArtifact(foundArtifact)) {
-                    return;
+                    return@performVerification
                 }
-                builder.failWith(failure);
-            });
+                builder.failWith(failure)
+            })
     }
 
-    private boolean shouldSkipVerification(ArtifactVerificationOperation.ArtifactKind kind) {
-        return kind == ArtifactVerificationOperation.ArtifactKind.METADATA && !config.isVerifyMetadata();
+    private fun shouldSkipVerification(kind: ArtifactVerificationOperation.ArtifactKind?): Boolean {
+        return kind == ArtifactVerificationOperation.ArtifactKind.METADATA && !configuration.isVerifyMetadata()
     }
 
-    private boolean isTrustedArtifact(ModuleComponentArtifactIdentifier id) {
-        return config.getTrustedArtifacts().stream().anyMatch(artifact -> artifact.matches(id));
+    private fun isTrustedArtifact(id: ModuleComponentArtifactIdentifier): Boolean {
+        return configuration.getTrustedArtifacts().stream().anyMatch { artifact: DependencyVerificationConfiguration.TrustedArtifact? -> artifact!!.matches(id) }
     }
 
-    private void performVerification(ModuleComponentArtifactIdentifier foundArtifact, ChecksumService checksumService, SignatureVerificationService signatureVerificationService, File file, File signature, ArtifactVerificationResultBuilder builder) {
+    private fun performVerification(
+        foundArtifact: ModuleComponentArtifactIdentifier,
+        checksumService: ChecksumService,
+        signatureVerificationService: SignatureVerificationService,
+        file: File,
+        signature: File?,
+        builder: ArtifactVerificationResultBuilder
+    ) {
         if (!file.exists()) {
-            builder.failWith(new DeletedArtifact(file));
-            return;
+            builder.failWith(DeletedArtifact(file))
+            return
         }
-        doVerifyArtifact(foundArtifact, checksumService, signatureVerificationService, file, signature, builder);
+        doVerifyArtifact(foundArtifact, checksumService, signatureVerificationService, file, signature, builder)
     }
 
-    private void doVerifyArtifact(ModuleComponentArtifactIdentifier foundArtifact, ChecksumService checksumService, SignatureVerificationService signatureVerificationService, File file, File signature, ArtifactVerificationResultBuilder builder) {
-        PublicKeyService publicKeyService = signatureVerificationService.getPublicKeyService();
-        ComponentVerificationMetadata componentVerification = verificationMetadata.get(toStringKey(foundArtifact.getComponentIdentifier()));
+    private fun doVerifyArtifact(
+        foundArtifact: ModuleComponentArtifactIdentifier,
+        checksumService: ChecksumService,
+        signatureVerificationService: SignatureVerificationService,
+        file: File,
+        signature: File?,
+        builder: ArtifactVerificationResultBuilder
+    ) {
+        val publicKeyService = signatureVerificationService.getPublicKeyService()
+        val componentVerification: ComponentVerificationMetadata? = verificationMetadata.get(toStringKey(foundArtifact.getComponentIdentifier()))
         if (componentVerification != null) {
-            String foundArtifactFileName = foundArtifact.fileName;
-            List<ArtifactVerificationMetadata> verifications = componentVerification.getArtifactVerifications();
-            for (ArtifactVerificationMetadata verification : verifications) {
-                String verifiedArtifact = verification.getArtifactName();
-                if (verifiedArtifact.equals(foundArtifactFileName)) {
+            val foundArtifactFileName = foundArtifact.fileName
+            val verifications = componentVerification.artifactVerifications
+            for (verification in verifications) {
+                val verifiedArtifact = verification.artifactName
+                if (verifiedArtifact == foundArtifactFileName) {
                     if (signature == null) {
                         // There is no signature file or verify-signature=false
-                        if (config.isVerifySignatures()) {
-                            builder.failWith(new MissingSignature(file));
+                        if (configuration.isVerifySignatures()) {
+                            builder.failWith(MissingSignature(file))
                         }
                     } else {
                         // There is a signature file and verify-signature=true
-                        DefaultSignatureVerificationResultBuilder result = new DefaultSignatureVerificationResultBuilder(file, signature);
-                        verifySignature(signatureVerificationService, file, signature, allTrustedKeys(foundArtifact, verification.getTrustedPgpKeys()), allIgnoredKeys(verification.getIgnoredPgpKeys()), result);
+                        val result = DefaultSignatureVerificationResultBuilder(file, signature)
+                        verifySignature(
+                            signatureVerificationService,
+                            file,
+                            signature,
+                            allTrustedKeys(foundArtifact, verification.trustedPgpKeys),
+                            allIgnoredKeys(verification.ignoredPgpKeys),
+                            result
+                        )
                         if (result.hasError()) {
-                            VerificationFailure error = result.asError(publicKeyService);
-                            builder.failWith(error);
+                            val error = result.asError(publicKeyService)
+                            builder.failWith(error)
                             if (error.isFatal()) {
-                                return;
+                                return
                             }
-                        } else if (verification.getChecksums().isEmpty()) {
-                            return;
+                        } else if (verification.checksums.isEmpty()) {
+                            return
                         }
                     }
-                    if (verification.getChecksums().isEmpty()) {
-                        builder.failWith(new MissingChecksums(file));
+                    if (verification.checksums.isEmpty()) {
+                        builder.failWith(MissingChecksums(file))
                     } else {
-                        verifyChecksums(checksumService, file, verification, builder);
+                        verifyChecksums(checksumService, file, verification, builder)
                     }
-                    return;
+                    return
                 }
             }
         }
         if (signature != null) {
             // it's possible that the artifact is not listed explicitly but we can still verify signatures
-            DefaultSignatureVerificationResultBuilder result = new DefaultSignatureVerificationResultBuilder(file, signature);
-            verifySignature(signatureVerificationService, file, signature, allTrustedKeys(foundArtifact, Collections.emptySet()), allIgnoredKeys(Collections.emptySet()), result);
+            val result = DefaultSignatureVerificationResultBuilder(file, signature)
+            verifySignature(signatureVerificationService, file, signature, allTrustedKeys(foundArtifact, mutableSetOf<String?>()), allIgnoredKeys(mutableSetOf<IgnoredKey?>()), result)
             if (result.hasError()) {
-                VerificationFailure error = result.asError(publicKeyService);
-                builder.failWith(error);
+                val error = result.asError(publicKeyService)
+                builder.failWith(error)
                 if (error.isFatal()) {
-                    return;
+                    return
                 }
             } else {
-                return;
+                return
             }
         }
-        builder.failWith(new MissingChecksums(file));
+        builder.failWith(MissingChecksums(file))
     }
 
-    private String toStringKey(ModuleComponentIdentifier moduleComponentIdentifier) {
-        return moduleComponentIdentifier.getGroup() + ":" + moduleComponentIdentifier.getModule() + ":" + moduleComponentIdentifier.getVersion();
+    private fun toStringKey(moduleComponentIdentifier: ModuleComponentIdentifier): String {
+        return moduleComponentIdentifier.getGroup() + ":" + moduleComponentIdentifier.getModule() + ":" + moduleComponentIdentifier.getVersion()
     }
 
-    private Set<String> allTrustedKeys(ModuleComponentArtifactIdentifier id, Set<String> artifactSpecificKeys) {
-        if (config.getTrustedKeys().isEmpty()) {
-            return artifactSpecificKeys;
+    private fun allTrustedKeys(id: ModuleComponentArtifactIdentifier, artifactSpecificKeys: MutableSet<String?>): MutableSet<String?> {
+        if (configuration.getTrustedKeys().isEmpty()) {
+            return artifactSpecificKeys
         } else {
-            Set<String> allKeys = Sets.newHashSet(artifactSpecificKeys);
-            config.getTrustedKeys()
+            val allKeys: MutableSet<String?> = Sets.newHashSet<String?>(artifactSpecificKeys)
+            configuration.getTrustedKeys()
                 .stream()
-                .filter(trustedKey -> trustedKey.matches(id))
-                .forEach(trustedKey -> allKeys.add(trustedKey.getKeyId()));
-            return allKeys;
+                .filter { trustedKey: DependencyVerificationConfiguration.TrustedKey? -> trustedKey!!.matches(id) }
+                .forEach { trustedKey: DependencyVerificationConfiguration.TrustedKey? -> allKeys.add(trustedKey!!.getKeyId()) }
+            return allKeys
         }
     }
 
-    private Set<String> allIgnoredKeys(Set<IgnoredKey> artifactSpecificKeys) {
-        if (config.getIgnoredKeys().isEmpty()) {
-            return artifactSpecificKeys.stream().map(IgnoredKey::getKeyId).collect(Collectors.toSet());
+    private fun allIgnoredKeys(artifactSpecificKeys: MutableSet<IgnoredKey?>): MutableSet<String?> {
+        if (configuration.getIgnoredKeys().isEmpty()) {
+            return artifactSpecificKeys.stream().map<String?> { obj: IgnoredKey? -> obj!!.keyId }.collect(Collectors.toSet())
         } else {
             if (artifactSpecificKeys.isEmpty()) {
-                return config.getIgnoredKeys().stream().map(IgnoredKey::getKeyId).collect(Collectors.toSet());
+                return configuration.getIgnoredKeys().stream().map<String?> { obj: IgnoredKey? -> obj!!.keyId }.collect(Collectors.toSet())
             }
-            Set<String> allKeys = new HashSet<>();
+            val allKeys: MutableSet<String?> = HashSet<String?>()
             artifactSpecificKeys.stream()
-                .map(IgnoredKey::getKeyId)
-                .forEach(allKeys::add);
-            config.getIgnoredKeys()
+                .map<String?> { obj: IgnoredKey? -> obj!!.keyId }
+                .forEach { e: String? -> allKeys.add(e) }
+            configuration.getIgnoredKeys()
                 .stream()
-                .map(IgnoredKey::getKeyId)
-                .forEach(allKeys::add);
-            return allKeys;
+                .map<String?> { obj: IgnoredKey? -> obj!!.keyId }
+                .forEach { e: String? -> allKeys.add(e) }
+            return allKeys
         }
     }
 
-    private void verifySignature(SignatureVerificationService signatureVerificationService, File file, File signature, Set<String> trustedKeys, Set<String> ignoredKeys, SignatureVerificationResultBuilder result) {
-        signatureVerificationService.verify(file, signature, trustedKeys, ignoredKeys, result);
+    private fun verifySignature(
+        signatureVerificationService: SignatureVerificationService,
+        file: File?,
+        signature: File?,
+        trustedKeys: MutableSet<String?>?,
+        ignoredKeys: MutableSet<String?>?,
+        result: SignatureVerificationResultBuilder?
+    ) {
+        signatureVerificationService.verify(file, signature, trustedKeys, ignoredKeys, result)
     }
 
-    private void verifyChecksums(ChecksumService checksumService, File file, ArtifactVerificationMetadata verification, ArtifactVerificationResultBuilder builder) {
-        List<Checksum> checksums = verification.getChecksums();
-        for (Checksum checksum : checksums) {
-            verifyChecksum(checksum.getKind(), file, checksum.getValue(), checksum.getAlternatives(), checksumService, builder);
+    private fun verifyChecksums(checksumService: ChecksumService, file: File, verification: ArtifactVerificationMetadata, builder: ArtifactVerificationResultBuilder) {
+        val checksums = verification.checksums
+        for (checksum in checksums) {
+            verifyChecksum(checksum.kind, file, checksum.value, checksum.alternatives, checksumService, builder)
         }
     }
 
-    private static void verifyChecksum(ChecksumKind algorithm, File file, String expected, Set<String> alternatives, ChecksumService cache, ArtifactVerificationResultBuilder builder) {
-        String actualChecksum = checksumOf(algorithm, file, cache);
-        if (expected.equals(actualChecksum)) {
-            return;
-        }
-        if (alternatives != null) {
-            for (String alternative : alternatives) {
-                if (actualChecksum.equals(alternative)) {
-                    return;
-                }
+    fun getVerificationMetadata(): MutableCollection<ComponentVerificationMetadata?> {
+        return verificationMetadata.values
+    }
+
+    val suggestedWriteFlags: MutableList<String?>
+        get() {
+            val writeFlags: MutableSet<String?> = LinkedHashSet<String?>()
+            if (configuration.isVerifySignatures()) {
+                writeFlags.add("pgp")
             }
-        }
-        builder.failWith(new ChecksumVerificationFailure(file, algorithm, expected, actualChecksum));
-    }
-
-    private static String checksumOf(ChecksumKind algorithm, File file, ChecksumService cache) {
-        HashCode hashValue = null;
-        switch (algorithm) {
-            case md5:
-                hashValue = cache.md5(file);
-                break;
-            case sha1:
-                hashValue = cache.sha1(file);
-                break;
-            case sha256:
-                hashValue = cache.sha256(file);
-                break;
-            case sha512:
-                hashValue = cache.sha512(file);
-                break;
-        }
-        return hashValue.toString();
-    }
-
-    public Collection<ComponentVerificationMetadata> getVerificationMetadata() {
-        return verificationMetadata.values();
-    }
-
-    public DependencyVerificationConfiguration getConfiguration() {
-        return config;
-    }
-
-    public List<String> getTopLevelComments() {
-        return topLevelComments;
-    }
-
-    public List<String> getSuggestedWriteFlags() {
-        Set<String> writeFlags = new LinkedHashSet<>();
-        if (config.isVerifySignatures()) {
-            writeFlags.add("pgp");
-        }
-        getVerificationMetadata().forEach(md -> md.getArtifactVerifications().forEach(av -> {
-            av.getChecksums().forEach(checksum -> writeFlags.add(checksum.getKind().name()));
-        }));
-        if (Collections.singleton("pgp").equals(writeFlags)) {
-            // need to suggest at least one checksum so we use the most secure
-            writeFlags.add("sha512");
-        }
-        return ImmutableList.copyOf(writeFlags);
-    }
-
-    private static class DefaultSignatureVerificationResultBuilder implements SignatureVerificationResultBuilder {
-        private final File file;
-        private final File signatureFile;
-        private List<String> missingKeys = null;
-        private List<PGPPublicKey> trustedKeys = null;
-        private List<PGPPublicKey> validNotTrusted = null;
-        private List<PGPPublicKey> failedKeys = null;
-        private List<String> ignoredKeys = null;
-        private boolean hasValidSignatures = true;
-        private String corruptionError = null;
-
-        private DefaultSignatureVerificationResultBuilder(File file, File signatureFile) {
-            this.file = file;
-            this.signatureFile = signatureFile;
+            getVerificationMetadata().forEach(Consumer { md: ComponentVerificationMetadata? ->
+                md!!.artifactVerifications.forEach(Consumer { av: ArtifactVerificationMetadata? ->
+                    av!!.checksums.forEach(Consumer { checksum: Checksum? -> writeFlags.add(checksum!!.kind.name) })
+                })
+            })
+            if (mutableSetOf<String?>("pgp") == writeFlags) {
+                // need to suggest at least one checksum so we use the most secure
+                writeFlags.add("sha512")
+            }
+            return ImmutableList.copyOf<String?>(writeFlags)
         }
 
-        @Override
-        public void missingKey(String keyId) {
+    private class DefaultSignatureVerificationResultBuilder(private val file: File, private val signatureFile: File) : SignatureVerificationResultBuilder {
+        private var missingKeys: MutableList<String?>? = null
+        private var trustedKeys: MutableList<PGPPublicKey?>? = null
+        private var validNotTrusted: MutableList<PGPPublicKey>? = null
+        private var failedKeys: MutableList<PGPPublicKey>? = null
+        private var ignoredKeys: MutableList<String?>? = null
+        private var hasValidSignatures = true
+        private var corruptionError: String? = null
+
+        override fun missingKey(keyId: String?) {
             if (missingKeys == null) {
-                missingKeys = new ArrayList<>();
+                missingKeys = ArrayList<String?>()
             }
-            missingKeys.add(keyId);
+            missingKeys!!.add(keyId)
         }
 
-        @Override
-        public void verified(PGPPublicKey key, boolean trusted) {
+        override fun verified(key: PGPPublicKey?, trusted: Boolean) {
             if (trusted) {
                 if (trustedKeys == null) {
-                    trustedKeys = new ArrayList<>();
+                    trustedKeys = ArrayList<PGPPublicKey?>()
                 }
-                trustedKeys.add(key);
+                trustedKeys!!.add(key)
             } else {
                 if (validNotTrusted == null) {
-                    validNotTrusted = new ArrayList<>();
+                    validNotTrusted = ArrayList<PGPPublicKey>()
                 }
-                validNotTrusted.add(key);
+                validNotTrusted!!.add(key!!)
             }
         }
 
-        @Override
-        public void failed(PGPPublicKey pgpPublicKey) {
+        override fun failed(pgpPublicKey: PGPPublicKey?) {
             if (failedKeys == null) {
-                failedKeys = new ArrayList<>();
+                failedKeys = ArrayList<PGPPublicKey>()
             }
-            failedKeys.add(pgpPublicKey);
+            failedKeys!!.add(pgpPublicKey!!)
         }
 
-        @Override
-        public void ignored(String keyId) {
+        override fun ignored(keyId: String?) {
             if (ignoredKeys == null) {
-                ignoredKeys = new ArrayList<>();
+                ignoredKeys = ArrayList<String?>()
             }
-            ignoredKeys.add(keyId);
+            ignoredKeys!!.add(keyId)
         }
 
-        @Override
-        public void noSignatures() {
-            hasValidSignatures = false;
+        override fun noSignatures() {
+            hasValidSignatures = false
         }
 
-        @Override
-        public void failedToReadSignatureFile(String causeDescription) {
-            corruptionError = causeDescription;
+        override fun failedToReadSignatureFile(causeDescription: String?) {
+            corruptionError = causeDescription
         }
 
-        private boolean hasOnlyIgnoredKeys() {
-            return ignoredKeys != null
-                && trustedKeys == null
-                && validNotTrusted == null
-                && missingKeys == null
-                && failedKeys == null;
+        fun hasOnlyIgnoredKeys(): Boolean {
+            return ignoredKeys != null && trustedKeys == null && validNotTrusted == null && missingKeys == null && failedKeys == null
         }
 
-        public VerificationFailure asError(PublicKeyService publicKeyService) {
+        fun asError(publicKeyService: PublicKeyService?): VerificationFailure {
             if (corruptionError != null) {
-                return new InvalidSignatureFile(file, signatureFile, corruptionError);
+                return InvalidSignatureFile(file, signatureFile, corruptionError!!)
             }
             if (!hasValidSignatures) {
-                return new InvalidSignature(file, signatureFile);
+                return InvalidSignature(file, signatureFile)
             }
             if (hasOnlyIgnoredKeys()) {
-                return new OnlyIgnoredKeys(file);
+                return OnlyIgnoredKeys(file)
             }
-            Map<String, SignatureVerificationFailure.SignatureError> errors = new HashMap<>();
+            val errors: MutableMap<String?, SignatureVerificationFailure.SignatureError?> = HashMap<String?, SignatureVerificationFailure.SignatureError?>()
             if (missingKeys != null) {
-                for (String missingKey : missingKeys) {
-                    errors.put(missingKey, error(null, SignatureVerificationFailure.FailureKind.MISSING_KEY));
+                for (missingKey in missingKeys) {
+                    errors.put(missingKey, error(null, SignatureVerificationFailure.FailureKind.MISSING_KEY))
                 }
             }
             if (failedKeys != null) {
-                for (PGPPublicKey failedKey : failedKeys) {
-                    errors.put(Fingerprint.of(failedKey).toString(), error(failedKey, SignatureVerificationFailure.FailureKind.FAILED));
+                for (failedKey in failedKeys) {
+                    errors.put(of(failedKey).toString(), error(failedKey, SignatureVerificationFailure.FailureKind.FAILED))
                 }
             }
             if (validNotTrusted != null) {
-                for (PGPPublicKey trustedKey : validNotTrusted) {
-                    errors.put(Fingerprint.of(trustedKey).toString(), error(trustedKey, SignatureVerificationFailure.FailureKind.PASSED_NOT_TRUSTED));
+                for (trustedKey in validNotTrusted) {
+                    errors.put(of(trustedKey).toString(), error(trustedKey, SignatureVerificationFailure.FailureKind.PASSED_NOT_TRUSTED))
                 }
             }
             if (ignoredKeys != null) {
-                for (String ignoredKey : ignoredKeys) {
-                    errors.put(ignoredKey, error(null, SignatureVerificationFailure.FailureKind.IGNORED_KEY));
+                for (ignoredKey in ignoredKeys) {
+                    errors.put(ignoredKey, error(null, SignatureVerificationFailure.FailureKind.IGNORED_KEY))
                 }
             }
-            return new SignatureVerificationFailure(file, signatureFile, ImmutableMap.copyOf(errors), publicKeyService);
+            return SignatureVerificationFailure(file, signatureFile, ImmutableMap.copyOf<String?, SignatureVerificationFailure.SignatureError?>(errors), publicKeyService)
         }
 
-        public boolean hasError() {
-            return failedKeys != null || validNotTrusted != null || missingKeys != null || !hasValidSignatures || corruptionError != null || hasOnlyIgnoredKeys();
+        fun hasError(): Boolean {
+            return failedKeys != null || validNotTrusted != null || missingKeys != null || !hasValidSignatures || corruptionError != null || hasOnlyIgnoredKeys()
         }
     }
 
-    private static SignatureVerificationFailure.SignatureError error(@Nullable PGPPublicKey key, SignatureVerificationFailure.FailureKind kind) {
-        return new SignatureVerificationFailure.SignatureError(key, kind);
+    companion object {
+        private fun verifyChecksum(algorithm: ChecksumKind, file: File, expected: String, alternatives: MutableSet<String?>?, cache: ChecksumService, builder: ArtifactVerificationResultBuilder) {
+            val actualChecksum: String = checksumOf(algorithm, file, cache)
+            if (expected == actualChecksum) {
+                return
+            }
+            if (alternatives != null) {
+                for (alternative in alternatives) {
+                    if (actualChecksum == alternative) {
+                        return
+                    }
+                }
+            }
+            builder.failWith(ChecksumVerificationFailure(file, algorithm, expected, actualChecksum))
+        }
+
+        private fun checksumOf(algorithm: ChecksumKind, file: File, cache: ChecksumService): String {
+            var hashValue: HashCode? = null
+            when (algorithm) {
+                ChecksumKind.md5 -> hashValue = cache.md5(file)
+                ChecksumKind.sha1 -> hashValue = cache.sha1(file)
+                ChecksumKind.sha256 -> hashValue = cache.sha256(file)
+                ChecksumKind.sha512 -> hashValue = cache.sha512(file)
+            }
+            return hashValue.toString()
+        }
+
+        private fun error(key: PGPPublicKey?, kind: SignatureVerificationFailure.FailureKind?): SignatureVerificationFailure.SignatureError {
+            return SignatureVerificationFailure.SignatureError(key, kind)
+        }
     }
 }

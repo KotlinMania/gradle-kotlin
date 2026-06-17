@@ -13,71 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.Project;
-import org.gradle.api.internal.ClassPathRegistry;
-import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal;
-import org.gradle.api.internal.artifacts.transform.TransformStepNodeDependencyResolver;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.filestore.DefaultArtifactIdentifierFileStore;
-import org.gradle.api.internal.notations.DependencyNotationParser;
-import org.gradle.api.internal.notations.ProjectDependencyFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.problems.Problems;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resource.cached.DefaultExternalResourceFileStore;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.util.internal.SimpleMapInterner;
+import org.gradle.api.Project
+import org.gradle.api.internal.ClassPathRegistry
+import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal
+import org.gradle.api.internal.artifacts.transform.TransformStepNodeDependencyResolver
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.filestore.DefaultArtifactIdentifierFileStore
+import org.gradle.api.internal.notations.DependencyNotationParser
+import org.gradle.api.internal.notations.ProjectDependencyFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.problems.Problems
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resource.cached.DefaultExternalResourceFileStore
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.util.internal.SimpleMapInterner
 
 /**
  * The set of dependency management services that are created per project.
  */
-class DependencyManagementProjectScopeServices implements ServiceRegistrationProvider {
-
-    void configure(ServiceRegistration registration) {
-        registration.add(DefaultExternalResourceFileStore.Factory.class);
-        registration.add(DefaultArtifactIdentifierFileStore.Factory.class);
-        registration.add(TransformStepNodeDependencyResolver.class);
-        registration.add(DependencyManagementManagedTypesFactory.class);
-        registration.add(DefaultProjectDependencyFactory.class);
+internal class DependencyManagementProjectScopeServices : ServiceRegistrationProvider {
+    fun configure(registration: ServiceRegistration) {
+        registration.add(DefaultExternalResourceFileStore.Factory::class.java)
+        registration.add(DefaultArtifactIdentifierFileStore.Factory::class.java)
+        registration.add(TransformStepNodeDependencyResolver::class.java)
+        registration.add(DependencyManagementManagedTypesFactory::class.java)
+        registration.add(DefaultProjectDependencyFactory::class.java)
     }
 
     @Provides
-    DependencyFactoryInternal createDependencyFactory(
-        Instantiator instantiator,
-        DefaultProjectDependencyFactory factory,
-        ClassPathRegistry classPathRegistry,
-        FileCollectionFactory fileCollectionFactory,
-        RuntimeShadedJarFactory runtimeShadedJarFactory,
-        AttributesFactory attributesFactory,
-        SimpleMapInterner stringInterner,
-        CapabilityNotationParser capabilityNotationParser,
-        ObjectFactory objectFactory,
-        Project project,
-        Problems problems
-    ) {
-        ProjectDependencyFactory projectDependencyFactory = new ProjectDependencyFactory(factory);
+    fun createDependencyFactory(
+        instantiator: Instantiator?,
+        factory: DefaultProjectDependencyFactory,
+        classPathRegistry: ClassPathRegistry?,
+        fileCollectionFactory: FileCollectionFactory?,
+        runtimeShadedJarFactory: RuntimeShadedJarFactory?,
+        attributesFactory: AttributesFactory?,
+        stringInterner: SimpleMapInterner?,
+        capabilityNotationParser: CapabilityNotationParser?,
+        objectFactory: ObjectFactory?,
+        project: Project?,
+        problems: Problems?
+    ): DependencyFactoryInternal {
+        val projectDependencyFactory = ProjectDependencyFactory(factory)
 
-        DependencyNotationParser dependencyNotationParser = DependencyNotationParser.create(
-            instantiator,
+        val dependencyNotationParser: DependencyNotationParser? = DependencyNotationParser.create(
+            instantiator!!,
             factory,
             classPathRegistry,
             fileCollectionFactory,
             runtimeShadedJarFactory,
             stringInterner,
             problems
-        );
+        )
 
-        return new DefaultDependencyFactory(
+        return DefaultDependencyFactory(
             instantiator,
             dependencyNotationParser,
             capabilityNotationParser,
@@ -85,26 +83,17 @@ class DependencyManagementProjectScopeServices implements ServiceRegistrationPro
             projectDependencyFactory,
             attributesFactory,
             project
-        );
+        )
     }
 
     @Provides
-    protected DependencyMetaDataProvider createDependencyMetaDataProvider(ProjectInternal project) {
-        return new ProjectBackedModuleMetaDataProvider(project);
+    protected fun createDependencyMetaDataProvider(project: ProjectInternal): DependencyMetaDataProvider {
+        return ProjectBackedModuleMetaDataProvider(project)
     }
 
-    private static class ProjectBackedModuleMetaDataProvider implements DependencyMetaDataProvider {
-
-        private final ProjectInternal project;
-
-        public ProjectBackedModuleMetaDataProvider(ProjectInternal project) {
-            this.project = project;
-        }
-
-        @Override
-        public Module getModule() {
-            return new ProjectBackedModule(project);
+    private class ProjectBackedModuleMetaDataProvider(private val project: ProjectInternal) : DependencyMetaDataProvider {
+        override fun getModule(): Module {
+            return ProjectBackedModule(project)
         }
     }
-
 }

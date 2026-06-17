@@ -13,30 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.specs.Spec
+import org.gradle.internal.action.ConfigurableRule
 
-import org.gradle.api.artifacts.ComponentMetadataContext;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.specs.Spec;
-import org.gradle.internal.action.ConfigurableRule;
-
-class SpecConfigurableRule {
-
-    private final ConfigurableRule<ComponentMetadataContext> configurableRule;
-    private final Spec<ModuleVersionIdentifier> spec;
-
-    SpecConfigurableRule(ConfigurableRule<ComponentMetadataContext> configurableRule, Spec<ModuleVersionIdentifier> spec) {
-
-        this.configurableRule = configurableRule;
-        this.spec = spec;
-    }
-
-    public ConfigurableRule<ComponentMetadataContext> getConfigurableRule() {
-        return configurableRule;
-    }
-
-    public Spec<ModuleVersionIdentifier> getSpec() {
-        return spec;
-    }
-}
+internal class SpecConfigurableRule(val configurableRule: ConfigurableRule<ComponentMetadataContext>, val spec: Spec<ModuleVersionIdentifier?>)

@@ -13,24 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.Action;
+package org.gradle.api.internal.artifacts.configurations
 
 /**
- * A {@link MutationValidator} that can be used as a {@link Runnable} to be passed to
- * {@link org.gradle.api.internal.DefaultDomainObjectSet#beforeCollectionChanges(Action)}.
+ * A [MutationValidator] that can be used as a [Runnable] to be passed to
+ * [org.gradle.api.internal.DefaultDomainObjectSet.beforeCollectionChanges].
  */
-public abstract class RunnableMutationValidator implements MutationValidator, Runnable {
-    private final MutationType typeAsRunnable;
-
-    public RunnableMutationValidator(MutationType typeAsRunnable) {
-        this.typeAsRunnable = typeAsRunnable;
-    }
-
-    @Override
-    public void run() {
-        validateMutation(typeAsRunnable);
+abstract class RunnableMutationValidator(private val typeAsRunnable: MutationValidator.MutationType) : MutationValidator, Runnable {
+    override fun run() {
+        validateMutation(typeAsRunnable)
     }
 }

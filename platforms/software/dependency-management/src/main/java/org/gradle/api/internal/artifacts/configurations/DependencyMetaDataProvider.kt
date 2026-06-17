@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.configurations;
+package org.gradle.api.internal.artifacts.configurations
 
-import org.gradle.api.internal.artifacts.Module;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope({Scope.Build.class, Scope.Project.class})
-public interface DependencyMetaDataProvider {
-    Module getModule();
+@ServiceScope([Scope.Build::class, Scope.Project::class])
+interface DependencyMetaDataProvider {
+    @JvmField
+    val module: Module?
 }

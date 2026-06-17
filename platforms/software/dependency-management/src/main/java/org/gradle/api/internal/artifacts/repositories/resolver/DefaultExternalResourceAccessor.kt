@@ -13,58 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-package org.gradle.api.internal.artifacts.repositories.resolver;
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.net.URI
 
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor.DefaultResourceFileStore;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-
-public class DefaultExternalResourceAccessor implements ExternalResourceAccessor {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultExternalResourceAccessor.class);
-
-    private final FileStore<String> fileStore;
-    private final CacheAwareExternalResourceAccessor resourceAccessor;
-
-    public DefaultExternalResourceAccessor(FileStore<String> fileStore, CacheAwareExternalResourceAccessor resourceAccessor) {
-        this.fileStore = fileStore;
-        this.resourceAccessor = resourceAccessor;
+class DefaultExternalResourceAccessor(private val fileStore: FileStore<String>, private val resourceAccessor: CacheAwareExternalResourceAccessor) : ExternalResourceAccessor {
+    override fun resolveUri(uri: URI): LocallyAvailableExternalResource? {
+        return resolve(ExternalResourceName(uri))
     }
 
-    @Nullable
-    @Override
-    public LocallyAvailableExternalResource resolveUri(URI uri) {
-        return resolve(new ExternalResourceName(uri));
+    override fun resolveResource(resource: ExternalResourceName): LocallyAvailableExternalResource? {
+        return resolve(resource)
     }
 
-    @Nullable
-    @Override
-    public LocallyAvailableExternalResource resolveResource(ExternalResourceName resource) {
-        return resolve(resource);
-    }
-
-    @Nullable
-    private LocallyAvailableExternalResource resolve(final ExternalResourceName resource) {
-        LOGGER.debug("Loading {}", resource);
+    private fun resolve(resource: ExternalResourceName): LocallyAvailableExternalResource? {
+        LOGGER.debug("Loading {}", resource)
 
         try {
-            return resourceAccessor.getResource(resource, null, new DefaultResourceFileStore<String>(fileStore) {
-                @Override
-                protected String computeKey() {
-                    return resource.toString();
+            return resourceAccessor.getResource(resource, null, object : CacheAwareExternalResourceAccessor.DefaultResourceFileStore<String?>(fileStore) {
+                override fun computeKey(): String {
+                    return resource.toString()
                 }
-            }, null);
-        } catch (Exception e) {
-            throw ResourceExceptions.getFailed(resource.getUri(), e);
+            }, null)
+        } catch (e: Exception) {
+            throw ResourceExceptions.getFailed(resource.getUri(), e)
         }
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultExternalResourceAccessor::class.java)
     }
 }

@@ -13,58 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import com.google.common.collect.ImmutableMap
+import org.gradle.internal.operations.trace.CustomOperationTraceSerialization
+import org.gradle.operations.dependencies.transforms.ExecutePlannedTransformStepBuildOperationType
 
-import com.google.common.collect.ImmutableMap;
-import org.gradle.internal.operations.trace.CustomOperationTraceSerialization;
-import org.gradle.operations.dependencies.transforms.ExecutePlannedTransformStepBuildOperationType;
-import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity;
+class ExecutePlannedTransformStepBuildOperationDetails(val transformStepNode: TransformStepNode, val transformerName: String, val subjectName: String) :
+    ExecutePlannedTransformStepBuildOperationType.Details, CustomOperationTraceSerialization {
+    val plannedTransformStepIdentity: PlannedTransformStepIdentity
+        get() = transformStepNode.getNodeIdentity()
 
-public class ExecutePlannedTransformStepBuildOperationDetails implements ExecutePlannedTransformStepBuildOperationType.Details, CustomOperationTraceSerialization {
+    val transformActionClass: Class<*>
+        get() = transformStepNode.getTransformStep().getTransform().getImplementationClass()
 
-    private final TransformStepNode transformStepNode;
-    private final String transformerName;
-    private final String subjectName;
-
-    public ExecutePlannedTransformStepBuildOperationDetails(TransformStepNode transformStepNode, String transformerName, String subjectName) {
-        this.transformStepNode = transformStepNode;
-        this.transformerName = transformerName;
-        this.subjectName = subjectName;
+    override fun getCustomOperationTraceSerializableModel(): Any {
+        val builder = ImmutableMap.Builder<String, Any>()
+        builder.put("plannedTransformStepIdentity", plannedTransformStepIdentity)
+        builder.put("transformActionClass", transformActionClass)
+        builder.put("transformerName", transformerName)
+        builder.put("subjectName", subjectName)
+        return builder.build()
     }
-
-    public TransformStepNode getTransformStepNode() {
-        return transformStepNode;
-    }
-
-    @Override
-    public PlannedTransformStepIdentity getPlannedTransformStepIdentity() {
-        return transformStepNode.getNodeIdentity();
-    }
-
-    @Override
-    public Class<?> getTransformActionClass() {
-        return transformStepNode.getTransformStep().getTransform().getImplementationClass();
-    }
-
-    @Override
-    public String getTransformerName() {
-        return transformerName;
-    }
-
-    @Override
-    public String getSubjectName() {
-        return subjectName;
-    }
-
-    @Override
-    public Object getCustomOperationTraceSerializableModel() {
-        ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
-        builder.put("plannedTransformStepIdentity", getPlannedTransformStepIdentity());
-        builder.put("transformActionClass", getTransformActionClass());
-        builder.put("transformerName", transformerName);
-        builder.put("subjectName", subjectName);
-        return builder.build();
-    }
-
 }

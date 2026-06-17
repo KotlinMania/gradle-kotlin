@@ -144,13 +144,13 @@ public abstract class DependencyInsightReportTask extends DefaultTask {
         if (!rootComponentProperty.isPresent() && configuration != null && dependencySpec != null) {
             if (getShowingAllVariants().get()) {
                 ConfigurationInternal configurationInternal = (ConfigurationInternal) configuration;
-                if (!configurationInternal.isCanBeMutated()) {
+                if (!configurationInternal.isCanBeMutated) {
                     throw new IllegalStateException(
                         "The configuration '" + configuration.getName() + "' is not mutable. " +
                             "In order to use the '--all-variants' option, the configuration must not be resolved before this task is executed."
                     );
                 }
-                configurationInternal.getResolutionStrategy().setIncludeAllSelectableVariantResults(true);
+                configurationInternal.getResolutionStrategy().includeAllSelectableVariantResults = true;
             }
             configurationName = configuration.getName();
             configurationDescription = configuration.toString();

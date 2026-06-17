@@ -13,56 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes;
+import org.apache.ivy.plugins.matcher.ExactOrRegexpPatternMatcher
+import org.apache.ivy.plugins.matcher.ExactPatternMatcher
+import org.apache.ivy.plugins.matcher.GlobPatternMatcher
+import org.apache.ivy.plugins.matcher.PatternMatcher
+import org.apache.ivy.plugins.matcher.RegexpPatternMatcher
 
-import org.apache.ivy.plugins.matcher.ExactOrRegexpPatternMatcher;
-import org.apache.ivy.plugins.matcher.ExactPatternMatcher;
-import org.apache.ivy.plugins.matcher.GlobPatternMatcher;
-import org.apache.ivy.plugins.matcher.PatternMatcher;
-import org.apache.ivy.plugins.matcher.RegexpPatternMatcher;
+class PatternMatchers private constructor() {
+    private val matchers: MutableMap<String?, PatternMatcher?> = HashMap<String?, PatternMatcher?>()
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class PatternMatchers {
-    /**
-     * 'exact' pattern matcher name
-     */
-    public static final String EXACT = PatternMatcher.EXACT;
-
-    /**
-     * Any expression string: '*'
-     */
-    public static final String ANY_EXPRESSION = "*";
-
-    private static PatternMatchers instance;
-
-    private final Map<String, PatternMatcher> matchers = new HashMap<>();
-
-    private PatternMatchers() {
-        addMatcher(ExactPatternMatcher.INSTANCE);
-        addMatcher(RegexpPatternMatcher.INSTANCE);
-        addMatcher(ExactOrRegexpPatternMatcher.INSTANCE);
-        addMatcher(GlobPatternMatcher.INSTANCE);
+    init {
+        addMatcher(ExactPatternMatcher.INSTANCE)
+        addMatcher(RegexpPatternMatcher.INSTANCE)
+        addMatcher(ExactOrRegexpPatternMatcher.INSTANCE)
+        addMatcher(GlobPatternMatcher.INSTANCE)
     }
 
-    private void addMatcher(PatternMatcher instance) {
-        matchers.put(instance.getName(), instance);
+    private fun addMatcher(instance: PatternMatcher) {
+        matchers.put(instance.getName(), instance)
     }
 
-    public PatternMatcher getMatcher(String name) {
-        return matchers.get(name);
+    fun getMatcher(name: String?): PatternMatcher? {
+        return matchers.get(name)
     }
 
-    public static boolean isExactMatcher(String name) {
-        return name == null || EXACT.equals(name);
-    }
+    companion object {
+        /**
+         * 'exact' pattern matcher name
+         */
+        val EXACT: String = PatternMatcher.EXACT
 
-    public static synchronized PatternMatchers getInstance() {
-        if (instance == null) {
-            instance = new PatternMatchers();
+        /**
+         * Any expression string: '*'
+         */
+        const val ANY_EXPRESSION: String = "*"
+
+        @get:Synchronized
+        var instance: PatternMatchers? = null
+            get() {
+                if (field == null) {
+                    field = PatternMatchers()
+                }
+                return field
+            }
+            private set
+
+        fun isExactMatcher(name: String?): Boolean {
+            return name == null || EXACT == name
         }
-        return instance;
     }
 }

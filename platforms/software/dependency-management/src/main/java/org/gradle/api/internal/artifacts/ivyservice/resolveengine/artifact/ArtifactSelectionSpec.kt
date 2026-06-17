@@ -13,72 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.specs.Spec;
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.specs.Spec
 
 /**
  * A set of parameters governing the selection of artifacts from a dependency graph.
  */
-public class ArtifactSelectionSpec {
-
-    private final ImmutableAttributes requestAttributes;
-    private final Spec<? super ComponentIdentifier> componentFilter;
-    private final boolean selectFromAllVariants;
-    private final boolean allowNoMatchingVariants;
-    private final ResolutionStrategy.SortOrder sortOrder;
-
-    public ArtifactSelectionSpec(
-        ImmutableAttributes requestAttributes,
-        Spec<? super ComponentIdentifier> componentFilter,
-        boolean selectFromAllVariants,
-        boolean allowNoMatchingVariants,
-        ResolutionStrategy.SortOrder sortOrder
-    ) {
-        this.requestAttributes = requestAttributes;
-        this.componentFilter = componentFilter;
-        this.selectFromAllVariants = selectFromAllVariants;
-        this.allowNoMatchingVariants = allowNoMatchingVariants;
-        this.sortOrder = sortOrder;
-    }
-
+class ArtifactSelectionSpec(
     /**
      * The request attributes used to determine which variant of each graph node to select.
      */
-    public ImmutableAttributes getRequestAttributes() {
-        return requestAttributes;
-    }
-
+    val requestAttributes: ImmutableAttributes?,
     /**
      * Filters the selected artifacts to only contain those which originated from a component matching this filter.
      */
-    public Spec<? super ComponentIdentifier> getComponentFilter() {
-        return componentFilter;
-    }
-
+    val componentFilter: Spec<in ComponentIdentifier?>?,
     /**
      * If false, selection is restricted only to the artifacts exposed a selected node in the graph.
      * If true, selection is expanded to include artifacts from any variant exposed by the component that a given node belongs to.
      */
-    public boolean getSelectFromAllVariants() {
-        return selectFromAllVariants;
-    }
-
+    val selectFromAllVariants: Boolean,
     /**
      * If false, selection will fail if no matching artifact variants are found for a given graph node.
      */
-    public boolean getAllowNoMatchingVariants() {
-        return allowNoMatchingVariants;
-    }
-
+    val allowNoMatchingVariants: Boolean,
     /**
      * The order that artifacts should be sorted after selection.
      */
-    public ResolutionStrategy.SortOrder getSortOrder() {
-        return sortOrder;
-    }
-}
+    val sortOrder: ResolutionStrategy.SortOrder?
+)

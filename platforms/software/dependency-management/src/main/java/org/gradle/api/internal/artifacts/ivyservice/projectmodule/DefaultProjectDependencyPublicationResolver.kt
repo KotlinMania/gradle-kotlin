@@ -13,388 +13,356 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.projectmodule;
+package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.component.ComponentWithVariants;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.project.ProjectState;
-import org.gradle.api.internal.project.ProjectStateRegistry;
-import org.gradle.execution.ProjectConfigurer;
-import org.gradle.internal.Cast;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.lazy.Lazy;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Project
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.component.ComponentWithVariants
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.component.SoftwareComponentVariant
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectStateRegistry
+import org.gradle.execution.ProjectConfigurer
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
+import org.gradle.internal.lazy.Lazy
+import org.gradle.internal.lazy.Lazy.Companion.locking
+import org.gradle.internal.logging.text.TreeFormatter
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.Path
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Function
+import java.util.stream.Collectors
 
 /**
  * A service that will resolve a project identity path into publication coordinates.
  * This resolver can determine the coordinates of a project's root component
  * or can resolve the coordinates of a specific variant of that component.
  */
-@ServiceScope(Scope.Build.class)
-public class DefaultProjectDependencyPublicationResolver implements ProjectDependencyPublicationResolver {
-    private final ProjectPublicationRegistry publicationRegistry;
-    private final ProjectConfigurer projectConfigurer;
-    private final ProjectStateRegistry projects;
+@ServiceScope(Scope.Build::class)
+class DefaultProjectDependencyPublicationResolver(
+    private val publicationRegistry: ProjectPublicationRegistry,
+    private val projectConfigurer: ProjectConfigurer,
+    private val projects: ProjectStateRegistry
+) : ProjectDependencyPublicationResolver {
+    private val resolverCache = VariantCoordinateResolverCache()
 
-    private final VariantCoordinateResolverCache resolverCache = new VariantCoordinateResolverCache();
-
-    public DefaultProjectDependencyPublicationResolver(ProjectPublicationRegistry publicationRegistry, ProjectConfigurer projectConfigurer, ProjectStateRegistry projects) {
-        this.publicationRegistry = publicationRegistry;
-        this.projectConfigurer = projectConfigurer;
-        this.projects = projects;
+    override fun <T> resolveComponent(coordsType: Class<T?>, identityPath: Path): T? {
+        return
+        T > withCoordinateResolver<T?>(
+            coordsType, identityPath,
+            Function { obj: VariantCoordinateResolver<T?>? -> obj!!.componentCoordinates }
+        )
     }
 
-    @Override
-    public <T> T resolveComponent(Class<T> coordsType, Path identityPath) {
-        return withCoordinateResolver(coordsType, identityPath,
-            VariantCoordinateResolver::getComponentCoordinates
-        );
-    }
-
-    @Nullable
-    @Override
-    public <T> T resolveVariant(Class<T> coordsType, Path identityPath, String variantName) {
-        return withCoordinateResolver(coordsType, identityPath, resolver ->
-            resolver.getVariantCoordinates(variantName)
-        );
+    override fun <T> resolveVariant(coordsType: Class<T?>, identityPath: Path, variantName: String): T? {
+        return
+        T > withCoordinateResolver<T?>(coordsType, identityPath, Function { resolver: VariantCoordinateResolver<T?>? -> resolver!!.getVariantCoordinates(variantName) }
+        )
     }
 
     /**
      * Execute the action with a resolver for the given project.
      */
-    private <T> T withCoordinateResolver(Class<T> coordsType, Path identityPath, Function<VariantCoordinateResolver<T>, T> action) {
-        ProjectState projectState = projects.stateFor(identityPath);
+    private fun <T> withCoordinateResolver(coordsType: Class<T?>, identityPath: Path, action: Function<VariantCoordinateResolver<T?>, T?>): T? {
+        val projectState = projects.stateFor(identityPath)
 
         // Ensure target project is configured
-        projectConfigurer.configureFully(projectState);
+        projectConfigurer.configureFully(projectState)
 
-        return projectState.fromMutableState(project -> {
-            VariantCoordinateResolver<T> resolver = resolverCache.computeIfAbsent(identityPath, coordsType, key ->
-                createCoordinateResolver(identityPath, coordsType, project)
-            );
-            return action.apply(resolver);
-        });
+        return projectState.fromMutableState<T?>(Function { project: ProjectInternal? ->
+            val resolver = resolverCache.computeIfAbsent<T?>(identityPath, coordsType, { key -> }
+            <T> createCoordinateResolver < T ? > (identityPath, coordsType, project)
+            )
+            action.apply(resolver)
+        })
     }
 
     // It would be nice to get rid of the project parameter
-    private <T> VariantCoordinateResolver<T> createCoordinateResolver(Path identityPath, Class<T> coordsType, ProjectInternal project) {
-        Map<ProjectComponentPublication, T> publications = getPublications(identityPath, coordsType);
+    private fun <T> createCoordinateResolver(identityPath: Path, coordsType: Class<T?>, project: ProjectInternal): VariantCoordinateResolver<T?> {
+        val publications: MutableMap<ProjectComponentPublication, T?>
+        T > getPublications<T?>(identityPath, coordsType)
 
         if (publications.isEmpty()) {
-            return VariantCoordinateResolver.fixed(getImplicitCoordinates(coordsType, project));
+            return VariantCoordinateResolver.Companion.fixed<T?>(TODO("Cannot convert element"))<T> org . gradle . api . internal . artifacts . ivyservice . projectmodule . DefaultProjectDependencyPublicationResolver . Companion . getImplicitCoordinates < T ? > (coordsType, project)
         }
 
         // For all published components, find those that are not children of other components.
         // These are the top-level publications.
-        Set<ProjectComponentPublication> topLevel = new LinkedHashSet<>();
-        Set<ProjectComponentPublication> topLevelWithComponent = new LinkedHashSet<>();
-        Set<SoftwareComponent> childComponents = getChildComponents(publications.keySet());
-        for (Map.Entry<ProjectComponentPublication, T> entry : publications.entrySet()) {
-            ProjectComponentPublication publication = entry.getKey();
-            SoftwareComponent component = publication.getComponent().getOrNull();
+        val topLevel: MutableSet<ProjectComponentPublication> = LinkedHashSet<ProjectComponentPublication>()
+        val topLevelWithComponent: MutableSet<ProjectComponentPublication> = LinkedHashSet<ProjectComponentPublication>()
+        val childComponents: MutableSet<SoftwareComponent> = getChildComponents(publications.keys)
+        for (entry in publications.entries) {
+            val publication = entry.key
+            val component: SoftwareComponent? = publication.getComponent().getOrNull()
             if (!publication.isAlias() && !childComponents.contains(component)) {
-                topLevel.add(publication);
+                topLevel.add(publication)
                 if (component != null) {
-                    topLevelWithComponent.add(publication);
+                    topLevelWithComponent.add(publication)
                 }
             }
         }
 
-        if (topLevelWithComponent.size() == 1) {
-            SoftwareComponentInternal singleComponent = topLevelWithComponent.iterator().next().getComponent().get();
-            Map<SoftwareComponent, T> componentCoordinates = getComponentCoordinates(coordsType, publications.keySet());
-            return new MultiCoordinateVariantResolver<>(singleComponent, identityPath, componentCoordinates);
+        if (topLevelWithComponent.size == 1) {
+            val singleComponent = topLevelWithComponent.iterator().next().getComponent().get()
+            val componentCoordinates: MutableMap<SoftwareComponent, T?>
+            T > getComponentCoordinates<T?>(coordsType, publications.keys)
+            return MultiCoordinateVariantResolver<T?>(singleComponent, identityPath, componentCoordinates)
         }
 
         // See if all entry points have the same identifier
-        return VariantCoordinateResolver.fixed(getCommonCoordinates(project, coordsType, topLevel));
-    }
-
-    /**
-     * Get the coordinates of a project that has no publications.
-     */
-    private static <T> T getImplicitCoordinates(Class<T> coordsType, Project project) {
-        if (coordsType.equals(ModuleVersionIdentifier.class)) {
-            DeprecationLogger.deprecateAction("Declaring a dependency on an unpublished project")
-                .withContext("A dependency was declared on " + project.getDisplayName() + ", but that project does not declare any publications.")
-                .withAdvice("Ensure " + project.getDisplayName() + " declares at least one publication.")
-                .willBecomeAnErrorInGradle10()
-                .withUpgradeGuideSection(9, "publishing_dependency_on_unpublished_project")
-                .nagUser();
-
-            // These synthetic coordinates are problematic, since they are not the real coordinates of the target project. The target project is not actually published.
-            // We should throw an exception here in all cases in Gradle 10, instead requiring the user to declare at least one publication in the target project.
-            return coordsType.cast(DefaultModuleVersionIdentifier.newId(project.getGroup().toString(), project.getName(), project.getVersion().toString()));
-        }
-
-        throw new UnsupportedOperationException(String.format("Could not find any publications of type %s in %s.", coordsType.getSimpleName(), project.getDisplayName()));
-    }
-
-    /**
-     * Try to find a single set of coordinates shared by all top-level publications.
-     */
-    private static <T> T getCommonCoordinates(Project project, Class<T> coordsType, Collection<ProjectComponentPublication> topLevel) {
-        Iterator<ProjectComponentPublication> iterator = topLevel.iterator();
-        T candidate = iterator.next().getCoordinates(coordsType);
-        while (iterator.hasNext()) {
-            T alternative = iterator.next().getCoordinates(coordsType);
-            if (!candidate.equals(alternative)) {
-                TreeFormatter formatter = new TreeFormatter();
-                formatter.node("Publishing is not able to resolve a dependency on a project with multiple publications that have different coordinates.");
-                formatter.node("Found the following publications in " + project.getDisplayName());
-                formatter.startChildren();
-                for (ProjectComponentPublication publication : topLevel) {
-                    formatter.node(publication.getDisplayName().getCapitalizedDisplayName() + " with coordinates " + publication.getCoordinates(coordsType));
-                }
-                formatter.endChildren();
-                throw new UnsupportedOperationException(formatter.toString());
-            }
-        }
-        return candidate;
-    }
-
-    /**
-     * For each declared component in a set of publications, map it with its coordinates.
-     */
-    private static <T> Map<SoftwareComponent, T> getComponentCoordinates(Class<T> coordsType, Collection<ProjectComponentPublication> publications) {
-        Map<SoftwareComponent, T> coordinatesMap = new HashMap<>();
-        for (ProjectComponentPublication publication : publications) {
-            SoftwareComponent component = publication.getComponent().getOrNull();
-            if (component != null && !publication.isAlias()) {
-                T coordinates = publication.getCoordinates(coordsType);
-                if (coordinates != null) {
-                    coordinatesMap.put(component, coordinates);
-                }
-            }
-        }
-        return coordinatesMap;
+        return VariantCoordinateResolver.Companion.fixed<T?>(TODO("Cannot convert element"))<T> org . gradle . api . internal . artifacts . ivyservice . projectmodule . DefaultProjectDependencyPublicationResolver . Companion . getCommonCoordinates < T ? > (project, coordsType, topLevel)
     }
 
     /**
      * Given a project and a coordinate type, find all publications that publish a component
      * with the given coordinate type.
      */
-    private <T> Map<ProjectComponentPublication, T> getPublications(Path identityPath, Class<T> coordsType) {
-        Collection<ProjectComponentPublication> allPublications = publicationRegistry.getPublicationsForProject(ProjectComponentPublication.class, identityPath);
-        Map<ProjectComponentPublication, T> publications = new LinkedHashMap<>(allPublications.size());
-        for (ProjectComponentPublication publication : allPublications) {
-            T coordinates = publication.getCoordinates(coordsType);
+    private fun <T> getPublications(identityPath: Path, coordsType: Class<T?>): MutableMap<ProjectComponentPublication, T?> {
+        val allPublications = publicationRegistry.getPublicationsForProject<ProjectComponentPublication>(ProjectComponentPublication::class.java, identityPath)
+        val publications: MutableMap<ProjectComponentPublication, T?> = LinkedHashMap<ProjectComponentPublication, T?>(allPublications.size)
+        for (publication in allPublications) {
+            val coordinates = publication.getCoordinates<T?>(coordsType)
             if (!publication.isLegacy() && coordinates != null) {
-                publications.put(publication, coordinates);
+                publications.put(publication, coordinates)
             }
         }
-        return publications;
-    }
-
-    /**
-     * Get all components that are a child of another component.
-     */
-    private static Set<SoftwareComponent> getChildComponents(Collection<ProjectComponentPublication> publications) {
-        Set<SoftwareComponent> children = new HashSet<>();
-        for (ProjectComponentPublication publication : publications) {
-            SoftwareComponent component = publication.getComponent().getOrNull();
-            if (component instanceof ComponentWithVariants) {
-                ComponentWithVariants parent = (ComponentWithVariants) component;
-                // Child components are not top-level entry points.
-                children.addAll(parent.getVariants());
-            }
-        }
-        return children;
+        return publications
     }
 
     /**
      * Resolves the coordinates of variants of a single component
      */
     private interface VariantCoordinateResolver<T> {
-
         /**
          * Get the coordinates of the root component
          */
-        T getComponentCoordinates();
+        val componentCoordinates: T?
 
         /**
          * Get the coordinates of the variant with given name
          */
-        @Nullable
-        T getVariantCoordinates(String variantName);
+        fun getVariantCoordinates(variantName: String): T?
 
-        /**
-         * Create a resolver that always returns the given coordinates
-         */
-        static <T> VariantCoordinateResolver<T> fixed(T coordinates) {
-            return new FixedVariantCoordinateResolver<>(coordinates);
+        class FixedVariantCoordinateResolver<T> private constructor(private val coordinates: T?) : VariantCoordinateResolver<T?> {
+            override fun getComponentCoordinates(): T? {
+                return coordinates
+            }
+
+            override fun getVariantCoordinates(resolvedVariant: String): T? {
+                return coordinates
+            }
         }
 
-        class FixedVariantCoordinateResolver<T> implements VariantCoordinateResolver<T> {
-            private final T coordinates;
-
-            private FixedVariantCoordinateResolver(T coordinates) {
-                this.coordinates = coordinates;
-            }
-
-            @Override
-            public T getComponentCoordinates() {
-                return coordinates;
-            }
-
-            @Override
-            public T getVariantCoordinates(String resolvedVariant) {
-                return coordinates;
+        companion object {
+            /**
+             * Create a resolver that always returns the given coordinates
+             */
+            fun <T> fixed(coordinates: T?): VariantCoordinateResolver<T?> {
+                return VariantCoordinateResolver.FixedVariantCoordinateResolver<T?>(coordinates)
             }
         }
     }
 
     /**
-     * A {@link VariantCoordinateResolver} that supports composite components distributed across multiple coordinates
+     * A [VariantCoordinateResolver] that supports composite components distributed across multiple coordinates
      */
-    private static class MultiCoordinateVariantResolver<T> implements VariantCoordinateResolver<T> {
-        private final SoftwareComponent root;
-        private final Map<SoftwareComponent, T> componentCoordinates;
+    private class MultiCoordinateVariantResolver<T>(private val root: SoftwareComponent, identityPath: Path, private val componentCoordinates: MutableMap<SoftwareComponent, T?>) :
+        VariantCoordinateResolver<T?> {
+        private val variantCoordinatesMap: Lazy<MutableMap<String, T?>?>
 
-        private final Lazy<Map<String, T>> variantCoordinatesMap;
-
-        private MultiCoordinateVariantResolver(SoftwareComponent root, Path identityPath, Map<SoftwareComponent, T> componentCoordinates) {
-            this.root = root;
-            this.componentCoordinates = componentCoordinates;
-            this.variantCoordinatesMap = Lazy.locking().of(() -> mapVariantNamesToCoordinates(root, componentCoordinates, identityPath));
+        init {
+            this.variantCoordinatesMap =
+                locking().of<MutableMap<String, T?>?>(
+                    {}<T> org . gradle . api . internal . artifacts . ivyservice . projectmodule . DefaultProjectDependencyPublicationResolver . MultiCoordinateVariantResolver . Companion . mapVariantNamesToCoordinates < T ? > (root,
+                    componentCoordinates, identityPath
+                ))
         }
 
-        @Override
-        public T getComponentCoordinates() {
-            return componentCoordinates.get(root);
+        override fun getComponentCoordinates(): T? {
+            return componentCoordinates.get(root)
         }
 
-        @Nullable
-        @Override
-        public T getVariantCoordinates(String resolvedVariant) {
-            return variantCoordinatesMap.get().get(resolvedVariant);
+        override fun getVariantCoordinates(resolvedVariant: String): T? {
+            return variantCoordinatesMap.get()!!.get(resolvedVariant)
         }
 
-        private static <T>  Map<String, T> mapVariantNamesToCoordinates(SoftwareComponent root, Map<SoftwareComponent, T> componentsMap, Path identityPath) {
-            Map<String, T> result = new HashMap<>();
-            ComponentWalker.walkComponent(root, componentsMap, (variant, coordinates) -> {
-                if (result.put(variant.getName(), coordinates) != null) {
-                    throw new InvalidUserDataException(String.format(
-                        "Found multiple variants with name '%s' in component '%s' of project '%s'",
-                        variant.getName(), root.getName(), identityPath
-                    ));
-                }
-            });
-            return result;
+        companion object {
+            private fun <T> mapVariantNamesToCoordinates(root: SoftwareComponent, componentsMap: MutableMap<SoftwareComponent, T?>, identityPath: Path): MutableMap<String, T?> {
+                val result: MutableMap<String, T?> = HashMap<String, T?>()
+                ComponentWalker.walkComponent<T?>(root, componentsMap, ComponentWalker.ComponentVisitor { variant: SoftwareComponentVariant?, coordinates: T? ->
+                    if (result.put(variant!!.getName(), coordinates) != null) {
+                        throw InvalidUserDataException(
+                            String.format(
+                                "Found multiple variants with name '%s' in component '%s' of project '%s'",
+                                variant.getName(), root.getName(), identityPath
+                            )
+                        )
+                    }
+                })
+                return result
+            }
         }
     }
 
     /**
      * Walks a composite component and its subcomponents to determine coordinates of each variant.
      */
-    private static class ComponentWalker {
-
-        interface ComponentVisitor<T> {
-            void visitVariant(SoftwareComponentVariant variant, T coordinates);
-        }
-
+    private object ComponentWalker {
         /**
          * Visit every variant of a composite component
          */
-        public static <T> void walkComponent(SoftwareComponent component, Map<SoftwareComponent, T> componentsMap, ComponentVisitor<T> visitor) {
-            walkComponent(component, componentsMap, new LinkedHashSet<>(), new HashSet<>(), visitor);
+        fun <T> walkComponent(component: SoftwareComponent, componentsMap: MutableMap<SoftwareComponent, T?>, visitor: ComponentVisitor<T?>) {
+            T > walkComponent<T?>(component, componentsMap, LinkedHashSet<SoftwareComponent>(), HashSet<T?>(), visitor)
         }
 
-        private static <T> void walkComponent(
-            SoftwareComponent component,
-            Map<SoftwareComponent, T> componentCoordinates,
-            Set<SoftwareComponent> componentsSeen,
-            Set<T> coordinatesSeen,
-            ComponentVisitor<T> visitor
+        fun <T> walkComponent(
+            component: SoftwareComponent,
+            componentCoordinates: MutableMap<SoftwareComponent, T?>,
+            componentsSeen: MutableSet<SoftwareComponent>,
+            coordinatesSeen: MutableSet<T?>,
+            visitor: ComponentVisitor<T?>
         ) {
             if (!componentsSeen.add(component)) {
-                String allComponents = componentsSeen.stream()
-                    .map(SoftwareComponent::getName)
-                    .collect(Collectors.joining(", "));
-                throw new InvalidUserDataException("Circular dependency detected while resolving component coordinates. Found the following components: " + allComponents);
+                val allComponents = componentsSeen.stream()
+                    .map<String> { obj: SoftwareComponent? -> obj!!.getName() }
+                    .collect(Collectors.joining(", "))
+                throw InvalidUserDataException("Circular dependency detected while resolving component coordinates. Found the following components: " + allComponents)
             }
 
-            T coordinates = componentCoordinates.get(component);
+            val coordinates = componentCoordinates.get(component)
             if (!coordinatesSeen.add(coordinates)) {
-                throw new InvalidUserDataException("Multiple child components may not share the same coordinates: " + coordinates);
+                throw InvalidUserDataException("Multiple child components may not share the same coordinates: " + coordinates)
             }
 
             // First visit the local variants
-            if (component instanceof SoftwareComponentInternal) {
-                SoftwareComponentInternal componentInternal = (SoftwareComponentInternal) component;
-                for (SoftwareComponentVariant variant : componentInternal.getUsages()) {
-                    visitor.visitVariant(variant, coordinates);
+            if (component is SoftwareComponentInternal) {
+                val componentInternal = component
+                for (variant in componentInternal.getUsages()) {
+                    visitor.visitVariant(variant, coordinates)
                 }
             }
 
             // Then visit all child components' variants
-            if (component instanceof ComponentWithVariants) {
-                ComponentWithVariants parent = (ComponentWithVariants) component;
-                for (SoftwareComponent child : parent.getVariants()) {
-                    walkComponent(child, componentCoordinates, componentsSeen, coordinatesSeen, visitor);
+            if (component is ComponentWithVariants) {
+                val parent = component
+                for (child in parent.getVariants()) {
+                    T > walkComponent<T?>(child, componentCoordinates, componentsSeen, coordinatesSeen, visitor)
                 }
+            }
+        }
+
+        internal interface ComponentVisitor<T> {
+            fun visitVariant(variant: SoftwareComponentVariant, coordinates: T?)
+        }
+    }
+
+    private class VariantCoordinateResolverCache {
+        private val cache: MutableMap<Key, VariantCoordinateResolver<*>> = ConcurrentHashMap<Key, VariantCoordinateResolver<*>>()
+
+        fun <T> computeIfAbsent(identityPath: Path, coordsType: Class<T?>, factory: Function<Key, VariantCoordinateResolver<T?>>): VariantCoordinateResolver<T?> {
+            val key = Key(identityPath, coordsType)
+            val result = cache.computeIfAbsent(key, factory)
+            return uncheckedCast<VariantCoordinateResolver<T?>?>(result)!!
+        }
+
+        private class Key(private val identityPath: Path, private val coordsType: Class<*>) {
+            override fun equals(o: Any): Boolean {
+                if (this === o) {
+                    return true
+                }
+                if (o == null || javaClass != o.javaClass) {
+                    return false
+                }
+                val key = o as Key
+                return identityPath == key.identityPath && coordsType == key.coordsType
+            }
+
+            override fun hashCode(): Int {
+                return identityPath.hashCode() xor coordsType.hashCode()
             }
         }
     }
 
-    private static class VariantCoordinateResolverCache {
-        private final Map<Key, VariantCoordinateResolver<?>> cache = new ConcurrentHashMap<>();
+    companion object {
+        /**
+         * Get the coordinates of a project that has no publications.
+         */
+        private fun <T> getImplicitCoordinates(coordsType: Class<T?>, project: Project): T? {
+            if (coordsType == ModuleVersionIdentifier::class.java) {
+                deprecateAction("Declaring a dependency on an unpublished project")
+                    .withContext("A dependency was declared on " + project.getDisplayName() + ", but that project does not declare any publications.")!!
+                    .withAdvice("Ensure " + project.getDisplayName() + " declares at least one publication.")!!
+                    .willBecomeAnErrorInGradle10()
+                    .withUpgradeGuideSection(9, "publishing_dependency_on_unpublished_project")!!
+                    .nagUser()
 
-        public <T> VariantCoordinateResolver<T> computeIfAbsent(Path identityPath, Class<T> coordsType, Function<Key, VariantCoordinateResolver<T>> factory) {
-            Key key = new Key(identityPath, coordsType);
-            VariantCoordinateResolver<?> result = cache.computeIfAbsent(key, factory);
-            return Cast.uncheckedCast(result);
+                // These synthetic coordinates are problematic, since they are not the real coordinates of the target project. The target project is not actually published.
+                // We should throw an exception here in all cases in Gradle 10, instead requiring the user to declare at least one publication in the target project.
+                return coordsType.cast(DefaultModuleVersionIdentifier.newId(project.getGroup().toString(), project.getName(), project.getVersion().toString()))
+            }
+
+            throw UnsupportedOperationException(String.format("Could not find any publications of type %s in %s.", coordsType.getSimpleName(), project.getDisplayName()))
         }
 
-        private static class Key {
-            private final Path identityPath;
-            private final Class<?> coordsType;
-
-            public Key(Path identityPath, Class<?> coordsType) {
-                this.identityPath = identityPath;
-                this.coordsType = coordsType;
-            }
-
-            @Override
-            public boolean equals(Object o) {
-                if (this == o) {
-                    return true;
+        /**
+         * Try to find a single set of coordinates shared by all top-level publications.
+         */
+        private fun <T> getCommonCoordinates(project: Project, coordsType: Class<T?>, topLevel: MutableCollection<ProjectComponentPublication>): T? {
+            val iterator = topLevel.iterator()
+            val candidate = iterator.next().getCoordinates<T?>(coordsType)
+            while (iterator.hasNext()) {
+                val alternative = iterator.next().getCoordinates<T?>(coordsType)
+                if (candidate != alternative) {
+                    val formatter = TreeFormatter()
+                    formatter.node("Publishing is not able to resolve a dependency on a project with multiple publications that have different coordinates.")
+                    formatter.node("Found the following publications in " + project.getDisplayName())
+                    formatter.startChildren()
+                    for (publication in topLevel) {
+                        formatter.node(publication.getDisplayName().getCapitalizedDisplayName() + " with coordinates " + publication.getCoordinates<T?>(coordsType))
+                    }
+                    formatter.endChildren()
+                    throw UnsupportedOperationException(formatter.toString())
                 }
-                if (o == null || getClass() != o.getClass()) {
-                    return false;
-                }
-                Key key = (Key) o;
-                return Objects.equals(identityPath, key.identityPath) && Objects.equals(coordsType, key.coordsType);
             }
+            return candidate
+        }
 
-            @Override
-            public int hashCode() {
-                return identityPath.hashCode() ^ coordsType.hashCode();
+        /**
+         * For each declared component in a set of publications, map it with its coordinates.
+         */
+        private fun <T> getComponentCoordinates(coordsType: Class<T?>, publications: MutableCollection<ProjectComponentPublication>): MutableMap<SoftwareComponent, T?> {
+            val coordinatesMap: MutableMap<SoftwareComponent, T?> = HashMap<SoftwareComponent, T?>()
+            for (publication in publications) {
+                val component: SoftwareComponent? = publication.getComponent().getOrNull()
+                if (component != null && !publication.isAlias()) {
+                    val coordinates = publication.getCoordinates<T?>(coordsType)
+                    if (coordinates != null) {
+                        coordinatesMap.put(component, coordinates)
+                    }
+                }
             }
+            return coordinatesMap
+        }
+
+        /**
+         * Get all components that are a child of another component.
+         */
+        private fun getChildComponents(publications: MutableCollection<ProjectComponentPublication>): MutableSet<SoftwareComponent> {
+            val children: MutableSet<SoftwareComponent> = HashSet<SoftwareComponent>()
+            for (publication in publications) {
+                val component: SoftwareComponent? = publication.getComponent().getOrNull()
+                if (component is ComponentWithVariants) {
+                    val parent = component
+                    // Child components are not top-level entry points.
+                    children.addAll(parent.getVariants())
+                }
+            }
+            return children
         }
     }
 }

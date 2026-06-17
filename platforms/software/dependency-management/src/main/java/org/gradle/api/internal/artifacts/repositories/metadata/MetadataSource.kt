@@ -13,45 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.internal.artifacts.repositories.resolver.VersionLister
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
 
 /**
  * Represents a source of metadata for a repository. Each implementation is responsible for a different metadata
  * format: for discovering the metadata artifact, parsing the metadata and constructing a `MutableModuleComponentResolveMetadata`.
  */
-public interface MetadataSource<S extends MutableModuleComponentResolveMetadata> {
-
-    @Nullable
-    S create(String repositoryName,
-             ComponentResolvers componentResolvers,
-             ModuleComponentIdentifier moduleComponentIdentifier,
-             ComponentOverrideMetadata prescribedMetaData,
-             ExternalResourceArtifactResolver artifactResolver, // Required for MavenLocal to verify the presence of the artifact
-             BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result);
+interface MetadataSource<S : MutableModuleComponentResolveMetadata?> {
+    fun create(
+        repositoryName: String,
+        componentResolvers: ComponentResolvers,
+        moduleComponentIdentifier: ModuleComponentIdentifier,
+        prescribedMetaData: ComponentOverrideMetadata,
+        artifactResolver: ExternalResourceArtifactResolver,  // Required for MavenLocal to verify the presence of the artifact
+        result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+    ): S?
 
     /**
      * Use the supplied patterns and version lister to list available versions for the supplied dependency/module.
      *
      * This method would encapsulates all version listing for a metadata source, supplying the result (if found) to the
-     * {@link BuildableModuleVersionListingResolveResult} parameter.
+     * [BuildableModuleVersionListingResolveResult] parameter.
      *
      * Ideally, the ivyPatterns + artifactPatterns + versionLister would be encapsulated into a single 'module resource accessor'.
      */
-    void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, List<ResourcePattern> ivyPatterns, List<ResourcePattern> artifactPatterns, VersionLister versionLister, BuildableModuleVersionListingResolveResult result);
-
+    fun listModuleVersions(
+        selector: ModuleComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata,
+        ivyPatterns: MutableList<ResourcePattern>,
+        artifactPatterns: MutableList<ResourcePattern>,
+        versionLister: VersionLister,
+        result: BuildableModuleVersionListingResolveResult
+    )
 }

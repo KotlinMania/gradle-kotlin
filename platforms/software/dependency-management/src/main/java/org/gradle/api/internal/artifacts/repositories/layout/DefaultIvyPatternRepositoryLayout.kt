@@ -13,75 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.layout;
+package org.gradle.api.internal.artifacts.repositories.layout
 
-import org.gradle.api.artifacts.repositories.IvyPatternRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import org.gradle.api.artifacts.repositories.IvyPatternRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import java.net.URI
 
 /**
  * A repository layout that uses user-supplied patterns. Each pattern will be appended to the base URI for the repository.
  * At least one artifact pattern must be specified. If no Ivy patterns are specified, then the artifact patterns will be used.
  * Optionally supports a Maven style layout for the 'organisation' part, replacing any dots with forward slashes.
  */
-public class DefaultIvyPatternRepositoryLayout extends AbstractRepositoryLayout implements IvyPatternRepositoryLayout {
-    private final Set<String> artifactPatterns = new LinkedHashSet<>();
-    private final Set<String> ivyPatterns = new LinkedHashSet<>();
-    private boolean m2compatible;
+class DefaultIvyPatternRepositoryLayout : AbstractRepositoryLayout(), IvyPatternRepositoryLayout {
+    private val artifactPatterns: MutableSet<String?> = LinkedHashSet<String?>()
+    private val ivyPatterns: MutableSet<String?> = LinkedHashSet<String?>()
+    private var m2compatible = false
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void artifact(String pattern) {
-        artifactPatterns.add(pattern);
+    override fun artifact(pattern: String) {
+        artifactPatterns.add(pattern)
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void ivy(String pattern) {
-        ivyPatterns.add(pattern);
+    override fun ivy(pattern: String) {
+        ivyPatterns.add(pattern)
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public boolean getM2Compatible() {
-        return m2compatible;
+    override fun getM2Compatible(): Boolean {
+        return m2compatible
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void setM2compatible(boolean m2compatible) {
-        this.m2compatible = m2compatible;
+    override fun setM2compatible(m2compatible: Boolean) {
+        this.m2compatible = m2compatible
     }
 
-    @Override
-    public void apply(@Nullable URI baseUri, IvyRepositoryDescriptor.Builder builder) {
-        builder.setLayoutType("Pattern");
-        builder.setM2Compatible(m2compatible);
+    override fun apply(baseUri: URI?, builder: IvyRepositoryDescriptor.Builder) {
+        builder.setLayoutType("Pattern")
+        builder.setM2Compatible(m2compatible)
 
-        for (String pattern : artifactPatterns) {
-            builder.addArtifactPattern(pattern);
-            builder.addArtifactResource(baseUri, pattern);
+        for (pattern in artifactPatterns) {
+            builder.addArtifactPattern(pattern)
+            builder.addArtifactResource(baseUri, pattern)
         }
 
-        for (String pattern : ivyPatterns) {
-            builder.addIvyPattern(pattern);
+        for (pattern in ivyPatterns) {
+            builder.addIvyPattern(pattern)
         }
 
-        Set<String> effectivePatterns = ivyPatterns.isEmpty() ? artifactPatterns : ivyPatterns;
-        for (String pattern : effectivePatterns) {
-            builder.addIvyResource(baseUri, pattern);
+        val effectivePatterns = if (ivyPatterns.isEmpty()) artifactPatterns else ivyPatterns
+        for (pattern in effectivePatterns) {
+            builder.addIvyResource(baseUri, pattern)
         }
     }
 }

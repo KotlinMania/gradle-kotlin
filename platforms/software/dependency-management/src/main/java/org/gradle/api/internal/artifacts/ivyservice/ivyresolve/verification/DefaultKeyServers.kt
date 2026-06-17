@@ -13,35 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.UncheckedException;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.net.URI
+import java.net.URISyntaxException
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-
-public abstract class DefaultKeyServers {
-    private final static List<URI> DEFAULT_KEYSERVERS = ImmutableList.of(
+object DefaultKeyServers {
+    private val DEFAULT_KEYSERVERS: MutableList<URI> = ImmutableList.of<URI>(
         uri("hkp://ha.pool.sks-keyservers.net"),
         uri("https://keyserver.ubuntu.com"),
         uri("https://keys.openpgp.org"),
         uri("https://pgp.mit.edu")
-    );
+    )
 
-    private static URI uri(String uri) {
+    private fun uri(uri: String): URI {
         try {
-            return new URI(uri);
-        } catch (URISyntaxException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            return URI(uri)
+        } catch (e: URISyntaxException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    public static List<URI> getOrDefaults(List<URI> uris) {
+    fun getOrDefaults(uris: MutableList<URI>): MutableList<URI> {
         if (uris.isEmpty()) {
-            return DEFAULT_KEYSERVERS;
+            return DEFAULT_KEYSERVERS
         }
-        return uris;
+        return uris
     }
 }

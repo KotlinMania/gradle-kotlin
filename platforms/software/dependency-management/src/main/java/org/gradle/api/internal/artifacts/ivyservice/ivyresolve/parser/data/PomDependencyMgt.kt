@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.data;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-
-import java.util.List;
-
-public interface PomDependencyMgt {
-    MavenDependencyKey getId();
-    String getGroupId();
-    String getArtifactId();
-    String getVersion();
-    String getScope();
-    String getType();
-    String getClassifier();
-    List<ModuleIdentifier> getExcludedModules();
+interface PomDependencyMgt {
+    val id: MavenDependencyKey?
+    val groupId: String?
+    val artifactId: String?
+    val version: String?
+    val scope: String?
+    val type: String?
+    val classifier: String?
+    val excludedModules: MutableList<ModuleIdentifier?>?
 }

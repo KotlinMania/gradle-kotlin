@@ -13,41 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple.DefaultExcludeFactory;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.simple.DefaultExcludeFactory
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.local.model.LocalComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.VariantGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Cache for {@link ArtifactSet} for nodes of a resolved graph.
+ * Cache for [ArtifactSet] for nodes of a resolved graph.
  *
  * This cache contains ArtifactSets for the entire build tree.
  */
-@ServiceScope(Scope.BuildTree.class)
-public class VariantArtifactSetCache {
-
-    private static final ExcludeSpec EXCLUDE_NOTHING = new DefaultExcludeFactory().nothing();
-
-    private final Map<Long, ArtifactSet> cache = new ConcurrentHashMap<>();
+@ServiceScope(Scope.BuildTree::class)
+class VariantArtifactSetCache {
+    private val cache: MutableMap<Long, ArtifactSet> = ConcurrentHashMap<Long, ArtifactSet>()
 
     /**
      * Caches the implicit artifact set for the given node of the given component.
-     * <p>
+     *
+     *
      * This cache provides the _implicit_ artifact set for a variant -- the artifact set to
      * use when the dependency pointing to the variant does not modify the artifacts. This means
      * the attributes, capabilities, excludes, and requested artifacts are all empty.
-     * <p>
+     *
+     *
      * Results are undefined if the component does not belong to the given node.
      *
      * @param component The component
@@ -55,8 +52,7 @@ public class VariantArtifactSetCache {
      *
      * @return The resolved artifact set
      */
-    public ArtifactSet getImplicitVariant(ComponentGraphResolveState component, VariantGraphResolveState variant) {
-
+    fun getImplicitVariant(component: ComponentGraphResolveState, variant: VariantGraphResolveState): ArtifactSet {
         // We use the variant's instance ID as the key here. This ID is unique for each variant in the build tree.
         // For variants derived from project components, this cache is quite efficient. We only have a single project
         // component for any given project in the build tree.
@@ -66,29 +62,33 @@ public class VariantArtifactSetCache {
         // cache by deduplicating repositories across projects.
 
         // For now, we limit this cache to be used for project components only.
-        if (!(component instanceof LocalComponentGraphResolveState)) {
-            return createImplicitVariant(component, variant);
+
+        if (component !is LocalComponentGraphResolveState) {
+            return createImplicitVariant(component, variant)
         }
 
         // Check for a present value first without locking.
-        Long key = variant.getInstanceId();
-        ArtifactSet result = cache.get(key);
+        val key = variant.getInstanceId()
+        val result = cache.get(key)
         if (result != null) {
-            return result;
+            return result
         }
 
-        return cache.computeIfAbsent(key, id -> createImplicitVariant(component, variant));
+        return cache.computeIfAbsent(key) { id: Long? -> createImplicitVariant(component, variant) }
     }
 
-    private static VariantResolvingArtifactSet createImplicitVariant(ComponentGraphResolveState component, VariantGraphResolveState variant) {
-        return new VariantResolvingArtifactSet(
-            component,
-            variant,
-            ImmutableAttributes.EMPTY,
-            Collections.emptyList(),
-            EXCLUDE_NOTHING,
-            Collections.emptySet()
-        );
-    }
+    companion object {
+        private val EXCLUDE_NOTHING: ExcludeSpec = DefaultExcludeFactory().nothing()
 
+        private fun createImplicitVariant(component: ComponentGraphResolveState, variant: VariantGraphResolveState): VariantResolvingArtifactSet {
+            return VariantResolvingArtifactSet(
+                component,
+                variant,
+                ImmutableAttributes.EMPTY,
+                mutableListOf<IvyArtifactName>(),
+                EXCLUDE_NOTHING,
+                mutableSetOf<CapabilitySelector>()
+            )
+        }
+    }
 }

@@ -13,364 +13,313 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import com.google.common.collect.ImmutableSortedSet
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.internal.file.DefaultFileSystemLocation
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.provider.Providers
+import org.gradle.api.internal.tasks.properties.DefaultInputFilePropertySpec
+import org.gradle.api.internal.tasks.properties.InputFilePropertySpec
+import org.gradle.api.provider.Provider
+import org.gradle.internal.execution.ExecutionContext
+import org.gradle.internal.execution.Identity
+import org.gradle.internal.execution.ImplementationVisitor
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.execution.InputVisitor
+import org.gradle.internal.execution.OutputVisitor
+import org.gradle.internal.execution.UnitOfWork
+import org.gradle.internal.execution.WorkOutput
+import org.gradle.internal.execution.caching.CachingDisabledReason
+import org.gradle.internal.execution.caching.CachingDisabledReasonCategory
+import org.gradle.internal.execution.caching.CachingState
+import org.gradle.internal.execution.history.OverlappingOutputs
+import org.gradle.internal.execution.model.InputNormalizer
+import org.gradle.internal.file.TreeType
+import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint
+import org.gradle.internal.hash.Hashing
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationProgressEventEmitter
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.CallableBuildOperation
+import org.gradle.internal.operations.UncategorizedBuildOperations
+import org.gradle.internal.properties.InputBehavior
+import org.gradle.internal.properties.PropertyValue
+import org.gradle.internal.snapshot.ValueSnapshot
+import org.gradle.operations.dependencies.transforms.ExecuteTransformActionBuildOperationType
+import org.gradle.operations.dependencies.transforms.IdentifyTransformExecutionProgressDetails
+import org.gradle.operations.dependencies.transforms.SnapshotTransformInputsBuildOperationType
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.util.Optional
+import java.util.function.Supplier
+import javax.annotation.OverridingMethodsMustInvokeSuper
 
-import com.google.common.collect.ImmutableSortedSet;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.internal.file.DefaultFileSystemLocation;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.provider.Providers;
-import org.gradle.api.internal.tasks.properties.DefaultInputFilePropertySpec;
-import org.gradle.api.internal.tasks.properties.InputFilePropertySpec;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.execution.ExecutionContext;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.ImplementationVisitor;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.execution.InputVisitor;
-import org.gradle.internal.execution.OutputVisitor;
-import org.gradle.internal.execution.UnitOfWork;
-import org.gradle.internal.execution.WorkOutput;
-import org.gradle.internal.execution.caching.CachingDisabledReason;
-import org.gradle.internal.execution.caching.CachingDisabledReasonCategory;
-import org.gradle.internal.execution.caching.CachingState;
-import org.gradle.internal.execution.history.OverlappingOutputs;
-import org.gradle.internal.execution.history.changes.InputChangesInternal;
-import org.gradle.internal.execution.model.InputNormalizer;
-import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationProgressEventEmitter;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.CallableBuildOperation;
-import org.gradle.internal.operations.UncategorizedBuildOperations;
-import org.gradle.internal.properties.PropertyValue;
-import org.gradle.internal.snapshot.ValueSnapshot;
-import org.gradle.operations.dependencies.transforms.ExecuteTransformActionBuildOperationType;
-import org.gradle.operations.dependencies.transforms.IdentifyTransformExecutionProgressDetails;
-import org.gradle.operations.dependencies.transforms.SnapshotTransformInputsBuildOperationType;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+internal abstract class AbstractTransformExecution protected constructor(
+    protected val transform: Transform,
+    protected val inputArtifact: File,
+    private val dependencies: TransformDependencies,
+    private val subject: TransformStepSubject,
+    private val transformExecutionListener: TransformExecutionListener,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val progressEventEmitter: BuildOperationProgressEventEmitter,
+    private val fileCollectionFactory: FileCollectionFactory,
+    protected val inputFingerprinter: InputFingerprinter,
+    private val disableCachingByProperty: Boolean
+) : UnitOfWork {
+    private val inputArtifactProvider: Provider<FileSystemLocation>
 
-import javax.annotation.OverridingMethodsMustInvokeSuper;
-import java.io.File;
-import java.util.Map;
-import java.util.Optional;
+    private var operationContext: BuildOperationContext? = null
 
-import static org.gradle.internal.file.TreeType.DIRECTORY;
-import static org.gradle.internal.file.TreeType.FILE;
-import static org.gradle.internal.properties.InputBehavior.INCREMENTAL;
-import static org.gradle.internal.properties.InputBehavior.NON_INCREMENTAL;
-
-abstract class AbstractTransformExecution implements UnitOfWork {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractTransformExecution.class);
-    private static final CachingDisabledReason NOT_CACHEABLE = new CachingDisabledReason(CachingDisabledReasonCategory.NOT_CACHEABLE, "Caching not enabled.");
-    private static final CachingDisabledReason CACHING_DISABLED_REASON = new CachingDisabledReason(CachingDisabledReasonCategory.NOT_CACHEABLE, "Caching disabled by property ('org.gradle.internal.transform-caching-disabled')");
-
-    protected static final String INPUT_ARTIFACT_PROPERTY_NAME = "inputArtifact";
-    private static final String OUTPUT_DIRECTORY_PROPERTY_NAME = "outputDirectory";
-    private static final String RESULTS_FILE_PROPERTY_NAME = "resultsFile";
-    protected static final String INPUT_ARTIFACT_PATH_PROPERTY_NAME = "inputArtifactPath";
-    protected static final String DEPENDENCIES_PROPERTY_NAME = "inputArtifactDependencies";
-    protected static final String SECONDARY_INPUTS_HASH_PROPERTY_NAME = "inputPropertiesHash";
-
-    private static final SnapshotTransformInputsBuildOperationType.Details SNAPSHOT_TRANSFORM_INPUTS_DETAILS = new SnapshotTransformInputsBuildOperationType.Details() {};
-
-    protected final Transform transform;
-    protected final File inputArtifact;
-    private final TransformDependencies dependencies;
-    private final TransformStepSubject subject;
-
-    private final TransformExecutionListener transformExecutionListener;
-    private final BuildOperationRunner buildOperationRunner;
-    private final BuildOperationProgressEventEmitter progressEventEmitter;
-    private final FileCollectionFactory fileCollectionFactory;
-
-    private final Provider<FileSystemLocation> inputArtifactProvider;
-    protected final InputFingerprinter inputFingerprinter;
-    private final boolean disableCachingByProperty;
-
-    private BuildOperationContext operationContext;
-
-    protected AbstractTransformExecution(
-        Transform transform,
-        File inputArtifact,
-        TransformDependencies dependencies,
-        TransformStepSubject subject,
-        TransformExecutionListener transformExecutionListener,
-        BuildOperationRunner buildOperationRunner,
-        BuildOperationProgressEventEmitter progressEventEmitter,
-        FileCollectionFactory fileCollectionFactory,
-        InputFingerprinter inputFingerprinter,
-        boolean disableCachingByProperty
-    ) {
-        this.transform = transform;
-        this.inputArtifact = inputArtifact;
-        this.dependencies = dependencies;
-        this.inputArtifactProvider = Providers.of(new DefaultFileSystemLocation(inputArtifact));
-        this.subject = subject;
-        this.transformExecutionListener = transformExecutionListener;
-
-        this.buildOperationRunner = buildOperationRunner;
-        this.progressEventEmitter = progressEventEmitter;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.inputFingerprinter = inputFingerprinter;
-        this.disableCachingByProperty = disableCachingByProperty;
+    init {
+        this.inputArtifactProvider = Providers.of<FileSystemLocation>(DefaultFileSystemLocation(inputArtifact))
     }
 
-    @Override
-    public Optional<String> getBuildOperationWorkType() {
-        return Optional.of("TRANSFORM");
+    override fun getBuildOperationWorkType(): Optional<String> {
+        return Optional.of<String>("TRANSFORM")
     }
 
-    @Override
-    public Identity identify(Map<String, ValueSnapshot> scalarInputs, Map<String, CurrentFileCollectionFingerprint> fileInputs) {
-        TransformWorkspaceIdentity transformWorkspaceIdentity = createIdentity(scalarInputs, fileInputs);
-        emitIdentifyTransformExecutionProgressDetails(transformWorkspaceIdentity);
-        return transformWorkspaceIdentity;
+    override fun identify(scalarInputs: MutableMap<String, ValueSnapshot>, fileInputs: MutableMap<String, CurrentFileCollectionFingerprint>): Identity {
+        val transformWorkspaceIdentity = createIdentity(scalarInputs, fileInputs)
+        emitIdentifyTransformExecutionProgressDetails(transformWorkspaceIdentity)
+        return transformWorkspaceIdentity
     }
 
-    protected abstract TransformWorkspaceIdentity createIdentity(Map<String, ValueSnapshot> scalarInputs, Map<String, CurrentFileCollectionFingerprint> fileInputs);
+    protected abstract fun createIdentity(scalarInputs: MutableMap<String, ValueSnapshot>, fileInputs: MutableMap<String, CurrentFileCollectionFingerprint>): TransformWorkspaceIdentity
 
-    @Override
-    public WorkOutput execute(ExecutionContext executionContext) {
-        transformExecutionListener.beforeTransformExecution(transform, subject);
+    override fun execute(executionContext: ExecutionContext): WorkOutput {
+        transformExecutionListener.beforeTransformExecution(transform, subject)
         try {
-            return executeWithinTransformerListener(executionContext);
+            return executeWithinTransformerListener(executionContext)
         } finally {
-            transformExecutionListener.afterTransformExecution(transform, subject);
+            transformExecutionListener.afterTransformExecution(transform, subject)
         }
     }
 
-    private WorkOutput executeWithinTransformerListener(ExecutionContext executionRequest) {
-        TransformExecutionResult result = buildOperationRunner.call(new CallableBuildOperation<TransformExecutionResult>() {
-            @Override
-            public TransformExecutionResult call(BuildOperationContext context) {
+    private fun executeWithinTransformerListener(executionRequest: ExecutionContext): WorkOutput {
+        val result: TransformExecutionResult? = buildOperationRunner.call<TransformExecutionResult>(object : CallableBuildOperation<TransformExecutionResult> {
+            override fun call(context: BuildOperationContext): TransformExecutionResult {
                 try {
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Transforming {} with {}", subject.getDisplayName(), transform.getDisplayName());
+                        LOGGER.debug("Transforming {} with {}", subject.getDisplayName(), transform.getDisplayName())
                     }
-                    File workspace = executionRequest.getWorkspace();
-                    InputChangesInternal inputChanges = executionRequest.getInputChanges().orElse(null);
-                    TransformExecutionResult result = transform.transform(inputArtifactProvider, getOutputDir(workspace), dependencies, inputChanges);
-                    TransformExecutionResultSerializer resultSerializer = new TransformExecutionResultSerializer();
-                    resultSerializer.writeToFile(getResultsFile(workspace), result);
-                    return result;
+                    val workspace = executionRequest.getWorkspace()
+                    val inputChanges = executionRequest.getInputChanges().orElse(null)
+                    val result = transform.transform(inputArtifactProvider, getOutputDir(workspace), dependencies, inputChanges)
+                    val resultSerializer = TransformExecutionResultSerializer()
+                    resultSerializer.writeToFile(getResultsFile(workspace), result)
+                    return result
                 } finally {
-                    context.setResult(ExecuteTransformActionBuildOperationType.RESULT_INSTANCE);
+                    context.setResult(ExecuteTransformActionBuildOperationType.RESULT_INSTANCE)
                 }
             }
 
-            @Override
-            public BuildOperationDescriptor.Builder description() {
-                String displayName = transform.getDisplayName() + " " + inputArtifact.getName();
+            override fun description(): BuildOperationDescriptor.Builder {
+                val displayName = transform.getDisplayName() + " " + inputArtifact.getName()
                 return BuildOperationDescriptor.displayName(displayName)
                     .details(ExecuteTransformActionBuildOperationType.DETAILS_INSTANCE)
                     .metadata(UncategorizedBuildOperations.TRANSFORM_ACTION)
-                    .progressDisplayName(displayName);
+                    .progressDisplayName(displayName)
             }
-        });
+        })
 
-        return new WorkOutput() {
-            @Override
-            public WorkResult getDidWork() {
-                return WorkResult.DID_WORK;
+        return object : WorkOutput {
+            override fun getDidWork(): WorkOutput.WorkResult {
+                return WorkOutput.WorkResult.DID_WORK
             }
 
-            @Override
-            public Object getOutput(File workspace) {
-                return result.resolveForWorkspace(getOutputDir(workspace));
+            override fun getOutput(workspace: File): Any {
+                return result!!.resolveForWorkspace(getOutputDir(workspace))
             }
-        };
+        }
     }
 
-    @Override
-    public Object loadAlreadyProducedOutput(File workspace) {
-        TransformExecutionResultSerializer resultSerializer = new TransformExecutionResultSerializer();
-        return resultSerializer.readResultsFile(getResultsFile(workspace)).resolveForWorkspace(getOutputDir(workspace));
+    override fun loadAlreadyProducedOutput(workspace: File): Any {
+        val resultSerializer = TransformExecutionResultSerializer()
+        return resultSerializer.readResultsFile(getResultsFile(workspace)).resolveForWorkspace(getOutputDir(workspace))
     }
 
-    @Override
-    public InputFingerprinter getInputFingerprinter() {
-        return inputFingerprinter;
+    override fun getInputFingerprinter(): InputFingerprinter {
+        return inputFingerprinter
     }
 
-    private static File getOutputDir(File workspace) {
-        return new File(workspace, "transformed");
+    override fun visitImplementations(visitor: ImplementationVisitor) {
+        visitor.visitImplementation(transform.getImplementationClass())
     }
 
-    private static File getResultsFile(File workspace) {
-        return new File(workspace, "results.bin");
-    }
-
-    @Override
-    public void visitImplementations(ImplementationVisitor visitor) {
-        visitor.visitImplementation(transform.getImplementationClass());
-    }
-
-    @Override
     @OverridingMethodsMustInvokeSuper
-    public void visitImmutableInputs(InputVisitor visitor) {
+    override fun visitImmutableInputs(visitor: InputVisitor) {
         // Emulate secondary inputs as a single property for now
-        visitor.visitInputProperty(SECONDARY_INPUTS_HASH_PROPERTY_NAME, transform::getSecondaryInputHash);
-        visitor.visitInputProperty(INPUT_ARTIFACT_PATH_PROPERTY_NAME, () ->
-            // We always need the name as an input to the artifact transform,
+        visitor.visitInputProperty(SECONDARY_INPUTS_HASH_PROPERTY_NAME, InputVisitor.ValueSupplier { transform.getSecondaryInputHash() })
+        visitor.visitInputProperty(INPUT_ARTIFACT_PATH_PROPERTY_NAME, InputVisitor.ValueSupplier { // We always need the name as an input to the artifact transform,
             // since it is part of the ComponentArtifactIdentifier returned by the transform.
             // For absolute paths, the name is already part of the normalized path,
             // and for all the other normalization strategies we use the name directly.
-            transform.getInputArtifactNormalizer() == InputNormalizer.ABSOLUTE_PATH
-                ? inputArtifact.getAbsolutePath()
-                : inputArtifact.getName());
-        visitor.visitInputFileProperty(DEPENDENCIES_PROPERTY_NAME, NON_INCREMENTAL,
-            new InputVisitor.InputFileValueSupplier(
+            if (transform.getInputArtifactNormalizer() === InputNormalizer.ABSOLUTE_PATH)
+                inputArtifact.getAbsolutePath()
+            else
+                inputArtifact.getName()
+        })
+        visitor.visitInputFileProperty(
+            DEPENDENCIES_PROPERTY_NAME, InputBehavior.NON_INCREMENTAL,
+            InputVisitor.InputFileValueSupplier(
                 dependencies,
                 transform.getInputArtifactDependenciesNormalizer(),
                 transform.getInputArtifactDependenciesDirectorySensitivity(),
                 transform.getInputArtifactDependenciesLineEndingNormalization(),
-                () -> dependencies.getFiles()
-                    .orElse(FileCollectionFactory.empty())));
+                Supplier {
+                    dependencies.getFiles()
+                        .orElse(FileCollectionFactory.empty())
+                })
+        )
     }
 
-    protected void emitIdentifyTransformExecutionProgressDetails(TransformWorkspaceIdentity transformWorkspaceIdentity) {
-        progressEventEmitter.emitNowIfCurrent(new DefaultIdentifyTransformExecutionProgressDetails(
-            inputArtifact,
-            transformWorkspaceIdentity,
-            transform,
-            subject.getInitialComponentIdentifier()));
+    protected fun emitIdentifyTransformExecutionProgressDetails(transformWorkspaceIdentity: TransformWorkspaceIdentity) {
+        progressEventEmitter.emitNowIfCurrent(
+            DefaultIdentifyTransformExecutionProgressDetails(
+                inputArtifact,
+                transformWorkspaceIdentity,
+                transform,
+                subject.getInitialComponentIdentifier()
+            )
+        )
     }
 
-    protected void visitInputArtifact(InputVisitor visitor) {
-        visitor.visitInputFileProperty(INPUT_ARTIFACT_PROPERTY_NAME, INCREMENTAL,
-            new InputVisitor.InputFileValueSupplier(
+    protected fun visitInputArtifact(visitor: InputVisitor) {
+        visitor.visitInputFileProperty(
+            INPUT_ARTIFACT_PROPERTY_NAME, InputBehavior.INCREMENTAL,
+            InputVisitor.InputFileValueSupplier(
                 inputArtifactProvider,
                 transform.getInputArtifactNormalizer(),
                 transform.getInputArtifactDirectorySensitivity(),
                 transform.getInputArtifactLineEndingNormalization(),
-                () -> fileCollectionFactory.fixed(inputArtifact)));
+                Supplier { fileCollectionFactory.fixed(inputArtifact) })
+        )
     }
 
-    @Override
-    public void visitOutputs(File workspace, OutputVisitor visitor) {
-        File outputDir = getOutputDir(workspace);
-        File resultsFile = getResultsFile(workspace);
-        visitor.visitOutputProperty(OUTPUT_DIRECTORY_PROPERTY_NAME, DIRECTORY,
-            OutputVisitor.OutputFileValueSupplier.fromStatic(outputDir, fileCollectionFactory.fixed(outputDir)));
-        visitor.visitOutputProperty(RESULTS_FILE_PROPERTY_NAME, FILE,
-            OutputVisitor.OutputFileValueSupplier.fromStatic(resultsFile, fileCollectionFactory.fixed(resultsFile)));
+    override fun visitOutputs(workspace: File, visitor: OutputVisitor) {
+        val outputDir: File = getOutputDir(workspace)
+        val resultsFile: File = getResultsFile(workspace)
+        visitor.visitOutputProperty(
+            OUTPUT_DIRECTORY_PROPERTY_NAME, TreeType.DIRECTORY,
+            OutputVisitor.OutputFileValueSupplier.fromStatic(outputDir, fileCollectionFactory.fixed(outputDir))
+        )
+        visitor.visitOutputProperty(
+            RESULTS_FILE_PROPERTY_NAME, TreeType.FILE,
+            OutputVisitor.OutputFileValueSupplier.fromStatic(resultsFile, fileCollectionFactory.fixed(resultsFile))
+        )
     }
 
-    @Override
-    public void markLegacySnapshottingInputsStarted() {
-        this.operationContext = buildOperationRunner.start(BuildOperationDescriptor
-            .displayName("Snapshot transform inputs")
-            .name("Snapshot transform inputs")
-            .details(SNAPSHOT_TRANSFORM_INPUTS_DETAILS));
+    override fun markLegacySnapshottingInputsStarted() {
+        this.operationContext = buildOperationRunner.start(
+            BuildOperationDescriptor
+                .displayName("Snapshot transform inputs")
+                .name("Snapshot transform inputs")
+                .details(SNAPSHOT_TRANSFORM_INPUTS_DETAILS)
+        )
     }
 
-    @Override
-    public void markLegacySnapshottingInputsFinished(CachingState cachingState) {
+    override fun markLegacySnapshottingInputsFinished(cachingState: CachingState) {
         if (operationContext != null) {
-            ImmutableSortedSet.Builder<InputFilePropertySpec> builder = ImmutableSortedSet.naturalOrder();
-            builder.add(new DefaultInputFilePropertySpec(
-                INPUT_ARTIFACT_PROPERTY_NAME,
-                transform.getInputArtifactNormalizer(),
-                FileCollectionFactory.empty(),
-                PropertyValue.ABSENT,
-                INCREMENTAL,
-                transform.getInputArtifactDirectorySensitivity(),
-                transform.getInputArtifactLineEndingNormalization()
-            ));
-            builder.add(new DefaultInputFilePropertySpec(
-                DEPENDENCIES_PROPERTY_NAME,
-                transform.getInputArtifactDependenciesNormalizer(),
-                FileCollectionFactory.empty(),
-                PropertyValue.ABSENT,
-                NON_INCREMENTAL,
-                transform.getInputArtifactDependenciesDirectorySensitivity(),
-                transform.getInputArtifactDependenciesLineEndingNormalization()
-            ));
-            operationContext.setResult(new SnapshotTransformInputsBuildOperationResult(cachingState, builder.build()));
-            operationContext = null;
+            val builder = ImmutableSortedSet.naturalOrder<InputFilePropertySpec>()
+            builder.add(
+                DefaultInputFilePropertySpec(
+                    INPUT_ARTIFACT_PROPERTY_NAME,
+                    transform.getInputArtifactNormalizer(),
+                    FileCollectionFactory.empty(),
+                    PropertyValue.ABSENT,
+                    InputBehavior.INCREMENTAL,
+                    transform.getInputArtifactDirectorySensitivity(),
+                    transform.getInputArtifactLineEndingNormalization()
+                )
+            )
+            builder.add(
+                DefaultInputFilePropertySpec(
+                    DEPENDENCIES_PROPERTY_NAME,
+                    transform.getInputArtifactDependenciesNormalizer(),
+                    FileCollectionFactory.empty(),
+                    PropertyValue.ABSENT,
+                    InputBehavior.NON_INCREMENTAL,
+                    transform.getInputArtifactDependenciesDirectorySensitivity(),
+                    transform.getInputArtifactDependenciesLineEndingNormalization()
+                )
+            )
+            operationContext!!.setResult(SnapshotTransformInputsBuildOperationResult(cachingState, builder.build()))
+            operationContext = null
         }
     }
 
-    @Override
-    public Optional<CachingDisabledReason> shouldDisableCaching(@Nullable OverlappingOutputs detectedOverlappingOutputs) {
-        return transform.isCacheable()
-            ? maybeDisableCachingByProperty()
-            : Optional.of(NOT_CACHEABLE);
+    override fun shouldDisableCaching(detectedOverlappingOutputs: OverlappingOutputs?): Optional<CachingDisabledReason> {
+        return if (transform.isCacheable())
+            maybeDisableCachingByProperty()
+        else
+            Optional.of<CachingDisabledReason>(NOT_CACHEABLE)
     }
 
-    private Optional<CachingDisabledReason> maybeDisableCachingByProperty() {
+    private fun maybeDisableCachingByProperty(): Optional<CachingDisabledReason> {
         if (disableCachingByProperty) {
-            return Optional.of(CACHING_DISABLED_REASON);
+            return Optional.of<CachingDisabledReason>(CACHING_DISABLED_REASON)
         }
 
-        return Optional.empty();
+        return Optional.empty<CachingDisabledReason>()
     }
 
-    @Override
-    public String getDisplayName() {
-        return transform.getDisplayName() + ": " + inputArtifact;
+    override fun getDisplayName(): String {
+        return transform.getDisplayName() + ": " + inputArtifact
     }
 
-    private static class DefaultIdentifyTransformExecutionProgressDetails implements IdentifyTransformExecutionProgressDetails {
+    private class DefaultIdentifyTransformExecutionProgressDetails(
+        private val inputArtifact: File,
+        private val transformWorkspaceIdentity: TransformWorkspaceIdentity,
+        private val transform: Transform,
+        private val componentIdentifier: ComponentIdentifier
+    ) : IdentifyTransformExecutionProgressDetails {
+        val identity: String
+            get() = transformWorkspaceIdentity.getUniqueId()
 
-        private final File inputArtifact;
-        private final TransformWorkspaceIdentity transformWorkspaceIdentity;
-        private final Transform transform;
-        private final ComponentIdentifier componentIdentifier;
+        val fromAttributes: MutableMap<String, String>
+            get() = AttributesToMapConverter.convertToMap(transform.getFromAttributes())
 
-        public DefaultIdentifyTransformExecutionProgressDetails(
-            File inputArtifact,
-            TransformWorkspaceIdentity transformWorkspaceIdentity,
-            Transform transform,
-            ComponentIdentifier componentIdentifier
-        ) {
-            this.inputArtifact = inputArtifact;
-            this.transformWorkspaceIdentity = transformWorkspaceIdentity;
-            this.transform = transform;
-            this.componentIdentifier = componentIdentifier;
+        val toAttributes: MutableMap<String, String>
+            get() = AttributesToMapConverter.convertToMap(transform.getToAttributes())
+
+        val componentId: ComponentIdentifier
+            get() = ComponentToOperationConverter.convertComponentIdentifier(componentIdentifier)
+
+        val artifactName: String
+            get() = inputArtifact.getName()
+
+        val transformActionClass: Class<*>
+            get() = transform.getImplementationClass()
+
+        val secondaryInputValueHashBytes: ByteArray
+            get() = Hashing.hashHashable(transformWorkspaceIdentity.getSecondaryInputsSnapshot()).toByteArray()
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(AbstractTransformExecution::class.java)
+        private val NOT_CACHEABLE = CachingDisabledReason(CachingDisabledReasonCategory.NOT_CACHEABLE, "Caching not enabled.")
+        private val CACHING_DISABLED_REASON = CachingDisabledReason(CachingDisabledReasonCategory.NOT_CACHEABLE, "Caching disabled by property ('org.gradle.internal.transform-caching-disabled')")
+
+        protected const val INPUT_ARTIFACT_PROPERTY_NAME: String = "inputArtifact"
+        private const val OUTPUT_DIRECTORY_PROPERTY_NAME = "outputDirectory"
+        private const val RESULTS_FILE_PROPERTY_NAME = "resultsFile"
+        protected const val INPUT_ARTIFACT_PATH_PROPERTY_NAME: String = "inputArtifactPath"
+        protected const val DEPENDENCIES_PROPERTY_NAME: String = "inputArtifactDependencies"
+        protected const val SECONDARY_INPUTS_HASH_PROPERTY_NAME: String = "inputPropertiesHash"
+
+        private val SNAPSHOT_TRANSFORM_INPUTS_DETAILS: SnapshotTransformInputsBuildOperationType.Details = object : SnapshotTransformInputsBuildOperationType.Details {}
+
+        private fun getOutputDir(workspace: File): File {
+            return File(workspace, "transformed")
         }
 
-        @Override
-        public String getIdentity() {
-            return transformWorkspaceIdentity.getUniqueId();
-        }
-
-        @Override
-        public Map<String, String> getFromAttributes() {
-            return AttributesToMapConverter.convertToMap(transform.getFromAttributes());
-        }
-
-        @Override
-        public Map<String, String> getToAttributes() {
-            return AttributesToMapConverter.convertToMap(transform.getToAttributes());
-        }
-
-        @Override
-        public org.gradle.operations.dependencies.variants.ComponentIdentifier getComponentId() {
-            return ComponentToOperationConverter.convertComponentIdentifier(componentIdentifier);
-        }
-
-        @Override
-        public String getArtifactName() {
-            return inputArtifact.getName();
-        }
-
-        @Override
-        public Class<?> getTransformActionClass() {
-            return transform.getImplementationClass();
-        }
-
-        @Override
-        public byte[] getSecondaryInputValueHashBytes() {
-            return Hashing.hashHashable(transformWorkspaceIdentity.getSecondaryInputsSnapshot()).toByteArray();
+        private fun getResultsFile(workspace: File): File {
+            return File(workspace, "results.bin")
         }
     }
 }

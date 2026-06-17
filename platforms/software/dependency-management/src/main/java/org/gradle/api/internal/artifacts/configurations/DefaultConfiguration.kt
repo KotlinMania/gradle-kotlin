@@ -13,525 +13,500 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.Describable;
-import org.gradle.api.DomainObjectCollection;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.GradleException;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.ArtifactCollection;
-import org.gradle.api.artifacts.ArtifactView;
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationPublications;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.DependencyConstraintSet;
-import org.gradle.api.artifacts.DependencyResolutionListener;
-import org.gradle.api.artifacts.DependencySet;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.PublishArtifactSet;
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.artifacts.ResolvableDependencies;
-import org.gradle.api.artifacts.ResolvedConfiguration;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.result.ResolutionResult;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.CompositeDomainObjectSet;
-import org.gradle.api.internal.ConfigurationServicesBundle;
-import org.gradle.api.internal.DefaultDomainObjectSet;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.artifacts.ConfigurationResolver;
-import org.gradle.api.internal.artifacts.DefaultDependencyConstraintSet;
-import org.gradle.api.internal.artifacts.DefaultDependencySet;
-import org.gradle.api.internal.artifacts.DefaultExcludeRule;
-import org.gradle.api.internal.artifacts.DefaultPublishArtifactSet;
-import org.gradle.api.internal.artifacts.ExcludeRuleNotationConverter;
-import org.gradle.api.internal.artifacts.ResolveExceptionMapper;
-import org.gradle.api.internal.artifacts.ResolverResults;
-import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal;
-import org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters;
-import org.gradle.api.internal.artifacts.ivyservice.TypedResolveException;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.artifacts.resolver.DefaultResolutionOutputs;
-import org.gradle.api.internal.artifacts.resolver.ResolutionAccess;
-import org.gradle.api.internal.artifacts.resolver.ResolutionOutputsInternal;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.FreezableAttributeContainer;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.AbstractFileCollection;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.initialization.ResettableConfiguration;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.api.problems.ProblemId;
-import org.gradle.api.problems.internal.GradleCoreProblemGroup;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.specs.Spec;
-import org.gradle.api.specs.Specs;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.Factories;
-import org.gradle.internal.Factory;
-import org.gradle.internal.ImmutableActionSet;
-import org.gradle.internal.code.UserCodeApplicationContext;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.deprecation.Documentation;
-import org.gradle.internal.event.ListenerBroadcast;
-import org.gradle.internal.exceptions.ResolutionProvider;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.gradle.internal.model.CalculatedModelValue;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.CallableBuildOperation;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.operations.dependencies.configurations.ConfigurationIdentity;
-import org.gradle.util.Path;
-import org.gradle.util.internal.CollectionUtils;
-import org.gradle.util.internal.ConfigureUtil;
-import org.gradle.util.internal.WrapUtil;
-import org.jspecify.annotations.Nullable;
-import javax.inject.Inject;
-import java.io.File;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-import static org.gradle.api.internal.artifacts.configurations.ConfigurationInternal.InternalState.UNRESOLVED;
-import static org.gradle.util.internal.ConfigureUtil.configure;
+import com.google.common.annotations.VisibleForTesting
+import com.google.common.collect.ImmutableList
+import groovy.lang.Closure
+import org.apache.commons.lang3.text.WordUtils
+import org.gradle.api.Action
+import org.gradle.api.Describable
+import org.gradle.api.DomainObjectCollection
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.GradleException
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.ArtifactCollection
+import org.gradle.api.artifacts.ArtifactView
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationPublications
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.DependencyConstraintSet
+import org.gradle.api.artifacts.DependencyResolutionListener
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.PublishArtifactSet
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.artifacts.ResolvableDependencies
+import org.gradle.api.artifacts.ResolvedConfiguration
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolutionResult
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.CompositeDomainObjectSet
+import org.gradle.api.internal.ConfigurationServicesBundle
+import org.gradle.api.internal.DefaultDomainObjectSet
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.artifacts.ConfigurationResolver
+import org.gradle.api.internal.artifacts.ConfigurationResolver.Factory.create
+import org.gradle.api.internal.artifacts.DefaultDependencyConstraintSet
+import org.gradle.api.internal.artifacts.DefaultDependencySet
+import org.gradle.api.internal.artifacts.DefaultExcludeRule
+import org.gradle.api.internal.artifacts.DefaultPublishArtifactSet
+import org.gradle.api.internal.artifacts.ExcludeRuleNotationConverter
+import org.gradle.api.internal.artifacts.ResolveExceptionMapper
+import org.gradle.api.internal.artifacts.ResolverResults
+import org.gradle.api.internal.artifacts.dependencies.DependencyConstraintInternal
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParserFactory.create
+import org.gradle.api.internal.artifacts.dsl.PublishArtifactNotationParserFactory.create
+import org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters
+import org.gradle.api.internal.artifacts.ivyservice.TypedResolveException
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure
+import org.gradle.api.internal.artifacts.resolver.DefaultResolutionOutputs
+import org.gradle.api.internal.artifacts.resolver.ResolutionAccess
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.FreezableAttributeContainer
+import org.gradle.api.internal.file.AbstractFileCollection
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.initialization.ResettableConfiguration
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.problems.ProblemId.Companion.create
+import org.gradle.api.problems.internal.GradleCoreProblemGroup.configurationUsage
+import org.gradle.api.problems.internal.ProblemsInternal
+import org.gradle.api.provider.Provider
+import org.gradle.api.specs.Spec
+import org.gradle.api.specs.Specs
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.Factories
+import org.gradle.internal.Factory
+import org.gradle.internal.Factory.create
+import org.gradle.internal.ImmutableActionSet
+import org.gradle.internal.code.UserCodeApplicationContext
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
+import org.gradle.internal.deprecation.Documentation.Companion.userManual
+import org.gradle.internal.event.ListenerBroadcast
+import org.gradle.internal.exceptions.ResolutionProvider
+import org.gradle.internal.logging.text.TreeFormatter
+import org.gradle.internal.model.CalculatedModelValue
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.CallableBuildOperation
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.operations.dependencies.configurations.ConfigurationIdentity
+import org.gradle.util.Path
+import org.gradle.util.internal.CollectionUtils
+import org.gradle.util.internal.ConfigureUtil
+import org.gradle.util.internal.WrapUtil
+import java.io.File
+import java.util.ArrayDeque
+import java.util.Arrays
+import java.util.Collections
+import java.util.Objects
+import java.util.Optional
+import java.util.Queue
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import java.util.stream.StreamSupport
+import javax.inject.Inject
 
 /**
- * The default {@link Configuration} implementation.
+ * The default [Configuration] implementation.
  */
-@SuppressWarnings("rawtypes")
-public abstract class DefaultConfiguration extends AbstractFileCollection implements ConfigurationInternal, MutationValidator, ResettableConfiguration {
-    private final ConfigurationResolver resolver;
-    private final DefaultDependencySet dependencies;
-    private final DefaultDependencyConstraintSet dependencyConstraints;
-    private final DefaultDomainObjectSet<Dependency> ownDependencies;
-    private final DefaultDomainObjectSet<DependencyConstraint> ownDependencyConstraints;
-    private @Nullable InheritedCollection<Dependency> inheritedDependencies;
-    private @Nullable InheritedCollection<DependencyConstraint> inheritedDependencyConstraints;
-    private @Nullable DefaultDependencySet allDependencies;
-    private @Nullable DefaultDependencyConstraintSet allDependencyConstraints;
-    private ImmutableActionSet<DependencySet> defaultDependencyActions = ImmutableActionSet.empty();
-    private ImmutableActionSet<DependencySet> withDependencyActions = ImmutableActionSet.empty();
-    private final DefaultPublishArtifactSet artifacts;
-    private final DefaultDomainObjectSet<PublishArtifact> ownArtifacts;
-    private @Nullable InheritedCollection<PublishArtifact> inheritedArtifacts;
-    private @Nullable DefaultPublishArtifactSet allArtifacts;
-    private final ConfigurationResolvableDependencies resolvableDependencies;
-    private ListenerBroadcast<DependencyResolutionListener> dependencyResolutionListeners;
+abstract class DefaultConfiguration(
+    configurationServices: ConfigurationServicesBundle,
+    domainObjectContext: DomainObjectContext,
+    private val name: String,
+    private val isDetached: Boolean,
+    private val resolver: ConfigurationResolver,
+    dependencyResolutionListeners: ListenerBroadcast<DependencyResolutionListener?>,
+    resolutionStrategyFactory: Factory<ResolutionStrategyInternal?>,
+    artifactNotationParser: NotationParser<Any, ConfigurablePublishArtifact>,
+    capabilityNotationParser: NotationParser<Any, Capability>,
+    private val userCodeApplicationContext: UserCodeApplicationContext,
+    defaultConfigurationFactory: DefaultConfigurationFactory,
+    roleAtCreation: ConfigurationRole,
+    lockUsage: Boolean
+) : AbstractFileCollection(configurationServices.taskDependencyFactory), ConfigurationInternal, MutationValidator, ResettableConfiguration {
+    private val dependencies: DefaultDependencySet
+    private val dependencyConstraints: DefaultDependencyConstraintSet
+    private val ownDependencies: DefaultDomainObjectSet<Dependency>
+    private val ownDependencyConstraints: DefaultDomainObjectSet<DependencyConstraint>
+    private var inheritedDependencies: InheritedCollection<Dependency>? = null
+    private var inheritedDependencyConstraints: InheritedCollection<DependencyConstraint>? = null
+    private var allDependencies: DefaultDependencySet? = null
+    private var allDependencyConstraints: DefaultDependencyConstraintSet? = null
+    private var defaultDependencyActions = ImmutableActionSet.empty<DependencySet>()
+    private var withDependencyActions = ImmutableActionSet.empty<DependencySet>()
+    private val artifacts: DefaultPublishArtifactSet
+    private val ownArtifacts: DefaultDomainObjectSet<PublishArtifact>
+    private var inheritedArtifacts: InheritedCollection<PublishArtifact>? = null
+    private var allArtifacts: DefaultPublishArtifactSet? = null
+    private val resolvableDependencies: ConfigurationResolvableDependencies
 
-    private final Path identityPath;
-    private final Path projectPath;
+    @get:VisibleForTesting
+    var dependencyResolutionListeners: ListenerBroadcast<DependencyResolutionListener?>
+        private set
 
-    private final String name;
-    private final boolean isDetached;
-    private final DefaultConfigurationPublications outgoing;
+    private val identityPath: Path
+    private val projectPath: Path
 
-    private boolean visible = true;
-    private boolean transitive = true;
-    private ExtendedConfigurations extendsFrom;
-    private final Consumer<Configuration> validateExtendedConfiguration;
-    private @Nullable String description;
-    private final Set<Object> excludeRules = new LinkedHashSet<>();
-    private @Nullable Set<ExcludeRule> parsedExcludeRules;
+    private val outgoing: DefaultConfigurationPublications
 
-    private boolean canBeConsumed;
-    private boolean canBeResolved;
-    private boolean canBeDeclaredAgainst;
-    private final boolean consumptionDeprecated;
-    private final boolean resolutionDeprecated;
-    private final boolean declarationDeprecated;
-    private boolean usageCanBeMutated = true;
-    private final ConfigurationRole roleAtCreation;
+    private var visible = true
+    private var transitive = true
+    private var extendsFrom: ExtendedConfigurations
+    private val validateExtendedConfiguration: Consumer<Configuration>
+    private var description: String? = null
+    private val excludeRules: MutableSet<Any> = LinkedHashSet<Any>()
+    private var parsedExcludeRules: MutableSet<ExcludeRule>? = null
+
+    private var canBeConsumed: Boolean
+    private var canBeResolved: Boolean
+    private var canBeDeclaredAgainst: Boolean
+    private val consumptionDeprecated: Boolean
+    private val resolutionDeprecated: Boolean
+    private val declarationDeprecated: Boolean
+    private var usageCanBeMutated = true
+    private val roleAtCreation: ConfigurationRole
 
     // This field is reflectively accessed by Nebula:
     // https://github.com/nebula-plugins/gradle-resolution-rules-plugin/blob/db24ee7e0b5c5c6f6327cdfd377e90e505bb1fd2/src/main/kotlin/nebula/plugin/resolutionrules/configurations.kt#L59
-    private InternalState observedState = UNRESOLVED;
-    private @Nullable Supplier<String> observationReason = null;
-    boolean dependenciesObserved = false;
+    private var observedState = ConfigurationInternal.InternalState.UNRESOLVED
+    private var observationReason: Supplier<String>? = null
+    var dependenciesObserved: Boolean = false
 
-    private final FreezableAttributeContainer configurationAttributes;
-    private final DomainObjectContext domainObjectContext;
-    private final ResolutionAccess resolutionAccess;
-    private @Nullable FileCollectionInternal intrinsicFiles;
+    private val configurationAttributes: FreezableAttributeContainer
+    private val domainObjectContext: DomainObjectContext
+    private val resolutionAccess: ResolutionAccess
+    private var intrinsicFiles: FileCollectionInternal? = null
+        get() {
+            if (field == null) {
+                assertIsResolvable()
+                field = resolutionAccess.publicView!!.getFiles()
+            }
+            return field
+        }
 
-    private final DisplayName displayName;
-    private final UserCodeApplicationContext userCodeApplicationContext;
+    private val displayName: DisplayName
 
-    private final AtomicInteger copyCount = new AtomicInteger();
+    private val copyCount = AtomicInteger()
 
-    private List<String> declarationAlternatives = ImmutableList.of();
-    private List<String> resolutionAlternatives = ImmutableList.of();
+    private var declarationAlternatives: MutableList<String> = ImmutableList.of<String>()
+    private var resolutionAlternatives: MutableList<String> = ImmutableList.of<String>()
 
-    private final CalculatedModelValue<Optional<ResolverResults>> currentResolveState;
+    private val currentResolveState: CalculatedModelValue<Optional<ResolverResults>>
 
-    private @Nullable ConfigurationInternal consistentResolutionSource;
-    private @Nullable String consistentResolutionReason;
+    private var consistentResolutionSource: ConfigurationInternal? = null
+    private var consistentResolutionReason: String? = null
 
-    /** This factory can't be extracted to the services bundle, as it would create a circular dependency between those two types. */
-    private final DefaultConfigurationFactory defaultConfigurationFactory;
+    /** This factory can't be extracted to the services bundle, as it would create a circular dependency between those two types.  */
+    private val defaultConfigurationFactory: DefaultConfigurationFactory
 
-    /** This factory has some unique usages during copy, so it can't be extracted to the services bundle. */
-    private Factory<ResolutionStrategyInternal> resolutionStrategyFactory;
-    private @Nullable ResolutionStrategyInternal resolutionStrategy;
+    /** This factory has some unique usages during copy, so it can't be extracted to the services bundle.  */
+    private var resolutionStrategyFactory: Factory<ResolutionStrategyInternal?>?
+    private var resolutionStrategy: ResolutionStrategyInternal? = null
 
-    private final ConfigurationServicesBundle configurationServices;
+    private val configurationServices: ConfigurationServicesBundle
 
     /**
-     * To create an instance, use {@link DefaultConfigurationFactory#create}.
+     * To create an instance, use [DefaultConfigurationFactory.create].
      */
-    public DefaultConfiguration(
-        ConfigurationServicesBundle configurationServices,
-        DomainObjectContext domainObjectContext,
-        String name,
-        boolean isDetached,
-        ConfigurationResolver resolver,
-        ListenerBroadcast<DependencyResolutionListener> dependencyResolutionListeners,
-        Factory<ResolutionStrategyInternal> resolutionStrategyFactory,
-        NotationParser<Object, ConfigurablePublishArtifact> artifactNotationParser,
-        NotationParser<Object, Capability> capabilityNotationParser,
-        UserCodeApplicationContext userCodeApplicationContext,
-        DefaultConfigurationFactory defaultConfigurationFactory,
-        ConfigurationRole roleAtCreation,
-        boolean lockUsage
-    ) {
-        super(configurationServices.getTaskDependencyFactory());
-        this.userCodeApplicationContext = userCodeApplicationContext;
-        this.identityPath = domainObjectContext.identityPath(name);
-        this.projectPath = domainObjectContext.projectPath(name);
-        this.name = name;
-        this.isDetached = isDetached;
-        this.resolver = resolver;
-        this.resolutionStrategyFactory = resolutionStrategyFactory;
-        this.dependencyResolutionListeners = dependencyResolutionListeners;
-        this.domainObjectContext = domainObjectContext;
+    init {
+        this.identityPath = domainObjectContext.identityPath(name)
+        this.projectPath = domainObjectContext.projectPath(name)
+        this.resolutionStrategyFactory = resolutionStrategyFactory
+        this.dependencyResolutionListeners = dependencyResolutionListeners
+        this.domainObjectContext = domainObjectContext
 
-        this.displayName = Describables.memoize(new ConfigurationDescription(identityPath));
-        this.configurationAttributes = configurationServices.getAttributesFactory().freezable(configurationServices.getAttributesFactory().mutable(), this.displayName);
+        this.displayName = Describables.memoize(ConfigurationDescription(identityPath))
+        this.configurationAttributes = configurationServices.attributesFactory.freezable(configurationServices.attributesFactory.mutable(), this.displayName)
 
-        this.resolutionAccess = new ConfigurationResolutionAccess();
-        this.resolvableDependencies = configurationServices.getObjectFactory().newInstance(ConfigurationResolvableDependencies.class, this);
+        this.resolutionAccess = DefaultConfiguration.ConfigurationResolutionAccess()
+        this.resolvableDependencies = configurationServices.objectFactory.newInstance(ConfigurationResolvableDependencies::class.java, this)
 
-        this.ownDependencies = (DefaultDomainObjectSet<Dependency>) configurationServices.getDomainObjectCollectionFactory().newDomainObjectSet(Dependency.class);
-        this.ownDependencies.beforeCollectionChanges(validateMutationType(this, MutationType.DEPENDENCIES));
-        this.ownDependencyConstraints = (DefaultDomainObjectSet<DependencyConstraint>) configurationServices.getDomainObjectCollectionFactory().newDomainObjectSet(DependencyConstraint.class);
-        this.ownDependencyConstraints.beforeCollectionChanges(validateMutationType(this, MutationType.DEPENDENCIES));
+        this.ownDependencies = configurationServices.domainObjectCollectionFactory.newDomainObjectSet(Dependency::class.java) as DefaultDomainObjectSet<Dependency>
+        this.ownDependencies.beforeCollectionChanges(validateMutationType(this, MutationValidator.MutationType.DEPENDENCIES))
+        this.ownDependencyConstraints = configurationServices.domainObjectCollectionFactory.newDomainObjectSet(DependencyConstraint::class.java) as DefaultDomainObjectSet<DependencyConstraint>
+        this.ownDependencyConstraints.beforeCollectionChanges(validateMutationType(this, MutationValidator.MutationType.DEPENDENCIES))
 
-        this.dependencies = new DefaultDependencySet(Describables.of(displayName, "dependencies"), this, ownDependencies);
-        this.dependencyConstraints = new DefaultDependencyConstraintSet(Describables.of(displayName, "dependency constraints"), this, ownDependencyConstraints);
+        this.dependencies = DefaultDependencySet(Describables.of(displayName, "dependencies"), this, ownDependencies)
+        this.dependencyConstraints = DefaultDependencyConstraintSet(Describables.of(displayName, "dependency constraints"), this, ownDependencyConstraints)
 
-        this.ownArtifacts = (DefaultDomainObjectSet<PublishArtifact>) configurationServices.getDomainObjectCollectionFactory().newDomainObjectSet(PublishArtifact.class);
-        this.ownArtifacts.beforeCollectionChanges(validateMutationType(this, MutationType.ARTIFACTS));
+        this.ownArtifacts = configurationServices.domainObjectCollectionFactory.newDomainObjectSet(PublishArtifact::class.java) as DefaultDomainObjectSet<PublishArtifact>
+        this.ownArtifacts.beforeCollectionChanges(validateMutationType(this, MutationValidator.MutationType.ARTIFACTS))
 
-        this.artifacts = new DefaultPublishArtifactSet(Describables.of(displayName, "artifacts"), ownArtifacts, configurationServices.getFileCollectionFactory(), taskDependencyFactory);
+        this.artifacts = DefaultPublishArtifactSet(Describables.of(displayName, "artifacts"), ownArtifacts, configurationServices.fileCollectionFactory, taskDependencyFactory)
 
-        this.outgoing = configurationServices.getObjectFactory().newInstance(DefaultConfigurationPublications.class, displayName, artifacts, new AllArtifactsProvider(), configurationAttributes, artifactNotationParser, capabilityNotationParser, configurationServices.getFileCollectionFactory(), configurationServices.getAttributesFactory(), configurationServices.getDomainObjectCollectionFactory(), taskDependencyFactory);
-        this.currentResolveState = domainObjectContext.getModel().newCalculatedValue(Optional.empty());
-        this.defaultConfigurationFactory = defaultConfigurationFactory;
+        this.outgoing = configurationServices.objectFactory.newInstance(
+            DefaultConfigurationPublications::class.java,
+            displayName,
+            artifacts,
+            DefaultConfiguration.AllArtifactsProvider(),
+            configurationAttributes,
+            artifactNotationParser,
+            capabilityNotationParser,
+            configurationServices.fileCollectionFactory,
+            configurationServices.attributesFactory,
+            configurationServices.domainObjectCollectionFactory,
+            taskDependencyFactory
+        )
+        this.currentResolveState = domainObjectContext.getModel().newCalculatedValue<Optional<ResolverResults>>(Optional.empty<ResolverResults>())
+        this.defaultConfigurationFactory = defaultConfigurationFactory
 
-        this.canBeConsumed = roleAtCreation.isConsumable();
-        this.canBeResolved = roleAtCreation.isResolvable();
-        this.canBeDeclaredAgainst = roleAtCreation.isDeclarable();
-        this.consumptionDeprecated = roleAtCreation.isConsumptionDeprecated();
-        this.resolutionDeprecated = roleAtCreation.isResolutionDeprecated();
-        this.declarationDeprecated = roleAtCreation.isDeclarationAgainstDeprecated();
-        this.usageCanBeMutated = !lockUsage;
-        this.roleAtCreation = roleAtCreation;
+        this.canBeConsumed = roleAtCreation.isConsumable()
+        this.canBeResolved = roleAtCreation.isResolvable()
+        this.canBeDeclaredAgainst = roleAtCreation.isDeclarable()
+        this.consumptionDeprecated = roleAtCreation.isConsumptionDeprecated()
+        this.resolutionDeprecated = roleAtCreation.isResolutionDeprecated()
+        this.declarationDeprecated = roleAtCreation.isDeclarationAgainstDeprecated()
+        this.usageCanBeMutated = !lockUsage
+        this.roleAtCreation = roleAtCreation
 
-        this.configurationServices = configurationServices;
+        this.configurationServices = configurationServices
 
-        this.validateExtendedConfiguration = extended -> {
-            ConfigurationInternal other = Objects.requireNonNull(Cast.uncheckedCast(extended));
-            if (!domainObjectContext.equals(other.getDomainObjectContext())) {
-                throw new InvalidUserDataException(String.format(
-                    "%s in %s cannot extend %s from %s. Configurations can only extend from configurations in the same context.",
-                    displayName.getCapitalizedDisplayName(),
-                    DefaultConfiguration.this.domainObjectContext.getDisplayName(),
-                    other.getDisplayName(),
-                    other.getDomainObjectContext().getDisplayName()
-                ));
+        this.validateExtendedConfiguration = Consumer { extended: Configuration? ->
+            val other = Objects.requireNonNull<ConfigurationInternal>(uncheckedCast<ConfigurationInternal?>(extended))
+            if (domainObjectContext != other.getDomainObjectContext()) {
+                throw InvalidUserDataException(
+                    String.format(
+                        "%s in %s cannot extend %s from %s. Configurations can only extend from configurations in the same context.",
+                        displayName.getCapitalizedDisplayName(),
+                        this@DefaultConfiguration.domainObjectContext.getDisplayName(),
+                        other.getDisplayName(),
+                        other.getDomainObjectContext().getDisplayName()
+                    )
+                )
             }
-            if (other.getHierarchy().contains(DefaultConfiguration.this)) {
-                throw new InvalidUserDataException(String.format(
-                    "Cyclic extendsFrom from %s and %s is not allowed. See existing hierarchy: %s", DefaultConfiguration.this,
-                    other, other.getHierarchy()));
+            if (other.getHierarchy().contains(this@DefaultConfiguration)) {
+                throw InvalidUserDataException(
+                    String.format(
+                        "Cyclic extendsFrom from %s and %s is not allowed. See existing hierarchy: %s", this@DefaultConfiguration,
+                        other, other.getHierarchy()
+                    )
+                )
             }
-        };
-        this.extendsFrom = new ExtendedConfigurations(validateExtendedConfiguration, configurationServices.getProviderFactory());
+        }
+        this.extendsFrom = ExtendedConfigurations(validateExtendedConfiguration, configurationServices.providerFactory)
     }
 
-    private static Action<String> validateMutationType(final MutationValidator mutationValidator, final MutationType type) {
-        return arg -> mutationValidator.validateMutation(type);
-    }
-
-    private void initializeInheritedArtifacts() {
+    private fun initializeInheritedArtifacts() {
         if (inheritedArtifacts == null) {
             // Use addCollectionProvider to avoid eagerly calling realizePending() on ownArtifacts,
             // which can force realization of lazy artifact providers before variant computation
             // has completed.
-            CompositeDomainObjectSet<PublishArtifact> all = CompositeDomainObjectSet.create(PublishArtifact.class, configurationServices.getCollectionCallbackActionDecorator());
-            all.addCollectionProvider(configurationServices.getProviderFactory().provider(() -> ownArtifacts));
-            inheritedArtifacts = new InheritedCollection<>(all, extendsFrom, Configuration::getAllArtifacts);
+            val all = CompositeDomainObjectSet.create<PublishArtifact>(PublishArtifact::class.java, configurationServices.collectionCallbackActionDecorator!!)
+            all.addCollectionProvider(configurationServices.providerFactory.provider({ ownArtifacts }))
+            inheritedArtifacts = DefaultConfiguration.InheritedCollection<PublishArtifact>(all, extendsFrom, Function { obj: Configuration? -> obj!!.getAllArtifacts() })
         }
     }
 
-    private void initializeInheritedDependencies() {
+    private fun initializeInheritedDependencies() {
         if (inheritedDependencies == null) {
-            CompositeDomainObjectSet<Dependency> all = configurationServices.getDomainObjectCollectionFactory().newDomainObjectSet(Dependency.class, ownDependencies);
-            inheritedDependencies = new InheritedCollection<>(all, extendsFrom, Configuration::getAllDependencies);
+            val all: CompositeDomainObjectSet<Dependency> = configurationServices.domainObjectCollectionFactory.newDomainObjectSet(Dependency::class.java, ownDependencies)
+            inheritedDependencies = DefaultConfiguration.InheritedCollection<Dependency>(all, extendsFrom, Function { obj: Configuration? -> obj!!.getAllDependencies() })
         }
     }
 
-    private void initializeInheritedDependencyConstraints() {
+    private fun initializeInheritedDependencyConstraints() {
         if (inheritedDependencyConstraints == null) {
-            CompositeDomainObjectSet<DependencyConstraint> all = configurationServices.getDomainObjectCollectionFactory().newDomainObjectSet(DependencyConstraint.class, ownDependencyConstraints);
-            inheritedDependencyConstraints = new InheritedCollection<>(all, extendsFrom, Configuration::getAllDependencyConstraints);
+            val all: CompositeDomainObjectSet<DependencyConstraint> = configurationServices.domainObjectCollectionFactory.newDomainObjectSet(DependencyConstraint::class.java, ownDependencyConstraints)
+            inheritedDependencyConstraints = DefaultConfiguration.InheritedCollection<DependencyConstraint>(all, extendsFrom, Function { obj: Configuration? -> obj!!.getAllDependencyConstraints() })
         }
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public State getState() {
-        Optional<ResolverResults> currentState = currentResolveState.get();
+    override fun getState(): Configuration.State {
+        val currentState = currentResolveState.get()
         if (!currentState.isPresent()) {
-            return State.UNRESOLVED;
+            return Configuration.State.UNRESOLVED
         }
 
-        ResolverResults resolvedState = currentState.get();
+        val resolvedState = currentState.get()
         if (resolvedState.visitedGraph.hasAnyFailure()) {
-            return State.RESOLVED_WITH_FAILURES;
+            return Configuration.State.RESOLVED_WITH_FAILURES
         } else if (resolvedState.isFullyResolved) {
-            return State.RESOLVED;
+            return Configuration.State.RESOLVED
         } else {
-            return State.UNRESOLVED;
+            return Configuration.State.UNRESOLVED
         }
     }
 
-    @Override
-    @Deprecated
-    public boolean isVisible() {
-        DeprecationLogger.deprecateMethod(Configuration.class, "isVisible")
+    @Deprecated("")
+    override fun isVisible(): Boolean {
+        deprecateMethod(Configuration::class.java, "isVisible")
             .willBeRemovedInGradle10()
-            .withUpgradeGuideSection(9, "deprecate-visible-property")
-            .nagUser();
-        return visible;
+            .withUpgradeGuideSection(9, "deprecate-visible-property")!!
+            .nagUser()
+        return visible
     }
 
-    @Override
-    @Deprecated
-    public Configuration setVisible(boolean visible) {
-        validateMutation(MutationType.BASIC_STATE);
+    @Deprecated("")
+    override fun setVisible(visible: Boolean): Configuration {
+        validateMutation(MutationValidator.MutationType.BASIC_STATE)
         // TODO: Create a deprecation warning once https://youtrack.jetbrains.com/issue/KT-78754 is resolved
-        this.visible = visible;
-        return this;
+        this.visible = visible
+        return this
     }
 
-    @Override
-    public Set<Configuration> getExtendsFrom() {
-        Set<Configuration> set = new LinkedHashSet<>();
-        extendsFrom.visitConfigurations(configuration -> set.add(configuration.get()));
-        return Collections.unmodifiableSet(set);
+    override fun getExtendsFrom(): MutableSet<Configuration> {
+        val set: MutableSet<Configuration> = LinkedHashSet<Configuration>()
+        extendsFrom.visitConfigurations(ExtendedConfiguration.Visitor { configuration: ExtendedConfiguration? -> set.add(configuration!!.get()) })
+        return Collections.unmodifiableSet<Configuration>(set)
     }
 
-    private void updateInheritedCollections() {
-        maybeUpdateCollection(inheritedDependencies);
-        maybeUpdateCollection(inheritedArtifacts);
-        maybeUpdateCollection(inheritedDependencyConstraints);
+    private fun updateInheritedCollections() {
+        maybeUpdateCollection(inheritedDependencies)
+        maybeUpdateCollection(inheritedArtifacts)
+        maybeUpdateCollection(inheritedDependencyConstraints)
     }
 
-    private void maybeUpdateCollection(@Nullable InheritedCollection<?> collection) {
+    private fun maybeUpdateCollection(collection: InheritedCollection<*>?) {
         if (collection != null) {
-            collection.updateExtendedConfigurations(this.extendsFrom);
+            collection.updateExtendedConfigurations(this.extendsFrom)
         }
     }
 
-    @Override
-    public Configuration setExtendsFrom(Iterable<Configuration> extendsFrom) {
-        validateMutation(MutationType.HIERARCHY);
-        assertNotDetachedExtensionDoingExtending(extendsFrom);
-        this.extendsFrom = new ExtendedConfigurations(validateExtendedConfiguration, configurationServices.getProviderFactory());
-        for (Configuration configuration : extendsFrom) {
-            extendsFrom(configuration);
+    override fun setExtendsFrom(extendsFrom: Iterable<Configuration>): Configuration {
+        validateMutation(MutationValidator.MutationType.HIERARCHY)
+        assertNotDetachedExtensionDoingExtending(extendsFrom)
+        this.extendsFrom = ExtendedConfigurations(validateExtendedConfiguration, configurationServices.providerFactory)
+        for (configuration in extendsFrom) {
+            extendsFrom(configuration)
         }
-        updateInheritedCollections();
-        return this;
+        updateInheritedCollections()
+        return this
     }
 
-    @Override
-    public Configuration extendsFrom(Configuration... extendsFrom) {
-        validateMutation(MutationType.HIERARCHY);
-        assertNotDetachedExtensionDoingExtending(Arrays.asList(extendsFrom));
-        for (Configuration extended : extendsFrom) {
-            this.extendsFrom.add(extended);
+    override fun extendsFrom(vararg extendsFrom: Configuration): Configuration {
+        validateMutation(MutationValidator.MutationType.HIERARCHY)
+        assertNotDetachedExtensionDoingExtending(Arrays.asList<Configuration>(*extendsFrom))
+        for (extended in extendsFrom) {
+            this.extendsFrom.add(extended)
         }
-        updateInheritedCollections();
-        return this;
+        updateInheritedCollections()
+        return this
     }
 
-    @Override
     @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final Configuration extendsFrom(Provider<? extends Configuration>... extendsFrom) {
-        validateMutation(MutationType.HIERARCHY);
-        assertNotDetachedExtensionDoingExtendingProviders(Arrays.asList(extendsFrom));
-        for (Provider<? extends Configuration> extended : extendsFrom) {
-            this.extendsFrom.add(extended);
+    override fun extendsFrom(vararg extendsFrom: Provider<out Configuration>): Configuration {
+        validateMutation(MutationValidator.MutationType.HIERARCHY)
+        assertNotDetachedExtensionDoingExtendingProviders(Arrays.asList<Provider<out Configuration>>(*extendsFrom))
+        for (extended in extendsFrom) {
+            this.extendsFrom.add(extended)
         }
-        updateInheritedCollections();
-        return this;
+        updateInheritedCollections()
+        return this
     }
 
-    @Override
-    public boolean isTransitive() {
-        return transitive;
+    override fun isTransitive(): Boolean {
+        return transitive
     }
 
-    @Override
-    public Configuration setTransitive(boolean transitive) {
-        validateMutation(MutationType.BASIC_STATE);
-        this.transitive = transitive;
-        return this;
+    override fun setTransitive(transitive: Boolean): Configuration {
+        validateMutation(MutationValidator.MutationType.BASIC_STATE)
+        this.transitive = transitive
+        return this
     }
 
-    @Override
-    @Nullable
-    public String getDescription() {
-        return description;
+    override fun getDescription(): String? {
+        return description
     }
 
-    @Override
-    public Configuration setDescription(@Nullable String description) {
-        this.description = description;
-        return this;
+    override fun setDescription(description: String?): Configuration {
+        this.description = description
+        return this
     }
 
-    @Override
-    public Set<Configuration> getHierarchy() {
+    override fun getHierarchy(): MutableSet<Configuration> {
         if (extendsFrom.isEmpty()) {
-            return Collections.singleton(this);
+            return mutableSetOf<Configuration>(this)
         }
-        Set<Configuration> result = WrapUtil.toLinkedSet(this);
-        collectSuperConfigs(this, result);
-        return result;
+        val result = WrapUtil.toLinkedSet<Configuration>(this)
+        collectSuperConfigs(this, result)
+        return result
     }
 
-    private void collectSuperConfigs(Configuration configuration, Set<Configuration> result) {
-        for (Configuration superConfig : configuration.getExtendsFrom()) {
+    private fun collectSuperConfigs(configuration: Configuration, result: MutableSet<Configuration>) {
+        for (superConfig in configuration.getExtendsFrom()) {
             // The result is an ordered set - so seeing the same value a second time pushes further down
-            result.remove(superConfig);
-            result.add(superConfig);
-            if (superConfig != this) {  // don't recurse if there's a cycle
-                collectSuperConfigs(superConfig, result);
+            result.remove(superConfig)
+            result.add(superConfig)
+            if (superConfig !== this) {  // don't recurse if there's a cycle
+                collectSuperConfigs(superConfig, result)
             }
         }
     }
 
-    @Override
-    public Configuration defaultDependencies(final Action<? super DependencySet> action) {
-        warnOrFailOnInvalidUsage("defaultDependencies(Action)", ProperMethodUsage.DECLARABLE_AGAINST);
+    override fun defaultDependencies(action: Action<in DependencySet>): Configuration {
+        warnOrFailOnInvalidUsage("defaultDependencies(Action)", ProperMethodUsage.DECLARABLE_AGAINST)
 
         // For backwards compatibility, we permit more than just dependencies to be
         // mutated in this callback, which is why we don't use MutationType.DEPENDENCIES here
-        validateMutation(MutationType.BASIC_STATE);
+        validateMutation(MutationValidator.MutationType.BASIC_STATE)
 
-        defaultDependencyActions = defaultDependencyActions.add(configurationServices.getCollectionCallbackActionDecorator().decorate(dependencies -> {
+        defaultDependencyActions = defaultDependencyActions.add(configurationServices.collectionCallbackActionDecorator!!.decorate<DependencySet>(Action { dependencies: DependencySet ->
             if (dependencies.isEmpty()) {
-                action.execute(dependencies);
+                action.execute(dependencies)
             }
-        }));
-        return this;
+        }))
+        return this
     }
 
-    @Override
-    public Configuration withDependencies(final Action<? super DependencySet> action) {
+    override fun withDependencies(action: Action<in DependencySet>): Configuration {
         // For backwards compatibility, we permit more than just dependencies to be
         // mutated in this callback, which is why we don't use MutationType.DEPENDENCIES here
-        validateMutation(MutationType.BASIC_STATE);
+        validateMutation(MutationValidator.MutationType.BASIC_STATE)
 
-        withDependencyActions = withDependencyActions.add(configurationServices.getCollectionCallbackActionDecorator().decorate(action));
-        return this;
+        withDependencyActions = withDependencyActions.add(configurationServices.collectionCallbackActionDecorator!!.decorate(action))
+        return this
     }
 
-    @Override
-    public void runDependencyActions() {
-        runActionInHierarchy(conf -> {
-            conf.defaultDependencyActions.execute(conf.dependencies);
-            conf.withDependencyActions.execute(conf.dependencies);
+    override fun runDependencyActions() {
+        runActionInHierarchy(Action { conf: DefaultConfiguration ->
+            conf.defaultDependencyActions.execute(conf.dependencies)
+            conf.withDependencyActions.execute(conf.dependencies)
 
             // Discard actions after execution
-            conf.defaultDependencyActions = ImmutableActionSet.empty();
-            conf.withDependencyActions = ImmutableActionSet.empty();
-        });
+            conf.defaultDependencyActions = ImmutableActionSet.empty<DependencySet>()
+            conf.withDependencyActions = ImmutableActionSet.empty<DependencySet>()
+        })
     }
 
-    private FileCollectionInternal getIntrinsicFiles() {
-        if (intrinsicFiles == null) {
-            assertIsResolvable();
-            intrinsicFiles = resolutionAccess.getPublicView().getFiles();
-        }
-        return intrinsicFiles;
+    override fun resolve(): MutableSet<File> {
+        warnOrFailOnInvalidUsage("resolve()", ProperMethodUsage.RESOLVABLE)
+        return getFiles()
     }
 
-    @Override
-    public Set<File> resolve() {
-        warnOrFailOnInvalidUsage("resolve()", ProperMethodUsage.RESOLVABLE);
-        return getFiles();
+    override fun iterator(): MutableIterator<File> {
+        return this.intrinsicFiles!!.iterator()
     }
 
-    @Override
-    public Iterator<File> iterator() {
-        return getIntrinsicFiles().iterator();
+    override fun visitContents(visitor: FileCollectionStructureVisitor) {
+        this.intrinsicFiles!!.visitStructure(visitor)
     }
 
-    @Override
-    protected void visitContents(FileCollectionStructureVisitor visitor) {
-        getIntrinsicFiles().visitStructure(visitor);
-    }
-
-    @Override
-    protected void appendContents(TreeFormatter formatter) {
-        formatter.node("configuration: " + identityPath);
+    override fun appendContents(formatter: TreeFormatter) {
+        formatter.node("configuration: " + identityPath)
     }
 
     /**
@@ -540,15 +515,13 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method should only be called on resolvable configurations and throws an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public boolean contains(File file) {
-        warnOrFailOnInvalidUsage("contains(File)", ProperMethodUsage.RESOLVABLE);
-        return getIntrinsicFiles().contains(file);
+    override fun contains(file: File): Boolean {
+        warnOrFailOnInvalidUsage("contains(File)", ProperMethodUsage.RESOLVABLE)
+        return this.intrinsicFiles!!.contains(file)
     }
 
-    @Override
-    public boolean isEmpty() {
-        return getIntrinsicFiles().isEmpty();
+    override fun isEmpty(): Boolean {
+        return this.intrinsicFiles!!.isEmpty()
     }
 
     /**
@@ -557,173 +530,160 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public ResolvedConfiguration getResolvedConfiguration() {
-        warnOrFailOnInvalidUsage("getResolvedConfiguration()", ProperMethodUsage.RESOLVABLE);
-        return resolutionAccess.getResults().getValue().legacyResults.resolvedConfiguration;
+    override fun getResolvedConfiguration(): ResolvedConfiguration {
+        warnOrFailOnInvalidUsage("getResolvedConfiguration()", ProperMethodUsage.RESOLVABLE)
+        return resolutionAccess.results.getValue().legacyResults.resolvedConfiguration
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private static Boolean isFullyResolved(Optional<ResolverResults> currentState) {
-        return currentState.map(ResolverResults::isFullyResolved).orElse(false);
-    }
+    private inner class ConfigurationResolutionAccess : ResolutionAccess {
+        val host: ResolutionHost
+            get() = DefaultResolutionHost(
+                identityPath,
+                displayName,
+                configurationServices.problems,
+                configurationServices.exceptionMapper
+            )
 
-    private class ConfigurationResolutionAccess implements ResolutionAccess {
+        val attributes: ImmutableAttributes
+            get() {
+                configurationAttributes.freeze()
+                return configurationAttributes.asImmutable()
+            }
 
-        @Override
-        public ResolutionHost getHost() {
-            return new DefaultResolutionHost(identityPath, displayName, configurationServices.getProblems(), configurationServices.getExceptionMapper());
-        }
+        val defaultSortOrder: ResolutionStrategy.SortOrder
+            get() = getResolutionStrategy().sortOrder
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            configurationAttributes.freeze();
-            return configurationAttributes.asImmutable();
-        }
+        val results: ResolutionResultProvider<ResolverResults>
+            get() = DefaultConfiguration.ResolverResultsResolutionResultProvider()
 
-        @Override
-        public ResolutionStrategy.SortOrder getDefaultSortOrder() {
-            return getResolutionStrategy().getSortOrder();
-        }
-
-        @Override
-        public ResolutionResultProvider<ResolverResults> getResults() {
-            return new ResolverResultsResolutionResultProvider();
-        }
-
-        @Override
-        public ResolutionOutputsInternal getPublicView() {
-            return new DefaultResolutionOutputs(
+        val publicView: ResolutionOutputsInternal
+            get() = DefaultResolutionOutputs(
                 this,
                 taskDependencyFactory,
-                configurationServices.getCalculatedValueContainerFactory(),
-                configurationServices.getAttributesFactory(),
-                configurationServices.getAttributeDesugaring(),
-                configurationServices.getObjectFactory()
-            );
-        }
+                configurationServices.calculatedValueContainerFactory,
+                configurationServices.attributesFactory,
+                configurationServices.attributeDesugaring,
+                configurationServices.objectFactory
+            )
     }
 
     /**
      * A provider that lazily resolves this configuration.
      */
-    private class ResolverResultsResolutionResultProvider implements ResolutionResultProvider<ResolverResults> {
-
-        @Override
-        public ResolverResults getTaskDependencyValue() {
+    private inner class ResolverResultsResolutionResultProvider : ResolutionResultProvider<ResolverResults> {
+        override fun getTaskDependencyValue(): ResolverResults {
             if (getResolutionStrategy().resolveGraphToDetermineTaskDependencies()) {
                 // Force graph resolution as this is required to calculate build dependencies
-                return getValue();
+                return getValue()
             } else {
-                return resolveGraphForBuildDependenciesIfRequired();
+                return resolveGraphForBuildDependenciesIfRequired()
             }
         }
 
-        @Override
-        public ResolverResults getValue() {
-            return resolveGraphIfRequired();
+        override fun getValue(): ResolverResults {
+            return resolveGraphIfRequired()
         }
-
     }
 
-    private ResolverResults resolveGraphIfRequired() {
-        assertIsResolvable();
-        maybeEmitResolutionDeprecation();
+    private fun resolveGraphIfRequired(): ResolverResults {
+        assertIsResolvable()
+        maybeEmitResolutionDeprecation()
 
-        Optional<ResolverResults> currentState = currentResolveState.get();
+        val currentState = currentResolveState.get()
         if (isFullyResolved(currentState)) {
-            return currentState.get();
+            return currentState.get()
         }
 
-        ResolverResults newState;
+        val newState: ResolverResults
         if (!domainObjectContext.getModel().hasMutableState()) {
-            throw new IllegalResolutionException("Resolution of the " + displayName.getDisplayName() + " was attempted without an exclusive lock. This is unsafe and not allowed.");
+            throw IllegalResolutionException("Resolution of the " + displayName.getDisplayName() + " was attempted without an exclusive lock. This is unsafe and not allowed.")
         } else {
-            newState = resolveExclusivelyIfRequired();
+            newState = resolveExclusivelyIfRequired()
         }
 
-        return newState;
+        return newState
     }
 
-    private ResolverResults resolveExclusivelyIfRequired() {
-        return currentResolveState.update(currentState -> {
-            if (isFullyResolved(currentState)) {
-                return currentState;
+    private fun resolveExclusivelyIfRequired(): ResolverResults {
+        return currentResolveState.update(Function { currentState: Optional<ResolverResults>? ->
+            if (Companion.isFullyResolved(currentState!!)) {
+                return@update currentState
             }
-
-            return Optional.of(resolveGraphInBuildOperation());
-        }).get();
+            Optional.of<ResolverResults>(resolveGraphInBuildOperation())
+        }).get()
     }
 
     /**
-     * Must be called from {@link #resolveExclusivelyIfRequired} only.
+     * Must be called from [.resolveExclusivelyIfRequired] only.
      */
-    private ResolverResults resolveGraphInBuildOperation() {
-        return configurationServices.getBuildOperationRunner().call(new CallableBuildOperation<ResolverResults>() {
-            @Override
-            public ResolverResults call(BuildOperationContext context) {
-                runDependencyActions();
-                dependencyResolutionListeners.getSource().beforeResolve(getIncoming());
+    private fun resolveGraphInBuildOperation(): ResolverResults {
+        return configurationServices.buildOperationRunner.call(object : CallableBuildOperation<ResolverResults> {
+            override fun call(context: BuildOperationContext): ResolverResults {
+                runDependencyActions()
+                dependencyResolutionListeners.getSource()!!.beforeResolve(getIncoming())
 
-                ResolverResults results;
+                val results: ResolverResults
                 try {
-                    results = resolver.resolveGraph(DefaultConfiguration.this);
-                } catch (Exception e) {
-                    throw configurationServices.getExceptionMapper().mapFailure(e, "dependencies", displayName.getDisplayName());
+                    results = resolver.resolveGraph(this@DefaultConfiguration)!!
+                } catch (e: Exception) {
+                    throw configurationServices.exceptionMapper.mapFailure(e, "dependencies", displayName.getDisplayName())
                 }
 
                 // Make the new state visible in case a dependency resolution listener queries the result, which requires the new state
-                currentResolveState.set(Optional.of(results));
+                currentResolveState.set(Optional.of<ResolverResults>(results))
 
-                dependencyResolutionListeners.getSource().afterResolve(getIncoming());
+                dependencyResolutionListeners.getSource()!!.afterResolve(getIncoming())
 
                 // Discard State
-                dependencyResolutionListeners.removeAll();
+                dependencyResolutionListeners.removeAll()
                 if (resolutionStrategy != null) {
-                    resolutionStrategy.maybeDiscardStateRequiredForGraphResolution();
+                    resolutionStrategy!!.maybeDiscardStateRequiredForGraphResolution()
                 }
 
-                captureBuildOperationResult(context, results);
-                return results;
+                captureBuildOperationResult(context, results)
+                return results
             }
 
-            private void captureBuildOperationResult(BuildOperationContext context, ResolverResults results) {
+            fun captureBuildOperationResult(context: BuildOperationContext, results: ResolverResults) {
                 // When dependency resolution has failed, we don't want the build operation listeners to fail as well
                 // because:
                 // 1. the `failed` method will have been called with the user facing error
                 // 2. such an error may still lead to a valid dependency graph
-                VisitedGraphResults visitedGraph = results.visitedGraph;
-                context.setResult(new ResolveConfigurationResolutionBuildOperationResult(
-                    visitedGraph.getResolvedGraphResultSource(),
-                    visitedGraph.getRequestedAttributes(),
-                    configurationServices.getAttributesFactory()
-                ));
+                val visitedGraph: VisitedGraphResults = results.visitedGraph
+                context.setResult(
+                    ResolveConfigurationResolutionBuildOperationResult(
+                        visitedGraph.resolvedGraphResultSource,
+                        visitedGraph.requestedAttributes,
+                        configurationServices.attributesFactory
+                    )
+                )
             }
 
-            @Override
-            public BuildOperationDescriptor.Builder description() {
-                String displayName = "Resolve dependencies of " + identityPath;
-                ProjectIdentity projectId = domainObjectContext.getProjectIdentity();
-                String projectPathString = null;
+            override fun description(): BuildOperationDescriptor.Builder {
+                val displayName = "Resolve dependencies of " + identityPath
+                val projectId = domainObjectContext.getProjectIdentity()
+                var projectPathString: String? = null
                 if (!domainObjectContext.isScript()) {
                     if (projectId != null) {
-                        projectPathString = projectId.getProjectPath().asString();
+                        projectPathString = projectId.getProjectPath().asString()
                     }
                 }
                 return BuildOperationDescriptor.displayName(displayName)
                     .progressDisplayName(displayName)
-                    .details(new ResolveConfigurationResolutionBuildOperationDetails(
-                        getName(),
-                        domainObjectContext.isScript(),
-                        getDescription(),
-                        domainObjectContext.getBuildPath().asString(),
-                        projectPathString,
-                        visible,
-                        isTransitive(),
-                        resolver.getAllRepositories()
-                    ));
+                    .details(
+                        ResolveConfigurationResolutionBuildOperationDetails(
+                            getName(),
+                            domainObjectContext.isScript(),
+                            getDescription(),
+                            domainObjectContext.getBuildPath().asString(),
+                            projectPathString,
+                            visible,
+                            isTransitive(),
+                            resolver.allRepositories
+                        )
+                    )
             }
-        });
+        })
     }
 
 
@@ -733,52 +693,52 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public ConfigurationInternal getConsistentResolutionSource() {
-        warnOrFailOnInvalidInternalAPIUsage("getConsistentResolutionSource()", ProperMethodUsage.RESOLVABLE);
-        return consistentResolutionSource;
+    override fun getConsistentResolutionSource(): ConfigurationInternal {
+        warnOrFailOnInvalidInternalAPIUsage("getConsistentResolutionSource()", ProperMethodUsage.RESOLVABLE)
+        return consistentResolutionSource!!
     }
 
-    @Override
-    public ImmutableList<ResolutionParameters.ModuleVersionLock> getConsistentResolutionVersionLocks() {
+    override fun getConsistentResolutionVersionLocks(): ImmutableList<ResolutionParameters.ModuleVersionLock> {
         if (consistentResolutionSource == null) {
-            return ImmutableList.of();
+            return ImmutableList.of<ResolutionParameters.ModuleVersionLock>()
         }
 
-        assertThatConsistentResolutionIsPropertyConfigured();
-        ResolverResults consistentResolutionResults = consistentResolutionSource.getResolutionAccess().getResults().getValue();
-        GraphStructure structure = consistentResolutionResults.visitedGraph.getGraphStructureSource().get();
+        assertThatConsistentResolutionIsPropertyConfigured()
+        val consistentResolutionResults: ResolverResults = consistentResolutionSource!!.getResolutionAccess().results.getValue()
+        val structure: GraphStructure = consistentResolutionResults.visitedGraph.getGraphStructureSource().get()
 
-        GraphStructure.Components components = structure.components();
-        int numComponents = components.count();
-        ImmutableList.Builder<ResolutionParameters.ModuleVersionLock> locks = ImmutableList.builderWithExpectedSize(numComponents);
-        for (int i = 0; i < numComponents; i++) {
-            if (components.id(i) instanceof ModuleComponentIdentifier moduleId) {
-                locks.add(new ResolutionParameters.ModuleVersionLock(
-                    moduleId.getModuleIdentifier(),
-                    moduleId.getVersion(),
-                    consistentResolutionReason,
-                    true
-                ));
+        val components = structure.components()
+        val numComponents = components!!.count()
+        val locks = ImmutableList.builderWithExpectedSize<ResolutionParameters.ModuleVersionLock>(numComponents)
+        for (i in 0..<numComponents) {
+            if (components.id(i) is ModuleComponentIdentifier) {
+                locks.add(
+                    ResolutionParameters.ModuleVersionLock(
+                        moduleId.getModuleIdentifier(),
+                        moduleId.getVersion(),
+                        consistentResolutionReason!!,
+                        true
+                    )
+                )
             }
         }
-        return locks.build();
+        return locks.build()
     }
 
-    private void assertThatConsistentResolutionIsPropertyConfigured() {
-        if (!consistentResolutionSource.isCanBeResolved()) {
-            throw new InvalidUserCodeException("You can't use " + consistentResolutionSource + " as a consistent resolution source for " + this + " because it isn't a resolvable configuration.");
+    private fun assertThatConsistentResolutionIsPropertyConfigured() {
+        if (!consistentResolutionSource!!.isCanBeResolved()) {
+            throw InvalidUserCodeException("You can't use " + consistentResolutionSource + " as a consistent resolution source for " + this + " because it isn't a resolvable configuration.")
         }
 
         // Ensure there are no cycles in the consistent resolution graph.
-        Set<ConfigurationInternal> sources = new LinkedHashSet<>();
-        ConfigurationInternal src = this;
+        val sources: MutableSet<ConfigurationInternal> = LinkedHashSet<ConfigurationInternal>()
+        var src: ConfigurationInternal? = this
         while (src != null) {
             if (!sources.add(src)) {
-                String cycle = sources.stream().map(Configuration::getName).collect(Collectors.joining(" -> ")) + " -> " + getName();
-                throw new InvalidUserDataException("Cycle detected in consistent resolution sources: " + cycle);
+                val cycle = sources.stream().map<String> { obj: ConfigurationInternal? -> obj!!.getName() }.collect(Collectors.joining(" -> ")) + " -> " + getName()
+                throw InvalidUserDataException("Cycle detected in consistent resolution sources: " + cycle)
             }
-            src = src.getConsistentResolutionSource();
+            src = src.getConsistentResolutionSource()
         }
     }
 
@@ -788,274 +748,263 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public <T> T callAndResetResolutionState(Factory<T> factory) {
-        warnOrFailOnInvalidInternalAPIUsage("callAndResetResolutionState(Factory)", ProperMethodUsage.RESOLVABLE);
+    override fun <T> callAndResetResolutionState(factory: Factory<T?>): T? {
+        warnOrFailOnInvalidInternalAPIUsage("callAndResetResolutionState(Factory)", ProperMethodUsage.RESOLVABLE)
         try {
             // Prevent the state required for resolution from being discarded if anything in the
             // factory resolves this configuration
-            getResolutionStrategy().setKeepStateRequiredForGraphResolution(true);
+            getResolutionStrategy().setKeepStateRequiredForGraphResolution(true)
 
-            T value = factory.create();
+            val value = factory.create()
 
             // Reset this configuration to an unresolved state
-            currentResolveState.set(Optional.empty());
+            currentResolveState.set(Optional.empty<ResolverResults>())
 
-            return value;
+            return value
         } finally {
-            getResolutionStrategy().setKeepStateRequiredForGraphResolution(false);
+            getResolutionStrategy().setKeepStateRequiredForGraphResolution(false)
         }
     }
 
-    private ResolverResults resolveGraphForBuildDependenciesIfRequired() {
-        assertIsResolvable();
-        return currentResolveState.update(initial -> {
-            if (!initial.isPresent()) {
-
-                CalculatedValue<ResolverResults> futureCompleteResults = configurationServices.getCalculatedValueContainerFactory().create(Describables.of("Full results for", getName()), context -> {
-                    Optional<ResolverResults> currentState = currentResolveState.get();
+    private fun resolveGraphForBuildDependenciesIfRequired(): ResolverResults {
+        assertIsResolvable()
+        return currentResolveState.update(Function { initial: Optional<ResolverResults>? ->
+            if (!initial!!.isPresent()) {
+                val futureCompleteResults: CalculatedValue<ResolverResults>? = configurationServices.calculatedValueContainerFactory.create(Describables.of("Full results for", getName()), { context ->
+                    val currentState = currentResolveState.get()
                     if (!isFullyResolved(currentState)) {
                         // Do not validate that the current thread holds the project lock.
                         // TODO: Should instead assert that the results are available and fail if not.
-                        return resolveExclusivelyIfRequired();
+                        return@create resolveExclusivelyIfRequired()
                     }
-                    return currentState.get();
-                });
+                    currentState.get()
+                })
 
                 try {
-                    return Optional.of(resolver.resolveBuildDependencies(this, futureCompleteResults));
-                } catch (Exception e) {
-                    throw configurationServices.getExceptionMapper().mapFailure(e, "dependencies", displayName.getDisplayName());
+                    return@update Optional.of<ResolverResults>(resolver.resolveBuildDependencies(this, futureCompleteResults)!!)
+                } catch (e: Exception) {
+                    throw configurationServices.exceptionMapper.mapFailure(e, "dependencies", displayName.getDisplayName())
                 }
             } // Otherwise, already have a result, so reuse it
-            return initial;
-        }).get();
+            initial
+        }).get()
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        context.add(getIntrinsicFiles());
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        context.add(this.intrinsicFiles)
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    @Deprecated
-    @SuppressWarnings("deprecation")
-    public TaskDependency getTaskDependencyFromProjectDependency(final boolean useDependedOn, final String taskName) {
-        DeprecationLogger.deprecateMethod(Configuration.class, "getTaskDependencyFromProjectDependency(boolean, String)")
+    @Deprecated("")
+    @Suppress("deprecation")
+    override fun getTaskDependencyFromProjectDependency(useDependedOn: Boolean, taskName: String): TaskDependency {
+        deprecateMethod(Configuration::class.java, "getTaskDependencyFromProjectDependency(boolean, String)")
             .willBeRemovedInGradle10()
-            .withUpgradeGuideSection(9, "deprecate_getTaskDependencyFromProjectDependency")
-            .nagUser();
+            .withUpgradeGuideSection(9, "deprecate_getTaskDependencyFromProjectDependency")!!
+            .nagUser()
 
         if (useDependedOn) {
-            return new TasksFromProjectDependencies(taskName, () -> {
-                return getAllDependencies().withType(ProjectDependency.class);
-            }, taskDependencyFactory, configurationServices.getProjectStateRegistry());
+            return TasksFromProjectDependencies(
+                taskName,
+                Supplier { getAllDependencies().withType<ProjectDependency>(ProjectDependency::class.java) },
+                taskDependencyFactory,
+                configurationServices.projectStateRegistry
+            )
         } else {
-            return new TasksFromDependentProjects(taskName, getName(), taskDependencyFactory);
+            return TasksFromDependentProjects(taskName, getName(), taskDependencyFactory)
         }
     }
 
-    @Override
-    public DependencySet getDependencies() {
-        return dependencies;
+    override fun getDependencies(): DependencySet {
+        return dependencies
     }
 
-    @Override
-    public DependencySet getAllDependencies() {
+    override fun getAllDependencies(): DependencySet {
         if (allDependencies == null) {
-            initAllDependencies();
+            initAllDependencies()
         }
-        return allDependencies;
+        return allDependencies!!
     }
 
-    private synchronized void initAllDependencies() {
+    @Synchronized
+    private fun initAllDependencies() {
         if (allDependencies != null) {
-            return;
+            return
         }
 
-        initializeInheritedDependencies();
-        allDependencies = new DefaultDependencySet(Describables.of(displayName, "all dependencies"), this, inheritedDependencies.getAllInherited());
+        initializeInheritedDependencies()
+        allDependencies = DefaultDependencySet(Describables.of(displayName, "all dependencies"), this, inheritedDependencies!!.allInherited)
     }
 
-    @Override
-    public DependencyConstraintSet getDependencyConstraints() {
-        return dependencyConstraints;
+    override fun getDependencyConstraints(): DependencyConstraintSet {
+        return dependencyConstraints
     }
 
-    @Override
-    public DependencyConstraintSet getAllDependencyConstraints() {
+    override fun getAllDependencyConstraints(): DependencyConstraintSet {
         if (allDependencyConstraints == null) {
-            initAllDependencyConstraints();
+            initAllDependencyConstraints()
         }
-        return allDependencyConstraints;
+        return allDependencyConstraints!!
     }
 
-    private synchronized void initAllDependencyConstraints() {
+    @Synchronized
+    private fun initAllDependencyConstraints() {
         if (allDependencyConstraints != null) {
-            return;
+            return
         }
 
-        initializeInheritedDependencyConstraints();
-        allDependencyConstraints = new DefaultDependencyConstraintSet(Describables.of(displayName, "all dependency constraints"), this, inheritedDependencyConstraints.getAllInherited());
+        initializeInheritedDependencyConstraints()
+        allDependencyConstraints = DefaultDependencyConstraintSet(
+            Describables.of(displayName, "all dependency constraints"), this,
+            inheritedDependencyConstraints!!.allInherited
+        )
     }
 
-    @Override
-    public PublishArtifactSet getArtifacts() {
-        return artifacts;
+    override fun getArtifacts(): PublishArtifactSet {
+        return artifacts
     }
 
-    @Override
-    public PublishArtifactSet getAllArtifacts() {
-        initAllArtifacts();
-        return allArtifacts;
+    override fun getAllArtifacts(): PublishArtifactSet {
+        initAllArtifacts()
+        return allArtifacts!!
     }
 
-    private synchronized void initAllArtifacts() {
+    @Synchronized
+    private fun initAllArtifacts() {
         if (allArtifacts != null) {
-            return;
+            return
         }
-        DisplayName displayName = Describables.of(this.displayName, "all artifacts");
+        val displayName = Describables.of(this.displayName, "all artifacts")
 
-        if (isObserved() && extendsFrom.isEmpty()) {
+        if (this.isObserved && extendsFrom.isEmpty()) {
             // No further mutation is allowed and there's no parent: the artifact set corresponds to this configuration own artifacts
-            this.allArtifacts = new DefaultPublishArtifactSet(displayName, ownArtifacts, configurationServices.getFileCollectionFactory(), taskDependencyFactory);
+            this.allArtifacts = DefaultPublishArtifactSet(displayName, ownArtifacts, configurationServices.fileCollectionFactory, taskDependencyFactory)
         } else {
             // Otherwise, the configuration can still be mutated, so we need to create a composite in case extendsFrom are added
-            initializeInheritedArtifacts();
-            this.allArtifacts = new DefaultPublishArtifactSet(displayName, inheritedArtifacts.getAllInherited(), configurationServices.getFileCollectionFactory(), taskDependencyFactory);
+            initializeInheritedArtifacts()
+            this.allArtifacts = DefaultPublishArtifactSet(
+                displayName,
+                inheritedArtifacts!!.allInherited, configurationServices.fileCollectionFactory, taskDependencyFactory
+            )
         }
     }
 
-    @Override
-    public Set<ExcludeRule> getExcludeRules() {
-        initExcludeRules();
-        return Collections.unmodifiableSet(parsedExcludeRules);
+    override fun getExcludeRules(): MutableSet<ExcludeRule> {
+        initExcludeRules()
+        return Collections.unmodifiableSet<ExcludeRule>(parsedExcludeRules)
     }
 
-    @Override
-    public Set<ExcludeRule> getAllExcludeRules() {
-        Set<ExcludeRule> result = new LinkedHashSet<>(getExcludeRules());
-        extendsFrom.visitConfigurations(configuration -> result.addAll(((ConfigurationInternal)configuration.get()).getAllExcludeRules()));
-        return result;
+    override fun getAllExcludeRules(): MutableSet<ExcludeRule> {
+        val result: MutableSet<ExcludeRule> = LinkedHashSet<ExcludeRule>(getExcludeRules())
+        extendsFrom.visitConfigurations(ExtendedConfiguration.Visitor { configuration: ExtendedConfiguration? -> result.addAll((configuration!!.get() as ConfigurationInternal).getAllExcludeRules()) })
+        return result
     }
 
     /**
      * Synchronize read access to excludes. Mutation does not need to be thread-safe.
      */
-    private synchronized void initExcludeRules() {
+    @Synchronized
+    private fun initExcludeRules() {
         if (parsedExcludeRules == null) {
-            NotationParser<Object, ExcludeRule> parser = ExcludeRuleNotationConverter.parser();
-            parsedExcludeRules = new LinkedHashSet<>();
-            for (Object excludeRule : excludeRules) {
-                parsedExcludeRules.add(parser.parseNotation(excludeRule));
+            val parser = ExcludeRuleNotationConverter.parser()
+            parsedExcludeRules = LinkedHashSet<ExcludeRule>()
+            for (excludeRule in excludeRules) {
+                parsedExcludeRules!!.add(parser.parseNotation(excludeRule))
             }
         }
     }
 
-    @Override
-    public DefaultConfiguration exclude(Map<String, String> excludeRuleArgs) {
-        validateMutation(MutationType.DEPENDENCIES);
-        parsedExcludeRules = null;
-        excludeRules.add(excludeRuleArgs);
-        return this;
+    override fun exclude(excludeRuleArgs: MutableMap<String, String>): DefaultConfiguration {
+        validateMutation(MutationValidator.MutationType.DEPENDENCIES)
+        parsedExcludeRules = null
+        excludeRules.add(excludeRuleArgs)
+        return this
     }
 
-    @Override
-    public String getDisplayName() {
-        return displayName.getDisplayName();
+    override fun getDisplayName(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return displayName;
+    override fun asDescribable(): DisplayName {
+        return displayName
     }
 
-    @Override
-    public ResolvableDependencies getIncoming() {
-        return resolvableDependencies;
+    override fun getIncoming(): ResolvableDependencies {
+        return resolvableDependencies
     }
 
-    @Override
-    public ConfigurationPublications getOutgoing() {
-        return outgoing;
+    override fun getOutgoing(): ConfigurationPublications {
+        return outgoing
     }
 
-    @Override
-    public void collectVariants(VariantVisitor visitor) {
-        outgoing.collectVariants(visitor);
+    override fun collectVariants(visitor: ConfigurationInternal.VariantVisitor) {
+        outgoing.collectVariants(visitor)
     }
 
-    @Override
-    public boolean isCanBeMutated() {
-        boolean immutable = isObserved() || currentResolveState.get().isPresent();
-        return !immutable;
+    override fun isCanBeMutated(): Boolean {
+        val immutable = this.isObserved || currentResolveState.get().isPresent()
+        return !immutable
     }
 
-    @Override
-    public void markAsObserved(String reason) {
-        if (isObserved()) {
-            return;
+    override fun markAsObserved(reason: String) {
+        if (this.isObserved) {
+            return
         }
 
-        runActionInHierarchy(conf -> {
-            if (!conf.isObserved()) {
-                conf.observationReason = () -> {
-                    String target = conf == this ? "the configuration" : "the configuration's child " + this.getDisplayName();
-                    return target + " was " + reason;
-                };
+        runActionInHierarchy(Action { conf: DefaultConfiguration ->
+            if (!conf.isObserved) {
+                conf.observationReason = Supplier {
+                    val target = if (conf === this) "the configuration" else "the configuration's child " + this.getDisplayName()
+                    target + " was " + reason
+                }
 
                 // This field is only set for compatibility with Nebula
-                conf.observedState = InternalState.OBSERVED;
+                conf.observedState = ConfigurationInternal.InternalState.OBSERVED
 
-                conf.configurationAttributes.freeze();
-                conf.outgoing.preventFromFurtherMutation(conf.observationReason);
-                conf.preventUsageMutation();
+                conf.configurationAttributes.freeze()
+                conf.outgoing.preventFromFurtherMutation(conf.observationReason!!)
+                conf.preventUsageMutation()
             }
-        });
+        })
     }
 
-    @Override
-    public void markDependenciesObserved() {
-        if (!isObserved()) {
-            throw new IllegalStateException("Cannot observe dependencies before markAsObserved(String) has been called.");
-        }
+    override fun markDependenciesObserved() {
+        check(this.isObserved) { "Cannot observe dependencies before markAsObserved(String) has been called." }
 
-        this.dependenciesObserved = true;
+        this.dependenciesObserved = true
     }
 
-    private boolean isObserved() {
-        return observationReason != null;
-    }
+    private val isObserved: Boolean
+        get() = observationReason != null
 
     /**
      * Runs the provided action for this configuration and all configurations that it extends from.
      *
-     * <p>Specifically handles the case where {@link Configuration#extendsFrom} is called during the
-     * action execution.</p>
+     *
+     * Specifically handles the case where [Configuration.extendsFrom] is called during the
+     * action execution.
      */
-    private void runActionInHierarchy(Action<DefaultConfiguration> action) {
-        Set<Configuration> seen = new HashSet<>();
-        Queue<Configuration> remaining = new ArrayDeque<>();
-        remaining.add(this);
+    private fun runActionInHierarchy(action: Action<DefaultConfiguration>) {
+        val seen: MutableSet<Configuration> = HashSet<Configuration>()
+        val remaining: Queue<Configuration> = ArrayDeque<Configuration>()
+        remaining.add(this)
 
         while (!remaining.isEmpty()) {
-            Configuration current = remaining.remove();
-            action.execute((DefaultConfiguration) current);
+            val current = remaining.remove()
+            action.execute(current as DefaultConfiguration)
 
-            for (Configuration parent : current.getExtendsFrom()) {
+            for (parent in current.getExtendsFrom()) {
                 if (seen.add(parent)) {
-                    remaining.add(parent);
+                    remaining.add(parent)
                 }
             }
         }
     }
 
-    @Override
-    public void outgoing(Action<? super ConfigurationPublications> action) {
-        action.execute(outgoing);
+    override fun outgoing(action: Action<in ConfigurationPublications>) {
+        action.execute(outgoing)
     }
 
     /**
@@ -1064,10 +1013,9 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public ConfigurationInternal copy() {
-        warnOrFailOnInvalidUsage("copy()", ProperMethodUsage.RESOLVABLE);
-        return createCopy(getDependencies(), getDependencyConstraints());
+    override fun copy(): ConfigurationInternal {
+        warnOrFailOnInvalidUsage("copy()", ProperMethodUsage.RESOLVABLE)
+        return createCopy(getDependencies(), getDependencyConstraints())
     }
 
     /**
@@ -1076,10 +1024,9 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public Configuration copyRecursive() {
-        warnOrFailOnInvalidUsage("copyRecursive()", ProperMethodUsage.RESOLVABLE);
-        return createCopy(getAllDependencies(), getAllDependencyConstraints());
+    override fun copyRecursive(): Configuration {
+        warnOrFailOnInvalidUsage("copyRecursive()", ProperMethodUsage.RESOLVABLE)
+        return createCopy(getAllDependencies(), getAllDependencyConstraints())
     }
 
     /**
@@ -1088,16 +1035,14 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public Configuration copy(Spec<? super Dependency> dependencySpec) {
-        warnOrFailOnInvalidUsage("copy(Spec)", ProperMethodUsage.RESOLVABLE);
-        return createCopy(CollectionUtils.filter(getDependencies(), dependencySpec), getDependencyConstraints());
+    override fun copy(dependencySpec: Spec<in Dependency?>): Configuration {
+        warnOrFailOnInvalidUsage("copy(Spec)", ProperMethodUsage.RESOLVABLE)
+        return createCopy(CollectionUtils.filter<Dependency?>(getDependencies(), dependencySpec), getDependencyConstraints())
     }
 
-    @Override
-    public Configuration copyRecursive(Spec<? super Dependency> dependencySpec) {
-        warnOrFailOnInvalidUsage("copyRecursive(Spec)", ProperMethodUsage.RESOLVABLE);
-        return createCopy(CollectionUtils.filter(getAllDependencies(), dependencySpec), getAllDependencyConstraints());
+    override fun copyRecursive(dependencySpec: Spec<in Dependency?>): Configuration {
+        warnOrFailOnInvalidUsage("copyRecursive(Spec)", ProperMethodUsage.RESOLVABLE)
+        return createCopy(CollectionUtils.filter<Dependency?>(getAllDependencies(), dependencySpec), getAllDependencyConstraints())
     }
 
     /**
@@ -1105,121 +1050,116 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * to assume any role. However, any roles which were previously disabled will become
      * deprecated in the copied configuration.
      *
-     * This means the copy created is <strong>NOT</strong> a strictly identical copy of the original, as the role
+     * This means the copy created is **NOT** a strictly identical copy of the original, as the role
      * will be not only a different instance, but also may return different deprecation values.
      */
-    private DefaultConfiguration createCopy(Set<Dependency> dependencies, Set<DependencyConstraint> dependencyConstraints) {
-        DefaultConfiguration copiedConfiguration = copyAsDetached();
+    private fun createCopy(dependencies: MutableSet<Dependency>, dependencyConstraints: MutableSet<DependencyConstraint>): DefaultConfiguration {
+        val copiedConfiguration = copyAsDetached()
 
-        copiedConfiguration.visible = visible;
-        copiedConfiguration.transitive = transitive;
-        copiedConfiguration.description = description;
+        copiedConfiguration.visible = visible
+        copiedConfiguration.transitive = transitive
+        copiedConfiguration.description = description
 
-        copiedConfiguration.defaultDependencyActions = defaultDependencyActions;
-        copiedConfiguration.withDependencyActions = withDependencyActions;
-        copiedConfiguration.dependencyResolutionListeners = dependencyResolutionListeners.copy();
+        copiedConfiguration.defaultDependencyActions = defaultDependencyActions
+        copiedConfiguration.withDependencyActions = withDependencyActions
+        copiedConfiguration.dependencyResolutionListeners = dependencyResolutionListeners.copy()
 
-        copiedConfiguration.declarationAlternatives = declarationAlternatives;
-        copiedConfiguration.resolutionAlternatives = resolutionAlternatives;
+        copiedConfiguration.declarationAlternatives = declarationAlternatives
+        copiedConfiguration.resolutionAlternatives = resolutionAlternatives
 
-        copiedConfiguration.getArtifacts().addAll(getAllArtifacts());
+        copiedConfiguration.getArtifacts().addAll(getAllArtifacts())
 
         if (!configurationAttributes.isEmpty()) {
-            for (Attribute<?> attribute : configurationAttributes.keySet()) {
-                Object value = configurationAttributes.getAttribute(attribute);
-                copiedConfiguration.getAttributes().attribute(Cast.uncheckedNonnullCast(attribute), value);
+            for (attribute in configurationAttributes.keySet()) {
+                val value: Any? = configurationAttributes.getAttribute(attribute)
+                copiedConfiguration.getAttributes().attribute<Any>(uncheckedNonnullCast<Attribute<Any>?>(attribute)!!, value!!)
             }
         }
 
         // todo An ExcludeRule is a value object but we don't enforce immutability for DefaultExcludeRule as strong as we
         // should (we expose the Map). We should provide a better API for ExcludeRule (I don't want to use unmodifiable Map).
         // As soon as DefaultExcludeRule is truly immutable, we don't need to create a new instance of DefaultExcludeRule.
-        for (ExcludeRule excludeRule : getAllExcludeRules()) {
-            copiedConfiguration.excludeRules.add(new DefaultExcludeRule(excludeRule.getGroup(), excludeRule.getModule()));
+        for (excludeRule in getAllExcludeRules()) {
+            copiedConfiguration.excludeRules.add(DefaultExcludeRule(excludeRule.getGroup(), excludeRule.getModule()))
         }
 
-        DomainObjectSet<Dependency> copiedDependencies = copiedConfiguration.getDependencies();
-        for (Dependency dependency : dependencies) {
-            copiedDependencies.add(dependency.copy());
+        val copiedDependencies: DomainObjectSet<Dependency> = copiedConfiguration.getDependencies()
+        for (dependency in dependencies) {
+            copiedDependencies.add(dependency.copy())
         }
-        DomainObjectSet<DependencyConstraint> copiedDependencyConstraints = copiedConfiguration.getDependencyConstraints();
-        for (DependencyConstraint dependencyConstraint : dependencyConstraints) {
-            copiedDependencyConstraints.add(((DependencyConstraintInternal) dependencyConstraint).copy());
+        val copiedDependencyConstraints: DomainObjectSet<DependencyConstraint> = copiedConfiguration.getDependencyConstraints()
+        for (dependencyConstraint in dependencyConstraints) {
+            copiedDependencyConstraints.add((dependencyConstraint as DependencyConstraintInternal).copy())
         }
-        return copiedConfiguration;
+        return copiedConfiguration
     }
 
-    private DefaultConfiguration copyAsDetached() {
-        String newName = getNameWithCopySuffix();
-        Factory<ResolutionStrategyInternal> childResolutionStrategy = resolutionStrategy != null ? Factories.constant(resolutionStrategy.copy()) : resolutionStrategyFactory;
+    private fun copyAsDetached(): DefaultConfiguration {
+        val newName = this.nameWithCopySuffix
+        val childResolutionStrategy: Factory<ResolutionStrategyInternal?> =
+            if (resolutionStrategy != null) Factories.constant<ResolutionStrategyInternal>(resolutionStrategy!!.copy()) else resolutionStrategyFactory
 
-        @SuppressWarnings("deprecation")
-        ConfigurationRole role = ConfigurationRoles.RESOLVABLE_DEPENDENCY_SCOPE;
+        @Suppress("deprecation") val role = ConfigurationRoles.RESOLVABLE_DEPENDENCY_SCOPE
         return defaultConfigurationFactory.create(
             newName,
             true,
             resolver,
             childResolutionStrategy,
             role
-        );
+        )
     }
 
-    private String getNameWithCopySuffix() {
-        int count = copyCount.incrementAndGet();
-        String copyName = name + "Copy";
-        return count == 1
-            ? copyName
-            : copyName + count;
+    private val nameWithCopySuffix: String
+        get() {
+            val count = copyCount.incrementAndGet()
+            val copyName = name + "Copy"
+            return if (count == 1)
+                copyName
+            else
+                copyName + count
+        }
+
+    override fun copy(dependencySpec: Closure<*>): Configuration {
+        return copy(Specs.convertClosureToSpec<Dependency>(dependencySpec))
     }
 
-    @Override
-    public Configuration copy(Closure dependencySpec) {
-        return copy(Specs.convertClosureToSpec(dependencySpec));
+    override fun copyRecursive(dependencySpec: Closure<*>): Configuration {
+        return copyRecursive(Specs.convertClosureToSpec<Dependency>(dependencySpec))
     }
 
-    @Override
-    public Configuration copyRecursive(Closure dependencySpec) {
-        return copyRecursive(Specs.convertClosureToSpec(dependencySpec));
-    }
-
-    @Override
-    public ResolutionStrategyInternal getResolutionStrategy() {
+    override fun getResolutionStrategy(): ResolutionStrategyInternal {
         if (resolutionStrategy == null) {
-            resolutionStrategy = resolutionStrategyFactory.create();
-            resolutionStrategy.setMutationValidator(this);
-            resolutionStrategyFactory = null;
+            resolutionStrategy = resolutionStrategyFactory!!.create()
+            resolutionStrategy!!.setMutationValidator(this)
+            resolutionStrategyFactory = null
         }
-        return resolutionStrategy;
+        return resolutionStrategy!!
     }
 
-    @Override
-    public DomainObjectContext getDomainObjectContext() {
-        return domainObjectContext;
+    override fun getDomainObjectContext(): DomainObjectContext {
+        return domainObjectContext
     }
 
-    @Override
-    public Configuration resolutionStrategy(Closure closure) {
-        configure(closure, getResolutionStrategy());
-        return this;
+    override fun resolutionStrategy(closure: Closure<*>): Configuration {
+        ConfigureUtil.configure<ResolutionStrategyInternal>(closure, getResolutionStrategy())
+        return this
     }
 
-    @Override
-    public Configuration resolutionStrategy(Action<? super ResolutionStrategy> action) {
-        action.execute(getResolutionStrategy());
-        return this;
+    override fun resolutionStrategy(action: Action<in ResolutionStrategy>): Configuration {
+        action.execute(getResolutionStrategy())
+        return this
     }
 
-    @Override
-    public void validateMutation(MutationType type) {
+    override fun validateMutation(type: MutationValidator.MutationType) {
         if (isMutationForbidden(type)) {
-            throw new InvalidUserCodeException(
-                String.format("Cannot mutate the %s of %s after %s. ", type, this.getDisplayName(), observationReason.get()) +
-                    "After a configuration has been observed, it should not be modified."
-            );
+            throw InvalidUserCodeException(
+                String.format("Cannot mutate the %s of %s after %s. ", type, this.getDisplayName(), observationReason!!.get()) +
+                        "After a configuration has been observed, it should not be modified."
+            )
         }
 
-        if (type == MutationType.USAGE) {
-            assertUsageIsMutable();
+        if (type == MutationValidator.MutationType.USAGE) {
+            assertUsageIsMutable()
         }
     }
 
@@ -1227,182 +1167,139 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * Given the type of mutation, determine based on the observation state of this
      * configuration whether the mutation is forbidden or if it may proceed.
      */
-    private boolean isMutationForbidden(MutationType type) {
+    private fun isMutationForbidden(type: MutationValidator.MutationType): Boolean {
         if (observationReason == null) {
             // This configuration has not been observed, and so is still mutable.
             // No reason to throw an exception.
-            return false;
+            return false
         }
 
-        if (type == MutationType.STRATEGY && !isFullyResolved(currentResolveState.get())) {
+        if (type == MutationValidator.MutationType.STRATEGY && !isFullyResolved(currentResolveState.get())) {
             // TODO: Eventually this should become an error, but plugins (Android?) are mutating the
             // resolution strategy in beforeResolve in order to save memory.
-            return false;
+            return false
         }
 
-        if (type == MutationType.DEPENDENCIES ||
-            type == MutationType.DEPENDENCY_ATTRIBUTES ||
-            type == MutationType.DEPENDENCY_CONSTRAINT_ATTRIBUTES
+        if (type == MutationValidator.MutationType.DEPENDENCIES || type == MutationValidator.MutationType.DEPENDENCY_ATTRIBUTES || type == MutationValidator.MutationType.DEPENDENCY_CONSTRAINT_ATTRIBUTES
         ) {
             // When building variant metadata, dependencies are observed lazily after attributes, capabilities, etc.
             // We allow these to be marked as observed separately from the remainder of its state.
-            return dependenciesObserved;
+            return dependenciesObserved
         }
 
         // Otherwise, non-dependency state has been observed and is therefore non-mutable.
-        return true;
+        return true
     }
 
-    @Override
-    public ConfigurationIdentity getConfigurationIdentity() {
-        String name = getName();
-        ProjectIdentity projectId = domainObjectContext.getProjectIdentity();
-        String projectPath = projectId == null ? null : projectId.getProjectPath().asString();
-        String buildPath = domainObjectContext.getBuildPath().toString();
-        return new DefaultConfigurationIdentity(buildPath, projectPath, name);
+    override fun getConfigurationIdentity(): ConfigurationIdentity {
+        val name = getName()
+        val projectId = domainObjectContext.getProjectIdentity()
+        val projectPath = if (projectId == null) null else projectId.getProjectPath().asString()
+        val buildPath = domainObjectContext.getBuildPath().toString()
+        return DefaultConfigurationIdentity(buildPath, projectPath, name)
     }
 
-    private boolean isProperUsage(ProperMethodUsage... properUsages) {
-        ConfigurationInternal conf = this;
-        return Arrays.stream(properUsages).anyMatch(pu -> pu.isAllowed(conf));
+    private fun isProperUsage(vararg properUsages: ProperMethodUsage): Boolean {
+        val conf: ConfigurationInternal = this
+        return Arrays.stream<ProperMethodUsage>(properUsages).anyMatch { pu: ProperMethodUsage? -> pu!!.isAllowed(conf) }
     }
 
     /**
      * Checks if the only usages that allow this method are also deprecated.
      *
      * @param properUsages the usages to check against
-     * @return {@code true} if so; {@code false} otherwise
+     * @return `true` if so; `false` otherwise
      */
-    private boolean isExclusivelyDeprecatedUsage(ProperMethodUsage... properUsages) {
-        ConfigurationInternal conf = this;
-        return Arrays.stream(properUsages)
-            .filter(pu -> pu.isAllowed(conf))
-            .allMatch(pu -> pu.isDeprecated(conf));
+    private fun isExclusivelyDeprecatedUsage(vararg properUsages: ProperMethodUsage): Boolean {
+        val conf: ConfigurationInternal = this
+        return Arrays.stream<ProperMethodUsage>(properUsages)
+            .filter { pu: ProperMethodUsage? -> pu!!.isAllowed(conf) }
+            .allMatch { pu: ProperMethodUsage? -> pu!!.isDeprecated(conf) }
     }
 
     // TODO: This causes redundant deprecation logs when we call internal methods to support
     //       features on deprecated configurations. We already emit deprecation warnings
     //       when using public deprecated methods, we should not emit them again for internal API usage.
-    private void warnOrFailOnInvalidInternalAPIUsage(String methodName, ProperMethodUsage... properUsages) {
-        warnOrFailOnInvalidUsage(methodName, true, properUsages);
+    private fun warnOrFailOnInvalidInternalAPIUsage(methodName: String, vararg properUsages: ProperMethodUsage) {
+        warnOrFailOnInvalidUsage(methodName, true, *properUsages)
     }
 
-    private void warnOrFailOnInvalidUsage(String methodName, ProperMethodUsage... properUsages) {
-        warnOrFailOnInvalidUsage(methodName, false, properUsages);
+    private fun warnOrFailOnInvalidUsage(methodName: String, vararg properUsages: ProperMethodUsage) {
+        warnOrFailOnInvalidUsage(methodName, false, *properUsages)
     }
 
-    private void warnOrFailOnInvalidUsage(String methodName, boolean allowDeprecated, ProperMethodUsage... properUsages) {
-        if (!isProperUsage(properUsages)) {
-            String currentUsageDesc = UsageDescriber.describeCurrentUsage(this);
-            String properUsageDesc = ProperMethodUsage.summarizeProperUsage(properUsages);
-            @SuppressWarnings("InlineFormatString")
-            String prefixTemplate = "Calling configuration method '%s' is not allowed for configuration '%s'";
-            @SuppressWarnings("InlineFormatString")
-            String suffixTemplate = "This method is only meant to be called on configurations which allow the %susage(s): '%s'.";
-            GradleException ex = new GradleException(
+    private fun warnOrFailOnInvalidUsage(methodName: String, allowDeprecated: Boolean, vararg properUsages: ProperMethodUsage) {
+        if (!isProperUsage(*properUsages)) {
+            val currentUsageDesc = UsageDescriber.describeCurrentUsage(this)
+            val properUsageDesc: String = ProperMethodUsage.Companion.summarizeProperUsage(*properUsages)
+            val prefixTemplate = "Calling configuration method '%s' is not allowed for configuration '%s'"
+            val suffixTemplate = "This method is only meant to be called on configurations which allow the %susage(s): '%s'."
+            val ex = GradleException(
                 String.format(
                     prefixTemplate + ", which has permitted usage(s):\n%s\n" + suffixTemplate,
                     methodName,
                     getName(),
                     currentUsageDesc,
-                    allowDeprecated ? "" : "(non-deprecated) ",
+                    if (allowDeprecated) "" else "(non-deprecated) ",
                     properUsageDesc
                 )
-            );
+            )
 
-            ProblemId id = ProblemId.create("method-not-allowed", "Method call not allowed", GradleCoreProblemGroup.configurationUsage());
-            throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
+            val id = create("method-not-allowed", "Method call not allowed", configurationUsage())
+            throw configurationServices.problems.internalReporter.throwing(ex, id, { spec ->
                 spec.contextualLabel(
                     String.format(
                         prefixTemplate,
                         methodName,
                         getName()
                     )
-                );
+                )
                 spec.details(
                     String.format(
                         "'%s' has the following permitted usage(s):\n%s\n" + suffixTemplate,
                         getName(),
                         currentUsageDesc,
-                        allowDeprecated ? "" : "(non-deprecated) ",
+                        if (allowDeprecated) "" else "(non-deprecated) ",
                         properUsageDesc
                     )
-                );
-            });
-        } else if (isExclusivelyDeprecatedUsage(properUsages)) {
-            DeprecationLogger.deprecateAction(String.format("Calling %s on %s", methodName, this))
-                .withContext("This configuration does not allow this method to be called.")
+                )
+            })
+        } else if (isExclusivelyDeprecatedUsage(*properUsages)) {
+            deprecateAction(String.format("Calling %s on %s", methodName, this))
+                .withContext("This configuration does not allow this method to be called.")!!
                 .willBecomeAnErrorInGradle10()
-                .withUpgradeGuideSection(8, "configurations_allowed_usage")
-                .nagUser();
+                .withUpgradeGuideSection(8, "configurations_allowed_usage")!!
+                .nagUser()
         }
     }
 
-    private static class ConfigurationDescription implements Describable {
-        private final Path identityPath;
-
-        ConfigurationDescription(Path identityPath) {
-            this.identityPath = identityPath;
-        }
-
-        @Override
-        public String getDisplayName() {
-            return "configuration '" + identityPath + "'";
+    private class ConfigurationDescription(private val identityPath: Path) : Describable {
+        override fun getDisplayName(): String {
+            return "configuration '" + identityPath + "'"
         }
     }
 
-    private static class DefaultConfigurationIdentity implements ConfigurationIdentity {
-        private final String buildPath;
-        private final String projectPath;
-        private final String name;
-
-        public DefaultConfigurationIdentity(String buildPath, @Nullable String projectPath, String name) {
-            this.buildPath = buildPath;
-            this.projectPath = projectPath;
-            this.name = name;
-        }
-
-        @Override
-        public String getBuildPath() {
-            return buildPath;
-        }
-
-        @Nullable
-        @Override
-        public String getProjectPath() {
-            return projectPath;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public String toString() {
-            Path path = Path.path(buildPath);
+    private class DefaultConfigurationIdentity(val buildPath: String, val projectPath: String?, val name: String) : ConfigurationIdentity {
+        override fun toString(): String {
+            var path = Path.path(buildPath)
             if (projectPath != null) {
-                path = path.append(Path.path(projectPath));
+                path = path.append(Path.path(projectPath))
             }
-            path = path.child(name);
-            return "Configuration '" + path.toString() + "'";
+            path = path.child(name)
+            return "Configuration '" + path.toString() + "'"
         }
     }
 
-    private void assertIsResolvable() {
-        if (!canBeResolved) {
-            throw new IllegalStateException("Resolving dependency configuration '" + name + "' is not allowed as it is defined as 'canBeResolved=false'.\nInstead, a resolvable ('canBeResolved=true') dependency configuration that extends '" + name + "' should be resolved.");
-        }
+    private fun assertIsResolvable() {
+        check(canBeResolved) { "Resolving dependency configuration '" + name + "' is not allowed as it is defined as 'canBeResolved=false'.\nInstead, a resolvable ('canBeResolved=true') dependency configuration that extends '" + name + "' should be resolved." }
     }
 
-    @Override
-    protected void assertCanCarryBuildDependencies() {
-        assertIsResolvable();
+    override fun assertCanCarryBuildDependencies() {
+        assertIsResolvable()
     }
 
-    @Override
-    public AttributeContainerInternal getAttributes() {
-        return configurationAttributes;
+    override fun getAttributes(): AttributeContainerInternal {
+        return configurationAttributes
     }
 
     /**
@@ -1411,72 +1308,76 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on consumable or resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public Configuration attributes(Action<? super AttributeContainer> action) {
-        warnOrFailOnInvalidUsage("attributes(Action)", ProperMethodUsage.CONSUMABLE, ProperMethodUsage.RESOLVABLE);
-        action.execute(configurationAttributes);
-        return this;
+    override fun attributes(action: Action<in AttributeContainer>): Configuration {
+        warnOrFailOnInvalidUsage("attributes(Action)", ProperMethodUsage.CONSUMABLE, ProperMethodUsage.RESOLVABLE)
+        action.execute(configurationAttributes)
+        return this
     }
 
-    @Override
-    public void preventUsageMutation() {
-        usageCanBeMutated = false;
+    override fun preventUsageMutation() {
+        usageCanBeMutated = false
     }
 
-    @SuppressWarnings("deprecation")
-    private void assertUsageIsMutable() {
+    @Suppress("deprecation")
+    private fun assertUsageIsMutable() {
         if (!usageCanBeMutated) {
             // Don't print role message for configurations with all usages - users might not have actively chosen this role
-            if (roleAtCreation != ConfigurationRoles.ALL) {
-                throw new GradleException(
-                    String.format("Cannot change the allowed usage of %s, as it was locked upon creation to the role: '%s'.\n" +
-                            "This role permits the following usage:\n" +
-                            "%s\n" +
-                            "Ideally, each configuration should be used for a single purpose.",
-                        getDisplayName(), roleAtCreation.getName(), roleAtCreation.describeUsage()));
+            if (roleAtCreation !== ConfigurationRoles.ALL) {
+                throw GradleException(
+                    String.format(
+                        "Cannot change the allowed usage of %s, as it was locked upon creation to the role: '%s'.\n" +
+                                "This role permits the following usage:\n" +
+                                "%s\n" +
+                                "Ideally, each configuration should be used for a single purpose.",
+                        getDisplayName(), roleAtCreation.getName(), roleAtCreation.describeUsage()
+                    )
+                )
             } else {
-                throw new GradleException(String.format("Cannot change the allowed usage of %s, as it has been locked.", getDisplayName()));
+                throw GradleException(String.format("Cannot change the allowed usage of %s, as it has been locked.", getDisplayName()))
             }
         }
     }
 
     /**
      * If this configuration has a role set upon creation, conditionally fail upon usage mutation.
-     * <p>
+     *
+     *
      * Configurations with roles set upon creation should not have their usage changed.
-     * <p>
-     * For <strong>redundant</strong>, where a method is called but no change in the usage occurs, this method does not fail. This is
+     *
+     *
+     * For **redundant**, where a method is called but no change in the usage occurs, this method does not fail. This is
      * to allow plugins utilizing this behavior to continue to function, as popular third-party plugins continue to
      * violate these conditions.  However, it may emit a warning on redundant changes if a special flag is set.
-     * <p>
+     *
+     *
      * The eventual goal is that all configuration usage be specified upon creation and immutable
      * thereafter.
      */
-    private void checkChangingUsage(String methodName, boolean current, boolean newValue) {
+    private fun checkChangingUsage(methodName: String, current: Boolean, newValue: Boolean) {
         if (hasAllUsages()) {
             // We currently allow configurations with all usages -- those that are created with
             // `create` and `register` -- to have mutable roles. This is likely to change in the future
             // when we deprecate any configuration with mutable roles.
-            return;
+            return
         }
 
-        boolean redundantChange = current == newValue;
+        val redundantChange = current == newValue
 
         // Error will be thrown later. Don't emit a duplicate warning.
         if (!usageCanBeMutated && !redundantChange) {
-            return;
+            return
         }
 
         // KGP continues to set the already-set value for a given usage even though it is already set
         // This property exists to allow KGP to test whether they have properly stopped making unnecessary redundant
         // changes to detachedConfigurations.
         // This property WILL be removed without warning and should be removed in Gradle 9.x.
-        boolean extraWarningsEnabled = Boolean.getBoolean("org.gradle.internal.deprecation.preliminary.Configuration.redundantUsageChangeWarning.enabled");
+        val extraWarningsEnabled = java.lang.Boolean.getBoolean("org.gradle.internal.deprecation.preliminary.Configuration.redundantUsageChangeWarning.enabled")
 
         if (redundantChange) {
             // Remove this condition in Gradle 9.x and warn on every redundant change, in Gradle 10 this should fail.
             if (extraWarningsEnabled) {
-                warnAboutChangingUsage(methodName, newValue);
+                warnAboutChangingUsage(methodName, newValue)
             }
         } else {
             if (isDetachedConfiguration() && !newValue) {
@@ -1485,118 +1386,101 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
                 // but we can at least warn if the flag is set.
                 // Remove this check and warn on every actual change to a detached conf in Gradle 9.x, in Gradle 10 this should fail.
                 if (extraWarningsEnabled) {
-                    warnAboutChangingUsage(methodName, newValue);
+                    warnAboutChangingUsage(methodName, newValue)
                 }
             } else {
-                failDueToChangingUsage(methodName, newValue);
+                failDueToChangingUsage(methodName, newValue)
             }
         }
     }
 
-    private void warnAboutChangingUsage(String methodName, boolean newValue) {
-        DeprecationLogger.deprecateAction(String.format("Calling %s(%b) on %s", methodName, newValue, this))
-            .withContext("This configuration's role was set upon creation and its usage should not be changed.")
+    private fun warnAboutChangingUsage(methodName: String, newValue: Boolean) {
+        deprecateAction(String.format("Calling %s(%b) on %s", methodName, newValue, this))
+            .withContext("This configuration's role was set upon creation and its usage should not be changed.")!!
             .willBecomeAnErrorInGradle10()
-            .withUpgradeGuideSection(8, "configurations_allowed_usage")
-            .nagUser();
+            .withUpgradeGuideSection(8, "configurations_allowed_usage")!!
+            .nagUser()
     }
 
-    private void failDueToChangingUsage(String methodName, boolean newValue) {
-        GradleException ex = new GradleException(String.format("Calling %s(%b) on %s is not allowed.  This configuration's role was set upon creation and its usage should not be changed.", methodName, newValue, this));
-        ProblemId id = ProblemId.create("method-not-allowed", "Method call not allowed", GradleCoreProblemGroup.configurationUsage());
-        throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
-            spec.contextualLabel(ex.getMessage());
-        });
+    private fun failDueToChangingUsage(methodName: String, newValue: Boolean) {
+        val ex =
+            GradleException(String.format("Calling %s(%b) on %s is not allowed.  This configuration's role was set upon creation and its usage should not be changed.", methodName, newValue, this))
+        val id = create("method-not-allowed", "Method call not allowed", configurationUsage())
+        throw configurationServices.problems.internalReporter.throwing(ex, id, { spec ->
+            spec.contextualLabel(ex.message)
+        })
     }
 
-    @Override
-    public boolean isDetachedConfiguration() {
-        return isDetached;
+    override fun isDetachedConfiguration(): Boolean {
+        return isDetached
     }
 
-    @SuppressWarnings("deprecation")
-    private boolean hasAllUsages() {
-        return roleAtCreation == ConfigurationRoles.ALL;
+    @Suppress("deprecation")
+    private fun hasAllUsages(): Boolean {
+        return roleAtCreation === ConfigurationRoles.ALL
     }
 
-    @Override
-    public boolean isDeprecatedForConsumption() {
-        return consumptionDeprecated;
+    override fun isDeprecatedForConsumption(): Boolean {
+        return consumptionDeprecated
     }
 
-    @Override
-    public boolean isDeprecatedForResolution() {
-        return resolutionDeprecated;
+    override fun isDeprecatedForResolution(): Boolean {
+        return resolutionDeprecated
     }
 
-    @Override
-    public boolean isDeprecatedForDeclarationAgainst() {
-        return declarationDeprecated;
+    override fun isDeprecatedForDeclarationAgainst(): Boolean {
+        return declarationDeprecated
     }
 
-    @Override
-    public boolean isCanBeConsumed() {
-        return canBeConsumed;
+    override fun isCanBeConsumed(): Boolean {
+        return canBeConsumed
     }
 
-    @Override
-    public void setCanBeConsumed(boolean allowed) {
-        checkChangingUsage("setCanBeConsumed", canBeConsumed, allowed);
+    override fun setCanBeConsumed(allowed: Boolean) {
+        checkChangingUsage("setCanBeConsumed", canBeConsumed, allowed)
         if (canBeConsumed != allowed) {
-            validateMutation(MutationType.USAGE);
-            canBeConsumed = allowed;
+            validateMutation(MutationValidator.MutationType.USAGE)
+            canBeConsumed = allowed
         }
     }
 
-    @Override
-    public boolean isCanBeResolved() {
-        return canBeResolved;
+    override fun isCanBeResolved(): Boolean {
+        return canBeResolved
     }
 
-    @Override
-    public void setCanBeResolved(boolean allowed) {
-        checkChangingUsage("setCanBeResolved", canBeResolved, allowed);
+    override fun setCanBeResolved(allowed: Boolean) {
+        checkChangingUsage("setCanBeResolved", canBeResolved, allowed)
         if (canBeResolved != allowed) {
-            validateMutation(MutationType.USAGE);
-            canBeResolved = allowed;
+            validateMutation(MutationValidator.MutationType.USAGE)
+            canBeResolved = allowed
         }
     }
 
-    @Override
-    public boolean isCanBeDeclared() {
-        return canBeDeclaredAgainst;
+    override fun isCanBeDeclared(): Boolean {
+        return canBeDeclaredAgainst
     }
 
-    @Override
-    public void setCanBeDeclared(boolean allowed) {
-        checkChangingUsage("setCanBeDeclared", canBeDeclaredAgainst, allowed);
+    override fun setCanBeDeclared(allowed: Boolean) {
+        checkChangingUsage("setCanBeDeclared", canBeDeclaredAgainst, allowed)
         if (canBeDeclaredAgainst != allowed) {
-            validateMutation(MutationType.USAGE);
-            canBeDeclaredAgainst = allowed;
+            validateMutation(MutationValidator.MutationType.USAGE)
+            canBeDeclaredAgainst = allowed
         }
     }
 
-    @VisibleForTesting
-    ListenerBroadcast<DependencyResolutionListener> getDependencyResolutionListeners() {
-        return dependencyResolutionListeners;
+    override fun getDeclarationAlternatives(): MutableList<String> {
+        return declarationAlternatives
     }
 
-    @Override
-    public List<String> getDeclarationAlternatives() {
-        return declarationAlternatives;
+    override fun getResolutionAlternatives(): MutableList<String> {
+        return resolutionAlternatives
     }
 
-    @Override
-    public List<String> getResolutionAlternatives() {
-        return resolutionAlternatives;
-    }
-
-    @Override
-    public void addDeclarationAlternatives(String... alternativesForDeclaring) {
-        this.declarationAlternatives = ImmutableList.<String>builder()
+    override fun addDeclarationAlternatives(vararg alternativesForDeclaring: String) {
+        this.declarationAlternatives = ImmutableList.builder<String>()
             .addAll(declarationAlternatives)
-            .addAll(Arrays.asList(alternativesForDeclaring))
-            .build();
+            .addAll(Arrays.asList<String>(*alternativesForDeclaring))
+            .build()
     }
 
     /**
@@ -1605,20 +1489,18 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public void addResolutionAlternatives(String... alternativesForResolving) {
-        this.resolutionAlternatives = ImmutableList.<String>builder()
+    override fun addResolutionAlternatives(vararg alternativesForResolving: String) {
+        this.resolutionAlternatives = ImmutableList.builder<String>()
             .addAll(resolutionAlternatives)
-            .addAll(Arrays.asList(alternativesForResolving))
-            .build();
+            .addAll(Arrays.asList<String>(*alternativesForResolving))
+            .build()
     }
 
-    @Override
-    public Configuration shouldResolveConsistentlyWith(Configuration versionsSource) {
-        warnOrFailOnInvalidUsage("shouldResolveConsistentlyWith(Configuration)", ProperMethodUsage.RESOLVABLE);
-        this.consistentResolutionSource = (ConfigurationInternal) versionsSource;
-        this.consistentResolutionReason = "version resolved in " + versionsSource + " by consistent resolution";
-        return this;
+    override fun shouldResolveConsistentlyWith(versionsSource: Configuration): Configuration {
+        warnOrFailOnInvalidUsage("shouldResolveConsistentlyWith(Configuration)", ProperMethodUsage.RESOLVABLE)
+        this.consistentResolutionSource = versionsSource as ConfigurationInternal
+        this.consistentResolutionReason = "version resolved in " + versionsSource + " by consistent resolution"
+        return this
     }
 
     /**
@@ -1627,307 +1509,257 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
      * @implNote Usage: This method can only be called on resolvable configurations and will throw an exception if
      * called on a configuration that does not permit this usage.
      */
-    @Override
-    public Configuration disableConsistentResolution() {
-        warnOrFailOnInvalidUsage("disableConsistentResolution()", ProperMethodUsage.RESOLVABLE);
-        this.consistentResolutionSource = null;
-        this.consistentResolutionReason = null;
-        return this;
+    override fun disableConsistentResolution(): Configuration {
+        warnOrFailOnInvalidUsage("disableConsistentResolution()", ProperMethodUsage.RESOLVABLE)
+        this.consistentResolutionSource = null
+        this.consistentResolutionReason = null
+        return this
     }
 
-    @Override
-    public ConfigurationRole getRoleAtCreation() {
-        return roleAtCreation;
+    override fun getRoleAtCreation(): ConfigurationRole {
+        return roleAtCreation
     }
 
-    public ProblemsInternal getProblems() {
-        return configurationServices.getProblems();
-    }
+    val problems: ProblemsInternal
+        get() = configurationServices.problems
 
-    private void assertNotDetachedExtensionDoingExtending(Iterable<Configuration> extendsFrom) {
+    private fun assertNotDetachedExtensionDoingExtending(extendsFrom: Iterable<Configuration>) {
         if (isDetachedConfiguration()) {
-            throwDetachedConfigurationWithExtendsFromError(extendsFrom);
+            throwDetachedConfigurationWithExtendsFromError(extendsFrom)
         }
     }
 
-    private void assertNotDetachedExtensionDoingExtendingProviders(List<Provider<? extends Configuration>> extendsFrom) {
+    private fun assertNotDetachedExtensionDoingExtendingProviders(extendsFrom: MutableList<Provider<out Configuration>>) {
         if (isDetachedConfiguration()) {
-            throwDetachedConfigurationWithExtendsFromError(extendsFrom.stream().map(Provider::get).collect(Collectors.toList()));
+            throwDetachedConfigurationWithExtendsFromError(extendsFrom.stream().map { obj: Provider<*>? -> obj!!.get() }.collect(Collectors.toList()))
         }
     }
 
-    private void throwDetachedConfigurationWithExtendsFromError(Iterable<Configuration> extendsFrom) {
-        String summarizedExtensionTargets = StreamSupport.stream(extendsFrom.spliterator(), false)
-            .map(ConfigurationInternal.class::cast)
-            .map(ConfigurationInternal::getDisplayName)
-            .collect(Collectors.joining(", "));
-        GradleException ex = new GradleException(getDisplayName() + " cannot extend " + summarizedExtensionTargets);
-        ProblemId id = ProblemId.create("extend-detached-not-allowed", "Extending a detachedConfiguration is not allowed", GradleCoreProblemGroup.configurationUsage());
-        throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
-            spec.contextualLabel(ex.getMessage());
-        });
+    private fun throwDetachedConfigurationWithExtendsFromError(extendsFrom: Iterable<Configuration>) {
+        val summarizedExtensionTargets = StreamSupport.stream<Configuration>(extendsFrom.spliterator(), false)
+            .map<ConfigurationInternal> { obj: Configuration? -> ConfigurationInternal::class.java.cast(obj) }
+            .map<String> { obj: ConfigurationInternal? -> obj!!.getDisplayName() }
+            .collect(Collectors.joining(", "))
+        val ex = GradleException(getDisplayName() + " cannot extend " + summarizedExtensionTargets)
+        val id = create("extend-detached-not-allowed", "Extending a detachedConfiguration is not allowed", configurationUsage())
+        throw configurationServices.problems.internalReporter.throwing(ex, id, { spec ->
+            spec.contextualLabel(ex.message)
+        })
     }
 
-    public static class ConfigurationResolvableDependencies implements ResolvableDependencies {
-        private final DefaultConfiguration configuration;
-
-        @Inject
-        public ConfigurationResolvableDependencies(DefaultConfiguration configuration) {
-            this.configuration = configuration;
+    class ConfigurationResolvableDependencies @Inject constructor(private val configuration: DefaultConfiguration) : ResolvableDependencies {
+        override fun getName(): String {
+            return configuration.name
         }
 
-        @Override
-        public String getName() {
-            return configuration.name;
+        override fun getPath(): String {
+            return configuration.projectPath.asString()
         }
 
-        @Override
-        public String getPath() {
-            return configuration.projectPath.asString();
+        override fun toString(): String {
+            return "dependencies '" + configuration.identityPath + "'"
         }
 
-        @Override
-        public String toString() {
-            return "dependencies '" + configuration.identityPath + "'";
+        override fun getFiles(): FileCollection {
+            return configuration.intrinsicFiles!!
         }
 
-        @Override
-        public FileCollection getFiles() {
-            return configuration.getIntrinsicFiles();
+        override fun getDependencies(): DependencySet {
+            configuration.runDependencyActions()
+            return configuration.getAllDependencies()
         }
 
-        @Override
-        public DependencySet getDependencies() {
-            configuration.runDependencyActions();
-            return configuration.getAllDependencies();
+        override fun getDependencyConstraints(): DependencyConstraintSet {
+            configuration.runDependencyActions()
+            return configuration.getAllDependencyConstraints()
         }
 
-        @Override
-        public DependencyConstraintSet getDependencyConstraints() {
-            configuration.runDependencyActions();
-            return configuration.getAllDependencyConstraints();
+        override fun beforeResolve(action: Action<in ResolvableDependencies>) {
+            configuration.dependencyResolutionListeners.add("beforeResolve", configuration.userCodeApplicationContext.reapplyCurrentLater(action))
         }
 
-        @Override
-        public void beforeResolve(Action<? super ResolvableDependencies> action) {
-            configuration.dependencyResolutionListeners.add("beforeResolve", configuration.userCodeApplicationContext.reapplyCurrentLater(action));
+        override fun beforeResolve(action: Closure<*>) {
+            beforeResolve(ConfigureUtil.configureUsing<ResolvableDependencies>(action))
         }
 
-        @Override
-        public void beforeResolve(Closure action) {
-            beforeResolve(ConfigureUtil.configureUsing(action));
+        override fun afterResolve(action: Action<in ResolvableDependencies>) {
+            configuration.dependencyResolutionListeners.add("afterResolve", configuration.userCodeApplicationContext.reapplyCurrentLater(action))
         }
 
-        @Override
-        public void afterResolve(Action<? super ResolvableDependencies> action) {
-            configuration.dependencyResolutionListeners.add("afterResolve", configuration.userCodeApplicationContext.reapplyCurrentLater(action));
+        override fun afterResolve(action: Closure<*>) {
+            afterResolve(ConfigureUtil.configureUsing<ResolvableDependencies>(action))
         }
 
-        @Override
-        public void afterResolve(Closure action) {
-            afterResolve(ConfigureUtil.configureUsing(action));
+        override fun getResolutionResult(): ResolutionResult {
+            configuration.assertIsResolvable()
+            return configuration.resolutionAccess.publicView!!.resolutionResult
         }
 
-        @Override
-        public ResolutionResult getResolutionResult() {
-            configuration.assertIsResolvable();
-            return configuration.resolutionAccess.getPublicView().getResolutionResult();
+        override fun getArtifacts(): ArtifactCollection {
+            return configuration.resolutionAccess.publicView!!.getArtifacts()!!
         }
 
-        @Override
-        public ArtifactCollection getArtifacts() {
-            return configuration.resolutionAccess.getPublicView().getArtifacts();
+        override fun artifactView(configAction: Action<in ArtifactView.ViewConfiguration>): ArtifactView {
+            return configuration.resolutionAccess.publicView!!.artifactView(configAction)!!
         }
 
-        @Override
-        public ArtifactView artifactView(Action<? super ArtifactView.ViewConfiguration> configAction) {
-            return configuration.resolutionAccess.getPublicView().artifactView(configAction);
-        }
-
-        @Override
-        public AttributeContainer getAttributes() {
-            return configuration.configurationAttributes;
+        override fun getAttributes(): AttributeContainer {
+            return configuration.configurationAttributes
         }
     }
 
-    private class AllArtifactsProvider implements PublishArtifactSetProvider {
-        @Override
-        public PublishArtifactSet getPublishArtifactSet() {
-            return getAllArtifacts();
+    private inner class AllArtifactsProvider : PublishArtifactSetProvider {
+        override fun getPublishArtifactSet(): PublishArtifactSet {
+            return getAllArtifacts()
         }
     }
 
-    @Override
-    public ResolutionHost getResolutionHost() {
-        return resolutionAccess.getHost();
+    override fun getResolutionHost(): ResolutionHost {
+        return resolutionAccess.host
     }
 
-    @Override
-    public ResolutionAccess getResolutionAccess() {
-        return resolutionAccess;
+    override fun getResolutionAccess(): ResolutionAccess {
+        return resolutionAccess
     }
 
-    private static class DefaultResolutionHost implements ResolutionHost {
-
-        private final Path buildTreePath;
-        private final DisplayName displayName;
-        private final ProblemsInternal problems;
-        private final ResolveExceptionMapper exceptionMapper;
-
-        public DefaultResolutionHost(
-            Path buildTreePath,
-            DisplayName displayName,
-            ProblemsInternal problems,
-            ResolveExceptionMapper exceptionMapper
-        ) {
-            this.buildTreePath = buildTreePath;
-            this.displayName = displayName;
-            this.problems = problems;
-            this.exceptionMapper = exceptionMapper;
+    private class DefaultResolutionHost(
+        private val buildTreePath: Path,
+        private val displayName: DisplayName,
+        private val problems: ProblemsInternal,
+        private val exceptionMapper: ResolveExceptionMapper
+    ) : ResolutionHost {
+        override fun getProblems(): ProblemsInternal {
+            return problems
         }
 
-        @Override
-        public ProblemsInternal getProblems() {
-            return problems;
+        override fun displayName(): DisplayName {
+            return displayName
         }
 
-        @Override
-        public DisplayName displayName() {
-            return displayName;
+        override fun consolidateFailures(resolutionType: String, failures: MutableCollection<Throwable>): Optional<TypedResolveException> {
+            return Optional.ofNullable<TypedResolveException>(exceptionMapper.mapFailures(failures, resolutionType, displayName))
         }
 
-        @Override
-        public Optional<TypedResolveException> consolidateFailures(String resolutionType, Collection<Throwable> failures) {
-            return Optional.ofNullable(exceptionMapper.mapFailures(failures, resolutionType, displayName));
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            DefaultResolutionHost that = (DefaultResolutionHost) o;
-            return buildTreePath.equals(that.buildTreePath);
+            val that = o as DefaultResolutionHost
+            return buildTreePath == that.buildTreePath
         }
 
-        @Override
-        public int hashCode() {
-            return buildTreePath.hashCode();
+        override fun hashCode(): Int {
+            return buildTreePath.hashCode()
         }
     }
 
-    private enum ProperMethodUsage {
+    private enum class ProperMethodUsage {
         CONSUMABLE {
-            @Override
-            boolean isAllowed(ConfigurationInternal configuration) {
-                return configuration.isCanBeConsumed();
+            override fun isAllowed(configuration: ConfigurationInternal): Boolean {
+                return configuration.isCanBeConsumed()
             }
 
-            @Override
-            boolean isDeprecated(ConfigurationInternal configuration) {
-                return configuration.isDeprecatedForConsumption();
+            override fun isDeprecated(configuration: ConfigurationInternal): Boolean {
+                return configuration.isDeprecatedForConsumption()
             }
         },
         RESOLVABLE {
-            @Override
-            boolean isAllowed(ConfigurationInternal configuration) {
-                return configuration.isCanBeResolved();
+            override fun isAllowed(configuration: ConfigurationInternal): Boolean {
+                return configuration.isCanBeResolved()
             }
 
-            @Override
-            boolean isDeprecated(ConfigurationInternal configuration) {
-                return configuration.isDeprecatedForResolution();
+            override fun isDeprecated(configuration: ConfigurationInternal): Boolean {
+                return configuration.isDeprecatedForResolution()
             }
         },
         DECLARABLE_AGAINST {
-            @Override
-            boolean isAllowed(ConfigurationInternal configuration) {
-                return configuration.isCanBeDeclared();
+            override fun isAllowed(configuration: ConfigurationInternal): Boolean {
+                return configuration.isCanBeDeclared()
             }
 
-            @Override
-            boolean isDeprecated(ConfigurationInternal configuration) {
-                return configuration.isDeprecatedForDeclarationAgainst();
+            override fun isDeprecated(configuration: ConfigurationInternal): Boolean {
+                return configuration.isDeprecatedForDeclarationAgainst()
             }
         };
 
-        abstract boolean isAllowed(ConfigurationInternal configuration);
+        abstract fun isAllowed(configuration: ConfigurationInternal): Boolean
 
-        abstract boolean isDeprecated(ConfigurationInternal configuration);
+        abstract fun isDeprecated(configuration: ConfigurationInternal): Boolean
 
-        public static String buildProperName(ProperMethodUsage usage) {
-            @SuppressWarnings("deprecation")
-            String capitalizedName = org.apache.commons.lang3.text.WordUtils.capitalizeFully(usage.name().replace('_', ' '));
-            return capitalizedName;
-        }
+        companion object {
+            fun buildProperName(usage: ProperMethodUsage): String {
+                @Suppress("deprecation") val capitalizedName = WordUtils.capitalizeFully(usage.name.replace('_', ' '))
+                return capitalizedName
+            }
 
-        public static String summarizeProperUsage(ProperMethodUsage... properUsages) {
-            return Arrays.stream(properUsages)
-                .map(ProperMethodUsage::buildProperName)
-                .collect(Collectors.joining(", "));
+            fun summarizeProperUsage(vararg properUsages: ProperMethodUsage): String {
+                return Arrays.stream<ProperMethodUsage>(properUsages)
+                    .map<String> { usage: ProperMethodUsage? -> ProperMethodUsage.Companion.buildProperName(usage!!) }
+                    .collect(Collectors.joining(", "))
+            }
         }
     }
 
-    private static final class IllegalResolutionException extends GradleException implements ResolutionProvider {
-        private final String resolution;
+    private class IllegalResolutionException(message: String) : GradleException(message), ResolutionProvider {
+        private val resolution: String
 
-        public IllegalResolutionException(String message) {
-            super(message);
-            Documentation userGuideLink = Documentation.userManual("viewing_debugging_dependencies", "sub:resolving-unsafe-configuration-resolution-errors");
-            resolution = "For more information, please refer to " + userGuideLink.url + " in the Gradle documentation.";
+        init {
+            val userGuideLink = userManual("viewing_debugging_dependencies", "sub:resolving-unsafe-configuration-resolution-errors")
+            resolution = "For more information, please refer to " + userGuideLink.url + " in the Gradle documentation."
         }
 
-        @Override
-        public List<String> getResolutions() {
-            return Collections.singletonList(resolution);
-        }
+        val resolutions: MutableList<String>
+            get() = mutableListOf<String>(resolution)
     }
 
     /**
      * This class encapsulates the logic for maintaining a collection that is derived off of extended configurations.
      * Specifically, it handles updating the derived collection when the set of extended configurations changes.
      */
-    private static class InheritedCollection<T> {
-        private final Function<Configuration, DomainObjectCollection<T>> configurationToCollection;
-        private final CompositeDomainObjectSet<T> all;
-        private final List<Provider<DomainObjectCollection<? extends T>>> inheritedCollections = new ArrayList<>();
+    private class InheritedCollection<T>(
+        private val all: CompositeDomainObjectSet<T?>,
+        extendsFrom: ExtendedConfigurations,
+        private val configurationToCollection: Function<Configuration, DomainObjectCollection<T?>>
+    ) {
+        private val inheritedCollections: MutableList<Provider<DomainObjectCollection<out T>>> = ArrayList<Provider<DomainObjectCollection<out T>>>()
 
-        public InheritedCollection(
-            CompositeDomainObjectSet<T> all,
-            ExtendedConfigurations extendsFrom,
-            Function<Configuration, DomainObjectCollection<T>> configurationToCollection
-        ) {
-            this.configurationToCollection = configurationToCollection;
-            this.all = all;
-
-            updateExtendedConfigurations(extendsFrom);
+        init {
+            updateExtendedConfigurations(extendsFrom)
         }
 
         /**
          * Called when the extended configurations have changed, to update the derived collection.
          */
-        public void updateExtendedConfigurations(ExtendedConfigurations extendsFrom) {
+        fun updateExtendedConfigurations(extendsFrom: ExtendedConfigurations) {
             if (!inheritedCollections.isEmpty()) {
-                inheritedCollections.forEach(all::removeCollectionProvider);
-                inheritedCollections.clear();
+                inheritedCollections.forEach(Consumer { collectionProvider: Provider<DomainObjectCollection<out T?>?>? -> all.removeCollectionProvider(collectionProvider) })
+                inheritedCollections.clear()
             }
-            extendsFrom.visitConfigurations(configuration -> {
-                Provider<DomainObjectCollection<? extends T>> providedCollection = configuration.mapToCollection(configurationToCollection);
+            extendsFrom.visitConfigurations(ExtendedConfiguration.Visitor { configuration: ExtendedConfiguration? ->
+                val providedCollection = configuration!!.mapToCollection<T?>(configurationToCollection)
                 // The composite set contains more than just the inherited collections (for instance, it also contains the collection from
                 // this configuration, and it's also technically possible to add additional, non-inherited collections to the composite),
                 // so we keep track of the inherited collections separately
-                inheritedCollections.add(providedCollection);
-                all.addCollectionProvider(providedCollection);
-            });
+                inheritedCollections.add(providedCollection)
+                all.addCollectionProvider(providedCollection)
+            })
         }
 
-        public DomainObjectSet<T> getAllInherited() {
-            return all;
-        }
+        val allInherited: DomainObjectSet<T?>
+            get() = all
     }
 
+    companion object {
+        private fun validateMutationType(mutationValidator: MutationValidator, type: MutationValidator.MutationType): Action<String> {
+            return Action { arg: String -> mutationValidator.validateMutation(type) }
+        }
+
+        private fun isFullyResolved(currentState: Optional<ResolverResults>): Boolean {
+            return currentState.map<Any>(ResolverResults::isFullyResolved).orElse(false)
+        }
+    }
 }

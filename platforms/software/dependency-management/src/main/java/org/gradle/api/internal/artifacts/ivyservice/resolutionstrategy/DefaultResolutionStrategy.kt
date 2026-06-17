@@ -13,403 +13,346 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.api.artifacts.CapabilitiesResolution
+import org.gradle.api.artifacts.ComponentSelectionRules
+import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencySubstitutions
+import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal
+import org.gradle.api.internal.artifacts.ComponentSelectorConverter
+import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal
+import org.gradle.api.internal.artifacts.GlobalDependencyResolutionRules
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.configurations.CachePolicy
+import org.gradle.api.internal.artifacts.configurations.ConflictResolution
+import org.gradle.api.internal.artifacts.configurations.MutationValidator
+import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal
+import org.gradle.api.internal.artifacts.dsl.ModuleComponentSelectorParsers
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.internal.ImmutableActionSet
+import org.gradle.internal.typeconversion.TimeUnitsParser
+import org.gradle.vcs.internal.VcsResolver
+import java.lang.Boolean
+import java.util.Collections
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import kotlin.Any
+import kotlin.IllegalStateException
+import kotlin.Int
+import kotlin.String
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.CapabilitiesResolution;
-import org.gradle.api.artifacts.ComponentSelection;
-import org.gradle.api.artifacts.ComponentSelectionRules;
-import org.gradle.api.artifacts.DependencyResolveDetails;
-import org.gradle.api.artifacts.DependencySubstitutions;
-import org.gradle.api.artifacts.ModuleVersionSelector;
-import org.gradle.api.artifacts.ResolutionStrategy;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal;
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector;
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal;
-import org.gradle.api.internal.artifacts.GlobalDependencyResolutionRules;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.configurations.CachePolicy;
-import org.gradle.api.internal.artifacts.configurations.ConflictResolution;
-import org.gradle.api.internal.artifacts.configurations.MutationValidator;
-import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal;
-import org.gradle.api.internal.artifacts.dsl.ModuleComponentSelectorParsers;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionsInternal;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.ImmutableActionSet;
-import org.gradle.internal.rules.SpecRuleAction;
-import org.gradle.internal.typeconversion.NormalizedTimeUnit;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.TimeUnitsParser;
-import org.gradle.vcs.internal.VcsResolver;
-import org.jspecify.annotations.Nullable;
+class DefaultResolutionStrategy @Inject constructor(
+    private val cachePolicy: CachePolicy,
+    private val dependencySubstitutions: DependencySubstitutionsInternal,
+    private val globalDependencySubstitutionRules: GlobalDependencyResolutionRules,
+    private val vcsResolver: VcsResolver,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val componentSelectorConverter: ComponentSelectorConverter,
+    private val dependencyLockingProvider: DependencyLockingProvider,
+    private val capabilitiesResolution: CapabilitiesResolutionInternal,
+    private val objectFactory: ObjectFactory
+) : ResolutionStrategyInternal {
+    private val forcedModules: MutableSet<Any> = LinkedHashSet<Any>()
+    private var parsedForcedModules: MutableSet<ModuleComponentSelector>? = null
+    private var conflictResolution = ConflictResolution.latest
+    private val componentSelectionRules: DefaultComponentSelectionRules
 
-import javax.inject.Inject;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
+    private var mutationValidator = MutationValidator.IGNORE
 
-import static org.gradle.api.internal.artifacts.configurations.MutationValidator.MutationType.STRATEGY;
+    private var dependencyLockingEnabled = false
+    private var assumeFluidDependencies: Boolean
+    private var sortOrder = ResolutionStrategy.SortOrder.DEFAULT
+    private var failOnDynamicVersions = false
+    private var failOnChangingVersions = false
+    private var verifyDependencies = true
+    private val useGlobalDependencySubstitutionRules: Property<Boolean>
+    private var selectableVariantResults = false
+    private var keepStateRequiredForGraphResolution = false
 
-public class DefaultResolutionStrategy implements ResolutionStrategyInternal {
-
-    private static final String ASSUME_FLUID_DEPENDENCIES = "org.gradle.resolution.assumeFluidDependencies";
-    private static final NotationParser<Object, Set<ModuleComponentSelector>> FORCED_MODULES_PARSER = ModuleComponentSelectorParsers.multiParser("force()");
-
-    private final Set<Object> forcedModules = new LinkedHashSet<>();
-    private @Nullable Set<ModuleComponentSelector> parsedForcedModules;
-    private ConflictResolution conflictResolution = ConflictResolution.latest;
-    private final DefaultComponentSelectionRules componentSelectionRules;
-
-    private final CachePolicy cachePolicy;
-    private final DependencySubstitutionsInternal dependencySubstitutions;
-    private final GlobalDependencyResolutionRules globalDependencySubstitutionRules;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final VcsResolver vcsResolver;
-    private final ComponentSelectorConverter componentSelectorConverter;
-    private final DependencyLockingProvider dependencyLockingProvider;
-    private final CapabilitiesResolutionInternal capabilitiesResolution;
-    private final ObjectFactory objectFactory;
-    private MutationValidator mutationValidator = MutationValidator.IGNORE;
-
-    private boolean dependencyLockingEnabled = false;
-    private boolean assumeFluidDependencies;
-    private SortOrder sortOrder = SortOrder.DEFAULT;
-    private boolean failOnDynamicVersions;
-    private boolean failOnChangingVersions;
-    private boolean verifyDependencies = true;
-    private final Property<Boolean> useGlobalDependencySubstitutionRules;
-    private boolean selectableVariantResults = false;
-    private boolean keepStateRequiredForGraphResolution = false;
-
-    @Inject
-    public DefaultResolutionStrategy(
-        CachePolicy cachePolicy,
-        DependencySubstitutionsInternal dependencySubstitutions,
-        GlobalDependencyResolutionRules globalDependencySubstitutionRules,
-        VcsResolver vcsResolver,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        ComponentSelectorConverter componentSelectorConverter,
-        DependencyLockingProvider dependencyLockingProvider,
-        CapabilitiesResolutionInternal capabilitiesResolution,
-        ObjectFactory objectFactory
-    ) {
-        this.cachePolicy = cachePolicy;
-        this.dependencySubstitutions = dependencySubstitutions;
-        this.globalDependencySubstitutionRules = globalDependencySubstitutionRules;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.componentSelectionRules = new DefaultComponentSelectionRules(moduleIdentifierFactory);
-        this.vcsResolver = vcsResolver;
-        this.componentSelectorConverter = componentSelectorConverter;
-        this.dependencyLockingProvider = dependencyLockingProvider;
-        this.capabilitiesResolution = capabilitiesResolution;
-        this.objectFactory = objectFactory;
-        this.useGlobalDependencySubstitutionRules = objectFactory.property(Boolean.class).convention(true);
+    init {
+        this.componentSelectionRules = DefaultComponentSelectionRules(moduleIdentifierFactory)
+        this.useGlobalDependencySubstitutionRules = objectFactory.property<Boolean>(Boolean::class.java).convention(true)
         // This is only used for testing purposes so we can test handling of fluid dependencies without adding dependency substitution rule
-        assumeFluidDependencies = Boolean.getBoolean(ASSUME_FLUID_DEPENDENCIES);
+        assumeFluidDependencies = Boolean.getBoolean(ASSUME_FLUID_DEPENDENCIES)
     }
 
-    @Override
-    public void maybeDiscardStateRequiredForGraphResolution() {
+    override fun maybeDiscardStateRequiredForGraphResolution() {
         if (!keepStateRequiredForGraphResolution) {
-            dependencySubstitutions.discard();
+            dependencySubstitutions.discard()
         }
     }
 
-    @Override
-    public void setMutationValidator(MutationValidator validator) {
-        mutationValidator = validator;
-        cachePolicy.setMutationValidator(validator);
-        componentSelectionRules.setMutationValidator(validator);
-        dependencySubstitutions.setMutationValidator(validator);
+    override fun setMutationValidator(validator: MutationValidator) {
+        mutationValidator = validator
+        cachePolicy.setMutationValidator(validator)
+        componentSelectionRules.setMutationValidator(validator)
+        dependencySubstitutions.setMutationValidator(validator)
     }
 
-    @Override
-    public Set<ModuleVersionSelector> getForcedModules() {
+    override fun getForcedModules(): MutableSet<ModuleVersionSelector> {
         return getParsedForcedModules().stream()
-            .map(DefaultModuleVersionSelector::newSelector)
-            .collect(ImmutableSet.toImmutableSet());
+            .map<ModuleVersionSelector> { selector: ModuleComponentSelector? -> DefaultModuleVersionSelector.newSelector(selector) }
+            .collect(ImmutableSet.toImmutableSet<ModuleVersionSelector>())
     }
 
-    private Set<ModuleComponentSelector> getParsedForcedModules() {
+    private fun getParsedForcedModules(): MutableSet<ModuleComponentSelector> {
         if (parsedForcedModules == null) {
-            parsedForcedModules = FORCED_MODULES_PARSER.parseNotation(forcedModules);
+            parsedForcedModules = FORCED_MODULES_PARSER.parseNotation(forcedModules)
         }
-        return parsedForcedModules;
+        return parsedForcedModules!!
     }
 
-    @Override
-    public ResolutionStrategy failOnVersionConflict() {
-        mutationValidator.validateMutation(STRATEGY);
-        this.conflictResolution = ConflictResolution.strict;
-        return this;
+    override fun failOnVersionConflict(): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        this.conflictResolution = ConflictResolution.strict
+        return this
     }
 
-    @Override
-    public ResolutionStrategy failOnDynamicVersions() {
-        mutationValidator.validateMutation(STRATEGY);
-        this.failOnDynamicVersions = true;
-        return this;
+    override fun failOnDynamicVersions(): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        this.failOnDynamicVersions = true
+        return this
     }
 
-    @Override
-    public ResolutionStrategy failOnChangingVersions() {
-        mutationValidator.validateMutation(STRATEGY);
-        this.failOnChangingVersions = true;
-        return this;
+    override fun failOnChangingVersions(): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        this.failOnChangingVersions = true
+        return this
     }
 
-    @Override
-    public ResolutionStrategy failOnNonReproducibleResolution() {
-        failOnChangingVersions();
-        failOnDynamicVersions();
-        return this;
+    override fun failOnNonReproducibleResolution(): ResolutionStrategy {
+        failOnChangingVersions()
+        failOnDynamicVersions()
+        return this
     }
 
-    @Override
-    public void preferProjectModules() {
-        conflictResolution = ConflictResolution.preferProjectModules;
+    override fun preferProjectModules() {
+        conflictResolution = ConflictResolution.preferProjectModules
     }
 
-    @Override
-    public ResolutionStrategy activateDependencyLocking() {
-        mutationValidator.validateMutation(STRATEGY);
-        dependencyLockingEnabled = true;
-        return this;
+    override fun activateDependencyLocking(): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        dependencyLockingEnabled = true
+        return this
     }
 
-    @Override
-    public ResolutionStrategy deactivateDependencyLocking() {
-        mutationValidator.validateMutation(STRATEGY);
-        dependencyLockingEnabled = false;
-        return this;
+    override fun deactivateDependencyLocking(): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        dependencyLockingEnabled = false
+        return this
     }
 
 
-    @Override
-    public void sortArtifacts(SortOrder sortOrder) {
-        this.sortOrder = sortOrder;
+    override fun sortArtifacts(sortOrder: ResolutionStrategy.SortOrder) {
+        this.sortOrder = sortOrder
     }
 
-    @Override
-    public ResolutionStrategy capabilitiesResolution(Action<? super CapabilitiesResolution> action) {
-        action.execute(capabilitiesResolution);
-        return this;
+    override fun capabilitiesResolution(action: Action<in CapabilitiesResolution>): ResolutionStrategy {
+        action.execute(capabilitiesResolution)
+        return this
     }
 
-    @Override
-    public CapabilitiesResolution getCapabilitiesResolution() {
-        return capabilitiesResolution;
+    override fun getCapabilitiesResolution(): CapabilitiesResolution {
+        return capabilitiesResolution
     }
 
-    @Override
-    public SortOrder getSortOrder() {
-        return sortOrder;
+    override fun getSortOrder(): ResolutionStrategy.SortOrder {
+        return sortOrder
     }
 
-    @Override
-    public ConflictResolution getConflictResolution() {
-        return this.conflictResolution;
+    override fun getConflictResolution(): ConflictResolution {
+        return this.conflictResolution
     }
 
-    @Override
-    public DefaultResolutionStrategy force(Object... notations) {
-        mutationValidator.validateMutation(STRATEGY);
-        parsedForcedModules = null;
-        Collections.addAll(forcedModules, notations);
-        return this;
+    override fun force(vararg notations: Any): DefaultResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        parsedForcedModules = null
+        Collections.addAll<Any>(forcedModules, *notations)
+        return this
     }
 
-    @Override
-    public ResolutionStrategy eachDependency(Action<? super DependencyResolveDetails> rule) {
-        mutationValidator.validateMutation(STRATEGY);
-        dependencySubstitutions.allWithDependencyResolveDetails(rule, componentSelectorConverter);
-        return this;
+    override fun eachDependency(rule: Action<in DependencyResolveDetails>): ResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        dependencySubstitutions.allWithDependencyResolveDetails(rule, componentSelectorConverter)
+        return this
     }
 
-    @Override
-    public ImmutableActionSet<DependencySubstitutionInternal> getDependencySubstitutionRule() {
-        ImmutableActionSet<DependencySubstitutionInternal> result = ImmutableActionSet.empty();
-        Set<ModuleComponentSelector> forcedModules = getParsedForcedModules();
+    override fun getDependencySubstitutionRule(): ImmutableActionSet<DependencySubstitutionInternal> {
+        var result = ImmutableActionSet.empty<DependencySubstitutionInternal>()
+        val forcedModules = getParsedForcedModules()
         if (!forcedModules.isEmpty()) {
-            result = result.add(new ModuleForcingResolveRule(forcedModules));
+            result = result.add(ModuleForcingResolveRule(forcedModules))
         }
-        result = result.add(dependencySubstitutions.getRuleAction());
+        result = result.add(dependencySubstitutions.ruleAction)
         if (useGlobalDependencySubstitutionRules.get()) {
-            result = result.add(globalDependencySubstitutionRules.getDependencySubstitutionRules().getRuleAction());
+            result = result.add(globalDependencySubstitutionRules.dependencySubstitutionRules.ruleAction)
         }
-        return result;
+        return result
     }
 
-    @Override
-    public void assumeFluidDependencies() {
-        assumeFluidDependencies = true;
+    override fun assumeFluidDependencies() {
+        assumeFluidDependencies = true
     }
 
-    @Override
-    public boolean resolveGraphToDetermineTaskDependencies() {
+    override fun resolveGraphToDetermineTaskDependencies(): kotlin.Boolean {
         return assumeFluidDependencies
-            || dependencySubstitutions.rulesMayAddProjectDependency()
-            || (useGlobalDependencySubstitutionRules.get() && globalDependencySubstitutionRules.getDependencySubstitutionRules().rulesMayAddProjectDependency())
-            || vcsResolver.hasRules();
+                || dependencySubstitutions.rulesMayAddProjectDependency()
+                || (useGlobalDependencySubstitutionRules.get() && globalDependencySubstitutionRules.dependencySubstitutionRules.rulesMayAddProjectDependency())
+                || vcsResolver.hasRules()
     }
 
-    @Override
-    public DefaultResolutionStrategy setForcedModules(Object... moduleVersionSelectorNotations) {
-        mutationValidator.validateMutation(STRATEGY);
-        this.forcedModules.clear();
-        force(moduleVersionSelectorNotations);
-        return this;
+    override fun setForcedModules(vararg moduleVersionSelectorNotations: Any): DefaultResolutionStrategy {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        this.forcedModules.clear()
+        force(*moduleVersionSelectorNotations)
+        return this
     }
 
-    @Override
-    public CachePolicy getCachePolicy() {
-        return cachePolicy;
+    override fun getCachePolicy(): CachePolicy {
+        return cachePolicy
     }
 
-    @Override
-    public void cacheDynamicVersionsFor(int value, String units) {
-        NormalizedTimeUnit timeUnit = new TimeUnitsParser().parseNotation(units, value);
-        cacheDynamicVersionsFor(timeUnit.getValue(), timeUnit.getTimeUnit());
+    override fun cacheDynamicVersionsFor(value: Int, units: String) {
+        val timeUnit = TimeUnitsParser().parseNotation(units, value)
+        cacheDynamicVersionsFor(timeUnit.getValue(), timeUnit.getTimeUnit())
     }
 
-    @Override
-    public void cacheDynamicVersionsFor(int value, TimeUnit units) {
-        this.cachePolicy.cacheDynamicVersionsFor(value, units);
+    override fun cacheDynamicVersionsFor(value: Int, units: TimeUnit) {
+        this.cachePolicy.cacheDynamicVersionsFor(value, units)
     }
 
-    @Override
-    public void cacheChangingModulesFor(int value, String units) {
-        NormalizedTimeUnit timeUnit = new TimeUnitsParser().parseNotation(units, value);
-        cacheChangingModulesFor(timeUnit.getValue(), timeUnit.getTimeUnit());
+    override fun cacheChangingModulesFor(value: Int, units: String) {
+        val timeUnit = TimeUnitsParser().parseNotation(units, value)
+        cacheChangingModulesFor(timeUnit.getValue(), timeUnit.getTimeUnit())
     }
 
-    @Override
-    public void cacheChangingModulesFor(int value, TimeUnit units) {
-        this.cachePolicy.cacheChangingModulesFor(value, units);
+    override fun cacheChangingModulesFor(value: Int, units: TimeUnit) {
+        this.cachePolicy.cacheChangingModulesFor(value, units)
     }
 
-    @Override
-    public ComponentSelectionRulesInternal getComponentSelection() {
-        return componentSelectionRules;
+    override fun getComponentSelection(): ComponentSelectionRulesInternal {
+        return componentSelectionRules
     }
 
-    @Override
-    public ResolutionStrategy componentSelection(Action<? super ComponentSelectionRules> action) {
-        action.execute(componentSelectionRules);
-        return this;
+    override fun componentSelection(action: Action<in ComponentSelectionRules>): ResolutionStrategy {
+        action.execute(componentSelectionRules)
+        return this
     }
 
-    @Override
-    public DependencySubstitutionsInternal getDependencySubstitution() {
-        return dependencySubstitutions;
+    override fun getDependencySubstitution(): DependencySubstitutionsInternal {
+        return dependencySubstitutions
     }
 
-    @Override
-    public ResolutionStrategy dependencySubstitution(Action<? super DependencySubstitutions> action) {
-        action.execute(dependencySubstitutions);
-        return this;
+    override fun dependencySubstitution(action: Action<in DependencySubstitutions>): ResolutionStrategy {
+        action.execute(dependencySubstitutions)
+        return this
     }
 
-    @Override
-    public Property<Boolean> getUseGlobalDependencySubstitutionRules() {
-        return useGlobalDependencySubstitutionRules;
+    override fun getUseGlobalDependencySubstitutionRules(): Property<kotlin.Boolean> {
+        return useGlobalDependencySubstitutionRules
     }
 
-    @Override
-    public DefaultResolutionStrategy copy() {
-        DefaultResolutionStrategy out = new DefaultResolutionStrategy(cachePolicy.copy(), dependencySubstitutions.copy(), globalDependencySubstitutionRules, vcsResolver, moduleIdentifierFactory, componentSelectorConverter, dependencyLockingProvider, capabilitiesResolution, objectFactory);
+    override fun copy(): DefaultResolutionStrategy {
+        val out = DefaultResolutionStrategy(
+            cachePolicy.copy(),
+            dependencySubstitutions.copy(),
+            globalDependencySubstitutionRules,
+            vcsResolver,
+            moduleIdentifierFactory,
+            componentSelectorConverter,
+            dependencyLockingProvider,
+            capabilitiesResolution,
+            objectFactory
+        )
 
         if (conflictResolution == ConflictResolution.strict) {
-            out.failOnVersionConflict();
+            out.failOnVersionConflict()
         } else if (conflictResolution == ConflictResolution.preferProjectModules) {
-            out.preferProjectModules();
+            out.preferProjectModules()
         }
-        out.setForcedModules(forcedModules);
-        for (SpecRuleAction<? super ComponentSelection> ruleAction : componentSelectionRules.getRules()) {
-            out.getComponentSelection().addRule(ruleAction);
+        out.setForcedModules(forcedModules)
+        for (ruleAction in componentSelectionRules.rules) {
+            out.getComponentSelection().addRule(ruleAction)
         }
         if (isDependencyLockingEnabled()) {
-            out.activateDependencyLocking();
+            out.activateDependencyLocking()
         }
         if (isFailingOnDynamicVersions()) {
-            out.failOnDynamicVersions();
+            out.failOnDynamicVersions()
         }
         if (isFailingOnChangingVersions()) {
-            out.failOnChangingVersions();
+            out.failOnChangingVersions()
         }
         if (!isDependencyVerificationEnabled()) {
-            out.disableDependencyVerification();
+            out.disableDependencyVerification()
         }
-        out.getUseGlobalDependencySubstitutionRules().convention(useGlobalDependencySubstitutionRules.get());
-        return out;
+        out.getUseGlobalDependencySubstitutionRules().convention(useGlobalDependencySubstitutionRules.get())
+        return out
     }
 
-    @Override
-    public DependencyLockingProvider getDependencyLockingProvider() {
+    override fun getDependencyLockingProvider(): DependencyLockingProvider {
         if (dependencyLockingEnabled) {
-            return dependencyLockingProvider;
+            return dependencyLockingProvider
         } else {
-            throw new IllegalStateException("Dependency locking is not enabled");
+            throw IllegalStateException("Dependency locking is not enabled")
         }
     }
 
-    @Override
-    public boolean isDependencyLockingEnabled() {
-        return dependencyLockingEnabled;
+    override fun isDependencyLockingEnabled(): kotlin.Boolean {
+        return dependencyLockingEnabled
     }
 
-    @Override
-    public CapabilitiesResolutionInternal getCapabilitiesResolutionRules() {
-        return capabilitiesResolution;
+    override fun getCapabilitiesResolutionRules(): CapabilitiesResolutionInternal {
+        return capabilitiesResolution
     }
 
-    @Override
-    public boolean isFailingOnDynamicVersions() {
-        return failOnDynamicVersions;
+    override fun isFailingOnDynamicVersions(): kotlin.Boolean {
+        return failOnDynamicVersions
     }
 
-    @Override
-    public boolean isFailingOnChangingVersions() {
-        return failOnChangingVersions;
+    override fun isFailingOnChangingVersions(): kotlin.Boolean {
+        return failOnChangingVersions
     }
 
-    @Override
-    public boolean isDependencyVerificationEnabled() {
-        return verifyDependencies;
+    override fun isDependencyVerificationEnabled(): kotlin.Boolean {
+        return verifyDependencies
     }
 
-    @Override
-    public ResolutionStrategy disableDependencyVerification() {
-        verifyDependencies = false;
-        return this;
+    override fun disableDependencyVerification(): ResolutionStrategy {
+        verifyDependencies = false
+        return this
     }
 
-    @Override
-    public ResolutionStrategy enableDependencyVerification() {
-        verifyDependencies = true;
-        return this;
+    override fun enableDependencyVerification(): ResolutionStrategy {
+        verifyDependencies = true
+        return this
     }
 
-    @Override
-    public void setIncludeAllSelectableVariantResults(boolean selectableVariantResults) {
-        mutationValidator.validateMutation(STRATEGY);
-        this.selectableVariantResults = selectableVariantResults;
+    override fun setIncludeAllSelectableVariantResults(selectableVariantResults: kotlin.Boolean) {
+        mutationValidator.validateMutation(MutationValidator.MutationType.STRATEGY)
+        this.selectableVariantResults = selectableVariantResults
     }
 
-    @Override
-    public boolean getIncludeAllSelectableVariantResults() {
-        return this.selectableVariantResults;
+    override fun getIncludeAllSelectableVariantResults(): kotlin.Boolean {
+        return this.selectableVariantResults
     }
 
-    @Override
-    public void setKeepStateRequiredForGraphResolution(boolean keepStateRequiredForGraphResolution) {
-        this.keepStateRequiredForGraphResolution = keepStateRequiredForGraphResolution;
+    override fun setKeepStateRequiredForGraphResolution(keepStateRequiredForGraphResolution: kotlin.Boolean) {
+        this.keepStateRequiredForGraphResolution = keepStateRequiredForGraphResolution
+    }
+
+    companion object {
+        private const val ASSUME_FLUID_DEPENDENCIES = "org.gradle.resolution.assumeFluidDependencies"
+        private val FORCED_MODULES_PARSER = ModuleComponentSelectorParsers.multiParser("force()")
     }
 }

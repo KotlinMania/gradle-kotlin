@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.mvnsettings
 
-package org.gradle.api.internal.artifacts.mvnsettings;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class CannotLocateLocalMavenRepositoryException extends GradleException {
-    public CannotLocateLocalMavenRepositoryException(String message, Throwable cause) {
-        super(message, cause);
-    }
+class CannotLocateLocalMavenRepositoryException : GradleException {
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 
-    public CannotLocateLocalMavenRepositoryException(String message) {
-        super(message);
-    }
+    constructor(message: String?) : super(message)
 }

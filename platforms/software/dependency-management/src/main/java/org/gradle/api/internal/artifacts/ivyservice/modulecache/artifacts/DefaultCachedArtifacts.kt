@@ -13,36 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.hash.HashCode;
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.hash.HashCode
 
-import java.util.Set;
-
-class DefaultCachedArtifacts implements CachedArtifacts {
-    private final Set<ComponentArtifactMetadata> artifacts;
-    private final HashCode descriptorHash;
-    private final long ageMillis;
-
-    DefaultCachedArtifacts(Set<ComponentArtifactMetadata> artifacts, HashCode descriptorHash, long ageMillis) {
-        this.ageMillis = ageMillis;
-        this.artifacts = artifacts;
-        this.descriptorHash = descriptorHash;
+internal class DefaultCachedArtifacts(private val artifacts: MutableSet<ComponentArtifactMetadata?>?, private val descriptorHash: HashCode?, private val ageMillis: Long) : CachedArtifacts {
+    override fun getArtifacts(): MutableSet<ComponentArtifactMetadata?>? {
+        return artifacts
     }
 
-    @Override
-    public Set<ComponentArtifactMetadata> getArtifacts() {
-        return artifacts;
+    override fun getDescriptorHash(): HashCode? {
+        return descriptorHash
     }
 
-    @Override
-    public HashCode getDescriptorHash() {
-        return descriptorHash;
-    }
-
-    @Override
-    public long getAgeMillis() {
-        return ageMillis;
+    override fun getAgeMillis(): Long {
+        return ageMillis
     }
 }

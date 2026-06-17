@@ -13,48 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import org.gradle.api.artifacts.ExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.VersionConstraintInternal;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.component.model.LocalComponentDependencyMetadata;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.VersionConstraintInternal
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
+import org.gradle.internal.component.model.LocalComponentDependencyMetadata
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
 
-public class ExternalModuleDependencyMetadataConverter extends AbstractDependencyMetadataConverter {
+class ExternalModuleDependencyMetadataConverter(excludeRuleConverter: ExcludeRuleConverter) : AbstractDependencyMetadataConverter(excludeRuleConverter) {
+    override fun createDependencyMetadata(dependency: ModuleDependency): LocalOriginDependencyMetadata {
+        val externalModuleDependency = dependency as ExternalModuleDependency
+        val force = externalModuleDependency.isForce()
+        val changing = externalModuleDependency.isChanging()
+        val transitive = externalModuleDependency.isTransitive()
 
-    public ExternalModuleDependencyMetadataConverter(ExcludeRuleConverter excludeRuleConverter) {
-        super(excludeRuleConverter);
-    }
-
-    @Override
-    public LocalOriginDependencyMetadata createDependencyMetadata(ModuleDependency dependency) {
-        ExternalModuleDependency externalModuleDependency = (ExternalModuleDependency) dependency;
-        boolean force = externalModuleDependency.isForce();
-        boolean changing = externalModuleDependency.isChanging();
-        boolean transitive = externalModuleDependency.isTransitive();
-
-        ModuleIdentifier moduleId = DefaultModuleIdentifier.newId(
+        val moduleId: ModuleIdentifier? = DefaultModuleIdentifier.newId(
             nullToEmpty(dependency.getGroup()),
             nullToEmpty(dependency.getName())
-        );
+        )
 
-        ImmutableVersionConstraint version = ((VersionConstraintInternal) externalModuleDependency.getVersionConstraint()).asImmutable();
+        val version = (externalModuleDependency.getVersionConstraint() as VersionConstraintInternal).asImmutable()
 
-        ModuleComponentSelector selector = DefaultModuleComponentSelector.newSelector(
-            moduleId,
-            version,
+        val selector = DefaultModuleComponentSelector.newSelector(
+            moduleId!!,
+            version!!,
             dependency.getAttributes(),
             dependency.getCapabilitySelectors()
-        );
+        )
 
-        return new LocalComponentDependencyMetadata(
+        return LocalComponentDependencyMetadata(
             selector,
             dependency.getTargetConfiguration(),
             convertArtifacts(dependency.getArtifacts()),
@@ -65,16 +56,16 @@ public class ExternalModuleDependencyMetadataConverter extends AbstractDependenc
             false,
             dependency.isEndorsingStrictVersions(),
             dependency.getReason()
-        );
+        )
     }
 
-    private static String nullToEmpty(@Nullable String input) {
-        return input == null ? "" : input;
+    override fun canConvert(dependency: ModuleDependency): Boolean {
+        return dependency is ExternalModuleDependency
     }
 
-    @Override
-    public boolean canConvert(ModuleDependency dependency) {
-        return dependency instanceof ExternalModuleDependency;
+    companion object {
+        private fun nullToEmpty(input: String?): String {
+            return if (input == null) "" else input
+        }
     }
-
 }

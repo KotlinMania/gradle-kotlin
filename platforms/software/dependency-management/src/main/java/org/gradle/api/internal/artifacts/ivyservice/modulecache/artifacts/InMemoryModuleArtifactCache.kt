@@ -13,66 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.internal.hash.HashCode;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.hash.HashCode
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+class InMemoryModuleArtifactCache : ModuleArtifactCache {
+    private val inMemoryCache: MutableMap<ArtifactAtRepositoryKey?, CachedArtifact?> = ConcurrentHashMap<ArtifactAtRepositoryKey?, CachedArtifact?>()
+    private val timeProvider: BuildCommencedTimeProvider
+    private val delegate: ModuleArtifactCache?
 
-public class InMemoryModuleArtifactCache implements ModuleArtifactCache {
-    private final Map<ArtifactAtRepositoryKey, CachedArtifact> inMemoryCache = new ConcurrentHashMap<>();
-    private final BuildCommencedTimeProvider timeProvider;
-    private final ModuleArtifactCache delegate;
-
-    public InMemoryModuleArtifactCache(BuildCommencedTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
-        this.delegate = null;
+    constructor(timeProvider: BuildCommencedTimeProvider) {
+        this.timeProvider = timeProvider
+        this.delegate = null
     }
 
-    public InMemoryModuleArtifactCache(BuildCommencedTimeProvider timeProvider, ModuleArtifactCache delegate) {
-        this.timeProvider = timeProvider;
-        this.delegate = delegate;
+    constructor(timeProvider: BuildCommencedTimeProvider, delegate: ModuleArtifactCache?) {
+        this.timeProvider = timeProvider
+        this.delegate = delegate
     }
 
-    @Override
-    public void store(ArtifactAtRepositoryKey key, File artifactFile, HashCode moduleDescriptorHash) {
-        inMemoryCache.put(key, new DefaultCachedArtifact(artifactFile, timeProvider.getCurrentTime(), moduleDescriptorHash));
+    override fun store(key: ArtifactAtRepositoryKey?, artifactFile: File?, moduleDescriptorHash: HashCode?) {
+        inMemoryCache.put(key, DefaultCachedArtifact(artifactFile, timeProvider.getCurrentTime(), moduleDescriptorHash))
         if (delegate != null) {
-            delegate.store(key, artifactFile, moduleDescriptorHash);
+            delegate.store(key, artifactFile, moduleDescriptorHash)
         }
     }
 
-    @Override
-    public void storeMissing(ArtifactAtRepositoryKey key, List<String> attemptedLocations, HashCode descriptorHash) {
-        inMemoryCache.put(key, new DefaultCachedArtifact(attemptedLocations, timeProvider.getCurrentTime(), descriptorHash));
+    override fun storeMissing(key: ArtifactAtRepositoryKey?, attemptedLocations: MutableList<String?>?, descriptorHash: HashCode?) {
+        inMemoryCache.put(key, DefaultCachedArtifact(attemptedLocations, timeProvider.getCurrentTime(), descriptorHash))
         if (delegate != null) {
-            delegate.storeMissing(key, attemptedLocations, descriptorHash);
+            delegate.storeMissing(key, attemptedLocations, descriptorHash)
         }
     }
 
-    @Nullable
-    @Override
-    public CachedArtifact lookup(ArtifactAtRepositoryKey key) {
-        CachedArtifact cachedArtifact = inMemoryCache.get(key);
+    override fun lookup(key: ArtifactAtRepositoryKey?): CachedArtifact? {
+        var cachedArtifact = inMemoryCache.get(key)
         if (cachedArtifact == null && delegate != null) {
-            cachedArtifact = delegate.lookup(key);
+            cachedArtifact = delegate.lookup(key)
             if (cachedArtifact != null) {
-                inMemoryCache.put(key, cachedArtifact);
+                inMemoryCache.put(key, cachedArtifact)
             }
         }
-        return cachedArtifact;
+        return cachedArtifact
     }
 
-    @Override
-    public void clear(ArtifactAtRepositoryKey key) {
-        inMemoryCache.remove(key);
+    override fun clear(key: ArtifactAtRepositoryKey?) {
+        inMemoryCache.remove(key)
         if (delegate != null) {
-            delegate.clear(key);
+            delegate.clear(key)
         }
     }
 }

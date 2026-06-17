@@ -13,748 +13,669 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultExcludeRuleConverter
+import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExcludeRuleConverter
+import org.gradle.api.internal.artifacts.repositories.metadata.MavenVariantAttributesFactory
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.ImmutableAttributesEntry
+import org.gradle.api.internal.attributes.UsageCompatibilityHandler
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
+import org.gradle.internal.component.external.model.MutableComponentVariant
+import org.gradle.internal.component.external.model.MutableComponentVariant.attributes
+import org.gradle.internal.component.external.model.MutableComponentVariant.capabilities
+import org.gradle.internal.component.external.model.MutableComponentVariant.name
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata.attributes
+import org.gradle.internal.component.external.model.ShadowedImmutableCapability
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashSet
+import kotlin.collections.MutableList
+import kotlin.collections.MutableSet
+import kotlin.collections.copy
+import kotlin.collections.isEmpty
+import kotlin.collections.mutableListOf
+import kotlin.text.format
+import kotlin.text.isEmpty
+import kotlin.text.lastIndexOf
+import kotlin.text.replace
+import kotlin.text.substring
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.LibraryElements;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.DefaultExcludeRuleConverter;
-import org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies.ExcludeRuleConverter;
-import org.gradle.api.internal.artifacts.repositories.metadata.MavenVariantAttributesFactory;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
-import org.gradle.api.internal.attributes.UsageCompatibilityHandler;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
-import org.gradle.internal.component.external.model.MutableComponentVariant;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ShadowedImmutableCapability;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot;
+class GradleModuleMetadataParser(val attributesFactory: AttributesFactory, moduleIdentifierFactory: ImmutableModuleIdentifierFactory, val instantiator: NamedObjectInstantiator?) {
+    private val excludeRuleConverter: ExcludeRuleConverter
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import static com.google.gson.stream.JsonToken.BOOLEAN;
-import static com.google.gson.stream.JsonToken.END_ARRAY;
-import static com.google.gson.stream.JsonToken.END_OBJECT;
-import static com.google.gson.stream.JsonToken.NULL;
-import static com.google.gson.stream.JsonToken.NUMBER;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.lang3.StringUtils.capitalize;
-
-public class GradleModuleMetadataParser {
-    private final static Logger LOGGER = Logging.getLogger(GradleModuleMetadataParser.class);
-
-    public static final String FORMAT_VERSION = "1.1";
-    private final AttributesFactory attributesFactory;
-    private final NamedObjectInstantiator instantiator;
-    private final ExcludeRuleConverter excludeRuleConverter;
-
-    public GradleModuleMetadataParser(AttributesFactory attributesFactory, ImmutableModuleIdentifierFactory moduleIdentifierFactory, NamedObjectInstantiator instantiator) {
-        this.attributesFactory = attributesFactory;
-        this.instantiator = instantiator;
-        this.excludeRuleConverter = new DefaultExcludeRuleConverter(moduleIdentifierFactory);
+    init {
+        this.excludeRuleConverter = DefaultExcludeRuleConverter(moduleIdentifierFactory)
     }
 
-    public AttributesFactory getAttributesFactory() {
-        return attributesFactory;
-    }
-
-    public NamedObjectInstantiator getInstantiator() {
-        return instantiator;
-    }
-
-    public void parse(final LocallyAvailableExternalResource resource, final MutableModuleComponentResolveMetadata metadata) {
-        resource.withContent(inputStream -> {
-            String version = null;
+    fun parse(resource: LocallyAvailableExternalResource, metadata: MutableModuleComponentResolveMetadata) {
+        resource.withContent<Any?>(ExternalResource.ContentAction { inputStream: InputStream? ->
+            var version: String? = null
             try {
-                JsonReader reader = new JsonReader(new InputStreamReader(inputStream, UTF_8));
-                reader.beginObject();
+                val reader = JsonReader(InputStreamReader(inputStream, StandardCharsets.UTF_8))
+                reader.beginObject()
                 if (reader.peek() != JsonToken.NAME) {
-                    throw new RuntimeException("Module metadata should contain a 'formatVersion' value.");
+                    throw RuntimeException("Module metadata should contain a 'formatVersion' value.")
                 }
-                String name = reader.nextName();
-                if (!name.equals("formatVersion")) {
-                    throw new RuntimeException(String.format("The 'formatVersion' value should be the first value in a module metadata. Found '%s' instead.", name));
+                val name = reader.nextName()
+                if (name != "formatVersion") {
+                    throw RuntimeException(String.format("The 'formatVersion' value should be the first value in a module metadata. Found '%s' instead.", name))
                 }
                 if (reader.peek() != JsonToken.STRING) {
-                    throw new RuntimeException("The 'formatVersion' value should have a string value.");
+                    throw RuntimeException("The 'formatVersion' value should have a string value.")
                 }
-                version = reader.nextString();
-                consumeTopLevelElements(reader, metadata);
-                File file = resource.getFile();
-                if (!FORMAT_VERSION.equals(version)) {
-                    LOGGER.debug("Unrecognized metadata format version '{}' found in '{}'. Parsing succeeded but it may lead to unexpected resolution results. Try upgrading to a newer version of Gradle", version, file);
+                version = reader.nextString()
+                consumeTopLevelElements(reader, metadata)
+                val file = resource.getFile()
+                if (FORMAT_VERSION != version) {
+                    LOGGER!!.debug(
+                        "Unrecognized metadata format version '{}' found in '{}'. Parsing succeeded but it may lead to unexpected resolution results. Try upgrading to a newer version of Gradle",
+                        version,
+                        file
+                    )
                 }
-                return null;
-            } catch (Exception e) {
-                if (version != null && !FORMAT_VERSION.equals(version)) {
-                    throw new MetaDataParseException("module metadata", resource, String.format("unsupported format version '%s' specified in module metadata. This version of Gradle supports format version %s.", version, FORMAT_VERSION), e);
+                return@withContent null
+            } catch (e: Exception) {
+                if (version != null && FORMAT_VERSION != version) {
+                    throw MetaDataParseException(
+                        "module metadata",
+                        resource,
+                        String.format("unsupported format version '%s' specified in module metadata. This version of Gradle supports format version %s.", version, FORMAT_VERSION),
+                        e
+                    )
                 }
-                throw new MetaDataParseException("module metadata", resource, e);
+                throw MetaDataParseException("module metadata", resource, e)
             }
-        });
-        maybeAddEnforcedPlatformVariant(metadata);
+        })
+        maybeAddEnforcedPlatformVariant(metadata)
     }
 
-    private void maybeAddEnforcedPlatformVariant(MutableModuleComponentResolveMetadata metadata) {
-        List<? extends MutableComponentVariant> variants = metadata.getMutableVariants();
+    private fun maybeAddEnforcedPlatformVariant(metadata: MutableModuleComponentResolveMetadata) {
+        val variants: MutableList<out MutableComponentVariant?>? = metadata.mutableVariants
         if (variants == null || variants.isEmpty()) {
-            return;
+            return
         }
-        for (MutableComponentVariant variant : ImmutableList.copyOf(variants)) {
-            ImmutableAttributesEntry<String> entry = variant.getAttributes().findEntry(MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE);
-            if (entry != null && Category.REGULAR_PLATFORM.equals(entry.getIsolatedValue()) && variant.getCapabilities().isEmpty()) {
+        for (variant in ImmutableList.copyOf(variants)) {
+            val entry: ImmutableAttributesEntry<String?>? = variant.attributes.findEntry<String>(MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE)
+            if (entry != null && Category.REGULAR_PLATFORM == entry.getIsolatedValue() && variant.capabilities.isEmpty()) {
                 // This generates a synthetic enforced platform variant with the same dependencies, similar to what the Maven variant derivation strategy does
-                ImmutableAttributes enforcedAttributes = attributesFactory.concat(variant.getAttributes(), MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE, new CoercingStringValueSnapshot(Category.ENFORCED_PLATFORM, instantiator));
-                Capability enforcedCapability = buildShadowPlatformCapability(metadata.getId());
-                metadata.addVariant(variant.copy("enforced" + capitalize(variant.getName()), enforcedAttributes, enforcedCapability));
+                val enforcedAttributes =
+                    attributesFactory.concat<String>(variant.attributes, MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE, CoercingStringValueSnapshot(Category.ENFORCED_PLATFORM, instantiator!!))
+                val enforcedCapability = buildShadowPlatformCapability(metadata.id)
+                metadata.addVariant(variant.copy("enforced" + StringUtils.capitalize(variant.name), enforcedAttributes, enforcedCapability))
             }
         }
     }
 
-    private Capability buildShadowPlatformCapability(ModuleComponentIdentifier componentId) {
-        return new ShadowedImmutableCapability(new DefaultImmutableCapability(
+    private fun buildShadowPlatformCapability(componentId: ModuleComponentIdentifier): Capability {
+        return ShadowedImmutableCapability(
+            DefaultImmutableCapability(
                 componentId.getGroup(),
                 componentId.getModule(),
                 componentId.getVersion()
-            ), "-derived-enforced-platform");
+            ), "-derived-enforced-platform"
+        )
     }
 
-    private void consumeTopLevelElements(JsonReader reader, MutableModuleComponentResolveMetadata metadata) throws IOException {
-        while (reader.peek() != END_OBJECT) {
-            String name = reader.nextName();
-            switch (name) {
-                case "variants":
-                    consumeVariants(reader, metadata);
-                    break;
-                case "component":
-                    consumeComponent(reader, metadata);
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+    @Throws(IOException::class)
+    private fun consumeTopLevelElements(reader: JsonReader, metadata: MutableModuleComponentResolveMetadata) {
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val name = reader.nextName()
+            when (name) {
+                "variants" -> consumeVariants(reader, metadata)
+                "component" -> consumeComponent(reader, metadata)
+                else -> consumeAny(reader)
             }
         }
     }
 
-    private void consumeComponent(JsonReader reader, MutableModuleComponentResolveMetadata metadata) throws IOException {
-        reader.beginObject();
-        while (reader.peek() != END_OBJECT) {
-            String name = reader.nextName();
-            //noinspection SwitchStatementWithTooFewBranches
-            switch (name) {
-                case "attributes":
-                    metadata.setAttributes(consumeAttributes(reader));
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+    @Throws(IOException::class)
+    private fun consumeComponent(reader: JsonReader, metadata: MutableModuleComponentResolveMetadata) {
+        reader.beginObject()
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val name = reader.nextName()
+            when (name) {
+                "attributes" -> metadata.attributes = consumeAttributes(reader)
+                else -> consumeAny(reader)
             }
         }
-        reader.endObject();
+        reader.endObject()
     }
 
-    private void consumeVariants(JsonReader reader, MutableModuleComponentResolveMetadata metadata) throws IOException {
-        reader.beginArray();
+    @Throws(IOException::class)
+    private fun consumeVariants(reader: JsonReader, metadata: MutableModuleComponentResolveMetadata) {
+        reader.beginArray()
         while (reader.peek() != JsonToken.END_ARRAY) {
-            consumeVariant(reader, metadata);
+            consumeVariant(reader, metadata)
         }
-        reader.endArray();
+        reader.endArray()
     }
 
-    private void consumeVariant(JsonReader reader, MutableModuleComponentResolveMetadata metadata) throws IOException {
-        String variantName = null;
-        ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
-        List<ModuleFile> files = Collections.emptyList();
-        List<ModuleDependency> dependencies = Collections.emptyList();
-        List<ModuleDependencyConstraint> dependencyConstraints = Collections.emptyList();
-        List<ImmutableCapability> capabilities = Collections.emptyList();
-        boolean availableExternally = false;
+    @Throws(IOException::class)
+    private fun consumeVariant(reader: JsonReader, metadata: MutableModuleComponentResolveMetadata) {
+        var variantName: String? = null
+        var attributes = ImmutableAttributes.EMPTY
+        var files: MutableList<ModuleFile> = mutableListOf<ModuleFile?>()
+        var dependencies: MutableList<ModuleDependency> = mutableListOf<ModuleDependency?>()
+        var dependencyConstraints: MutableList<ModuleDependencyConstraint> = mutableListOf<ModuleDependencyConstraint?>()
+        var capabilities: MutableList<ImmutableCapability> = mutableListOf<ImmutableCapability?>()
+        var availableExternally = false
 
-        reader.beginObject();
-        while (reader.peek() != END_OBJECT) {
-            String name = reader.nextName();
-            switch (name) {
-                case "name":
-                    variantName = reader.nextString();
-                    break;
-                case "attributes":
-                    attributes = consumeAttributes(reader);
-                    break;
-                case "files":
-                    files = consumeFiles(reader);
-                    break;
-                case "dependencies":
-                    dependencies = consumeDependencies(reader);
-                    break;
-                case "dependencyConstraints":
-                    dependencyConstraints = consumeDependencyConstraints(reader);
-                    break;
-                case "capabilities":
-                    capabilities = consumeCapabilities(reader, true);
-                    break;
-                case "available-at":
-                    availableExternally = true;
-                    dependencies = consumeVariantLocation(reader);
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+        reader.beginObject()
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val name = reader.nextName()
+            when (name) {
+                "name" -> variantName = reader.nextString()
+                "attributes" -> attributes = consumeAttributes(reader)
+                "files" -> files = consumeFiles(reader)
+                "dependencies" -> dependencies = consumeDependencies(reader)
+                "dependencyConstraints" -> dependencyConstraints = consumeDependencyConstraints(reader)
+                "capabilities" -> capabilities = consumeCapabilities(reader, true)
+                "available-at" -> {
+                    availableExternally = true
+                    dependencies = consumeVariantLocation(reader)
+                }
+
+                else -> consumeAny(reader)
             }
         }
-        assertDefined(reader, "name", variantName);
-        reader.endObject();
+        assertDefined(reader, "name", variantName)
+        reader.endObject()
 
-        MutableComponentVariant variant = metadata.addVariant(variantName, attributes);
-        variant.setAvailableExternally(availableExternally);
+        val variant = metadata.addVariant(variantName!!, attributes)
+        variant!!.isAvailableExternally = availableExternally
         if (availableExternally) {
             if (!dependencyConstraints.isEmpty()) {
-                throw new RuntimeException("A variant declared with available-at cannot declare dependency constraints");
+                throw RuntimeException("A variant declared with available-at cannot declare dependency constraints")
             }
             if (!files.isEmpty()) {
-                throw new RuntimeException("A variant declared with available-at cannot declare files");
+                throw RuntimeException("A variant declared with available-at cannot declare files")
             }
         }
-        populateVariant(files, dependencies, dependencyConstraints, capabilities, variant);
+        populateVariant(files, dependencies, dependencyConstraints, capabilities, variant)
     }
 
-    private void populateVariant(List<ModuleFile> files, List<ModuleDependency> dependencies, List<ModuleDependencyConstraint> dependencyConstraints, List<ImmutableCapability> capabilities, MutableComponentVariant variant) {
-        for (ModuleFile file : files) {
-            variant.addFile(file.name, file.uri);
+    private fun populateVariant(
+        files: MutableList<ModuleFile>,
+        dependencies: MutableList<ModuleDependency>,
+        dependencyConstraints: MutableList<ModuleDependencyConstraint>,
+        capabilities: MutableList<ImmutableCapability>,
+        variant: MutableComponentVariant
+    ) {
+        for (file in files) {
+            variant.addFile(file.name, file.uri)
         }
-        for (ModuleDependency dependency : dependencies) {
-            ImmutableSet.Builder<CapabilitySelector> capabilitySelectors = ImmutableSet.builderWithExpectedSize(dependency.requestedCapabilities.size());
-            for (ImmutableCapability requestedCapability : dependency.requestedCapabilities) {
-                capabilitySelectors.add(new DefaultSpecificCapabilitySelector(requestedCapability));
+        for (dependency in dependencies) {
+            val capabilitySelectors = ImmutableSet.builderWithExpectedSize<CapabilitySelector?>(dependency.requestedCapabilities.size)
+            for (requestedCapability in dependency.requestedCapabilities) {
+                capabilitySelectors.add(DefaultSpecificCapabilitySelector(requestedCapability))
             }
-            variant.addDependency(dependency.group, dependency.module, dependency.versionConstraint, dependency.excludes, dependency.reason, dependency.attributes, capabilitySelectors.build(), dependency.endorsing, dependency.artifact);
+            variant.addDependency(
+                dependency.group,
+                dependency.module,
+                dependency.versionConstraint,
+                dependency.excludes,
+                dependency.reason,
+                dependency.attributes,
+                capabilitySelectors.build(),
+                dependency.endorsing,
+                dependency.artifact
+            )
         }
-        for (ModuleDependencyConstraint dependencyConstraint : dependencyConstraints) {
-            variant.addDependencyConstraint(dependencyConstraint.group, dependencyConstraint.module, dependencyConstraint.versionConstraint, dependencyConstraint.reason, dependencyConstraint.attributes);
+        for (dependencyConstraint in dependencyConstraints) {
+            variant.addDependencyConstraint(
+                dependencyConstraint.group,
+                dependencyConstraint.module,
+                dependencyConstraint.versionConstraint,
+                dependencyConstraint.reason,
+                dependencyConstraint.attributes
+            )
         }
-        for (ImmutableCapability capability : capabilities) {
-            variant.addCapability(capability.getGroup(), capability.getName(), capability.getVersion());
+        for (capability in capabilities) {
+            variant.addCapability(capability.getGroup(), capability.getName(), capability.getVersion()!!)
         }
     }
 
-    private List<ModuleDependency> consumeVariantLocation(JsonReader reader) throws IOException {
-        String url = null;
-        String group = null;
-        String module = null;
-        String version = null;
+    @Throws(IOException::class)
+    private fun consumeVariantLocation(reader: JsonReader): MutableList<ModuleDependency> {
+        var url: String? = null
+        var group: String? = null
+        var module: String? = null
+        var version: String? = null
 
-        reader.beginObject();
-        while (reader.peek() != END_OBJECT) {
-            String name = reader.nextName();
-            switch (name) {
-                case "url":
-                    url = reader.nextString();
-                    break;
-                case "group":
-                    group = reader.nextString();
-                    break;
-                case "module":
-                    module = reader.nextString();
-                    break;
-                case "version":
-                    version = reader.nextString();
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+        reader.beginObject()
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val name = reader.nextName()
+            when (name) {
+                "url" -> url = reader.nextString()
+                "group" -> group = reader.nextString()
+                "module" -> module = reader.nextString()
+                "version" -> version = reader.nextString()
+                else -> consumeAny(reader)
             }
         }
-        assertDefined(reader, "url", url);
-        assertDefined(reader, "group", group);
-        assertDefined(reader, "module", module);
-        assertDefined(reader, "version", version);
-        reader.endObject();
+        assertDefined(reader, "url", url)
+        assertDefined(reader, "group", group)
+        assertDefined(reader, "module", module)
+        assertDefined(reader, "version", version)
+        reader.endObject()
 
-        return ImmutableList.of(new ModuleDependency(group, module, new DefaultImmutableVersionConstraint(version), ImmutableList.of(), null, ImmutableAttributes.EMPTY, Collections.emptyList(), false, null));
+        return ImmutableList.of<ModuleDependency?>(
+            GradleModuleMetadataParser.ModuleDependency(
+                group!!,
+                module!!,
+                DefaultImmutableVersionConstraint(version!!),
+                ImmutableList.of<ExcludeMetadata?>(),
+                null,
+                ImmutableAttributes.EMPTY,
+                mutableListOf<ImmutableCapability?>(),
+                false,
+                null
+            )
+        )
     }
 
     /**
      * Consume the dependencies of a given variant.
-     * <p>
+     *
+     *
      * This method needs to remove any duplicates from said dependencies.
      *
      * @param reader The Json to read from
      * @return a list of dependencies
      * @throws IOException when the reader fails
      */
-    private List<ModuleDependency> consumeDependencies(JsonReader reader) throws IOException {
-        Set<ModuleDependency> dependencies = new LinkedHashSet<>();
-        reader.beginArray();
-        while (reader.peek() != END_ARRAY) {
-            String group = null;
-            String module = null;
-            String reason = null;
-            ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
-            VersionConstraint version = DefaultImmutableVersionConstraint.of();
-            ImmutableList<ExcludeMetadata> excludes = ImmutableList.of();
-            List<ImmutableCapability> requestedCapabilities = ImmutableList.of();
-            IvyArtifactName artifactSelector = null;
-            boolean endorseStrictVersions = false;
+    @Throws(IOException::class)
+    private fun consumeDependencies(reader: JsonReader): MutableList<ModuleDependency> {
+        val dependencies: MutableSet<ModuleDependency?> = LinkedHashSet<ModuleDependency?>()
+        reader.beginArray()
+        while (reader.peek() != JsonToken.END_ARRAY) {
+            var group: String? = null
+            var module: String? = null
+            var reason: String? = null
+            var attributes = ImmutableAttributes.EMPTY
+            var version: VersionConstraint = DefaultImmutableVersionConstraint.of()
+            var excludes = ImmutableList.of<ExcludeMetadata?>()
+            var requestedCapabilities: MutableList<ImmutableCapability> = ImmutableList.of<ImmutableCapability?>()
+            var artifactSelector: IvyArtifactName? = null
+            var endorseStrictVersions = false
 
-            reader.beginObject();
-            while (reader.peek() != END_OBJECT) {
-                String name = reader.nextName();
-                switch (name) {
-                    case "group":
-                        group = reader.nextString();
-                        break;
-                    case "module":
-                        module = reader.nextString();
-                        break;
-                    case "version":
-                        version = consumeVersion(reader);
-                        break;
-                    case "excludes":
-                        excludes = consumeExcludes(reader);
-                        break;
-                    case "reason":
-                        reason = reader.nextString();
-                        break;
-                    case "attributes":
-                        attributes = consumeAttributes(reader);
-                        break;
-                    case "requestedCapabilities":
-                        requestedCapabilities = consumeCapabilities(reader, false);
-                        break;
-                    case "endorseStrictVersions":
-                        endorseStrictVersions = reader.nextBoolean();
-                        break;
-                    case "thirdPartyCompatibility":
-                        reader.beginObject();
-                        while (reader.peek() != END_OBJECT) {
-                            String compatibilityFeatureName = reader.nextName();
-                            if (compatibilityFeatureName.equals("artifactSelector")) {
-                                artifactSelector = consumeArtifactSelector(reader);
+            reader.beginObject()
+            while (reader.peek() != JsonToken.END_OBJECT) {
+                val name = reader.nextName()
+                when (name) {
+                    "group" -> group = reader.nextString()
+                    "module" -> module = reader.nextString()
+                    "version" -> version = consumeVersion(reader)
+                    "excludes" -> excludes = consumeExcludes(reader)
+                    "reason" -> reason = reader.nextString()
+                    "attributes" -> attributes = consumeAttributes(reader)
+                    "requestedCapabilities" -> requestedCapabilities = consumeCapabilities(reader, false)
+                    "endorseStrictVersions" -> endorseStrictVersions = reader.nextBoolean()
+                    "thirdPartyCompatibility" -> {
+                        reader.beginObject()
+                        while (reader.peek() != JsonToken.END_OBJECT) {
+                            val compatibilityFeatureName = reader.nextName()
+                            if (compatibilityFeatureName == "artifactSelector") {
+                                artifactSelector = consumeArtifactSelector(reader)
                             } else {
-                                consumeAny(reader);
+                                consumeAny(reader)
                             }
                         }
-                        reader.endObject();
-                        break;
-                    default:
-                        consumeAny(reader);
-                        break;
+                        reader.endObject()
+                    }
+
+                    else -> consumeAny(reader)
                 }
             }
-            assertDefined(reader, "group", group);
-            assertDefined(reader, "module", module);
-            reader.endObject();
+            assertDefined(reader, "group", group)
+            assertDefined(reader, "module", module)
+            reader.endObject()
 
-            dependencies.add(new ModuleDependency(group, module, version, excludes, reason, attributes, requestedCapabilities, endorseStrictVersions, artifactSelector));
+            dependencies.add(GradleModuleMetadataParser.ModuleDependency(group!!, module!!, version, excludes, reason!!, attributes, requestedCapabilities, endorseStrictVersions, artifactSelector))
         }
-        reader.endArray();
-        return new ArrayList<>(dependencies);
+        reader.endArray()
+        return ArrayList<ModuleDependency>(dependencies)
     }
 
-    private IvyArtifactName consumeArtifactSelector(JsonReader reader) throws IOException {
-        reader.beginObject();
-        String artifactName = null;
-        String type = null;
-        String extension = null;
-        String classifier = null;
-        while (reader.peek() != END_OBJECT) {
-            String name = reader.nextName();
-            switch (name) {
-                case "name":
-                    artifactName = reader.nextString();
-                    break;
-                case "type":
-                    type = reader.nextString();
-                    break;
-                case "extension":
-                    extension = reader.nextString();
-                    break;
-                case "classifier":
-                    classifier = reader.nextString();
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+    @Throws(IOException::class)
+    private fun consumeArtifactSelector(reader: JsonReader): IvyArtifactName {
+        reader.beginObject()
+        var artifactName: String? = null
+        var type: String? = null
+        var extension: String? = null
+        var classifier: String? = null
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val name = reader.nextName()
+            when (name) {
+                "name" -> artifactName = reader.nextString()
+                "type" -> type = reader.nextString()
+                "extension" -> extension = reader.nextString()
+                "classifier" -> classifier = reader.nextString()
+                else -> consumeAny(reader)
             }
         }
-        assertDefined(reader, "name", artifactName);
-        assertDefined(reader, "type", type);
+        assertDefined(reader, "name", artifactName)
+        assertDefined(reader, "type", type)
         if (extension == null) {
-            extension = type;
+            extension = type
         }
-        reader.endObject();
-        return new DefaultIvyArtifactName(artifactName, type, extension, classifier);
+        reader.endObject()
+        return DefaultIvyArtifactName(artifactName!!, type!!, extension, classifier)
     }
 
-    private List<ImmutableCapability> consumeCapabilities(JsonReader reader, boolean versionRequired) throws IOException {
-        ImmutableList.Builder<ImmutableCapability> capabilities = ImmutableList.builder();
-        reader.beginArray();
-        while (reader.peek() != END_ARRAY) {
-            String group = null;
-            String name = null;
-            String version = null;
+    @Throws(IOException::class)
+    private fun consumeCapabilities(reader: JsonReader, versionRequired: Boolean): MutableList<ImmutableCapability> {
+        val capabilities = ImmutableList.builder<ImmutableCapability?>()
+        reader.beginArray()
+        while (reader.peek() != JsonToken.END_ARRAY) {
+            var group: String? = null
+            var name: String? = null
+            var version: String? = null
 
-            reader.beginObject();
-            while (reader.peek() != END_OBJECT) {
-                String val = reader.nextName();
-                switch (val) {
-                    case "group":
-                        group = reader.nextString();
-                        break;
-                    case "name":
-                        name = reader.nextString();
-                        break;
-                    case "version":
-                        if (reader.peek() == NULL) {
-                            reader.nextNull();
-                        } else {
-                            version = reader.nextString();
-                        }
-                        break;
+            reader.beginObject()
+            while (reader.peek() != JsonToken.END_OBJECT) {
+                val `val` = reader.nextName()
+                when (`val`) {
+                    "group" -> group = reader.nextString()
+                    "name" -> name = reader.nextString()
+                    "version" -> if (reader.peek() == JsonToken.NULL) {
+                        reader.nextNull()
+                    } else {
+                        version = reader.nextString()
+                    }
                 }
             }
-            assertDefined(reader, "group", group);
-            assertDefined(reader, "name", name);
+            assertDefined(reader, "group", group)
+            assertDefined(reader, "name", name)
             if (versionRequired) {
-                assertDefined(reader, "version", version);
+                assertDefined(reader, "version", version)
             }
-            reader.endObject();
+            reader.endObject()
 
-            capabilities.add(new DefaultImmutableCapability(group, name, version));
+            capabilities.add(DefaultImmutableCapability(group!!, name!!, version))
         }
-        reader.endArray();
-        return capabilities.build();
+        reader.endArray()
+        return capabilities.build()
     }
 
     /**
      * Consume the dependency constraints of a given variant.
-     * <p>
+     *
+     *
      * This method needs to remove any duplicates from said constraints.
      *
      * @param reader The Json to read from
      * @return a list of constraints
      * @throws IOException when the reader fails
      */
-    private List<ModuleDependencyConstraint> consumeDependencyConstraints(JsonReader reader) throws IOException {
-        Set<ModuleDependencyConstraint> dependencies = new LinkedHashSet<>();
-        reader.beginArray();
-        while (reader.peek() != END_ARRAY) {
-            String group = null;
-            String module = null;
-            String reason = null;
-            VersionConstraint version = DefaultImmutableVersionConstraint.of();
-            ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
+    @Throws(IOException::class)
+    private fun consumeDependencyConstraints(reader: JsonReader): MutableList<ModuleDependencyConstraint> {
+        val dependencies: MutableSet<ModuleDependencyConstraint?> = LinkedHashSet<ModuleDependencyConstraint?>()
+        reader.beginArray()
+        while (reader.peek() != JsonToken.END_ARRAY) {
+            var group: String? = null
+            var module: String? = null
+            var reason: String? = null
+            var version: VersionConstraint = DefaultImmutableVersionConstraint.of()
+            var attributes = ImmutableAttributes.EMPTY
 
-            reader.beginObject();
-            while (reader.peek() != END_OBJECT) {
-                String name = reader.nextName();
-                switch (name) {
-                    case "group":
-                        group = reader.nextString();
-                        break;
-                    case "module":
-                        module = reader.nextString();
-                        break;
-                    case "version":
-                        version = consumeVersion(reader);
-                        break;
-                    case "reason":
-                        reason = reader.nextString();
-                        break;
-                    case "attributes":
-                        attributes = consumeAttributes(reader);
-                        break;
-                    default:
-                        consumeAny(reader);
-                        break;
+            reader.beginObject()
+            while (reader.peek() != JsonToken.END_OBJECT) {
+                val name = reader.nextName()
+                when (name) {
+                    "group" -> group = reader.nextString()
+                    "module" -> module = reader.nextString()
+                    "version" -> version = consumeVersion(reader)
+                    "reason" -> reason = reader.nextString()
+                    "attributes" -> attributes = consumeAttributes(reader)
+                    else -> consumeAny(reader)
                 }
             }
-            assertDefined(reader, "group", group);
-            assertDefined(reader, "module", module);
-            reader.endObject();
+            assertDefined(reader, "group", group)
+            assertDefined(reader, "module", module)
+            reader.endObject()
 
-            dependencies.add(new ModuleDependencyConstraint(group, module, version, reason, attributes));
+            dependencies.add(GradleModuleMetadataParser.ModuleDependencyConstraint(group!!, module!!, version, reason!!, attributes))
         }
-        reader.endArray();
-        return new ArrayList<>(dependencies);
+        reader.endArray()
+        return ArrayList<ModuleDependencyConstraint>(dependencies)
     }
 
-    private ImmutableVersionConstraint consumeVersion(JsonReader reader) throws IOException {
-        String requiredVersion = "";
-        String preferredVersion = "";
-        String strictVersion = "";
-        List<String> rejects = new ArrayList<>();
+    @Throws(IOException::class)
+    private fun consumeVersion(reader: JsonReader): ImmutableVersionConstraint {
+        var requiredVersion = ""
+        var preferredVersion = ""
+        var strictVersion = ""
+        val rejects: MutableList<String?> = ArrayList<String?>()
 
-        reader.beginObject();
-        while (reader.peek() != END_OBJECT) {
+        reader.beginObject()
+        while (reader.peek() != JsonToken.END_OBJECT) {
             // At this stage, 'strictly' implies 'requires'.
-            String cst = reader.nextName();
-            switch (cst) {
-                case "prefers":
-                    preferredVersion = reader.nextString();
-                    break;
-                case "requires":
-                    requiredVersion = reader.nextString();
-                    break;
-                case "strictly":
-                    strictVersion = reader.nextString();
-                    break;
-                case "rejects":
-                    reader.beginArray();
-                    while (reader.peek() != END_ARRAY) {
-                        rejects.add(reader.nextString());
+            val cst = reader.nextName()
+            when (cst) {
+                "prefers" -> preferredVersion = reader.nextString()
+                "requires" -> requiredVersion = reader.nextString()
+                "strictly" -> strictVersion = reader.nextString()
+                "rejects" -> {
+                    reader.beginArray()
+                    while (reader.peek() != JsonToken.END_ARRAY) {
+                        rejects.add(reader.nextString())
                     }
-                    reader.endArray();
-                    break;
-                default:
-                    consumeAny(reader);
-                    break;
+                    reader.endArray()
+                }
+
+                else -> consumeAny(reader)
             }
         }
-        reader.endObject();
-        return DefaultImmutableVersionConstraint.of(preferredVersion, requiredVersion, strictVersion, rejects);
+        reader.endObject()
+        return DefaultImmutableVersionConstraint.of(preferredVersion, requiredVersion, strictVersion, rejects)
     }
 
-    private ImmutableList<ExcludeMetadata> consumeExcludes(JsonReader reader) throws IOException {
-        ImmutableList.Builder<ExcludeMetadata> builder = new ImmutableList.Builder<>();
-        reader.beginArray();
-        while (reader.peek() != END_ARRAY) {
-            String group = null;
-            String module = null;
+    @Throws(IOException::class)
+    private fun consumeExcludes(reader: JsonReader): ImmutableList<ExcludeMetadata?> {
+        val builder = ImmutableList.Builder<ExcludeMetadata?>()
+        reader.beginArray()
+        while (reader.peek() != JsonToken.END_ARRAY) {
+            var group: String? = null
+            var module: String? = null
 
-            reader.beginObject();
-            while (reader.peek() != END_OBJECT) {
-                String name = reader.nextName();
-                switch (name) {
-                    case "group":
-                        group = reader.nextString();
-                        break;
-                    case "module":
-                        module = reader.nextString();
-                        break;
-                    default:
-                        consumeAny(reader);
-                        break;
+            reader.beginObject()
+            while (reader.peek() != JsonToken.END_OBJECT) {
+                val name = reader.nextName()
+                when (name) {
+                    "group" -> group = reader.nextString()
+                    "module" -> module = reader.nextString()
+                    else -> consumeAny(reader)
                 }
             }
-            reader.endObject();
+            reader.endObject()
 
-            ExcludeMetadata exclude = excludeRuleConverter.createExcludeRule(group, module);
-            builder.add(exclude);
+            val exclude = excludeRuleConverter.createExcludeRule(group!!, module!!)
+            builder.add(exclude)
         }
-        reader.endArray();
-        return builder.build();
+        reader.endArray()
+        return builder.build()
     }
 
-    private List<ModuleFile> consumeFiles(JsonReader reader) throws IOException {
-        List<ModuleFile> files = new ArrayList<>();
-        reader.beginArray();
-        while (reader.peek() != END_ARRAY) {
-            String fileName = null;
-            String fileUrl = null;
+    @Throws(IOException::class)
+    private fun consumeFiles(reader: JsonReader): MutableList<ModuleFile> {
+        val files: MutableList<ModuleFile> = ArrayList<ModuleFile>()
+        reader.beginArray()
+        while (reader.peek() != JsonToken.END_ARRAY) {
+            var fileName: String? = null
+            var fileUrl: String? = null
 
-            reader.beginObject();
-            while (reader.peek() != END_OBJECT) {
-                String name = reader.nextName();
-                switch (name) {
-                    case "name":
-                        fileName = reader.nextString();
-                        break;
-                    case "url":
-                        fileUrl = reader.nextString();
-                        break;
-                    default:
-                        consumeAny(reader);
-                        break;
+            reader.beginObject()
+            while (reader.peek() != JsonToken.END_OBJECT) {
+                val name = reader.nextName()
+                when (name) {
+                    "name" -> fileName = reader.nextString()
+                    "url" -> fileUrl = reader.nextString()
+                    else -> consumeAny(reader)
                 }
             }
-            assertDefined(reader, "name", fileName);
-            assertDefined(reader, "url", fileUrl);
-            reader.endObject();
+            assertDefined(reader, "name", fileName)
+            assertDefined(reader, "url", fileUrl)
+            reader.endObject()
 
-            files.add(new ModuleFile(fileName, fileUrl));
+            files.add(GradleModuleMetadataParser.ModuleFile(fileName!!, fileUrl!!))
         }
-        reader.endArray();
-        return files;
+        reader.endArray()
+        return files
     }
 
-    private ImmutableAttributes consumeAttributes(JsonReader reader) throws IOException {
-        String libraryElementsValue = null;
-        ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
+    @Throws(IOException::class)
+    private fun consumeAttributes(reader: JsonReader): ImmutableAttributes {
+        var libraryElementsValue: String? = null
+        var attributes = ImmutableAttributes.EMPTY
 
-        reader.beginObject();
-        while (reader.peek() != END_OBJECT) {
-            String attrName = reader.nextName();
-            if (reader.peek() == BOOLEAN) {
-                boolean attrValue = reader.nextBoolean();
-                attributes = attributesFactory.concat(attributes, Attribute.of(attrName, Boolean.class), attrValue);
-            } else if (reader.peek() == NUMBER) {
-                Integer attrValue = reader.nextInt();
-                attributes = attributesFactory.concat(attributes, Attribute.of(attrName, Integer.class), attrValue);
+        reader.beginObject()
+        while (reader.peek() != JsonToken.END_OBJECT) {
+            val attrName = reader.nextName()
+            if (reader.peek() == JsonToken.BOOLEAN) {
+                val attrValue = reader.nextBoolean()
+                attributes = attributesFactory.concat<Boolean?>(attributes, Attribute.of<Boolean?>(attrName, Boolean::class.java), attrValue)
+            } else if (reader.peek() == JsonToken.NUMBER) {
+                val attrValue = reader.nextInt()
+                attributes = attributesFactory.concat<Int?>(attributes, Attribute.of<Int?>(attrName, Int::class.java), attrValue)
             } else {
-                String attrValue = reader.nextString();
-                if (Usage.USAGE_ATTRIBUTE.getName().equals(attrName)) {
+                var attrValue = reader.nextString()
+                if (Usage.USAGE_ATTRIBUTE.getName() == attrName) {
                     // Handle potentially legacy Usage values. Unfortunately, "published metadata is forever",
                     // so we need to handle this legacy value for the rest of time.
                     // In the future, it might make sense to handle this in another place, like in a JVM-specific
                     // ecosystem plugin.
-                    String legacyUsage = UsageCompatibilityHandler.getReplacementUsage(attrValue);
+                    val legacyUsage = UsageCompatibilityHandler.getReplacementUsage(attrValue)
                     if (legacyUsage != null) {
-                        libraryElementsValue = UsageCompatibilityHandler.getLibraryElements(attrValue);
-                        attrValue = legacyUsage;
+                        libraryElementsValue = UsageCompatibilityHandler.getLibraryElements(attrValue)
+                        attrValue = legacyUsage
                     }
                 }
-                attributes = attributesFactory.concat(attributes, Attribute.of(attrName, String.class), new CoercingStringValueSnapshot(attrValue, instantiator));
+                attributes = attributesFactory.concat<String?>(attributes, Attribute.of<String?>(attrName, String::class.java), CoercingStringValueSnapshot(attrValue!!, instantiator!!))
             }
         }
-        reader.endObject();
+        reader.endObject()
 
         // If a legacy Usage value was encountered, only add the corresponding LibraryElements value if there is not already one provided.
         if (libraryElementsValue != null && attributes.findEntry(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE.getName()) == null) {
-            attributes = attributesFactory.concat(attributes, Attribute.of(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE.getName(), String.class), new CoercingStringValueSnapshot(libraryElementsValue, instantiator));
+            attributes = attributesFactory.concat<String?>(
+                attributes,
+                Attribute.of<String?>(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE.getName(), String::class.java),
+                CoercingStringValueSnapshot(libraryElementsValue, instantiator!!)
+            )
         }
 
-        return attributes;
+        return attributes
     }
 
-    private void consumeAny(JsonReader reader) throws IOException {
-        reader.skipValue();
+    @Throws(IOException::class)
+    private fun consumeAny(reader: JsonReader) {
+        reader.skipValue()
     }
 
-    private void assertDefined(JsonReader reader, String attribute, String value) {
+    private fun assertDefined(reader: JsonReader, attribute: String?, value: String?) {
         if (StringUtils.isEmpty(value)) {
-            String path = reader.getPath();
+            val path = reader.getPath()
             // remove leading '$', remove last child segment, use '/' as separator
-            throw new RuntimeException("missing '" + attribute + "' at " + path.substring(1, path.lastIndexOf('.')).replace('.', '/'));
+            throw RuntimeException("missing '" + attribute + "' at " + path.substring(1, path.lastIndexOf('.')).replace('.', '/'))
         }
     }
 
-    private static class ModuleFile {
-        final String name;
-        final String uri;
+    private class ModuleFile(val name: String, val uri: String)
 
-        ModuleFile(String name, String uri) {
-            this.name = name;
-            this.uri = uri;
-        }
-    }
-
-    private static class ModuleDependency {
-        final String group;
-        final String module;
-        final VersionConstraint versionConstraint;
-        final ImmutableList<ExcludeMetadata> excludes;
-        final String reason;
-        final ImmutableAttributes attributes;
-        final List<ImmutableCapability> requestedCapabilities;
-        final boolean endorsing;
-        final IvyArtifactName artifact;
-
-        ModuleDependency(String group, String module, VersionConstraint versionConstraint, ImmutableList<ExcludeMetadata> excludes, String reason, ImmutableAttributes attributes, List<ImmutableCapability> requestedCapabilities, boolean endorsing, IvyArtifactName artifact) {
-            this.group = group;
-            this.module = module;
-            this.versionConstraint = versionConstraint;
-            this.excludes = excludes;
-            this.reason = reason;
-            this.attributes = attributes;
-            this.requestedCapabilities = requestedCapabilities;
-            this.endorsing = endorsing;
-            this.artifact = artifact;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+    private class ModuleDependency(
+        val group: String,
+        val module: String,
+        val versionConstraint: VersionConstraint,
+        val excludes: ImmutableList<ExcludeMetadata?>,
+        val reason: String,
+        val attributes: ImmutableAttributes,
+        val requestedCapabilities: MutableList<ImmutableCapability>,
+        val endorsing: Boolean,
+        val artifact: IvyArtifactName?
+    ) {
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            ModuleDependency that = (ModuleDependency) o;
+            val that = o as ModuleDependency
             return Objects.equal(group, that.group)
-                && Objects.equal(module, that.module)
-                && Objects.equal(versionConstraint, that.versionConstraint)
-                && Objects.equal(excludes, that.excludes)
-                && Objects.equal(reason, that.reason)
-                && Objects.equal(attributes, that.attributes)
-                && Objects.equal(requestedCapabilities, that.requestedCapabilities)
-                && endorsing == that.endorsing
-                && Objects.equal(artifact, that.artifact);
+                    && Objects.equal(module, that.module)
+                    && Objects.equal(versionConstraint, that.versionConstraint)
+                    && Objects.equal(excludes, that.excludes)
+                    && Objects.equal(reason, that.reason)
+                    && Objects.equal(attributes, that.attributes)
+                    && Objects.equal(requestedCapabilities, that.requestedCapabilities)
+                    && endorsing == that.endorsing && Objects.equal(artifact, that.artifact)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(group, module, versionConstraint, excludes, reason, attributes, endorsing, artifact);
+        override fun hashCode(): Int {
+            return Objects.hashCode(group, module, versionConstraint, excludes, reason, attributes, endorsing, artifact)
         }
-
     }
 
-    private static class ModuleDependencyConstraint {
-        final String group;
-        final String module;
-        final VersionConstraint versionConstraint;
-        final String reason;
-        final ImmutableAttributes attributes;
-
-        ModuleDependencyConstraint(String group, String module, VersionConstraint versionConstraint, String reason, ImmutableAttributes attributes) {
-            this.group = group;
-            this.module = module;
-            this.versionConstraint = versionConstraint;
-            this.reason = reason;
-            this.attributes = attributes;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+    private class ModuleDependencyConstraint(val group: String, val module: String, val versionConstraint: VersionConstraint, val reason: String, val attributes: ImmutableAttributes) {
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            ModuleDependencyConstraint that = (ModuleDependencyConstraint) o;
+            val that = o as ModuleDependencyConstraint
             return Objects.equal(group, that.group)
-                && Objects.equal(module, that.module)
-                && Objects.equal(versionConstraint, that.versionConstraint)
-                && Objects.equal(reason, that.reason)
-                && Objects.equal(attributes, that.attributes);
+                    && Objects.equal(module, that.module)
+                    && Objects.equal(versionConstraint, that.versionConstraint)
+                    && Objects.equal(reason, that.reason)
+                    && Objects.equal(attributes, that.attributes)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(group, module, versionConstraint, reason, attributes);
+        override fun hashCode(): Int {
+            return Objects.hashCode(group, module, versionConstraint, reason, attributes)
         }
+    }
+
+    companion object {
+        private val LOGGER = getLogger(GradleModuleMetadataParser::class.java)
+
+        const val FORMAT_VERSION: String = "1.1"
     }
 }

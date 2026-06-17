@@ -13,251 +13,216 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ComponentMetadataBuilder
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.ivy.IvyModuleDescriptor
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessor.processMetadata
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory.createComponentMetadataProcessor
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.MetadataResolutionContext
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils
+import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataAdapter
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata
+import org.gradle.internal.logging.text.TreeFormatter
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.rules.RuleAction.execute
+import java.lang.Boolean
+import kotlin.String
+import kotlin.Suppress
+import kotlin.compareTo
 
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ComponentMetadataBuilder;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.MetadataResolutionContext;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils;
-import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataAdapter;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.jspecify.annotations.Nullable;
+internal class DefaultMetadataProvider(private val resolveState: ModuleComponentResolveState) : MetadataProvider {
+    private var cachedResult: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>? = null
+    private var cachedComponentMetadata: ComponentMetadata? = null
+    private var computedMetadata = false
 
-import java.util.ArrayList;
-import java.util.List;
-
-class DefaultMetadataProvider implements MetadataProvider {
-    private final static Transformer<ComponentMetadata, BuildableComponentMetadataSupplierDetails> TO_COMPONENT_METADATA = BuildableComponentMetadataSupplierDetails::getExecutionResult;
-    private final ModuleComponentResolveState resolveState;
-    private BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> cachedResult;
-    private ComponentMetadata cachedComponentMetadata;
-    private boolean computedMetadata;
-
-    DefaultMetadataProvider(ModuleComponentResolveState resolveState) {
-        this.resolveState = resolveState;
-    }
-
-    @Override
-    public ComponentMetadata getComponentMetadata() {
+    override fun getComponentMetadata(): ComponentMetadata? {
         if (computedMetadata) {
-            return cachedComponentMetadata;
+            return cachedComponentMetadata
         }
 
-        cachedComponentMetadata = computeMetadata();
-        computedMetadata = true;
-        return cachedComponentMetadata;
+        cachedComponentMetadata = computeMetadata()
+        computedMetadata = true
+        return cachedComponentMetadata
     }
 
-    @Nullable
-    private ComponentMetadata computeMetadata() {
-        ComponentMetadata metadata = null;
-        InstantiatingAction<ComponentMetadataSupplierDetails> componentMetadataSupplier = resolveState.getComponentMetadataSupplier();
+    private fun computeMetadata(): ComponentMetadata? {
+        var metadata: ComponentMetadata? = null
+        val componentMetadataSupplier: InstantiatingAction<ComponentMetadataSupplierDetails?>? = resolveState.componentMetadataSupplier
         if (componentMetadataSupplier != null) {
-            metadata = getComponentMetadataFromSupplier(componentMetadataSupplier);
+            metadata = getComponentMetadataFromSupplier(componentMetadataSupplier)
         }
         if (metadata != null) {
-            metadata = transformThroughComponentMetadataRules(componentMetadataSupplier, metadata);
+            metadata = transformThroughComponentMetadataRules(componentMetadataSupplier!!, metadata)
         } else if (resolve()) {
-            @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
-            metadata = new ComponentMetadataAdapter(legacyMetadata);
+            @Suppress("deprecation") val legacyMetadata: ExternalComponentResolveMetadata = cachedResult!!.metaData.getLegacyMetadata()
+            metadata = ComponentMetadataAdapter(legacyMetadata)
         }
-        return metadata;
+        return metadata
     }
 
-    private ComponentMetadata transformThroughComponentMetadataRules(InstantiatingAction<ComponentMetadataSupplierDetails> componentMetadataSupplier, ComponentMetadata metadata) {
-        DefaultMetadataResolutionContext resolutionContext = new DefaultMetadataResolutionContext(resolveState.getCacheExpirationControl(), componentMetadataSupplier.getInstantiator());
-        metadata = resolveState.getComponentMetadataProcessorFactory().createComponentMetadataProcessor(resolutionContext).processMetadata(metadata);
-        return metadata;
+    private fun transformThroughComponentMetadataRules(componentMetadataSupplier: InstantiatingAction<ComponentMetadataSupplierDetails?>, metadata: ComponentMetadata?): ComponentMetadata? {
+        var metadata = metadata
+        val resolutionContext = DefaultMetadataResolutionContext(resolveState.cacheExpirationControl, componentMetadataSupplier.getInstantiator())
+        metadata = resolveState.componentMetadataProcessorFactory.createComponentMetadataProcessor(resolutionContext).processMetadata(metadata)
+        return metadata
     }
 
-    private ComponentMetadata getComponentMetadataFromSupplier(InstantiatingAction<ComponentMetadataSupplierDetails> componentMetadataSupplier) {
-        ComponentMetadata metadata;
-        ModuleVersionIdentifier id = DefaultModuleVersionIdentifier.newId(resolveState.getId());
-        metadata = resolveState.getComponentMetadataSupplierExecutor().execute(id, componentMetadataSupplier, TO_COMPONENT_METADATA, id1 -> {
-            final SimpleComponentMetadataBuilder builder = new SimpleComponentMetadataBuilder(id1, resolveState.getAttributesFactory());
-            return new BuildableComponentMetadataSupplierDetails(builder);
-        }, resolveState.getCacheExpirationControl());
-        return metadata;
+    private fun getComponentMetadataFromSupplier(componentMetadataSupplier: InstantiatingAction<ComponentMetadataSupplierDetails?>?): ComponentMetadata? {
+        val metadata: ComponentMetadata?
+        val id: ModuleVersionIdentifier? = DefaultModuleVersionIdentifier.newId(resolveState.id)
+        metadata =
+            resolveState.componentMetadataSupplierExecutor.< BuildableComponentMetadataSupplierDetails > execute < org . gradle . api . internal . artifacts . ivyservice . ivyresolve . DefaultMetadataProvider . BuildableComponentMetadataSupplierDetails ? > (id, componentMetadataSupplier, org.gradle.api.internal.artifacts.ivyservice.ivyresolve.DefaultMetadataProvider.Companion.TO_COMPONENT_METADATA, { id1 ->
+            val builder = SimpleComponentMetadataBuilder(id1, resolveState.attributesFactory)
+            DefaultMetadataProvider.BuildableComponentMetadataSupplierDetails(builder)
+        }, resolveState.cacheExpirationControl)
+        return metadata
     }
 
-    @Override
-    public IvyModuleDescriptor getIvyModuleDescriptor() {
+    override fun getIvyModuleDescriptor(): IvyModuleDescriptor? {
         if (resolve()) {
-            @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
-            if (legacyMetadata instanceof IvyModuleResolveMetadata) {
-                IvyModuleResolveMetadata ivyMetadata = (IvyModuleResolveMetadata) legacyMetadata;
-                return new DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status);
+            @Suppress("deprecation") val legacyMetadata: ExternalComponentResolveMetadata? = cachedResult!!.metaData.getLegacyMetadata()
+            if (legacyMetadata is IvyModuleResolveMetadata) {
+                val ivyMetadata = legacyMetadata
+                return DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status!!)
             }
         }
-        return null;
+        return null
     }
 
-    private boolean resolve() {
+    private fun resolve(): Boolean {
         if (cachedResult == null) {
-            cachedResult = resolveState.resolve();
+            cachedResult = resolveState.resolve()
         }
-        return cachedResult.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+        return cachedResult!!.state === BuildableModuleComponentMetaDataResolveResult.State.Resolved
     }
 
-    @Override
-    public boolean isUsable() {
-        return cachedResult == null || cachedResult.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+    override fun isUsable(): Boolean {
+        return cachedResult == null || cachedResult!!.state === BuildableModuleComponentMetaDataResolveResult.State.Resolved
     }
 
-    public BuildableModuleComponentMetaDataResolveResult<?> getResult() {
-        return cachedResult;
-    }
+    val result: BuildableModuleComponentMetaDataResolveResult<*>?
+        get() = cachedResult
 
     /**
-     * This class bridges from the public type available in metadata suppliers ({@link ComponentMetadataBuilder}
-     * to the complete type ({@link ComponentMetadata}) which provides more than what we want to expose in those
+     * This class bridges from the public type available in metadata suppliers ([ComponentMetadataBuilder]
+     * to the complete type ([ComponentMetadata]) which provides more than what we want to expose in those
      * rules. In particular, the builder exposes setters, that we don't want on the component metadata type.
      */
-    private static class SimpleComponentMetadataBuilder implements ComponentMetadataBuilder {
-        private final ModuleVersionIdentifier id;
-        private boolean mutated; // used internally to determine if a rule effectively did something
+    private class SimpleComponentMetadataBuilder(private val id: ModuleVersionIdentifier, attributesFactory: AttributesFactory) : ComponentMetadataBuilder {
+        private var mutated = false // used internally to determine if a rule effectively did something
 
-        private List<String> statusScheme = ExternalComponentResolveMetadata.DEFAULT_STATUS_SCHEME;
-        private final AttributeContainerInternal attributes;
+        private var statusScheme = ExternalComponentResolveMetadata.DEFAULT_STATUS_SCHEME
+        private val attributes: AttributeContainerInternal
 
-        private SimpleComponentMetadataBuilder(ModuleVersionIdentifier id, AttributesFactory attributesFactory) {
-            this.id = id;
-            this.attributes = attributesFactory.mutable();
-            this.attributes.attribute(ProjectInternal.STATUS_ATTRIBUTE, MavenVersionUtils.inferStatusFromEffectiveVersion(id.getVersion()));
+        init {
+            this.attributes = attributesFactory.mutable()
+            this.attributes.attribute<String?>(
+                ProjectInternal.STATUS_ATTRIBUTE, MavenVersionUtils.inferStatusFromEffectiveVersion(
+                    id.getVersion()
+                )
+            )
         }
 
-        @Override
-        public void setStatus(String status) {
-            attributes.attribute(ProjectInternal.STATUS_ATTRIBUTE, status);
-            mutated = true;
+        override fun setStatus(status: String) {
+            attributes.attribute<String?>(ProjectInternal.STATUS_ATTRIBUTE, status)
+            mutated = true
         }
 
-        @Override
-        public void setStatusScheme(List<String> scheme) {
-            this.statusScheme = scheme;
-            mutated = true;
+        override fun setStatusScheme(scheme: MutableList<String?>) {
+            this.statusScheme = scheme
+            mutated = true
         }
 
-        @Override
-        public void attributes(Action<? super AttributeContainer> attributesConfiguration) {
-            mutated = true;
-            attributesConfiguration.execute(attributes);
+        override fun attributes(attributesConfiguration: Action<in AttributeContainer?>) {
+            mutated = true
+            attributesConfiguration.execute(attributes)
         }
 
-        @Override
-        public AttributeContainer getAttributes() {
-            mutated = true;
-            return attributes;
+        override fun getAttributes(): AttributeContainer {
+            mutated = true
+            return attributes
         }
 
-        private ImmutableAttributes validateAttributeTypes(AttributeContainerInternal attributes) {
-            List<Attribute<?>> invalidAttributes = null;
-            for (Attribute<?> attribute : attributes.keySet()) {
+        fun validateAttributeTypes(attributes: AttributeContainerInternal): ImmutableAttributes? {
+            var invalidAttributes: MutableList<Attribute<*>>? = null
+            for (attribute in attributes.keySet()) {
                 if (!isValidType(attribute)) {
                     if (invalidAttributes == null) {
-                        invalidAttributes = new ArrayList<>();
+                        invalidAttributes = ArrayList<Attribute<*>>()
                     }
-                    invalidAttributes.add(attribute);
+                    invalidAttributes.add(attribute)
                 }
             }
-            maybeThrowValidationError(invalidAttributes);
-            return attributes.asImmutable();
+            maybeThrowValidationError(invalidAttributes)
+            return attributes.asImmutable()
         }
 
-        private void maybeThrowValidationError(@Nullable List<Attribute<?>> invalidAttributes) {
+        fun maybeThrowValidationError(invalidAttributes: MutableList<Attribute<*>>?) {
             if (invalidAttributes != null) {
-                TreeFormatter fm = new TreeFormatter();
-                fm.node("Invalid attributes types have been provider by component metadata supplier. Attributes must either be strings or booleans");
-                fm.startChildren();
-                for (Attribute<?> invalidAttribute : invalidAttributes) {
-                    fm.node("Attribute '" + invalidAttribute.getName() + "' has type " + invalidAttribute.getType());
+                val fm = TreeFormatter()
+                fm.node("Invalid attributes types have been provider by component metadata supplier. Attributes must either be strings or booleans")
+                fm.startChildren()
+                for (invalidAttribute in invalidAttributes) {
+                    fm.node("Attribute '" + invalidAttribute.getName() + "' has type " + invalidAttribute.getType())
                 }
-                fm.endChildren();
-                throw new InvalidUserDataException(fm.toString());
+                fm.endChildren()
+                throw InvalidUserDataException(fm.toString())
             }
         }
 
-        private static boolean isValidType(Attribute<?> attribute) {
-            Class<?> type = attribute.getType();
-            return type == String.class || type == Boolean.class || type == Boolean.TYPE;
+        fun build(): ComponentMetadata {
+            return UserProvidedMetadata(id, statusScheme, validateAttributeTypes(attributes)!!)
         }
 
-        ComponentMetadata build() {
-            return new UserProvidedMetadata(id, statusScheme, validateAttributeTypes(attributes));
-        }
-
-    }
-
-    private class BuildableComponentMetadataSupplierDetails implements ComponentMetadataSupplierDetails {
-        private final SimpleComponentMetadataBuilder builder;
-
-        public BuildableComponentMetadataSupplierDetails(SimpleComponentMetadataBuilder builder) {
-            this.builder = builder;
-        }
-
-        @Override
-        public ModuleComponentIdentifier getId() {
-            return resolveState.getId();
-        }
-
-        @Override
-        public ComponentMetadataBuilder getResult() {
-            return builder;
-        }
-
-        @Nullable
-        public ComponentMetadata getExecutionResult() {
-            if (builder.mutated) {
-                return builder.build();
+        companion object {
+            private fun isValidType(attribute: Attribute<*>): Boolean {
+                val type: Class<*> = attribute.getType()
+                return type == String::class.java || type == Boolean::class.java || type == Boolean.TYPE
             }
-            return null;
         }
-
     }
 
-    private static class DefaultMetadataResolutionContext implements MetadataResolutionContext {
-
-        private final CacheExpirationControl cacheExpirationControl;
-        private final Instantiator instantiator;
-
-        private DefaultMetadataResolutionContext(CacheExpirationControl cacheExpirationControl, Instantiator instantiator) {
-            this.cacheExpirationControl = cacheExpirationControl;
-            this.instantiator = instantiator;
+    private inner class BuildableComponentMetadataSupplierDetails(private val builder: SimpleComponentMetadataBuilder) : ComponentMetadataSupplierDetails {
+        override fun getId(): ModuleComponentIdentifier {
+            return resolveState.id
         }
 
-        @Override
-        public CacheExpirationControl getCacheExpirationControl() {
-            return cacheExpirationControl;
+        override fun getResult(): ComponentMetadataBuilder {
+            return builder
         }
 
-        @Override
-        public Instantiator getInjectingInstantiator() {
-            return instantiator;
-        }
+        val executionResult: ComponentMetadata?
+            get() {
+                if (builder.mutated) {
+                    return builder.build()
+                }
+                return null
+            }
+    }
+
+    private class DefaultMetadataResolutionContext(val cacheExpirationControl: CacheExpirationControl?, val injectingInstantiator: Instantiator?) : MetadataResolutionContext
+    companion object {
+        private val TO_COMPONENT_METADATA = Transformer { obj: BuildableComponentMetadataSupplierDetails? -> obj!!.executionResult }
     }
 }

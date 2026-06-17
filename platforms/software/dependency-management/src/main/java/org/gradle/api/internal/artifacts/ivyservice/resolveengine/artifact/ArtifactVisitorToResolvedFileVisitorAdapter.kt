@@ -13,51 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import java.io.File
 
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-
-import java.io.File;
-
-public class ArtifactVisitorToResolvedFileVisitorAdapter implements ArtifactVisitor {
-    private final ResolvedFileVisitor visitor;
-
-    public ArtifactVisitorToResolvedFileVisitorAdapter(ResolvedFileVisitor visitor) {
-        this.visitor = visitor;
+class ArtifactVisitorToResolvedFileVisitorAdapter(private val visitor: ResolvedFileVisitor) : ArtifactVisitor {
+    override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+        return visitor.prepareForVisit(source)
     }
 
-    @Override
-    public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-        return visitor.prepareForVisit(source);
+    fun visitFile(file: File) {
+        visitor.visitFile(file)
     }
 
-    public void visitFile(File file) {
-        visitor.visitFile(file);
+    override fun visitArtifact(
+        artifactSetName: DisplayName?,
+        sourceVariantId: VariantIdentifier?,
+        attributes: ImmutableAttributes?,
+        capabilities: ImmutableCapabilities?,
+        artifact: ResolvableArtifact
+    ) {
+        visitor.visitFile(artifact.file!!)
     }
 
-    @Override
-    public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact) {
-        visitor.visitFile(artifact.getFile());
+    override fun visitFailure(failure: Throwable) {
+        visitor.visitFailure(failure)
     }
 
-    @Override
-    public void visitFailure(Throwable failure) {
-        visitor.visitFailure(failure);
+    override fun endVisitCollection(source: FileCollectionInternal.Source) {
+        visitor.endVisitCollection(source)
     }
 
-    @Override
-    public void endVisitCollection(FileCollectionInternal.Source source) {
-        visitor.endVisitCollection(source);
-    }
-
-    @Override
-    public boolean requireArtifactFiles() {
-        return true;
+    override fun requireArtifactFiles(): Boolean {
+        return true
     }
 }

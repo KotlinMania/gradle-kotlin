@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
+interface ComponentResolvers {
+    val componentIdResolver: DependencyToComponentIdResolver?
 
-public interface ComponentResolvers {
-    DependencyToComponentIdResolver getComponentIdResolver();
+    val componentResolver: ComponentMetaDataResolver?
 
-    ComponentMetaDataResolver getComponentResolver();
-
-    ArtifactResolver getArtifactResolver();
+    val artifactResolver: ArtifactResolver?
 }

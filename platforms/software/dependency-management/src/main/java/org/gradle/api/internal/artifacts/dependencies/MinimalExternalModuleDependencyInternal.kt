@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dependencies
 
-package org.gradle.api.internal.artifacts.dependencies;
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
 
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.typeconversion.NotationParser;
+interface MinimalExternalModuleDependencyInternal : MinimalExternalModuleDependency {
+    fun copyTo(target: AbstractExternalModuleDependency)
 
-public interface MinimalExternalModuleDependencyInternal extends MinimalExternalModuleDependency {
-    void copyTo(AbstractExternalModuleDependency target);
+    val attributesFactory: AttributesFactory?
 
-    AttributesFactory getAttributesFactory();
+    val capabilityNotationParser: NotationParser<Any, Capability>?
 
-    NotationParser<Object, Capability> getCapabilityNotationParser();
-
-    ObjectFactory getObjectFactory();
+    val objectFactory: ObjectFactory?
 }

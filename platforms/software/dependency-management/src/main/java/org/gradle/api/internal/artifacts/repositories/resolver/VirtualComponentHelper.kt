@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.resolver;
+package org.gradle.api.internal.artifacts.repositories.resolver
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.DefaultVirtualModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.VirtualComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.DefaultVirtualModuleComponentIdentifier
+import org.gradle.internal.component.external.model.VirtualComponentIdentifier
 
-public class VirtualComponentHelper {
+object VirtualComponentHelper {
     /**
      * Decorates a component identifier, marking it as virtual.
      * @param id the original component identifier
      * @return a virtual component identifier
      */
-    public static VirtualComponentIdentifier makeVirtual(final ComponentIdentifier id) {
-        ModuleComponentIdentifier mid = assertModuleComponentIdentifier(id);
-        return new DefaultVirtualModuleComponentIdentifier(mid.getModuleIdentifier(), mid.getVersion());
+    fun makeVirtual(id: ComponentIdentifier): VirtualComponentIdentifier {
+        val mid = assertModuleComponentIdentifier(id)
+        return DefaultVirtualModuleComponentIdentifier(mid.getModuleIdentifier(), mid.getVersion())
     }
 
-    private static ModuleComponentIdentifier assertModuleComponentIdentifier(ComponentIdentifier id) {
-        if (id instanceof ModuleComponentIdentifier) {
-            return (ModuleComponentIdentifier) id;
+    private fun assertModuleComponentIdentifier(id: ComponentIdentifier): ModuleComponentIdentifier {
+        if (id is ModuleComponentIdentifier) {
+            return id
         }
-        throw new UnsupportedOperationException("Cannot create a virtual component from a " + id.getClass());
+        throw UnsupportedOperationException("Cannot create a virtual component from a " + id.javaClass)
     }
 }

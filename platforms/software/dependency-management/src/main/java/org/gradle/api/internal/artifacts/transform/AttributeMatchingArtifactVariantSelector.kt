@@ -13,94 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.BrokenResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariantSet;
-import org.gradle.api.internal.attributes.AttributeSchemaServices;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.matching.AttributeMatcher;
-import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler;
-
-import java.util.List;
-import java.util.Optional;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.BrokenResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariantSet
+import org.gradle.api.internal.attributes.AttributeSchemaServices
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler
 
 /**
- * A {@link ArtifactVariantSelector} that uses attribute matching to select a matching set of artifacts.
- * <p>
+ * A [ArtifactVariantSelector] that uses attribute matching to select a matching set of artifacts.
+ *
+ *
  * If no producer variant is compatible with the requested attributes, this selector will attempt to construct a chain of artifact
  * transforms that can produce a variant compatible with the requested attributes.
- * <p>
- * An instance of {@link ResolutionFailureHandler} is injected in the constructor
+ *
+ *
+ * An instance of [ResolutionFailureHandler] is injected in the constructor
  * to allow the caller to handle failures in a consistent manner as during graph variant selection.
  */
-public class AttributeMatchingArtifactVariantSelector implements ArtifactVariantSelector {
-    private final ImmutableAttributesSchema consumerSchema;
-    private final AttributesFactory attributesFactory;
-    private final AttributeSchemaServices attributeSchemaServices;
-    private final ResolutionFailureHandler failureHandler;
-    private final TransformationChainSelector transformationChainSelector;
+class AttributeMatchingArtifactVariantSelector(
+    private val consumerSchema: ImmutableAttributesSchema,
+    transformationChainBuilder: ConsumerProvidedVariantFinder,
+    private val attributesFactory: AttributesFactory,
+    private val attributeSchemaServices: AttributeSchemaServices,
+    private val failureHandler: ResolutionFailureHandler
+) : ArtifactVariantSelector {
+    private val transformationChainSelector: TransformationChainSelector
 
-    public AttributeMatchingArtifactVariantSelector(
-        ImmutableAttributesSchema consumerSchema,
-        ConsumerProvidedVariantFinder transformationChainBuilder,
-        AttributesFactory attributesFactory,
-        AttributeSchemaServices attributeSchemaServices,
-        ResolutionFailureHandler failureHandler
-    ) {
-        this.consumerSchema = consumerSchema;
-        this.attributesFactory = attributesFactory;
-        this.attributeSchemaServices = attributeSchemaServices;
-        this.failureHandler = failureHandler;
-        this.transformationChainSelector = new TransformationChainSelector(transformationChainBuilder, failureHandler);
+    init {
+        this.transformationChainSelector = TransformationChainSelector(transformationChainBuilder, failureHandler)
     }
 
-    @Override
-    public ResolvedArtifactSet select(
-        ResolvedVariantSet producer,
-        ImmutableAttributes requestAttributes,
-        boolean allowNoMatchingVariants
-    ) {
+    override fun select(
+        producer: ResolvedVariantSet,
+        requestAttributes: ImmutableAttributes,
+        allowNoMatchingVariants: Boolean
+    ): ResolvedArtifactSet {
         try {
-            return doSelect(producer, requestAttributes, allowNoMatchingVariants);
-        } catch (Exception t) {
-            return new BrokenResolvedArtifactSet(failureHandler.unknownArtifactVariantSelectionFailure(producer, requestAttributes, t));
+            return doSelect(producer, requestAttributes, allowNoMatchingVariants)
+        } catch (t: Exception) {
+            return BrokenResolvedArtifactSet(failureHandler.unknownArtifactVariantSelectionFailure(producer, requestAttributes, t))
         }
     }
 
-    private ResolvedArtifactSet doSelect(
-        ResolvedVariantSet producer,
-        ImmutableAttributes requestAttributes,
-        boolean allowNoMatchingVariants
-    ) {
-        AttributeMatcher matcher = attributeSchemaServices.getMatcher(consumerSchema, producer.getProducerSchema());
-        ImmutableAttributes targetAttributes = attributesFactory.concat(requestAttributes, producer.getOverriddenAttributes());
+    private fun doSelect(
+        producer: ResolvedVariantSet,
+        requestAttributes: ImmutableAttributes,
+        allowNoMatchingVariants: Boolean
+    ): ResolvedArtifactSet {
+        val matcher = attributeSchemaServices.getMatcher(consumerSchema, producer.producerSchema)
+        val targetAttributes = attributesFactory.concat(requestAttributes, producer.overriddenAttributes)
 
         // Check for matching variant without using artifact transforms.  If we found only one match, return it.
         // If we found multiple matches, there is ambiguity.
-        List<ResolvedVariant> matchingVariants = matcher.matchMultipleCandidates(producer.getCandidates(), targetAttributes);
-        if (matchingVariants.size() == 1) {
-            return matchingVariants.get(0).getArtifacts();
-        } else if (matchingVariants.size() > 1) {
-            throw failureHandler.ambiguousArtifactsFailure(matcher, producer, targetAttributes, matchingVariants);
+        val matchingVariants: MutableList<ResolvedVariant>? = matcher.matchMultipleCandidates<ResolvedVariant?>(producer.candidates, targetAttributes)
+        if (matchingVariants!!.size == 1) {
+            return matchingVariants.get(0).artifacts
+        } else if (matchingVariants.size > 1) {
+            throw failureHandler.ambiguousArtifactsFailure(matcher, producer, targetAttributes, matchingVariants)
         }
 
         // We found no matching variant.  Attempt to select a chain of transformations that produces a suitable virtual variant.
-        Optional<TransformedVariant> selectedTransformationChain = transformationChainSelector.selectTransformationChain(producer, targetAttributes, matcher);
+        val selectedTransformationChain = transformationChainSelector.selectTransformationChain(producer, targetAttributes, matcher)
         if (selectedTransformationChain.isPresent()) {
-            return producer.transformCandidate(selectedTransformationChain.get().getRoot(), selectedTransformationChain.get().getTransformedVariantDefinition());
+            return producer.transformCandidate(selectedTransformationChain.get().getRoot(), selectedTransformationChain.get().getTransformedVariantDefinition())
         }
 
         // At this point, there is no possibility of a match for the request.  That could be okay if allowed, else it's a failure.
         if (allowNoMatchingVariants) {
-            return ResolvedArtifactSet.EMPTY;
+            return ResolvedArtifactSet.EMPTY
         } else {
-            throw failureHandler.noCompatibleArtifactFailure(matcher, producer, targetAttributes);
+            throw failureHandler.noCompatibleArtifactFailure(matcher, producer, targetAttributes)
         }
     }
 }

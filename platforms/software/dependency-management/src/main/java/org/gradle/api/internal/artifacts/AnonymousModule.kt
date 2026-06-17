@@ -13,32 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.Project;
+import org.gradle.api.Project
 
 /**
  * A module representing a component with no unique identity.
  */
-public class AnonymousModule implements Module {
+class AnonymousModule : Module {
+    val group: String
+        get() = "unspecified"
 
-    @Override
-    public String getGroup() {
-        return "unspecified";
-    }
+    val name: String
+        get() = "unspecified"
 
-    @Override
-    public String getName() {
-        return "unspecified";
-    }
+    val version: String
+        get() = Project.DEFAULT_VERSION
 
-    @Override
-    public String getVersion() {
-        return Project.DEFAULT_VERSION;
-    }
-
-    @Override
-    public String getStatus() {
-        return Project.DEFAULT_STATUS;
-    }
+    val status: String
+        get() = Project.DEFAULT_STATUS
 }

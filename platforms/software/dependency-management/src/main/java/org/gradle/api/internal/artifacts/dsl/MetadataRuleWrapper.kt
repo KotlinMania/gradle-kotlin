@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+internal interface MetadataRuleWrapper {
+    val displayName: DisplayName?
 
-import org.gradle.api.artifacts.ComponentMetadataDetails;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.rules.SpecRuleAction;
+    val isClassBased: Boolean
 
-import java.util.Collection;
+    val classRules: MutableCollection<SpecConfigurableRule>?
 
-interface MetadataRuleWrapper {
-    DisplayName getDisplayName();
+    val rule: SpecRuleAction<in ComponentMetadataDetails?>?
 
-    boolean isClassBased();
-
-    Collection<SpecConfigurableRule> getClassRules();
-
-    SpecRuleAction<? super ComponentMetadataDetails> getRule();
-
-    void addClassRule(SpecConfigurableRule ruleAction);
+    fun addClassRule(ruleAction: SpecConfigurableRule)
 }

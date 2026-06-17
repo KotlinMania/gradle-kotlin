@@ -13,69 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.result;
+package org.gradle.api.internal.artifacts.result
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.component.Artifact;
-import org.gradle.internal.DisplayName;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.component.Artifact
+import org.gradle.internal.DisplayName
+import java.io.File
 
-import java.io.File;
+class DefaultResolvedArtifactResult : ResolvedArtifactResult {
+    private val identifier: ComponentArtifactIdentifier
+    private val variant: ResolvedVariantResult
+    private val type: Class<out Artifact>
+    private val file: File
 
-public class DefaultResolvedArtifactResult implements ResolvedArtifactResult {
-    private final ComponentArtifactIdentifier identifier;
-    private final ResolvedVariantResult variant;
-    private final Class<? extends Artifact> type;
-    private final File file;
-
-    public DefaultResolvedArtifactResult(ComponentArtifactIdentifier identifier,
-                                         AttributeContainer variantAttributes,
-                                         ImmutableList<Capability> capabilities,
-                                         DisplayName variantDisplayName,
-                                         Class<? extends Artifact> type,
-                                         File file) {
-        this.identifier = identifier;
-        this.variant = new DefaultResolvedVariantResult(identifier.getComponentIdentifier(), variantDisplayName, variantAttributes, capabilities, null);
-        this.type = type;
-        this.file = file;
+    constructor(
+        identifier: ComponentArtifactIdentifier,
+        variantAttributes: AttributeContainer,
+        capabilities: ImmutableList<Capability>,
+        variantDisplayName: DisplayName,
+        type: Class<out Artifact>,
+        file: File
+    ) {
+        this.identifier = identifier
+        this.variant = DefaultResolvedVariantResult(identifier.getComponentIdentifier(), variantDisplayName, variantAttributes, capabilities, null)
+        this.type = type
+        this.file = file
     }
 
-    public DefaultResolvedArtifactResult(ComponentArtifactIdentifier identifier,
-                                         ResolvedVariantResult variant,
-                                         Class<? extends Artifact> type,
-                                         File file) {
-        this.identifier = identifier;
-        this.variant = variant;
-        this.type = type;
-        this.file = file;
+    constructor(
+        identifier: ComponentArtifactIdentifier,
+        variant: ResolvedVariantResult,
+        type: Class<out Artifact>,
+        file: File
+    ) {
+        this.identifier = identifier
+        this.variant = variant
+        this.type = type
+        this.file = file
     }
 
-    @Override
-    public String toString() {
-        return identifier.getDisplayName();
+    override fun toString(): String {
+        return identifier.getDisplayName()
     }
 
-    @Override
-    public ComponentArtifactIdentifier getId() {
-        return identifier;
+    override fun getId(): ComponentArtifactIdentifier {
+        return identifier
     }
 
-    @Override
-    public Class<? extends Artifact> getType() {
-        return type;
+    override fun getType(): Class<out Artifact> {
+        return type
     }
 
-    @Override
-    public File getFile() {
-        return file;
+    override fun getFile(): File {
+        return file
     }
 
-    @Override
-    public ResolvedVariantResult getVariant() {
-        return variant;
+    override fun getVariant(): ResolvedVariantResult {
+        return variant
     }
 }

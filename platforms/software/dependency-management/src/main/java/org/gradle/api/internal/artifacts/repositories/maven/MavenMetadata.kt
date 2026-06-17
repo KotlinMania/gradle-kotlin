@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.maven
 
-package org.gradle.api.internal.artifacts.repositories.maven;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public class MavenMetadata {
-    public String timestamp;
-    public String buildNumber;
-    public final List<String> versions = new ArrayList<>();
+class MavenMetadata {
+    var timestamp: String? = null
+    var buildNumber: String? = null
+    val versions: MutableList<String?> = ArrayList<String?>()
 }

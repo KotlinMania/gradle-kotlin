@@ -13,33 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.Versioned;
-
-import java.util.Comparator;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.Versioned
 
 /**
  * This comparator considers `1.1.1 == 1-1-1`.
  * @see StaticVersionComparator
  */
-public class DefaultVersionComparator implements VersionComparator {
-    private final Comparator<Version> baseComparator;
+class DefaultVersionComparator : VersionComparator {
+    private val baseComparator: Comparator<Version?>
 
-    public DefaultVersionComparator() {
-        baseComparator = new StaticVersionComparator();
+    init {
+        baseComparator = StaticVersionComparator()
     }
 
-    @Override
-    public int compare(Versioned element1, Versioned element2) {
-        Version version1 = element1.getVersion();
-        Version version2 = element2.getVersion();
-        return baseComparator.compare(version1, version2);
+    override fun compare(element1: Versioned, element2: Versioned): Int {
+        val version1: Version? = element1.version
+        val version2: Version? = element2.version
+        return baseComparator.compare(version1, version2)
     }
 
-    @Override
-    public Comparator<Version> asVersionComparator() {
-        return baseComparator;
+    override fun asVersionComparator(): Comparator<Version?> {
+        return baseComparator
     }
-
 }

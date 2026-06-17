@@ -13,31 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.artifacts
 
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-public class TwoStageArtifactsCache extends AbstractArtifactsCache {
-    private final AbstractArtifactsCache readOnlyCache;
-    private final AbstractArtifactsCache writableCache;
-
-    public TwoStageArtifactsCache(BuildCommencedTimeProvider timeProvider, AbstractArtifactsCache readOnlyCache, AbstractArtifactsCache writableCache) {
-        super(timeProvider);
-        this.readOnlyCache = readOnlyCache;
-        this.writableCache = writableCache;
+class TwoStageArtifactsCache(timeProvider: BuildCommencedTimeProvider?, private val readOnlyCache: AbstractArtifactsCache, private val writableCache: AbstractArtifactsCache) :
+    AbstractArtifactsCache(timeProvider) {
+    protected override fun store(key: ArtifactsAtRepositoryKey?, entry: ModuleArtifactsCacheEntry?) {
+        writableCache.store(key, entry)
     }
 
-    @Override
-    protected void store(ArtifactsAtRepositoryKey key, ModuleArtifactsCacheEntry entry) {
-        writableCache.store(key, entry);
-    }
-
-    @Override
-    protected ModuleArtifactsCacheEntry get(ArtifactsAtRepositoryKey key) {
-        ModuleArtifactsCacheEntry entry = writableCache.get(key);
+    protected override fun get(key: ArtifactsAtRepositoryKey?): ModuleArtifactsCacheEntry? {
+        val entry = writableCache.get(key)
         if (entry != null) {
-            return entry;
+            return entry
         }
-        return readOnlyCache.get(key);
+        return readOnlyCache.get(key)
     }
 }

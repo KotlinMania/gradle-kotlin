@@ -13,87 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.project.ProjectStateRegistry
+import org.gradle.cache.Cache
+import org.gradle.internal.Deferrable
+import org.gradle.internal.Try
+import org.gradle.internal.buildoption.InternalOptions
+import org.gradle.internal.execution.DeferredResult
+import org.gradle.internal.execution.ExecutionEngine
+import org.gradle.internal.execution.Identity
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.execution.UnitOfWork
+import org.gradle.internal.operations.BuildOperationProgressEventEmitter
+import org.gradle.internal.operations.BuildOperationRunner
+import java.io.File
+import java.util.Arrays
+import java.util.function.Function
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.transform.TransformExecutionResult.TransformWorkspaceResult;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.project.ProjectStateRegistry;
-import org.gradle.cache.Cache;
-import org.gradle.internal.Deferrable;
-import org.gradle.internal.Try;
-import org.gradle.internal.buildoption.InternalOption;
-import org.gradle.internal.buildoption.InternalOptions;
-import org.gradle.internal.execution.DeferredResult;
-import org.gradle.internal.execution.ExecutionEngine;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.execution.UnitOfWork;
-import org.gradle.internal.operations.BuildOperationProgressEventEmitter;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.jspecify.annotations.Nullable;
+class DefaultTransformInvocationFactory(
+    private val executionEngine: ExecutionEngine,
+    private val internalOptions: InternalOptions,
+    private val transformExecutionListener: TransformExecutionListener,
+    private val immutableWorkspaceServices: ImmutableTransformWorkspaceServices,
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val projectStateRegistry: ProjectStateRegistry,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val progressEventEmitter: BuildOperationProgressEventEmitter
+) : TransformInvocationFactory {
+    override fun createInvocation(
+        transform: Transform,
+        inputArtifact: File,
+        dependencies: TransformDependencies,
+        subject: TransformStepSubject,
+        inputFingerprinter: InputFingerprinter
+    ): Deferrable<Try<ImmutableList<File>>?> {
+        val producerProject = determineProducerProject(subject)
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
+        val identityCache: Cache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>>?
+        val execution: UnitOfWork?
 
-public class DefaultTransformInvocationFactory implements TransformInvocationFactory {
-    private static final InternalOption<@Nullable String> CACHING_DISABLED_PROPERTY =
-        InternalOptions.ofStringOrNull("org.gradle.internal.transform-caching-disabled");
-
-    private final ExecutionEngine executionEngine;
-    private final InternalOptions internalOptions;
-    private final TransformExecutionListener transformExecutionListener;
-    private final ImmutableTransformWorkspaceServices immutableWorkspaceServices;
-    private final FileCollectionFactory fileCollectionFactory;
-    private final ProjectStateRegistry projectStateRegistry;
-    private final BuildOperationRunner buildOperationRunner;
-    private final BuildOperationProgressEventEmitter progressEventEmitter;
-
-    public DefaultTransformInvocationFactory(
-        ExecutionEngine executionEngine,
-        InternalOptions internalOptions,
-        TransformExecutionListener transformExecutionListener,
-        ImmutableTransformWorkspaceServices immutableWorkspaceServices,
-        FileCollectionFactory fileCollectionFactory,
-        ProjectStateRegistry projectStateRegistry,
-        BuildOperationRunner buildOperationRunner,
-        BuildOperationProgressEventEmitter progressEventEmitter
-    ) {
-        this.executionEngine = executionEngine;
-        this.internalOptions = internalOptions;
-        this.transformExecutionListener = transformExecutionListener;
-        this.immutableWorkspaceServices = immutableWorkspaceServices;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.projectStateRegistry = projectStateRegistry;
-        this.buildOperationRunner = buildOperationRunner;
-        this.progressEventEmitter = progressEventEmitter;
-    }
-
-    @Override
-    public Deferrable<Try<ImmutableList<File>>> createInvocation(
-        Transform transform,
-        File inputArtifact,
-        TransformDependencies dependencies,
-        TransformStepSubject subject,
-        InputFingerprinter inputFingerprinter
-    ) {
-        ProjectInternal producerProject = determineProducerProject(subject);
-
-        Cache<Identity, DeferredResult<TransformWorkspaceResult>> identityCache;
-        UnitOfWork execution;
-
-        boolean cachingDisabledByProperty = isCachingDisabledByProperty(transform);
+        val cachingDisabledByProperty = isCachingDisabledByProperty(transform)
 
         if (producerProject != null && transform.requiresInputChanges()) {
             // Incremental project artifact transforms are executed in a project-bound mutable workspace
-            MutableTransformWorkspaceServices workspaceServices = producerProject.getServices().get(MutableTransformWorkspaceServices.class);
-            identityCache = workspaceServices.getIdentityCache();
-            execution = new MutableTransformExecution(
+            val workspaceServices = producerProject.getServices().get<MutableTransformWorkspaceServices?>(MutableTransformWorkspaceServices::class.java)
+            identityCache = workspaceServices!!.getIdentityCache()
+            execution = MutableTransformExecution(
                 transform,
                 inputArtifact,
                 dependencies,
@@ -109,11 +79,11 @@ public class DefaultTransformInvocationFactory implements TransformInvocationFac
                 workspaceServices.getExecutionHistoryStore(),
 
                 cachingDisabledByProperty
-            );
+            )
         } else {
             // Immutable transforms and transforms without a producer project are executed in a global immutable workspace
-            identityCache = immutableWorkspaceServices.getIdentityCache();
-            execution = new ImmutableTransformExecution(
+            identityCache = immutableWorkspaceServices.getIdentityCache()
+            execution = ImmutableTransformExecution(
                 transform,
                 inputArtifact,
                 dependencies,
@@ -127,35 +97,44 @@ public class DefaultTransformInvocationFactory implements TransformInvocationFac
                 immutableWorkspaceServices.getWorkspaceProvider(),
 
                 cachingDisabledByProperty
-            );
+            )
         }
         return executionEngine.createRequest(execution)
-            .executeDeferred(identityCache)
-            .map(result -> result
-                .map(successfulResult -> successfulResult.resolveForInputArtifact(inputArtifact))
-                .mapFailure(failure -> new TransformException(String.format("Execution failed for %s.", execution.getDisplayName()), failure)));
+            .executeDeferred<TransformExecutionResult.TransformWorkspaceResult>(identityCache)
+            .map<Try<ImmutableList<File>?>?>(Function { result: Try<TransformExecutionResult.TransformWorkspaceResult?>? ->
+                result!!
+                    .map<ImmutableList<File>?>(java.util.function.Function { successfulResult: org.gradle.api.internal.artifacts.transform.TransformExecutionResult.TransformWorkspaceResult? ->
+                        successfulResult!!.resolveForInputArtifact(
+                            inputArtifact
+                        )
+                    })!!
+                    .mapFailure(Function { failure: Throwable? -> TransformException(String.format("Execution failed for %s.", execution.getDisplayName()), failure!!) })
+            })
     }
 
-    @Nullable
-    private ProjectInternal determineProducerProject(TransformStepSubject subject) {
-        ComponentIdentifier componentIdentifier = subject.getInitialComponentIdentifier();
-        if (componentIdentifier instanceof ProjectComponentIdentifier) {
-            return projectStateRegistry.stateFor((ProjectComponentIdentifier) componentIdentifier).getMutableModel();
+    private fun determineProducerProject(subject: TransformStepSubject): ProjectInternal? {
+        val componentIdentifier = subject.getInitialComponentIdentifier()
+        if (componentIdentifier is ProjectComponentIdentifier) {
+            return projectStateRegistry.stateFor(componentIdentifier).getMutableModel()
         } else {
-            return null;
+            return null
         }
     }
 
-    private boolean isCachingDisabledByProperty(Transform transform) {
-        String experimentalProperty = internalOptions.getValueOrNull(CACHING_DISABLED_PROPERTY);
+    private fun isCachingDisabledByProperty(transform: Transform): Boolean {
+        val experimentalProperty = internalOptions.getValueOrNull<String?>(CACHING_DISABLED_PROPERTY)
         if (experimentalProperty != null) {
-            if (experimentalProperty.isEmpty() || experimentalProperty.equals("true")) {
-                return true;
+            if (experimentalProperty.isEmpty() || experimentalProperty == "true") {
+                return true
             }
-            List<String> disabledTransformClasses = Arrays.asList(experimentalProperty.split(","));
-            return disabledTransformClasses.contains(transform.getImplementationClass().getName());
+            val disabledTransformClasses = Arrays.asList<String>(*experimentalProperty.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+            return disabledTransformClasses.contains(transform.getImplementationClass().getName())
         }
 
-        return false;
+        return false
+    }
+
+    companion object {
+        private val CACHING_DISABLED_PROPERTY = InternalOptions.ofStringOrNull("org.gradle.internal.transform-caching-disabled")
     }
 }

@@ -13,34 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionReasonInternal;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
 /**
  * The final representation of a dependency in the resolved dependency graph.
  * This is the type that is serialized on resolve and deserialized when we later need to build a `ResolutionResult`.
  */
-public interface ResolvedGraphDependency {
-
+interface ResolvedGraphDependency {
     /**
      * The component selector that the user requested, before substitutions are applied.
      */
-    ComponentSelector getRequested();
+    val requested: ComponentSelector?
 
-    @Nullable
-    ModuleVersionResolveException getFailure();
+    val failure: ModuleVersionResolveException?
 
     /**
      * Not null only when failure is not null.
      */
-    @Nullable
-    ComponentSelectionReasonInternal getReason();
+    val reason: ComponentSelectionReasonInternal?
 
-    boolean isConstraint();
-
+    val isConstraint: Boolean
 }

@@ -13,84 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories.maven
 
-package org.gradle.api.internal.artifacts.repositories.maven;
+import org.apache.ivy.util.ContextualSAXHandler
+import org.apache.ivy.util.XMLHelper
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.ErroringAction
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.xml.sax.SAXException
+import java.io.IOException
+import java.io.InputStream
+import javax.xml.parsers.ParserConfigurationException
 
-import org.apache.ivy.util.ContextualSAXHandler;
-import org.apache.ivy.util.XMLHelper;
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.ErroringAction;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor.DefaultResourceFileStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
-import java.io.InputStream;
-
-public class MavenMetadataLoader {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MavenMetadataLoader.class);
-    private final CacheAwareExternalResourceAccessor cacheAwareExternalResourceAccessor;
-    private final FileStore<String> resourcesFileStore;
-
-    public MavenMetadataLoader(CacheAwareExternalResourceAccessor cacheAwareExternalResourceAccessor, FileStore<String> resourcesFileStore) {
-        this.cacheAwareExternalResourceAccessor = cacheAwareExternalResourceAccessor;
-        this.resourcesFileStore = resourcesFileStore;
-    }
-
-    public MavenMetadata load(ExternalResourceName metadataLocation) throws ResourceException {
-        MavenMetadata metadata = new MavenMetadata();
+class MavenMetadataLoader(private val cacheAwareExternalResourceAccessor: CacheAwareExternalResourceAccessor, private val resourcesFileStore: FileStore<String?>) {
+    @Throws(ResourceException::class)
+    fun load(metadataLocation: ExternalResourceName): MavenMetadata {
+        val metadata = MavenMetadata()
         try {
-            parseMavenMetadataInfo(metadataLocation, metadata);
-        } catch (MissingResourceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ResourceException(metadataLocation.getUri(), String.format("Unable to load Maven meta-data from %s.", metadataLocation), e);
+            parseMavenMetadataInfo(metadataLocation, metadata)
+        } catch (e: MissingResourceException) {
+            throw e
+        } catch (e: Exception) {
+            throw ResourceException(metadataLocation.getUri(), String.format("Unable to load Maven meta-data from %s.", metadataLocation), e)
         }
-        return metadata;
+        return metadata
     }
 
-    private void parseMavenMetadataInfo(final ExternalResourceName metadataLocation, final MavenMetadata metadata) throws IOException {
-        ExternalResource resource = cacheAwareExternalResourceAccessor.getResource(metadataLocation, null, new DefaultResourceFileStore<String>(resourcesFileStore) {
-            @Override
-            protected String computeKey() {
-                return metadataLocation.toString();
-            }
-        }, null);
+    @Throws(IOException::class)
+    private fun parseMavenMetadataInfo(metadataLocation: ExternalResourceName, metadata: MavenMetadata) {
+        val resource: ExternalResource? =
+            cacheAwareExternalResourceAccessor.getResource(metadataLocation, null, object : CacheAwareExternalResourceAccessor.DefaultResourceFileStore<String?>(resourcesFileStore) {
+                override fun computeKey(): String? {
+                    return metadataLocation.toString()
+                }
+            }, null)
         if (resource == null) {
-            throw new MissingResourceException(metadataLocation.getUri(), String.format("Maven meta-data not available at %s", metadataLocation));
+            throw MissingResourceException(metadataLocation.getUri(), String.format("Maven meta-data not available at %s", metadataLocation))
         }
-        parseMavenMetadataInto(resource, metadata);
+        parseMavenMetadataInto(resource, metadata)
     }
 
-    private void parseMavenMetadataInto(ExternalResource metadataResource, final MavenMetadata mavenMetadata) {
-        LOGGER.debug("parsing maven-metadata: {}", metadataResource);
-        metadataResource.withContent(new ErroringAction<InputStream>() {
-            @Override
-            public void doExecute(InputStream inputStream) throws ParserConfigurationException, SAXException, IOException {
-                XMLHelper.parse(inputStream, null, new ContextualSAXHandler() {
-                    @Override
-                    public void endElement(String uri, String localName, String qName)
-                            throws SAXException {
-                        if ("metadata/versioning/snapshot/timestamp".equals(getContext())) {
-                            mavenMetadata.timestamp = getText();
+    private fun parseMavenMetadataInto(metadataResource: ExternalResource, mavenMetadata: MavenMetadata) {
+        LOGGER.debug("parsing maven-metadata: {}", metadataResource)
+        metadataResource.withContent(object : ErroringAction<InputStream?>() {
+            @Throws(ParserConfigurationException::class, SAXException::class, IOException::class)
+            public override fun doExecute(inputStream: InputStream?) {
+                XMLHelper.parse(inputStream, null, object : ContextualSAXHandler() {
+                    @Throws(SAXException::class)
+                    override fun endElement(uri: String?, localName: String?, qName: String?) {
+                        if ("metadata/versioning/snapshot/timestamp" == getContext()) {
+                            mavenMetadata.timestamp = getText()
                         }
-                        if ("metadata/versioning/snapshot/buildNumber".equals(getContext())) {
-                            mavenMetadata.buildNumber = getText();
+                        if ("metadata/versioning/snapshot/buildNumber" == getContext()) {
+                            mavenMetadata.buildNumber = getText()
                         }
-                        if ("metadata/versioning/versions/version".equals(getContext())) {
-                            mavenMetadata.versions.add(getText().trim());
+                        if ("metadata/versioning/versions/version" == getContext()) {
+                            mavenMetadata.versions.add(getText().trim { it <= ' ' })
                         }
-                        super.endElement(uri, localName, qName);
+                        super.endElement(uri, localName, qName)
                     }
-                }, null);
+                }, null)
             }
-        });
+        })
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(MavenMetadataLoader::class.java)
     }
 }

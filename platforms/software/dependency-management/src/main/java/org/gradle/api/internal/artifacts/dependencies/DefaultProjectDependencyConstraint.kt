@@ -13,121 +13,93 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
 
 /**
  * A limited use, project dependency constraint mostly aimed at publishing
  * platforms.
  */
-public class DefaultProjectDependencyConstraint extends AbstractDependencyConstraint {
-    private final ProjectDependency projectDependency;
-    private String reason;
-    private boolean force;
+class DefaultProjectDependencyConstraint(@JvmField val projectDependency: ProjectDependency) : AbstractDependencyConstraint() {
+    private var reason: String? = null
+    private var force = false
 
-    public DefaultProjectDependencyConstraint(ProjectDependency projectDependency) {
-        this.projectDependency = projectDependency;
+    override fun version(configureAction: Action<in MutableVersionConstraint>) {
+        throw UnsupportedOperationException("Cannot change version constraint on a project dependency")
     }
 
-    public ProjectDependency getProjectDependency() {
-        return projectDependency;
+    override fun getReason(): String? {
+        return reason
     }
 
-    @Override
-    public void version(Action<? super MutableVersionConstraint> configureAction) {
-        throw new UnsupportedOperationException("Cannot change version constraint on a project dependency");
+    override fun because(reason: String?) {
+        validateMutation()
+        this.reason = reason
     }
 
-    @Nullable
-    @Override
-    public String getReason() {
-        return reason;
+    override fun getAttributes(): AttributeContainer {
+        return projectDependency.getAttributes()
     }
 
-    @Override
-    public void because(@Nullable String reason) {
-        validateMutation();
-        this.reason = reason;
+    override fun attributes(configureAction: Action<in AttributeContainer>): DependencyConstraint {
+        validateMutation()
+        projectDependency.attributes(configureAction)
+        return this
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return projectDependency.getAttributes();
+    override fun getVersionConstraint(): VersionConstraint {
+        return DefaultImmutableVersionConstraint(
+            "",
+            projectDependency.getVersion()!!,
+            "",
+            mutableListOf<String>(),
+            ""
+        )
     }
 
-    @Override
-    public DependencyConstraint attributes(Action<? super AttributeContainer> configureAction) {
-        validateMutation();
-        projectDependency.attributes(configureAction);
-        return this;
+    override fun getGroup(): String {
+        return projectDependency.getGroup()!!
     }
 
-    @Override
-    public VersionConstraint getVersionConstraint() {
-        return new DefaultImmutableVersionConstraint(
-                "",
-                projectDependency.getVersion(),
-                "",
-                Collections.emptyList(),
-                ""
-        );
+    override fun getName(): String {
+        return projectDependency.getName()
     }
 
-    @Override
-    public String getGroup() {
-        return projectDependency.getGroup();
+    override fun getVersion(): String? {
+        return projectDependency.getVersion()
     }
 
-    @Override
-    public String getName() {
-        return projectDependency.getName();
+    override fun matchesStrictly(identifier: ModuleVersionIdentifier): Boolean {
+        return identifier.getModule() == getModule() && identifier.getVersion() == projectDependency.getVersion()
     }
 
-    @Nullable
-    @Override
-    public String getVersion() {
-        return projectDependency.getVersion();
+    override fun getModule(): ModuleIdentifier {
+        val group = projectDependency.getGroup()
+        return DefaultModuleIdentifier.newId(if (group != null) group else "", projectDependency.getName())
     }
 
-    @Override
-    public boolean matchesStrictly(ModuleVersionIdentifier identifier) {
-        return identifier.getModule().equals(getModule()) && identifier.getVersion().equals(projectDependency.getVersion());
+    override fun setForce(force: Boolean) {
+        validateMutation()
+        this.force = force
     }
 
-    @Override
-    public ModuleIdentifier getModule() {
-        String group = projectDependency.getGroup();
-        return DefaultModuleIdentifier.newId(group != null ? group : "", projectDependency.getName());
+    override fun isForce(): Boolean {
+        return force
     }
 
-    @Override
-    public void setForce(boolean force) {
-        validateMutation();
-        this.force = force;
-    }
-
-    @Override
-    public boolean isForce() {
-        return force;
-    }
-
-    @Override
-    public DependencyConstraint copy() {
-        DefaultProjectDependencyConstraint result = new DefaultProjectDependencyConstraint(projectDependency.copy());
-        result.force = force;
-        result.reason = reason;
-        return result;
+    override fun copy(): DependencyConstraint {
+        val result = DefaultProjectDependencyConstraint(projectDependency.copy())
+        result.force = force
+        result.reason = reason
+        return result
     }
 }

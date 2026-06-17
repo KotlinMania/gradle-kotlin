@@ -13,40 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.dsl.dependencies;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-
-import java.util.Set;
+package org.gradle.api.internal.artifacts.dsl.dependencies
 
 /**
  * Describes the lock state for a given configuration.
  */
-public interface DependencyLockingState {
-
+interface DependencyLockingState {
     /**
      * Indicates if the lock state must be strictly validated.
      *
-     * If {@code true}, each locked dependency is added as a strict constraint,
+     * If `true`, each locked dependency is added as a strict constraint,
      * and the resolution result must exactly match the set of locked dependencies.
      *
-     * If {@code false}, each locked dependency is added a regular (lenient) constraint,
+     * If `false`, each locked dependency is added a regular (lenient) constraint,
      * and the resolution result is not verified against the set of locked dependencies.
      *
-     * @return {@code true} if lock state was found, {@code false} otherwise
+     * @return `true` if lock state was found, `false` otherwise
      */
-    boolean mustValidateLockState();
+    fun mustValidateLockState(): Boolean
 
     /**
      * Returns the set of locking constraints found.
      * Note that an empty set can mean either that lock state was not defined or that lock state is an empty set.
-     * Disambiguation can be done by calling {@link #mustValidateLockState()}.
+     * Disambiguation can be done by calling [.mustValidateLockState].
      *
      * @return The set of module versions to lock.
-     * @see #mustValidateLockState()
+     * @see .mustValidateLockState
      */
-    Set<ModuleComponentIdentifier> getLockedDependencies();
+    val lockedDependencies: MutableSet<ModuleComponentIdentifier>?
 
-    LockEntryFilter getIgnoredEntryFilter();
+    val ignoredEntryFilter: LockEntryFilter?
 }

@@ -13,73 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.internal.artifacts.PublishArtifactInternal
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.TaskDependency
+import java.io.File
+import java.util.Date
 
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.internal.artifacts.PublishArtifactInternal;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.jspecify.annotations.Nullable;
+class FileSystemPublishArtifact(private val fileSystemLocation: FileSystemLocation, private val version: String?) : PublishArtifactInternal {
+    private var artifactFile: ArtifactFile? = null
 
-import java.io.File;
-import java.util.Date;
-
-public class FileSystemPublishArtifact implements PublishArtifactInternal {
-
-    private final FileSystemLocation fileSystemLocation;
-    private final String version;
-    private ArtifactFile artifactFile;
-
-    public FileSystemPublishArtifact(FileSystemLocation fileSystemLocation, @Nullable String version) {
-        this.fileSystemLocation = fileSystemLocation;
-        this.version = version;
+    override fun getName(): String {
+        return this.value.getName()
     }
 
-    @Override
-    public String getName() {
-        return getValue().getName();
+    override fun getExtension(): String {
+        return this.value.getExtension()
     }
 
-    @Override
-    public String getExtension() {
-        return getValue().getExtension();
+    override fun getType(): String {
+        return ""
     }
 
-    @Override
-    public String getType() {
-        return "";
+    override fun getClassifier(): String {
+        return this.value.getClassifier()
     }
 
-    @Override
-    public String getClassifier() {
-        return getValue().getClassifier();
+    override fun getFile(): File {
+        return fileSystemLocation.getAsFile()
     }
 
-    @Override
-    public File getFile() {
-        return fileSystemLocation.getAsFile();
+    override fun getDate(): Date {
+        return Date()
     }
 
-    @Override
-    public Date getDate() {
-        return new Date();
+    override fun getBuildDependencies(): TaskDependency {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
-    }
-
-    private ArtifactFile getValue() {
-        if (artifactFile == null) {
-            artifactFile = new ArtifactFile(getFile(), version);
+    private val value: ArtifactFile
+        get() {
+            if (artifactFile == null) {
+                artifactFile = ArtifactFile(getFile(), version)
+            }
+            return artifactFile!!
         }
-        return artifactFile;
-    }
 
-    @Override
-    public boolean shouldBePublished() {
-        return true;
+    override fun shouldBePublished(): Boolean {
+        return true
     }
 }

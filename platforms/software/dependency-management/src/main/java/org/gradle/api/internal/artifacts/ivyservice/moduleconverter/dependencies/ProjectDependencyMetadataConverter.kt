@@ -13,38 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
+package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.LocalComponentDependencyMetadata;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.internal.component.local.model.DefaultProjectComponentSelector
+import org.gradle.internal.component.model.LocalComponentDependencyMetadata
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
 
-public class ProjectDependencyMetadataConverter extends AbstractDependencyMetadataConverter {
+class ProjectDependencyMetadataConverter(excludeRuleConverter: ExcludeRuleConverter) : AbstractDependencyMetadataConverter(excludeRuleConverter) {
+    override fun createDependencyMetadata(dependency: ModuleDependency): LocalOriginDependencyMetadata {
+        val projectDependency = dependency as ProjectDependencyInternal
 
-    public ProjectDependencyMetadataConverter(ExcludeRuleConverter excludeRuleConverter) {
-        super(excludeRuleConverter);
-    }
-
-    @Override
-    public LocalOriginDependencyMetadata createDependencyMetadata(ModuleDependency dependency) {
-        ProjectDependencyInternal projectDependency = (ProjectDependencyInternal) dependency;
-
-        ComponentSelector selector = new DefaultProjectComponentSelector(
+        val selector: ComponentSelector = DefaultProjectComponentSelector(
             projectDependency.getTargetProjectIdentity(),
-            ((AttributeContainerInternal) projectDependency.getAttributes()).asImmutable(),
-            ImmutableSet.copyOf(projectDependency.getCapabilitySelectors())
-        );
+            (projectDependency.getAttributes() as AttributeContainerInternal).asImmutable(),
+            ImmutableSet.copyOf<CapabilitySelector>(projectDependency.getCapabilitySelectors())
+        )
 
-        ImmutableList<ExcludeMetadata> excludes = convertExcludeRules(dependency.getExcludeRules());
-        return new LocalComponentDependencyMetadata(
+        val excludes = convertExcludeRules(dependency.getExcludeRules())
+        return LocalComponentDependencyMetadata(
             selector,
             projectDependency.getTargetConfiguration(),
             convertArtifacts(dependency.getArtifacts()),
@@ -55,12 +48,10 @@ public class ProjectDependencyMetadataConverter extends AbstractDependencyMetada
             false,
             dependency.isEndorsingStrictVersions(),
             dependency.getReason()
-        );
+        )
     }
 
-    @Override
-    public boolean canConvert(ModuleDependency dependency) {
-        return dependency instanceof ProjectDependency;
+    override fun canConvert(dependency: ModuleDependency): Boolean {
+        return dependency is ProjectDependency
     }
-
 }

@@ -13,37 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet
 
 /**
- * Companion type to {@link TransformStepNode} that knows how to compute extra dependent nodes
+ * Companion type to [TransformStepNode] that knows how to compute extra dependent nodes
  * aside from the to be transformed artifact.
  */
-public interface TransformUpstreamDependenciesResolver {
-
-    /**
-     * A resolver that always returns empty transform dependencies.
-     */
-    TransformUpstreamDependenciesResolver NO_DEPENDENCIES = (componentId, transformStep) -> DefaultTransformUpstreamDependenciesResolver.NO_DEPENDENCIES;
-
+interface TransformUpstreamDependenciesResolver {
     /**
      * Returns the dependencies that should be applied to the given transform step for an artifact
      * sourced from a component with the given identifier.
      */
-    TransformUpstreamDependencies dependenciesFor(ComponentIdentifier componentId, TransformStep transformStep);
+    fun dependenciesFor(componentId: ComponentIdentifier, transformStep: TransformStep): TransformUpstreamDependencies?
 
     interface Factory {
-
         /**
          * Create a new instance of the resolver.
          *
          * @param visitedArtifacts The artifact set is used to resolve the dependencies of the transform steps.
          */
-        TransformUpstreamDependenciesResolver create(VisitedArtifactSet visitedArtifacts);
+        fun create(visitedArtifacts: VisitedArtifactSet): TransformUpstreamDependenciesResolver?
+    }
 
+    companion object {
+        /**
+         * A resolver that always returns empty transform dependencies.
+         */
+        @JvmField
+        val NO_DEPENDENCIES: TransformUpstreamDependenciesResolver =
+            org.gradle.api.internal.artifacts.transform.TransformUpstreamDependenciesResolver { componentId: ComponentIdentifier, transformStep: TransformStep -> DefaultTransformUpstreamDependenciesResolver.Companion.NO_DEPENDENCIES }
     }
 }

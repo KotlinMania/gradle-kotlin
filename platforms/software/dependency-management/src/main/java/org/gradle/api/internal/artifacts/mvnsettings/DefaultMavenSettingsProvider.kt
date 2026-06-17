@@ -13,73 +13,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.mvnsettings;
+package org.gradle.api.internal.artifacts.mvnsettings
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.maven.settings.Settings;
-import org.apache.maven.settings.building.DefaultSettingsBuilder;
-import org.apache.maven.settings.building.DefaultSettingsBuilderFactory;
-import org.apache.maven.settings.building.DefaultSettingsBuildingRequest;
-import org.apache.maven.settings.building.SettingsBuildingException;
-import org.apache.maven.settings.building.SettingsBuildingResult;
-import org.apache.maven.settings.io.DefaultSettingsReader;
-import org.apache.maven.settings.io.SettingsReader;
+import org.apache.commons.lang3.StringUtils
+import org.apache.maven.settings.Settings
+import org.apache.maven.settings.building.DefaultSettingsBuilderFactory
+import org.apache.maven.settings.building.DefaultSettingsBuildingRequest
+import org.apache.maven.settings.building.SettingsBuildingException
+import org.apache.maven.settings.io.DefaultSettingsReader
+import org.apache.maven.settings.io.SettingsReader
+import java.io.File
+import java.lang.Boolean
+import java.util.Collections
+import kotlin.Exception
+import kotlin.String
+import kotlin.Throws
 
-import java.io.File;
-import java.util.Collections;
-import java.util.Map;
-
-public class DefaultMavenSettingsProvider implements MavenSettingsProvider {
-
-    private final MavenFileLocations mavenFileLocations;
-
-    public DefaultMavenSettingsProvider(MavenFileLocations mavenFileLocations) {
-        this.mavenFileLocations = mavenFileLocations;
-    }
-
+class DefaultMavenSettingsProvider(private val mavenFileLocations: MavenFileLocations) : MavenSettingsProvider {
     /**
      * Builds a complete `Settings` instance for this machine.
      *
      * Note that this can be an expensive operation, spawning an external process
      * and doing a bunch of additional processing.
      */
-    @Override
-    public Settings buildSettings() throws SettingsBuildingException {
-        DefaultSettingsBuilderFactory factory = new DefaultSettingsBuilderFactory();
-        DefaultSettingsBuilder defaultSettingsBuilder = factory.newInstance();
-        DefaultSettingsBuildingRequest settingsBuildingRequest = new DefaultSettingsBuildingRequest();
-        settingsBuildingRequest.setSystemProperties(System.getProperties());
-        settingsBuildingRequest.setUserSettingsFile(mavenFileLocations.getUserSettingsFile());
-        settingsBuildingRequest.setGlobalSettingsFile(mavenFileLocations.getGlobalSettingsFile());
-        SettingsBuildingResult settingsBuildingResult = defaultSettingsBuilder.build(settingsBuildingRequest);
-        return settingsBuildingResult.getEffectiveSettings();
+    @Throws(SettingsBuildingException::class)
+    override fun buildSettings(): Settings? {
+        val factory = DefaultSettingsBuilderFactory()
+        val defaultSettingsBuilder = factory.newInstance()
+        val settingsBuildingRequest = DefaultSettingsBuildingRequest()
+        settingsBuildingRequest.setSystemProperties(System.getProperties())
+        settingsBuildingRequest.setUserSettingsFile(mavenFileLocations.getUserSettingsFile())
+        settingsBuildingRequest.setGlobalSettingsFile(mavenFileLocations.getGlobalSettingsFile())
+        val settingsBuildingResult = defaultSettingsBuilder.build(settingsBuildingRequest)
+        return settingsBuildingResult.getEffectiveSettings()
     }
 
     /**
      * Read the local repository location from local Maven settings files.
      *
-     * @return The path to the local repository, or <code>null</code> if not specified in Maven settings.
+     * @return The path to the local repository, or `null` if not specified in Maven settings.
      */
-    @Override
-    public String getLocalRepository() {
-        String localRepo = readLocalRepository(mavenFileLocations.getUserSettingsFile());
+    override fun getLocalRepository(): String? {
+        var localRepo = readLocalRepository(mavenFileLocations.getUserSettingsFile())
         if (localRepo == null) {
-            localRepo = readLocalRepository(mavenFileLocations.getGlobalSettingsFile());
+            localRepo = readLocalRepository(mavenFileLocations.getGlobalSettingsFile())
         }
-        return localRepo;
+        return localRepo
     }
 
-    private String readLocalRepository(File settingsFile) {
+    private fun readLocalRepository(settingsFile: File?): String? {
         if (settingsFile == null || !settingsFile.exists()) {
-            return null;
+            return null
         }
-        Map<String, ?> options = Collections.singletonMap(SettingsReader.IS_STRICT, Boolean.FALSE);
-        SettingsReader settingsReader = new DefaultSettingsReader();
+        val options: MutableMap<String?, *> = Collections.singletonMap<String?, Boolean?>(SettingsReader.IS_STRICT, Boolean.FALSE)
+        val settingsReader: SettingsReader = DefaultSettingsReader()
         try {
-            String localRepository = settingsReader.read(settingsFile, options).getLocalRepository();
-            return StringUtils.isEmpty(localRepository) ? null : localRepository;
-        } catch (Exception parseException) {
-            throw new CannotLocateLocalMavenRepositoryException("Unable to parse local Maven settings: " + settingsFile.getAbsolutePath(), parseException);
+            val localRepository = settingsReader.read(settingsFile, options).getLocalRepository()
+            return if (StringUtils.isEmpty(localRepository)) null else localRepository
+        } catch (parseException: Exception) {
+            throw CannotLocateLocalMavenRepositoryException("Unable to parse local Maven settings: " + settingsFile.getAbsolutePath(), parseException)
         }
     }
 }

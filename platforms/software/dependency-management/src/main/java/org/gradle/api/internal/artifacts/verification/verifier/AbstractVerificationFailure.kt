@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-import java.io.File;
+import java.io.File
 
-public abstract class AbstractVerificationFailure implements VerificationFailure {
-    private final File affectedFile;
-
-    protected AbstractVerificationFailure(File affectedFile) {
-        this.affectedFile = affectedFile;
-    }
-
-    @Override
-    public File getFilePath() {
-        return affectedFile;
+abstract class AbstractVerificationFailure protected constructor(private val affectedFile: File?) : VerificationFailure {
+    override fun getFilePath(): File? {
+        return affectedFile
     }
 }

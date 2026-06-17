@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph
 
 /**
  * A dependency selector in the dependency graph
  */
-public interface DependencyGraphSelector {
-
+interface DependencyGraphSelector {
     /**
      * Returns the requested dependency.
      */
-    ComponentSelector getRequested();
-
+    val requested: ComponentSelector?
 }

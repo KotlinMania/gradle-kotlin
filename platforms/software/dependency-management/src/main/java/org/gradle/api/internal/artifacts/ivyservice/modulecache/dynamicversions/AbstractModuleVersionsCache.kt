@@ -13,55 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache.dynamicversions
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import java.util.Set;
-
-public abstract class AbstractModuleVersionsCache implements ModuleVersionsCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultModuleVersionsCache.class);
-    protected final BuildCommencedTimeProvider timeProvider;
-
-    public AbstractModuleVersionsCache(BuildCommencedTimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+abstract class AbstractModuleVersionsCache(protected val timeProvider: BuildCommencedTimeProvider) : ModuleVersionsCache {
+    override fun cacheModuleVersionList(repository: ModuleComponentRepository<*>, moduleId: ModuleIdentifier?, listedVersions: MutableSet<String?>?) {
+        LOGGER.debug("Caching version list in module versions cache: Using '{}' for '{}'", listedVersions, moduleId)
+        val key = createKey(repository, moduleId)
+        val entry = createEntry(listedVersions)
+        store(key, entry)
     }
 
-    @Override
-    public void cacheModuleVersionList(ModuleComponentRepository<?> repository, ModuleIdentifier moduleId, Set<String> listedVersions) {
-        LOGGER.debug("Caching version list in module versions cache: Using '{}' for '{}'", listedVersions, moduleId);
-        ModuleAtRepositoryKey key = createKey(repository, moduleId);
-        ModuleVersionsCacheEntry entry = createEntry(listedVersions);
-        store(key, entry);
+    override fun getCachedModuleResolution(repository: ModuleComponentRepository<*>, moduleId: ModuleIdentifier?): ModuleVersionsCache.CachedModuleVersionList? {
+        val key = createKey(repository, moduleId)
+        val entry = get(key)
+        return if (entry == null) null else versionList(entry)
     }
 
-    @Override
-    public CachedModuleVersionList getCachedModuleResolution(ModuleComponentRepository<?> repository, ModuleIdentifier moduleId) {
-        ModuleAtRepositoryKey key = createKey(repository, moduleId);
-        ModuleVersionsCacheEntry entry = get(key);
-        return entry == null ? null : versionList(entry);
-    }
-
-    private CachedModuleVersionList versionList(ModuleVersionsCacheEntry entry) {
-        return new DefaultCachedModuleVersionList(
+    private fun versionList(entry: ModuleVersionsCacheEntry): ModuleVersionsCache.CachedModuleVersionList {
+        return DefaultCachedModuleVersionList(
             entry.moduleVersionListing,
             timeProvider.getCurrentTime() - entry.createTimestamp
-        );
+        )
     }
 
-    private ModuleAtRepositoryKey createKey(ModuleComponentRepository<?> repository, ModuleIdentifier moduleId) {
-        return new ModuleAtRepositoryKey(repository.getId(), moduleId);
+    private fun createKey(repository: ModuleComponentRepository<*>, moduleId: ModuleIdentifier?): ModuleAtRepositoryKey {
+        return ModuleAtRepositoryKey(repository.id, moduleId)
     }
 
-    private ModuleVersionsCacheEntry createEntry(Set<String> listedVersions) {
-        return new ModuleVersionsCacheEntry(listedVersions, timeProvider.getCurrentTime());
+    private fun createEntry(listedVersions: MutableSet<String?>?): ModuleVersionsCacheEntry {
+        return ModuleVersionsCacheEntry(listedVersions, timeProvider.getCurrentTime())
     }
 
-    protected abstract void store(ModuleAtRepositoryKey key, ModuleVersionsCacheEntry entry);
+    abstract fun store(key: ModuleAtRepositoryKey?, entry: ModuleVersionsCacheEntry?)
 
-    protected abstract ModuleVersionsCacheEntry get(ModuleAtRepositoryKey key);
+    abstract fun get(key: ModuleAtRepositoryKey?): ModuleVersionsCacheEntry?
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultModuleVersionsCache::class.java)
+    }
 }

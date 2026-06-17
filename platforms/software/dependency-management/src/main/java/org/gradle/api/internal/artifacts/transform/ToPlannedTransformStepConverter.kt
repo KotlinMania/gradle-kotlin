@@ -13,53 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.execution.plan.Node;
-import org.gradle.execution.plan.ToPlannedNodeConverter;
-import org.gradle.internal.taskgraph.CalculateTaskGraphBuildOperationType.PlannedNode;
-import org.gradle.internal.taskgraph.NodeIdentity;
-import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity;
-import org.jspecify.annotations.NullMarked;
-
-import java.util.List;
+import org.gradle.execution.plan.Node
+import org.gradle.execution.plan.ToPlannedNodeConverter
+import org.gradle.internal.taskgraph.NodeIdentity
+import org.gradle.operations.dependencies.transforms.PlannedTransformStepIdentity
+import org.jspecify.annotations.NullMarked
 
 /**
- * A converter from {@link TransformStepNode} to {@link PlannedNode}.
+ * A converter from [TransformStepNode] to [PlannedNode].
  */
 @NullMarked
-public class ToPlannedTransformStepConverter implements ToPlannedNodeConverter {
-
-    @Override
-    public Class<? extends Node> getSupportedNodeType() {
-        return TransformStepNode.class;
+class ToPlannedTransformStepConverter : ToPlannedNodeConverter {
+    override fun getSupportedNodeType(): Class<out Node> {
+        return TransformStepNode::class.java
     }
 
-    @Override
-    public NodeIdentity.NodeType getConvertedNodeType() {
-        return NodeIdentity.NodeType.TRANSFORM_STEP;
+    override fun getConvertedNodeType(): NodeIdentity.NodeType {
+        return NodeIdentity.NodeType.TRANSFORM_STEP
     }
 
-    @Override
-    public PlannedTransformStepIdentity getNodeIdentity(Node node) {
-        TransformStepNode transformStepNode = (TransformStepNode) node;
-        return transformStepNode.getNodeIdentity();
+    override fun getNodeIdentity(node: Node): PlannedTransformStepIdentity {
+        val transformStepNode = node as TransformStepNode
+        return transformStepNode.getNodeIdentity()
     }
 
-    @Override
-    public boolean isInSamePlan(Node node) {
-        return true;
+    override fun isInSamePlan(node: Node): Boolean {
+        return true
     }
 
-    @Override
-    public DefaultPlannedTransformStep convert(Node node, List<? extends NodeIdentity> nodeDependencies) {
-        TransformStepNode transformStepNode = (TransformStepNode) node;
-        return new DefaultPlannedTransformStep(transformStepNode.getNodeIdentity(), nodeDependencies);
+    override fun convert(node: Node, nodeDependencies: MutableList<out NodeIdentity>): DefaultPlannedTransformStep {
+        val transformStepNode = node as TransformStepNode
+        return DefaultPlannedTransformStep(transformStepNode.getNodeIdentity(), nodeDependencies)
     }
 
-    @Override
-    public String toString() {
-        return "ToPlannedTransformStepConverter(" + getSupportedNodeType().getSimpleName() + ")";
+    override fun toString(): String {
+        return "ToPlannedTransformStepConverter(" + getSupportedNodeType().getSimpleName() + ")"
     }
 }

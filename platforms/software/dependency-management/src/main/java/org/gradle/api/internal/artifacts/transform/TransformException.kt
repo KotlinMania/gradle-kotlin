@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class TransformException extends GradleException {
-
-    public TransformException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
+class TransformException(message: String, cause: Throwable) : GradleException(message, cause)

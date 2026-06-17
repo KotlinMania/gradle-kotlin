@@ -13,58 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results;
-
-import org.gradle.api.artifacts.UnresolvedDependency;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.artifacts.result.ResolvedGraphResult;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.Consumer
 
 /**
  * Models the result of resolving dependency graph. Provides access to the root
  * of the dependency graph, as well as access to any failures that occurred while
  * building the graph.
  */
-public interface VisitedGraphResults {
-
+interface VisitedGraphResults {
     /**
      * The attributes that were requested for the root of the dependency graph.
      */
-    ImmutableAttributes getRequestedAttributes();
+    val requestedAttributes: ImmutableAttributes?
 
     /**
      * Returns true if any failures occurred while building these results.
      */
-    boolean hasAnyFailure();
+    fun hasAnyFailure(): Boolean
 
     /**
      * Visits all failures that occurred while resolving the graph.
      *
-     * <p>No failures are visited if {@link #hasAnyFailure()} is false</p>
+     *
+     * No failures are visited if [.hasAnyFailure] is false
      */
-    void visitFailures(Consumer<Throwable> visitor);
+    fun visitFailures(visitor: Consumer<Throwable>)
 
     /**
      * Returns all failures to resolve a dependency.
      * These failures are also accessible via the resolution result.
      */
-    Set<UnresolvedDependency> getUnresolvedDependencies();
+    val unresolvedDependencies: MutableSet<UnresolvedDependency>?
 
     /**
      * Get the raw structure of the resolved graph, without mapping to any
      * public API. This is the most efficient way to obtain a rich
      * representation of a dependency graph.
      */
-    Supplier<GraphStructure> getGraphStructureSource();
+    val graphStructureSource: Supplier<GraphStructure>?
 
     /**
      * Returns the public view of the resolved graph.
      */
-    Supplier<ResolvedGraphResult> getResolvedGraphResultSource();
-
+    val resolvedGraphResultSource: Supplier<ResolvedGraphResult>?
 }

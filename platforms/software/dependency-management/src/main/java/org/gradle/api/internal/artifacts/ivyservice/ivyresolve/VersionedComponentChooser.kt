@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveMetadata;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.gradle.internal.resolve.RejectedByRuleVersion;
-import org.gradle.internal.resolve.result.ComponentSelectionContext;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveMetadata
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata
+import org.gradle.internal.resolve.RejectedByRuleVersion
+import org.gradle.internal.resolve.result.ComponentSelectionContext
 
-import java.util.Collection;
+interface VersionedComponentChooser {
+    fun selectNewestComponent(one: ExternalModuleComponentGraphResolveMetadata, two: ExternalModuleComponentGraphResolveMetadata): ComponentGraphResolveMetadata?
 
-public interface VersionedComponentChooser {
-    @Nullable
-    ComponentGraphResolveMetadata selectNewestComponent(ExternalModuleComponentGraphResolveMetadata one, ExternalModuleComponentGraphResolveMetadata two);
+    fun selectNewestMatchingComponent(
+        versions: MutableCollection<out ModuleComponentResolveState>,
+        result: ComponentSelectionContext,
+        versionSelector: VersionSelector,
+        rejectedVersionSelector: VersionSelector,
+        consumerAttributes: ImmutableAttributes
+    )
 
-    void selectNewestMatchingComponent(Collection<? extends ModuleComponentResolveState> versions, ComponentSelectionContext result, VersionSelector versionSelector, VersionSelector rejectedVersionSelector, ImmutableAttributes consumerAttributes);
-
-    @Nullable
-    RejectedByRuleVersion isRejectedComponent(ModuleComponentIdentifier candidateIdentifier, MetadataProvider metadataProvider);
+    fun isRejectedComponent(candidateIdentifier: ModuleComponentIdentifier, metadataProvider: MetadataProvider): RejectedByRuleVersion?
 }

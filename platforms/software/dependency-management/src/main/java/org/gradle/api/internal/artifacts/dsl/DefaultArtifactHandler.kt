@@ -13,96 +13,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.dsl.ArtifactHandler
+import org.gradle.internal.Actions
+import org.gradle.internal.metaobject.DynamicInvokeResult
+import org.gradle.internal.metaobject.MethodAccess
+import org.gradle.internal.metaobject.MethodMixIn
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.util.internal.ConfigureUtil
+import org.gradle.util.internal.GUtil
+import java.util.Arrays
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.dsl.ArtifactHandler;
-import org.gradle.internal.Actions;
-import org.gradle.internal.metaobject.DynamicInvokeResult;
-import org.gradle.internal.metaobject.MethodAccess;
-import org.gradle.internal.metaobject.MethodMixIn;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.util.internal.ConfigureUtil;
-import org.gradle.util.internal.GUtil;
+class DefaultArtifactHandler(private val configurationContainer: ConfigurationContainer, private val publishArtifactFactory: NotationParser<Any, ConfigurablePublishArtifact>) : ArtifactHandler,
+    MethodMixIn {
+    private val dynamicMethods: DynamicMethods
 
-import java.util.Arrays;
-import java.util.List;
-
-public class DefaultArtifactHandler implements ArtifactHandler, MethodMixIn {
-
-    private final ConfigurationContainer configurationContainer;
-    private final NotationParser<Object, ConfigurablePublishArtifact> publishArtifactFactory;
-    private final DynamicMethods dynamicMethods;
-
-    public DefaultArtifactHandler(ConfigurationContainer configurationContainer, NotationParser<Object, ConfigurablePublishArtifact> publishArtifactFactory) {
-        this.configurationContainer = configurationContainer;
-        this.publishArtifactFactory = publishArtifactFactory;
-        dynamicMethods = new DynamicMethods();
+    init {
+        dynamicMethods = DefaultArtifactHandler.DynamicMethods()
     }
 
-    @SuppressWarnings("rawtypes")
-    private PublishArtifact pushArtifact(org.gradle.api.artifacts.Configuration configuration, Object notation, Closure configureClosure) {
-        Action<Object> configureAction = ConfigureUtil.configureUsing(configureClosure);
-        return pushArtifact(configuration, notation, configureAction);
+    private fun pushArtifact(configuration: Configuration, notation: Any, configureClosure: Closure<*>): PublishArtifact {
+        val configureAction = ConfigureUtil.configureUsing<Any>(configureClosure)
+        return pushArtifact(configuration, notation, configureAction)
     }
 
-    private PublishArtifact pushArtifact(Configuration configuration, Object notation, Action<? super ConfigurablePublishArtifact> configureAction) {
-        ConfigurablePublishArtifact publishArtifact = publishArtifactFactory.parseNotation(notation);
-        configuration.getArtifacts().add(publishArtifact);
-        configureAction.execute(publishArtifact);
-        return publishArtifact;
+    private fun pushArtifact(configuration: Configuration, notation: Any, configureAction: Action<in ConfigurablePublishArtifact>): PublishArtifact {
+        val publishArtifact = publishArtifactFactory.parseNotation(notation)
+        configuration.getArtifacts().add(publishArtifact)
+        configureAction.execute(publishArtifact)
+        return publishArtifact
     }
 
-    @Override
-    public PublishArtifact add(String configurationName, Object artifactNotation, Action<? super ConfigurablePublishArtifact> configureAction) {
-        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, configureAction);
+    override fun add(configurationName: String, artifactNotation: Any, configureAction: Action<in ConfigurablePublishArtifact>): PublishArtifact {
+        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, configureAction)
     }
 
-    @Override
-    public PublishArtifact add(String configurationName, Object artifactNotation) {
-        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, Actions.doNothing());
+    override fun add(configurationName: String, artifactNotation: Any): PublishArtifact {
+        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, Actions.doNothing<ConfigurablePublishArtifact>())
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public PublishArtifact add(String configurationName, Object artifactNotation, Closure configureClosure) {
-        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, configureClosure);
+    override fun add(configurationName: String, artifactNotation: Any, configureClosure: Closure<*>): PublishArtifact {
+        return pushArtifact(configurationContainer.getByName(configurationName), artifactNotation, configureClosure)
     }
 
-    @Override
-    public MethodAccess getAdditionalMethods() {
-        return dynamicMethods;
+    override fun getAdditionalMethods(): MethodAccess {
+        return dynamicMethods
     }
 
-    private class DynamicMethods implements MethodAccess {
-        @Override
-        public boolean hasMethod(String name, Object... arguments) {
-            return arguments.length > 0 && configurationContainer.findByName(name) != null;
+    private inner class DynamicMethods : MethodAccess {
+        override fun hasMethod(name: String, vararg arguments: Any): Boolean {
+            return arguments.size > 0 && configurationContainer.findByName(name) != null
         }
 
-        @Override
-        public DynamicInvokeResult tryInvokeMethod(String name, Object... arguments) {
-            if (arguments.length == 0) {
-                return DynamicInvokeResult.notFound();
+        override fun tryInvokeMethod(name: String, vararg arguments: Any): DynamicInvokeResult {
+            if (arguments.size == 0) {
+                return DynamicInvokeResult.notFound()
             }
-            Configuration configuration = configurationContainer.findByName(name);
+            val configuration = configurationContainer.findByName(name)
             if (configuration == null) {
-                return DynamicInvokeResult.notFound();
+                return DynamicInvokeResult.notFound()
             }
-            List<Object> normalizedArgs = GUtil.flatten(Arrays.asList(arguments), false);
-            if (normalizedArgs.size() == 2 && normalizedArgs.get(1) instanceof Closure) {
-                return DynamicInvokeResult.found(pushArtifact(configuration, normalizedArgs.get(0), (Closure<?>) normalizedArgs.get(1)));
+            val normalizedArgs = GUtil.flatten(Arrays.asList<Any>(*arguments), false)
+            if (normalizedArgs.size == 2 && normalizedArgs.get(1) is Closure<*>) {
+                return DynamicInvokeResult.found(pushArtifact(configuration, normalizedArgs.get(0), normalizedArgs.get(1) as Closure<*>))
             } else {
-                for (Object notation : normalizedArgs) {
-                    pushArtifact(configuration, notation, Actions.doNothing());
+                for (notation in normalizedArgs) {
+                    pushArtifact(configuration, notation, Actions.doNothing<ConfigurablePublishArtifact>())
                 }
-                return DynamicInvokeResult.found();
+                return DynamicInvokeResult.found()
             }
         }
     }

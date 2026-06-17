@@ -13,33 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflicts
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.ModuleConflictResolver;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ComponentState;
-
-public interface ModuleConflictHandler {
-
+interface ModuleConflictHandler {
     /**
      * Registers new module, de-selecting it and any other conflicting module if it is in
      * conflict with another registered module.
      *
      * @return true if a conflict was detected
      */
-    boolean registerCandidate(CandidateModule candidate);
+    fun registerCandidate(candidate: CandidateModule): Boolean
 
     /**
      * Informs whether there is any conflict at present
      */
-    boolean hasConflicts();
+    fun hasConflicts(): Boolean
 
     /**
      * Resolves next conflict.
      *
-     * Must be called only if {@link #hasConflicts()} returns true.
+     * Must be called only if [.hasConflicts] returns true.
      */
-    void resolveNextConflict();
+    fun resolveNextConflict()
 
-    ModuleConflictResolver<ComponentState> getResolver();
-
+    val resolver: ModuleConflictResolver<ComponentState?>?
 }

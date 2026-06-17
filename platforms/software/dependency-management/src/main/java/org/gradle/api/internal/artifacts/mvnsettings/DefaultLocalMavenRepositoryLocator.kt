@@ -13,103 +13,97 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.mvnsettings;
+package org.gradle.api.internal.artifacts.mvnsettings
 
-import org.apache.maven.settings.building.SettingsBuildingException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.maven.settings.building.SettingsBuildingException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
-import java.io.File;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+class DefaultLocalMavenRepositoryLocator protected constructor(
+    private val settingsProvider: MavenSettingsProvider,
+    private val mavenFileLocations: MavenFileLocations,
+    private val system: SystemPropertyAccess
+) : LocalMavenRepositoryLocator {
+    private var localRepoPathFromMavenSettings: String? = null
 
-public class DefaultLocalMavenRepositoryLocator implements LocalMavenRepositoryLocator {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultLocalMavenRepositoryLocator.class);
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]*)}");
+    constructor(settingsProvider: MavenSettingsProvider) : this(settingsProvider, DefaultMavenFileLocations(), CurrentSystemPropertyAccess())
 
-    private final MavenSettingsProvider settingsProvider;
-    private final SystemPropertyAccess system;
-    private final MavenFileLocations mavenFileLocations;
-    private String localRepoPathFromMavenSettings;
-
-    public DefaultLocalMavenRepositoryLocator(MavenSettingsProvider settingsProvider) {
-        this(settingsProvider, new DefaultMavenFileLocations(), new CurrentSystemPropertyAccess());
-    }
-
-    protected DefaultLocalMavenRepositoryLocator(MavenSettingsProvider settingsProvider, MavenFileLocations mavenFileLocations, SystemPropertyAccess system) {
-        this.settingsProvider = settingsProvider;
-        this.mavenFileLocations = mavenFileLocations;
-        this.system = system;
-    }
-
-    @Override
-    public File getLocalMavenRepository() throws CannotLocateLocalMavenRepositoryException {
-        String localOverride = system.getProperty("maven.repo.local");
+    @Throws(CannotLocateLocalMavenRepositoryException::class)
+    override fun getLocalMavenRepository(): File {
+        val localOverride = system.getProperty("maven.repo.local")
         if (localOverride != null) {
-            return new File(localOverride);
+            return File(localOverride)
         }
         try {
-            String repoPath = parseLocalRepoPathFromMavenSettings();
+            val repoPath = parseLocalRepoPathFromMavenSettings()
             if (repoPath != null) {
-                File file = new File(resolvePlaceholders(repoPath.trim()));
+                val file = File(resolvePlaceholders(repoPath.trim { it <= ' ' }))
                 if (isDriveRelativeWindowsPath(file)) {
-                    return file.getAbsoluteFile();
+                    return file.getAbsoluteFile()
                 } else {
-                    return file;
+                    return file
                 }
             } else {
-                File defaultLocation = new File(mavenFileLocations.getUserMavenDir(), "repository").getAbsoluteFile();
-                LOGGER.debug("No local repository in Settings file defined. Using default path: {}", defaultLocation);
-                return defaultLocation;
+                val defaultLocation = File(mavenFileLocations.getUserMavenDir(), "repository").getAbsoluteFile()
+                LOGGER.debug("No local repository in Settings file defined. Using default path: {}", defaultLocation)
+                return defaultLocation
             }
-        } catch (SettingsBuildingException e) {
-            throw new CannotLocateLocalMavenRepositoryException("Unable to parse local Maven settings.", e);
+        } catch (e: SettingsBuildingException) {
+            throw CannotLocateLocalMavenRepositoryException("Unable to parse local Maven settings.", e)
         }
     }
 
-    private boolean isDriveRelativeWindowsPath(File file) {
-        return !file.isAbsolute() && file.getPath().startsWith(File.separator);
+    private fun isDriveRelativeWindowsPath(file: File): Boolean {
+        return !file.isAbsolute() && file.getPath().startsWith(File.separator)
     }
 
     // We only cache the result of parsing the Maven settings files, but allow this value to be updated in-flight
     // via system properties. This allows the local maven repo to be overridden when publishing to maven
     // (see http://forums.gradle.org/gradle/topics/override_location_of_the_local_maven_repo).
-    private synchronized String parseLocalRepoPathFromMavenSettings() throws SettingsBuildingException {
+    @Synchronized
+    @Throws(SettingsBuildingException::class)
+    private fun parseLocalRepoPathFromMavenSettings(): String? {
         if (localRepoPathFromMavenSettings == null) {
-            localRepoPathFromMavenSettings = settingsProvider.getLocalRepository();
+            localRepoPathFromMavenSettings = settingsProvider.getLocalRepository()
         }
-        return localRepoPathFromMavenSettings;
+        return localRepoPathFromMavenSettings
     }
 
-    private String resolvePlaceholders(String value) {
-        StringBuffer result = new StringBuffer();
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
+    private fun resolvePlaceholders(value: String): String {
+        val result = StringBuffer()
+        val matcher: Matcher = PLACEHOLDER_PATTERN.matcher(value)
         while (matcher.find()) {
-            String placeholder = matcher.group(1);
-            String replacement = placeholder.startsWith("env.") ? system.getEnv(placeholder.substring(4)) : system.getProperty(placeholder);
+            val placeholder = matcher.group(1)
+            val replacement = (if (placeholder.startsWith("env.")) system.getEnv(placeholder.substring(4)) else system.getProperty(placeholder))!!
             if (replacement == null) {
-                throw new CannotLocateLocalMavenRepositoryException(String.format("Cannot resolve placeholder '%s' in value '%s'", placeholder, value));
+                throw CannotLocateLocalMavenRepositoryException(String.format("Cannot resolve placeholder '%s' in value '%s'", placeholder, value))
             }
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement))
         }
-        matcher.appendTail(result);
-        return result.toString();
+        matcher.appendTail(result)
+        return result.toString()
     }
 
-    public interface SystemPropertyAccess {
-        String getProperty(String name);
-        String getEnv(String name);
+    interface SystemPropertyAccess {
+        fun getProperty(name: String?): String?
+        fun getEnv(name: String?): String
     }
 
-    public static class CurrentSystemPropertyAccess implements SystemPropertyAccess {
-        @Override
-        public String getProperty(String name) {
-            return System.getProperty(name);
+    class CurrentSystemPropertyAccess : SystemPropertyAccess {
+        override fun getProperty(name: String): String? {
+            return System.getProperty(name)
         }
 
-        @Override
-        public String getEnv(String name) {
-            return System.getenv(name);
+        override fun getEnv(name: String?): String? {
+            return System.getenv(name)
         }
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultLocalMavenRepositoryLocator::class.java)
+        private val PLACEHOLDER_PATTERN: Pattern = Pattern.compile("\\$\\{([^}]*)}")
     }
 }

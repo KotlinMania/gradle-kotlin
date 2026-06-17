@@ -13,58 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice
 
-package org.gradle.api.internal.artifacts.ivyservice;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ResolveException;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ResolveException
 
 /**
- * An internal specialization of the public {@link ResolveException}. All resolve exceptions thrown
+ * An internal specialization of the public [ResolveException]. All resolve exceptions thrown
  * by Gradle are assumed to be an instance of this class.
  */
-public class TypedResolveException extends ResolveException {
-
-    private final String type;
-    private final ImmutableList<String> resolutions;
-
-    /**
-     * Creates a new instance without resolutions.
-     */
-    public TypedResolveException(String type, String displayName, Iterable<? extends Throwable> failures) {
-        this(type, displayName, failures, ImmutableList.of());
-    }
-
-    /**
-     * Creates a new instance with resolutions.
-     */
-    public TypedResolveException(String type, String displayName, Iterable<? extends Throwable> failures, List<String> resolutions) {
-        super(buildMessage(type, displayName), failures);
-        this.type = type;
-        this.resolutions = ImmutableList.copyOf(resolutions);
-    }
-
+class TypedResolveException @JvmOverloads constructor(
     /**
      * The type. This is used to build the failure message.
      *
      * Usually "dependencies", "artifacts", or "files".
      */
-    public String getType() {
-        return type;
+    val type: String, displayName: String, failures: Iterable<out Throwable>, resolutions: MutableList<String> = ImmutableList.of<String>()
+) : ResolveException(
+    buildMessage(
+        type, displayName
+    ), failures
+) {
+    private val resolutions: ImmutableList<String>
+
+    /**
+     * Creates a new instance with resolutions.
+     */
+    /**
+     * Creates a new instance without resolutions.
+     */
+    init {
+        this.resolutions = ImmutableList.copyOf<String>(resolutions)
     }
 
-    @Override
-    public List<String> getResolutions() {
-        return ImmutableList.<String>builder()
+    public override fun getResolutions(): MutableList<String> {
+        return ImmutableList.builder<String>()
             .addAll(resolutions)
             .addAll(super.getResolutions()) // Calculated from causes
-            .build();
+            .build()
     }
 
-    private static String buildMessage(String type, String displayName) {
-        return String.format("Could not resolve all %s for %s.", type, displayName);
+    companion object {
+        private fun buildMessage(type: String, displayName: String): String {
+            return String.format("Could not resolve all %s for %s.", type, displayName)
+        }
     }
-
 }

@@ -13,444 +13,389 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.ComponentMetadataListerDetails;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepositoryMetaDataProvider;
-import org.gradle.api.artifacts.repositories.IvyPatternRepositoryLayout;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextualMetaDataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.IvyModuleDescriptorConverter;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.IvyXmlModuleDescriptorParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor;
-import org.gradle.api.internal.artifacts.repositories.layout.AbstractRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.layout.DefaultIvyPatternRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.layout.GradleRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.layout.IvyRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.layout.MavenRepositoryLayout;
-import org.gradle.api.internal.artifacts.repositories.layout.ResolvedPattern;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultGradleModuleMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.DefaultIvyDescriptorMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMetadataArtifactProvider;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource;
-import org.gradle.api.internal.artifacts.repositories.metadata.RedirectingGradleMetadataModuleMetadataSource;
-import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.repositories.AuthenticationContainer
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepositoryMetaDataProvider
+import org.gradle.api.artifacts.repositories.IvyPatternRepositoryLayout
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextualMetaDataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ConfiguredModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.IvyModuleDescriptorConverter
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.IvyXmlModuleDescriptorParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.descriptor.IvyRepositoryDescriptor
+import org.gradle.api.internal.artifacts.repositories.layout.AbstractRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.layout.DefaultIvyPatternRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.layout.GradleRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.layout.IvyRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.layout.MavenRepositoryLayout
+import org.gradle.api.internal.artifacts.repositories.layout.ResolvedPattern
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultArtifactMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultGradleModuleMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.DefaultIvyDescriptorMetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.ImmutableMetadataSources
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMetadataArtifactProvider
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.artifacts.repositories.metadata.MetadataSource
+import org.gradle.api.internal.artifacts.repositories.metadata.RedirectingGradleMetadataModuleMetadataSource
+import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ivy.MutableIvyModuleResolveMetadata
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableResourceFinder
+import java.net.URI
+import java.util.Collections
+import java.util.function.Supplier
+import javax.inject.Inject
+import kotlin.concurrent.Volatile
 
-import javax.inject.Inject;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+abstract class DefaultIvyArtifactRepository @Inject constructor(
+    private val fileResolver: FileResolver,
+    private val transportFactory: RepositoryTransportFactory,
+    private val locallyAvailableResourceFinder: LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata>,
+    private val artifactFileStore: FileStore<ModuleComponentArtifactIdentifier>,
+    private val externalResourcesFileStore: FileStore<String>,
+    authenticationContainer: AuthenticationContainer,
+    private val ivyContextManager: IvyContextManager,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    private val instantiatorFactory: InstantiatorFactory,
+    private val fileResourceRepository: FileResourceRepository,
+    private val moduleMetadataParser: GradleModuleMetadataParser,
+    private val metadataFactory: IvyMutableModuleMetadataFactory,
+    private val isolatableFactory: IsolatableFactory,
+    objectFactory: ObjectFactory,
+    urlArtifactRepositoryFactory: DefaultUrlArtifactRepository.Factory,
+    private val checksumService: ChecksumService,
+    providerFactory: ProviderFactory,
+    versionParser: VersionParser
+) : AbstractAuthenticationSupportedRepository<IvyRepositoryDescriptor>(instantiatorFactory.decorateLenient(), authenticationContainer, objectFactory, providerFactory, versionParser),
+    IvyArtifactRepository, ResolutionAwareRepository {
+    @Volatile
+    private var schemes: MutableSet<String>? = null
+    private var layout: AbstractRepositoryLayout
+    private val urlArtifactRepository: DefaultUrlArtifactRepository
+    private val additionalPatternsLayout: AdditionalPatternsRepositoryLayout
+    private val metaDataProvider: MetaDataProvider
+    private val instantiator: Instantiator
+    private val metadataSources: IvyMetadataSources = DefaultIvyArtifactRepository.IvyMetadataSources()
 
-import static java.util.Collections.unmodifiableSet;
-
-public abstract class DefaultIvyArtifactRepository extends AbstractAuthenticationSupportedRepository<IvyRepositoryDescriptor> implements IvyArtifactRepository, ResolutionAwareRepository {
-    private volatile Set<String> schemes;
-    private AbstractRepositoryLayout layout;
-    private final DefaultUrlArtifactRepository urlArtifactRepository;
-    private final AdditionalPatternsRepositoryLayout additionalPatternsLayout;
-    private final FileResolver fileResolver;
-    private final RepositoryTransportFactory transportFactory;
-    private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final MetaDataProvider metaDataProvider;
-    private final Instantiator instantiator;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
-    private final FileStore<String> externalResourcesFileStore;
-    private final IvyContextManager ivyContextManager;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final InstantiatorFactory instantiatorFactory;
-    private final FileResourceRepository fileResourceRepository;
-    private final GradleModuleMetadataParser moduleMetadataParser;
-    private final IvyMutableModuleMetadataFactory metadataFactory;
-    private final IsolatableFactory isolatableFactory;
-    private final ChecksumService checksumService;
-    private final IvyMetadataSources metadataSources = new IvyMetadataSources();
-
-    @Inject
-    public DefaultIvyArtifactRepository(
-        FileResolver fileResolver,
-        RepositoryTransportFactory transportFactory,
-        LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-        FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
-        FileStore<String> externalResourcesFileStore,
-        AuthenticationContainer authenticationContainer,
-        IvyContextManager ivyContextManager,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        InstantiatorFactory instantiatorFactory,
-        FileResourceRepository fileResourceRepository,
-        GradleModuleMetadataParser moduleMetadataParser,
-        IvyMutableModuleMetadataFactory metadataFactory,
-        IsolatableFactory isolatableFactory,
-        ObjectFactory objectFactory,
-        DefaultUrlArtifactRepository.Factory urlArtifactRepositoryFactory,
-        ChecksumService checksumService,
-        ProviderFactory providerFactory,
-        VersionParser versionParser
-    ) {
-        super(instantiatorFactory.decorateLenient(), authenticationContainer, objectFactory, providerFactory, versionParser);
-        this.fileResolver = fileResolver;
-        this.urlArtifactRepository = urlArtifactRepositoryFactory.create("Ivy", this::getDisplayName);
-        this.transportFactory = transportFactory;
-        this.locallyAvailableResourceFinder = locallyAvailableResourceFinder;
-        this.artifactFileStore = artifactFileStore;
-        this.externalResourcesFileStore = externalResourcesFileStore;
-        this.additionalPatternsLayout = new AdditionalPatternsRepositoryLayout(fileResolver);
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.instantiatorFactory = instantiatorFactory;
-        this.fileResourceRepository = fileResourceRepository;
-        this.moduleMetadataParser = moduleMetadataParser;
-        this.metadataFactory = metadataFactory;
-        this.isolatableFactory = isolatableFactory;
-        this.checksumService = checksumService;
-        this.layout = new GradleRepositoryLayout();
-        this.metaDataProvider = new MetaDataProvider();
-        this.instantiator = instantiatorFactory.decorateLenient();
-        this.ivyContextManager = ivyContextManager;
-        this.metadataSources.setDefaults();
+    init {
+        this.urlArtifactRepository = urlArtifactRepositoryFactory.create("Ivy", Supplier { this.getDisplayName() })
+        this.additionalPatternsLayout = AdditionalPatternsRepositoryLayout(fileResolver)
+        this.layout = GradleRepositoryLayout()
+        this.metaDataProvider = MetaDataProvider()
+        this.instantiator = instantiatorFactory.decorateLenient()
+        this.metadataSources.setDefaults()
     }
 
-    @Override
-    public String getDisplayName() {
-        URI url = getUrl();
+    override fun getDisplayName(): String {
+        val url = getUrl()
         if (url == null) {
-            return super.getDisplayName();
+            return super.getDisplayName()
         }
-        return super.getDisplayName() + '(' + url + ')';
+        return super.getDisplayName() + '(' + url + ')'
     }
 
-    public IvyResolver createPublisher() {
-        return createRealResolver();
+    fun createPublisher(): IvyResolver {
+        return createRealResolver()
     }
 
-    @Override
-    public ConfiguredModuleComponentRepository createResolver() {
-        return createRealResolver();
+    override fun createResolver(): ConfiguredModuleComponentRepository {
+        return createRealResolver()
     }
 
-    @Override
-    protected IvyRepositoryDescriptor createDescriptor() {
-        Set<String> schemes = getSchemes();
-        validate(schemes);
+    override fun createDescriptor(): IvyRepositoryDescriptor {
+        val schemes = getSchemes()
+        validate(schemes)
 
-        URI url = urlArtifactRepository.getUrl();
-        IvyRepositoryDescriptor.Builder builder = new IvyRepositoryDescriptor.Builder(getName(), url)
+        val url = urlArtifactRepository.getUrl()
+        val builder = IvyRepositoryDescriptor.Builder(getName(), url)
             .setAuthenticated(usesCredentials())
             .setAuthenticationSchemes(getAuthenticationSchemes())
-            .setMetadataSources(metadataSources.asList());
-        layout.apply(url, builder);
-        additionalPatternsLayout.apply(url, builder);
-        return builder.create();
+            .setMetadataSources(metadataSources.asList())
+        layout.apply(url, builder)
+        additionalPatternsLayout.apply(url, builder)
+        return builder.create()
     }
 
-    private IvyResolver createRealResolver() {
-        Set<String> schemes = getSchemes();
-        validate(schemes);
-        return createResolver(schemes);
+    private fun createRealResolver(): IvyResolver {
+        val schemes = getSchemes()
+        validate(schemes)
+        return createResolver(schemes)
     }
 
-    private IvyResolver createResolver(Set<String> schemes) {
-        return createResolver(transportFactory.createTransport(schemes, getName(), getConfiguredAuthentication(), urlArtifactRepository.createRedirectVerifier()));
+    private fun createResolver(schemes: MutableSet<String>): IvyResolver {
+        return createResolver(transportFactory.createTransport(schemes, getName(), getConfiguredAuthentication(), urlArtifactRepository.createRedirectVerifier()))
     }
 
-    private void validate(Set<String> schemes) {
+    private fun validate(schemes: MutableSet<String>) {
         if (schemes.isEmpty()) {
-            throw new InvalidUserDataException("You must specify a base url or at least one artifact pattern for the Ivy repository '" + getDisplayName() + "'.");
+            throw InvalidUserDataException("You must specify a base url or at least one artifact pattern for the Ivy repository '" + getDisplayName() + "'.")
         }
     }
 
-    private Set<String> getSchemes() {
+    private fun getSchemes(): MutableSet<String> {
         if (schemes == null) {
-            URI uri = getUrl();
+            val uri = getUrl()
             // use a local variable to prepare the set,
             // so that other threads do not see the half-initialized
             // list of schemes and fail in strange ways
-            Set<String> result = new LinkedHashSet<>();
-            layout.addSchemes(uri, result);
-            additionalPatternsLayout.addSchemes(uri, result);
-            schemes = unmodifiableSet(result);
+            val result: MutableSet<String> = LinkedHashSet<String>()
+            layout.addSchemes(uri, result)
+            additionalPatternsLayout.addSchemes(uri, result)
+            schemes = Collections.unmodifiableSet<String>(result)
         }
-        return schemes;
+        return schemes!!
     }
 
-    private IvyResolver createResolver(RepositoryTransport transport) {
-        Instantiator injector = createInjectorForMetadataSuppliers(transport, instantiatorFactory, getUrl(), externalResourcesFileStore);
-        InstantiatingAction<ComponentMetadataSupplierDetails> supplierFactory = createComponentMetadataSupplierFactory(injector, isolatableFactory);
-        InstantiatingAction<ComponentMetadataListerDetails> listerFactory = createComponentMetadataVersionLister(injector, isolatableFactory);
-        return new IvyResolver(getDescriptor(), transport, locallyAvailableResourceFinder, metaDataProvider.dynamicResolve, artifactFileStore, supplierFactory, listerFactory, createMetadataSources(), IvyMetadataArtifactProvider.INSTANCE, injector, checksumService, getAllowInsecureContinueWhenDisabled().get());
+    private fun createResolver(transport: RepositoryTransport): IvyResolver {
+        val injector: Instantiator = createInjectorForMetadataSuppliers(transport, instantiatorFactory, getUrl(), externalResourcesFileStore)
+        val supplierFactory = createComponentMetadataSupplierFactory(injector, isolatableFactory)
+        val listerFactory = createComponentMetadataVersionLister(injector, isolatableFactory)
+        return IvyResolver(
+            getDescriptor(),
+            transport,
+            locallyAvailableResourceFinder,
+            metaDataProvider.dynamicResolve,
+            artifactFileStore,
+            supplierFactory,
+            listerFactory,
+            createMetadataSources(),
+            IvyMetadataArtifactProvider.Companion.INSTANCE,
+            injector,
+            checksumService,
+            getAllowInsecureContinueWhenDisabled().get()
+        )
     }
 
-    @Override
-    public void metadataSources(Action<? super MetadataSources> configureAction) {
-        invalidateDescriptor();
-        metadataSources.reset();
-        configureAction.execute(metadataSources);
+    override fun metadataSources(configureAction: Action<in IvyArtifactRepository.MetadataSources>) {
+        invalidateDescriptor()
+        metadataSources.reset()
+        configureAction.execute(metadataSources)
     }
 
-    @Override
-    public MetadataSources getMetadataSources() {
-        return metadataSources;
+    override fun getMetadataSources(): IvyArtifactRepository.MetadataSources {
+        return metadataSources
     }
 
-    private ImmutableMetadataSources createMetadataSources() {
-        ImmutableList.Builder<MetadataSource<?>> sources = ImmutableList.builder();
-        DefaultGradleModuleMetadataSource gradleModuleMetadataSource = new DefaultGradleModuleMetadataSource(moduleMetadataParser, metadataFactory, true, checksumService);
+    private fun createMetadataSources(): ImmutableMetadataSources {
+        val sources = ImmutableList.builder<MetadataSource<*>>()
+        val gradleModuleMetadataSource = DefaultGradleModuleMetadataSource(moduleMetadataParser, metadataFactory, true, checksumService)
         if (metadataSources.gradleMetadata) {
-            sources.add(gradleModuleMetadataSource);
+            sources.add(gradleModuleMetadataSource)
         }
         if (metadataSources.ivyDescriptor) {
-            DefaultIvyDescriptorMetadataSource ivyDescriptorMetadataSource = new DefaultIvyDescriptorMetadataSource(IvyMetadataArtifactProvider.INSTANCE, createIvyDescriptorParser(), fileResourceRepository, checksumService);
+            val ivyDescriptorMetadataSource = DefaultIvyDescriptorMetadataSource(IvyMetadataArtifactProvider.Companion.INSTANCE, createIvyDescriptorParser(), fileResourceRepository, checksumService)
             if (metadataSources.ignoreGradleMetadataRedirection) {
-                sources.add(ivyDescriptorMetadataSource);
+                sources.add(ivyDescriptorMetadataSource)
             } else {
-                sources.add(new RedirectingGradleMetadataModuleMetadataSource(ivyDescriptorMetadataSource, gradleModuleMetadataSource));
+                sources.add(RedirectingGradleMetadataModuleMetadataSource(ivyDescriptorMetadataSource, gradleModuleMetadataSource))
             }
         }
         if (metadataSources.artifact) {
-            sources.add(new DefaultArtifactMetadataSource(metadataFactory));
+            sources.add(DefaultArtifactMetadataSource(metadataFactory))
         }
-        return new DefaultImmutableMetadataSources(sources.build());
+        return DefaultImmutableMetadataSources(sources.build())
     }
 
-    private MetaDataParser<MutableIvyModuleResolveMetadata> createIvyDescriptorParser() {
-        return new IvyContextualMetaDataParser<>(ivyContextManager, new IvyXmlModuleDescriptorParser(new IvyModuleDescriptorConverter(moduleIdentifierFactory), moduleIdentifierFactory, fileResourceRepository, metadataFactory));
+    private fun createIvyDescriptorParser(): MetaDataParser<MutableIvyModuleResolveMetadata> {
+        return IvyContextualMetaDataParser<MutableIvyModuleResolveMetadata>(
+            ivyContextManager,
+            IvyXmlModuleDescriptorParser(IvyModuleDescriptorConverter(moduleIdentifierFactory), moduleIdentifierFactory, fileResourceRepository, metadataFactory)
+        )
     }
 
-    @Override
-    public URI getUrl() {
-        return urlArtifactRepository.getUrl();
+    override fun getUrl(): URI {
+        return urlArtifactRepository.getUrl()
     }
 
 
-    @Override
-    protected Collection<URI> getRepositoryUrls() {
+    override fun getRepositoryUrls(): MutableCollection<URI> {
         // Ivy can resolve files from multiple hosts, so we need to look at all
         // of the possible URLs used by the Ivy resolver to identify all of the repositories
-        ImmutableList.Builder<URI> builder = ImmutableList.builder();
-        URI root = getUrl();
+        val builder = ImmutableList.builder<URI>()
+        val root = getUrl()
         if (root != null) {
-            builder.add(root);
+            builder.add(root)
         }
-        for (String pattern : additionalPatternsLayout.artifactPatterns) {
-            URI baseUri = new ResolvedPattern(pattern, fileResolver).baseUri;
+        for (pattern in additionalPatternsLayout.artifactPatterns) {
+            val baseUri = ResolvedPattern(pattern, fileResolver).baseUri
             if (baseUri != null) {
-                builder.add(baseUri);
+                builder.add(baseUri)
             }
         }
-        for (String pattern : additionalPatternsLayout.ivyPatterns) {
-            URI baseUri = new ResolvedPattern(pattern, fileResolver).baseUri;
+        for (pattern in additionalPatternsLayout.ivyPatterns) {
+            val baseUri = ResolvedPattern(pattern, fileResolver).baseUri
             if (baseUri != null) {
-                builder.add(baseUri);
+                builder.add(baseUri)
             }
         }
-        return builder.build();
+        return builder.build()
     }
 
-    @Override
-    public void setUrl(URI url) {
-        invalidateDescriptor();
-        urlArtifactRepository.setUrl(url);
+    override fun setUrl(url: URI) {
+        invalidateDescriptor()
+        urlArtifactRepository.setUrl(url)
     }
 
-    @Override
-    public void setUrl(Object url) {
-        invalidateDescriptor();
-        urlArtifactRepository.setUrl(url);
+    override fun setUrl(url: Any) {
+        invalidateDescriptor()
+        urlArtifactRepository.setUrl(url)
     }
 
-    @Override
-    public void setAllowInsecureProtocol(boolean allowInsecureProtocol) {
-        invalidateDescriptor();
-        urlArtifactRepository.setAllowInsecureProtocol(allowInsecureProtocol);
+    override fun setAllowInsecureProtocol(allowInsecureProtocol: Boolean) {
+        invalidateDescriptor()
+        urlArtifactRepository.setAllowInsecureProtocol(allowInsecureProtocol)
     }
 
-    @Override
-    public boolean isAllowInsecureProtocol() {
-        return urlArtifactRepository.isAllowInsecureProtocol();
+    override fun isAllowInsecureProtocol(): Boolean {
+        return urlArtifactRepository.isAllowInsecureProtocol()
     }
 
-    @Override
-    public void artifactPattern(String pattern) {
-        invalidateDescriptor();
-        additionalPatternsLayout.artifactPatterns.add(pattern);
+    override fun artifactPattern(pattern: String) {
+        invalidateDescriptor()
+        additionalPatternsLayout.artifactPatterns.add(pattern)
     }
 
-    @Override
-    public void ivyPattern(String pattern) {
-        invalidateDescriptor();
-        additionalPatternsLayout.ivyPatterns.add(pattern);
+    override fun ivyPattern(pattern: String) {
+        invalidateDescriptor()
+        additionalPatternsLayout.ivyPatterns.add(pattern)
     }
 
-    public Set<String> additionalArtifactPatterns() {
-        return additionalPatternsLayout.artifactPatterns;
+    fun additionalArtifactPatterns(): MutableSet<String> {
+        return additionalPatternsLayout.artifactPatterns
     }
 
-    public Set<String> additionalIvyPatterns() {
-        return additionalPatternsLayout.ivyPatterns;
+    fun additionalIvyPatterns(): MutableSet<String> {
+        return additionalPatternsLayout.ivyPatterns
     }
 
-    @Override
-    public void layout(String layoutName) {
-        invalidateDescriptor();
-        switch (layoutName) {
-            case "ivy":
-                layout = instantiator.newInstance(IvyRepositoryLayout.class);
-                break;
-            case "maven":
-                layout = instantiator.newInstance(MavenRepositoryLayout.class);
-                break;
-            case "pattern":
-                layout = instantiator.newInstance(DefaultIvyPatternRepositoryLayout.class);
-                break;
-            default:
-                layout = instantiator.newInstance(GradleRepositoryLayout.class);
-                break;
+    override fun layout(layoutName: String) {
+        invalidateDescriptor()
+        when (layoutName) {
+            "ivy" -> layout = instantiator.newInstance<IvyRepositoryLayout>(IvyRepositoryLayout::class.java)
+            "maven" -> layout = instantiator.newInstance<MavenRepositoryLayout>(MavenRepositoryLayout::class.java)
+            "pattern" -> layout = instantiator.newInstance<DefaultIvyPatternRepositoryLayout>(DefaultIvyPatternRepositoryLayout::class.java)
+            else -> layout = instantiator.newInstance<GradleRepositoryLayout>(GradleRepositoryLayout::class.java)
         }
     }
 
-    @Override
-    public void patternLayout(Action<? super IvyPatternRepositoryLayout> config) {
-        invalidateDescriptor();
-        DefaultIvyPatternRepositoryLayout layout = instantiator.newInstance(DefaultIvyPatternRepositoryLayout.class);
-        this.layout = layout;
-        config.execute(layout);
+    override fun patternLayout(config: Action<in IvyPatternRepositoryLayout>) {
+        invalidateDescriptor()
+        val layout = instantiator.newInstance<DefaultIvyPatternRepositoryLayout>(DefaultIvyPatternRepositoryLayout::class.java)
+        this.layout = layout
+        config.execute(layout)
     }
 
-    public AbstractRepositoryLayout getRepositoryLayout() {
-        return layout;
+    var repositoryLayout: AbstractRepositoryLayout
+        get() = layout
+        set(layout) {
+            invalidateDescriptor()
+            this.layout = layout
+        }
+
+    override fun getResolve(): IvyArtifactRepositoryMetaDataProvider {
+        return metaDataProvider
     }
 
-    @Override
-    public IvyArtifactRepositoryMetaDataProvider getResolve() {
-        return metaDataProvider;
+    override fun invalidateDescriptor() {
+        super.invalidateDescriptor()
+        schemes = null
     }
 
-    public void setRepositoryLayout(AbstractRepositoryLayout layout) {
-        invalidateDescriptor();
-        this.layout = layout;
-    }
-
-    @Override
-    protected void invalidateDescriptor() {
-        super.invalidateDescriptor();
-        schemes = null;
-    }
-
-    public boolean hasStandardPattern() {
+    fun hasStandardPattern(): Boolean {
         // This is wasteful because we create a descriptor and throw it away immediately.
-        IvyRepositoryDescriptor descriptor = createDescriptor();
-        List<String> artifactPatterns = descriptor.getArtifactPatterns();
-        if (artifactPatterns.size() == 1) {
-            return artifactPatterns.get(0).equals(IvyArtifactRepository.GRADLE_ARTIFACT_PATTERN);
+        val descriptor = createDescriptor()
+        val artifactPatterns = descriptor.getArtifactPatterns()
+        if (artifactPatterns.size == 1) {
+            return artifactPatterns.get(0) == IvyArtifactRepository.GRADLE_ARTIFACT_PATTERN
         } else {
-            return false;
+            return false
         }
     }
 
     /**
-     * Layout for applying additional patterns added via {@link #artifactPatterns} and {@link #ivyPatterns}.
+     * Layout for applying additional patterns added via [.artifactPatterns] and [.ivyPatterns].
      */
-    private static class AdditionalPatternsRepositoryLayout extends AbstractRepositoryLayout {
-        private final FileResolver fileResolver;
-        private final Set<String> artifactPatterns = new LinkedHashSet<>();
-        private final Set<String> ivyPatterns = new LinkedHashSet<>();
+    private class AdditionalPatternsRepositoryLayout(private val fileResolver: FileResolver) : AbstractRepositoryLayout() {
+        private val artifactPatterns: MutableSet<String> = LinkedHashSet<String>()
+        private val ivyPatterns: MutableSet<String> = LinkedHashSet<String>()
 
-        public AdditionalPatternsRepositoryLayout(FileResolver fileResolver) {
-            this.fileResolver = fileResolver;
-        }
-
-        @Override
-        public void apply(@Nullable URI baseUri, IvyRepositoryDescriptor.Builder builder) {
-            for (String artifactPattern : artifactPatterns) {
-                ResolvedPattern resolvedPattern = new ResolvedPattern(artifactPattern, fileResolver);
-                builder.addArtifactPattern(artifactPattern);
-                builder.addArtifactResource(resolvedPattern.baseUri, resolvedPattern.pattern);
+        override fun apply(baseUri: URI?, builder: IvyRepositoryDescriptor.Builder) {
+            for (artifactPattern in artifactPatterns) {
+                val resolvedPattern = ResolvedPattern(artifactPattern, fileResolver)
+                builder.addArtifactPattern(artifactPattern)
+                builder.addArtifactResource(resolvedPattern.baseUri, resolvedPattern.pattern)
             }
 
-            for (String ivyPattern : ivyPatterns) {
-                builder.addIvyPattern(ivyPattern);
+            for (ivyPattern in ivyPatterns) {
+                builder.addIvyPattern(ivyPattern)
             }
-            Set<String> effectiveIvyPatterns = ivyPatterns.isEmpty() ? artifactPatterns : ivyPatterns;
-            for (String ivyPattern : effectiveIvyPatterns) {
-                ResolvedPattern resolvedPattern = new ResolvedPattern(ivyPattern, fileResolver);
-                builder.addIvyResource(resolvedPattern.baseUri, resolvedPattern.pattern);
+            val effectiveIvyPatterns = if (ivyPatterns.isEmpty()) artifactPatterns else ivyPatterns
+            for (ivyPattern in effectiveIvyPatterns) {
+                val resolvedPattern = ResolvedPattern(ivyPattern, fileResolver)
+                builder.addIvyResource(resolvedPattern.baseUri, resolvedPattern.pattern)
             }
         }
 
-        @Override
-        public void addSchemes(URI baseUri, Set<String> schemes) {
-            for (String pattern : artifactPatterns) {
-                schemes.add(new ResolvedPattern(pattern, fileResolver).scheme);
+        override fun addSchemes(baseUri: URI, schemes: MutableSet<String>) {
+            for (pattern in artifactPatterns) {
+                schemes.add(ResolvedPattern(pattern, fileResolver).scheme)
             }
-            for (String pattern : ivyPatterns) {
-                schemes.add(new ResolvedPattern(pattern, fileResolver).scheme);
+            for (pattern in ivyPatterns) {
+                schemes.add(ResolvedPattern(pattern, fileResolver).scheme)
             }
         }
     }
 
-    private static class MetaDataProvider implements IvyArtifactRepositoryMetaDataProvider {
-        boolean dynamicResolve;
+    private class MetaDataProvider : IvyArtifactRepositoryMetaDataProvider {
+        var dynamicResolve: Boolean = false
 
-        @Override
-        public boolean isDynamicMode() {
-            return dynamicResolve;
+        override fun isDynamicMode(): Boolean {
+            return dynamicResolve
         }
 
-        @Override
-        public void setDynamicMode(boolean mode) {
-            this.dynamicResolve = mode;
+        override fun setDynamicMode(mode: Boolean) {
+            this.dynamicResolve = mode
         }
     }
 
-    private class IvyMetadataSources implements MetadataSources {
-        boolean gradleMetadata;
-        boolean ivyDescriptor;
-        boolean artifact;
-        boolean ignoreGradleMetadataRedirection;
+    private inner class IvyMetadataSources : IvyArtifactRepository.MetadataSources {
+        var gradleMetadata: Boolean = false
+        var ivyDescriptor: Boolean = false
+        var artifact: Boolean = false
+        var ignoreGradleMetadataRedirection: Boolean = false
 
-        void setDefaults() {
-            ivyDescriptor();
-            ignoreGradleMetadataRedirection = false;
+        fun setDefaults() {
+            ivyDescriptor()
+            ignoreGradleMetadataRedirection = false
         }
 
-        void reset() {
-            gradleMetadata = false;
-            ivyDescriptor = false;
-            artifact = false;
-            ignoreGradleMetadataRedirection = false;
+        fun reset() {
+            gradleMetadata = false
+            ivyDescriptor = false
+            artifact = false
+            ignoreGradleMetadataRedirection = false
         }
 
         /**
@@ -459,66 +404,57 @@ public abstract class DefaultIvyArtifactRepository extends AbstractAuthenticatio
          *
          * @return a list of implemented metadata sources, as strings.
          */
-        List<String> asList() {
-            List<String> list = new ArrayList<>();
+        fun asList(): MutableList<String> {
+            val list: MutableList<String> = ArrayList<String>()
             if (gradleMetadata) {
-                list.add("gradleMetadata");
+                list.add("gradleMetadata")
             }
             if (ivyDescriptor) {
-                list.add("ivyDescriptor");
+                list.add("ivyDescriptor")
             }
             if (artifact) {
-                list.add("artifact");
+                list.add("artifact")
             }
             if (ignoreGradleMetadataRedirection) {
-                list.add("ignoreGradleMetadataRedirection");
+                list.add("ignoreGradleMetadataRedirection")
             }
-            return list;
+            return list
         }
 
-        @Override
-        public void gradleMetadata() {
-            invalidateDescriptor();
-            gradleMetadata = true;
+        override fun gradleMetadata() {
+            invalidateDescriptor()
+            gradleMetadata = true
         }
 
-        @Override
-        public void ivyDescriptor() {
-            invalidateDescriptor();
-            ivyDescriptor = true;
+        override fun ivyDescriptor() {
+            invalidateDescriptor()
+            ivyDescriptor = true
         }
 
-        @Override
-        public void artifact() {
-            invalidateDescriptor();
-            artifact = true;
+        override fun artifact() {
+            invalidateDescriptor()
+            artifact = true
         }
 
-        @Override
-        public void ignoreGradleMetadataRedirection() {
-            invalidateDescriptor();
-            ignoreGradleMetadataRedirection = true;
+        override fun ignoreGradleMetadataRedirection() {
+            invalidateDescriptor()
+            ignoreGradleMetadataRedirection = true
         }
 
-        @Override
-        public boolean isGradleMetadataEnabled() {
-            return gradleMetadata;
+        override fun isGradleMetadataEnabled(): Boolean {
+            return gradleMetadata
         }
 
-        @Override
-        public boolean isIvyDescriptorEnabled() {
-            return ivyDescriptor;
+        override fun isIvyDescriptorEnabled(): Boolean {
+            return ivyDescriptor
         }
 
-        @Override
-        public boolean isArtifactEnabled() {
-            return artifact;
+        override fun isArtifactEnabled(): Boolean {
+            return artifact
         }
 
-        @Override
-        public boolean isIgnoreGradleMetadataRedirectionEnabled() {
-            return ignoreGradleMetadataRedirection;
+        override fun isIgnoreGradleMetadataRedirectionEnabled(): Boolean {
+            return ignoreGradleMetadataRedirection
         }
     }
-
 }

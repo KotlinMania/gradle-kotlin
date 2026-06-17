@@ -13,54 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.resolve.result.BuildableArtifactFileResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleVersionListingResolveResult
 
-public class BaseModuleComponentRepositoryAccess<T> implements ModuleComponentRepositoryAccess<T> {
-    private final ModuleComponentRepositoryAccess<T> delegate;
-
-    public BaseModuleComponentRepositoryAccess(ModuleComponentRepositoryAccess<T> delegate) {
-        this.delegate = delegate;
+open class BaseModuleComponentRepositoryAccess<T>(val delegate: ModuleComponentRepositoryAccess<T?>) : ModuleComponentRepositoryAccess<T?> {
+    override fun listModuleVersions(selector: ModuleComponentSelector?, overrideMetadata: ComponentOverrideMetadata?, result: BuildableModuleVersionListingResolveResult?) {
+        delegate.listModuleVersions(selector, overrideMetadata, result)
     }
 
-    public ModuleComponentRepositoryAccess<T> getDelegate() {
-        return delegate;
+    override fun resolveComponentMetaData(
+        moduleComponentIdentifier: ModuleComponentIdentifier?,
+        requestMetaData: ComponentOverrideMetadata?,
+        result: BuildableModuleComponentMetaDataResolveResult<T?>?
+    ) {
+        delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result)
     }
 
-    @Override
-    public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-        delegate.listModuleVersions(selector, overrideMetadata, result);
+    override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata?, artifactType: ArtifactType?, result: BuildableArtifactSetResolveResult?) {
+        delegate.resolveArtifactsWithType(component, artifactType, result)
     }
 
-    @Override
-    public void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult<T> result) {
-        delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result);
+    override fun resolveArtifact(artifact: ComponentArtifactMetadata?, moduleSources: ModuleSources?, result: BuildableArtifactFileResolveResult?) {
+        delegate.resolveArtifact(artifact, moduleSources, result)
     }
 
-    @Override
-    public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-        delegate.resolveArtifactsWithType(component, artifactType, result);
-    }
-
-    @Override
-    public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
-        delegate.resolveArtifact(artifact, moduleSources, result);
-    }
-
-    @Override
-    public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
-        return delegate.estimateMetadataFetchingCost(moduleComponentIdentifier);
+    override fun estimateMetadataFetchingCost(moduleComponentIdentifier: ModuleComponentIdentifier?): MetadataFetchingCost? {
+        return delegate.estimateMetadataFetchingCost(moduleComponentIdentifier)
     }
 }

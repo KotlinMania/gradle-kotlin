@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.store;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.store
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.cache.internal.BinaryStore;
-import org.gradle.cache.internal.Store;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure
+import org.gradle.cache.internal.BinaryStore
+import org.gradle.cache.internal.Store
 
-public interface StoreSet {
+interface StoreSet {
+    fun nextBinaryStore(): BinaryStore?
 
-    BinaryStore nextBinaryStore();
-
-    Store<GraphStructure> graphStructureCache();
-
+    fun graphStructureCache(): Store<GraphStructure>?
 }

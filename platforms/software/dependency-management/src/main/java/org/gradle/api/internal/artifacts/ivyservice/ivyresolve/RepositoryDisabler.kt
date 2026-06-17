@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import java.util.Optional
 
-import java.util.Optional;
-
-public interface RepositoryDisabler {
-
-    boolean isDisabled(String repositoryId);
+interface RepositoryDisabler {
+    fun isDisabled(repositoryId: String): Boolean
 
     /**
      * Gets the reason why the repository was disabled, if it was disabled.
      *
      * @param repositoryId The id of the repository to check
-     * @return the reason why the repository was disabled, if it was disabled; otherwise, an empty {@link Optional}
+     * @return the reason why the repository was disabled, if it was disabled; otherwise, an empty [Optional]
      */
-    Optional<Throwable> getDisabledReason(String repositoryId);
+    fun getDisabledReason(repositoryId: String): Optional<Throwable>?
 
     /**
      * Attempts to disable the repository with the given id, recording the exception causing it to be disabled, if
@@ -36,29 +34,26 @@ public interface RepositoryDisabler {
      *
      * @param repositoryId the id of the repository to disable
      * @param throwable the reason why the repository is being disabled
-     * @param retriesExceeded {@code true} if the maximum number of retries for the repository has been exceeded
-     * @return {@code true} if the repository is now disabled, {@code false} if it was already disabled or could not be disabled
-     * (<strong>Be sure to note the ambiguity in this value</strong>)
-     * @implSpec implementations <strong>MUST</strong> return {@code false} if the repository is not disabled by this call
+     * @param retriesExceeded `true` if the maximum number of retries for the repository has been exceeded
+     * @return `true` if the repository is now disabled, `false` if it was already disabled or could not be disabled
+     * (**Be sure to note the ambiguity in this value**)
+     * @implSpec implementations **MUST** return `false` if the repository is not disabled by this call
      */
-    boolean tryDisableRepository(String repositoryId, Throwable throwable, boolean retriesExceeded);
+    fun tryDisableRepository(repositoryId: String, throwable: Throwable, retriesExceeded: Boolean): Boolean
 
-    enum NoOpDisabler implements RepositoryDisabler {
+    enum class NoOpDisabler : RepositoryDisabler {
         INSTANCE;
 
-        @Override
-        public boolean isDisabled(String repositoryId) {
-            return false;
+        override fun isDisabled(repositoryId: String): Boolean {
+            return false
         }
 
-        @Override
-        public Optional<Throwable> getDisabledReason(String repositoryId) {
-            return Optional.empty();
+        override fun getDisabledReason(repositoryId: String): Optional<Throwable> {
+            return Optional.empty<Throwable>()
         }
 
-        @Override
-        public boolean tryDisableRepository(String repositoryId, Throwable throwable, boolean retriesExceeded) {
-            return false;
+        override fun tryDisableRepository(repositoryId: String, throwable: Throwable, retriesExceeded: Boolean): Boolean {
+            return false
         }
     }
 }

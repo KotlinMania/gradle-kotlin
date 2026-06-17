@@ -13,38 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.mvnsettings
 
-package org.gradle.api.internal.artifacts.mvnsettings;
+import org.gradle.util.internal.MavenUtil
+import java.io.File
 
-import org.gradle.util.internal.MavenUtil;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-
-public class DefaultMavenFileLocations implements MavenFileLocations {
-    @Override
-    public File getUserMavenDir() {
-        return MavenUtil.getUserMavenDir();
+class DefaultMavenFileLocations : MavenFileLocations {
+    override fun getUserMavenDir(): File {
+        return MavenUtil.getUserMavenDir()
     }
 
-    @Override
-    @Nullable
-    public File getGlobalMavenDir() {
-        return MavenUtil.getGlobalMavenDir();
+    override fun getGlobalMavenDir(): File? {
+        return MavenUtil.getGlobalMavenDir()
     }
 
-    @Override
-    public File getUserSettingsFile() {
-        return new File(getUserMavenDir(), "settings.xml");
+    override fun getUserSettingsFile(): File {
+        return File(getUserMavenDir(), "settings.xml")
     }
 
-    @Override
-    @Nullable
-    public File getGlobalSettingsFile() {
-        File dir = getGlobalMavenDir();
+    override fun getGlobalSettingsFile(): File? {
+        val dir = getGlobalMavenDir()
         if (dir == null) {
-            return null;
+            return null
         }
-        return new File(dir, "conf/settings.xml");
+        return File(dir, "conf/settings.xml")
     }
 }

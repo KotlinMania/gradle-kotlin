@@ -13,55 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact;
-
-import org.gradle.api.Action;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.gradle.api.Action
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
 
 /**
  * A wrapper that prepares artifacts in parallel when visiting the delegate.
  * This is done by collecting all artifacts to prepare and/or visit in a first step.
  * The collected artifacts are prepared in parallel and subsequently visited in sequence.
  */
-public abstract class ParallelResolveArtifactSet {
-    private static final EmptySet EMPTY = new EmptySet();
+abstract class ParallelResolveArtifactSet {
+    abstract fun visit(visitor: ArtifactVisitor)
 
-    public abstract void visit(ArtifactVisitor visitor);
-
-    public static ParallelResolveArtifactSet wrap(ResolvedArtifactSet artifacts, BuildOperationExecutor buildOperationProcessor) {
-        if (artifacts == ResolvedArtifactSet.EMPTY) {
-            return EMPTY;
-        }
-        return new VisitingSet(artifacts, buildOperationProcessor);
-    }
-
-    private static class EmptySet extends ParallelResolveArtifactSet {
-        @Override
-        public void visit(ArtifactVisitor visitor) {
+    private class EmptySet : ParallelResolveArtifactSet() {
+        override fun visit(visitor: ArtifactVisitor) {
         }
     }
 
-    private static class VisitingSet extends ParallelResolveArtifactSet {
-        private final ResolvedArtifactSet artifacts;
-        private final BuildOperationExecutor buildOperationProcessor;
-
-        VisitingSet(ResolvedArtifactSet artifacts, BuildOperationExecutor buildOperationProcessor) {
-            this.artifacts = artifacts;
-            this.buildOperationProcessor = buildOperationProcessor;
-        }
-
-        @Override
-        public void visit(ArtifactVisitor visitor) {
+    private class VisitingSet(private val artifacts: ResolvedArtifactSet, private val buildOperationProcessor: BuildOperationExecutor) : ParallelResolveArtifactSet() {
+        override fun visit(visitor: ArtifactVisitor) {
             // Start preparing the result
-            StartVisitAction visitAction = new StartVisitAction(visitor);
+            val visitAction: StartVisitAction = VisitingSet.StartVisitAction(visitor)
 
             // TODO: Ideally we'd execute this work on an unconstrained executor, allowing us to download
             // more artifacts in parallel than the number of worker leases. However, if there are artifact
@@ -69,43 +46,47 @@ public abstract class ParallelResolveArtifactSet {
             // We need a way to split the downloading work and transform computations into separate queues,
             // potentially allowing `Artifact#startFinalization` to submit work to separate queues -- one for
             // CPU-bound work and one for IO-bound work.
-            buildOperationProcessor.runAll(visitAction);
+            buildOperationProcessor.runAll<RunnableBuildOperation>(visitAction)
 
             // Now visit the result in order
-            visitAction.visitResults();
+            visitAction.visitResults()
         }
 
-        private class StartVisitAction implements Action<BuildOperationQueue<RunnableBuildOperation>>, ResolvedArtifactSet.Visitor {
-            private final ArtifactVisitor visitor;
-            private final List<ResolvedArtifactSet.Artifacts> results = new ArrayList<>();
-            private BuildOperationQueue<RunnableBuildOperation> queue;
+        private inner class StartVisitAction(private val visitor: ArtifactVisitor) : Action<BuildOperationQueue<RunnableBuildOperation?>?>, ResolvedArtifactSet.Visitor {
+            private val results: MutableList<ResolvedArtifactSet.Artifacts> = ArrayList<ResolvedArtifactSet.Artifacts>()
+            private var queue: BuildOperationQueue<RunnableBuildOperation>? = null
 
-            StartVisitAction(ArtifactVisitor visitor) {
-                this.visitor = visitor;
+            override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+                return visitor.prepareForVisit(source)
             }
 
-            @Override
-            public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-                return visitor.prepareForVisit(source);
+            override fun visitArtifacts(artifacts: ResolvedArtifactSet.Artifacts) {
+                artifacts.startFinalization(queue!!, visitor.requireArtifactFiles())
+                results.add(artifacts)
             }
 
-            @Override
-            public void visitArtifacts(ResolvedArtifactSet.Artifacts artifacts) {
-                artifacts.startFinalization(queue, visitor.requireArtifactFiles());
-                results.add(artifacts);
+            override fun execute(buildOperationQueue: BuildOperationQueue<RunnableBuildOperation>) {
+                this.queue = buildOperationQueue
+                artifacts.visit(this)
             }
 
-            @Override
-            public void execute(BuildOperationQueue<RunnableBuildOperation> buildOperationQueue) {
-                this.queue = buildOperationQueue;
-                artifacts.visit(this);
-            }
-
-            public void visitResults() {
-                for (ResolvedArtifactSet.Artifacts result : results) {
-                    result.visit(visitor);
+            fun visitResults() {
+                for (result in results) {
+                    result.visit(visitor)
                 }
             }
+        }
+    }
+
+    companion object {
+        private val EMPTY = EmptySet()
+
+        @JvmStatic
+        fun wrap(artifacts: ResolvedArtifactSet, buildOperationProcessor: BuildOperationExecutor): ParallelResolveArtifactSet {
+            if (artifacts === ResolvedArtifactSet.Companion.EMPTY) {
+                return EMPTY
+            }
+            return VisitingSet(artifacts, buildOperationProcessor)
         }
     }
 }

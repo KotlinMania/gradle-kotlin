@@ -13,127 +13,116 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.dependencies;
+package org.gradle.api.internal.artifacts.dependencies
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.Nullable;
-
-import java.io.Serializable;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.util.internal.GUtil
+import java.io.Serializable
 
 // does not override equals() but hashCode() in order to cache the latter's
 // pre-computed value to improve performance when used in HashMaps
-@SuppressWarnings("checkstyle:EqualsHashCode")
-public class DefaultImmutableVersionConstraint extends AbstractVersionConstraint implements ImmutableVersionConstraint, Serializable {
-    private static final DefaultImmutableVersionConstraint EMPTY = new DefaultImmutableVersionConstraint("");
-    private final String requiredVersion;
-    private final String preferredVersion;
-    private final String strictVersion;
-    private final ImmutableList<String> rejectedVersions;
-    @Nullable
-    private final String requiredBranch;
+class DefaultImmutableVersionConstraint : AbstractVersionConstraint, ImmutableVersionConstraint, Serializable {
+    private val requiredVersion: String
+    private val preferredVersion: String
+    private val strictVersion: String
+    private val rejectedVersions: ImmutableList<String>
+    private val requiredBranch: String?
 
-    private final int hashCode;
+    private val hashCode: Int
 
-    public DefaultImmutableVersionConstraint(String preferredVersion,
-                                             String requiredVersion,
-                                             String strictVersion,
-                                             List<String> rejectedVersions,
-                                             @Nullable String requiredBranch) {
-        if (preferredVersion == null) {
-            throw new IllegalArgumentException("Preferred version must not be null");
+    constructor(
+        preferredVersion: String,
+        requiredVersion: String,
+        strictVersion: String,
+        rejectedVersions: MutableList<String>,
+        requiredBranch: String?
+    ) {
+        requireNotNull(preferredVersion) { "Preferred version must not be null" }
+        requireNotNull(requiredVersion) { "Required version must not be null" }
+        requireNotNull(strictVersion) { "Strict version must not be null" }
+        requireNotNull(rejectedVersions) { "Rejected versions must not be null" }
+        for (rejectedVersion in rejectedVersions) {
+            require(GUtil.isTrue(rejectedVersion)) { "Rejected version must not be empty" }
         }
-        if (requiredVersion == null) {
-            throw new IllegalArgumentException("Required version must not be null");
-        }
-        if (strictVersion == null) {
-            throw new IllegalArgumentException("Strict version must not be null");
-        }
-        if (rejectedVersions == null) {
-            throw new IllegalArgumentException("Rejected versions must not be null");
-        }
-        for (String rejectedVersion : rejectedVersions) {
-            if (!GUtil.isTrue(rejectedVersion)) {
-                throw new IllegalArgumentException("Rejected version must not be empty");
+        this.preferredVersion = preferredVersion
+        this.requiredVersion = requiredVersion
+        this.strictVersion = strictVersion
+        this.rejectedVersions = ImmutableList.copyOf<String>(rejectedVersions)
+        this.requiredBranch = requiredBranch
+        this.hashCode = super.hashCode()
+    }
+
+    constructor(requiredVersion: String) {
+        requireNotNull(requiredVersion) { "Required version must not be null" }
+        this.preferredVersion = ""
+        this.requiredVersion = requiredVersion
+        this.strictVersion = ""
+        this.rejectedVersions = ImmutableList.of<String>()
+        this.requiredBranch = null
+        this.hashCode = super.hashCode()
+    }
+
+    override fun hashCode(): Int {
+        return hashCode
+    }
+
+    override fun getBranch(): String? {
+        return requiredBranch
+    }
+
+    override fun getRequiredVersion(): String {
+        return requiredVersion
+    }
+
+    override fun getPreferredVersion(): String {
+        return preferredVersion
+    }
+
+    override fun getStrictVersion(): String {
+        return strictVersion
+    }
+
+    override fun getRejectedVersions(): MutableList<String> {
+        return rejectedVersions
+    }
+
+    companion object {
+        private val EMPTY = DefaultImmutableVersionConstraint("")
+        @JvmStatic
+        fun of(versionConstraint: VersionConstraint): ImmutableVersionConstraint {
+            if (versionConstraint is ImmutableVersionConstraint) {
+                return versionConstraint
             }
+            return DefaultImmutableVersionConstraint(
+                versionConstraint.getPreferredVersion(),
+                versionConstraint.getRequiredVersion(),
+                versionConstraint.getStrictVersion(),
+                versionConstraint.getRejectedVersions(),
+                versionConstraint.getBranch()
+            )
         }
-        this.preferredVersion = preferredVersion;
-        this.requiredVersion = requiredVersion;
-        this.strictVersion = strictVersion;
-        this.rejectedVersions = ImmutableList.copyOf(rejectedVersions);
-        this.requiredBranch = requiredBranch;
-        this.hashCode = super.hashCode();
-    }
 
-    public DefaultImmutableVersionConstraint(String requiredVersion) {
-        if (requiredVersion == null) {
-            throw new IllegalArgumentException("Required version must not be null");
+        @JvmStatic
+        fun of(version: String?): ImmutableVersionConstraint {
+            if (version == null) {
+                return of()
+            }
+            return DefaultImmutableVersionConstraint(version)
         }
-        this.preferredVersion = "";
-        this.requiredVersion = requiredVersion;
-        this.strictVersion = "";
-        this.rejectedVersions = ImmutableList.of();
-        this.requiredBranch = null;
-        this.hashCode = super.hashCode();
-    }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
-    }
-
-    @Nullable
-    @Override
-    public String getBranch() {
-        return requiredBranch;
-    }
-
-    @Override
-    public String getRequiredVersion() {
-        return requiredVersion;
-    }
-
-    @Override
-    public String getPreferredVersion() {
-        return preferredVersion;
-    }
-
-    @Override
-    public String getStrictVersion() {
-        return strictVersion;
-    }
-
-    @Override
-    public List<String> getRejectedVersions() {
-        return rejectedVersions;
-    }
-
-    public static ImmutableVersionConstraint of(VersionConstraint versionConstraint) {
-        if (versionConstraint instanceof ImmutableVersionConstraint) {
-            return (ImmutableVersionConstraint) versionConstraint;
+        fun of(preferredVersion: String, requiredVersion: String, strictVersion: String, rejects: MutableList<String>): ImmutableVersionConstraint {
+            return DefaultImmutableVersionConstraint(preferredVersion, requiredVersion, strictVersion, rejects, null)
         }
-        return new DefaultImmutableVersionConstraint(versionConstraint.getPreferredVersion(), versionConstraint.getRequiredVersion(), versionConstraint.getStrictVersion(), versionConstraint.getRejectedVersions(), versionConstraint.getBranch());
-    }
 
-    public static ImmutableVersionConstraint of(@Nullable String version) {
-        if (version == null) {
-            return of();
+        @JvmStatic
+        fun of(): ImmutableVersionConstraint {
+            return EMPTY
         }
-        return new DefaultImmutableVersionConstraint(version);
-    }
 
-    public static ImmutableVersionConstraint of(String preferredVersion, String requiredVersion, String strictVersion, List<String> rejects) {
-        return new DefaultImmutableVersionConstraint(preferredVersion, requiredVersion, strictVersion, rejects, null);
-    }
-
-    public static ImmutableVersionConstraint of() {
-        return EMPTY;
-    }
-
-    public static ImmutableVersionConstraint strictly(String version) {
-        return new DefaultImmutableVersionConstraint("", version, version, ImmutableList.of(), null);
+        fun strictly(version: String): ImmutableVersionConstraint {
+            return DefaultImmutableVersionConstraint("", version, version, ImmutableList.of<String>(), null)
+        }
     }
 }

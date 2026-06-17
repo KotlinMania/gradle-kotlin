@@ -13,26 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.repositories
 
-package org.gradle.api.internal.artifacts.repositories;
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.internal.exceptions.ResolutionProvider
+import java.util.Arrays
 
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.internal.exceptions.ResolutionProvider;
+class InsecureProtocolException(message: String, vararg resolutions: String) : InvalidUserCodeException(message), ResolutionProvider {
+    val resolutions: MutableList<String>
 
-import java.util.Arrays;
-import java.util.List;
-
-public class InsecureProtocolException extends InvalidUserCodeException implements ResolutionProvider {
-
-    private final List<String> resolutions;
-
-    public InsecureProtocolException(String message, String... resolutions) {
-        super(message);
-        this.resolutions = Arrays.asList(resolutions);
-    }
-
-    @Override
-    public List<String> getResolutions() {
-        return resolutions;
+    init {
+        this.resolutions = Arrays.asList<String>(*resolutions)
     }
 }

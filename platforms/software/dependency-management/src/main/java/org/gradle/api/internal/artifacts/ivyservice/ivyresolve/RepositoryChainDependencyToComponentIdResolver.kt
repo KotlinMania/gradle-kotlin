@@ -13,76 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor
+import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver
+import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ComponentMetadataProcessorFactory;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.caching.ComponentMetadataSupplierRuleExecutor;
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver;
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult;
-import org.jspecify.annotations.Nullable;
+class RepositoryChainDependencyToComponentIdResolver(
+    componentChooser: VersionedComponentChooser,
+    versionParser: VersionParser,
+    attributesFactory: AttributesFactory,
+    componentMetadataProcessorFactory: ComponentMetadataProcessorFactory,
+    componentMetadataSupplierRuleExecutor: ComponentMetadataSupplierRuleExecutor,
+    cacheExpirationControl: CacheExpirationControl
+) : DependencyToComponentIdResolver {
+    private val dynamicRevisionResolver: DynamicVersionResolver
 
-public class RepositoryChainDependencyToComponentIdResolver implements DependencyToComponentIdResolver {
-    private final DynamicVersionResolver dynamicRevisionResolver;
-
-    public RepositoryChainDependencyToComponentIdResolver(
-        VersionedComponentChooser componentChooser,
-        VersionParser versionParser,
-        AttributesFactory attributesFactory,
-        ComponentMetadataProcessorFactory componentMetadataProcessorFactory,
-        ComponentMetadataSupplierRuleExecutor componentMetadataSupplierRuleExecutor,
-        CacheExpirationControl cacheExpirationControl
-    ) {
-        this.dynamicRevisionResolver = new DynamicVersionResolver(
+    init {
+        this.dynamicRevisionResolver = DynamicVersionResolver(
             componentChooser,
             versionParser,
             attributesFactory,
             componentMetadataProcessorFactory,
             componentMetadataSupplierRuleExecutor,
             cacheExpirationControl
-        );
+        )
     }
 
-    public void add(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository) {
-        dynamicRevisionResolver.add(repository);
+    fun add(repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState>) {
+        dynamicRevisionResolver.add(repository)
     }
 
-    @Override
-    public void resolve(
-        ComponentSelector selector,
-        ComponentOverrideMetadata overrideMetadata,
-        VersionSelector acceptor,
-        @Nullable VersionSelector rejector,
-        BuildableComponentIdResolveResult result,
-        ImmutableAttributes consumerAttributes
+    override fun resolve(
+        selector: ComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata,
+        acceptor: VersionSelector,
+        rejector: VersionSelector?,
+        result: BuildableComponentIdResolveResult,
+        consumerAttributes: ImmutableAttributes
     ) {
-        if (selector instanceof ModuleComponentSelector) {
-            ModuleComponentSelector module = (ModuleComponentSelector) selector;
-            if (acceptor.isDynamic()) {
-                dynamicRevisionResolver.resolve(module, overrideMetadata, acceptor, rejector, consumerAttributes, result);
+        if (selector is ModuleComponentSelector) {
+            val module = selector
+            if (acceptor.isDynamic) {
+                dynamicRevisionResolver.resolve(module, overrideMetadata, acceptor, rejector, consumerAttributes, result)
             } else {
-                String version = acceptor.getSelector();
-                ModuleIdentifier moduleId = module.getModuleIdentifier();
-                ModuleComponentIdentifier id = DefaultModuleComponentIdentifier.newId(moduleId, version);
-                ModuleVersionIdentifier mvId = DefaultModuleVersionIdentifier.newId(moduleId, version);
+                val version = acceptor.selector
+                val moduleId = module.getModuleIdentifier()
+                val id = newId(moduleId, version)
+                val mvId: ModuleVersionIdentifier? = DefaultModuleVersionIdentifier.newId(moduleId, version)
                 if (rejector != null && rejector.accept(version)) {
-                    result.rejected(id, mvId);
+                    result.rejected(id, mvId)
                 } else {
-                    result.resolved(id, mvId);
+                    result.resolved(id, mvId)
                 }
             }
         }

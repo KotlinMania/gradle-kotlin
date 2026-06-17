@@ -13,8 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy
 
-@NullMarked
-package org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy;
+import org.gradle.internal.component.external.model.DefaultImmutableCapability.Companion.of
+import org.gradle.internal.rules.RuleActionAdapter.createFromAction
+import org.gradle.internal.rules.RuleActionAdapter.createFromClosure
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
+import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
+import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
+import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
+import org.gradle.internal.rules.RuleActionAdapter.createFromRuleSource
+import org.gradle.api.internal.artifacts.GlobalDependencyResolutionRules.dependencySubstitutionRules
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal.rules
+import org.gradle.api.internal.artifacts.ComponentSelectionRulesInternal.addRule
+import org.gradle.api.internal.artifacts.DependencySubstitutionInternal.useTarget
 
-import org.jspecify.annotations.NullMarked;

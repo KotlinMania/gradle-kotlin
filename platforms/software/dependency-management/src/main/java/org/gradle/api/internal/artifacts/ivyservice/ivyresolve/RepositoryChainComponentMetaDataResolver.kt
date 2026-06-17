@@ -13,201 +13,193 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.DisplayName
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueFactory
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver
+import org.gradle.internal.resolve.result.BuildableComponentResolveResult
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.DefaultBuildableComponentResolveResult
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.LinkedList
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.function.Supplier
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.repositories.resolver.MetadataFetchingCost;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueFactory;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver;
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.DefaultBuildableComponentResolveResult;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+class RepositoryChainComponentMetaDataResolver(private val versionedComponentChooser: VersionedComponentChooser, private val calculatedValueFactory: CalculatedValueFactory) :
+    ComponentMetaDataResolver {
+    private val repositories: MutableList<ModuleComponentRepository<ExternalModuleComponentGraphResolveState>> = ArrayList<ModuleComponentRepository<ExternalModuleComponentGraphResolveState>>()
+    private val repositoryNames: MutableList<String> = ArrayList<String>()
+    private val metadataValueContainerCache: Cache<ModuleComponentIdentifier, CalculatedValue<BuildableComponentResolveResult>>
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
-public class RepositoryChainComponentMetaDataResolver implements ComponentMetaDataResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryChainComponentMetaDataResolver.class);
-
-    private final List<ModuleComponentRepository<ExternalModuleComponentGraphResolveState>> repositories = new ArrayList<>();
-    private final List<String> repositoryNames = new ArrayList<>();
-    private final VersionedComponentChooser versionedComponentChooser;
-    private final CalculatedValueFactory calculatedValueFactory;
-    private final Cache<ModuleComponentIdentifier, CalculatedValue<BuildableComponentResolveResult>> metadataValueContainerCache;
-
-    public RepositoryChainComponentMetaDataResolver(VersionedComponentChooser componentChooser, CalculatedValueFactory calculatedValueFactory) {
-        this.versionedComponentChooser = componentChooser;
-        this.calculatedValueFactory = calculatedValueFactory;
-        this.metadataValueContainerCache = CacheBuilder.newBuilder().weakValues().build();
+    init {
+        this.metadataValueContainerCache = CacheBuilder.newBuilder().weakValues().build<ModuleComponentIdentifier, CalculatedValue<BuildableComponentResolveResult>>()
     }
 
-    public void add(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository) {
-        repositories.add(repository);
-        repositoryNames.add(repository.getName());
+    fun add(repository: ModuleComponentRepository<ExternalModuleComponentGraphResolveState>) {
+        repositories.add(repository)
+        repositoryNames.add(repository.name)
     }
 
-    @Override
-    public void resolve(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata, BuildableComponentResolveResult result) {
-        if (!(identifier instanceof ModuleComponentIdentifier)) {
-            throw new UnsupportedOperationException("Can resolve meta-data for module components only.");
+    override fun resolve(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata, result: BuildableComponentResolveResult) {
+        if (identifier !is ModuleComponentIdentifier) {
+            throw UnsupportedOperationException("Can resolve meta-data for module components only.")
         }
 
         try {
-            CalculatedValue<BuildableComponentResolveResult> metadataValueContainer =
-                metadataValueContainerCache.get((ModuleComponentIdentifier) identifier, () -> createValueContainerFor(identifier, componentOverrideMetadata));
-            metadataValueContainer.finalizeIfNotAlready();
-            metadataValueContainer.get().applyTo(result);
-        } catch (ExecutionException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            val metadataValueContainer =
+                metadataValueContainerCache.get(identifier, Callable { createValueContainerFor(identifier, componentOverrideMetadata) })
+            metadataValueContainer.finalizeIfNotAlready()
+            metadataValueContainer.get().applyTo(result)
+        } catch (e: ExecutionException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    private CalculatedValue<BuildableComponentResolveResult> createValueContainerFor(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata) {
-        return calculatedValueFactory.create(toDisplayName(identifier), () -> resolveModule((ModuleComponentIdentifier) identifier, componentOverrideMetadata));
+    private fun createValueContainerFor(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata): CalculatedValue<BuildableComponentResolveResult> {
+        return calculatedValueFactory.create<BuildableComponentResolveResult>(toDisplayName(identifier), Supplier { resolveModule(identifier as ModuleComponentIdentifier, componentOverrideMetadata) })
     }
 
-    @Override
-    public boolean isFetchingMetadataCheap(ComponentIdentifier identifier) {
-        if (identifier instanceof ModuleComponentIdentifier) {
-            for (ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository : repositories) {
-                ModuleComponentRepositoryAccess<ExternalModuleComponentGraphResolveState> localAccess = repository.getLocalAccess();
-                MetadataFetchingCost fetchingCost = localAccess.estimateMetadataFetchingCost((ModuleComponentIdentifier) identifier);
-                if (fetchingCost.isFast()) {
-                    return true;
-                } else if (fetchingCost.isExpensive()) {
-                    return false;
+    override fun isFetchingMetadataCheap(identifier: ComponentIdentifier): Boolean {
+        if (identifier is ModuleComponentIdentifier) {
+            for (repository in repositories) {
+                val localAccess = repository.localAccess
+                val fetchingCost = localAccess.estimateMetadataFetchingCost(identifier)
+                if (fetchingCost.isFast) {
+                    return true
+                } else if (fetchingCost.isExpensive) {
+                    return false
                 }
             }
         }
-        return true;
+        return true
     }
 
-    private BuildableComponentResolveResult resolveModule(ModuleComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata) {
-        LOGGER.debug("Attempting to resolve component for {} using repositories {}", identifier, repositoryNames);
+    private fun resolveModule(identifier: ModuleComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata): BuildableComponentResolveResult {
+        LOGGER.debug("Attempting to resolve component for {} using repositories {}", identifier, repositoryNames)
 
-        RepositoryFailureCollector errors = new RepositoryFailureCollector();
-        BuildableComponentResolveResult result = new DefaultBuildableComponentResolveResult();
+        val errors = RepositoryFailureCollector()
+        val result: BuildableComponentResolveResult = DefaultBuildableComponentResolveResult()
 
-        List<ComponentMetaDataResolveState> resolveStates = new ArrayList<>();
-        for (ModuleComponentRepository<ExternalModuleComponentGraphResolveState> repository : repositories) {
-            resolveStates.add(new ComponentMetaDataResolveState(identifier, componentOverrideMetadata, repository, versionedComponentChooser));
+        val resolveStates: MutableList<ComponentMetaDataResolveState> = ArrayList<ComponentMetaDataResolveState>()
+        for (repository in repositories) {
+            resolveStates.add(ComponentMetaDataResolveState(identifier, componentOverrideMetadata, repository, versionedComponentChooser))
         }
 
-        final RepositoryChainModuleResolution latestResolved = findBestMatch(resolveStates, errors);
+        val latestResolved = findBestMatch(resolveStates, errors)
         if (latestResolved != null) {
-            LOGGER.debug("Using {} from {}", latestResolved.component.getId(), latestResolved.repository);
-            for (Throwable error : errors.getFailures()) {
-                LOGGER.debug("Discarding resolve failure.", error);
+            LOGGER.debug("Using {} from {}", latestResolved.component.getId(), latestResolved.repository)
+            for (error in errors.getFailures()) {
+                LOGGER.debug("Discarding resolve failure.", error)
             }
 
-            String repositoryName = latestResolved.repository.getName();
-            result.resolved(latestResolved.component, new ModuleComponentGraphSpecificResolveState(repositoryName));
-            return result;
+            val repositoryName = latestResolved.repository.name
+            result.resolved(latestResolved.component, ModuleComponentGraphSpecificResolveState(repositoryName))
+            return result
         }
         if (!errors.getFailures().isEmpty()) {
-            result.failed(new ModuleVersionResolveException(identifier, errors.getFailures()));
+            result.failed(ModuleVersionResolveException(identifier, errors.getFailures()))
         } else {
-            for (ComponentMetaDataResolveState resolveState : resolveStates) {
-                resolveState.applyTo(result);
+            for (resolveState in resolveStates) {
+                resolveState.applyTo(result)
             }
-            result.notFound(identifier);
+            result.notFound(identifier)
         }
 
-        return result;
+        return result
     }
 
-    @Nullable
-    private RepositoryChainModuleResolution findBestMatch(List<ComponentMetaDataResolveState> resolveStates, RepositoryFailureCollector failures) {
-        LinkedList<ComponentMetaDataResolveState> queue = new LinkedList<>(resolveStates);
+    private fun findBestMatch(resolveStates: MutableList<ComponentMetaDataResolveState>, failures: RepositoryFailureCollector): RepositoryChainModuleResolution? {
+        val queue = LinkedList<ComponentMetaDataResolveState>(resolveStates)
 
-        LinkedList<ComponentMetaDataResolveState> missing = new LinkedList<>();
+        val missing = LinkedList<ComponentMetaDataResolveState>()
 
         // A first pass to do local resolves only
-        RepositoryChainModuleResolution best = findBestMatch(queue, failures, missing);
+        val best = findBestMatch(queue, failures, missing)
         if (failures.hasFatalError()) {
-            return null;
+            return null
         }
         if (best != null) {
-            return best;
+            return best
         }
 
         // Nothing found locally - try a remote search for all resolve states that were not yet searched remotely
-        queue.addAll(missing);
-        missing.clear();
-        return findBestMatch(queue, failures, missing);
+        queue.addAll(missing)
+        missing.clear()
+        return findBestMatch(queue, failures, missing)
     }
 
-    @Nullable
-    @SuppressWarnings("NonApiType") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-    private RepositoryChainModuleResolution findBestMatch(LinkedList<ComponentMetaDataResolveState> queue, RepositoryFailureCollector failures, Collection<ComponentMetaDataResolveState> missing) {
-        RepositoryChainModuleResolution best = null;
+    //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+    private fun findBestMatch(
+        queue: LinkedList<ComponentMetaDataResolveState>,
+        failures: RepositoryFailureCollector,
+        missing: MutableCollection<ComponentMetaDataResolveState>
+    ): RepositoryChainModuleResolution? {
+        var best: RepositoryChainModuleResolution? = null
         while (!queue.isEmpty()) {
-            ComponentMetaDataResolveState request = queue.removeFirst();
-            BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> metaDataResolveResult;
-            metaDataResolveResult = request.resolve();
-            switch (metaDataResolveResult.state) {
-                case Failed:
-                    ModuleVersionResolveException failure = metaDataResolveResult.getFailure();
-                    assert failure != null; // Failure cannot be null in Failed state
-                    failures.addFailure(failure);
+            val request = queue.removeFirst()
+            val metaDataResolveResult: BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState?>?
+            metaDataResolveResult = request.resolve()
+            when (metaDataResolveResult.state) {
+                Failed -> {
+                    val failure = metaDataResolveResult.getFailure()
+                    checkNotNull(failure) // Failure cannot be null in Failed state
+                    failures.addFailure(failure)
                     if (request.isRepositoryDisabled() && !request.isContinueOnConnectionFailure()) {
                         // Clear the queue only if repo is now disabled, and we can't continue with it disabled
-                        queue.clear();
-                        failures.markFatalError();
+                        queue.clear()
+                        failures.markFatalError()
                     }
-                    break;
-                case Missing:
-                    // Queue this up for checking again later
+                }
+
+                Missing ->                     // Queue this up for checking again later
                     if (request.canMakeFurtherAttempts()) {
-                        missing.add(request);
+                        missing.add(request)
                     }
-                    break;
-                case Resolved:
-                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, metaDataResolveResult.metaData);
-                    if (!metaDataResolveResult.metaData.getMetadata().isMissing()) {
-                        return moduleResolution;
+
+                Resolved -> {
+                    val moduleResolution = RepositoryChainModuleResolution(request.repository, metaDataResolveResult.metaData!!)
+                    if (!metaDataResolveResult.metaData!!.getMetadata().isMissing()) {
+                        return moduleResolution
                     }
-                    best = best != null ? best : moduleResolution;
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected state for resolution: " + metaDataResolveResult.state);
+                    best = if (best != null) best else moduleResolution
+                }
+
+                else -> throw IllegalStateException("Unexpected state for resolution: " + metaDataResolveResult.state)
             }
         }
 
-        return best;
+        return best
     }
 
-    private static DisplayName toDisplayName(ComponentIdentifier identifier) {
-        if (DisplayName.class.isAssignableFrom(identifier.getClass())) {
-            return (DisplayName) identifier;
-        } else {
-            return new DisplayName() {
-                @Override
-                public String getDisplayName() {
-                    return identifier.getDisplayName();
-                }
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(RepositoryChainComponentMetaDataResolver::class.java)
 
-                @Override
-                public String getCapitalizedDisplayName() {
-                    return getDisplayName();
+        private fun toDisplayName(identifier: ComponentIdentifier): DisplayName {
+            if (DisplayName::class.java.isAssignableFrom(identifier.javaClass)) {
+                return identifier as DisplayName
+            } else {
+                return object : DisplayName {
+                    override fun getDisplayName(): String {
+                        return identifier.getDisplayName()
+                    }
+
+                    override fun getCapitalizedDisplayName(): String {
+                        return getDisplayName()
+                    }
                 }
-            };
+            }
         }
     }
 }

@@ -13,131 +13,138 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories.metadata;
+package org.gradle.api.internal.artifacts.repositories.metadata
 
-import com.google.common.base.Joiner;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.DescriptorParseContext;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParseException;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolver;
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolverDescriptorParseContext;
-import org.gradle.internal.SystemProperties;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.DefaultModuleDescriptorArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata;
-import org.gradle.internal.component.model.MutableModuleSources;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult;
-import org.gradle.internal.resolve.result.ResourceAwareResolveResult;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.base.Joiner
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ComponentResolvers
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.DescriptorParseContext
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParseException
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceArtifactResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolver
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceResolverDescriptorParseContext
+import org.gradle.internal.SystemProperties
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.component.model.DefaultModuleDescriptorArtifactMetadata
+import org.gradle.internal.component.model.ModuleDescriptorArtifactMetadata
+import org.gradle.internal.component.model.MutableModuleSources
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.resolve.result.BuildableModuleComponentMetaDataResolveResult
+import org.gradle.internal.resolve.result.ResourceAwareResolveResult
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-abstract class AbstractRepositoryMetadataSource<S extends MutableModuleComponentResolveMetadata> implements MetadataSource<S> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExternalResourceResolver.class);
-
-    protected final MetadataArtifactProvider metadataArtifactProvider;
-    private final FileResourceRepository fileResourceRepository;
-    private final ChecksumService checksumService;
-
-    protected AbstractRepositoryMetadataSource(MetadataArtifactProvider metadataArtifactProvider,
-                                               FileResourceRepository fileResourceRepository,
-                                               ChecksumService checksumService) {
-        this.metadataArtifactProvider = metadataArtifactProvider;
-        this.fileResourceRepository = fileResourceRepository;
-        this.checksumService = checksumService;
-    }
-
-    @Override
-    public S create(String repositoryName, ComponentResolvers componentResolvers, ModuleComponentIdentifier moduleVersionIdentifier, ComponentOverrideMetadata prescribedMetaData, ExternalResourceArtifactResolver artifactResolver, BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata> result) {
-        S parsedMetadataFromRepository = parseMetaDataFromArtifact(repositoryName, componentResolvers, moduleVersionIdentifier, artifactResolver, result);
+internal abstract class AbstractRepositoryMetadataSource<S : MutableModuleComponentResolveMetadata?> protected constructor(
+    protected val metadataArtifactProvider: MetadataArtifactProvider,
+    private val fileResourceRepository: FileResourceRepository,
+    private val checksumService: ChecksumService
+) : MetadataSource<S?> {
+    override fun create(
+        repositoryName: String,
+        componentResolvers: ComponentResolvers,
+        moduleVersionIdentifier: ModuleComponentIdentifier,
+        prescribedMetaData: ComponentOverrideMetadata,
+        artifactResolver: ExternalResourceArtifactResolver,
+        result: BuildableModuleComponentMetaDataResolveResult<ModuleComponentResolveMetadata?>
+    ): S? {
+        val parsedMetadataFromRepository = parseMetaDataFromArtifact(repositoryName, componentResolvers, moduleVersionIdentifier, artifactResolver, result)
         if (parsedMetadataFromRepository != null) {
-            LOGGER.debug("Metadata file found for module '{}' in repository '{}'.", moduleVersionIdentifier, repositoryName);
+            LOGGER.debug("Metadata file found for module '{}' in repository '{}'.", moduleVersionIdentifier, repositoryName)
         }
-        return parsedMetadataFromRepository;
+        return parsedMetadataFromRepository
     }
 
-    @Nullable
-    private S parseMetaDataFromArtifact(String repositoryName, ComponentResolvers componentResolvers, ModuleComponentIdentifier moduleComponentIdentifier, ExternalResourceArtifactResolver artifactResolver, ResourceAwareResolveResult result) {
-        ModuleComponentArtifactMetadata artifact = getMetaDataArtifactFor(moduleComponentIdentifier);
-        LocallyAvailableExternalResource metadataArtifact = artifactResolver.resolveArtifact(artifact, result);
+    private fun parseMetaDataFromArtifact(
+        repositoryName: String,
+        componentResolvers: ComponentResolvers,
+        moduleComponentIdentifier: ModuleComponentIdentifier,
+        artifactResolver: ExternalResourceArtifactResolver,
+        result: ResourceAwareResolveResult
+    ): S? {
+        val artifact: ModuleComponentArtifactMetadata = getMetaDataArtifactFor(moduleComponentIdentifier)
+        val metadataArtifact = artifactResolver.resolveArtifact(artifact, result)
         if (metadataArtifact != null) {
-            ExternalResourceResolverDescriptorParseContext context = new ExternalResourceResolverDescriptorParseContext(componentResolvers, fileResourceRepository, checksumService);
-            MetaDataParser.ParseResult<S> parseResult = parseMetaDataFromResource(moduleComponentIdentifier, metadataArtifact, artifactResolver, context, repositoryName);
+            val context = ExternalResourceResolverDescriptorParseContext(componentResolvers, fileResourceRepository, checksumService)
+            val parseResult: MetaDataParser.ParseResult<S?> = parseMetaDataFromResource(moduleComponentIdentifier, metadataArtifact, artifactResolver, context, repositoryName)
             if (parseResult != null) {
                 if (parseResult.hasGradleMetadataRedirectionMarker()) {
-                    if (result instanceof BuildableModuleComponentMetaDataResolveResult) {
-                        ((BuildableModuleComponentMetaDataResolveResult<?>) result).redirectToGradleMetadata();
+                    if (result is BuildableModuleComponentMetaDataResolveResult<*>) {
+                        result.redirectToGradleMetadata()
                     } else {
-                        throw new IllegalStateException("Unexpected Gradle metadata redirection answer");
+                        throw IllegalStateException("Unexpected Gradle metadata redirection answer")
                     }
                 }
-                S metadata = parseResult.getResult();
-                File metadataArtifactFile = metadataArtifact.getFile();
-                ExternalResourceMetaData metaData = metadataArtifact.getMetaData();
-                MutableModuleSources sources = metadata.getSources();
-                sources.add(new DefaultMetadataFileSource(artifact.getId(), metadataArtifactFile, findSha1(metaData, metadataArtifactFile)));
-                context.appendSources(sources);
-                return metadata;
+                val metadata = parseResult.result
+                val metadataArtifactFile = metadataArtifact.getFile()
+                val metaData = metadataArtifact.getMetaData()
+                val sources: MutableModuleSources = metadata!!.sources
+                sources.add(DefaultMetadataFileSource(artifact.getId()!!, metadataArtifactFile, findSha1(metaData!!, metadataArtifactFile)))
+                context.appendSources(sources)
+                return metadata
             }
         }
-        return null;
+        return null
     }
 
-    private HashCode findSha1(ExternalResourceMetaData metaData, File artifact) {
-        HashCode sha1 = metaData.getSha1();
+    private fun findSha1(metaData: ExternalResourceMetaData, artifact: File): HashCode {
+        var sha1 = metaData.getSha1()
         if (sha1 == null) {
-            sha1 = checksumService.sha1(artifact);
+            sha1 = checksumService.sha1(artifact)
         }
-        return sha1;
+        return sha1
     }
 
-    private ModuleDescriptorArtifactMetadata getMetaDataArtifactFor(ModuleComponentIdentifier moduleComponentIdentifier) {
-        IvyArtifactName ivyArtifactName = metadataArtifactProvider.getMetaDataArtifactName(moduleComponentIdentifier.getModule());
-        return new DefaultModuleDescriptorArtifactMetadata(moduleComponentIdentifier, ivyArtifactName);
+    private fun getMetaDataArtifactFor(moduleComponentIdentifier: ModuleComponentIdentifier): ModuleDescriptorArtifactMetadata {
+        val ivyArtifactName = metadataArtifactProvider.getMetaDataArtifactName(moduleComponentIdentifier.getModule())
+        return DefaultModuleDescriptorArtifactMetadata(moduleComponentIdentifier, ivyArtifactName)
     }
 
-    void checkMetadataConsistency(ModuleComponentIdentifier expectedId, MutableModuleComponentResolveMetadata metadata) throws MetaDataParseException {
-        checkModuleIdentifier(expectedId, metadata.getModuleVersionId());
+    @Throws(MetaDataParseException::class)
+    fun checkMetadataConsistency(expectedId: ModuleComponentIdentifier, metadata: MutableModuleComponentResolveMetadata) {
+        checkModuleIdentifier(expectedId, metadata.moduleVersionId)
     }
 
-    private void checkModuleIdentifier(ModuleComponentIdentifier expectedId, ModuleVersionIdentifier actualId) {
-        List<String> errors = new ArrayList<>();
-        checkEquals("group", expectedId.getGroup(), actualId.getGroup(), errors);
-        checkEquals("module name", expectedId.getModule(), actualId.getName(), errors);
-        checkEquals("version", expectedId.getVersion(), actualId.getVersion(), errors);
-        if (errors.size() > 0) {
-            throw new MetaDataParseException(
-                    String.format("inconsistent module metadata found. Descriptor: %s Errors: %s", actualId, joinLines(errors)));
-        }
-    }
-
-    private String joinLines(List<String> lines) {
-        return Joiner.on(SystemProperties.getInstance().getLineSeparator()).join(lines);
-    }
-
-    private void checkEquals(String label, String expected, String actual, List<String> errors) {
-        if (!expected.equals(actual)) {
-            errors.add("bad " + label + ": expected='" + expected + "' found='" + actual + "'");
+    private fun checkModuleIdentifier(expectedId: ModuleComponentIdentifier, actualId: ModuleVersionIdentifier) {
+        val errors: MutableList<String> = ArrayList<String>()
+        checkEquals("group", expectedId.getGroup(), actualId.getGroup(), errors)
+        checkEquals("module name", expectedId.getModule(), actualId.getName(), errors)
+        checkEquals("version", expectedId.getVersion(), actualId.getVersion(), errors)
+        if (errors.size > 0) {
+            throw MetaDataParseException(
+                String.format("inconsistent module metadata found. Descriptor: %s Errors: %s", actualId, joinLines(errors))
+            )
         }
     }
 
-    protected abstract MetaDataParser.ParseResult<S> parseMetaDataFromResource(ModuleComponentIdentifier moduleComponentIdentifier, LocallyAvailableExternalResource cachedResource, ExternalResourceArtifactResolver artifactResolver, DescriptorParseContext context, String repoName);
+    private fun joinLines(lines: MutableList<String>): String {
+        return Joiner.on(SystemProperties.getInstance().getLineSeparator()).join(lines)
+    }
 
+    private fun checkEquals(label: String, expected: String, actual: String, errors: MutableList<String>) {
+        if (expected != actual) {
+            errors.add("bad " + label + ": expected='" + expected + "' found='" + actual + "'")
+        }
+    }
+
+    protected abstract fun parseMetaDataFromResource(
+        moduleComponentIdentifier: ModuleComponentIdentifier,
+        cachedResource: LocallyAvailableExternalResource,
+        artifactResolver: ExternalResourceArtifactResolver,
+        context: DescriptorParseContext,
+        repoName: String
+    ): MetaDataParser.ParseResult<S?>
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(ExternalResourceResolver::class.java)
+    }
 }

@@ -13,145 +13,141 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.repositories;
+package org.gradle.api.internal.artifacts.repositories
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
-import org.gradle.api.artifacts.repositories.PasswordCredentials;
-import org.gradle.api.credentials.Credentials;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor;
-import org.gradle.api.internal.provider.MissingValueException;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.Cast;
-import org.gradle.internal.artifacts.repositories.AuthenticationSupportedInternal;
-import org.gradle.internal.authentication.AuthenticationInternal;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.util.internal.CollectionUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.repositories.AuthenticationContainer
+import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.api.credentials.Credentials
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.repositories.descriptor.RepositoryDescriptor
+import org.gradle.api.internal.provider.MissingValueException
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.authentication.Authentication
+import org.gradle.internal.Cast
+import org.gradle.internal.artifacts.repositories.AuthenticationSupportedInternal
+import org.gradle.internal.authentication.AuthenticationInternal
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.util.internal.CollectionUtils.collect
+import java.net.URI
+import java.util.concurrent.Callable
+import java.util.function.Function
 
-import java.net.URI;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+abstract class AbstractAuthenticationSupportedRepository<T : RepositoryDescriptor?> internal constructor(
+    instantiator: Instantiator,
+    authenticationContainer: AuthenticationContainer,
+    objectFactory: ObjectFactory,
+    private val providerFactory: ProviderFactory,
+    versionParser: VersionParser
+) : AbstractResolutionAwareArtifactRepository<T?>(objectFactory, versionParser), AuthenticationSupportedInternal {
+    private val delegate: AuthenticationSupporter
 
-public abstract class AbstractAuthenticationSupportedRepository<T extends RepositoryDescriptor> extends AbstractResolutionAwareArtifactRepository<T> implements AuthenticationSupportedInternal {
-    private final AuthenticationSupporter delegate;
-    private final ProviderFactory providerFactory;
-
-    AbstractAuthenticationSupportedRepository(Instantiator instantiator, AuthenticationContainer authenticationContainer, ObjectFactory objectFactory, ProviderFactory providerFactory, VersionParser versionParser) {
-        super(objectFactory, versionParser);
-        this.delegate = new AuthenticationSupporter(instantiator, objectFactory, authenticationContainer, providerFactory);
-        this.providerFactory = providerFactory;
+    init {
+        this.delegate = AuthenticationSupporter(instantiator, objectFactory, authenticationContainer, providerFactory)
     }
 
-    @Override
-    public PasswordCredentials getCredentials() {
-        invalidateDescriptor();
-        return delegate.getCredentials();
+    override fun getCredentials(): PasswordCredentials {
+        invalidateDescriptor()
+        return delegate.getCredentials()
     }
 
-    @Override
-    public <C extends Credentials> C getCredentials(Class<C> credentialsType) {
-        invalidateDescriptor();
-        return delegate.getCredentials(credentialsType);
+    override fun <C : Credentials?> getCredentials(credentialsType: Class<C?>): C? {
+        invalidateDescriptor()
+        return delegate.getCredentials<C?>(credentialsType)
     }
 
-    @Override
-    public Property<Credentials> getConfiguredCredentials() {
-        return delegate.getConfiguredCredentials();
+    override fun getConfiguredCredentials(): Property<Credentials> {
+        return delegate.getConfiguredCredentials()
     }
 
-    @Override
-    public void setConfiguredCredentials(Credentials credentials) {
-        invalidateDescriptor();
-        delegate.setConfiguredCredentials(credentials);
+    override fun setConfiguredCredentials(credentials: Credentials) {
+        invalidateDescriptor()
+        delegate.setConfiguredCredentials(credentials)
     }
 
-    @Override
-    public void credentials(Action<? super PasswordCredentials> action) {
-        invalidateDescriptor();
-        delegate.credentials(action);
+    override fun credentials(action: Action<in PasswordCredentials>) {
+        invalidateDescriptor()
+        delegate.credentials(action)
     }
 
-    @Override
-    public <C extends Credentials> void credentials(Class<C> credentialsType, Action<? super C> action) throws IllegalStateException {
-        invalidateDescriptor();
-        delegate.credentials(credentialsType, action);
+    @Throws(IllegalStateException::class)
+    override fun <C : Credentials?> credentials(credentialsType: Class<C?>, action: Action<in C?>) {
+        invalidateDescriptor()
+        delegate.credentials<C?>(credentialsType, action)
     }
 
-    @Override
-    public void credentials(Class<? extends Credentials> credentialsType) {
-        invalidateDescriptor();
-        delegate.credentials(credentialsType, providerFactory.provider(this::getName));
+    override fun credentials(credentialsType: Class<out Credentials>) {
+        invalidateDescriptor()
+        delegate.credentials(credentialsType, providerFactory.provider<String>(Callable { this.getName() }))
     }
 
-    @Override
-    public void authentication(Action<? super AuthenticationContainer> action) {
-        invalidateDescriptor();
-        delegate.authentication(action);
+    override fun authentication(action: Action<in AuthenticationContainer>) {
+        invalidateDescriptor()
+        delegate.authentication(action)
     }
 
-    @Override
-    public AuthenticationContainer getAuthentication() {
-        invalidateDescriptor();
-        return delegate.getAuthentication();
+    override fun getAuthentication(): AuthenticationContainer {
+        invalidateDescriptor()
+        return delegate.getAuthentication()
     }
 
-    @Override
-    public Collection<Authentication> getConfiguredAuthentication() {
-        Collection<Authentication> configuredAuthentication = delegate.getConfiguredAuthentication();
+    override fun getConfiguredAuthentication(): MutableCollection<Authentication> {
+        val configuredAuthentication = delegate.getConfiguredAuthentication()
 
-        for (Authentication authentication : configuredAuthentication) {
-            AuthenticationInternal authenticationInternal = (AuthenticationInternal) authentication;
-            for (URI repositoryUrl : getRepositoryUrls()) {
+        for (authentication in configuredAuthentication) {
+            val authenticationInternal = authentication as AuthenticationInternal
+            for (repositoryUrl in this.repositoryUrls) {
                 // only care about HTTP hosts right now
                 if (repositoryUrl.getScheme().startsWith("http")) {
-                    authenticationInternal.addHost(repositoryUrl.getHost(), repositoryUrl.getPort());
+                    authenticationInternal.addHost(repositoryUrl.getHost(), repositoryUrl.getPort())
                 }
             }
         }
-        return configuredAuthentication;
+        return configuredAuthentication
     }
 
-    protected Collection<URI> getRepositoryUrls() {
-        return Collections.emptyList();
+    protected open val repositoryUrls: MutableCollection<URI>
+        get() = mutableListOf<URI>()
+
+    val authenticationSchemes: MutableList<String>
+        get() = collect<String?, Authentication?>(
+            getConfiguredAuthentication(),
+            Function { authentication: Authentication? ->
+                Cast.cast<AuthenticationInternal?, Authentication?>(
+                    org.gradle.internal.authentication.AuthenticationInternal::class.java,
+                    authentication
+                )!!.type!!.getSimpleName()
+            })
+
+    fun usesCredentials(): Boolean {
+        return delegate.usesCredentials()
     }
 
-    List<String> getAuthenticationSchemes() {
-        return CollectionUtils.collect(getConfiguredAuthentication(), authentication -> Cast.cast(AuthenticationInternal.class, authentication).type.getSimpleName());
+    override fun isUsingCredentialsProvider(): Provider<Boolean> {
+        return getConfiguredCredentials().map<Boolean>(Transformer { configured: Credentials? -> isUsingCredentialsProvider(getName(), configured!!) }
+        )
     }
 
-    boolean usesCredentials() {
-        return delegate.usesCredentials();
-    }
-
-    @Override
-    public Provider<Boolean> isUsingCredentialsProvider() {
-        return getConfiguredCredentials().map(configured ->
-            isUsingCredentialsProvider(getName(), configured)
-        );
-    }
-
-    private boolean isUsingCredentialsProvider(String identity, Credentials toCheck) {
-        Credentials referenceCredentials;
+    private fun isUsingCredentialsProvider(identity: String, toCheck: Credentials): Boolean {
+        val referenceCredentials: Credentials?
         try {
-            Provider<? extends Credentials> credentialsProvider;
+            val credentialsProvider: Provider<out Credentials>?
             try {
-                credentialsProvider = providerFactory.credentials(toCheck.getClass(), identity);
-            } catch (IllegalArgumentException e) {
+                credentialsProvider = providerFactory.credentials(toCheck.javaClass, identity)
+            } catch (e: IllegalArgumentException) {
                 // some possibilities are invalid repository names and invalid credential types
                 // either way, this is not the place to validate that
-                return false;
+                return false
             }
-            referenceCredentials = credentialsProvider.get();
-        } catch (MissingValueException e) {
-            return false;
+            referenceCredentials = credentialsProvider.get()
+        } catch (e: MissingValueException) {
+            return false
         }
-        return EqualsBuilder.reflectionEquals(toCheck, referenceCredentials);
+        return EqualsBuilder.reflectionEquals(toCheck, referenceCredentials)
     }
 }

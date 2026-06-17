@@ -13,79 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.modulecache;
+package org.gradle.api.internal.artifacts.ivyservice.modulecache
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Interner;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.resource.local.LocallyAvailableResource;
-import org.gradle.internal.resource.local.PathKeyFileStore;
-import org.gradle.internal.serialize.kryo.KryoBackedDecoder;
-import org.gradle.internal.serialize.kryo.KryoBackedEncoder;
+import com.google.common.base.Joiner
+import com.google.common.collect.Interner
+import org.gradle.api.Action
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.component.external.model.ExternalDependencyDescriptor
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.maven.MavenDependencyDescriptor
+import org.gradle.internal.resource.local.LocallyAvailableResource
+import org.gradle.internal.resource.local.PathKeyFileStore
+import org.gradle.internal.serialize.kryo.KryoBackedDecoder
+import org.gradle.internal.serialize.kryo.KryoBackedEncoder
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.util.HashMap;
-
-public class ModuleMetadataStore {
-
-    private static final Joiner PATH_JOINER = Joiner.on("/");
-    private final PathKeyFileStore metaDataStore;
-    private final ModuleMetadataSerializer moduleMetadataSerializer;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final Interner<String> stringInterner;
-
-    public ModuleMetadataStore(PathKeyFileStore metaDataStore,
-                               ModuleMetadataSerializer moduleMetadataSerializer,
-                               ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-                               Interner<String> stringInterner) {
-        this.metaDataStore = metaDataStore;
-        this.moduleMetadataSerializer = moduleMetadataSerializer;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.stringInterner = stringInterner;
-    }
-
-    public MutableModuleComponentResolveMetadata getModuleDescriptor(ModuleComponentAtRepositoryKey component) {
-        String[] filePath = getFilePath(component);
-        LocallyAvailableResource resource = metaDataStore.get(filePath);
+class ModuleMetadataStore(
+    private val metaDataStore: PathKeyFileStore,
+    private val moduleMetadataSerializer: ModuleMetadataSerializer,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory?,
+    private val stringInterner: Interner<String?>?
+) {
+    fun getModuleDescriptor(component: ModuleComponentAtRepositoryKey): MutableModuleComponentResolveMetadata? {
+        val filePath = getFilePath(component)
+        val resource = metaDataStore.get(*filePath)
         if (resource != null) {
             try {
-                try (StringDeduplicatingDecoder decoder = new StringDeduplicatingDecoder(new KryoBackedDecoder(new FileInputStream(resource.getFile())), stringInterner)) {
-                    return moduleMetadataSerializer.read(decoder, moduleIdentifierFactory, new HashMap<>());
+                StringDeduplicatingDecoder(KryoBackedDecoder(FileInputStream(resource.getFile())), stringInterner).use { decoder ->
+                    return moduleMetadataSerializer.read(decoder, moduleIdentifierFactory, HashMap<Int?, MavenDependencyDescriptor?>())
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Could not load module metadata from " + resource.getDisplayName(), e);
+            } catch (e: Exception) {
+                throw RuntimeException("Could not load module metadata from " + resource.getDisplayName(), e)
             }
         }
-        return null;
+        return null
     }
 
-    public LocallyAvailableResource putModuleDescriptor(ModuleComponentAtRepositoryKey component, final ModuleComponentResolveMetadata metadata) {
-        String[] filePath = getFilePath(component);
-        return metaDataStore.add(PATH_JOINER.join(filePath), moduleDescriptorFile -> {
+    fun putModuleDescriptor(component: ModuleComponentAtRepositoryKey, metadata: ModuleComponentResolveMetadata?): LocallyAvailableResource? {
+        val filePath = getFilePath(component)
+        return metaDataStore.add(PATH_JOINER.join(filePath), Action { moduleDescriptorFile: File? ->
             try {
-                try (KryoBackedEncoder encoder = new KryoBackedEncoder(new FileOutputStream(moduleDescriptorFile))) {
-                    moduleMetadataSerializer.write(encoder, metadata, new HashMap<>());
+                KryoBackedEncoder(FileOutputStream(moduleDescriptorFile)).use { encoder ->
+                    moduleMetadataSerializer.write(encoder, metadata, HashMap<ExternalDependencyDescriptor?, Int?>())
                 }
-            } catch (Exception e) {
-                throw UncheckedException.throwAsUncheckedException(e);
+            } catch (e: Exception) {
+                throw throwAsUncheckedException(e)
             }
-        });
+        })
     }
 
-    private String[] getFilePath(ModuleComponentAtRepositoryKey componentId) {
-        ModuleComponentIdentifier moduleComponentIdentifier = componentId.getComponentId();
-        return new String[] {
+    private fun getFilePath(componentId: ModuleComponentAtRepositoryKey): Array<String?> {
+        val moduleComponentIdentifier = componentId.getComponentId()
+        return arrayOf<String?>(
             moduleComponentIdentifier.getGroup(),
             moduleComponentIdentifier.getModule(),
             moduleComponentIdentifier.getVersion(),
             componentId.getRepositoryId(),
             "descriptor.bin"
-        };
+        )
     }
 
+    companion object {
+        private val PATH_JOINER = Joiner.on("/")
+    }
 }

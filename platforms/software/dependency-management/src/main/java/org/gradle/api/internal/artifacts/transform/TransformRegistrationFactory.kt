@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.internal.artifacts.TransformRegistration
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.api.artifacts.transform.TransformParameters;
-import org.gradle.api.internal.artifacts.TransformRegistration;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-@ServiceScope(Scope.Project.class)
-public interface TransformRegistrationFactory {
-    TransformRegistration create(ImmutableAttributes from, ImmutableAttributes to, Class<? extends TransformAction<?>> implementation, TransformParameters parameterObject);
+@ServiceScope(Scope.Project::class)
+interface TransformRegistrationFactory {
+    fun create(from: ImmutableAttributes, to: ImmutableAttributes, implementation: Class<out TransformAction<*>>, parameterObject: TransformParameters): TransformRegistration?
 }

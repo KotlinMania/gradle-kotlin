@@ -13,48 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.dsl
 
-package org.gradle.api.internal.artifacts.dsl;
+import org.gradle.api.artifacts.ivy.IvyModuleDescriptor
+import org.gradle.api.artifacts.maven.PomModuleDescriptor
+import org.gradle.api.internal.artifacts.DefaultPomModuleDescriptor
+import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata
 
-import org.gradle.api.artifacts.ivy.IvyModuleDescriptor;
-import org.gradle.api.artifacts.maven.PomModuleDescriptor;
-import org.gradle.api.internal.artifacts.DefaultPomModuleDescriptor;
-import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyModuleDescriptor;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata;
-
-class MetadataDescriptorFactory {
-
-    private final ModuleComponentResolveMetadata metadata;
-
-    public MetadataDescriptorFactory(ModuleComponentResolveMetadata metadata) {
-        this.metadata = metadata;
-    }
-
-    public <T> T createDescriptor(Class<T> descriptorClass) {
+internal class MetadataDescriptorFactory(private val metadata: ModuleComponentResolveMetadata) {
+    fun <T> createDescriptor(descriptorClass: Class<T?>): T? {
         if (isIvyMetadata(descriptorClass, metadata)) {
-            IvyModuleResolveMetadata ivyMetadata = (IvyModuleResolveMetadata) metadata;
-            IvyModuleDescriptor descriptor = new DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status);
-            return descriptorClass.cast(descriptor);
+            val ivyMetadata = metadata as IvyModuleResolveMetadata
+            val descriptor: IvyModuleDescriptor = DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status!!)
+            return descriptorClass.cast(descriptor)
         } else if (isPomMetadata(descriptorClass, metadata)) {
-            MavenModuleResolveMetadata mavenMetadata = (MavenModuleResolveMetadata) metadata;
-            PomModuleDescriptor descriptor = new DefaultPomModuleDescriptor(mavenMetadata);
-            return descriptorClass.cast(descriptor);
+            val mavenMetadata = metadata as MavenModuleResolveMetadata
+            val descriptor: PomModuleDescriptor = DefaultPomModuleDescriptor(mavenMetadata)
+            return descriptorClass.cast(descriptor)
         }
-        return null;
+        return null
     }
 
-    public static boolean isMatchingMetadata(Class<?> descriptor, ModuleComponentResolveMetadata metadata) {
-        return isPomMetadata(descriptor, metadata) || isIvyMetadata(descriptor, metadata);
-    }
+    companion object {
+        fun isMatchingMetadata(descriptor: Class<*>, metadata: ModuleComponentResolveMetadata): Boolean {
+            return isPomMetadata(descriptor, metadata) || isIvyMetadata(descriptor, metadata)
+        }
 
-    private static boolean isIvyMetadata(Class<?> descriptor, ModuleComponentResolveMetadata metadata) {
-        return IvyModuleDescriptor.class.isAssignableFrom(descriptor) && metadata instanceof IvyModuleResolveMetadata;
-    }
+        private fun isIvyMetadata(descriptor: Class<*>, metadata: ModuleComponentResolveMetadata): Boolean {
+            return IvyModuleDescriptor::class.java.isAssignableFrom(descriptor) && metadata is IvyModuleResolveMetadata
+        }
 
-    private static boolean isPomMetadata(Class<?> descriptor, ModuleComponentResolveMetadata metadata) {
-        return PomModuleDescriptor.class.isAssignableFrom(descriptor) && metadata instanceof MavenModuleResolveMetadata;
+        private fun isPomMetadata(descriptor: Class<*>, metadata: ModuleComponentResolveMetadata): Boolean {
+            return PomModuleDescriptor::class.java.isAssignableFrom(descriptor) && metadata is MavenModuleResolveMetadata
+        }
     }
-
 }

@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.configurations
 
-package org.gradle.api.internal.artifacts.configurations;
-
-import org.gradle.api.DomainObjectCollection;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.provider.Provider;
-
-import java.util.function.Function;
+import org.gradle.api.DomainObjectCollection
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.provider.Provider
+import java.util.function.Function
 
 /**
  * Represents a parent configuration that is extended from, which may be either a realized configuration or a provider for a configuration.
  */
-public interface ExtendedConfiguration {
+interface ExtendedConfiguration {
     /**
      * Returns the underlying configuration. Calling this method may realize the configuration if it is not already realized.
      */
-    Configuration get();
+    fun get(): Configuration?
 
     /**
      * Maps this extended configuration to a provider of a domain object collection.  Calling this method should not
@@ -37,14 +35,14 @@ public interface ExtendedConfiguration {
      *
      * @param configurationToCollection Function that maps the configuration to a domain object collection
      * @param <T>                       The type of objects in the domain object collection
-     * @return A provider of the domain object collection specific by {@code configurationToCollection}
-     */
-    <T> Provider<DomainObjectCollection<? extends T>> mapToCollection(Function<Configuration, DomainObjectCollection<T>> configurationToCollection);
+     * @return A provider of the domain object collection specific by `configurationToCollection`
+    </T> */
+    fun <T> mapToCollection(configurationToCollection: Function<Configuration, DomainObjectCollection<T?>>): Provider<DomainObjectCollection<out T>>?
 
     /**
-     * Visitor interface for visiting extended configurations (see {@link ExtendedConfigurations#visitConfigurations(Visitor)}).
+     * Visitor interface for visiting extended configurations (see [ExtendedConfigurations.visitConfigurations]).
      */
     interface Visitor {
-        void visit(ExtendedConfiguration configuration);
+        fun visit(configuration: ExtendedConfiguration)
     }
 }

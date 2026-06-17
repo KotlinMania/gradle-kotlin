@@ -13,38 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.resolve.ArtifactResolveException;
-import org.gradle.internal.resolve.resolver.ArtifactResolver;
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.resolve.ArtifactResolveException
+import org.gradle.internal.resolve.resolver.ArtifactResolver
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
 
-public class ErrorHandlingArtifactResolver implements ArtifactResolver {
-    private final ArtifactResolver resolver;
-
-    public ErrorHandlingArtifactResolver(ArtifactResolver resolver) {
-        this.resolver = resolver;
-    }
-
-    @Override
-    public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
+class ErrorHandlingArtifactResolver(private val resolver: ArtifactResolver) : ArtifactResolver {
+    override fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult) {
         try {
-            resolver.resolveArtifactsWithType(component, artifactType, result);
-        } catch (Exception t) {
-            result.failed(new ArtifactResolveException(component.getId(), t));
+            resolver.resolveArtifactsWithType(component, artifactType, result)
+        } catch (t: Exception) {
+            result.failed(ArtifactResolveException(component.getId()!!, t))
         }
     }
 
-    @Override
-    public void resolveArtifact(ComponentArtifactResolveMetadata component, ComponentArtifactMetadata artifact, BuildableArtifactResolveResult result) {
+    override fun resolveArtifact(component: ComponentArtifactResolveMetadata, artifact: ComponentArtifactMetadata, result: BuildableArtifactResolveResult) {
         try {
-            resolver.resolveArtifact(component, artifact, result);
-        } catch (Exception t) {
-            result.failed(new ArtifactResolveException(artifact.getId(), t));
+            resolver.resolveArtifact(component, artifact, result)
+        } catch (t: Exception) {
+            result.failed(ArtifactResolveException(artifact.getId()!!, t))
         }
     }
 }

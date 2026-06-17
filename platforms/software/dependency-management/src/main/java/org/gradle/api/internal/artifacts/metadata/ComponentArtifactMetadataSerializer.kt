@@ -13,53 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.metadata;
+package org.gradle.api.internal.artifacts.metadata
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
+import com.google.common.base.Objects
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentIdentifierSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
 
-public class ComponentArtifactMetadataSerializer extends AbstractSerializer<ComponentArtifactMetadata> {
-    private final ComponentIdentifierSerializer componentIdentifierSerializer = new ComponentIdentifierSerializer();
+class ComponentArtifactMetadataSerializer : AbstractSerializer<ComponentArtifactMetadata?>() {
+    private val componentIdentifierSerializer = ComponentIdentifierSerializer()
 
-    @Override
-    public void write(Encoder encoder, ComponentArtifactMetadata value) throws Exception {
-        if (value instanceof ModuleComponentArtifactMetadata) {
-            ModuleComponentArtifactMetadata moduleComponentArtifactMetadata = (ModuleComponentArtifactMetadata) value;
-            componentIdentifierSerializer.write(encoder, moduleComponentArtifactMetadata.getComponentId());
-            IvyArtifactNameSerializer.INSTANCE.write(encoder,  moduleComponentArtifactMetadata.getName());
+    @Throws(Exception::class)
+    override fun write(encoder: Encoder, value: ComponentArtifactMetadata) {
+        if (value is ModuleComponentArtifactMetadata) {
+            val moduleComponentArtifactMetadata = value
+            componentIdentifierSerializer.write(encoder, moduleComponentArtifactMetadata.getComponentId())
+            IvyArtifactNameSerializer.INSTANCE.write(encoder, moduleComponentArtifactMetadata.getName())
         } else {
-            throw new IllegalArgumentException("Unknown artifact metadata type.");
+            throw IllegalArgumentException("Unknown artifact metadata type.")
         }
     }
 
-    @Override
-    public ComponentArtifactMetadata read(Decoder decoder) throws Exception {
-        ModuleComponentIdentifier componentIdentifier = (ModuleComponentIdentifier) componentIdentifierSerializer.read(decoder);
-        IvyArtifactName name = IvyArtifactNameSerializer.INSTANCE.read(decoder);
-        return new DefaultModuleComponentArtifactMetadata(componentIdentifier, name);
+    @Throws(Exception::class)
+    override fun read(decoder: Decoder): ComponentArtifactMetadata {
+        val componentIdentifier = componentIdentifierSerializer.read(decoder) as ModuleComponentIdentifier
+        val name = IvyArtifactNameSerializer.INSTANCE.read(decoder)
+        return DefaultModuleComponentArtifactMetadata(componentIdentifier, name)
     }
 
-    @Override
-    public boolean equals(Object obj) {
+    public override fun equals(obj: Any): Boolean {
         if (!super.equals(obj)) {
-            return false;
+            return false
         }
 
-        ComponentArtifactMetadataSerializer rhs = (ComponentArtifactMetadataSerializer) obj;
-        return Objects.equal(componentIdentifierSerializer, rhs.componentIdentifierSerializer);
+        val rhs = obj as ComponentArtifactMetadataSerializer
+        return Objects.equal(componentIdentifierSerializer, rhs.componentIdentifierSerializer)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(super.hashCode(), componentIdentifierSerializer);
+    public override fun hashCode(): Int {
+        return Objects.hashCode(super.hashCode(), componentIdentifierSerializer)
     }
 }

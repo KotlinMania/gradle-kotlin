@@ -61,7 +61,7 @@ public class MavenRemotePublisher extends AbstractMavenPublisher {
         String protocol = repositoryUrl.getScheme().toLowerCase(Locale.ROOT);
         DefaultMavenArtifactRepository realRepository = (DefaultMavenArtifactRepository) artifactRepository;
         RepositoryTransport transport = realRepository.getTransport(protocol);
-        ExternalResourceRepository repository = transport.getRepository();
+        ExternalResourceRepository repository = transport.repository;
 
         publish(publication, repository, repositoryUrl, false);
     }

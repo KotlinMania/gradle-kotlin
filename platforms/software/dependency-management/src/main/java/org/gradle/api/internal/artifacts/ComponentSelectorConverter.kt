@@ -13,29 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Resolves the module coordinates of the given component selector.
- * <p>
+ *
+ *
  * This service should be generally avoided. We should not assume all components are module components.
  */
-@ServiceScope(Scope.Project.class)
-public interface ComponentSelectorConverter {
-
+@ServiceScope(Scope.Project::class)
+interface ComponentSelectorConverter {
     /**
      * Resolves the given component selector and returns the module coordinates of the selected component.
-     * <p>
-     * Returns instantly for {@link org.gradle.api.artifacts.component.ModuleComponentSelector}s.
-     * Resolves the target project for {@link org.gradle.api.artifacts.component.ProjectComponentSelector}s.
+     *
+     *
+     * Returns instantly for [org.gradle.api.artifacts.component.ModuleComponentSelector]s.
+     * Resolves the target project for [org.gradle.api.artifacts.component.ProjectComponentSelector]s.
      *
      * @throws IllegalArgumentException if an unknown selector type is provided.
      */
-    ModuleVersionIdentifier getModuleVersionId(ComponentSelector selector);
-
+    fun getModuleVersionId(selector: ComponentSelector?): ModuleVersionIdentifier?
 }

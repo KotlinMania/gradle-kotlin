@@ -13,296 +13,290 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Queues;
-import com.google.common.collect.Sets;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.artifacts.verification.DependencyVerificationMode;
-import org.gradle.api.component.Artifact;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.DependencyVerifyingModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report.DependencyVerificationReportWriter;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report.VerificationReport;
-import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException;
-import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlReader;
-import org.gradle.api.internal.artifacts.verification.signatures.BuildTreeDefinedKeys;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService;
-import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationServiceFactory;
-import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier;
-import org.gradle.api.internal.properties.GradleProperties;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.Factory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.concurrent.Stoppable;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.logging.ConsoleRenderer;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.resource.local.FileResourceListener;
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.LinkedHashMultimap
+import com.google.common.collect.Multimap
+import com.google.common.collect.Queues
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.artifacts.verification.DependencyVerificationMode
+import org.gradle.api.component.Artifact
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.DependencyVerifyingModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleComponentRepository
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report.DependencyVerificationReportWriter
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.verification.report.VerificationReport
+import org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException
+import org.gradle.api.internal.artifacts.verification.serializer.DependencyVerificationsXmlReader.readFromXml
+import org.gradle.api.internal.artifacts.verification.signatures.BuildTreeDefinedKeys
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationService
+import org.gradle.api.internal.artifacts.verification.signatures.SignatureVerificationServiceFactory
+import org.gradle.api.internal.artifacts.verification.verifier.DependencyVerifier
+import org.gradle.api.internal.artifacts.verification.verifier.VerificationFailure
+import org.gradle.api.internal.properties.GradleProperties
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.Factory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.concurrent.Stoppable
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.logging.ConsoleRenderer
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.resource.local.FileResourceListener
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.net.URI
+import java.util.Deque
+import java.util.Map
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.Function
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.net.URI;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-public class ChecksumAndSignatureVerificationOverride implements DependencyVerificationOverride, ArtifactVerificationOperation, Stoppable {
-    private final static Logger LOGGER = Logging.getLogger(ChecksumAndSignatureVerificationOverride.class);
-
-    private final DependencyVerifier verifier;
-    private final BuildOperationExecutor buildOperationExecutor;
-    private final ChecksumService checksumService;
-    private final SignatureVerificationService signatureVerificationService;
-    private final DependencyVerificationMode verificationMode;
-    private final FileResourceListener fileResourceListener;
-    private final Set<VerificationQuery> verificationQueries = Sets.newConcurrentHashSet();
-    private final Deque<VerificationEvent> verificationEvents = Queues.newArrayDeque();
-    private final AtomicBoolean closed = new AtomicBoolean();
-    private final DependencyVerificationReportWriter reportWriter;
+class ChecksumAndSignatureVerificationOverride(
+    private val buildOperationExecutor: BuildOperationExecutor,
+    gradleUserHome: File,
+    verificationsFile: File,
+    private val checksumService: ChecksumService,
+    signatureVerificationServiceFactory: SignatureVerificationServiceFactory,
+    private val verificationMode: DependencyVerificationMode,
+    documentationRegistry: DocumentationRegistry,
+    reportsDirectory: File,
+    gradlePropertiesFactory: Factory<GradleProperties?>,
+    private val fileResourceListener: FileResourceListener
+) : DependencyVerificationOverride, ArtifactVerificationOperation, Stoppable {
+    private val verifier: DependencyVerifier
+    private val signatureVerificationService: SignatureVerificationService
+    private val verificationQueries: MutableSet<VerificationQuery> = Sets.newConcurrentHashSet<VerificationQuery>()
+    private val verificationEvents: Deque<VerificationEvent> = Queues.newArrayDeque<VerificationEvent>()
+    private val closed = AtomicBoolean()
+    private val reportWriter: DependencyVerificationReportWriter
 
     // Must hold lock on `failuresLock` to access `failures` or `hasFatalFailure`
-    private final Object failuresLock = new Object();
-    private final Multimap<ModuleComponentArtifactIdentifier, RepositoryAwareVerificationFailure> failures = LinkedHashMultimap.create();
-    private boolean hasFatalFailure = false;
+    private val failuresLock = Any()
+    private val failures: Multimap<ModuleComponentArtifactIdentifier, RepositoryAwareVerificationFailure> =
+        LinkedHashMultimap.create<ModuleComponentArtifactIdentifier, RepositoryAwareVerificationFailure>()
+    private var hasFatalFailure = false
 
-    public ChecksumAndSignatureVerificationOverride(
-        BuildOperationExecutor buildOperationExecutor,
-        File gradleUserHome,
-        File verificationsFile,
-        ChecksumService checksumService,
-        SignatureVerificationServiceFactory signatureVerificationServiceFactory,
-        DependencyVerificationMode verificationMode,
-        DocumentationRegistry documentationRegistry,
-        File reportsDirectory,
-        Factory<GradleProperties> gradlePropertiesFactory,
-        FileResourceListener fileResourceListener
-    ) {
-        this.buildOperationExecutor = buildOperationExecutor;
-        this.checksumService = checksumService;
-        this.verificationMode = verificationMode;
-        this.fileResourceListener = fileResourceListener;
+    init {
         try {
-            this.verifier = DependencyVerificationsXmlReader.readFromXml(
-                new FileInputStream(observed(verificationsFile))
-            );
-            this.reportWriter = new DependencyVerificationReportWriter(gradleUserHome.toPath(), documentationRegistry, verificationsFile, verifier.getSuggestedWriteFlags(), reportsDirectory, gradlePropertiesFactory, verifier.getConfiguration().isUseKeyServers());
-        } catch (FileNotFoundException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        } catch (DependencyVerificationException e) {
-            throw new DependencyVerificationException("Unable to read dependency verification metadata from " + verificationsFile, e.getCause());
+            this.verifier = readFromXml(
+                FileInputStream(observed(verificationsFile))
+            )
+            this.reportWriter = DependencyVerificationReportWriter(
+                gradleUserHome.toPath(),
+                documentationRegistry,
+                verificationsFile,
+                verifier.suggestedWriteFlags,
+                reportsDirectory,
+                gradlePropertiesFactory,
+                verifier.configuration.isUseKeyServers
+            )
+        } catch (e: FileNotFoundException) {
+            throw throwAsUncheckedException(e)
+        } catch (e: DependencyVerificationException) {
+            throw DependencyVerificationException("Unable to read dependency verification metadata from " + verificationsFile, e.cause)
         }
-        BuildTreeDefinedKeys localKeyring = new BuildTreeDefinedKeys(verificationsFile.getParentFile(), verifier.getConfiguration().getKeyringFormat());
-        this.signatureVerificationService = signatureVerificationServiceFactory.create(localKeyring, keyServers(), verifier.getConfiguration().isUseKeyServers());
+        val localKeyring = BuildTreeDefinedKeys(verificationsFile.getParentFile(), verifier.configuration.keyringFormat)
+        this.signatureVerificationService = signatureVerificationServiceFactory.create(localKeyring, keyServers(), verifier.configuration.isUseKeyServers)!!
     }
 
-    private List<URI> keyServers() {
-        return DefaultKeyServers.getOrDefaults(verifier.getConfiguration().getKeyServers());
+    private fun keyServers(): MutableList<URI> {
+        return DefaultKeyServers.getOrDefaults(verifier.configuration.keyServers)
     }
 
-    @Override
-    public void onArtifact(ArtifactKind kind, ModuleComponentArtifactIdentifier artifact, File mainFile, Factory<File> signatureFile, String repositoryName, String repositoryId) {
-        if (verificationQueries.add(new VerificationQuery(artifact, repositoryId))) {
-            VerificationEvent event = new VerificationEvent(kind, artifact, mainFile, signatureFile, repositoryName);
-            synchronized (verificationEvents) {
-                verificationEvents.add(event);
+    override fun onArtifact(
+        kind: ArtifactVerificationOperation.ArtifactKind,
+        artifact: ModuleComponentArtifactIdentifier,
+        mainFile: File,
+        signatureFile: Factory<File?>,
+        repositoryName: String,
+        repositoryId: String
+    ) {
+        if (verificationQueries.add(VerificationQuery(artifact, repositoryId))) {
+            val event = VerificationEvent(kind, artifact, mainFile, signatureFile, repositoryName)
+            synchronized(verificationEvents) {
+                verificationEvents.add(event)
             }
         }
     }
 
-    private void verifyConcurrently() {
-        synchronized (verificationEvents) {
+    private fun verifyConcurrently() {
+        synchronized(verificationEvents) {
             if (verificationEvents.isEmpty()) {
-                return;
+                return
             }
         }
         if (closed.get()) {
-            LOGGER.debug("Cannot perform verification of all dependencies because the verification service has been shutdown. Under normal circumstances this shouldn't happen unless a user buildFinished was added in an unexpected way.");
-            return;
+            LOGGER.debug("Cannot perform verification of all dependencies because the verification service has been shutdown. Under normal circumstances this shouldn't happen unless a user buildFinished was added in an unexpected way.")
+            return
         }
-        buildOperationExecutor.runAll(queue -> {
-            VerificationEvent event;
-            synchronized (verificationEvents) {
-                while ((event = verificationEvents.poll()) != null) {
-                    VerificationEvent ve = event;
-                    queue.add(new RunnableBuildOperation() {
-                        @Override
-                        public void run(BuildOperationContext context) {
-                            verifier.verify(checksumService, signatureVerificationService, ve.kind, ve.artifact, observed(ve.mainFile), observed(ve.signatureFile.create()), f -> {
-                                synchronized (failuresLock) {
-                                    failures.put(ve.artifact, new RepositoryAwareVerificationFailure(f, ve.repositoryName));
-                                    if (f.isFatal()) {
-                                        hasFatalFailure = true;
+        buildOperationExecutor.runAll<RunnableBuildOperation>(Action { queue: BuildOperationQueue<RunnableBuildOperation>? ->
+            var event: VerificationEvent?
+            synchronized(verificationEvents) {
+                while ((verificationEvents.poll().also { event = it }) != null) {
+                    val ve = event
+                    queue!!.add(object : RunnableBuildOperation {
+                        override fun run(context: BuildOperationContext) {
+                            verifier.verify(
+                                checksumService,
+                                signatureVerificationService,
+                                ve.kind,
+                                ve.artifact,
+                                observed(ve.mainFile),
+                                observed(ve.signatureFile.create()!!),
+                                org.gradle.api.internal.artifacts.verification.verifier.ArtifactVerificationResultBuilder { f: VerificationFailure? ->
+                                    synchronized(failuresLock) {
+                                        failures.put(ve.artifact, RepositoryAwareVerificationFailure(f!!, ve.repositoryName))
+                                        if (f.isFatal) {
+                                            hasFatalFailure = true
+                                        }
                                     }
-                                }
-                            });
+                                })
                         }
 
-                        @Override
-                        public BuildOperationDescriptor.Builder description() {
-                            return BuildOperationDescriptor.displayName("Dependency verification")
-                                .progressDisplayName("Verifying " + ve.artifact);
+                        override fun description(): BuildOperationDescriptor.Builder {
+                            return@runAll BuildOperationDescriptor.displayName("Dependency verification")
+                                .progressDisplayName("Verifying " + ve.artifact)
                         }
-                    });
+                    })
                 }
             }
-        });
-
+        })
     }
 
-    @Override
-    public ModuleComponentRepository<ExternalModuleComponentGraphResolveState> overrideDependencyVerification(ModuleComponentRepository<ExternalModuleComponentGraphResolveState> original) {
-        return new DependencyVerifyingModuleComponentRepository(original, this, verifier.getConfiguration().isVerifySignatures());
+    override fun overrideDependencyVerification(original: ModuleComponentRepository<ExternalModuleComponentGraphResolveState?>): ModuleComponentRepository<ExternalModuleComponentGraphResolveState?> {
+        return DependencyVerifyingModuleComponentRepository(original, this, verifier.configuration.isVerifySignatures)
     }
 
-    @Override
-    public void artifactsAccessed(String displayName) {
-        verifyConcurrently();
-        synchronized (failuresLock) {
+    override fun artifactsAccessed(displayName: String) {
+        verifyConcurrently()
+        synchronized(failuresLock) {
             if (hasFatalFailure) {
                 // There are fatal failures, but not necessarily on all artifacts so we first filter out
                 // the artifacts which only have not fatal errors
-                Map<ModuleComponentArtifactIdentifier, Collection<RepositoryAwareVerificationFailure>> filtered =
-                    failures.asMap().entrySet().stream().filter(entry -> {
-                        Collection<RepositoryAwareVerificationFailure> value = entry.getValue();
-                        return value.stream().anyMatch(wrapper -> wrapper.getFailure().isFatal());
-                    }).collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-                VerificationReport report = reportWriter.generateReport(displayName, filtered, verifier.getConfiguration().isUseKeyServers());
-                String errorMessage = buildConsoleErrorMessage(report);
+                val filtered: MutableMap<ModuleComponentArtifactIdentifier, MutableCollection<RepositoryAwareVerificationFailure>> =
+                    failures.asMap().entries.stream().filter { entry: MutableMap.MutableEntry<ModuleComponentArtifactIdentifier?, MutableCollection<RepositoryAwareVerificationFailure>>? ->
+                        val value = entry!!.value
+                        value.stream().anyMatch { wrapper: RepositoryAwareVerificationFailure? -> wrapper!!.getFailure().isFatal }
+                    }.collect(
+                        ImmutableMap.toImmutableMap<MutableMap.MutableEntry<ModuleComponentArtifactIdentifier, MutableCollection<RepositoryAwareVerificationFailure>>, ModuleComponentArtifactIdentifier, MutableCollection<RepositoryAwareVerificationFailure>>(
+                            Function { Map.Entry.key }, Function { Map.Entry.value })
+                    )
+                val report = reportWriter.generateReport(displayName, filtered, verifier.configuration.isUseKeyServers)
+                val errorMessage = buildConsoleErrorMessage(report)
                 if (verificationMode == DependencyVerificationMode.LENIENT) {
-                    LOGGER.error(errorMessage);
+                    LOGGER.error(errorMessage)
                     // Clear failures to avoid printing this error multiple times.
-                    failures.clear();
-                    hasFatalFailure = false;
+                    failures.clear()
+                    hasFatalFailure = false
                 } else {
-                    throw new DependencyVerificationException(errorMessage);
+                    throw DependencyVerificationException(errorMessage)
                 }
             }
         }
     }
 
-    public String buildConsoleErrorMessage(VerificationReport report) {
-        String errorMessage = report.getSummary();
-        String htmlReport = new ConsoleRenderer().asClickableFileUrl(report.getHtmlReport());
-        errorMessage += "\n\nOpen this report for more details: " + htmlReport;
-        return errorMessage;
+    fun buildConsoleErrorMessage(report: VerificationReport): String {
+        var errorMessage = report.summary
+        val htmlReport = ConsoleRenderer().asClickableFileUrl(report.htmlReport)
+        errorMessage += "\n\nOpen this report for more details: " + htmlReport
+        return errorMessage
     }
 
-    @Override
-    public ResolvedArtifactResult verifiedArtifact(ResolvedArtifactResult artifact) {
-        return new ResolvedArtifactResult() {
-            @Override
-            public File getFile() {
-                artifactsAccessed(artifact.getVariant().getDisplayName());
-                return artifact.getFile();
+    override fun verifiedArtifact(artifact: ResolvedArtifactResult): ResolvedArtifactResult {
+        return object : ResolvedArtifactResult {
+            override fun getFile(): File {
+                artifactsAccessed(artifact.getVariant().getDisplayName())
+                return artifact.getFile()
             }
 
-            @Override
-            public ResolvedVariantResult getVariant() {
-                return artifact.getVariant();
+            override fun getVariant(): ResolvedVariantResult {
+                return artifact.getVariant()
             }
 
-            @Override
-            public ComponentArtifactIdentifier getId() {
-                return artifact.getId();
+            override fun getId(): ComponentArtifactIdentifier {
+                return artifact.getId()
             }
 
-            @Override
-            public Class<? extends Artifact> getType() {
-                return artifact.getType();
+            override fun getType(): Class<out Artifact> {
+                return artifact.getType()
             }
-        };
+        }
     }
 
-    private File observed(File file) {
+    private fun observed(file: File): File {
         if (file == null) {
-            return file;
+            return file
         }
-        fileResourceListener.fileObserved(file);
-        return file;
+        fileResourceListener.fileObserved(file)
+        return file
     }
 
-    @Override
-    public void stop() {
-        closed.set(true);
-        signatureVerificationService.stop();
+    override fun stop() {
+        closed.set(true)
+        signatureVerificationService.stop()
     }
 
-    private static class VerificationQuery {
-        private final ModuleComponentArtifactIdentifier artifact;
-        private final String repositoryId;
-        private final int hashCode;
+    private class VerificationQuery(private val artifact: ModuleComponentArtifactIdentifier, private val repositoryId: String) {
+        private val hashCode: Int
 
-        public VerificationQuery(ModuleComponentArtifactIdentifier artifact, String repositoryId) {
-            this.artifact = artifact;
-            this.repositoryId = repositoryId;
-            this.hashCode = precomputeHashCode(artifact, repositoryId);
+        init {
+            this.hashCode = precomputeHashCode(artifact, repositoryId)
         }
 
-        private int precomputeHashCode(ModuleComponentArtifactIdentifier artifact, String repositoryId) {
-            int hashCode = artifact.getComponentIdentifier().hashCode();
-            hashCode = 31 * hashCode + artifact.fileName.hashCode();
-            hashCode = 31 * hashCode + repositoryId.hashCode();
-            return hashCode;
+        fun precomputeHashCode(artifact: ModuleComponentArtifactIdentifier, repositoryId: String): Int {
+            var hashCode = artifact.getComponentIdentifier().hashCode()
+            hashCode = 31 * hashCode + artifact.fileName.hashCode()
+            hashCode = 31 * hashCode + repositoryId.hashCode()
+            return hashCode
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            VerificationQuery that = (VerificationQuery) o;
+            val that = o as VerificationQuery
             if (hashCode != that.hashCode) {
-                return false;
+                return false
             }
-            if (!artifact.getComponentIdentifier().equals(that.artifact.getComponentIdentifier())) {
-                return false;
+            if (artifact.getComponentIdentifier() != that.artifact.getComponentIdentifier()) {
+                return false
             }
             if (!artifact.fileName.equals(that.artifact.fileName)) {
-                return false;
+                return false
             }
-            return repositoryId.equals(that.repositoryId);
+            return repositoryId == that.repositoryId
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
     }
 
-    private static class VerificationEvent {
-        private final ArtifactKind kind;
-        private final ModuleComponentArtifactIdentifier artifact;
-        private final File mainFile;
-        private final Factory<File> signatureFile;
-        private final String repositoryName;
+    private class VerificationEvent(
+        private val kind: ArtifactVerificationOperation.ArtifactKind,
+        private val artifact: ModuleComponentArtifactIdentifier,
+        private val mainFile: File,
+        private val signatureFile: Factory<File?>,
+        private val repositoryName: String
+    )
 
-        private VerificationEvent(ArtifactKind kind, ModuleComponentArtifactIdentifier artifact, File mainFile, Factory<File> signatureFile, String repositoryName) {
-            this.kind = kind;
-            this.artifact = artifact;
-            this.mainFile = mainFile;
-            this.signatureFile = signatureFile;
-            this.repositoryName = repositoryName;
-        }
+    companion object {
+        private val LOGGER: Logger = getLogger(ChecksumAndSignatureVerificationOverride::class.java)!!
     }
 }

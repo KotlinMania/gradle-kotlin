@@ -13,158 +13,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts.transform
 
-package org.gradle.api.internal.artifacts.transform;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.EndCollection;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.NodeExecutionContext;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.Describables;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.model.CalculatedValueContainer;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.model.ValueCalculator;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.EndCollection
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.Describables
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.model.CalculatedValueContainer
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.model.ValueCalculator
 
 /**
  * Transformed artifact set that performs the transform itself when visited.
  */
-public abstract class AbstractTransformedArtifactSet implements TransformedArtifactSet, FileCollectionInternal.Source {
-    private final CalculatedValueContainer<ImmutableList<ResolvedArtifactSet.Artifacts>, CalculateArtifacts> result;
+abstract class AbstractTransformedArtifactSet : TransformedArtifactSet, FileCollectionInternal.Source {
+    val result: CalculatedValueContainer<ImmutableList<ResolvedArtifactSet.Artifacts>, CalculateArtifacts>
 
-    public AbstractTransformedArtifactSet(
-        ComponentIdentifier componentIdentifier,
-        VariantIdentifier sourceVariantId,
-        ResolvedArtifactSet delegate,
-        ImmutableAttributes targetVariantAttributes,
-        ImmutableCapabilities capabilities,
-        TransformChain transformChain,
-        TransformUpstreamDependenciesResolver dependenciesResolver,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
+    constructor(
+        componentIdentifier: ComponentIdentifier,
+        sourceVariantId: VariantIdentifier,
+        delegate: ResolvedArtifactSet,
+        targetVariantAttributes: ImmutableAttributes,
+        capabilities: ImmutableCapabilities,
+        transformChain: TransformChain,
+        dependenciesResolver: TransformUpstreamDependenciesResolver,
+        calculatedValueContainerFactory: CalculatedValueContainerFactory
     ) {
-        ImmutableList.Builder<BoundTransformStep> builder = ImmutableList.builder();
-        transformChain.visitTransformSteps(step -> builder.add(new BoundTransformStep(step, dependenciesResolver.dependenciesFor(componentIdentifier, step))));
-        ImmutableList<BoundTransformStep> steps = builder.build();
-        this.result = calculatedValueContainerFactory.create(Describables.of(componentIdentifier), new CalculateArtifacts(componentIdentifier, sourceVariantId, delegate, targetVariantAttributes, capabilities, steps));
+        val builder = ImmutableList.builder<BoundTransformStep>()
+        transformChain.visitTransformSteps(Action { step: TransformStep? -> builder.add(BoundTransformStep(step!!, dependenciesResolver.dependenciesFor(componentIdentifier, step))) })
+        val steps = builder.build()
+        this.result = calculatedValueContainerFactory.create<ImmutableList<ResolvedArtifactSet.Artifacts>, CalculateArtifacts>(
+            Describables.of(componentIdentifier),
+            CalculateArtifacts(componentIdentifier, sourceVariantId, delegate, targetVariantAttributes, capabilities, steps)
+        )
     }
 
-    public AbstractTransformedArtifactSet(CalculatedValueContainer<ImmutableList<ResolvedArtifactSet.Artifacts>, CalculateArtifacts> result) {
-        this.result = result;
+    constructor(result: CalculatedValueContainer<ImmutableList<ResolvedArtifactSet.Artifacts>, CalculateArtifacts>) {
+        this.result = result
     }
 
-    public CalculatedValueContainer<ImmutableList<Artifacts>, CalculateArtifacts> getResult() {
-        return result;
-    }
-
-    @Override
-    public void visit(Visitor visitor) {
-        FileCollectionStructureVisitor.VisitType visitType = visitor.prepareForVisit(this);
+    override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+        val visitType = visitor.prepareForVisit(this)
         if (visitType == FileCollectionStructureVisitor.VisitType.NoContents) {
-            visitor.visitArtifacts(new EndCollection(this));
-            return;
+            visitor.visitArtifacts(EndCollection(this))
+            return
         }
 
         // Calculate the artifacts now
-        result.finalizeIfNotAlready();
-        for (Artifacts artifacts : result.get()) {
-            artifacts.prepareForVisitingIfNotAlready();
-            visitor.visitArtifacts(artifacts);
+        result.finalizeIfNotAlready()
+        for (artifacts in result.get()) {
+            artifacts.prepareForVisitingIfNotAlready()
+            visitor.visitArtifacts(artifacts)
         }
         // Need to fire an "end collection" event. Should clean this up so it is not necessary
-        visitor.visitArtifacts(new EndCollection(this));
+        visitor.visitArtifacts(EndCollection(this))
     }
 
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
-        result.visitDependencies(context);
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
+        result.visitDependencies(context)
     }
 
-    @Override
-    public void visitTransformSources(TransformSourceVisitor visitor) {
+    override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
         // Should never be called
-        throw new IllegalStateException();
+        throw IllegalStateException()
     }
 
-    @Override
-    public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
+    override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
         // Should never be called
-        throw new IllegalStateException();
+        throw IllegalStateException()
     }
 
-    public static class CalculateArtifacts implements ValueCalculator<ImmutableList<Artifacts>> {
-        private final ComponentIdentifier ownerId;
-        private final VariantIdentifier sourceVariantId;
-        private final ResolvedArtifactSet delegate;
-        private final ImmutableList<BoundTransformStep> steps;
-        private final ImmutableAttributes targetVariantAttributes;
-        private final ImmutableCapabilities capabilities;
-
-        public CalculateArtifacts(
-            ComponentIdentifier ownerId,
-            VariantIdentifier sourceVariantId,
-            ResolvedArtifactSet delegate,
-            ImmutableAttributes targetVariantAttributes,
-            ImmutableCapabilities capabilities,
-            ImmutableList<BoundTransformStep> steps
-        ) {
-            this.ownerId = ownerId;
-            this.sourceVariantId = sourceVariantId;
-            this.delegate = delegate;
-            this.steps = steps;
-            this.targetVariantAttributes = targetVariantAttributes;
-            this.capabilities = capabilities;
-        }
-
-        public ComponentIdentifier getOwnerId() {
-            return ownerId;
-        }
-
-        public VariantIdentifier getSourceVariantId() {
-            return sourceVariantId;
-        }
-
-        public ResolvedArtifactSet getDelegate() {
-            return delegate;
-        }
-
-        public ImmutableList<BoundTransformStep> getSteps() {
-            return steps;
-        }
-
-        public ImmutableAttributes getTargetVariantAttributes() {
-            return targetVariantAttributes;
-        }
-
-        public ImmutableCapabilities getCapabilities() {
-            return capabilities;
-        }
-
-        @Override
-        public void visitDependencies(TaskDependencyResolveContext context) {
-            for (BoundTransformStep step : steps) {
-                context.add(step.getUpstreamDependencies());
+    class CalculateArtifacts(
+        val ownerId: ComponentIdentifier,
+        val sourceVariantId: VariantIdentifier,
+        val delegate: ResolvedArtifactSet,
+        val targetVariantAttributes: ImmutableAttributes,
+        val capabilities: ImmutableCapabilities,
+        val steps: ImmutableList<BoundTransformStep>
+    ) : ValueCalculator<ImmutableList<ResolvedArtifactSet.Artifacts>> {
+        override fun visitDependencies(context: TaskDependencyResolveContext) {
+            for (step in steps) {
+                context.add(step.getUpstreamDependencies())
             }
         }
 
-        @Override
-        public ImmutableList<Artifacts> calculateValue(NodeExecutionContext context) {
+        override fun calculateValue(context: NodeExecutionContext): ImmutableList<ResolvedArtifactSet.Artifacts> {
             // Isolate the transform parameters, if not already done
-            for (BoundTransformStep step : steps) {
-                step.getTransformStep().isolateParametersIfNotAlready();
-                step.getUpstreamDependencies().finalizeIfNotAlready();
+            for (step in steps) {
+                step.getTransformStep().isolateParametersIfNotAlready()
+                step.getUpstreamDependencies().finalizeIfNotAlready()
             }
 
-            ImmutableList.Builder<Artifacts> builder = ImmutableList.builderWithExpectedSize(1);
-            delegate.visit(new TransformingAsyncArtifactListener(steps, targetVariantAttributes, capabilities, builder));
-            return builder.build();
+            val builder = ImmutableList.builderWithExpectedSize<ResolvedArtifactSet.Artifacts>(1)
+            delegate.visit(TransformingAsyncArtifactListener(steps, targetVariantAttributes, capabilities, builder))
+            return builder.build()
         }
     }
 }

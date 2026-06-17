@@ -13,18 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.ivyresolve;
+package org.gradle.api.internal.artifacts.ivyservice.ivyresolve
 
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import java.util.Collection;
-
-@ServiceScope(Scope.Build.class)
-public interface ResolverProviderFactory {
+@ServiceScope(Scope.Build::class)
+interface ResolverProviderFactory {
     /**
      * Create any applicable resolvers and add to the given collection.
      */
-    void create(Collection<ComponentResolvers> resolvers, LocalComponentRegistry localComponentRegistry);
+    fun create(resolvers: MutableCollection<ComponentResolvers>, localComponentRegistry: LocalComponentRegistry)
 }

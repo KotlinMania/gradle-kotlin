@@ -13,208 +13,173 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice;
+package org.gradle.api.internal.artifacts.ivyservice
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.ResolvedDependency;
-import org.gradle.api.artifacts.UnresolvedDependency;
-import org.gradle.api.internal.artifacts.DefaultResolvedDependency;
-import org.gradle.api.internal.artifacts.configurations.ResolutionHost;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.LocalDependencyFiles;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSetResolver;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactResults;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.internal.artifacts.DefaultResolvedDependency
+import org.gradle.api.internal.artifacts.configurations.ResolutionHost
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactSelectionSpec
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.LocalDependencyFiles
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSetResolver
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.SelectedArtifactResults
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphStructure
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.resolve.ArtifactResolveException
+import java.util.Deque
+import java.util.LinkedList
+import java.util.function.Supplier
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Supplier;
-
-public class DefaultLenientConfiguration implements LenientConfigurationInternal {
-
-    private final ResolutionHost resolutionHost;
-    private final VisitedGraphResults graphResults;
-    private final VisitedArtifactSet artifactResults;
-    private final Supplier<GraphStructure> graphStructureSupplier;
-    private final ResolvedArtifactSetResolver artifactSetResolver;
-    private final ArtifactSelectionSpec implicitSelectionSpec;
-    private final BuildOperationExecutor buildOperationExecutor;
-
+class DefaultLenientConfiguration(
+    private val resolutionHost: ResolutionHost,
+    private val graphResults: VisitedGraphResults,
+    private val artifactResults: VisitedArtifactSet,
+    private val graphStructureSupplier: Supplier<GraphStructure>,
+    private val artifactSetResolver: ResolvedArtifactSetResolver,
+    val implicitSelectionSpec: ArtifactSelectionSpec,
+    private val buildOperationExecutor: BuildOperationExecutor
+) : LenientConfigurationInternal {
     // Selected for the configuration
-    private @Nullable SelectedArtifactResults artifactsForThisConfiguration;
-    private @Nullable DefaultResolvedDependency root;
+    private var artifactsForThisConfiguration: SelectedArtifactResults? = null
+    private var root: DefaultResolvedDependency? = null
+        get() {
+            if (field == null) {
+                val structure = graphStructureSupplier.get()
+                val nodes = structure.nodes()
+                val components = structure.components()
+                val edges = structure.edges()
+                val artifactsByNodeId = this.selectedArtifacts
 
-    public DefaultLenientConfiguration(
-        ResolutionHost resolutionHost,
-        VisitedGraphResults graphResults,
-        VisitedArtifactSet artifactResults,
-        Supplier<GraphStructure> graphStructureSupplier,
-        ResolvedArtifactSetResolver artifactSetResolver,
-        ArtifactSelectionSpec implicitSelectionSpec,
-        BuildOperationExecutor buildOperationExecutor
-    ) {
-        this.resolutionHost = resolutionHost;
-        this.graphResults = graphResults;
-        this.artifactResults = artifactResults;
-        this.graphStructureSupplier = graphStructureSupplier;
-        this.artifactSetResolver = artifactSetResolver;
-        this.implicitSelectionSpec = implicitSelectionSpec;
-        this.buildOperationExecutor = buildOperationExecutor;
-    }
+                val allNodes: MutableList<DefaultResolvedDependency> =
+                    ArrayList<DefaultResolvedDependency>(nodes.count())
+                for (i in 0..<nodes.count()) {
+                    val owner = nodes.owner(i)
+                    val artifacts = artifactsByNodeId.getArtifactsWithId(i)
+                    val node = DefaultResolvedDependency(
+                        nodes.variantName(i),
+                        components.moduleVersionId(owner),
+                        buildOperationExecutor,
+                        resolutionHost
+                    )
+                    node.addModuleArtifacts(artifacts)
+                    allNodes.add(node)
+                }
 
-    private SelectedArtifactResults getSelectedArtifacts() {
-        if (artifactsForThisConfiguration == null) {
-            artifactsForThisConfiguration = artifactResults.selectLegacy(implicitSelectionSpec);
-        }
-        return artifactsForThisConfiguration;
-    }
-
-    @Override
-    public ArtifactSelectionSpec getImplicitSelectionSpec() {
-        return implicitSelectionSpec;
-    }
-
-    @Override
-    public Set<UnresolvedDependency> getUnresolvedModuleDependencies() {
-        return graphResults.getUnresolvedDependencies();
-    }
-
-    private DefaultResolvedDependency getRoot() {
-        if (root == null) {
-            GraphStructure structure = graphStructureSupplier.get();
-            GraphStructure.Nodes nodes = structure.nodes();
-            GraphStructure.Components components = structure.components();
-            GraphStructure.Edges edges = structure.edges();
-            SelectedArtifactResults artifactsByNodeId = getSelectedArtifacts();
-
-            List<DefaultResolvedDependency> allNodes = new ArrayList<>(nodes.count());
-            for (int i = 0; i < nodes.count(); i++) {
-                int owner = nodes.owner(i);
-                ResolvedArtifactSet artifacts = artifactsByNodeId.getArtifactsWithId(i);
-                DefaultResolvedDependency node = new DefaultResolvedDependency(
-                    nodes.variantName(i),
-                    components.moduleVersionId(owner),
-                    buildOperationExecutor,
-                    resolutionHost
-                );
-                node.addModuleArtifacts(artifacts);
-                allNodes.add(node);
-            }
-
-            for (int i = 0; i < nodes.count(); i++) {
-                DefaultResolvedDependency parent = allNodes.get(i);
-                for (int e = edges.start(i); e < edges.end(i); e++) {
-                    if (!edges.constraint(e)) {
-                        int target = edges.targetNode(e);
-                        if (target != -1) {
-                            // Resolved/LenientConfiguration only expose
-                            // successful, non-constraint edges.
-                            parent.addChild(allNodes.get(target));
+                for (i in 0..<nodes.count()) {
+                    val parent = allNodes.get(i)
+                    for (e in edges.start(i)..<edges.end(i)) {
+                        if (!edges.constraint(e)) {
+                            val target = edges.targetNode(e)
+                            if (target != -1) {
+                                // Resolved/LenientConfiguration only expose
+                                // successful, non-constraint edges.
+                                parent.addChild(allNodes.get(target))
+                            }
                         }
                     }
                 }
+
+                field = allNodes.get(nodes.root())
             }
-
-            root = allNodes.get(nodes.root());
+            return field
         }
-        return root;
+
+    private val selectedArtifacts: SelectedArtifactResults
+        get() {
+            if (artifactsForThisConfiguration == null) {
+                artifactsForThisConfiguration = artifactResults.selectLegacy(implicitSelectionSpec)
+            }
+            return artifactsForThisConfiguration
+        }
+
+    override fun getUnresolvedModuleDependencies(): MutableSet<UnresolvedDependency?> {
+        return graphResults.getUnresolvedDependencies()
     }
 
-    @Override
-    public ImmutableSet<ResolvedDependency> getFirstLevelModuleDependencies() {
-        return getRoot().getChildren();
+    override fun getFirstLevelModuleDependencies(): ImmutableSet<ResolvedDependency?> {
+        return this.root!!.getChildren()
     }
 
-    @Override
-    public Set<ResolvedDependency> getAllModuleDependencies() {
-        Set<ResolvedDependency> resolvedElements = new LinkedHashSet<>();
-        Deque<ResolvedDependency> workQueue = new LinkedList<>(getRoot().getChildren());
+    override fun getAllModuleDependencies(): MutableSet<ResolvedDependency?> {
+        val resolvedElements: MutableSet<ResolvedDependency?> = LinkedHashSet<ResolvedDependency?>()
+        val workQueue: Deque<ResolvedDependency> = LinkedList<ResolvedDependency>(this.root!!.getChildren())
         while (!workQueue.isEmpty()) {
-            ResolvedDependency item = workQueue.removeFirst();
+            val item = workQueue.removeFirst()
             if (resolvedElements.add(item)) {
-                final Set<ResolvedDependency> children = item.getChildren();
-                workQueue.addAll(children);
+                val children: MutableSet<ResolvedDependency?> = item.getChildren()
+                workQueue.addAll(children)
             }
         }
-        return resolvedElements;
+        return resolvedElements
     }
 
-    @Override
-    public Set<ResolvedArtifact> getArtifacts() {
-        LenientArtifactCollectingVisitor visitor = new LenientArtifactCollectingVisitor();
-        artifactSetResolver.visitArtifacts(getSelectedArtifacts().getArtifacts(), visitor, resolutionHost);
-        resolutionHost.rethrowFailuresAndReportProblems("artifacts", visitor.getFailures());
-        return visitor.artifacts;
+    override fun getArtifacts(): MutableSet<ResolvedArtifact?> {
+        val visitor = LenientArtifactCollectingVisitor()
+        artifactSetResolver.visitArtifacts(this.selectedArtifacts.artifacts, visitor, resolutionHost)
+        resolutionHost.rethrowFailuresAndReportProblems("artifacts", visitor.getFailures())
+        return visitor.artifacts
     }
 
-    private static class LenientArtifactCollectingVisitor implements ArtifactVisitor {
+    private class LenientArtifactCollectingVisitor : ArtifactVisitor {
+        private val artifacts: MutableSet<ResolvedArtifact?> = LinkedHashSet<ResolvedArtifact?>()
+        private var failures: MutableList<Throwable?>? = null
 
-        private final Set<ResolvedArtifact> artifacts = new LinkedHashSet<>();
-        private @Nullable List<Throwable> failures;
-
-        @Override
-        public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact) {
+        override fun visitArtifact(
+            artifactSetName: DisplayName,
+            sourceVariantId: VariantIdentifier,
+            attributes: ImmutableAttributes,
+            capabilities: ImmutableCapabilities,
+            artifact: ResolvableArtifact
+        ) {
             try {
-                ResolvedArtifact resolvedArtifact = artifact.toPublicView();
+                val resolvedArtifact = artifact.toPublicView()
 
                 // Attempt to download the file
-                resolvedArtifact.getFile();
+                resolvedArtifact.getFile()
 
                 // Only record the artifact if the file is accessible
-                artifacts.add(resolvedArtifact);
-            } catch (org.gradle.internal.resolve.ArtifactResolveException e) {
+                artifacts.add(resolvedArtifact)
+            } catch (e: ArtifactResolveException) {
                 // Ignore
                 // TODO: Would be nice to not use exceptions for control flow
-            } catch (Exception e) {
-                visitFailure(e);
+            } catch (e: Exception) {
+                visitFailure(e)
             }
         }
 
-        @Override
-        public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-            if (source instanceof LocalDependencyFiles) {
-                return FileCollectionStructureVisitor.VisitType.NoContents;
+        override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+            if (source is LocalDependencyFiles) {
+                return FileCollectionStructureVisitor.VisitType.NoContents
             }
-            return FileCollectionStructureVisitor.VisitType.Visit;
+            return FileCollectionStructureVisitor.VisitType.Visit
         }
 
-        @Override
-        public boolean requireArtifactFiles() {
+        override fun requireArtifactFiles(): Boolean {
             // This is false so that we can download the artifact in `visitArtifact` and ignore missing files
-            return false;
+            return false
         }
 
-        @Override
-        public void visitFailure(Throwable failure) {
+        override fun visitFailure(failure: Throwable) {
             if (failures == null) {
-                failures = new ArrayList<>();
+                failures = ArrayList<Throwable?>()
             }
-            failures.add(failure);
+            failures!!.add(failure)
         }
 
-        public List<Throwable> getFailures() {
-            return failures != null ? failures : Collections.emptyList();
+        fun getFailures(): MutableList<Throwable?> {
+            return (if (failures != null) failures else kotlin.collections.mutableListOf<kotlin.Throwable?>())!!
         }
-
     }
-
 }
