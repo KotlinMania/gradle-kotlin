@@ -146,7 +146,7 @@ public class DependencyVerificationConfiguration {
             return matches(group, moduleComponentIdentifier.getGroup())
                 && matches(name, moduleComponentIdentifier.getModule())
                 && matches(version, moduleComponentIdentifier.getVersion())
-                && matches(fileName, id.getFileName());
+                && matches(fileName, id.fileName);
         }
 
         private boolean matches(@Nullable String value, String expr) {

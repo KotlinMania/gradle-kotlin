@@ -166,9 +166,9 @@ public class CredentialsProviderFactory implements TaskExecutionGraphListener {
             assertRequiredValuesPresent();
 
             AwsCredentials credentials = objectFactory.newInstance(DefaultAwsCredentials.class);
-            credentials.setAccessKey(accessKey);
-            credentials.setSecretKey(secretKey);
-            credentials.setSessionToken(getOptionalProperty("SessionToken"));
+            credentials.accessKey = accessKey;
+            credentials.secretKey = secretKey;
+            credentials.sessionToken = getOptionalProperty("SessionToken");
             return credentials;
         }
     }
@@ -186,8 +186,8 @@ public class CredentialsProviderFactory implements TaskExecutionGraphListener {
             assertRequiredValuesPresent();
 
             HttpHeaderCredentials credentials = objectFactory.newInstance(DefaultHttpHeaderCredentials.class);
-            credentials.setName(name);
-            credentials.setValue(value);
+            credentials.name = name;
+            credentials.value = value;
             return credentials;
         }
     }

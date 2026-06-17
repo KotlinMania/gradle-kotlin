@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
+package org.gradle.internal.resolve.caching
 
-public interface ImplicitInputRecorder {
-
-    <IN, OUT> void register(String serviceName, ImplicitInputRecord<IN, OUT> input);
-
+interface ImplicitInputRecorder {
+    fun <IN, OUT> register(serviceName: String?, input: ImplicitInputRecord<IN?, OUT?>?)
 }

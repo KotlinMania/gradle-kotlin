@@ -13,52 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure;
-
-import java.util.Set;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure
 
 /**
- * An abstract {@link VariantSelectionByAttributesFailure} that represents the situation when a variant
+ * An abstract [VariantSelectionByAttributesFailure] that represents the situation when a variant
  * was requested via variant-aware matching and that matching failed.
  */
-public abstract class AbstractVariantSelectionByAttributesFailure extends AbstractResolutionFailure implements VariantSelectionByAttributesFailure {
-    private final ComponentIdentifier targetComponent;
-    private final ImmutableAttributes requestedAttributes;
-    private final ImmutableSet<CapabilitySelector> capabilitySelectors;
+abstract class AbstractVariantSelectionByAttributesFailure(
+    problemId: ResolutionFailureProblemId,
+    private val targetComponent: ComponentIdentifier,
+    requestedAttributes: AttributeContainerInternal,
+    private val capabilitySelectors: ImmutableSet<CapabilitySelector>
+) : AbstractResolutionFailure(problemId), VariantSelectionByAttributesFailure {
+    private val requestedAttributes: ImmutableAttributes
 
-    public AbstractVariantSelectionByAttributesFailure(ResolutionFailureProblemId problemId, ComponentIdentifier targetComponent, AttributeContainerInternal requestedAttributes, ImmutableSet<CapabilitySelector> capabilitySelectors) {
-        super(problemId);
-        this.targetComponent = targetComponent;
-        this.requestedAttributes = requestedAttributes.asImmutable();
-        this.capabilitySelectors = capabilitySelectors;
+    init {
+        this.requestedAttributes = requestedAttributes.asImmutable()
     }
 
-    @Override
-    public String describeRequestTarget() {
-        return targetComponent.getDisplayName();
+    override fun describeRequestTarget(): String {
+        return targetComponent.getDisplayName()
     }
 
-    @Override
-    public ComponentIdentifier getTargetComponent() {
-        return targetComponent;
+    override fun getTargetComponent(): ComponentIdentifier {
+        return targetComponent
     }
 
-    @Override
-    public ImmutableAttributes getRequestedAttributes() {
-        return requestedAttributes;
+    override fun getRequestedAttributes(): ImmutableAttributes {
+        return requestedAttributes
     }
 
-    @Override
-    public Set<CapabilitySelector> getCapabilitySelectors() {
-        return capabilitySelectors;
+    override fun getCapabilitySelectors(): MutableSet<CapabilitySelector> {
+        return capabilitySelectors
     }
 }

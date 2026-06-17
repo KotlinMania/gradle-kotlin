@@ -13,28 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.internal.logging.progress.ResourceOperation
+import org.gradle.internal.operations.BuildOperationContext
+import java.net.URI
 
-import org.gradle.internal.logging.progress.ResourceOperation;
-import org.gradle.internal.operations.BuildOperationContext;
-
-import java.net.URI;
-
-public class AbstractProgressLoggingHandler {
-    protected ResourceOperation createResourceOperation(BuildOperationContext context, ResourceOperation.Type operationType) {
-        return new ResourceOperation(context, operationType);
+open class AbstractProgressLoggingHandler {
+    protected fun createResourceOperation(context: BuildOperationContext, operationType: ResourceOperation.Type): ResourceOperation {
+        return ResourceOperation(context, operationType)
     }
 
-    protected static class LocationDetails {
-        private final URI location;
-
-        LocationDetails(URI location) {
-            this.location = location;
-        }
-
-        public String getLocation() {
-            return location.toASCIIString();
+    protected open class LocationDetails internal constructor(private val location: URI) {
+        fun getLocation(): String {
+            return location.toASCIIString()
         }
     }
 }

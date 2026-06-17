@@ -13,33 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
 /**
  * State for a component instance that is used to perform artifact resolution.
  *
- * <p>Resolution happens in multiple steps. The first is to calculate the dependency graph, and the subsequent steps select artifacts. Artifact resolution is broken down into 3 main steps:</p>
- * <ul>
- *     <li>Select a variant of the component instance. The variant selected for artifact resolution may be different to that used for graph resolution,
- *     for example when using an {@link org.gradle.api.artifacts.ArtifactView} to select different variants.</li>
- *     <li>Determine how to produce the artifacts of the variant, for example by running a chain of transformers.</li>
- *     <li>Produce the artifacts, for example by running the transforms or downloading files.</li>
- * </ul>
  *
- * <p>This interface says nothing about thread safety, however some subtypes may be required to be thread safe.</p>
+ * Resolution happens in multiple steps. The first is to calculate the dependency graph, and the subsequent steps select artifacts. Artifact resolution is broken down into 3 main steps:
  *
- * <p>Instances of this type are created using {@link ComponentGraphResolveState#prepareForArtifactResolution()}.</p>
+ *  * Select a variant of the component instance. The variant selected for artifact resolution may be different to that used for graph resolution,
+ * for example when using an [org.gradle.api.artifacts.ArtifactView] to select different variants.
+ *  * Determine how to produce the artifacts of the variant, for example by running a chain of transformers.
+ *  * Produce the artifacts, for example by running the transforms or downloading files.
+ *
+ *
+ *
+ * This interface says nothing about thread safety, however some subtypes may be required to be thread safe.
+ *
+ *
+ * Instances of this type are created using [ComponentGraphResolveState.prepareForArtifactResolution].
  */
-public interface ComponentArtifactResolveState {
-
-    ComponentIdentifier getId();
+interface ComponentArtifactResolveState {
+    fun getId(): ComponentIdentifier?
 
     /**
      * Metadata for this component's artifacts.
      */
-    ComponentArtifactResolveMetadata getArtifactMetadata();
-
+    fun getArtifactMetadata(): ComponentArtifactResolveMetadata?
 }

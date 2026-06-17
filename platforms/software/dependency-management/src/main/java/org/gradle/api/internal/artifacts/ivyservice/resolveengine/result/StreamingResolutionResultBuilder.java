@@ -213,8 +213,8 @@ public class StreamingResolutionResultBuilder implements DependencyGraphVisitor 
             .flatMap(variant -> variant.prepareForArtifactResolution().getArtifactVariants().stream())
             .map(artifactSet -> new DefaultResolvedVariantResult(
                 component.getId(),
-                Describables.of(artifactSet.getName()),
-                attributeDesugaring.desugar(artifactSet.getAttributes().asImmutable()),
+                Describables.of(artifactSet.name),
+                attributeDesugaring.desugar(artifactSet.attributes.asImmutable()),
                 capabilitiesFor(artifactSet.getCapabilities(), component),
                 null
             ))

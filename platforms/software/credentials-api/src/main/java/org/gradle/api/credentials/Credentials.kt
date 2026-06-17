@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.credentials
 
-package org.gradle.api.credentials;
-
-import org.gradle.api.NonExtensible;
+import org.gradle.api.NonExtensible
 
 /**
  * Base interface for credentials used for different authentication purposes.
- * (e.g authenticated {@link org.gradle.api.artifacts.dsl.RepositoryHandler})
- * */
+ * (e.g authenticated [org.gradle.api.artifacts.dsl.RepositoryHandler])
+ */
 @NonExtensible
-public interface Credentials {
-}
+interface Credentials

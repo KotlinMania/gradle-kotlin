@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
+import org.gradle.api.attributes.MultipleCandidatesDetails
 
-import org.gradle.api.attributes.MultipleCandidatesDetails;
+interface MultipleCandidatesResult<T> : MultipleCandidatesDetails<T?> {
+    fun hasResult(): Boolean
 
-import java.util.Set;
-
-public interface MultipleCandidatesResult<T> extends MultipleCandidatesDetails<T> {
-    boolean hasResult();
-
-    Set<T> getMatches();
+    val matches: MutableSet<T?>?
 }

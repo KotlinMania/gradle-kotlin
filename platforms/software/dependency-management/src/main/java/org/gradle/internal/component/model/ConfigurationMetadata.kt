@@ -13,72 +13,73 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.external.model.ivy.IvyDependencyDescriptor;
-
-import java.util.List;
-import java.util.Set;
+import org.gradle.internal.DisplayName
 
 /**
- * <p>Note that this type is being replaced by several other interfaces that separate out the data and state required at various stages of dependency resolution.
+ *
+ * Note that this type is being replaced by several other interfaces that separate out the data and state required at various stages of dependency resolution.
  * You should try to use those interfaces instead of using this interface or introduce a new interface that provides a view over this type but exposes only the
  * data required.
- * </p>
+ *
  *
  * @see VariantGraphResolveMetadata
+ *
  * @see ConfigurationGraphResolveMetadata
  */
-public interface ConfigurationMetadata {
+interface ConfigurationMetadata {
     /**
      * The set of configurations that this configuration extends. Includes this configuration.
      *
      * It would be good to remove this from the API, as consumers of this interface generally have no need
-     * for this information. However it _is_ currently used by {@link IvyDependencyDescriptor#selectLegacyConfigurations}
+     * for this information. However it _is_ currently used by [IvyDependencyDescriptor.selectLegacyConfigurations]
      * to determine if the target 'runtime' configuration includes the target 'compile' configuration.
      */
-    ImmutableSet<String> getHierarchy();
+    @JvmField
+    val hierarchy: ImmutableSet<String>?
 
-    String getName();
+    @JvmField
+    val name: String?
 
-    DisplayName asDescribable();
+    fun asDescribable(): DisplayName?
 
-    ImmutableAttributes getAttributes();
+    @JvmField
+    val attributes: ImmutableAttributes?
 
     /**
      * Returns the dependencies that apply to this configuration.
      *
-     * If the implementation supports {@link DependencyMetadataRules}, this method
+     * If the implementation supports [DependencyMetadataRules], this method
      * is responsible for lazily applying the rules the first time it is called.
      */
-    List<? extends DependencyMetadata> getDependencies();
+    @JvmField
+    val dependencies: MutableList<out DependencyMetadata>?
 
     /**
      * Returns the artifacts associated with this configuration, if known.
      */
-    ImmutableList<? extends ComponentArtifactMetadata> getArtifacts();
+    @JvmField
+    val artifacts: ImmutableList<out ComponentArtifactMetadata>?
 
     /**
      * Returns the variants of this configuration. Should include at least one value. Exactly one variant must be selected and the artifacts of that variant used.
      */
-    Set<? extends VariantResolveMetadata> getArtifactVariants();
+    val artifactVariants: MutableSet<out VariantResolveMetadata>?
 
     /**
      * Returns the exclusions to apply to this configuration:
      * - Module exclusions apply to all outgoing dependencies from this configuration
      * - Artifact exclusions apply to artifacts obtained from this configuration
      */
-    ImmutableList<ExcludeMetadata> getExcludes();
+    @JvmField
+    val excludes: ImmutableList<ExcludeMetadata>?
 
-    boolean isTransitive();
+    @JvmField
+    val isTransitive: Boolean
 
-    boolean isVisible();
+    @JvmField
+    val isVisible: Boolean
 
     /**
      * Find the component artifact with the given IvyArtifactName, creating a new one if none matches.
@@ -87,9 +88,11 @@ public interface ConfigurationMetadata {
      * The reason to do this lookup is that for a local component artifact, the file is part of the artifact metadata.
      * (For external module components, we just instantiate a new artifact metadata).
      */
-    ComponentArtifactMetadata artifact(IvyArtifactName artifact);
+    fun artifact(artifact: IvyArtifactName): ComponentArtifactMetadata?
 
-    ImmutableCapabilities getCapabilities();
+    @JvmField
+    val capabilities: ImmutableCapabilities?
 
-    boolean isExternalVariant();
+    @JvmField
+    val isExternalVariant: Boolean
 }

@@ -130,12 +130,12 @@ public class DefaultModuleArtifactCache extends AbstractCachedIndex<ArtifactAtRe
 
         @Override
         public void write(Encoder encoder, CachedArtifact value) throws Exception {
-            encoder.writeBoolean(value.isMissing());
-            encoder.writeLong(value.getCachedAt());
+            encoder.writeBoolean(value.isMissing);
+            encoder.writeLong(value.cachedAt);
             byte[] hash = value.getDescriptorHash().toByteArray();
             encoder.writeBinary(hash);
-            if (!value.isMissing()) {
-                encoder.writeString(relativizeAndNormalizeFilePath(value.getCachedFile()));
+            if (!value.isMissing) {
+                encoder.writeString(relativizeAndNormalizeFilePath(value.cachedFile));
             } else {
                 encoder.writeSmallInt(value.attemptedLocations().size());
                 for (String location : value.attemptedLocations()) {

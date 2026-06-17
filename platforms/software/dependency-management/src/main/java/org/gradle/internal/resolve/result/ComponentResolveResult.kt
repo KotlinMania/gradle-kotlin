@@ -13,52 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
 /**
  * The result of resolving a module version selector to a particular component.
  *
- * <p>Very similar to {@link org.gradle.internal.resolve.result.ComponentIdResolveResult}, could probably merge these.
+ *
+ * Very similar to [ComponentIdResolveResult], could probably merge these.
  */
-public interface ComponentResolveResult extends ResolveResult {
-
+interface ComponentResolveResult : ResolveResult {
     /**
      * Returns the identifier of the component.
      */
-    ComponentIdentifier getId();
+    val id: ComponentIdentifier?
 
-    /**
-     * Returns the module version id of the component.
-     *
-     * @throws org.gradle.internal.resolve.ModuleVersionResolveException If resolution was unsuccessful and the id is unknown.
-     */
-    ModuleVersionIdentifier getModuleVersionId() throws ModuleVersionResolveException;
+    @get:Throws(ModuleVersionResolveException::class)
+    val moduleVersionId: ModuleVersionIdentifier?
 
-    /**
-     * Returns the graph resolution state for the component.
-     *
-     * @throws ModuleVersionResolveException If resolution was unsuccessful and the descriptor is not available.
-     */
-    ComponentGraphResolveState getState() throws ModuleVersionResolveException;
+    @JvmField
+    @get:Throws(ModuleVersionResolveException::class)
+    val state: ComponentGraphResolveState?
 
-    /**
-     * Returns the graph specific resolution state for the component.
-     *
-     * @throws ModuleVersionResolveException If resolution was unsuccessful and the descriptor is not available.
-     */
-    ComponentGraphSpecificResolveState getGraphState() throws ModuleVersionResolveException;
+    @get:Throws(ModuleVersionResolveException::class)
+    val graphState: ComponentGraphSpecificResolveState?
 
     /**
      * Returns the resolve failure, if any.
      */
-    @Override
-    @Nullable
-    ModuleVersionResolveException getFailure();
+    override fun getFailure(): ModuleVersionResolveException?
 }

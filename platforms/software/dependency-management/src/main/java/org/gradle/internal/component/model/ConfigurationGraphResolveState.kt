@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
  * The state for a configuration used for graph resolution.
  */
-public interface ConfigurationGraphResolveState {
-    String getName();
+interface ConfigurationGraphResolveState {
+    fun getName(): String?
 
-    ImmutableAttributes getAttributes();
+    fun getAttributes(): ImmutableAttributes?
 
     /**
      * Returns a view of this configuration that can be used as a variant.
      */
-    VariantGraphResolveState asVariant();
+    fun asVariant(): VariantGraphResolveState?
 
-    ConfigurationGraphResolveMetadata getMetadata();
+    fun getMetadata(): ConfigurationGraphResolveMetadata?
 }

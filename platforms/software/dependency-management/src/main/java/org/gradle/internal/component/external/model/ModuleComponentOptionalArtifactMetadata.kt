@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.model.IvyArtifactName;
-
-public class ModuleComponentOptionalArtifactMetadata extends DefaultModuleComponentArtifactMetadata {
-    public ModuleComponentOptionalArtifactMetadata(ModuleComponentIdentifier componentIdentifier, IvyArtifactName artifact) {
-        super(componentIdentifier, artifact);
-    }
-
-    @Override
-    public boolean isOptionalArtifact() {
-        return true;
+class ModuleComponentOptionalArtifactMetadata(componentIdentifier: ModuleComponentIdentifier, artifact: IvyArtifactName) : DefaultModuleComponentArtifactMetadata(componentIdentifier, artifact) {
+    override fun isOptionalArtifact(): Boolean {
+        return true
     }
 }

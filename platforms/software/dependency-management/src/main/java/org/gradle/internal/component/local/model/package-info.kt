@@ -13,8 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-@NullMarked
-package org.gradle.internal.component.local.model;
+import org.gradle.internal.component.model.AbstractComponentGraphResolveState.getMetadata
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata.getModuleVersionId
+import org.gradle.internal.component.model.VariantGraphResolveState.getMetadata
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata.getId
+import org.gradle.internal.component.model.ImmutableModuleSources.Companion.of
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata.getAttributesSchema
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getId
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getName
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getAttributes
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getCapabilities
+import org.gradle.internal.component.model.VariantArtifactResolveState.getArtifactVariants
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
+import org.gradle.internal.component.model.DependencyMetadata.withTarget
+import org.gradle.internal.component.model.DependencyMetadata.withTargetAndArtifacts
+import org.gradle.internal.component.model.ForcingDependencyMetadata.isForce
+import org.gradle.internal.component.model.ForcingDependencyMetadata.forced
+import org.gradle.internal.component.model.ComponentIdGenerator.nextComponentId
+import org.gradle.internal.component.model.ComponentIdGenerator.nextVariantId
+import org.gradle.internal.component.model.DefaultIvyArtifactName.Companion.forPublishArtifact
 
-import org.jspecify.annotations.NullMarked;

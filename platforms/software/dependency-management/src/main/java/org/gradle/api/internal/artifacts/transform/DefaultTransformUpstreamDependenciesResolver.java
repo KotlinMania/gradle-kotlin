@@ -150,12 +150,12 @@ public class DefaultTransformUpstreamDependenciesResolver implements TransformUp
         this.completeGraphResults = calculatedValueContainerFactory.create(Describables.of("complete graph results for", resolutionHost.getDisplayName()), context -> {
             // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
             fullGraphResults.finalizeIfNotAlready();
-            return fullGraphResults.get().getVisitedGraph();
+            return fullGraphResults.get().visitedGraph;
         });
         this.completeArtifactResults = calculatedValueContainerFactory.create(Describables.of("complete artifact results for", resolutionHost.getDisplayName()), context -> {
             // TODO: We should acquire the project lock here, since this will resolve a configuration, which requires a project lock.
             fullGraphResults.finalizeIfNotAlready();
-            return fullGraphResults.get().getVisitedArtifacts();
+            return fullGraphResults.get().visitedArtifacts;
         });
 
         this.owner = owner;

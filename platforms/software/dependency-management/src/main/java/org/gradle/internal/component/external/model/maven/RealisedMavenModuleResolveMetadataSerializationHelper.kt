@@ -13,210 +13,224 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.maven
 
-package org.gradle.internal.component.external.model.maven;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Maps
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.external.descriptor.MavenScope
+import org.gradle.internal.component.external.model.AbstractModuleComponentResolveMetadata.getId
+import org.gradle.internal.component.external.model.AbstractRealisedModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.AbstractRealisedModuleResolveMetadataSerializationHelper
+import org.gradle.internal.component.external.model.ExternalDependencyDescriptor
+import org.gradle.internal.component.external.model.ForcedDependencyMetadataWrapper
+import org.gradle.internal.component.external.model.GradleDependencyMetadata
+import org.gradle.internal.component.external.model.LazyToRealisedModuleComponentResolveMetadataHelper
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata.getId
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.external.model.RealisedConfigurationMetadata
+import org.gradle.internal.component.model.ConfigurationMetadata
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.IOException
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.IvyArtifactNameSerializer;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.descriptor.MavenScope;
-import org.gradle.internal.component.external.model.AbstractRealisedModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.AbstractRealisedModuleResolveMetadataSerializationHelper;
-import org.gradle.internal.component.external.model.ComponentVariant;
-import org.gradle.internal.component.external.model.ExternalDependencyDescriptor;
-import org.gradle.internal.component.external.model.ForcedDependencyMetadataWrapper;
-import org.gradle.internal.component.external.model.GradleDependencyMetadata;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.external.model.LazyToRealisedModuleComponentResolveMetadataHelper;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.RealisedConfigurationMetadata;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
-public class RealisedMavenModuleResolveMetadataSerializationHelper extends AbstractRealisedModuleResolveMetadataSerializationHelper {
-
-    public RealisedMavenModuleResolveMetadataSerializationHelper(
-        AttributeContainerSerializer attributeContainerSerializer,
-        CapabilitySelectorSerializer capabilitySelectorSerializer,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory
+class RealisedMavenModuleResolveMetadataSerializationHelper(
+    attributeContainerSerializer: AttributeContainerSerializer,
+    capabilitySelectorSerializer: CapabilitySelectorSerializer,
+    moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+) : AbstractRealisedModuleResolveMetadataSerializationHelper(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory) {
+    @Throws(IOException::class)
+    public override fun writeRealisedConfigurationsData(
+        encoder: Encoder,
+        transformed: AbstractRealisedModuleComponentResolveMetadata,
+        deduplicationDependencyCache: MutableMap<ExternalDependencyDescriptor, Int>
     ) {
-        super(attributeContainerSerializer, capabilitySelectorSerializer, moduleIdentifierFactory);
-    }
-
-    @Override
-    public void writeRealisedConfigurationsData(Encoder encoder, AbstractRealisedModuleComponentResolveMetadata transformed, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
-        super.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache);
-        if (transformed instanceof RealisedMavenModuleResolveMetadata) {
-            writeDerivedVariants(encoder, (RealisedMavenModuleResolveMetadata) transformed, deduplicationDependencyCache);
+        super.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache)
+        if (transformed is RealisedMavenModuleResolveMetadata) {
+            writeDerivedVariants(encoder, transformed, deduplicationDependencyCache)
         }
     }
 
-    public ModuleComponentResolveMetadata readMetadata(Decoder decoder, DefaultMavenModuleResolveMetadata resolveMetadata, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        Map<String, List<GradleDependencyMetadata>> variantToDependencies = readVariantDependencies(decoder);
-        ImmutableList<? extends ComponentVariant> variants = resolveMetadata.getVariants();
-        ImmutableList.Builder<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> builder = ImmutableList.builder();
-        for (ComponentVariant variant : variants) {
-            builder.add(new AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl(resolveMetadata.getId(), variant.getName(), variant.getAttributes().asImmutable(), variant.getDependencies(), variant.getDependencyConstraints(),
-                variant.getFiles(), variant.getCapabilities(), variantToDependencies.get(variant.getName()), variant.isExternalVariant()));
+    @Throws(IOException::class)
+    fun readMetadata(decoder: Decoder, resolveMetadata: DefaultMavenModuleResolveMetadata, deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>): ModuleComponentResolveMetadata {
+        val variantToDependencies: MutableMap<String, MutableList<GradleDependencyMetadata>> = readVariantDependencies(decoder)
+        val variants = resolveMetadata.variants
+        val builder = ImmutableList.builder<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl>()
+        for (variant in variants) {
+            builder.add(
+                AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl(
+                    resolveMetadata.getId(), variant.name!!, variant.attributes.asImmutable(), variant.dependencies, variant.dependencyConstraints,
+                    variant.files, variant.capabilities, variantToDependencies.get(variant.name)!!, variant.isExternalVariant()
+                )
+            )
         }
-        ImmutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> realisedVariants = builder.build();
+        val realisedVariants = builder.build()
 
-        Map<String, ModuleConfigurationMetadata> configurations = readMavenConfigurations(decoder, resolveMetadata, deduplicationDependencyCache);
-        ImmutableList<ModuleConfigurationMetadata> derivedVariants = readDerivedVariants(decoder, resolveMetadata, deduplicationDependencyCache);
+        val configurations = readMavenConfigurations(decoder, resolveMetadata, deduplicationDependencyCache)
+        val derivedVariants = readDerivedVariants(decoder, resolveMetadata, deduplicationDependencyCache)
 
-        return new RealisedMavenModuleResolveMetadata(resolveMetadata, realisedVariants, derivedVariants, configurations);
+        return RealisedMavenModuleResolveMetadata(resolveMetadata, realisedVariants, derivedVariants, configurations)
     }
 
-    @Override
-    protected void writeDependencies(Encoder encoder, ConfigurationMetadata configuration, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
-        List<? extends DependencyMetadata> dependencies = configuration.getDependencies();
-        encoder.writeSmallInt(dependencies.size());
-        for (DependencyMetadata dependency : dependencies) {
-            if (dependency instanceof ForcedDependencyMetadataWrapper) {
-                ForcedDependencyMetadataWrapper wrapper = (ForcedDependencyMetadataWrapper) dependency;
-                dependency = wrapper.unwrap();
+    @Throws(IOException::class)
+    override fun writeDependencies(encoder: Encoder, configuration: ConfigurationMetadata, deduplicationDependencyCache: MutableMap<ExternalDependencyDescriptor, Int>) {
+        val dependencies: MutableList<out DependencyMetadata> = configuration.dependencies!!
+        encoder.writeSmallInt(dependencies.size)
+        for (dependency in dependencies) {
+            var dependency = dependency
+            if (dependency is ForcedDependencyMetadataWrapper) {
+                val wrapper = dependency
+                dependency = wrapper.unwrap()
                 if (wrapper.isForce()) {
-                    encoder.writeByte(FORCED_DEPENDENCY_METADATA);
+                    encoder.writeByte(FORCED_DEPENDENCY_METADATA)
                 }
             }
-            if (dependency instanceof GradleDependencyMetadata) {
-                encoder.writeByte(GRADLE_DEPENDENCY_METADATA);
-                writeDependencyMetadata(encoder, (GradleDependencyMetadata) dependency);
-            } else if (dependency instanceof MavenDependencyMetadata) {
-                MavenDependencyMetadata dependencyMetadata = (MavenDependencyMetadata) dependency;
-                MavenDependencyDescriptor dependencyDescriptor = dependencyMetadata.getDependencyDescriptor();
-                encoder.writeByte(MAVEN_DEPENDENCY_METADATA);
-                writeMavenDependency(encoder, dependencyDescriptor, deduplicationDependencyCache);
-                encoder.writeNullableString(dependency.getReason());
+            if (dependency is GradleDependencyMetadata) {
+                encoder.writeByte(GRADLE_DEPENDENCY_METADATA)
+                writeDependencyMetadata(encoder, dependency)
+            } else if (dependency is MavenDependencyMetadata) {
+                val dependencyMetadata = dependency
+                val dependencyDescriptor = dependencyMetadata.dependencyDescriptor
+                encoder.writeByte(MAVEN_DEPENDENCY_METADATA)
+                writeMavenDependency(encoder, dependencyDescriptor, deduplicationDependencyCache)
+                encoder.writeNullableString(dependency.reason)
             } else {
-                throw new IllegalStateException("Unknown type of dependency: " + dependency.getClass());
+                throw IllegalStateException("Unknown type of dependency: " + dependency.javaClass)
             }
         }
     }
 
-    private void writeDerivedVariants(Encoder encoder, RealisedMavenModuleResolveMetadata metadata, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
-        ImmutableList<? extends ConfigurationMetadata> derivedVariants = metadata.getDerivedVariants();
-        encoder.writeSmallInt(derivedVariants.size());
-        for (ConfigurationMetadata derivedVariant : derivedVariants) {
-            writeConfiguration(encoder, derivedVariant);
-            writeFiles(encoder, derivedVariant.getArtifacts());
-            writeDerivedVariantExtra(encoder, derivedVariant, deduplicationDependencyCache);
+    @Throws(IOException::class)
+    private fun writeDerivedVariants(encoder: Encoder, metadata: RealisedMavenModuleResolveMetadata, deduplicationDependencyCache: MutableMap<ExternalDependencyDescriptor, Int>) {
+        val derivedVariants: ImmutableList<out ConfigurationMetadata> = metadata.getDerivedVariants()
+        encoder.writeSmallInt(derivedVariants.size)
+        for (derivedVariant in derivedVariants) {
+            writeConfiguration(encoder, derivedVariant)
+            writeFiles(encoder, derivedVariant.artifacts)
+            writeDerivedVariantExtra(encoder, derivedVariant, deduplicationDependencyCache)
         }
     }
 
-    private void writeDerivedVariantExtra(Encoder encoder, ConfigurationMetadata derivedVariant, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
-        encoder.writeBoolean(derivedVariant.isTransitive());
-        encoder.writeBoolean(derivedVariant.isVisible());
-        writeStringSet(encoder, derivedVariant.getHierarchy());
-        writeMavenExcludeRules(encoder, derivedVariant.getExcludes());
-        writeDependencies(encoder, derivedVariant, deduplicationDependencyCache);
+    @Throws(IOException::class)
+    private fun writeDerivedVariantExtra(encoder: Encoder, derivedVariant: ConfigurationMetadata, deduplicationDependencyCache: MutableMap<ExternalDependencyDescriptor, Int>) {
+        encoder.writeBoolean(derivedVariant.isTransitive)
+        encoder.writeBoolean(derivedVariant.isVisible)
+        writeStringSet(encoder, derivedVariant.hierarchy)
+        writeMavenExcludeRules(encoder, derivedVariant.excludes)
+        writeDependencies(encoder, derivedVariant, deduplicationDependencyCache)
     }
 
-    private Map<String, ModuleConfigurationMetadata> readMavenConfigurations(Decoder decoder, DefaultMavenModuleResolveMetadata metadata, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        ImmutableMap<String, Configuration> configurationDefinitions = metadata.getConfigurationDefinitions();
+    @Throws(IOException::class)
+    private fun readMavenConfigurations(
+        decoder: Decoder,
+        metadata: DefaultMavenModuleResolveMetadata,
+        deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>
+    ): MutableMap<String, ModuleConfigurationMetadata> {
+        val configurationDefinitions: ImmutableMap<String, Configuration> = metadata.configurationDefinitions
 
-        int configurationsCount = decoder.readSmallInt();
-        Map<String, ModuleConfigurationMetadata> configurations = Maps.newHashMapWithExpectedSize(configurationsCount);
-        for (int i = 0; i < configurationsCount; i++) {
-            String configurationName = decoder.readString();
-            Configuration configuration = configurationDefinitions.get(configurationName);
-            ImmutableSet<String> hierarchy = LazyToRealisedModuleComponentResolveMetadataHelper.constructHierarchy(configuration, configurationDefinitions);
-            ImmutableAttributes attributes = getAttributeContainerSerializer().read(decoder);
-            ImmutableCapabilities capabilities = readCapabilities(decoder);
-            boolean isExternalVariant = decoder.readBoolean();
-            ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts = readFiles(decoder, metadata.getId());
+        val configurationsCount = decoder.readSmallInt()
+        val configurations: MutableMap<String, ModuleConfigurationMetadata> = Maps.newHashMapWithExpectedSize<String, ModuleConfigurationMetadata>(configurationsCount)
+        for (i in 0..<configurationsCount) {
+            val configurationName = decoder.readString()
+            val configuration = configurationDefinitions.get(configurationName)
+            val hierarchy: ImmutableSet<String> = LazyToRealisedModuleComponentResolveMetadataHelper.constructHierarchy(configuration!!, configurationDefinitions)
+            val attributes = attributeContainerSerializer.read(decoder)
+            val capabilities = readCapabilities(decoder)
+            val isExternalVariant = decoder.readBoolean()
+            val artifacts = readFiles(decoder, metadata.getId())
 
-            VariantIdentifier id = new NamedVariantIdentifier(metadata.getId(), configurationName);
-            RealisedConfigurationMetadata configurationMetadata = new RealisedConfigurationMetadata(configurationName, id, metadata.getId(), configuration.isTransitive(), configuration.isVisible(),
-                hierarchy, artifacts, ImmutableList.of(), attributes, capabilities, false, isExternalVariant);
-            ImmutableList<ModuleDependencyMetadata> dependencies = readDependencies(decoder, deduplicationDependencyCache);
-            configurationMetadata.setDependencies(dependencies);
-            configurations.put(configurationName, configurationMetadata);
+            val id: VariantIdentifier = NamedVariantIdentifier(metadata.getId(), configurationName!!)
+            val configurationMetadata = RealisedConfigurationMetadata(
+                configurationName, id, metadata.getId(), configuration.isTransitive(), configuration.isVisible(),
+                hierarchy, artifacts, ImmutableList.of<ExcludeMetadata>(), attributes, capabilities, false, isExternalVariant
+            )
+            val dependencies = readDependencies(decoder, deduplicationDependencyCache)
+            configurationMetadata.setDependencies(dependencies)
+            configurations.put(configurationName, configurationMetadata)
         }
-        return configurations;
+        return configurations
     }
 
-    private ImmutableList<ModuleDependencyMetadata> readDependencies(Decoder decoder, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        ImmutableList.Builder<ModuleDependencyMetadata> builder = ImmutableList.builder();
-        int dependenciesCount = decoder.readSmallInt();
+    @Throws(IOException::class)
+    private fun readDependencies(decoder: Decoder, deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>): ImmutableList<ModuleDependencyMetadata> {
+        val builder = ImmutableList.builder<ModuleDependencyMetadata>()
+        val dependenciesCount = decoder.readSmallInt()
         if (dependenciesCount == 0) {
-            return ImmutableList.of();
+            return ImmutableList.of<ModuleDependencyMetadata>()
         }
-        for (int j = 0; j < dependenciesCount; j++) {
-            byte dependencyType = decoder.readByte();
-            boolean force = false;
+        for (j in 0..<dependenciesCount) {
+            var dependencyType = decoder.readByte()
+            var force = false
             if (dependencyType == FORCED_DEPENDENCY_METADATA) {
-                force = true;
-                dependencyType = decoder.readByte();
+                force = true
+                dependencyType = decoder.readByte()
             }
-            ModuleDependencyMetadata md;
-            switch (dependencyType) {
-                case GRADLE_DEPENDENCY_METADATA:
-                    md = readDependencyMetadata(decoder);
-                    break;
-                case MAVEN_DEPENDENCY_METADATA:
-                    MavenDependencyDescriptor mavenDependencyDescriptor = readMavenDependency(decoder, deduplicationDependencyCache);
-                    String reason = decoder.readNullableString();
-                    md = new MavenDependencyMetadata(mavenDependencyDescriptor, reason, false);
-                    break;
-                case IVY_DEPENDENCY_METADATA:
-                    throw new IllegalStateException("Unexpected Ivy dependency for Maven module");
-                default:
-                    throw new IllegalStateException("Unknown dependency type " + dependencyType);
+            var md: ModuleDependencyMetadata?
+            when (dependencyType) {
+                GRADLE_DEPENDENCY_METADATA -> md = readDependencyMetadata(decoder)
+                MAVEN_DEPENDENCY_METADATA -> {
+                    val mavenDependencyDescriptor = readMavenDependency(decoder, deduplicationDependencyCache)
+                    val reason = decoder.readNullableString()
+                    md = MavenDependencyMetadata(mavenDependencyDescriptor, reason, false)
+                }
+
+                IVY_DEPENDENCY_METADATA -> throw IllegalStateException("Unexpected Ivy dependency for Maven module")
+                else -> throw IllegalStateException("Unknown dependency type " + dependencyType)
             }
             if (force) {
-                md = new ForcedDependencyMetadataWrapper(md);
+                md = ForcedDependencyMetadataWrapper(md)
             }
-            builder.add(md);
+            builder.add(md)
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private ImmutableList<ModuleConfigurationMetadata> readDerivedVariants(Decoder decoder, DefaultMavenModuleResolveMetadata resolveMetadata, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        int derivedVariantsCount = decoder.readSmallInt();
+    @Throws(IOException::class)
+    private fun readDerivedVariants(
+        decoder: Decoder,
+        resolveMetadata: DefaultMavenModuleResolveMetadata,
+        deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>
+    ): ImmutableList<ModuleConfigurationMetadata> {
+        val derivedVariantsCount = decoder.readSmallInt()
         if (derivedVariantsCount == 0) {
-            return ImmutableList.of();
+            return ImmutableList.of<ModuleConfigurationMetadata>()
         }
-        ImmutableList.Builder<ModuleConfigurationMetadata> builder = new ImmutableList.Builder<>();
-        for (int i = 0; i < derivedVariantsCount; i++) {
-            builder.add(readDerivedVariant(decoder, resolveMetadata, deduplicationDependencyCache));
+        val builder = ImmutableList.Builder<ModuleConfigurationMetadata>()
+        for (i in 0..<derivedVariantsCount) {
+            builder.add(readDerivedVariant(decoder, resolveMetadata, deduplicationDependencyCache))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private ModuleConfigurationMetadata readDerivedVariant(Decoder decoder, DefaultMavenModuleResolveMetadata resolveMetadata, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        String name = decoder.readString();
-        ImmutableAttributes attributes = attributeContainerSerializer.read(decoder);
-        ImmutableCapabilities immutableCapabilities = readCapabilities(decoder);
-        boolean isExternalVariant = decoder.readBoolean();
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts = readFiles(decoder, resolveMetadata.getId());
-        boolean transitive = decoder.readBoolean();
-        boolean visible = decoder.readBoolean();
-        ImmutableSet<String> hierarchy = ImmutableSet.copyOf(readStringSet(decoder));
-        List<ExcludeMetadata> excludeMetadata = readMavenExcludes(decoder);
-        VariantIdentifier id = new NamedVariantIdentifier(resolveMetadata.getId(), name);
-        RealisedConfigurationMetadata realized = new RealisedConfigurationMetadata(
+    @Throws(IOException::class)
+    private fun readDerivedVariant(
+        decoder: Decoder,
+        resolveMetadata: DefaultMavenModuleResolveMetadata,
+        deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>
+    ): ModuleConfigurationMetadata {
+        val name = decoder.readString()
+        val attributes = attributeContainerSerializer.read(decoder)
+        val immutableCapabilities = readCapabilities(decoder)
+        val isExternalVariant = decoder.readBoolean()
+        val artifacts = readFiles(decoder, resolveMetadata.getId())
+        val transitive = decoder.readBoolean()
+        val visible = decoder.readBoolean()
+        val hierarchy: ImmutableSet<String> = ImmutableSet.copyOf<String>(readStringSet(decoder))
+        val excludeMetadata: MutableList<ExcludeMetadata> = readMavenExcludes(decoder)
+        val id: VariantIdentifier = NamedVariantIdentifier(resolveMetadata.getId(), name!!)
+        val realized = RealisedConfigurationMetadata(
             name,
             id,
             resolveMetadata.getId(),
@@ -224,49 +238,48 @@ public class RealisedMavenModuleResolveMetadataSerializationHelper extends Abstr
             visible,
             hierarchy,
             artifacts,
-            ImmutableList.copyOf(excludeMetadata),
+            ImmutableList.copyOf<ExcludeMetadata>(excludeMetadata),
             attributes,
             immutableCapabilities,
             false,
             isExternalVariant
-        );
-        ImmutableList<ModuleDependencyMetadata> dependencies = readDependencies(decoder, deduplicationDependencyCache);
-        realized.setDependencies(dependencies);
-        return realized;
-
+        )
+        val dependencies = readDependencies(decoder, deduplicationDependencyCache)
+        realized.setDependencies(dependencies)
+        return realized
     }
 
-    private MavenDependencyDescriptor readMavenDependency(Decoder decoder, Map<Integer, MavenDependencyDescriptor> deduplicationDependencyCache) throws IOException {
-        int mapping = decoder.readSmallInt();
-        if (mapping == deduplicationDependencyCache.size()) {
-            ModuleComponentSelector requested = getComponentSelectorSerializer().read(decoder);
-            IvyArtifactName artifactName = IvyArtifactNameSerializer.INSTANCE.readNullable(decoder);
-            List<ExcludeMetadata> mavenExcludes = readMavenExcludes(decoder);
-            MavenScope scope = MavenScope.values()[decoder.readSmallInt()];
-            MavenDependencyType type = MavenDependencyType.values()[decoder.readSmallInt()];
-            MavenDependencyDescriptor mavenDependencyDescriptor = new MavenDependencyDescriptor(scope, type, requested, artifactName, mavenExcludes);
-            deduplicationDependencyCache.put(mapping, mavenDependencyDescriptor);
-            return mavenDependencyDescriptor;
+    @Throws(IOException::class)
+    private fun readMavenDependency(decoder: Decoder, deduplicationDependencyCache: MutableMap<Int, MavenDependencyDescriptor>): MavenDependencyDescriptor {
+        val mapping = decoder.readSmallInt()
+        if (mapping == deduplicationDependencyCache.size) {
+            val requested = componentSelectorSerializer.read(decoder)
+            val artifactName = IvyArtifactNameSerializer.INSTANCE.readNullable(decoder)
+            val mavenExcludes: MutableList<ExcludeMetadata> = readMavenExcludes(decoder)
+            val scope = MavenScope.entries[decoder.readSmallInt()]
+            val type = MavenDependencyType.entries[decoder.readSmallInt()]
+            val mavenDependencyDescriptor = MavenDependencyDescriptor(scope, type, requested, artifactName, mavenExcludes)
+            deduplicationDependencyCache.put(mapping, mavenDependencyDescriptor)
+            return mavenDependencyDescriptor
         } else {
-            MavenDependencyDescriptor mavenDependencyDescriptor = deduplicationDependencyCache.get(mapping);
-            assert mavenDependencyDescriptor != null;
-            return mavenDependencyDescriptor;
+            val mavenDependencyDescriptor = checkNotNull(deduplicationDependencyCache.get(mapping))
+            return mavenDependencyDescriptor
         }
     }
 
-    private void writeMavenDependency(Encoder encoder, MavenDependencyDescriptor mavenDependency, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
-        int nextMapping = deduplicationDependencyCache.size();
-        Integer mapping = deduplicationDependencyCache.putIfAbsent(mavenDependency, nextMapping);
+    @Throws(IOException::class)
+    private fun writeMavenDependency(encoder: Encoder, mavenDependency: MavenDependencyDescriptor, deduplicationDependencyCache: MutableMap<ExternalDependencyDescriptor, Int>) {
+        val nextMapping = deduplicationDependencyCache.size
+        val mapping = deduplicationDependencyCache.putIfAbsent(mavenDependency, nextMapping)
         if (mapping != null) {
-            encoder.writeSmallInt(mapping);
+            encoder.writeSmallInt(mapping)
         } else {
-            encoder.writeSmallInt(nextMapping);
-            getComponentSelectorSerializer().write(encoder, mavenDependency.getSelector());
-            IvyArtifactNameSerializer.INSTANCE.writeNullable(encoder, mavenDependency.getDependencyArtifact());
-            writeMavenExcludeRules(encoder, mavenDependency.getAllExcludes());
-            encoder.writeSmallInt(mavenDependency.getScope().ordinal());
-            encoder.writeSmallInt(mavenDependency.getType().ordinal());
+            encoder.writeSmallInt(nextMapping)
+            componentSelectorSerializer.write(encoder, mavenDependency.selector)
+            IvyArtifactNameSerializer.INSTANCE.writeNullable(encoder, mavenDependency.getDependencyArtifact())
+            writeMavenExcludeRules(encoder, mavenDependency.getAllExcludes())
+            encoder.writeSmallInt(mavenDependency.getScope().ordinal)
+            encoder.writeSmallInt(mavenDependency.getType().ordinal)
         }
     }
-
 }

@@ -13,90 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
+import com.google.common.collect.Ordering
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.ActionConfiguration
+import org.gradle.api.attributes.AttributeDisambiguationRule
+import org.gradle.api.attributes.DisambiguationRuleChain
+import org.gradle.api.attributes.MultipleCandidatesDetails
+import org.gradle.internal.action.ConfigurableRule
+import org.gradle.internal.action.DefaultConfigurableRule
+import org.gradle.internal.action.DefaultConfigurableRules
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.isolation.IsolatableFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.model.internal.type.ModelType
 
-import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
-import org.gradle.api.Action;
-import org.gradle.api.ActionConfiguration;
-import org.gradle.api.attributes.AttributeDisambiguationRule;
-import org.gradle.api.attributes.DisambiguationRuleChain;
-import org.gradle.api.attributes.MultipleCandidatesDetails;
-import org.gradle.internal.action.ConfigurableRule;
-import org.gradle.internal.action.DefaultConfigurableRule;
-import org.gradle.internal.action.DefaultConfigurableRules;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.isolation.IsolatableFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.model.internal.type.ModelType;
+class DefaultDisambiguationRuleChain<T>(private val instantiator: Instantiator, private val isolatableFactory: IsolatableFactory) : DisambiguationRuleChain<T?> {
+    val rules: MutableList<Action<in MultipleCandidatesDetails<T?>>> = ArrayList<Action<in MultipleCandidatesDetails<T?>>>()
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-
-public class DefaultDisambiguationRuleChain<T> implements DisambiguationRuleChain<T> {
-
-    private final List<Action<? super MultipleCandidatesDetails<T>>> rules = new ArrayList<>();
-    private final Instantiator instantiator;
-    private final IsolatableFactory isolatableFactory;
-
-    public DefaultDisambiguationRuleChain(Instantiator instantiator, IsolatableFactory isolatableFactory) {
-        this.instantiator = instantiator;
-        this.isolatableFactory = isolatableFactory;
+    override fun add(ruleClass: Class<out AttributeDisambiguationRule<T?>>, configureAction: Action<in ActionConfiguration>) {
+        val rule = DefaultConfigurableRule.of<MultipleCandidatesDetails<T?>>(ruleClass, configureAction, isolatableFactory)
+        rules.add(createAction<T?>(rule, instantiator))
     }
 
-    @Override
-    public void add(final Class<? extends AttributeDisambiguationRule<T>> ruleClass, Action<? super ActionConfiguration> configureAction) {
-        ConfigurableRule<MultipleCandidatesDetails<T>> rule = DefaultConfigurableRule.of(ruleClass, configureAction, isolatableFactory);
-        rules.add(createAction(rule, instantiator));
+    override fun add(ruleClass: Class<out AttributeDisambiguationRule<T?>>) {
+        val rule = DefaultConfigurableRule.of<MultipleCandidatesDetails<T?>>(ruleClass)
+        rules.add(createAction<T?>(rule, instantiator))
     }
 
-    @Override
-    public void add(final Class<? extends AttributeDisambiguationRule<T>> ruleClass) {
-        ConfigurableRule<MultipleCandidatesDetails<T>> rule = DefaultConfigurableRule.of(ruleClass);
-        rules.add(createAction(rule, instantiator));
+    override fun pickFirst(comparator: Comparator<in T?>) {
+        val rule = AttributeMatchingRules.orderedDisambiguation<T?>(comparator, true)
+        rules.add(rule)
     }
 
-    @Override
-    public void pickFirst(Comparator<? super T> comparator) {
-        Action<? super MultipleCandidatesDetails<T>> rule = AttributeMatchingRules.orderedDisambiguation(comparator, true);
-        rules.add(rule);
+    override fun pickLast(comparator: Comparator<in T?>) {
+        val rule = AttributeMatchingRules.orderedDisambiguation<T?>(comparator, false)
+        rules.add(rule)
     }
 
-    @Override
-    public void pickLast(Comparator<? super T> comparator) {
-        Action<? super MultipleCandidatesDetails<T>> rule = AttributeMatchingRules.orderedDisambiguation(comparator, false);
-        rules.add(rule);
-    }
-
-    public List<Action<? super MultipleCandidatesDetails<T>>> getRules() {
-        return rules;
-    }
-
-    public static <T> Action<MultipleCandidatesDetails<T>> createAction(
-        ConfigurableRule<MultipleCandidatesDetails<T>> rule,
-        Instantiator instantiator
-    ) {
-        return new InstantiatingAction<>(DefaultConfigurableRules.of(rule), instantiator, new ExceptionHandler<>(rule.getRuleClass()));
-    }
-
-    private static class ExceptionHandler<T> implements InstantiatingAction.ExceptionHandler<MultipleCandidatesDetails<T>> {
-
-        private final Class<?> rule;
-
-        private ExceptionHandler(Class<?> rule) {
-            this.rule = rule;
+    private class ExceptionHandler<T>(private val rule: Class<*>) : InstantiatingAction.ExceptionHandler<MultipleCandidatesDetails<T?>> {
+        override fun handleException(details: MultipleCandidatesDetails<T?>, throwable: Throwable) {
+            val orderedValues: MutableSet<T?> = Sets.newTreeSet<T?>(Ordering.usingToString())
+            orderedValues.addAll(details.getCandidateValues())
+            throw AttributeMatchException(String.format("Could not select value from candidates %s using %s.", orderedValues, ModelType.of(rule).getDisplayName()), throwable)
         }
-
-        @Override
-        public void handleException(MultipleCandidatesDetails<T> details, Throwable throwable) {
-            Set<T> orderedValues = Sets.newTreeSet(Ordering.usingToString());
-            orderedValues.addAll(details.getCandidateValues());
-            throw new AttributeMatchException(String.format("Could not select value from candidates %s using %s.", orderedValues, ModelType.of(rule).getDisplayName()), throwable);
-        }
-
     }
 
+    companion object {
+        fun <T> createAction(
+            rule: ConfigurableRule<MultipleCandidatesDetails<T?>>,
+            instantiator: Instantiator
+        ): Action<MultipleCandidatesDetails<T?>> {
+            return InstantiatingAction<MultipleCandidatesDetails<T?>>(DefaultConfigurableRules.of<MultipleCandidatesDetails<T?>>(rule), instantiator, ExceptionHandler<T?>(rule.getRuleClass()))
+        }
+    }
 }

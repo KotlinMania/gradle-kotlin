@@ -13,43 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
+import org.gradle.internal.component.resolution.failure.exception.AbstractResolutionFailureException
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure
 
 /**
  * Describe a certain type of resolution failure, by providing concise and specific human-readable
  * information to the message of the resulting exception, and also adding resolution suggestions if possible.
  *
  * @param <FAILURE> the type of failure that this describer can describe
- */
-public interface ResolutionFailureDescriber<FAILURE extends ResolutionFailure> {
+</FAILURE> */
+interface ResolutionFailureDescriber<FAILURE : ResolutionFailure?> {
     /**
      * Tests whether this describer can be applied to a given failure.
      *
-     * This defaults to {@code true} as many describers are applicable to all instances of a single failure type
+     * This defaults to `true` as many describers are applicable to all instances of a single failure type
      * (and only to instances of that failure type) and will only be called upon to describe failures of that type.
      *
-     * @return {@code true} if this describer can describe the given failure; {@code false} otherwise
+     * @return `true` if this describer can describe the given failure; `false` otherwise
      */
-    default boolean canDescribeFailure(FAILURE failure) {
-        return true;
+    fun canDescribeFailure(failure: FAILURE?): Boolean {
+        return true
     }
 
     /**
      * Describe the given failure.
      *
-     * This method should only be called if {@link #canDescribeFailure(ResolutionFailure)} returns {@code true}
+     * This method should only be called if [.canDescribeFailure] returns `true`
      * for the given failure.
      *
      * @param failure the failure to describe
      *
      * @return the exception that describes the failure
      *
-     * @implSpec Testing {@link #canDescribeFailure(ResolutionFailure)} should <strong>NOT</strong> be done by
+     * @implSpec Testing [.canDescribeFailure] should **NOT** be done by
      * implementations of this method; ensuring this is done first is the responsibility of the caller.
      */
-    AbstractResolutionFailureException describeFailure(FAILURE failure);
+    fun describeFailure(failure: FAILURE?): AbstractResolutionFailureException?
 }

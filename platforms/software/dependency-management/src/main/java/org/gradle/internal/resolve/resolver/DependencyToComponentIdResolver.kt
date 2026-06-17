@@ -13,34 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult
 
 /**
  * Responsible for taking a dependency declaration and locating the matching component. The component can be returned either the resolution state for the component, if this state is cheaply available
  * to this resolver, or an id for the component if not.
  *
- * <p>At some point in the future, this should resolve to a set of candidates rather than a single instance.
+ *
+ * At some point in the future, this should resolve to a set of candidates rather than a single instance.
  */
-public interface DependencyToComponentIdResolver {
+interface DependencyToComponentIdResolver {
     /**
      * Resolves the given selector to a component instance. Failures should be attached to the result.
      *
-     * <p>At some point in the future, this should resolve to a set of candidates rather than a single instance.
+     *
+     * At some point in the future, this should resolve to a set of candidates rather than a single instance.
      */
-    void resolve(
-        ComponentSelector selector,
-        ComponentOverrideMetadata overrideMetadata,
-        VersionSelector acceptor,
-        @Nullable VersionSelector rejector,
-        BuildableComponentIdResolveResult result,
-        ImmutableAttributes consumerAttributes
-    );
+    fun resolve(
+        selector: ComponentSelector,
+        overrideMetadata: ComponentOverrideMetadata,
+        acceptor: VersionSelector,
+        rejector: VersionSelector?,
+        result: BuildableComponentIdResolveResult,
+        consumerAttributes: ImmutableAttributes
+    )
 }

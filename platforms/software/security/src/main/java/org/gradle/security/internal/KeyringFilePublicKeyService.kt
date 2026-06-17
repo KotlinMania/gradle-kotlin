@@ -13,104 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Multimap;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.UncheckedException;
+import com.google.common.collect.ImmutableListMultimap
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableMultimap
+import com.google.common.collect.Multimap
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.time.ExponentialBackoff.Companion.of
+import java.io.File
+import java.io.IOException
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+class KeyringFilePublicKeyService(private val keyRingFile: File?) : PublicKeyService {
+    private var keys: LoadedKeys? = null
 
-public class KeyringFilePublicKeyService implements PublicKeyService {
-    private final static Logger LOGGER = Logging.getLogger(KeyringFilePublicKeyService.class);
-    private final File keyRingFile;
-    private LoadedKeys keys;
-
-    public KeyringFilePublicKeyService(File keyRingFile) {
-        this.keyRingFile = keyRingFile;
-    }
-
-    private LoadedKeys load() {
-        synchronized (this) {
+    private fun load(): LoadedKeys? {
+        synchronized(this) {
             if (keys == null) {
                 try {
-                    List<PGPPublicKeyRing> keyrings = SecuritySupport.loadKeyRingFile(keyRingFile);
-                    Map<Fingerprint, PGPPublicKeyRing> keyToKeyringBuilder = new HashMap<>();
-                    ImmutableMultimap.Builder<Long, PGPPublicKeyRing> longIdLongPGPPublicKeyBuilder = ImmutableListMultimap.builder();
+                    val keyrings = SecuritySupport.loadKeyRingFile(keyRingFile)
+                    val keyToKeyringBuilder: MutableMap<Fingerprint?, PGPPublicKeyRing?> = HashMap<Fingerprint?, PGPPublicKeyRing?>()
+                    val longIdLongPGPPublicKeyBuilder: ImmutableMultimap.Builder<Long?, PGPPublicKeyRing?> = ImmutableListMultimap.builder<Long?, PGPPublicKeyRing?>()
 
-                    for (PGPPublicKeyRing keyring : keyrings) {
-                        Iterator<PGPPublicKey> it = keyring.getPublicKeys();
+                    for (keyring in keyrings) {
+                        val it = keyring.getPublicKeys()
                         while (it.hasNext()) {
-                            PGPPublicKey key = it.next();
-                            Fingerprint fingerprint = Fingerprint.of(key);
-                            keyToKeyringBuilder.put(fingerprint, keyring);
-                            longIdLongPGPPublicKeyBuilder.put(key.getKeyID(), keyring);
+                            val key = it.next()
+                            val fingerprint: Fingerprint = Fingerprint.Companion.of(key)
+                            keyToKeyringBuilder.put(fingerprint, keyring)
+                            longIdLongPGPPublicKeyBuilder.put(key.getKeyID(), keyring)
                         }
                     }
-                    keys = new LoadedKeys(ImmutableMap.copyOf(keyToKeyringBuilder), longIdLongPGPPublicKeyBuilder.build());
-                    LOGGER.info("Loaded {} keys from {}", keys.keyToKeyring.size(), keyRingFile);
-                } catch (IOException e) {
-                    throw UncheckedException.throwAsUncheckedException(e);
+                    keys = KeyringFilePublicKeyService.LoadedKeys(ImmutableMap.copyOf<Fingerprint?, PGPPublicKeyRing?>(keyToKeyringBuilder), longIdLongPGPPublicKeyBuilder.build())
+                    LOGGER!!.info("Loaded {} keys from {}", keys.keyToKeyring.size, keyRingFile)
+                } catch (e: IOException) {
+                    throw throwAsUncheckedException(e)
                 }
             }
-            return keys;
+            return keys
         }
     }
 
-    @Override
-    public void close() {
-
+    override fun close() {
     }
 
-    @Override
-    public void findByLongId(long keyId, PublicKeyResultBuilder builder) {
-        for (PGPPublicKeyRing keyring : load().longIdToPublicKeys.get(keyId)) {
-            builder.keyRing(keyring);
-            Iterator<PGPPublicKey> pkIt = keyring.getPublicKeys();
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
+        for (keyring in load().longIdToPublicKeys.get(keyId)) {
+            builder.keyRing(keyring)
+            val pkIt = keyring.getPublicKeys()
             while (pkIt.hasNext()) {
-                PGPPublicKey key = pkIt.next();
+                val key = pkIt.next()
                 if (key.getKeyID() == keyId) {
-                    builder.publicKey(key);
+                    builder.publicKey(key)
                 }
             }
         }
     }
 
-    @Override
-    public void findByFingerprint(byte[] bytes, PublicKeyResultBuilder builder) {
-        Fingerprint fingerprint = Fingerprint.wrap(bytes);
-        PGPPublicKeyRing keyring = load().keyToKeyring.get(fingerprint);
+    override fun findByFingerprint(bytes: ByteArray?, builder: PublicKeyResultBuilder) {
+        val fingerprint: Fingerprint = Fingerprint.Companion.wrap(bytes)
+        val keyring = load().keyToKeyring.get(fingerprint)
         if (keyring != null) {
-            builder.keyRing(keyring);
-            Iterator<PGPPublicKey> pkIt = keyring.getPublicKeys();
+            builder.keyRing(keyring)
+            val pkIt = keyring.getPublicKeys()
             while (pkIt.hasNext()) {
-                PGPPublicKey key = pkIt.next();
-                if (Arrays.equals(key.getFingerprint(), bytes)) {
-                    builder.publicKey(key);
+                val key = pkIt.next()
+                if (key.getFingerprint().contentEquals(bytes)) {
+                    builder.publicKey(key)
                 }
             }
         }
     }
 
-    private static class LoadedKeys {
-        private final Map<Fingerprint, PGPPublicKeyRing> keyToKeyring;
-        private final Multimap<Long, PGPPublicKeyRing> longIdToPublicKeys;
-
-        public LoadedKeys(Map<Fingerprint, PGPPublicKeyRing> keyToKeyring, Multimap<Long, PGPPublicKeyRing> longIdToPublicKeys) {
-            this.keyToKeyring = keyToKeyring;
-            this.longIdToPublicKeys = longIdToPublicKeys;
-        }
+    private class LoadedKeys(private val keyToKeyring: MutableMap<Fingerprint?, PGPPublicKeyRing?>, private val longIdToPublicKeys: Multimap<Long?, PGPPublicKeyRing>)
+    companion object {
+        private val LOGGER = getLogger(KeyringFilePublicKeyService::class.java)
     }
 }

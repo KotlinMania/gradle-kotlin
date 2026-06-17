@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
 /**
  * Represents the module identity of the component that a dependency management instance exposes.
@@ -24,14 +23,16 @@ package org.gradle.api.internal.artifacts;
  *
  * TODO: We should migrate away from this type. Not all components have a module identity.
  */
-public interface Module {
+interface Module {
+    @JvmField
+    val group: String?
 
-    String getGroup();
+    @JvmField
+    val name: String?
 
-    String getName();
+    @JvmField
+    val version: String?
 
-    String getVersion();
-
-    String getStatus();
-
+    @JvmField
+    val status: String?
 }

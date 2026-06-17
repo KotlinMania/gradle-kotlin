@@ -13,130 +13,135 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import org.bouncycastle.bcpg.ArmoredInputStream;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openpgp.PGPCompressedData;
-import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPObjectFactory;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPSignature;
-import org.bouncycastle.openpgp.PGPSignatureList;
-import org.bouncycastle.openpgp.PGPUtil;
-import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory;
-import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
-import org.bouncycastle.openpgp.operator.PGPContentVerifierBuilderProvider;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
-import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.UncheckedException;
-import org.jspecify.annotations.Nullable;
+import org.bouncycastle.bcpg.ArmoredInputStream
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.openpgp.PGPCompressedData
+import org.bouncycastle.openpgp.PGPException
+import org.bouncycastle.openpgp.PGPObjectFactory
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPSignature
+import org.bouncycastle.openpgp.PGPSignatureList
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory
+import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator
+import org.bouncycastle.openpgp.operator.PGPContentVerifierBuilderProvider
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
+import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider
+import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.nio.file.Files
+import java.security.Security
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.security.Security;
-import java.util.ArrayList;
-import java.util.List;
+object SecuritySupport {
+    private val LOGGER = getLogger(SecuritySupport::class.java)
 
-public class SecuritySupport {
-    private static final Logger LOGGER = Logging.getLogger(SecuritySupport.class);
+    private const val BUFFER = 4096
+    const val KEYS_FILE_EXT: String = ".keys"
 
-    private static final int BUFFER = 4096;
-    public static final String KEYS_FILE_EXT = ".keys";
-
-    static {
+    init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            Security.setProperty("crypto.policy", "unlimited");
-            Security.addProvider(new BouncyCastleProvider());
+            Security.setProperty("crypto.policy", "unlimited")
+            Security.addProvider(BouncyCastleProvider())
         }
     }
 
-    public static boolean verify(File file, PGPSignature signature, PGPPublicKey publicKey) throws PGPException {
-        signature.init(createContentVerifier(), publicKey);
-        byte[] buffer = new byte[BUFFER];
-        int len;
-        try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
-            while ((len = in.read(buffer)) >= 0) {
-                signature.update(buffer, 0, len);
+    @JvmStatic
+    @Throws(PGPException::class)
+    fun verify(file: File, signature: PGPSignature, publicKey: PGPPublicKey?): Boolean {
+        signature.init(createContentVerifier(), publicKey)
+        val buffer = ByteArray(BUFFER)
+        var len: Int
+        try {
+            BufferedInputStream(FileInputStream(file)).use { `in` ->
+                while ((`in`.read(buffer).also { len = it }) >= 0) {
+                    signature.update(buffer, 0, len)
+                }
             }
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
-        return signature.verify();
+        return signature.verify()
     }
 
-    private static PGPContentVerifierBuilderProvider createContentVerifier() {
-        return new BcPGPContentVerifierBuilderProvider();
+    private fun createContentVerifier(): PGPContentVerifierBuilderProvider {
+        return BcPGPContentVerifierBuilderProvider()
     }
 
-    @Nullable
-    public static PGPSignatureList readSignatures(File file) {
-        try (
-            InputStream stream = new BufferedInputStream(Files.newInputStream(file.toPath()));
-            InputStream decoderStream = PGPUtil.getDecoderStream(stream)
-        ) {
-            return readSignatureList(decoderStream, file.toString());
-        } catch (IOException | PGPException e) {
-            throw new InvalidSignatureFileException(file, e);
+    @JvmStatic
+    fun readSignatures(file: File): PGPSignatureList? {
+        try {
+            BufferedInputStream(Files.newInputStream(file.toPath())).use { stream ->
+                PGPUtil.getDecoderStream(stream).use { decoderStream ->
+                    return readSignatureList(decoderStream, file.toString())
+                }
+            }
+        } catch (e: IOException) {
+            throw InvalidSignatureFileException(file, e)
+        } catch (e: PGPException) {
+            throw InvalidSignatureFileException(file, e)
         }
     }
 
-    @Nullable
-    private static PGPSignatureList readSignatureList(InputStream decoderStream, String locationHint) throws IOException, PGPException {
-        PGPObjectFactory objectFactory = new PGPObjectFactory(decoderStream, new BcKeyFingerprintCalculator());
-        Object nextObject = objectFactory.nextObject();
-        if (nextObject instanceof PGPSignatureList) {
-            return (PGPSignatureList) nextObject;
-        } else if (nextObject instanceof PGPCompressedData) {
-            return readSignatureList(((PGPCompressedData) nextObject).getDataStream(), locationHint);
+    @Throws(IOException::class, PGPException::class)
+    private fun readSignatureList(decoderStream: InputStream?, locationHint: String?): PGPSignatureList? {
+        val objectFactory = PGPObjectFactory(decoderStream, BcKeyFingerprintCalculator())
+        val nextObject = objectFactory.nextObject()
+        if (nextObject is PGPSignatureList) {
+            return nextObject
+        } else if (nextObject is PGPCompressedData) {
+            return readSignatureList(nextObject.getDataStream(), locationHint)
         } else {
-            LOGGER.warn("Expected a signature list in {}, but got {}. Skipping this signature.", locationHint, nextObject == null ? "invalid file" : nextObject.getClass());
-            return null;
+            LOGGER!!.warn("Expected a signature list in {}, but got {}. Skipping this signature.", locationHint, if (nextObject == null) "invalid file" else nextObject.javaClass)
+            return null
         }
     }
 
-    public static String toLongIdHexString(long key) {
-        return String.format("%016X", key).trim();
+    @JvmStatic
+    fun toLongIdHexString(key: Long): String {
+        return String.format("%016X", key).trim { it <= ' ' }
     }
 
-    public static String toHexString(byte[] fingerprint) {
-        return Fingerprint.wrap(fingerprint).toString();
+    fun toHexString(fingerprint: ByteArray?): String? {
+        return Fingerprint.Companion.wrap(fingerprint).toString()
     }
 
-    public static List<PGPPublicKeyRing> loadKeyRingFile(File keyringFile) throws IOException {
-        List<PGPPublicKeyRing> existingRings = new ArrayList<>();
-        // load existing keys from keyring before
-        try (InputStream ins = PGPUtil.getDecoderStream(createInputStreamFor(keyringFile))) {
-            PGPObjectFactory objectFactory = new JcaPGPObjectFactory(ins);
-            KeyFingerPrintCalculator fingerprintCalculator = new JcaKeyFingerprintCalculator();
+    @JvmStatic
+    @Throws(IOException::class)
+    fun loadKeyRingFile(keyringFile: File): MutableList<PGPPublicKeyRing?> {
+        val existingRings: MutableList<PGPPublicKeyRing?> = ArrayList<PGPPublicKeyRing?>()
+        PGPUtil.getDecoderStream(createInputStreamFor(keyringFile)).use { ins ->
+            val objectFactory: PGPObjectFactory = JcaPGPObjectFactory(ins)
+            val fingerprintCalculator: KeyFingerPrintCalculator = JcaKeyFingerprintCalculator()
             try {
-                for (Object o : objectFactory) {
-                    if (o instanceof PGPPublicKeyRing) {
+                for (o in objectFactory) {
+                    if (o is PGPPublicKeyRing) {
                         // backward compatibility: old keyrings should be stripped too
-                        PGPPublicKeyRing strippedKeyRing = KeyringStripper.strip((PGPPublicKeyRing) o, fingerprintCalculator);
-                        existingRings.add(strippedKeyRing);
+                        val strippedKeyRing = KeyringStripper.strip(o, fingerprintCalculator)
+                        existingRings.add(strippedKeyRing)
                     }
                 }
-            } catch (Exception e) {
-                LOGGER.warn("Error while reading the keyring file. {} keys read: {}", existingRings.size(), e.getMessage());
+            } catch (e: Exception) {
+                LOGGER!!.warn("Error while reading the keyring file. {} keys read: {}", existingRings.size, e.message)
             }
         }
-        return existingRings;
+        return existingRings
     }
 
-    private static InputStream createInputStreamFor(File keyringFile) throws IOException {
-        InputStream stream = new BufferedInputStream(new FileInputStream(keyringFile));
+    @Throws(IOException::class)
+    private fun createInputStreamFor(keyringFile: File): InputStream {
+        val stream: InputStream = BufferedInputStream(FileInputStream(keyringFile))
         if (keyringFile.getName().endsWith(KEYS_FILE_EXT)) {
-            return new ArmoredInputStream(stream);
+            return ArmoredInputStream(stream)
         }
-        return stream;
+        return stream
     }
 }

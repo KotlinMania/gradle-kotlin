@@ -13,95 +13,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.DefaultIvyArtifactName.Companion.forPublishArtifact
+import org.gradle.internal.component.model.IvyArtifactName
+import java.io.File
 
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
+class PublishArtifactLocalArtifactMetadata(componentIdentifier: ComponentIdentifier, publishArtifact: PublishArtifact) : LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
+    private val componentIdentifier: ComponentIdentifier
+    val publishArtifact: PublishArtifact
+    private val ivyArtifactName: DefaultIvyArtifactName
 
-import java.io.File;
-
-public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
-    private final ComponentIdentifier componentIdentifier;
-    private final PublishArtifact publishArtifact;
-    private final DefaultIvyArtifactName ivyArtifactName;
-
-    public PublishArtifactLocalArtifactMetadata(ComponentIdentifier componentIdentifier, PublishArtifact publishArtifact) {
-        this.componentIdentifier = componentIdentifier;
-        this.publishArtifact = publishArtifact;
+    init {
+        this.componentIdentifier = componentIdentifier
+        this.publishArtifact = publishArtifact
         // In case the publish artifact is backed by an ArchiveTask, this causes the task to be realized.
         // However, if we are at this point, we need the realized task to determine the archive extension/type later
         // to set the 'artifactType' attribute required in matching (even if the variant with the artifact is not selected in the end).
-        ivyArtifactName = DefaultIvyArtifactName.forPublishArtifact(publishArtifact);
+        ivyArtifactName = forPublishArtifact(publishArtifact)
     }
 
-    @Override
-    public String getDisplayName() {
-        return publishArtifact.getFile().getName() + " (" + componentIdentifier.getDisplayName() + ")";
+    override fun getDisplayName(): String {
+        return publishArtifact.getFile().getName() + " (" + componentIdentifier.getDisplayName() + ")"
     }
 
-    public PublishArtifact getPublishArtifact() {
-        return publishArtifact;
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun getComponentIdentifier(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ComponentIdentifier getComponentIdentifier() {
-        return componentIdentifier;
+    override fun getFile(): File {
+        return publishArtifact.getFile()
     }
 
-    @Override
-    public File getFile() {
-        return publishArtifact.getFile();
+    override fun getId(): ComponentArtifactIdentifier {
+        return this
     }
 
-    @Override
-    public ComponentArtifactIdentifier getId() {
-        return this;
+    override fun getComponentId(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ComponentIdentifier getComponentId() {
-        return componentIdentifier;
+    override fun getName(): IvyArtifactName {
+        return ivyArtifactName
     }
 
-    @Override
-    public IvyArtifactName getName() {
-        return ivyArtifactName;
+    override fun hashCode(): Int {
+        return componentIdentifier.hashCode() xor publishArtifact.hashCode()
     }
 
-    @Override
-    public int hashCode() {
-        return componentIdentifier.hashCode() ^ publishArtifact.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        PublishArtifactLocalArtifactMetadata other = (PublishArtifactLocalArtifactMetadata) obj;
-        return other.componentIdentifier.equals(componentIdentifier) && other.publishArtifact.equals(publishArtifact);
+        val other = obj as PublishArtifactLocalArtifactMetadata
+        return other.componentIdentifier == componentIdentifier && other.publishArtifact == publishArtifact
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return publishArtifact.getBuildDependencies();
+    override fun getBuildDependencies(): TaskDependency {
+        return publishArtifact.getBuildDependencies()
     }
 }

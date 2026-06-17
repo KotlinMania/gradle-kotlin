@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
-
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class AttributeMatchException extends RuntimeException {
-    public AttributeMatchException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
+class AttributeMatchException(message: String, cause: Throwable) : RuntimeException(message, cause)

@@ -13,80 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import com.google.common.collect.ImmutableList;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
+import com.google.common.collect.ImmutableList
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.gradle.api.logging.Logging.getLogger
 
-import java.util.List;
-
-public class PublicKeyServiceChain implements PublicKeyService {
-    private final static Logger LOGGER = Logging.getLogger(PublicKeyServiceChain.class);
-
-    private final List<PublicKeyService> services;
-
-    public static PublicKeyService of(PublicKeyService... delegates) {
-        return new PublicKeyServiceChain(ImmutableList.copyOf(delegates));
-    }
-
-    private PublicKeyServiceChain(List<PublicKeyService> services) {
-        this.services = services;
-    }
-
-    @Override
-    public void findByLongId(long keyId, PublicKeyResultBuilder builder) {
-        FirstMatchBuilder fmb = new FirstMatchBuilder(builder);
-        for (PublicKeyService service : services) {
-            service.findByLongId(keyId, fmb);
+class PublicKeyServiceChain private constructor(private val services: MutableList<PublicKeyService>) : PublicKeyService {
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
+        val fmb = FirstMatchBuilder(builder)
+        for (service in services) {
+            service.findByLongId(keyId, fmb)
             if (fmb.hasResult) {
-                return;
+                return
             }
         }
     }
 
-    @Override
-    public void findByFingerprint(byte[] fingerprint, PublicKeyResultBuilder builder) {
-        FirstMatchBuilder fmb = new FirstMatchBuilder(builder);
-        for (PublicKeyService service : services) {
-            service.findByFingerprint(fingerprint, fmb);
+    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder) {
+        val fmb = FirstMatchBuilder(builder)
+        for (service in services) {
+            service.findByFingerprint(fingerprint, fmb)
             if (fmb.hasResult) {
-                return;
+                return
             }
         }
     }
 
-    @Override
-    public void close() {
-        for (PublicKeyService service : services) {
+    override fun close() {
+        for (service in services) {
             try {
-                service.close();
-            } catch (Exception e) {
-                LOGGER.warn("Cannot close service", e);
+                service.close()
+            } catch (e: Exception) {
+                LOGGER!!.warn("Cannot close service", e)
             }
         }
     }
 
-    private static class FirstMatchBuilder implements PublicKeyResultBuilder {
-        private final PublicKeyResultBuilder delegate;
-        public boolean hasResult;
+    private class FirstMatchBuilder(private val delegate: PublicKeyResultBuilder) : PublicKeyResultBuilder {
+        var hasResult: Boolean = false
 
-        private FirstMatchBuilder(PublicKeyResultBuilder delegate) {
-            this.delegate = delegate;
+        override fun keyRing(keyring: PGPPublicKeyRing?) {
+            delegate.keyRing(keyring)
+            hasResult = true
         }
 
-        @Override
-        public void keyRing(PGPPublicKeyRing keyring) {
-            delegate.keyRing(keyring);
-            hasResult = true;
+        override fun publicKey(publicKey: PGPPublicKey?) {
+            delegate.publicKey(publicKey)
+            hasResult = true
         }
+    }
 
-        @Override
-        public void publicKey(PGPPublicKey publicKey) {
-            delegate.publicKey(publicKey);
-            hasResult = true;
+    companion object {
+        private val LOGGER = getLogger(PublicKeyServiceChain::class.java)
+
+        @JvmStatic
+        fun of(vararg delegates: PublicKeyService?): PublicKeyService {
+            return PublicKeyServiceChain(ImmutableList.copyOf<PublicKeyService?>(delegates))
         }
     }
 }

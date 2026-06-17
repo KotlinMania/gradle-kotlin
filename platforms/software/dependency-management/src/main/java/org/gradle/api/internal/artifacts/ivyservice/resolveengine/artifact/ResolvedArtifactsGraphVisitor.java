@@ -132,9 +132,9 @@ public class ResolvedArtifactsGraphVisitor implements DependencyGraphVisitor {
         VariantGraphResolveState variant = node.getResolveState();
 
         ImmutableAttributes attributes = dependency.getAttributes();
-        List<IvyArtifactName> artifacts = dependency.getDependencyMetadata().getArtifacts();
+        List<IvyArtifactName> artifacts = dependency.getDependencyMetadata().artifacts;
         ExcludeSpec exclusions = dependency.getExclusions();
-        Set<CapabilitySelector> capabilitySelectors = dependency.getDependencyMetadata().getSelector().getCapabilitySelectors();
+        Set<CapabilitySelector> capabilitySelectors = dependency.getDependencyMetadata().selector.getCapabilitySelectors();
 
         // If all dependency modifiers are empty, this edge does not produce an adhoc artifact set.
         if (artifacts.isEmpty() &&

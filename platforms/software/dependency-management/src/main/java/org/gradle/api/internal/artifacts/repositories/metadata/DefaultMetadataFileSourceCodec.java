@@ -53,7 +53,7 @@ public class DefaultMetadataFileSourceCodec implements PersistentModuleSource.Co
         encoder.writeString(componentIdentifier.getGroup());
         encoder.writeString(componentIdentifier.getModule());
         encoder.writeString(componentIdentifier.getVersion());
-        encoder.writeString(artifactId.getFileName());
+        encoder.writeString(artifactId.fileName);
         encoder.writeBinary(moduleSource.getSha1().toByteArray());
     }
 

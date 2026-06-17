@@ -13,56 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import org.gradle.model.internal.type.ModelType
+import java.util.Arrays
+import java.util.stream.Collectors
 
-import org.gradle.model.internal.type.ModelType;
+class DefaultRuleActionValidator : RuleActionValidator {
+    private val validInputType: MutableList<Class<*>?>
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class DefaultRuleActionValidator implements RuleActionValidator {
-    @SuppressWarnings("InlineFormatString")
-    private static final String VALID_NO_TYPES = "Rule may not have an input parameter of type: %s.";
-    @SuppressWarnings("InlineFormatString")
-    private static final String VALID_MULTIPLE_TYPES = "Rule may not have an input parameter of type: %s. Second parameter must be of type: %s.";
-
-    private final List<Class<?>> validInputType;
-
-    public DefaultRuleActionValidator() {
-        this.validInputType = Collections.emptyList();
+    constructor() {
+        this.validInputType = mutableListOf<Class<*>?>()
     }
 
-    public DefaultRuleActionValidator(Class<?>... validInputTypes) {
-        this.validInputType = Arrays.asList(validInputTypes);
+    constructor(vararg validInputTypes: Class<*>?) {
+        this.validInputType = Arrays.asList<Class<*>?>(*validInputTypes)
     }
 
-    @Override
-    public <T> RuleAction<? super T> validate(RuleAction<? super T> ruleAction) {
-        validateInputTypes(ruleAction);
-        return ruleAction;
+    override fun <T> validate(ruleAction: RuleAction<in T?>): RuleAction<in T?> {
+        validateInputTypes(ruleAction)
+        return ruleAction
     }
 
-    private void validateInputTypes(RuleAction<?> ruleAction) {
-        for (Class<?> inputType : ruleAction.getInputTypes()) {
+    private fun validateInputTypes(ruleAction: RuleAction<*>) {
+        for (inputType in ruleAction.getInputTypes()) {
             if (!validInputType.contains(inputType)) {
-                throw new RuleActionValidationException(invalidParameterMessage(inputType));
+                throw RuleActionValidationException(invalidParameterMessage(inputType))
             }
         }
     }
 
-    private String invalidParameterMessage(Class<?> inputType) {
+    private fun invalidParameterMessage(inputType: Class<*>): String {
         if (validInputType.isEmpty()) {
-            return String.format(VALID_NO_TYPES, inputType.getName());
+            return String.format(VALID_NO_TYPES, inputType.getName())
         } else {
-            return String.format(VALID_MULTIPLE_TYPES, inputType.getName(), validTypeNames());
+            return String.format(VALID_MULTIPLE_TYPES, inputType.getName(), validTypeNames())
         }
     }
 
-    private String validTypeNames() {
-        return validInputType.stream().map(ModelType::of).map(ModelType::toString).collect(Collectors.joining(" or "));
+    private fun validTypeNames(): String {
+        return validInputType.stream().map { clazz: Class<*>? -> ModelType.of(clazz) }.map<String?> { obj: ModelType<Any?>? -> obj.toString() }.collect(Collectors.joining(" or "))
     }
 
+    companion object {
+        private const val VALID_NO_TYPES = "Rule may not have an input parameter of type: %s."
+        private const val VALID_MULTIPLE_TYPES = "Rule may not have an input parameter of type: %s. Second parameter must be of type: %s."
+    }
 }

@@ -13,32 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.internal.resolve.ArtifactResolveException
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.internal.resolve.ArtifactResolveException;
-import org.jspecify.annotations.Nullable;
-
-public interface BuildableArtifactResolveResult extends ResolveResult, BuildableTypedResolveResult<ResolvableArtifact, ArtifactResolveException>, ResourceAwareResolveResult {
-    boolean isSuccessful();
+interface BuildableArtifactResolveResult : ResolveResult, BuildableTypedResolveResult<ResolvableArtifact?, ArtifactResolveException?>, ResourceAwareResolveResult {
+    val isSuccessful: Boolean
 
     /**
      * Returns the resolve failure, if any.
      */
-    @Override
-    @Nullable
-    ArtifactResolveException getFailure();
+    override fun getFailure(): ArtifactResolveException?
 
     /**
      * @throws ArtifactResolveException If the resolution was unsuccessful.
      */
-    @Override
-    ResolvableArtifact getResult() throws ArtifactResolveException;
+    @Throws(ArtifactResolveException::class)
+    override fun getResult(): ResolvableArtifact?
 
     /**
      * Marks the artifact as not found.
      */
-    void notFound(ComponentArtifactIdentifier artifact);
+    fun notFound(artifact: ComponentArtifactIdentifier?)
 }

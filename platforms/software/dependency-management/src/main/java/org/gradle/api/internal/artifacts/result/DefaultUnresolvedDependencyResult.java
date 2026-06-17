@@ -70,7 +70,7 @@ public class DefaultUnresolvedDependencyResult implements UnresolvedDependencyRe
 
     @Override
     public ComponentSelector getAttempted() {
-        return failure.getSelector();
+        return failure.selector;
     }
 
     @Override

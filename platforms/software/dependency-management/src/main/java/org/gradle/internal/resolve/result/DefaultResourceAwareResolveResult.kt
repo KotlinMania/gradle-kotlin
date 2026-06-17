@@ -13,43 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.resource.ExternalResourceName
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.resource.ExternalResourceName;
+open class DefaultResourceAwareResolveResult : ResourceAwareResolveResult {
+    private var attempted: MutableSet<String?>? = null
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-public class DefaultResourceAwareResolveResult implements ResourceAwareResolveResult {
-    private Set<String> attempted;
-
-    @Override
-    public List<String> getAttempted() {
-        return attempted == null ? Collections.emptyList() : ImmutableList.copyOf(attempted);
+    override fun getAttempted(): MutableList<String?> {
+        return if (attempted == null) mutableListOf<String?>() else ImmutableList.copyOf<String?>(attempted)
     }
 
-    @Override
-    public void attempted(String locationDescription) {
+    override fun attempted(locationDescription: String?) {
         if (attempted == null) {
-            attempted = new LinkedHashSet<>();
+            attempted = LinkedHashSet<String?>()
         }
-        attempted.add(locationDescription);
+        attempted!!.add(locationDescription)
     }
 
-    @Override
-    public void attempted(ExternalResourceName location) {
-        attempted(location.getDisplayName());
+    override fun attempted(location: ExternalResourceName) {
+        attempted(location.getDisplayName())
     }
 
-    @Override
-    public void applyTo(ResourceAwareResolveResult target) {
+    override fun applyTo(target: ResourceAwareResolveResult) {
         if (attempted != null) {
-            for (String location : attempted) {
-                target.attempted(location);
+            for (location in attempted) {
+                target.attempted(location)
             }
         }
     }

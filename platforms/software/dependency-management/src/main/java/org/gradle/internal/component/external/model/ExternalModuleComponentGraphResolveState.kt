@@ -13,33 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-
-import javax.annotation.concurrent.ThreadSafe;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import javax.annotation.concurrent.ThreadSafe
 
 /**
- * A specialized {@link ComponentGraphResolveState} for external module components.
+ * A specialized [ComponentGraphResolveState] for external module components.
  *
- * <p>Instances of this type are cached and reused for multiple graph resolutions, possibly in parallel. This means that the implementation must be thread-safe.
+ *
+ * Instances of this type are cached and reused for multiple graph resolutions, possibly in parallel. This means that the implementation must be thread-safe.
  */
 @ThreadSafe
-public interface ExternalModuleComponentGraphResolveState extends ComponentGraphResolveState {
+interface ExternalModuleComponentGraphResolveState : ComponentGraphResolveState {
+    @get:Deprecated(
+        """Try to avoid using this. This method exposes legacy stateful metadata. Usages should be
+      replaced by using the stateful types like {@link ComponentGraphResolveState} and
+      {@link org.gradle.internal.component.model.ComponentArtifactResolveState}."""
+    )
+    val legacyMetadata: ExternalComponentResolveMetadata?
 
-    /**
-     * @deprecated Try to avoid using this. This method exposes legacy stateful metadata. Usages should be
-     * replaced by using the stateful types like {@link ComponentGraphResolveState} and
-     * {@link org.gradle.internal.component.model.ComponentArtifactResolveState}.
-     */
-    @Deprecated
-    ExternalComponentResolveMetadata getLegacyMetadata();
+    override fun getId(): ModuleComponentIdentifier?
 
-    @Override
-    ModuleComponentIdentifier getId();
-
-    @Override
-    ExternalModuleComponentGraphResolveMetadata getMetadata();
+    override fun getMetadata(): ExternalModuleComponentGraphResolveMetadata?
 }

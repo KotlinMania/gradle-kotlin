@@ -13,62 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.ResolvedConfiguration;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.VisitedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.results.VisitedGraphResults;
-import org.gradle.api.specs.Spec;
+package org.gradle.api.internal.artifacts
 
 /**
  * Immutable representation of the state of dependency resolution. Can represent the result of resolving build
  * dependencies or the result of a full dependency graph resolution.
- * <p>
- * In case of failures, both fatal and partial, exceptions are attached to the {@link VisitedGraphResults}.
+ *
+ *
+ * In case of failures, both fatal and partial, exceptions are attached to the [VisitedGraphResults].
  */
-public interface ResolverResults {
-
+interface ResolverResults {
     /**
-     * Returns the old model, which has been replaced by {@link VisitedGraphResults} and {@link VisitedArtifactSet}.
+     * Returns the old model, which has been replaced by [VisitedGraphResults] and [VisitedArtifactSet].
      *
-     * <strong>This method should only be used to implement existing legacy public API methods.</strong>
+     * **This method should only be used to implement existing legacy public API methods.**
      */
-    LegacyResolverResults getLegacyResults();
+    @JvmField
+    val legacyResults: LegacyResolverResults?
 
     /**
      * Return the model representing the resolved graph. This model provides access
      * to the root component as well as any failure that occurred while resolving the graph.
      */
-    VisitedGraphResults getVisitedGraph();
+    @JvmField
+    val visitedGraph: VisitedGraphResults?
 
     /**
      * Returns the artifacts visited during graph resolution.
      */
-    VisitedArtifactSet getVisitedArtifacts();
+    @JvmField
+    val visitedArtifacts: VisitedArtifactSet?
 
     /**
      * Returns true if the full graph was resolved. False if only build dependencies were resolved.
      */
-    boolean isFullyResolved();
+    @JvmField
+    val isFullyResolved: Boolean
 
     /**
      * Results for supporting legacy resolution APIs including:
-     * <ul>
-     *     <li>{@link ResolvedConfiguration}</li>
-     *     <li>{@link org.gradle.api.artifacts.LenientConfiguration}</li>
-     *     <li>{@link org.gradle.api.artifacts.Configuration#fileCollection(Spec)} and related methods</li>
-     * </ul>
+     *
+     *  * [ResolvedConfiguration]
+     *  * [org.gradle.api.artifacts.LenientConfiguration]
+     *  * [org.gradle.api.artifacts.Configuration.fileCollection] and related methods
+     *
      */
     interface LegacyResolverResults {
-
         /**
-         * Get a legacy {@link ResolvedConfiguration}.
+         * Get a legacy [ResolvedConfiguration].
          *
          * @throws IllegalStateException If only build dependencies have been resolved.
          */
-        ResolvedConfiguration getResolvedConfiguration();
-
+        @JvmField
+        val resolvedConfiguration: ResolvedConfiguration?
     }
-
 }

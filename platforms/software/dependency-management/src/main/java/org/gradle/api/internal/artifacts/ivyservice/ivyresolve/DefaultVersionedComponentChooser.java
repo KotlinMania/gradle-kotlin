@@ -87,7 +87,7 @@ class DefaultVersionedComponentChooser implements VersionedComponentChooser {
     }
 
     private boolean isMissingModuleDescriptor(ExternalModuleComponentGraphResolveMetadata metadata) {
-        return metadata.isMissing();
+        return metadata.isMissing;
     }
 
     @Override
@@ -96,7 +96,7 @@ class DefaultVersionedComponentChooser implements VersionedComponentChooser {
 
         // Loop over all listed versions, sorted by LATEST first
         List<ModuleComponentResolveState> resolveStates = sortLatestFirst(versions);
-        Action<? super ArtifactResolutionDetails> contentFilter = result.getContentFilter();
+        Action<? super ArtifactResolutionDetails> contentFilter = result.contentFilter;
         for (ModuleComponentResolveState candidate : resolveStates) {
             if (contentFilter != null) {
                 DynamicArtifactResolutionDetails details = new DynamicArtifactResolutionDetails(candidate);
@@ -199,7 +199,7 @@ class DefaultVersionedComponentChooser implements VersionedComponentChooser {
 
     private static void applyTo(DefaultMetadataProvider provider, ComponentSelectionContext result) {
         BuildableModuleComponentMetaDataResolveResult<?> metaDataResult = provider.getResult();
-        switch (metaDataResult.getState()) {
+        switch (metaDataResult.state) {
             case Unknown:
             case Missing:
                 result.noMatchFound();

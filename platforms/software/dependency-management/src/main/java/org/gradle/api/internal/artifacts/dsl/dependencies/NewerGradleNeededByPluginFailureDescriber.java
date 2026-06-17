@@ -46,12 +46,12 @@ public abstract class NewerGradleNeededByPluginFailureDescriber extends Abstract
 
     @Override
     public boolean canDescribeFailure(NoCompatibleVariantsFailure failure) {
-        return !failure.getCandidates().isEmpty() && allCandidatesIncompatibleDueToGradleVersionTooLow(failure);
+        return !failure.candidates.isEmpty() && allCandidatesIncompatibleDueToGradleVersionTooLow(failure);
     }
 
     @Override
     public AbstractResolutionFailureException describeFailure(NoCompatibleVariantsFailure failure) {
-        GradleVersion minGradleApiVersionSupportedByPlugin = findMinGradleVersionSupportedByPlugin(failure.getCandidates());
+        GradleVersion minGradleApiVersionSupportedByPlugin = findMinGradleVersionSupportedByPlugin(failure.candidates);
         String message = buildPluginNeedsNewerGradleVersionFailureMsg(failure.describeRequestTarget(), minGradleApiVersionSupportedByPlugin);
         List<String> resolutions = buildResolutions(suggestUpdateGradle(minGradleApiVersionSupportedByPlugin), suggestDowngradePlugin(failure.describeRequestTarget()));
         return new VariantSelectionByAttributesException(message, failure, resolutions);
@@ -59,8 +59,8 @@ public abstract class NewerGradleNeededByPluginFailureDescriber extends Abstract
 
     private boolean allCandidatesIncompatibleDueToGradleVersionTooLow(NoCompatibleVariantsFailure failure) {
         boolean requestingPluginApi = failure.getRequestedAttributes().contains(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE);
-        boolean allIncompatibleDueToGradleVersion = failure.getCandidates().stream()
-            .allMatch(candidate -> candidate.getIncompatibleAttributes().stream()
+        boolean allIncompatibleDueToGradleVersion = failure.candidates.stream()
+            .allMatch(candidate -> candidate.incompatibleAttributes.stream()
                 .anyMatch(this::isGradlePluginApiAttribute));
         return requestingPluginApi && allIncompatibleDueToGradleVersion;
     }
@@ -75,14 +75,14 @@ public abstract class NewerGradleNeededByPluginFailureDescriber extends Abstract
     }
 
     private Optional<GradleVersion> findMinGradleVersionSupportedByPlugin(AssessedCandidate candidate) {
-        return candidate.getIncompatibleAttributes().stream()
+        return candidate.incompatibleAttributes.stream()
             .filter(this::isGradlePluginApiAttribute)
-            .map(apiVersionAttribute -> GradleVersion.version(String.valueOf(apiVersionAttribute.getProvided())))
+            .map(apiVersionAttribute -> GradleVersion.version(String.valueOf(apiVersionAttribute.provided)))
             .min(Comparator.comparing(GradleVersion::getVersion));
     }
 
     private boolean isGradlePluginApiAttribute(AssessedAttribute<?> attribute) {
-        return attribute.getAttribute().getName().equals(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE.getName());
+        return attribute.attribute.getName().equals(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE.getName());
     }
 
     private String buildPluginNeedsNewerGradleVersionFailureMsg(String pluginId, GradleVersion minRequiredGradleVersion) {

@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.api.artifacts.transform.TransformParameters;
-import org.gradle.api.artifacts.transform.TransformSpec;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Set;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformParameters
+import org.gradle.api.artifacts.transform.TransformSpec
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * A registry for artifact transforms.
  */
-@ServiceScope(Scope.Project.class)
-public interface VariantTransformRegistry {
+@ServiceScope(Scope.Project::class)
+interface VariantTransformRegistry {
     /**
      * Register an artifact transform.
      *
@@ -38,12 +35,13 @@ public interface VariantTransformRegistry {
      *
      * @see TransformAction
      */
-    <T extends TransformParameters> void registerTransform(Class<? extends TransformAction<T>> actionType, Action<? super TransformSpec<T>> registrationAction);
+    fun <T : TransformParameters?> registerTransform(actionType: Class<out TransformAction<T?>>, registrationAction: Action<in TransformSpec<T?>>)
 
     /**
      * Returns a set of all the registered transforms.
      *
      * @return the set of registered transforms
      */
-    Set<TransformRegistration> getRegistrations();
+    @JvmField
+    val registrations: MutableSet<TransformRegistration>?
 }

@@ -121,7 +121,7 @@ public class DefaultGradleModuleMetadataSource implements MetadataSource<Mutable
             for (MutableComponentVariant mutableVariant : metaDataFromResource.getMutableVariants()) {
                 List<ComponentVariant.File> invalidFiles = null;
                 for (ComponentVariant.File file : mutableVariant.getFiles()) {
-                    if (file.getUri().contains("SNAPSHOT")) {
+                    if (file.uri.contains("SNAPSHOT")) {
                         if (invalidFiles == null) {
                             invalidFiles = new ArrayList<>(2);
                         }
@@ -131,7 +131,7 @@ public class DefaultGradleModuleMetadataSource implements MetadataSource<Mutable
                 if (invalidFiles != null) {
                     for (ComponentVariant.File invalidFile : invalidFiles) {
                         mutableVariant.removeFile(invalidFile);
-                        mutableVariant.addFile(invalidFile.getName(), invalidFile.getUri().replace("SNAPSHOT", uniqueIdentifier.getTimestamp()));
+                        mutableVariant.addFile(invalidFile.name, invalidFile.uri.replace("SNAPSHOT", uniqueIdentifier.getTimestamp()));
                     }
                 }
             }

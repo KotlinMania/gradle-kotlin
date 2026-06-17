@@ -13,31 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.component.model
 
 /**
  * Metadata about a component that will override the information obtained when resolving, typically specified by a dependency descriptor.
  * Metadata supplied in this way is applied inconsistently, because multiple dependencies can point to the same component with different
  * override metadata, and only one of these overrides will be used during dependency resolution.
  */
-public interface ComponentOverrideMetadata {
-
+interface ComponentOverrideMetadata {
     /**
      * If the dependency declared an artifact for the component, return it.
      */
-    @Nullable
-    IvyArtifactName getArtifact();
+    fun getArtifact(): IvyArtifactName?
 
     /**
      * Return true if the dependency declaration defines this component as changing.
      */
-    boolean isChanging();
+    fun isChanging(): Boolean
 
     /**
      * Return a copy of this override metadata with `isChanging()` set to true.
      */
-    ComponentOverrideMetadata withChanging();
+    fun withChanging(): ComponentOverrideMetadata?
 }

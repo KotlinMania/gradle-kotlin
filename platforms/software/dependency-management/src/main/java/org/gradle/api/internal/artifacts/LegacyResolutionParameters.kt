@@ -13,39 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.CapabilitiesResolutionInternal;
-import org.gradle.internal.ImmutableActionSet;
+package org.gradle.api.internal.artifacts
 
 /**
- * This is the legacy counterpart to {@link org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters}.
+ * This is the legacy counterpart to [org.gradle.api.internal.artifacts.ivyservice.ResolutionParameters].
  * The new parameters type is thread-safe, where any interactions with mutable Project state
  * are guarded by proper project locking. Otherwise, the new parameters are fully immutable.
- * <p>
+ *
+ *
  * TODO: Eventually, the data in this class should be made thread-safe and immutable in the same manner. The
- * primary restriction is that the user-provided {@link org.gradle.api.Action actions} provided by this class
+ * primary restriction is that the user-provided [actions][org.gradle.api.Action] provided by this class
  * are not necessarily isolated from the project. They are free to interact with the mutable project state without
  * proper locking. To resolve this, we should introduce a serialization and deserialization round-trip for each
  * registered action, where we deprecate (and then fail) if the user provided an action that cannot be
- * {@link org.gradle.api.IsolatedAction isolated} from the project.
+ * [isolated][org.gradle.api.IsolatedAction] from the project.
  */
-public interface LegacyResolutionParameters {
-
+interface LegacyResolutionParameters {
     /**
      * Rules that may substitute user declared dependencies for other dependencies.
      */
-    ImmutableActionSet<DependencySubstitutionInternal> getDependencySubstitutionRules();
+    @JvmField
+    val dependencySubstitutionRules: ImmutableActionSet<DependencySubstitutionInternal>?
 
     /**
      * Rules that may resolve capability conflicts.
      */
-    ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule> getCapabilityConflictResolutionRules();
+    @JvmField
+    val capabilityConflictResolutionRules: ImmutableList<CapabilitiesResolutionInternal.CapabilityResolutionRule>?
 
     /**
      * Rules that specify which components dynamic version selection may select.
      */
-    ComponentSelectionRulesInternal getComponentSelectionRules();
-
+    @JvmField
+    val componentSelectionRules: ComponentSelectionRulesInternal?
 }

@@ -13,25 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-public abstract class AbstractStatelessDerivationStrategy implements VariantDerivationStrategy {
-    private final int hashCode;
+abstract class AbstractStatelessDerivationStrategy protected constructor() : VariantDerivationStrategy {
+    private val hashCode: Int
 
-    protected AbstractStatelessDerivationStrategy() {
-        hashCode = this.getClass().getName().hashCode();
+    init {
+        hashCode = this.javaClass.getName().hashCode()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        return o != null && getClass() == o.getClass();
+        return o != null && javaClass == o.javaClass
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 }

@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
-
-import java.util.Set;
+package org.gradle.internal.component.model
 
 /**
  * Represents the Ivy descriptor representation of an exclude.
  * In an Ivy descriptor, and exclude can apply to a number of configurations.
  */
-public interface Exclude extends ExcludeMetadata {
+interface Exclude : ExcludeMetadata {
     /**
      * The configurations that this exclude will apply to.
      * NOTE: only supported for exclude rules sourced from an Ivy module descriptor (ivy.xml).
      *
      * @return The set of configurations that apply, or an empty set if this exclude applies to _all_ configurations.
      */
-    Set<String> getConfigurations();
+    @JvmField
+    val configurations: MutableSet<String>?
 }

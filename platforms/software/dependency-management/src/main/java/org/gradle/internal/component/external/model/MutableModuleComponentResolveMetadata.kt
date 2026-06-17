@@ -13,93 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.MutableModuleSources;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
-import java.util.List;
-import java.util.Set;
-
-public interface MutableModuleComponentResolveMetadata {
+interface MutableModuleComponentResolveMetadata {
     /**
      * The identifier for this component
      */
-    ModuleComponentIdentifier getId();
+    /**
+     * Sets the component id and legacy module version id
+     */
+    var id: ModuleComponentIdentifier?
 
     /**
      * The module version associated with this module.
      */
-    ModuleVersionIdentifier getModuleVersionId();
+    val moduleVersionId: ModuleVersionIdentifier?
 
     /**
      * Creates an immutable copy of this meta-data.
      */
-    ModuleComponentResolveMetadata asImmutable();
+    fun asImmutable(): ModuleComponentResolveMetadata?
 
-    /**
-     * Sets the component id and legacy module version id
-     */
-    void setId(ModuleComponentIdentifier componentId);
+    var isMissing: Boolean
 
-    boolean isMissing();
-    void setMissing(boolean missing);
+    var isChanging: Boolean
 
-    boolean isChanging();
-    void setChanging(boolean changing);
+    var status: String?
 
-    String getStatus();
-    void setStatus(String status);
+    var statusScheme: MutableList<String>?
 
-    List<String> getStatusScheme();
-    void setStatusScheme(List<String> statusScheme);
+    var sources: MutableModuleSources?
 
-    MutableModuleSources getSources();
+    fun addVariant(variant: MutableComponentVariant): MutableComponentVariant?
 
-    void setSources(ModuleSources moduleSources);
+    fun addVariant(variantName: String, attributes: ImmutableAttributes): MutableComponentVariant?
 
-    MutableComponentVariant addVariant(MutableComponentVariant variant);
+    var attributes: AttributeContainer?
 
-    MutableComponentVariant addVariant(String variantName, ImmutableAttributes attributes);
+    var isExternalVariant: Boolean
 
-    AttributeContainer getAttributes();
-
-    void setAttributes(AttributeContainer attributes);
-
-    boolean isExternalVariant();
-
-    void setExternalVariant(boolean externalVariant);
-
-    boolean isComponentMetadataRuleCachingEnabled();
-
-    void setComponentMetadataRuleCachingEnabled(boolean componentMetadataRuleCachingEnabled);
+    var isComponentMetadataRuleCachingEnabled: Boolean
 
     /**
      * Creates an artifact for this module. Does not mutate this metadata.
      */
-    ModuleComponentArtifactMetadata artifact(String type, @Nullable String extension, @Nullable String classifier);
+    fun artifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata?
 
-    AttributesFactory getAttributesFactory();
+    val attributesFactory: AttributesFactory?
 
     /**
      * Returns the metadata rules container for this module
      */
-    VariantMetadataRules getVariantMetadataRules();
+    val variantMetadataRules: VariantMetadataRules?
 
     /**
      * Declares that this component belongs to a virtual platform.
      * @param platform the identifier of the virtual platform
      */
-    void belongsTo(VirtualComponentIdentifier platform);
+    fun belongsTo(platform: VirtualComponentIdentifier)
 
-    @Nullable
-    Set<? extends VirtualComponentIdentifier> getPlatformOwners();
+    val platformOwners: MutableSet<out VirtualComponentIdentifier>?
 
-    List<? extends MutableComponentVariant> getMutableVariants();
+    val mutableVariants: MutableList<out MutableComponentVariant>?
 }

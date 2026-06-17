@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
 /**
  * This interface is used to make the difference between a "real" component
  * and something that was either created in a component metadata rule or
  * internally by the engine. Typically, virtual platforms.
  */
-public interface VirtualComponentIdentifier extends ComponentIdentifier {
-}
+interface VirtualComponentIdentifier : ComponentIdentifier

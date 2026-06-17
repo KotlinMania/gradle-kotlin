@@ -13,53 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.internal.capabilities.CapabilityInternal;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.gradle.api.internal.capabilities.ShadowedCapability;
+import org.gradle.api.internal.capabilities.CapabilityInternal
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.api.internal.capabilities.ShadowedCapability
 
 /**
  * A capability that is shadowed by another capability.
- * <p>
+ *
+ *
  * This class remains deeply immutable.
  */
-public final class ShadowedImmutableCapability implements ShadowedCapability {
-    private final ImmutableCapability shadowed;
-    private final String appendix;
+class ShadowedImmutableCapability(shadowed: CapabilityInternal, private val appendix: String) : ShadowedCapability {
+    private val shadowed: ImmutableCapability
 
-    public ShadowedImmutableCapability(CapabilityInternal shadowed, String appendix) {
-        this.shadowed = DefaultImmutableCapability.of(shadowed);
-        this.appendix = appendix;
+    init {
+        this.shadowed = DefaultImmutableCapability.of(shadowed)
     }
 
-    @Override
-    public String getAppendix() {
-        return appendix;
+    override fun getAppendix(): String {
+        return appendix
     }
 
-    @Override
-    public ImmutableCapability getShadowedCapability() {
-        return shadowed;
+    override fun getShadowedCapability(): ImmutableCapability {
+        return shadowed
     }
 
-    @Override
-    public String getGroup() {
-        return shadowed.getGroup();
+    override fun getGroup(): String {
+        return shadowed.getGroup()
     }
 
-    @Override
-    public String getName() {
-        return shadowed.getName() + appendix;
+    override fun getName(): String {
+        return shadowed.getName() + appendix
     }
 
-    @Override
-    public String getVersion() {
-        return shadowed.getVersion();
+    override fun getVersion(): String {
+        return shadowed.getVersion()!!
     }
 
-    @Override
-    public String getCapabilityId() {
-        return shadowed.getCapabilityId() + appendix;
+    override fun getCapabilityId(): String {
+        return shadowed.getCapabilityId() + appendix
     }
 }

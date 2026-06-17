@@ -13,132 +13,109 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.dsl.dependencies.LockEntryFilter
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.dsl.dependencies.LockEntryFilter;
+internal object LockEntryFilterFactory {
+    val FILTERS_NONE: LockEntryFilter = LockEntryFilter { element: ModuleComponentIdentifier? -> false }
+    private val FILTERS_ALL = LockEntryFilter { element: ModuleComponentIdentifier? -> true }
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+    private const val WILDCARD_SUFFIX = "*"
+    const val MODULE_SEPARATOR: String = ":"
 
-class LockEntryFilterFactory {
-
-    protected static final LockEntryFilter FILTERS_NONE = element -> false;
-    private static final LockEntryFilter FILTERS_ALL = element -> true;
-
-    private static final String WILDCARD_SUFFIX = "*";
-    public static final String MODULE_SEPARATOR = ":";
-
-    static LockEntryFilter forParameter(List<String> dependencyNotations, String context, boolean allowFullWildcard) {
+    fun forParameter(dependencyNotations: MutableList<String>, context: String, allowFullWildcard: Boolean): LockEntryFilter {
         if (dependencyNotations.isEmpty()) {
-            return FILTERS_NONE;
+            return FILTERS_NONE
         }
-        HashSet<LockEntryFilter> lockEntryFilters = new HashSet<>();
-        for (String lockExcludes : dependencyNotations) {
-            for (String lockExclude : lockExcludes.split(",")) {
-                String[] split = lockExclude.split(MODULE_SEPARATOR);
-                validateNotation(lockExclude, split, allowFullWildcard, context);
+        val lockEntryFilters = HashSet<LockEntryFilter>()
+        for (lockExcludes in dependencyNotations) {
+            for (lockExclude in lockExcludes.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+                val split = lockExclude.split(MODULE_SEPARATOR.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                validateNotation(lockExclude, split, allowFullWildcard, context)
 
-                lockEntryFilters.add(createFilter(split[0], split[1]));
+                lockEntryFilters.add(createFilter(split[0], split[1]))
             }
             if (lockEntryFilters.isEmpty()) {
-                throwInvalid(lockExcludes, context);
+                throwInvalid(lockExcludes, context)
             }
         }
 
-        if (lockEntryFilters.size() == 1) {
-            return lockEntryFilters.iterator().next();
+        if (lockEntryFilters.size == 1) {
+            return lockEntryFilters.iterator().next()
         } else {
-            return new AggregateLockEntryFilter(lockEntryFilters);
+            return AggregateLockEntryFilter(lockEntryFilters)
         }
     }
 
-    private static void throwInvalid(String lockExclude, String context) {
-        throw new IllegalArgumentException(context + " format must be <group>:<artifact> but '" + lockExclude + "' is invalid.");
+    private fun throwInvalid(lockExclude: String, context: String) {
+        throw IllegalArgumentException(context + " format must be <group>:<artifact> but '" + lockExclude + "' is invalid.")
     }
 
-    private static LockEntryFilter createFilter(final String group, final String module) {
-        if (group.equals(WILDCARD_SUFFIX) && module.equals(WILDCARD_SUFFIX)) {
-            return FILTERS_ALL;
+    private fun createFilter(group: String, module: String): LockEntryFilter {
+        if (group == WILDCARD_SUFFIX && module == WILDCARD_SUFFIX) {
+            return FILTERS_ALL
         }
 
-        return new GroupModuleLockEntryFilter(group, module);
+        return GroupModuleLockEntryFilter(group, module)
     }
 
-    private static void validateNotation(String lockExclude, String[] split, boolean allowFullWildcard, String context) {
-        if (split.length != 2) {
-            throwInvalid(lockExclude, context);
+    private fun validateNotation(lockExclude: String, split: Array<String>, allowFullWildcard: Boolean, context: String) {
+        if (split.size != 2) {
+            throwInvalid(lockExclude, context)
         }
-        String group = split[0];
-        String module = split[1];
+        val group = split[0]
+        val module = split[1]
 
         if ((group.contains(WILDCARD_SUFFIX) && !group.endsWith(WILDCARD_SUFFIX)) || (module.contains(WILDCARD_SUFFIX) && !module.endsWith(WILDCARD_SUFFIX))) {
-            throwInvalid(lockExclude, context);
+            throwInvalid(lockExclude, context)
         }
 
-        if (!allowFullWildcard && group.equals(WILDCARD_SUFFIX) && module.equals(WILDCARD_SUFFIX)) {
-            throwInvalid(lockExclude, context);
+        if (!allowFullWildcard && group == WILDCARD_SUFFIX && module == WILDCARD_SUFFIX) {
+            throwInvalid(lockExclude, context)
         }
-
     }
 
-    public static LockEntryFilter combine(LockEntryFilter firstFilter, LockEntryFilter secondFilter) {
-        if (firstFilter == FILTERS_NONE) {
-            return secondFilter;
+    fun combine(firstFilter: LockEntryFilter, secondFilter: LockEntryFilter): LockEntryFilter {
+        if (firstFilter === FILTERS_NONE) {
+            return secondFilter
         }
-        if (secondFilter == FILTERS_NONE) {
-            return firstFilter;
+        if (secondFilter === FILTERS_NONE) {
+            return firstFilter
         }
-        if (firstFilter == FILTERS_ALL) {
-            return firstFilter;
+        if (firstFilter === FILTERS_ALL) {
+            return firstFilter
         }
-        if (secondFilter == FILTERS_ALL) {
-            return secondFilter;
+        if (secondFilter === FILTERS_ALL) {
+            return secondFilter
         }
 
-        return new AggregateLockEntryFilter(ImmutableSet.of(firstFilter, secondFilter));
+        return AggregateLockEntryFilter(ImmutableSet.of<LockEntryFilter>(firstFilter, secondFilter))
     }
 
-    private static class AggregateLockEntryFilter implements LockEntryFilter {
-        private final Set<LockEntryFilter> filters;
-
-        private AggregateLockEntryFilter(Set<LockEntryFilter> filters) {
-            this.filters = filters;
-        }
-
-        @Override
-        public boolean isSatisfiedBy(ModuleComponentIdentifier moduleComponentIdentifier) {
-            for (LockEntryFilter filter : filters) {
+    private class AggregateLockEntryFilter(private val filters: MutableSet<LockEntryFilter>) : LockEntryFilter {
+        override fun isSatisfiedBy(moduleComponentIdentifier: ModuleComponentIdentifier): Boolean {
+            for (filter in filters) {
                 if (filter.isSatisfiedBy(moduleComponentIdentifier)) {
-                    return true;
+                    return true
                 }
             }
-            return false;
+            return false
         }
     }
 
-    private static class GroupModuleLockEntryFilter implements LockEntryFilter {
-        private final String group;
-        private final String module;
-
-        private GroupModuleLockEntryFilter(String group, String module) {
-            this.group = group;
-            this.module = module;
+    private class GroupModuleLockEntryFilter(private val group: String, private val module: String) : LockEntryFilter {
+        override fun isSatisfiedBy(id: ModuleComponentIdentifier): Boolean {
+            return matches(group, id.getGroup()) && matches(module, id.getModule())
         }
 
-        @Override
-        public boolean isSatisfiedBy(ModuleComponentIdentifier id) {
-            return matches(group, id.getGroup()) && matches(module, id.getModule());
-        }
-
-        private boolean matches(String test, String candidate) {
+        fun matches(test: String, candidate: String): Boolean {
             if (test.endsWith(WILDCARD_SUFFIX)) {
-                return candidate.startsWith(test.substring(0, test.length() - 1));
+                return candidate.startsWith(test.substring(0, test.length - 1))
             }
-            return candidate.equals(test);
+            return candidate == test
         }
     }
 }

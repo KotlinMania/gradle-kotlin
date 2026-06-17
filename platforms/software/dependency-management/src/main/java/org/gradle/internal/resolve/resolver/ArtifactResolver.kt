@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.resolver;
+package org.gradle.internal.resolve.resolver
 
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult;
-import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult;
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.resolve.result.BuildableArtifactResolveResult
+import org.gradle.internal.resolve.result.BuildableArtifactSetResolveResult
 
-public interface ArtifactResolver {
+interface ArtifactResolver {
     /**
      * Discovers the set of artifacts belonging to the given component, with the type specified. Does not download the artifacts. Any failures are packaged up in the result.
      */
-    void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result);
+    fun resolveArtifactsWithType(component: ComponentArtifactResolveMetadata, artifactType: ArtifactType, result: BuildableArtifactSetResolveResult)
 
     /**
      * Resolves the given artifact. Any failures are packaged up in the result.
      */
-    void resolveArtifact(ComponentArtifactResolveMetadata component, ComponentArtifactMetadata artifact, BuildableArtifactResolveResult result);
+    fun resolveArtifact(component: ComponentArtifactResolveMetadata, artifact: ComponentArtifactMetadata, result: BuildableArtifactResolveResult)
 }

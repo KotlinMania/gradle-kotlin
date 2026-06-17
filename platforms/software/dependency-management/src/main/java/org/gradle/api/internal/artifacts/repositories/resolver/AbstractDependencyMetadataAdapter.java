@@ -84,7 +84,7 @@ public abstract class AbstractDependencyMetadataAdapter<T extends DependencyMeta
 
     @Override
     public String getReason() {
-        return getMetadata().getReason();
+        return getMetadata().reason;
     }
 
     @Override

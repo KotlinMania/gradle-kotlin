@@ -13,167 +13,154 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.local.model;
+package org.gradle.internal.component.local.model
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ProjectComponentIdentifierInternal;
-import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.util.Path;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.ProjectComponentIdentifierInternal
+import org.gradle.api.internal.artifacts.capability.DefaultSpecificCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.api.internal.project.ProjectIdentity
+import org.gradle.util.Path
 
-import java.util.List;
+class DefaultProjectComponentSelector(
+    projectIdentity: ProjectIdentity,
+    attributes: ImmutableAttributes,
+    capabilitySelectors: ImmutableSet<CapabilitySelector>
+) : ProjectComponentSelectorInternal {
+    private val projectIdentity: ProjectIdentity
+    private val attributes: ImmutableAttributes
+    private val capabilitySelectors: ImmutableSet<CapabilitySelector>
 
-public class DefaultProjectComponentSelector implements ProjectComponentSelectorInternal {
+    private val hashCode: Int
 
-    private final ProjectIdentity projectIdentity;
-    private final ImmutableAttributes attributes;
-    private final ImmutableSet<CapabilitySelector> capabilitySelectors;
-
-    private final int hashCode;
-
-    public DefaultProjectComponentSelector(
-        ProjectIdentity projectIdentity,
-        ImmutableAttributes attributes,
-        ImmutableSet<CapabilitySelector> capabilitySelectors
-    ) {
-        this.projectIdentity = projectIdentity;
-        this.attributes = attributes;
-        this.capabilitySelectors = capabilitySelectors;
-        this.hashCode = computeHashCode(attributes, capabilitySelectors, projectIdentity);
+    init {
+        this.projectIdentity = projectIdentity
+        this.attributes = attributes
+        this.capabilitySelectors = capabilitySelectors
+        this.hashCode = computeHashCode(attributes, capabilitySelectors, projectIdentity)
     }
 
-    private static int computeHashCode(
-        ImmutableAttributes attributes,
-        ImmutableSet<CapabilitySelector> capabilitySelectors,
-        ProjectIdentity projectIdentity
-    ) {
-        int result = projectIdentity.hashCode();
-        result = 31 * result + attributes.hashCode();
-        result = 31 * result + capabilitySelectors.hashCode();
-        return result;
+    override fun getProjectIdentity(): ProjectIdentity {
+        return projectIdentity
     }
 
-    @Override
-    public ProjectIdentity getProjectIdentity() {
-        return projectIdentity;
+    override fun getDisplayName(): String {
+        return projectIdentity.getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return projectIdentity.getDisplayName();
+    override fun getBuildPath(): String {
+        return projectIdentity.getBuildPath().asString()
     }
 
-    @Override
-    public String getBuildPath() {
-        return projectIdentity.getBuildPath().asString();
+    override fun getIdentityPath(): Path {
+        return projectIdentity.getBuildTreePath()
     }
 
-    @Override
-    public Path getIdentityPath() {
-        return projectIdentity.getBuildTreePath();
+    override fun getProjectPath(): String {
+        return projectIdentity.getProjectPath().asString()
     }
 
-    @Override
-    public String getProjectPath() {
-        return projectIdentity.getProjectPath().asString();
-    }
+    override fun matchesStrictly(identifier: ComponentIdentifier): Boolean {
+        checkNotNull(identifier) { "identifier cannot be null" }
 
-    @Override
-    public boolean matchesStrictly(ComponentIdentifier identifier) {
-        assert identifier != null : "identifier cannot be null";
-
-        if (identifier instanceof ProjectComponentIdentifier) {
-            ProjectComponentIdentifierInternal projectComponentIdentifier = (ProjectComponentIdentifierInternal) identifier;
-            return projectComponentIdentifier.getProjectIdentity().equals(projectIdentity);
+        if (identifier is ProjectComponentIdentifier) {
+            val projectComponentIdentifier = identifier as ProjectComponentIdentifierInternal
+            return projectComponentIdentifier.getProjectIdentity() == projectIdentity
         }
 
-        return false;
+        return false
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    @SuppressWarnings("deprecation")
-    public List<Capability> getRequestedCapabilities() {
+    @Suppress("deprecation")
+    override fun getRequestedCapabilities(): MutableList<Capability> {
         return capabilitySelectors.stream()
-            .filter(c -> c instanceof SpecificCapabilitySelector)
-            .map(c -> ((DefaultSpecificCapabilitySelector) c).getBackingCapability())
-            .collect(ImmutableList.toImmutableList());
+            .filter { c: CapabilitySelector? -> c is SpecificCapabilitySelector }
+            .map<ImmutableCapability> { c: CapabilitySelector? -> (c as DefaultSpecificCapabilitySelector).getBackingCapability() }
+            .collect(ImmutableList.toImmutableList<Capability>())
     }
 
-    @Override
-    public ImmutableSet<CapabilitySelector> getCapabilitySelectors() {
-        return capabilitySelectors;
+    override fun getCapabilitySelectors(): ImmutableSet<CapabilitySelector> {
+        return capabilitySelectors
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultProjectComponentSelector that = (DefaultProjectComponentSelector) o;
-        return projectIdentity.equals(that.projectIdentity) &&
-            attributes.equals(that.attributes) &&
-            capabilitySelectors.equals(that.capabilitySelectors);
+        val that = o as DefaultProjectComponentSelector
+        return projectIdentity == that.projectIdentity &&
+                attributes == that.attributes &&
+                capabilitySelectors == that.capabilitySelectors
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
-    }
-
-    public static ProjectComponentSelector withAttributes(ProjectComponentSelector selector, ImmutableAttributes attributes) {
-        ProjectComponentSelectorInternal current = (ProjectComponentSelectorInternal) selector;
-        return new DefaultProjectComponentSelector(
-            current.getProjectIdentity(),
-            attributes,
-            current.getCapabilitySelectors()
-        );
-    }
-
-    public static ProjectComponentSelector withCapabilities(ProjectComponentSelector selector, ImmutableSet<CapabilitySelector> capabilitySelectors) {
-        ProjectComponentSelectorInternal current = (ProjectComponentSelectorInternal) selector;
-        return new DefaultProjectComponentSelector(
-            current.getProjectIdentity(),
-            current.getAttributes(),
-            capabilitySelectors
-        );
-    }
-
-    public static ProjectComponentSelector withAttributesAndCapabilities(ProjectComponentSelector selector, ImmutableAttributes attributes, ImmutableSet<CapabilitySelector> capabilitySelectors) {
-        ProjectComponentSelectorInternal current = (ProjectComponentSelectorInternal) selector;
-        return new DefaultProjectComponentSelector(
-            current.getProjectIdentity(),
-            attributes,
-            capabilitySelectors
-        );
+    override fun toString(): String {
+        return getDisplayName()
     }
 
     // TODO: It seems fishy to be able to go directly from a selector to an identifier.
     // There should be some registry involved here.
-    public ProjectComponentIdentifier toIdentifier() {
-        return new DefaultProjectComponentIdentifier(projectIdentity);
+    fun toIdentifier(): ProjectComponentIdentifier {
+        return DefaultProjectComponentIdentifier(projectIdentity)
     }
 
+    companion object {
+        private fun computeHashCode(
+            attributes: ImmutableAttributes,
+            capabilitySelectors: ImmutableSet<CapabilitySelector>,
+            projectIdentity: ProjectIdentity
+        ): Int {
+            var result = projectIdentity.hashCode()
+            result = 31 * result + attributes.hashCode()
+            result = 31 * result + capabilitySelectors.hashCode()
+            return result
+        }
+
+        fun withAttributes(selector: ProjectComponentSelector, attributes: ImmutableAttributes): ProjectComponentSelector {
+            val current = selector as ProjectComponentSelectorInternal
+            return DefaultProjectComponentSelector(
+                current.getProjectIdentity(),
+                attributes,
+                current.getCapabilitySelectors()
+            )
+        }
+
+        fun withCapabilities(selector: ProjectComponentSelector, capabilitySelectors: ImmutableSet<CapabilitySelector>): ProjectComponentSelector {
+            val current = selector as ProjectComponentSelectorInternal
+            return DefaultProjectComponentSelector(
+                current.getProjectIdentity(),
+                current.getAttributes(),
+                capabilitySelectors
+            )
+        }
+
+        fun withAttributesAndCapabilities(selector: ProjectComponentSelector, attributes: ImmutableAttributes, capabilitySelectors: ImmutableSet<CapabilitySelector>): ProjectComponentSelector {
+            val current = selector as ProjectComponentSelectorInternal
+            return DefaultProjectComponentSelector(
+                current.getProjectIdentity(),
+                attributes,
+                capabilitySelectors
+            )
+        }
+    }
 }

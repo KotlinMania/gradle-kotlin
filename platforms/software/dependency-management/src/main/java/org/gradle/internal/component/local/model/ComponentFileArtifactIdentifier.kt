@@ -13,60 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.DisplayName
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.DisplayName;
-
-public class ComponentFileArtifactIdentifier implements ComponentArtifactIdentifier, DisplayName {
-    private final ComponentIdentifier componentId;
-    private final String fileName;
-
-    public ComponentFileArtifactIdentifier(ComponentIdentifier componentId, String fileName) {
-        this.componentId = componentId;
-        this.fileName = fileName;
+open class ComponentFileArtifactIdentifier(private val componentId: ComponentIdentifier, val fileName: String) : ComponentArtifactIdentifier, DisplayName {
+    override fun getComponentIdentifier(): ComponentIdentifier {
+        return componentId
     }
 
-    @Override
-    public ComponentIdentifier getComponentIdentifier() {
-        return componentId;
+    override fun getDisplayName(): String {
+        return this.fileName + " (" + getComponentIdentifier().getDisplayName() + ")"
     }
 
-    public String getFileName() {
-        return fileName;
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return getFileName() + " (" + getComponentIdentifier().getDisplayName() + ")";
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
-    }
-
-    @Override
-    public String toString() {
-        return getDisplayName();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        ComponentFileArtifactIdentifier other = (ComponentFileArtifactIdentifier) obj;
-        return componentId.equals(other.componentId) && fileName.equals(other.fileName);
+        val other = obj as ComponentFileArtifactIdentifier
+        return componentId == other.componentId && fileName == other.fileName
     }
 
-    @Override
-    public int hashCode() {
-        return componentId.hashCode() ^ fileName.hashCode();
+    override fun hashCode(): Int {
+        return componentId.hashCode() xor fileName.hashCode()
     }
 }

@@ -13,48 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure
 
 /**
- * An abstract {@link ArtifactSelectionFailure} that represents the situation when an artifact is requested
+ * An abstract [ArtifactSelectionFailure] that represents the situation when an artifact is requested
  * for a variant and this request fails.
  */
-public abstract class AbstractArtifactSelectionFailure extends AbstractResolutionFailure implements ArtifactSelectionFailure {
-    private final ComponentIdentifier targetComponent;
-    private final String targetVariant;
-    private final ImmutableAttributes requestedAttributes;
+abstract class AbstractArtifactSelectionFailure(
+    problemId: ResolutionFailureProblemId,
+    private val targetComponent: ComponentIdentifier,
+    private val targetVariant: String,
+    requestedAttributes: AttributeContainerInternal
+) : AbstractResolutionFailure(problemId), ArtifactSelectionFailure {
+    private val requestedAttributes: ImmutableAttributes
 
-    public AbstractArtifactSelectionFailure(ResolutionFailureProblemId problemId, ComponentIdentifier targetComponent, String targetVariant, AttributeContainerInternal requestedAttributes) {
-        super(problemId);
-        this.targetComponent = targetComponent;
-        this.targetVariant = targetVariant;
-        this.requestedAttributes = requestedAttributes.asImmutable();
+    init {
+        this.requestedAttributes = requestedAttributes.asImmutable()
     }
 
-    @Override
-    public String describeRequestTarget() {
-        return targetVariant;
+    override fun describeRequestTarget(): String {
+        return targetVariant
     }
 
-    @Override
-    public ComponentIdentifier getTargetComponent() {
-        return targetComponent;
+    override fun getTargetComponent(): ComponentIdentifier {
+        return targetComponent
     }
 
-    @Override
-    public String getTargetVariant() {
-        return targetVariant;
+    override fun getTargetVariant(): String {
+        return targetVariant
     }
 
-    @Override
-    public ImmutableAttributes getRequestedAttributes() {
-        return requestedAttributes;
+    override fun getRequestedAttributes(): ImmutableAttributes {
+        return requestedAttributes
     }
 }

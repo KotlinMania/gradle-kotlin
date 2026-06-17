@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import org.gradle.internal.component.resolution.failure.type.ModuleRejectedFailure;
-
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.type.ModuleRejectedFailure
 
 /**
- * A {@link ComponentSelectionException} that indicates that component selection failed due to multiple
+ * A [ComponentSelectionException] that indicates that component selection failed due to multiple
  * conflicting constraints targeting the same module.
  */
-public final class ConflictingConstraintsException extends ComponentSelectionException {
-    public ConflictingConstraintsException(String message, ModuleRejectedFailure failure, List<String> resolutions) {
-        super(message, failure, resolutions);
-
-        LOGGER.info("Conflicting constraints detected: {}", failure.getLegacyErrorMsg());
+class ConflictingConstraintsException(message: String, failure: ModuleRejectedFailure, resolutions: MutableList<String>) : ComponentSelectionException(message, failure, resolutions) {
+    init {
+        AbstractResolutionFailureException.Companion.LOGGER.info("Conflicting constraints detected: {}", failure.getLegacyErrorMsg())
     }
 }

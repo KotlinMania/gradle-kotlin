@@ -13,59 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.api.internal.attributes.AttributeDescriber;
-import org.gradle.api.internal.attributes.AttributeDescriberRegistry;
-import org.gradle.internal.component.model.AttributeDescriberSelector;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor.AssessedCandidate;
-import org.gradle.internal.component.resolution.failure.exception.ArtifactSelectionException;
-import org.gradle.internal.component.resolution.failure.type.AmbiguousArtifactsFailure;
-import org.gradle.internal.component.resolution.failure.type.AmbiguousVariantsFailure;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import javax.inject.Inject;
-import java.util.List;
+import org.gradle.api.internal.attributes.AttributeDescriber
+import org.gradle.api.internal.attributes.AttributeDescriberRegistry
+import org.gradle.internal.component.model.AttributeDescriberSelector
+import org.gradle.internal.component.resolution.failure.exception.ArtifactSelectionException
+import org.gradle.internal.component.resolution.failure.type.AmbiguousArtifactsFailure
+import org.gradle.internal.logging.text.TreeFormatter
+import javax.inject.Inject
 
 /**
- * A {@link ResolutionFailureDescriber} that describes an {@link AmbiguousVariantsFailure}.
+ * A [ResolutionFailureDescriber] that describes an [AmbiguousVariantsFailure].
  */
-public abstract class AmbiguousArtifactsFailureDescriber extends AbstractResolutionFailureDescriber<AmbiguousArtifactsFailure> {
-    private static final String AMBIGUOUS_VARIANTS_PREFIX = "Ambiguity errors are explained in more detail at ";
-    private static final String AMBIGUOUS_VARIANTS_SECTION = "sub:variant-ambiguity";
-
-    private final AttributeDescriberRegistry attributeDescribers;
-
-    @Inject
-    public AmbiguousArtifactsFailureDescriber(
-        AttributeDescriberRegistry attributeDescribers
-    ) {
-        this.attributeDescribers = attributeDescribers;
+abstract class AmbiguousArtifactsFailureDescriber @Inject constructor(
+    private val attributeDescribers: AttributeDescriberRegistry
+) : AbstractResolutionFailureDescriber<AmbiguousArtifactsFailure?>() {
+    override fun describeFailure(failure: AmbiguousArtifactsFailure): ArtifactSelectionException {
+        val describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers.getDescribers())
+        val message = buildFailureMsg(failure, describer)
+        val resolutions = buildResolutions(suggestSpecificDocumentation(AMBIGUOUS_VARIANTS_PREFIX, AMBIGUOUS_VARIANTS_SECTION), suggestReviewAlgorithm())
+        return ArtifactSelectionException(message, failure, resolutions)
     }
 
-    @Override
-    public ArtifactSelectionException describeFailure(AmbiguousArtifactsFailure failure) {
-        AttributeDescriber describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers.getDescribers());
-        String message = buildFailureMsg(failure, describer);
-        List<String> resolutions = buildResolutions(suggestSpecificDocumentation(AMBIGUOUS_VARIANTS_PREFIX, AMBIGUOUS_VARIANTS_SECTION), suggestReviewAlgorithm());
-        return new ArtifactSelectionException(message, failure, resolutions);
-    }
-
-    private String buildFailureMsg(AmbiguousArtifactsFailure failure, AttributeDescriber describer) {
-        TreeFormatter formatter = new TreeFormatter();
+    private fun buildFailureMsg(failure: AmbiguousArtifactsFailure, describer: AttributeDescriber): String {
+        val formatter = TreeFormatter()
         if (failure.getRequestedAttributes().isEmpty()) {
-            formatter.node("More than one variant of " + failure.describeRequestTarget() + " matches the consumer attributes");
+            formatter.node("More than one variant of " + failure.describeRequestTarget() + " matches the consumer attributes")
         } else {
-            formatter.node("The consumer was configured to find " + describer.describeAttributeSet(failure.getRequestedAttributes().asMap()) + ". However we cannot choose between the following variants of " + failure.describeRequestTarget());
+            formatter.node(
+                "The consumer was configured to find " + describer.describeAttributeSet(
+                    failure.getRequestedAttributes().asMap()
+                ) + ". However we cannot choose between the following variants of " + failure.describeRequestTarget()
+            )
         }
-        formatter.startChildren();
-        for (AssessedCandidate assessedCandidate : failure.getCandidates()) {
-            String candidateName = assessedCandidate.getDisplayName();
-            formatter.node(candidateName);
-            formatAttributeMatchesForAmbiguity(assessedCandidate, formatter, describer);
+        formatter.startChildren()
+        for (assessedCandidate in failure.getCandidates()) {
+            val candidateName = assessedCandidate.getDisplayName()
+            formatter.node(candidateName)
+            formatAttributeMatchesForAmbiguity(assessedCandidate, formatter, describer)
         }
-        formatter.endChildren();
-        return formatter.toString();
+        formatter.endChildren()
+        return formatter.toString()
+    }
+
+    companion object {
+        private const val AMBIGUOUS_VARIANTS_PREFIX = "Ambiguity errors are explained in more detail at "
+        private const val AMBIGUOUS_VARIANTS_SECTION = "sub:variant-ambiguity"
     }
 }

@@ -51,12 +51,12 @@ class DefaultCachedMetadata implements ModuleMetadataCache.CachedMetadata {
 
     @Override
     public ModuleSources getModuleSources() {
-        return metadata.getSources();
+        return metadata.sources;
     }
 
     @Override
     public ResolvedModuleVersion getModuleVersion() {
-        return isMissing() ? null : new DefaultResolvedModuleVersion(getMetadata().getModuleVersionId());
+        return isMissing() ? null : new DefaultResolvedModuleVersion(getMetadata().moduleVersionId);
     }
 
     @Override

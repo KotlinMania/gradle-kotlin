@@ -13,43 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.resolution.failure.formatting;
+package org.gradle.internal.component.resolution.failure.formatting
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.AttributeDescriber;
-import org.gradle.internal.exceptions.StyledException;
-import org.gradle.internal.logging.text.StyledTextOutput;
-
-import java.util.Map;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.AttributeDescriber
+import org.gradle.internal.exceptions.StyledException
+import org.gradle.internal.logging.text.StyledTextOutput
 
 /**
- * An {@link AttributeDescriber} decorator that styles the output of a delegate for the console.
+ * An [AttributeDescriber] decorator that styles the output of a delegate for the console.
  */
-public final class StyledAttributeDescriber implements AttributeDescriber {
-    private final AttributeDescriber delegate;
-
-    public StyledAttributeDescriber(AttributeDescriber delegate) {
-        this.delegate = delegate;
+class StyledAttributeDescriber(private val delegate: AttributeDescriber) : AttributeDescriber {
+    override fun getDescribableAttributes(): ImmutableSet<Attribute<*>> {
+        return delegate.getDescribableAttributes()
     }
 
-    @Override
-    public ImmutableSet<Attribute<?>> getDescribableAttributes() {
-        return delegate.getDescribableAttributes();
+    override fun describeAttributeSet(attributes: MutableMap<Attribute<*>, *>): String {
+        return StyledException.style(StyledTextOutput.Style.Header, delegate.describeAttributeSet(attributes))
     }
 
-    @Override
-    public String describeAttributeSet(Map<Attribute<?>, ?> attributes) {
-        return StyledException.style(StyledTextOutput.Style.Header, delegate.describeAttributeSet(attributes));
+    override fun describeMissingAttribute(attribute: Attribute<*>, consumerValue: Any): String {
+        return StyledException.style(StyledTextOutput.Style.Info, delegate.describeMissingAttribute(attribute, consumerValue))
     }
 
-    @Override
-    public String describeMissingAttribute(Attribute<?> attribute, Object consumerValue) {
-        return StyledException.style(StyledTextOutput.Style.Info, delegate.describeMissingAttribute(attribute, consumerValue));
-    }
-
-    @Override
-    public String describeExtraAttribute(Attribute<?> attribute, Object producerValue) {
-        return StyledException.style(StyledTextOutput.Style.Info, delegate.describeExtraAttribute(attribute, producerValue));
+    override fun describeExtraAttribute(attribute: Attribute<*>, producerValue: Any): String {
+        return StyledException.style(StyledTextOutput.Style.Info, delegate.describeExtraAttribute(attribute, producerValue))
     }
 }

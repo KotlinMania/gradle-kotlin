@@ -13,54 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-import org.gradle.api.Action;
-import org.gradle.api.attributes.CompatibilityCheckDetails;
+import org.gradle.api.Action
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import java.lang.Boolean
+import kotlin.Any
+import kotlin.Comparator
+import kotlin.Int
 
-import java.util.Comparator;
-
-public class DefaultOrderedCompatibilityRule<T> implements Action<CompatibilityCheckDetails<T>> {
-    private final Comparator<? super T> comparator;
-    private final boolean reverse;
-
-    public DefaultOrderedCompatibilityRule(Comparator<? super T> comparator, boolean reverse) {
-        this.comparator = comparator;
-        this.reverse = reverse;
-    }
-
-    @Override
-    public void execute(CompatibilityCheckDetails<T> details) {
-        T consumerValue = details.getConsumerValue();
-        T producerValue = details.getProducerValue();
-        int cmp = comparator.compare(consumerValue, producerValue);
+class DefaultOrderedCompatibilityRule<T>(private val comparator: Comparator<in T?>, private val reverse: Boolean) : Action<CompatibilityCheckDetails<T?>?> {
+    override fun execute(details: CompatibilityCheckDetails<T?>) {
+        val consumerValue = details.getConsumerValue()
+        val producerValue = details.getProducerValue()
+        var cmp = comparator.compare(consumerValue, producerValue)
         if (reverse) {
-            cmp = -cmp;
+            cmp = -cmp
         }
         if (cmp >= 0) {
-            details.compatible();
+            details.compatible()
         } else {
-            details.incompatible();
+            details.incompatible()
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultOrderedCompatibilityRule<?> that = (DefaultOrderedCompatibilityRule<?>) o;
-        return reverse == that.reverse && comparator.equals(that.comparator);
+        val that = o as DefaultOrderedCompatibilityRule<*>
+        return reverse == that.reverse && comparator == that.comparator
     }
 
-    @Override
-    public int hashCode() {
-        int result = comparator.hashCode();
-        result = 31 * result + Boolean.hashCode(reverse);
-        return result;
+    override fun hashCode(): Int {
+        var result = comparator.hashCode()
+        result = 31 * result + Boolean.hashCode(reverse)
+        return result
     }
 }

@@ -112,8 +112,8 @@ class SelectorStateResolverResults {
     }
 
     public static <T extends ComponentResolutionState> T componentForIdResolveResult(ComponentStateFactory<T> componentFactory, ComponentIdResolveResult idResolveResult, ResolvableSelectorState selector) {
-        T component = componentFactory.getRevision(idResolveResult.getId(), idResolveResult.getModuleVersionId(), idResolveResult.getState(), idResolveResult.getGraphState());
-        if (idResolveResult.isRejected()) {
+        T component = componentFactory.getRevision(idResolveResult.id, idResolveResult.moduleVersionId, idResolveResult.state, idResolveResult.graphState);
+        if (idResolveResult.isRejected) {
             component.reject();
         }
         return component;
@@ -166,22 +166,22 @@ class SelectorStateResolverResults {
 
     private static boolean emptyVersion(ComponentIdResolveResult existing) {
         if (existing.getFailure() == null) {
-            return existing.getModuleVersionId().getVersion().isEmpty();
+            return existing.moduleVersionId.getVersion().isEmpty();
         }
         return false;
     }
 
     private static boolean sameVersion(ComponentIdResolveResult existing, ComponentIdResolveResult resolveResult) {
         if (existing.getFailure() == null && resolveResult.getFailure() == null) {
-            return existing.getId().equals(resolveResult.getId());
+            return existing.id.equals(resolveResult.id);
         }
         return false;
     }
 
     private boolean lowerVersion(ComponentIdResolveResult existing, ComponentIdResolveResult resolveResult) {
         if (existing.getFailure() == null && resolveResult.getFailure() == null) {
-            Version existingVersion = versionParser.transform(existing.getModuleVersionId().getVersion());
-            Version candidateVersion = versionParser.transform(resolveResult.getModuleVersionId().getVersion());
+            Version existingVersion = versionParser.transform(existing.moduleVersionId.getVersion());
+            Version candidateVersion = versionParser.transform(resolveResult.moduleVersionId.getVersion());
 
             int comparison = versionComparator.compare(candidateVersion, existingVersion);
             return comparison < 0;
@@ -195,9 +195,9 @@ class SelectorStateResolverResults {
         }
         ResolvedVersionConstraint versionConstraint = dep.getVersionConstraint();
         if (versionConstraint == null) {
-            return dep.getSelector().matchesStrictly(candidate.getId());
+            return dep.getSelector().matchesStrictly(candidate.id);
         }
-        VersionSelector versionSelector = versionConstraint.getRequiredSelector();
+        VersionSelector versionSelector = versionConstraint.requiredSelector;
         if (versionSelector != null &&
             (candidateIsFromLock || versionSelector.canShortCircuitWhenVersionAlreadyPreselected())) {
 
@@ -206,7 +206,7 @@ class SelectorStateResolverResults {
                 return true;
             }
 
-            String version = candidate.getModuleVersionId().getVersion();
+            String version = candidate.moduleVersionId.getVersion();
             if (StringUtils.isEmpty(version)) {
                 return false;
             }
@@ -234,7 +234,7 @@ class SelectorStateResolverResults {
 
         @Override
         public String toString() {
-            return selector.toString() + " -> " + result.getModuleVersionId();
+            return selector.toString() + " -> " + result.moduleVersionId;
         }
     }
 }

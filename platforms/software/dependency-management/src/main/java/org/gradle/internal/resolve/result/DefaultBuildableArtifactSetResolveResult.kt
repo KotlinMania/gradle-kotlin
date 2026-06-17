@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.resolve.ArtifactResolveException;
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.resolve.ArtifactResolveException
 
-import java.util.Collection;
-
-public class DefaultBuildableArtifactSetResolveResult extends DefaultBuildableTypedResolveResult<Collection<? extends ComponentArtifactMetadata>, ArtifactResolveException> implements BuildableArtifactSetResolveResult {
-}
+class DefaultBuildableArtifactSetResolveResult : DefaultBuildableTypedResolveResult<MutableCollection<out ComponentArtifactMetadata?>?, ArtifactResolveException?>(), BuildableArtifactSetResolveResult

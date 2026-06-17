@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.resource.local.LocallyAvailableResource
+import org.gradle.internal.resource.local.LocallyAvailableResourceCandidates
+import java.io.File
+import java.io.IOException
 
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.local.LocallyAvailableResource;
-import org.gradle.internal.resource.local.LocallyAvailableResourceCandidates;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-
-public interface CacheAwareExternalResourceAccessor {
+interface CacheAwareExternalResourceAccessor {
     /**
      * Fetches for a resource located at some URI.
      * @param source the URI of the resource to be fetched
@@ -36,29 +33,21 @@ public interface CacheAwareExternalResourceAccessor {
      * @return a locally available resource, if found
      * @throws IOException whenever an error occurs when downloading of fetching from the cache
      */
-    @Nullable
-    LocallyAvailableExternalResource getResource(ExternalResourceName source, @Nullable String baseName, ResourceFileStore fileStore, @Nullable LocallyAvailableResourceCandidates additionalCandidates) throws IOException;
+    @Throws(IOException::class)
+    fun getResource(source: ExternalResourceName, baseName: String?, fileStore: ResourceFileStore, additionalCandidates: LocallyAvailableResourceCandidates?): LocallyAvailableExternalResource?
 
     interface ResourceFileStore {
         /**
          * Called when a resource is to be cached. Should *move* the given file into the appropriate location and return a handle to the file.
          */
-        LocallyAvailableResource moveIntoCache(File downloadedResource);
+        fun moveIntoCache(downloadedResource: File): LocallyAvailableResource?
     }
 
-    abstract class DefaultResourceFileStore<K> implements ResourceFileStore {
-
-        private final FileStore<K> delegate;
-
-        public DefaultResourceFileStore(FileStore<K> delegate) {
-            this.delegate = delegate;
+    class DefaultResourceFileStore<K>(private val delegate: FileStore<K?>) : ResourceFileStore {
+        override fun moveIntoCache(downloadedResource: File): LocallyAvailableResource {
+            return delegate.move(computeKey(), downloadedResource)
         }
 
-        @Override
-        public final LocallyAvailableResource moveIntoCache(File downloadedResource) {
-            return delegate.move(computeKey(), downloadedResource);
-        }
-
-        protected abstract K computeKey();
+        protected abstract fun computeKey(): K?
     }
 }

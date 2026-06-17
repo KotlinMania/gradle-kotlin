@@ -46,7 +46,7 @@ final class DefaultIvyPatternMatcherExcludeRuleSpec implements IvyPatternMatcher
 
     @Override
     public String toString() {
-        return "{ \"exclude-rule\" : { \"moduleId\": \""  + moduleId + "\", \"artifact\" : \"" + (ivyArtifactName != null ? ivyArtifactName.getDisplayName() : "") + "\", \"matcher\": \"" + matcher.getName() + "\"} }";
+        return "{ \"exclude-rule\" : { \"moduleId\": \""  + moduleId + "\", \"artifact\" : \"" + (ivyArtifactName != null ? ivyArtifactName.displayName : "") + "\", \"matcher\": \"" + matcher.getName() + "\"} }";
     }
 
     @Override
@@ -64,9 +64,9 @@ final class DefaultIvyPatternMatcherExcludeRuleSpec implements IvyPatternMatcher
         }
         return matches(moduleId.getGroup(), module.getGroup())
             && matches(moduleId.getName(), module.getName())
-            && matches(ivyArtifactName.getName(), artifact.getName())
-            && matches(ivyArtifactName.getExtension(), artifact.getExtension())
-            && matches(ivyArtifactName.getType(), artifact.getType());
+            && matches(ivyArtifactName.name, artifact.name)
+            && matches(ivyArtifactName.extension, artifact.extension)
+            && matches(ivyArtifactName.type, artifact.type);
     }
 
     @Override

@@ -13,46 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal
 
-package org.gradle.api.internal;
-
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.internal.artifacts.ResolveExceptionMapper;
-import org.gradle.api.internal.attributes.AttributeDesugaring;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.project.ProjectStateRegistry;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * A bundle of services used by {@link Configuration}.
- * <p>
+ * A bundle of services used by [Configuration].
+ *
+ *
  * This type exists to minimize the number of references that each configuration needs to maintain, thus reducing memory usage
  * and improving performance in large projects with many configurations.
- * <p>
- * Every service, factory, or other type in this bundle <strong>must</strong> be effectively immutable.
+ *
+ *
+ * Every service, factory, or other type in this bundle **must** be effectively immutable.
  */
-@ServiceScope(Scope.Project.class)
-public interface ConfigurationServicesBundle {
-    BuildOperationRunner getBuildOperationRunner();
-    ProjectStateRegistry getProjectStateRegistry();
-    AttributesFactory getAttributesFactory();
-    ObjectFactory getObjectFactory();
-    TaskDependencyFactory getTaskDependencyFactory();
-    DomainObjectCollectionFactory getDomainObjectCollectionFactory();
-    CalculatedValueContainerFactory getCalculatedValueContainerFactory();
-    FileCollectionFactory getFileCollectionFactory();
-    CollectionCallbackActionDecorator getCollectionCallbackActionDecorator();
-    ProblemsInternal getProblems();
-    AttributeDesugaring getAttributeDesugaring();
-    ResolveExceptionMapper getExceptionMapper();
-    ProviderFactory getProviderFactory();
+@ServiceScope(Scope.Project::class)
+interface ConfigurationServicesBundle {
+    val buildOperationRunner: BuildOperationRunner?
+    val projectStateRegistry: ProjectStateRegistry?
+    val attributesFactory: AttributesFactory?
+    val objectFactory: ObjectFactory?
+    val taskDependencyFactory: TaskDependencyFactory?
+    val domainObjectCollectionFactory: DomainObjectCollectionFactory?
+    val calculatedValueContainerFactory: CalculatedValueContainerFactory?
+    val fileCollectionFactory: FileCollectionFactory?
+    val collectionCallbackActionDecorator: CollectionCallbackActionDecorator?
+    val problems: ProblemsInternal?
+    val attributeDesugaring: AttributeDesugaring?
+    val exceptionMapper: ResolveExceptionMapper?
+    val providerFactory: ProviderFactory?
 }

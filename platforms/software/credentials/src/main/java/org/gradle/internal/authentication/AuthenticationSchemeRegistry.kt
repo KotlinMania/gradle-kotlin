@@ -13,17 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.authentication.Authentication
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Map;
-
-@ServiceScope(Scope.Build.class)
-public interface AuthenticationSchemeRegistry {
-    <T extends Authentication> void registerScheme(Class<T> type, final Class<? extends T> implementationType);
-    <T extends Authentication> Map<Class<T>, Class<? extends T>> getRegisteredSchemes();
+@ServiceScope(Scope.Build::class)
+interface AuthenticationSchemeRegistry {
+    fun <T : Authentication?> registerScheme(type: Class<T?>?, implementationType: Class<out T?>?)
+    fun <T : Authentication?> getRegisteredSchemes(): MutableMap<Class<T?>?, Class<out T?>?>?
 }

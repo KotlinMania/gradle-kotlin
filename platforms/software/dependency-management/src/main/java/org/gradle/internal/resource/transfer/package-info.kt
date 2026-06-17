@@ -13,8 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-@NullMarked
-package org.gradle.internal.resource.transfer;
+import org.gradle.internal.file.FileAccessTracker.markAccessed
+import org.gradle.internal.serialize.Decoder.readBoolean
+import org.gradle.internal.serialize.Decoder.readString
+import org.gradle.internal.serialize.Decoder.readLong
+import org.gradle.internal.serialize.Decoder.readNullableString
+import org.gradle.internal.serialize.Decoder.readSmallLong
+import org.gradle.internal.serialize.Encoder.writeBoolean
+import org.gradle.internal.serialize.Encoder.writeString
+import org.gradle.internal.serialize.Encoder.writeLong
+import org.gradle.internal.serialize.Encoder.writeNullableString
+import org.gradle.internal.serialize.Encoder.writeSmallLong
+import org.gradle.internal.logging.progress.ResourceOperation.setContentLength
+import org.gradle.internal.logging.progress.ResourceOperation.totalProcessedBytes
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.reflect.JavaMethod.parameterTypes
+import org.gradle.internal.reflect.JavaMethod.invoke
+import org.gradle.util.internal.CollectionUtils.findFirst
+import org.gradle.api.specs.Spec.isSatisfiedBy
 
-import org.jspecify.annotations.NullMarked;

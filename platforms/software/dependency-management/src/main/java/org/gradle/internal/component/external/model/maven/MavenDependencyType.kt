@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.external.model.maven;
+package org.gradle.internal.component.external.model.maven
 
 /**
  * The context for a dependency parsed from a Maven POM. Note that the order of this enum is important for the module metadata cache.
  */
-public enum MavenDependencyType {
+enum class MavenDependencyType(val optional: Boolean) {
     DEPENDENCY(false),
     RELOCATION(false),
     OPTIONAL_DEPENDENCY(true),
-    DEPENDENCY_MANAGEMENT(true);
-
-    public final boolean optional;
-
-    MavenDependencyType(boolean optional) {
-        this.optional = optional;
-    }
+    DEPENDENCY_MANAGEMENT(true)
 }

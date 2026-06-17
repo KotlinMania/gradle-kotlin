@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.internal.component.model.VariantGraphResolveMetadata;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.component.model.VariantGraphResolveMetadata
 
 /**
  * Graph metadata for local variants.
  */
-public interface LocalVariantGraphResolveMetadata extends VariantGraphResolveMetadata {
-
+interface LocalVariantGraphResolveMetadata : VariantGraphResolveMetadata {
     /**
      * Get the configuration name that this variant is identified by, if any.
      */
-    @Nullable
-    String getConfigurationName();
-
+    val configurationName: String?
 }

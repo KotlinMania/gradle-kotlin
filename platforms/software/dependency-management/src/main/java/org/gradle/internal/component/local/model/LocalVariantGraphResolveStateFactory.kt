@@ -13,24 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import java.util.function.Consumer;
+import java.util.function.Consumer
 
 /**
- * Constructs {@link LocalVariantGraphResolveState} instances advertised by a
- * {@link DefaultLocalComponentGraphResolveState} instance. This allows the component state to
+ * Constructs [LocalVariantGraphResolveState] instances advertised by a
+ * [DefaultLocalComponentGraphResolveState] instance. This allows the component state to
  * source variant data from multiple sources, both lazy and eager.
  */
-public interface LocalVariantGraphResolveStateFactory {
-
+interface LocalVariantGraphResolveStateFactory {
     /**
      * Visit all variants in this component that can be selected in a dependency graph.
      *
-     * <p>This includes all variants with and without attributes. Variants visited
-     * by this method may not be suitable for selection via attribute matching.</p>
+     *
+     * This includes all variants with and without attributes. Variants visited
+     * by this method may not be suitable for selection via attribute matching.
      */
-    void visitConsumableVariants(Consumer<LocalVariantGraphResolveState> visitor);
-
+    fun visitConsumableVariants(visitor: Consumer<LocalVariantGraphResolveState>)
 }

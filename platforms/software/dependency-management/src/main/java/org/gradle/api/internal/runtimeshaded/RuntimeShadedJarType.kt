@@ -13,27 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.runtimeshaded
 
-package org.gradle.api.internal.runtimeshaded;
-
-public enum RuntimeShadedJarType {
-
+enum class RuntimeShadedJarType(identifier: String, displayName: String) {
     API("api", "API"),
     TEST_KIT("test-kit", "TestKit");
 
-    private final String identifier;
-    private final String displayName;
+    val identifier: String?
+    val displayName: String
 
-    RuntimeShadedJarType(String identifier, String displayName) {
-        this.identifier = identifier;
-        this.displayName = "Gradle " + displayName + " jar";
-    }
-
-    public String getIdentifier() {
-        return identifier;
-    }
-
-    public String getDisplayName() {
-        return displayName;
+    init {
+        this.identifier = identifier
+        this.displayName = "Gradle " + displayName + " jar"
     }
 }

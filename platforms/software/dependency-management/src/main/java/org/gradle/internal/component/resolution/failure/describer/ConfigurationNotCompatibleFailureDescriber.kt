@@ -13,69 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.api.internal.attributes.AttributeDescriber;
-import org.gradle.api.internal.attributes.AttributeDescriberRegistry;
-import org.gradle.internal.component.model.AttributeDescriberSelector;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor.AssessedCandidate;
-import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByNameException;
-import org.gradle.internal.component.resolution.failure.type.ConfigurationNotCompatibleFailure;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import javax.inject.Inject;
-import java.util.List;
-
-import static org.gradle.internal.exceptions.StyledException.style;
+import org.gradle.api.internal.attributes.AttributeDescriber
+import org.gradle.api.internal.attributes.AttributeDescriberRegistry
+import org.gradle.internal.component.model.AttributeDescriberSelector
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
+import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByNameException
+import org.gradle.internal.component.resolution.failure.type.ConfigurationNotCompatibleFailure
+import org.gradle.internal.exceptions.StyledException
+import org.gradle.internal.logging.text.StyledTextOutput
+import org.gradle.internal.logging.text.TreeFormatter
+import javax.inject.Inject
 
 /**
- * A {@link ResolutionFailureDescriber} that describes an {@link ConfigurationNotCompatibleFailure}.
+ * A [ResolutionFailureDescriber] that describes an [ConfigurationNotCompatibleFailure].
  */
-public abstract class ConfigurationNotCompatibleFailureDescriber extends AbstractResolutionFailureDescriber<ConfigurationNotCompatibleFailure> {
-    private static final String INCOMPATIBLE_VARIANTS_PREFIX = "Incompatible variant errors are explained in more detail at ";
-    private static final String INCOMPATIBLE_VARIANTS_SECTION = "sub:variant-incompatible";
-
-    private final AttributeDescriberRegistry attributeDescribers;
-
-    @Inject
-    public ConfigurationNotCompatibleFailureDescriber(
-        AttributeDescriberRegistry attributeDescribers
-    ) {
-        this.attributeDescribers = attributeDescribers;
+abstract class ConfigurationNotCompatibleFailureDescriber @Inject constructor(
+    private val attributeDescribers: AttributeDescriberRegistry
+) : AbstractResolutionFailureDescriber<ConfigurationNotCompatibleFailure?>() {
+    override fun describeFailure(failure: ConfigurationNotCompatibleFailure): VariantSelectionByNameException {
+        val describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers.getDescribers())
+        val message = buildFailureMsg(failure, describer)
+        val resolutions = buildResolutions(suggestSpecificDocumentation(INCOMPATIBLE_VARIANTS_PREFIX, INCOMPATIBLE_VARIANTS_SECTION), suggestReviewAlgorithm())
+        return VariantSelectionByNameException(message, failure, resolutions)
     }
 
-    @Override
-    public VariantSelectionByNameException describeFailure(ConfigurationNotCompatibleFailure failure) {
-        AttributeDescriber describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers.getDescribers());
-        String message = buildFailureMsg(failure, describer);
-        List<String> resolutions = buildResolutions(suggestSpecificDocumentation(INCOMPATIBLE_VARIANTS_PREFIX, INCOMPATIBLE_VARIANTS_SECTION), suggestReviewAlgorithm());
-        return new VariantSelectionByNameException(message, failure, resolutions);
+    private fun buildFailureMsg(
+        failure: ConfigurationNotCompatibleFailure,
+        describer: AttributeDescriber
+    ): String {
+        val assessedCandidate = failure.getCandidates().get(0)
+        val formatter = TreeFormatter()
+        val candidateName = assessedCandidate.getDisplayName()
+        formatter.node(
+            "Configuration '" + candidateName + "' in " + StyledException.style(
+                StyledTextOutput.Style.Info,
+                failure.getTargetComponent().getDisplayName()
+            ) + " does not match the consumer attributes"
+        )
+        formatUnselectable(assessedCandidate, formatter, describer)
+        return formatter.toString()
     }
 
-    private String buildFailureMsg(
-        ConfigurationNotCompatibleFailure failure,
-        AttributeDescriber describer
+    private fun formatUnselectable(
+        assessedCandidate: ResolutionCandidateAssessor.AssessedCandidate,
+        formatter: TreeFormatter,
+        describer: AttributeDescriber
     ) {
-        ResolutionCandidateAssessor.AssessedCandidate assessedCandidate = failure.getCandidates().get(0);
-        TreeFormatter formatter = new TreeFormatter();
-        String candidateName = assessedCandidate.getDisplayName();
-        formatter.node("Configuration '" + candidateName + "' in " + style(StyledTextOutput.Style.Info, failure.getTargetComponent().getDisplayName()) + " does not match the consumer attributes");
-        formatUnselectable(assessedCandidate, formatter, describer);
-        return formatter.toString();
+        formatter.node("Configuration '")
+        formatter.append(assessedCandidate.getDisplayName())
+        formatter.append("'")
+
+        formatAttributeMatchesForIncompatibility(assessedCandidate, formatter, describer)
     }
 
-    private void formatUnselectable(
-        AssessedCandidate assessedCandidate,
-        TreeFormatter formatter,
-        AttributeDescriber describer
-    ) {
-        formatter.node("Configuration '");
-        formatter.append(assessedCandidate.getDisplayName());
-        formatter.append("'");
-
-        formatAttributeMatchesForIncompatibility(assessedCandidate, formatter, describer);
+    companion object {
+        private const val INCOMPATIBLE_VARIANTS_PREFIX = "Incompatible variant errors are explained in more detail at "
+        private const val INCOMPATIBLE_VARIANTS_SECTION = "sub:variant-incompatible"
     }
 }

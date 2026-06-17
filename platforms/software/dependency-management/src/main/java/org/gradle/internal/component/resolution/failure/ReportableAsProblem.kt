@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure
 
-package org.gradle.internal.component.resolution.failure;
-
-import org.gradle.api.problems.Problem;
-import org.gradle.api.problems.internal.ProblemsInternal;
+import org.gradle.api.problems.internal.ProblemsInternal
 
 /**
- * Represents a {@link Throwable} that can be reported as a {@link Problem} to
- * the {@link org.gradle.api.problems.Problems} service.
- * <p>
+ * Represents a [Throwable] that can be reported as a [Problem] to
+ * the [org.gradle.api.problems.Problems] service.
+ *
+ *
  * This is necessary, as Dependency Management uses exceptions for flow control, and some exceptions are meant to
  * be "ignored", in the sense that they don't fail a build and represent dependency failures that can be recovered from.  Due
  * to this usage, we can't follow the typical advice of creating and reporting a problem at the time we create and
@@ -30,15 +29,15 @@ import org.gradle.api.problems.internal.ProblemsInternal;
  * problems as some later time, when the Dependency Resolution machinery can be confident that the exception represents
  * a failure that should be reported to the user.
  */
-public interface ReportableAsProblem {
+interface ReportableAsProblem {
     /**
-     * Reports this exception as a problem to the given {@link ProblemsInternal} service.
-     * <p>
+     * Reports this exception as a problem to the given [ProblemsInternal] service.
+     *
+     *
      * This method returns the exception itself, so that it can be thrown immediately after the problem is reported.
      *
      * @param problemsService the problems service to report the problem to
-     * @return the exception to report (should be {@code this})
+     * @return the exception to report (should be `this`)
      */
-    @SuppressWarnings("UnusedReturnValue")
-    Throwable reportAsProblem(ProblemsInternal problemsService);
+    fun reportAsProblem(problemsService: ProblemsInternal): Throwable?
 }

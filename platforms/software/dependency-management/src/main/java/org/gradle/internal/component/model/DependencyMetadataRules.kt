@@ -13,103 +13,98 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.DependencyConstraintMetadata
+import org.gradle.api.artifacts.DependencyConstraintsMetadata
+import org.gradle.api.artifacts.DirectDependenciesMetadata
+import org.gradle.api.artifacts.DirectDependencyMetadata
+import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataAdapter
+import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintsMetadataAdapter
+import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependenciesMetadataAdapter
+import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataAdapter
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.specs.Spec
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.external.model.VariantMetadataRules
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.util.internal.CollectionUtils
+import java.util.function.Consumer
 
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-import org.gradle.api.artifacts.DependencyConstraintsMetadata;
-import org.gradle.api.artifacts.DirectDependenciesMetadata;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
-import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintMetadataAdapter;
-import org.gradle.api.internal.artifacts.repositories.resolver.DependencyConstraintsMetadataAdapter;
-import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependenciesMetadataAdapter;
-import org.gradle.api.internal.artifacts.repositories.resolver.DirectDependencyMetadataAdapter;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.specs.Spec;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.VariantMetadataRules;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.util.internal.CollectionUtils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A set of rules provided by the build script author
- * (as {@link Action<DirectDependenciesMetadata>} or {@link Action<DependencyConstraintsMetadata>})
+ * (as [<] or [<])
  * that are applied on the dependencies defined in variant/configuration metadata. The rules are applied
- * in the {@link #execute(VariantResolveMetadata, List)} method when the dependencies of a variant are needed during dependency resolution.
+ * in the [.execute] method when the dependencies of a variant are needed during dependency resolution.
  */
-public class DependencyMetadataRules {
-    private static final Spec<ModuleDependencyMetadata> DEPENDENCY_FILTER = dep -> !dep.isConstraint();
-    private static final Spec<ModuleDependencyMetadata> DEPENDENCY_CONSTRAINT_FILTER = DependencyMetadata::isConstraint;
+class DependencyMetadataRules(
+    private val instantiator: Instantiator,
+    private val dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+    private val dependencyConstraintNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+    private val attributesFactory: AttributesFactory
+) {
+    private val dependencyActions: MutableList<VariantMetadataRules.VariantAction<in DirectDependenciesMetadata>> = ArrayList<VariantMetadataRules.VariantAction<in DirectDependenciesMetadata>>()
+    private val dependencyConstraintActions: MutableList<VariantMetadataRules.VariantAction<in DependencyConstraintsMetadata>> =
+        ArrayList<VariantMetadataRules.VariantAction<in DependencyConstraintsMetadata>>()
 
-    private final Instantiator instantiator;
-    private final NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser;
-    private final NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser;
-    private final List<VariantMetadataRules.VariantAction<? super DirectDependenciesMetadata>> dependencyActions = new ArrayList<>();
-    private final List<VariantMetadataRules.VariantAction<? super DependencyConstraintsMetadata>> dependencyConstraintActions = new ArrayList<>();
-    private final AttributesFactory attributesFactory;
-
-    public DependencyMetadataRules(
-        Instantiator instantiator,
-        NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser,
-        NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser,
-        AttributesFactory attributesFactory
-    ) {
-        this.instantiator = instantiator;
-        this.dependencyNotationParser = dependencyNotationParser;
-        this.dependencyConstraintNotationParser = dependencyConstraintNotationParser;
-        this.attributesFactory = attributesFactory;
+    fun addDependencyAction(action: VariantMetadataRules.VariantAction<in DirectDependenciesMetadata>) {
+        dependencyActions.add(action)
     }
 
-    public void addDependencyAction(VariantMetadataRules.VariantAction<? super DirectDependenciesMetadata> action) {
-        dependencyActions.add(action);
+    fun addDependencyConstraintAction(action: VariantMetadataRules.VariantAction<in DependencyConstraintsMetadata>) {
+        dependencyConstraintActions.add(action)
     }
 
-    public void addDependencyConstraintAction(VariantMetadataRules.VariantAction<? super DependencyConstraintsMetadata> action) {
-        dependencyConstraintActions.add(action);
+    fun <T : ModuleDependencyMetadata?> execute(variant: VariantResolveMetadata, dependencies: MutableList<T?>): MutableList<out ModuleDependencyMetadata> {
+        val calculatedDependencies = ImmutableList.Builder<ModuleDependencyMetadata>()
+        calculatedDependencies.addAll(executeDependencyRules<T?>(variant, dependencies))
+        calculatedDependencies.addAll(executeDependencyConstraintRules<T?>(variant, dependencies))
+        return calculatedDependencies.build()
     }
 
-    public <T extends ModuleDependencyMetadata> List<? extends ModuleDependencyMetadata> execute(VariantResolveMetadata variant, List<T> dependencies) {
-        ImmutableList.Builder<ModuleDependencyMetadata> calculatedDependencies = new ImmutableList.Builder<>();
-        calculatedDependencies.addAll(executeDependencyRules(variant, dependencies));
-        calculatedDependencies.addAll(executeDependencyConstraintRules(variant, dependencies));
-        return calculatedDependencies.build();
-    }
-
-    private <T extends ModuleDependencyMetadata> List<? extends ModuleDependencyMetadata> executeDependencyRules(VariantResolveMetadata variant, List<T> dependencies) {
+    private fun <T : ModuleDependencyMetadata?> executeDependencyRules(variant: VariantResolveMetadata, dependencies: MutableList<T?>): MutableList<out ModuleDependencyMetadata> {
         if (dependencyActions.isEmpty()) {
-            return CollectionUtils.filter(dependencies, DEPENDENCY_FILTER);
+            return CollectionUtils.filter<T?>(dependencies, DEPENDENCY_FILTER)
         }
 
-        DirectDependenciesMetadataAdapter adapter = instantiator.newInstance(
-            DirectDependenciesMetadataAdapter.class, attributesFactory, instantiator, dependencyNotationParser);
-        CollectionUtils.filter(dependencies, DEPENDENCY_FILTER).forEach(dep ->
-            adapter.add(instantiator.newInstance(DirectDependencyMetadataAdapter.class, attributesFactory, dep)));
+        val adapter = instantiator.newInstance<DirectDependenciesMetadataAdapter>(
+            DirectDependenciesMetadataAdapter::class.java, attributesFactory, instantiator, dependencyNotationParser
+        )
+        CollectionUtils.filter<T?>(dependencies, DEPENDENCY_FILTER)
+            .forEach(Consumer { dep: T? -> adapter.add(instantiator.newInstance<DirectDependencyMetadataAdapter>(DirectDependencyMetadataAdapter::class.java, attributesFactory, dep)) })
 
-        dependencyActions.forEach(action -> action.maybeExecute(variant, adapter));
+        dependencyActions.forEach(Consumer { action: VariantMetadataRules.VariantAction<in DirectDependenciesMetadata?>? -> action!!.maybeExecute(variant, adapter) })
 
-        return adapter.getMetadatas();
+        return adapter.getMetadatas()
     }
 
-    private <T extends ModuleDependencyMetadata> List<? extends ModuleDependencyMetadata> executeDependencyConstraintRules(VariantResolveMetadata variant, List<T> dependencies) {
+    private fun <T : ModuleDependencyMetadata?> executeDependencyConstraintRules(variant: VariantResolveMetadata, dependencies: MutableList<T?>): MutableList<out ModuleDependencyMetadata> {
         if (dependencyConstraintActions.isEmpty()) {
-            return CollectionUtils.filter(dependencies, DEPENDENCY_CONSTRAINT_FILTER);
+            return CollectionUtils.filter<T?>(dependencies, DEPENDENCY_CONSTRAINT_FILTER)
         }
 
-        DependencyConstraintsMetadataAdapter adapter = instantiator.newInstance(
-            DependencyConstraintsMetadataAdapter.class, attributesFactory, instantiator, dependencyConstraintNotationParser);
+        val adapter = instantiator.newInstance<DependencyConstraintsMetadataAdapter>(
+            DependencyConstraintsMetadataAdapter::class.java, attributesFactory, instantiator, dependencyConstraintNotationParser
+        )
 
-        CollectionUtils.filter(dependencies, DEPENDENCY_CONSTRAINT_FILTER).forEach(dep ->
-            adapter.add(instantiator.newInstance(DependencyConstraintMetadataAdapter.class, attributesFactory, dep)));
+        CollectionUtils.filter<T?>(dependencies, DEPENDENCY_CONSTRAINT_FILTER).forEach(Consumer { dep: T? ->
+            adapter.add(
+                instantiator.newInstance<DependencyConstraintMetadataAdapter>(
+                    DependencyConstraintMetadataAdapter::class.java, attributesFactory, dep
+                )
+            )
+        })
 
-        dependencyConstraintActions.forEach(action -> action.maybeExecute(variant, adapter));
+        dependencyConstraintActions.forEach(Consumer { action: VariantMetadataRules.VariantAction<in DependencyConstraintsMetadata?>? -> action!!.maybeExecute(variant, adapter) })
 
-        return adapter.getMetadatas();
+        return adapter.getMetadatas()
+    }
+
+    companion object {
+        private val DEPENDENCY_FILTER: Spec<ModuleDependencyMetadata?> = org.gradle.api.specs.Spec { dep: ModuleDependencyMetadata? -> !dep!!.isConstraint() }
+        private val DEPENDENCY_CONSTRAINT_FILTER: Spec<ModuleDependencyMetadata?> = org.gradle.api.specs.Spec { obj: ModuleDependencyMetadata? -> obj!!.isConstraint() }
     }
 }

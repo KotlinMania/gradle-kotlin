@@ -37,7 +37,7 @@ public abstract class ArtifactTransformReportModelFactory {
     }
 
     public ArtifactTransformReportModel buildForProject(Project project) {
-        List<ReportArtifactTransform> artifactTransformData = variantTransformRegistry.getRegistrations().stream()
+        List<ReportArtifactTransform> artifactTransformData = variantTransformRegistry.registrations.stream()
             .map(this::convertArtifactTransform)
             .collect(Collectors.toList());
 
@@ -45,7 +45,7 @@ public abstract class ArtifactTransformReportModelFactory {
     }
 
     private ReportArtifactTransform convertArtifactTransform(TransformRegistration transformRegistration) {
-        Transform transform = transformRegistration.getTransformStep().getTransform();
+        Transform transform = transformRegistration.transformStep.getTransform();
         return new ReportArtifactTransform(
             transform.getImplementationClass().getSimpleName(),
             transform.getImplementationClass(),

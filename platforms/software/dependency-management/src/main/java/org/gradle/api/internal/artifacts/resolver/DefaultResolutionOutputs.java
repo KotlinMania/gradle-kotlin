@@ -189,7 +189,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             // deprecate views that select no artifacts without the user specifying that switch.
             boolean allowNoMatchingVariants = !viewAttributes.isEmpty();
 
-            return results.getVisitedArtifacts().select(new ArtifactSelectionSpec(
+            return results.visitedArtifacts.select(new ArtifactSelectionSpec(
                 getAttributes(),
                 componentFilter,
                 reselectVariants,

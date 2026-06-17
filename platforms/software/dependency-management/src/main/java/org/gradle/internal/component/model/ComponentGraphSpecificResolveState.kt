@@ -13,25 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.component.model
 
 /**
  * State for a component that is specific to a particular dependency graph resolution.
  *
  * @see ComponentGraphResolveState for graph independent state for the component.
  */
-public interface ComponentGraphSpecificResolveState {
-    ComponentGraphSpecificResolveState EMPTY_STATE = new ComponentGraphSpecificResolveState() {
-        @Nullable
-        @Override
-        public String getRepositoryName() {
-            return null;
-        }
-    };
+interface ComponentGraphSpecificResolveState {
+    fun getRepositoryName(): String?
 
-    @Nullable
-    String getRepositoryName();
+    companion object {
+        @JvmField
+        val EMPTY_STATE: ComponentGraphSpecificResolveState = object : ComponentGraphSpecificResolveState {
+            override fun getRepositoryName(): String? {
+                return null
+            }
+        }
+    }
 }

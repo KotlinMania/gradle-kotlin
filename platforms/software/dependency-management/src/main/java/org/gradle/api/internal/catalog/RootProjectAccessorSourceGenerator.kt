@@ -13,47 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.initialization.ProjectDescriptor;
-import org.gradle.internal.UncheckedException;
+import org.gradle.api.initialization.ProjectDescriptor
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.IOException
+import java.io.Writer
 
-import java.io.IOException;
-import java.io.Writer;
+class RootProjectAccessorSourceGenerator(writer: Writer) : AbstractProjectAccessorsSourceGenerator(writer) {
+    @Throws(IOException::class)
+    private fun generate(packageName: String, className: String, current: ProjectDescriptor) {
+        writeHeader(packageName)
+        writeLn("@NullMarked")
+        writeLn("public class " + className + " extends TypeSafeProjectDependencyFactory {\n")
+        writeLn()
+        writeLn("    @Inject")
+        writeLn("    public " + className + "(DefaultProjectDependencyFactory factory, ProjectFinder finder) {")
+        writeLn("        super(factory, finder);")
+        writeLn("    }")
+        writeLn()
+        writeProjectAccessor(AbstractSourceGenerator.Companion.toJavaName(AbstractProjectAccessorsSourceGenerator.Companion.rootProjectName(current)), current)
+        processChildren(current)
 
-public class RootProjectAccessorSourceGenerator extends AbstractProjectAccessorsSourceGenerator {
-
-    public static final String ROOT_PROJECT_ACCESSOR_CLASSNAME = "RootProjectAccessor";
-
-    public RootProjectAccessorSourceGenerator(Writer writer) {
-        super(writer);
+        writeLn("}")
     }
 
-    public static void generateSource(Writer writer,
-                                      ProjectDescriptor root,
-                                      String packageName) {
-        RootProjectAccessorSourceGenerator generator = new RootProjectAccessorSourceGenerator(writer);
-        try {
-            generator.generate(packageName, ROOT_PROJECT_ACCESSOR_CLASSNAME, root);
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+    companion object {
+        const val ROOT_PROJECT_ACCESSOR_CLASSNAME: String = "RootProjectAccessor"
+
+        fun generateSource(
+            writer: Writer,
+            root: ProjectDescriptor,
+            packageName: String
+        ) {
+            val generator = RootProjectAccessorSourceGenerator(writer)
+            try {
+                generator.generate(packageName, ROOT_PROJECT_ACCESSOR_CLASSNAME, root)
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
+            }
         }
     }
-
-    private void generate(String packageName, String className, ProjectDescriptor current) throws IOException {
-        writeHeader(packageName);
-        writeLn("@NullMarked");
-        writeLn("public class " + className + " extends TypeSafeProjectDependencyFactory {\n");
-        writeLn();
-        writeLn("    @Inject");
-        writeLn("    public " + className + "(DefaultProjectDependencyFactory factory, ProjectFinder finder) {");
-        writeLn("        super(factory, finder);");
-        writeLn("    }");
-        writeLn();
-        writeProjectAccessor(toJavaName(rootProjectName(current)), current);
-        processChildren(current);
-
-        writeLn("}");
-    }
-
 }

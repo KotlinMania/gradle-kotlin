@@ -13,204 +13,188 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.Factory
+import org.gradle.internal.component.model.ComponentConfigurationIdentifier
+import org.gradle.internal.component.model.DefaultVariantMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.VariantIdentifier
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.model.ComponentConfigurationIdentifier;
-import org.gradle.internal.component.model.DefaultVariantMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
+abstract class AbstractConfigurationMetadata : ModuleConfigurationMetadata {
+    private val name: String
+    private val id: VariantIdentifier
+    protected val componentId: ModuleComponentIdentifier?
+    val artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?
+    private val transitive: Boolean
+    private val visible: Boolean
+    private val hierarchy: ImmutableSet<String?>?
+    private val excludes: ImmutableList<ExcludeMetadata?>?
+    private val attributes: ImmutableAttributes?
+    private val capabilities: ImmutableCapabilities?
+    private val externalVariant: Boolean
 
-import java.util.List;
-import java.util.Set;
+    private val lock = Any()
 
-public abstract class AbstractConfigurationMetadata implements ModuleConfigurationMetadata {
-
-    private final String name;
-    private final VariantIdentifier id;
-    private final ModuleComponentIdentifier componentId;
-    private final ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts;
-    private final boolean transitive;
-    private final boolean visible;
-    private final ImmutableSet<String> hierarchy;
-    private final ImmutableList<ExcludeMetadata> excludes;
-    private final ImmutableAttributes attributes;
-    private final ImmutableCapabilities capabilities;
-    private final boolean externalVariant;
-
-    private final Object lock = new Object();
     // Should be final, and set in constructor
-    private ImmutableList<ModuleDependencyMetadata> configDependencies;
-    private Factory<List<ModuleDependencyMetadata>> configDependenciesFactory;
+    private var configDependencies: ImmutableList<ModuleDependencyMetadata?>? = null
+    private var configDependenciesFactory: Factory<MutableList<ModuleDependencyMetadata?>?>? = null
 
-    AbstractConfigurationMetadata(
-        String name,
-        VariantIdentifier id,
-        ModuleComponentIdentifier componentId,
-        boolean transitive,
-        boolean visible,
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts,
-        ImmutableSet<String> hierarchy,
-        ImmutableList<ExcludeMetadata> excludes,
-        ImmutableAttributes attributes,
-        ImmutableList<ModuleDependencyMetadata> configDependencies,
-        ImmutableCapabilities capabilities,
-        boolean externalVariant
+    internal constructor(
+        name: String,
+        id: VariantIdentifier,
+        componentId: ModuleComponentIdentifier?,
+        transitive: Boolean,
+        visible: Boolean,
+        artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?,
+        hierarchy: ImmutableSet<String?>?,
+        excludes: ImmutableList<ExcludeMetadata?>?,
+        attributes: ImmutableAttributes?,
+        configDependencies: ImmutableList<ModuleDependencyMetadata?>?,
+        capabilities: ImmutableCapabilities?,
+        externalVariant: Boolean
     ) {
-        this.name = name;
-        this.id = id;
-        this.componentId = componentId;
-        this.transitive = transitive;
-        this.visible = visible;
-        this.artifacts = artifacts;
-        this.hierarchy = hierarchy;
-        this.excludes = excludes;
-        this.attributes = attributes;
-        this.configDependencies = configDependencies;
-        this.capabilities = capabilities;
-        this.externalVariant = externalVariant;
+        this.name = name
+        this.id = id
+        this.componentId = componentId
+        this.transitive = transitive
+        this.visible = visible
+        this.artifacts = artifacts
+        this.hierarchy = hierarchy
+        this.excludes = excludes
+        this.attributes = attributes
+        this.configDependencies = configDependencies
+        this.capabilities = capabilities
+        this.externalVariant = externalVariant
     }
 
-    AbstractConfigurationMetadata(
-        String name,
-        VariantIdentifier id,
-        ModuleComponentIdentifier componentId,
-        boolean transitive,
-        boolean visible,
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts,
-        ImmutableSet<String> hierarchy,
-        ImmutableList<ExcludeMetadata> excludes,
-        ImmutableAttributes attributes,
-        Factory<List<ModuleDependencyMetadata>> configDependenciesFactory,
-        ImmutableCapabilities capabilities,
-        boolean externalVariant
+    internal constructor(
+        name: String,
+        id: VariantIdentifier,
+        componentId: ModuleComponentIdentifier?,
+        transitive: Boolean,
+        visible: Boolean,
+        artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?,
+        hierarchy: ImmutableSet<String?>?,
+        excludes: ImmutableList<ExcludeMetadata?>?,
+        attributes: ImmutableAttributes?,
+        configDependenciesFactory: Factory<MutableList<ModuleDependencyMetadata?>?>?,
+        capabilities: ImmutableCapabilities?,
+        externalVariant: Boolean
     ) {
-        this.name = name;
-        this.id = id;
-        this.componentId = componentId;
-        this.transitive = transitive;
-        this.visible = visible;
-        this.artifacts = artifacts;
-        this.hierarchy = hierarchy;
-        this.excludes = excludes;
-        this.attributes = attributes;
-        this.configDependenciesFactory = configDependenciesFactory;
-        this.capabilities = capabilities;
-        this.externalVariant = externalVariant;
+        this.name = name
+        this.id = id
+        this.componentId = componentId
+        this.transitive = transitive
+        this.visible = visible
+        this.artifacts = artifacts
+        this.hierarchy = hierarchy
+        this.excludes = excludes
+        this.attributes = attributes
+        this.configDependenciesFactory = configDependenciesFactory
+        this.capabilities = capabilities
+        this.externalVariant = externalVariant
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return Describables.of(id.getComponentId(), "configuration", name);
+    override fun asDescribable(): DisplayName? {
+        return Describables.of(id.componentId, "configuration", name)
     }
 
-    @Override
-    public String toString() {
-        return asDescribable().getDisplayName();
+    override fun toString(): String {
+        return asDescribable()!!.getDisplayName()
     }
 
-    @Override
-    public VariantIdentifier getId() {
-        return id;
+    override fun getId(): VariantIdentifier {
+        return id
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public Identifier getIdentifier() {
-        return new ComponentConfigurationIdentifier(id.getComponentId(), name);
+    val identifier: VariantResolveMetadata.Identifier
+        get() = ComponentConfigurationIdentifier(id.componentId, name)
+
+    override fun getHierarchy(): ImmutableSet<String?>? {
+        return hierarchy
     }
 
-    @Override
-    public ImmutableSet<String> getHierarchy() {
-        return hierarchy;
+    override fun isTransitive(): Boolean {
+        return transitive
     }
 
-    @Override
-    public boolean isTransitive() {
-        return transitive;
+    override fun isVisible(): Boolean {
+        return visible
     }
 
-    @Override
-    public boolean isVisible() {
-        return visible;
+    override fun isExternalVariant(): Boolean {
+        return externalVariant
     }
 
-    @Override
-    public boolean isExternalVariant() {
-        return externalVariant;
-    }
-
-    public void setDependencies(List<ModuleDependencyMetadata> dependencies) {
-        synchronized (lock) {
-            assert this.configDependencies == null; // Can only set once: should really be part of the constructor
-            this.configDependencies = ImmutableList.copyOf(dependencies);
+    fun setDependencies(dependencies: MutableList<ModuleDependencyMetadata?>) {
+        synchronized(lock) {
+            assert(
+                this.configDependencies == null // Can only set once: should really be part of the constructor
+            )
+            this.configDependencies = ImmutableList.copyOf<ModuleDependencyMetadata?>(dependencies)
         }
     }
 
-    public void setConfigDependenciesFactory(Factory<List<ModuleDependencyMetadata>> dependenciesFactory) {
-        synchronized (lock) {
-            assert this.configDependencies == null; // Can only set once: should really be part of the constructor
-            assert this.configDependenciesFactory == null; // Can only set once: should really be part of the constructor
-            this.configDependenciesFactory = dependenciesFactory;
+    fun setConfigDependenciesFactory(dependenciesFactory: Factory<MutableList<ModuleDependencyMetadata?>?>?) {
+        synchronized(lock) {
+            assert(
+                this.configDependencies == null // Can only set once: should really be part of the constructor
+            )
+            assert(
+                this.configDependenciesFactory == null // Can only set once: should really be part of the constructor
+            )
+            this.configDependenciesFactory = dependenciesFactory
         }
     }
 
-    @Override
-    public ImmutableList<? extends ModuleComponentArtifactMetadata> getArtifacts() {
-        return artifacts;
+    val artifactVariants: MutableSet<out VariantResolveMetadata?>?
+        get() = ImmutableSet.of<DefaultVariantMetadata?>(
+            DefaultVariantMetadata(
+                name,
+                this.identifier,
+                asDescribable()!!,
+                getAttributes()!!,
+                this.artifacts!!,
+                getCapabilities()!!
+            )
+        )
+
+    override fun getExcludes(): ImmutableList<ExcludeMetadata?>? {
+        return excludes
     }
 
-    @Override
-    public Set<? extends VariantResolveMetadata> getArtifactVariants() {
-        return ImmutableSet.of(new DefaultVariantMetadata(name, getIdentifier(), asDescribable(), getAttributes(), getArtifacts(), getCapabilities()));
+    override fun artifact(artifact: IvyArtifactName?): ModuleComponentArtifactMetadata? {
+        return DefaultModuleComponentArtifactMetadata(componentId, artifact)
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return excludes;
+    override fun getAttributes(): ImmutableAttributes? {
+        return attributes
     }
 
-    @Override
-    public ModuleComponentArtifactMetadata artifact(IvyArtifactName artifact) {
-        return new DefaultModuleComponentArtifactMetadata(componentId, artifact);
+    override fun getCapabilities(): ImmutableCapabilities? {
+        return capabilities
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
-    }
-
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return capabilities;
-    }
-
-    ImmutableList<ModuleDependencyMetadata> getConfigDependencies() {
-        synchronized (lock) {
+    open fun getConfigDependencies(): ImmutableList<ModuleDependencyMetadata?>? {
+        synchronized(lock) {
             if (configDependenciesFactory != null) {
-                configDependencies = ImmutableList.copyOf(configDependenciesFactory.create());
-                configDependenciesFactory = null;
+                configDependencies = ImmutableList.copyOf<ModuleDependencyMetadata?>(configDependenciesFactory!!.create())
+                configDependenciesFactory = null
             }
-            return configDependencies;
+            return configDependencies
         }
     }
-
-    protected ModuleComponentIdentifier getComponentId() {
-        return componentId;
-    }
-
 }

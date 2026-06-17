@@ -13,124 +13,84 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentIdGenerator;
-import org.gradle.internal.component.model.ConfigurationGraphResolveState;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.DefaultExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.GraphSelectionCandidates;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.Dependency
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentIdGenerator
+import org.gradle.internal.component.model.ConfigurationGraphResolveState
+import org.gradle.internal.component.model.ConfigurationMetadata
+import org.gradle.internal.component.model.DefaultExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.GraphSelectionCandidates
+import org.gradle.internal.component.model.VariantGraphResolveState
+import java.util.function.Function
 
 /**
  * External component state implementation for ivy components.
  */
-public class DefaultIvyComponentGraphResolveState extends DefaultExternalModuleComponentGraphResolveState<IvyModuleResolveMetadata, IvyModuleResolveMetadata> implements IvyComponentGraphResolveState {
-
-    public DefaultIvyComponentGraphResolveState(long instanceId, IvyModuleResolveMetadata metadata, ComponentIdGenerator idGenerator) {
-        super(instanceId, metadata, metadata, idGenerator);
+class DefaultIvyComponentGraphResolveState(instanceId: Long, metadata: IvyModuleResolveMetadata, idGenerator: ComponentIdGenerator) :
+    DefaultExternalModuleComponentGraphResolveState<IvyModuleResolveMetadata?, IvyModuleResolveMetadata?>(instanceId, metadata, metadata, idGenerator), IvyComponentGraphResolveState {
+    override fun getConfigurationNames(): MutableSet<String> {
+        return getMetadata()!!.configurationNames
     }
 
-    @Override
-    public Set<String> getConfigurationNames() {
-        return getMetadata().getConfigurationNames();
-    }
-
-    @Nullable
-    @Override
-    public ConfigurationGraphResolveState getConfiguration(String configurationName) {
-        ModuleConfigurationMetadata configuration = getMetadata().getConfiguration(configurationName);
+    override fun getConfiguration(configurationName: String): ConfigurationGraphResolveState? {
+        val configuration = getMetadata()!!.getConfiguration(configurationName)
         if (configuration == null) {
-            return null;
+            return null
         } else {
-            return resolveStateFor(configuration);
+            return resolveStateFor(configuration)
         }
     }
 
-    @Nullable
-    private VariantGraphResolveState getConfigurationAsVariant(String name) {
-        ConfigurationGraphResolveState configuration = getConfiguration(name);
+    private fun getConfigurationAsVariant(name: String): VariantGraphResolveState? {
+        val configuration = getConfiguration(name)
         if (configuration == null) {
-            return null;
+            return null
         }
-        return configuration.asVariant();
+        return configuration.asVariant()
     }
 
 
-    @Override
-    public IvyComponentArtifactResolveMetadata getArtifactMetadata() {
-        @SuppressWarnings("deprecation")
-        IvyModuleResolveMetadata legacyMetadata = getLegacyMetadata();
-        return new DefaultIvyComponentArtifactResolveMetadata(legacyMetadata);
+    public override fun getArtifactMetadata(): IvyComponentArtifactResolveMetadata {
+        @Suppress("deprecation") val legacyMetadata: IvyModuleResolveMetadata? = getLegacyMetadata()
+        return DefaultIvyComponentGraphResolveState.DefaultIvyComponentArtifactResolveMetadata(legacyMetadata!!)
     }
 
-    @Override
-    public IvyGraphSelectionCandidates getCandidatesForGraphVariantSelection() {
-        return new DefaultIvyGraphSelectionCandidates(
+    override fun getCandidatesForGraphVariantSelection(): IvyComponentGraphResolveState.IvyGraphSelectionCandidates {
+        return DefaultIvyGraphSelectionCandidates(
             super.getCandidatesForGraphVariantSelection(),
-            this::getConfigurationAsVariant
-        );
+            Function { name: String -> this.getConfigurationAsVariant(name)!! }
+        )
     }
 
-    private static class DefaultIvyComponentArtifactResolveMetadata extends ExternalArtifactResolveMetadata implements IvyComponentArtifactResolveMetadata {
-        private final IvyModuleResolveMetadata metadata;
-
-        public DefaultIvyComponentArtifactResolveMetadata(IvyModuleResolveMetadata metadata) {
-            super(metadata);
-            this.metadata = metadata;
-        }
-
-        @Override
-        @Nullable
-        public ImmutableList<? extends ComponentArtifactMetadata> getConfigurationArtifacts(String configurationName) {
-            ConfigurationMetadata configuration = metadata.getConfiguration(configurationName);
+    private class DefaultIvyComponentArtifactResolveMetadata(private val metadata: IvyModuleResolveMetadata) : ExternalArtifactResolveMetadata(
+        metadata
+    ), IvyComponentArtifactResolveMetadata {
+        override fun getConfigurationArtifacts(configurationName: String): ImmutableList<out ComponentArtifactMetadata>? {
+            val configuration: ConfigurationMetadata? = metadata.getConfiguration(configurationName)
             if (configuration != null) {
-                return configuration.getArtifacts();
+                return configuration.artifacts
             }
-            return null;
+            return null
         }
     }
 
-    private static class DefaultIvyGraphSelectionCandidates implements IvyGraphSelectionCandidates {
-
-        private final GraphSelectionCandidates candidates;
-        private final Function<String, VariantGraphResolveState> configurationSupplier;
-
-        public DefaultIvyGraphSelectionCandidates(
-            GraphSelectionCandidates candidates,
-            Function<String, VariantGraphResolveState> configurationSupplier
-        ) {
-            this.candidates = candidates;
-            this.configurationSupplier = configurationSupplier;
+    private class DefaultIvyGraphSelectionCandidates(
+        private val candidates: GraphSelectionCandidates,
+        private val configurationSupplier: Function<String, VariantGraphResolveState>
+    ) : IvyComponentGraphResolveState.IvyGraphSelectionCandidates {
+        override fun getVariantsForAttributeMatching(): MutableList<out VariantGraphResolveState> {
+            return candidates.getVariantsForAttributeMatching()!!
         }
 
-        @Override
-        public List<? extends VariantGraphResolveState> getVariantsForAttributeMatching() {
-            return candidates.getVariantsForAttributeMatching();
+        override fun getLegacyVariant(): VariantGraphResolveState? {
+            return getVariantByConfigurationName(Dependency.DEFAULT_CONFIGURATION)
         }
 
-        @Nullable
-        @Override
-        public VariantGraphResolveState getLegacyVariant() {
-            return getVariantByConfigurationName(Dependency.DEFAULT_CONFIGURATION);
+        override fun getVariantByConfigurationName(name: String): VariantGraphResolveState? {
+            return configurationSupplier.apply(name)
         }
-
-        @Nullable
-        @Override
-        public VariantGraphResolveState getVariantByConfigurationName(String name) {
-            return configurationSupplier.apply(name);
-        }
-
     }
-
 }

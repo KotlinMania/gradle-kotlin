@@ -13,54 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
+package org.gradle.internal.resolve.caching
 
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ComponentMetadata;
-import org.gradle.api.artifacts.ComponentMetadataSupplierDetails;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.snapshot.ValueSnapshotter;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ComponentMetadataSupplierDetails
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.snapshot.ValueSnapshotter
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.time.Duration
 
-import java.time.Duration;
-
-@ServiceScope(Scope.Build.class)
-public class ComponentMetadataSupplierRuleExecutor extends CrossBuildCachingRuleExecutor<ModuleVersionIdentifier, ComponentMetadataSupplierDetails, ComponentMetadata> {
-    private final static Transformer<String, ModuleVersionIdentifier> KEY_TO_SNAPSHOTTABLE = Object::toString;
-
-    public ComponentMetadataSupplierRuleExecutor(
-            GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-            InMemoryCacheDecoratorFactory cacheDecoratorFactory,
-            ValueSnapshotter snapshotter,
-            BuildCommencedTimeProvider timeProvider,
-            Serializer<ComponentMetadata> componentMetadataSerializer) {
-        super("md-supplier", cacheBuilderFactory, cacheDecoratorFactory, snapshotter, timeProvider, createValidator(timeProvider), KEY_TO_SNAPSHOTTABLE, componentMetadataSerializer);
-    }
-
-    public static EntryValidator<ComponentMetadata> createValidator(final BuildCommencedTimeProvider timeProvider) {
-        return (policy, entry) -> {
-            Duration age = Duration.ofMillis(timeProvider.getCurrentTime() - entry.getTimestamp());
-            final ComponentMetadata result = entry.getResult();
-            return !policy.moduleExpiry(new SimpleResolvedModuleVersion(result), age, result.isChanging()).isMustCheck();
-        };
-    }
-
-    private static class SimpleResolvedModuleVersion implements ResolvedModuleVersion {
-        private final ComponentMetadata result;
-
-        public SimpleResolvedModuleVersion(ComponentMetadata result) {
-            this.result = result;
+@ServiceScope(Scope.Build::class)
+class ComponentMetadataSupplierRuleExecutor(
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    cacheDecoratorFactory: InMemoryCacheDecoratorFactory?,
+    snapshotter: ValueSnapshotter?,
+    timeProvider: BuildCommencedTimeProvider,
+    componentMetadataSerializer: Serializer<ComponentMetadata?>?
+) : CrossBuildCachingRuleExecutor<ModuleVersionIdentifier?, ComponentMetadataSupplierDetails?, ComponentMetadata?>(
+    "md-supplier",
+    cacheBuilderFactory,
+    cacheDecoratorFactory,
+    snapshotter,
+    timeProvider,
+    createValidator(timeProvider),
+    KEY_TO_SNAPSHOTTABLE,
+    componentMetadataSerializer
+) {
+    private class SimpleResolvedModuleVersion(private val result: ComponentMetadata) : ResolvedModuleVersion {
+        override fun getId(): ModuleVersionIdentifier {
+            return result.getId()
         }
+    }
 
-        @Override
-        public ModuleVersionIdentifier getId() {
-            return result.getId();
+    companion object {
+        private val KEY_TO_SNAPSHOTTABLE = Transformer { obj: ModuleVersionIdentifier? -> obj.toString() }
+
+        fun createValidator(timeProvider: BuildCommencedTimeProvider): EntryValidator<ComponentMetadata> {
+            return EntryValidator { policy: CacheExpirationControl?, entry: CachedEntry<ComponentMetadata>? ->
+                val age = Duration.ofMillis(timeProvider.getCurrentTime() - entry!!.getTimestamp())
+                val result = entry.getResult()
+                !policy!!.moduleExpiry(SimpleResolvedModuleVersion(result), age, result.isChanging()).isMustCheck()
+            }
         }
     }
 }

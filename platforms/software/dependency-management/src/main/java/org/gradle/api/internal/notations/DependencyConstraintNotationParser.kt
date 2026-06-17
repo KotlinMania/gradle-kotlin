@@ -13,155 +13,117 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.notations
 
-package org.gradle.api.internal.notations;
+import com.google.common.collect.Interner
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Project
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory
+import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyConstraint
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.internal.artifacts.dependencies.DependencyVariant
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.problems.Problems
+import org.gradle.api.provider.Provider
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.NotationConverterToNotationParserAdapter
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypeConversionException
+import org.gradle.internal.typeconversion.TypedNotationConverter
 
-import com.google.common.collect.Interner;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory;
-import org.gradle.api.internal.artifacts.dependencies.DefaultDependencyConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DependencyVariant;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.problems.Problems;
-import org.gradle.api.provider.Provider;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.NotationConverterToNotationParserAdapter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypeConversionException;
-import org.gradle.internal.typeconversion.TypedNotationConverter;
-
-public class DependencyConstraintNotationParser {
-
-    public static DependencyConstraintNotationParser parser(Instantiator instantiator, DefaultProjectDependencyFactory dependencyFactory, Interner<String> stringInterner, AttributesFactory attributesFactory, Problems problems) {
-        DependencyStringNotationConverter<DefaultDependencyConstraint> stringNotationConverter = new DependencyStringNotationConverter<>(instantiator, DefaultDependencyConstraint.class, stringInterner, problems);
-        MinimalExternalDependencyNotationConverter minimalExternalDependencyNotationConverter = new MinimalExternalDependencyNotationConverter(instantiator, attributesFactory);
-        ProjectDependencyNotationConverter projectDependencyNotationConverter = new ProjectDependencyNotationConverter(instantiator);
-        NotationParser<Object, DependencyConstraint> notationParser = NotationParserBuilder
-            .toType(DependencyConstraint.class)
-            .fromType(MinimalExternalModuleDependency.class, minimalExternalDependencyNotationConverter)
-            .fromCharSequence(stringNotationConverter)
-            .converter(new DependencyMapNotationConverter<>(instantiator, DefaultDependencyConstraint.class))
-            .fromType(Project.class, new DependencyConstraintProjectNotationConverter(instantiator, dependencyFactory))
-            .converter(projectDependencyNotationConverter)
-            .invalidNotationMessage("Comprehensive documentation on dependency notations is available in DSL reference for DependencyConstraintHandler type.")
-            .toComposite();
-        return new DependencyConstraintNotationParser(
-            notationParser,
-            new NotationConverterToNotationParserAdapter<>(stringNotationConverter),
-            new NotationConverterToNotationParserAdapter<>(minimalExternalDependencyNotationConverter),
-            new NotationConverterToNotationParserAdapter<>(projectDependencyNotationConverter)
-        );
-    }
-
-    private final NotationParser<Object, DependencyConstraint> notationParser;
-    private final NotationParser<String, ? extends DependencyConstraint> stringNotationParser;
-    private final NotationParser<MinimalExternalModuleDependency, ? extends DependencyConstraint> minimalExternalModuleDependencyNotationParser;
-    private final NotationParser<ProjectDependency, ? extends DependencyConstraint> projectDependencyNotationParser;
-
-    private DependencyConstraintNotationParser(
-        NotationParser<Object, DependencyConstraint> notationParser,
-        NotationParser<String, ? extends DependencyConstraint> stringNotationParser,
-        NotationParser<MinimalExternalModuleDependency, ? extends DependencyConstraint> minimalExternalModuleDependencyNotationParser,
-        NotationParser<ProjectDependency, ? extends DependencyConstraint> projectDependencyNotationParser
-    ) {
-        this.notationParser = notationParser;
-        this.stringNotationParser = stringNotationParser;
-        this.minimalExternalModuleDependencyNotationParser = minimalExternalModuleDependencyNotationParser;
-        this.projectDependencyNotationParser = projectDependencyNotationParser;
-    }
-
-    public NotationParser<Object, DependencyConstraint> getNotationParser() {
-        return notationParser;
-    }
-
-    public NotationParser<String, ? extends DependencyConstraint> getStringNotationParser() {
-        return stringNotationParser;
-    }
-
-    public NotationParser<MinimalExternalModuleDependency, ? extends DependencyConstraint> getMinimalExternalModuleDependencyNotationParser() {
-        return minimalExternalModuleDependencyNotationParser;
-    }
-
-    public NotationParser<ProjectDependency, ? extends DependencyConstraint> getProjectDependencyNotationParser() {
-        return projectDependencyNotationParser;
-    }
-
-    private static class ProjectDependencyNotationConverter extends TypedNotationConverter<ProjectDependency, DependencyConstraint> {
-        private final Instantiator instantiator;
-
-        public ProjectDependencyNotationConverter(Instantiator instantiator) {
-            super(ProjectDependency.class);
-            this.instantiator = instantiator;
-        }
-
-        @Override
-        protected DependencyConstraint parseType(ProjectDependency notation) {
-            return instantiator.newInstance(DefaultProjectDependencyConstraint.class, notation);
+class DependencyConstraintNotationParser private constructor(
+    val notationParser: NotationParser<Any?, DependencyConstraint?>?,
+    val stringNotationParser: NotationParser<String?, out DependencyConstraint?>?,
+    val minimalExternalModuleDependencyNotationParser: NotationParser<MinimalExternalModuleDependency?, out DependencyConstraint?>?,
+    val projectDependencyNotationParser: NotationParser<ProjectDependency?, out DependencyConstraint?>?
+) {
+    private class ProjectDependencyNotationConverter(private val instantiator: Instantiator) : TypedNotationConverter<ProjectDependency?, DependencyConstraint?>(ProjectDependency::class.java) {
+        override fun parseType(notation: ProjectDependency): DependencyConstraint {
+            return instantiator.newInstance<DefaultProjectDependencyConstraint>(DefaultProjectDependencyConstraint::class.java, notation)
         }
     }
 
-    private static class MinimalExternalDependencyNotationConverter implements NotationConverter<MinimalExternalModuleDependency, DefaultDependencyConstraint> {
-        private final Instantiator instantiator;
-        private final AttributesFactory attributesFactory;
-
-        public MinimalExternalDependencyNotationConverter(Instantiator instantiator, AttributesFactory attributesFactory) {
-            this.instantiator = instantiator;
-            this.attributesFactory = attributesFactory;
-        }
-
-        @Override
-        public void convert(MinimalExternalModuleDependency notation, NotationConvertResult<? super DefaultDependencyConstraint> result) throws TypeConversionException {
-            DefaultDependencyConstraint dependencyConstraint = instantiator.newInstance(DefaultDependencyConstraint.class, notation.getModule(), notation.getVersionConstraint());
-            if (notation instanceof DependencyVariant) {
-                dependencyConstraint.setAttributesFactory(attributesFactory);
-                DependencyVariant dependencyVariant = (DependencyVariant) notation;
-                dependencyConstraint.attributes(dependencyVariant::mutateAttributes);
-                dependencyVariant.mutateCapabilities(UnsupportedCapabilitiesHandler.INSTANCE);
-                String classifier = dependencyVariant.getClassifier();
-                String artifactType = dependencyVariant.getArtifactType();
+    private class MinimalExternalDependencyNotationConverter(private val instantiator: Instantiator, private val attributesFactory: AttributesFactory) :
+        NotationConverter<MinimalExternalModuleDependency?, DefaultDependencyConstraint?> {
+        @Throws(TypeConversionException::class)
+        override fun convert(notation: MinimalExternalModuleDependency, result: NotationConvertResult<in DefaultDependencyConstraint?>) {
+            val dependencyConstraint = instantiator.newInstance<DefaultDependencyConstraint>(DefaultDependencyConstraint::class.java, notation.getModule(), notation.getVersionConstraint())
+            if (notation is DependencyVariant) {
+                dependencyConstraint.setAttributesFactory(attributesFactory)
+                val dependencyVariant = notation as DependencyVariant
+                dependencyConstraint.attributes(Action { attributes: AttributeContainer? -> dependencyVariant.mutateAttributes(attributes!!) })
+                dependencyVariant.mutateCapabilities(UnsupportedCapabilitiesHandler.Companion.INSTANCE)
+                val classifier = dependencyVariant.getClassifier()
+                val artifactType = dependencyVariant.getArtifactType()
                 if (classifier != null || artifactType != null) {
-                    throw new InvalidUserDataException("Classifier and artifact types aren't supported by dependency constraints");
+                    throw InvalidUserDataException("Classifier and artifact types aren't supported by dependency constraints")
                 }
             }
-            result.converted(dependencyConstraint);
+            result.converted(dependencyConstraint)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
+        override fun describe(visitor: DiagnosticsVisitor?) {
         }
     }
 
-    private final static class UnsupportedCapabilitiesHandler implements ModuleDependencyCapabilitiesHandler {
-        private final static UnsupportedCapabilitiesHandler INSTANCE = new UnsupportedCapabilitiesHandler();
-
-        @Override
-        public void requireCapability(Object capabilityNotation) {
-            throw new InvalidUserDataException("Capabilities are not supported by dependency constraints");
+    private class UnsupportedCapabilitiesHandler : ModuleDependencyCapabilitiesHandler {
+        override fun requireCapability(capabilityNotation: Any) {
+            throw InvalidUserDataException("Capabilities are not supported by dependency constraints")
         }
 
-        @Override
-        public void requireCapabilities(Object... capabilityNotations) {
-            throw new InvalidUserDataException("Capabilities are not supported by dependency constraints");
+        override fun requireCapabilities(vararg capabilityNotations: Any?) {
+            throw InvalidUserDataException("Capabilities are not supported by dependency constraints")
         }
 
-        @Override
-        public void requireFeature(String featureName) {
-            throw new InvalidUserDataException("Capabilities are not supported by dependency constraints");
+        override fun requireFeature(featureName: String) {
+            throw InvalidUserDataException("Capabilities are not supported by dependency constraints")
         }
 
-        @Override
-        public void requireFeature(Provider<String> featureName) {
-            throw new InvalidUserDataException("Capabilities are not supported by dependency constraints");
+        override fun requireFeature(featureName: Provider<String?>) {
+            throw InvalidUserDataException("Capabilities are not supported by dependency constraints")
+        }
+
+        companion object {
+            private val INSTANCE = UnsupportedCapabilitiesHandler()
+        }
+    }
+
+    companion object {
+        fun parser(
+            instantiator: Instantiator,
+            dependencyFactory: DefaultProjectDependencyFactory?,
+            stringInterner: Interner<String?>?,
+            attributesFactory: AttributesFactory,
+            problems: Problems?
+        ): DependencyConstraintNotationParser {
+            val stringNotationConverter = DependencyStringNotationConverter<DefaultDependencyConstraint?>(instantiator, DefaultDependencyConstraint::class.java, stringInterner, problems)
+            val minimalExternalDependencyNotationConverter = MinimalExternalDependencyNotationConverter(instantiator, attributesFactory)
+            val projectDependencyNotationConverter = ProjectDependencyNotationConverter(instantiator)
+            val notationParser = NotationParserBuilder
+                .toType<DependencyConstraint?>(DependencyConstraint::class.java)
+                .fromType<MinimalExternalModuleDependency?>(MinimalExternalModuleDependency::class.java, minimalExternalDependencyNotationConverter)
+                .fromCharSequence(stringNotationConverter)
+                .converter(DependencyMapNotationConverter<DefaultDependencyConstraint?>(instantiator, DefaultDependencyConstraint::class.java))
+                .fromType<Project?>(Project::class.java, DependencyConstraintProjectNotationConverter(instantiator, dependencyFactory))
+                .converter(projectDependencyNotationConverter)
+                .invalidNotationMessage("Comprehensive documentation on dependency notations is available in DSL reference for DependencyConstraintHandler type.")
+                .toComposite()
+            return DependencyConstraintNotationParser(
+                notationParser,
+                NotationConverterToNotationParserAdapter<String?, DefaultDependencyConstraint?>(stringNotationConverter),
+                NotationConverterToNotationParserAdapter<MinimalExternalModuleDependency?, DefaultDependencyConstraint?>(minimalExternalDependencyNotationConverter),
+                NotationConverterToNotationParserAdapter<ProjectDependency?, DependencyConstraint?>(projectDependencyNotationConverter)
+            )
         }
     }
 }

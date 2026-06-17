@@ -13,31 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.file
 
-package org.gradle.internal.resource.transport.file;
+import com.google.common.collect.Sets
+import org.gradle.authentication.Authentication
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-import com.google.common.collect.Sets;
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-
-import java.util.HashSet;
-import java.util.Set;
-
-public class FileConnectorFactory implements ResourceConnectorFactory {
-    @Override
-    public Set<String> getSupportedProtocols() {
-        return Sets.newHashSet("file");
+class FileConnectorFactory : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String?> {
+        return Sets.newHashSet<String?>("file")
     }
 
-    @Override
-    public Set<Class<? extends Authentication>> getSupportedAuthentication() {
-        return new HashSet<>();
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
+        return HashSet<Class<out Authentication?>?>()
     }
 
-    @Override
-    public ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails) {
-        throw new UnsupportedOperationException("Not implemented");
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification?): ExternalResourceConnector? {
+        throw UnsupportedOperationException("Not implemented")
     }
 }

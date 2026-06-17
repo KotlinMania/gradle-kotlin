@@ -110,7 +110,7 @@ public class ModuleComponentResolveMetadataSerializer extends AbstractSerializer
         AbstractRealisedModuleComponentResolveMetadata transformed = assertRealized(value);
         HashMap<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache = new HashMap<>();
         delegate.write(encoder, transformed, deduplicationDependencyCache);
-        writeOwners(encoder, value.getPlatformOwners());
+        writeOwners(encoder, value.platformOwners);
         if (transformed instanceof RealisedIvyModuleResolveMetadata) {
             ivySerializationHelper.writeRealisedVariantsData(encoder, transformed);
             ivySerializationHelper.writeRealisedConfigurationsData(encoder, transformed, deduplicationDependencyCache);

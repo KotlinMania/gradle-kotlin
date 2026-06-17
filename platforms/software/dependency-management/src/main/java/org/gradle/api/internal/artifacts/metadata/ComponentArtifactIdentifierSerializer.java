@@ -33,7 +33,7 @@ public class ComponentArtifactIdentifierSerializer implements Serializer<Default
     @Override
     public void write(Encoder encoder, DefaultModuleComponentArtifactIdentifier value) throws Exception {
         componentIdentifierSerializer.write(encoder, value.getComponentIdentifier());
-        IvyArtifactNameSerializer.INSTANCE.write(encoder, value.getName());
+        IvyArtifactNameSerializer.INSTANCE.write(encoder, value.name);
     }
 
     @Override

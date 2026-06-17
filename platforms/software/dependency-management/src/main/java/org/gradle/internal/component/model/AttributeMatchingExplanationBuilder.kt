@@ -13,43 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.ImmutableAttributesEntry
 
-import java.util.Collection;
-
-public interface AttributeMatchingExplanationBuilder {
-    AttributeMatchingExplanationBuilder NO_OP = new AttributeMatchingExplanationBuilder() { };
-
-    static AttributeMatchingExplanationBuilder logging() {
-        return LoggingAttributeMatchingExplanationBuilder.logging();
+interface AttributeMatchingExplanationBuilder {
+    fun noCandidates(requested: ImmutableAttributes) {
     }
 
-    default void noCandidates(ImmutableAttributes requested) {
-
+    fun singleMatch(candidate: ImmutableAttributes, candidates: MutableCollection<ImmutableAttributes>, requested: AttributeContainerInternal) {
     }
 
-    default void singleMatch(ImmutableAttributes candidate, Collection<ImmutableAttributes> candidates, AttributeContainerInternal requested) {
-
+    fun candidateDoesNotMatchAttributes(candidate: ImmutableAttributes, requested: AttributeContainerInternal) {
     }
 
-    default void candidateDoesNotMatchAttributes(ImmutableAttributes candidate, AttributeContainerInternal requested) {
-
+    fun candidateAttributeDoesNotMatch(candidate: ImmutableAttributes, attribute: Attribute<*>, requestedValue: Any, candidateEntry: ImmutableAttributesEntry<*>) {
     }
 
-    default void candidateAttributeDoesNotMatch(ImmutableAttributes candidate, Attribute<?> attribute, Object requestedValue, ImmutableAttributesEntry<?> candidateEntry) {
-
+    fun candidateAttributeMissing(candidate: ImmutableAttributes, attribute: Attribute<*>, requestedValue: Any) {
     }
 
-    default void candidateAttributeMissing(ImmutableAttributes candidate, Attribute<?> attribute, Object requestedValue) {
-
+    fun candidateIsSuperSetOfAllOthers(candidate: ImmutableAttributes) {
     }
 
-    default void candidateIsSuperSetOfAllOthers(ImmutableAttributes candidate) {
+    companion object {
+        @JvmStatic
+        fun logging(): AttributeMatchingExplanationBuilder {
+            return LoggingAttributeMatchingExplanationBuilder.Companion.logging()
+        }
 
+        val NO_OP: AttributeMatchingExplanationBuilder = object : AttributeMatchingExplanationBuilder {}
     }
 }

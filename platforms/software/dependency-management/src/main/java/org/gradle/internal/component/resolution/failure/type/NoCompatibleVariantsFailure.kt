@@ -13,37 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
 
 /**
- * A {@link VariantSelectionByAttributesFailure} that represents the case when a variant cannot
+ * A [VariantSelectionByAttributesFailure] that represents the case when a variant cannot
  * be selected because no variants were found that are compatible with the requested attributes.
  */
-public final class NoCompatibleVariantsFailure extends AbstractVariantSelectionByAttributesFailure {
-    private final ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> candidates;
+class NoCompatibleVariantsFailure(
+    targetComponent: ComponentIdentifier,
+    requestedAttributes: AttributeContainerInternal,
+    capabilitySelectors: ImmutableSet<CapabilitySelector>,
+    candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>
+) : AbstractVariantSelectionByAttributesFailure(ResolutionFailureProblemId.NO_COMPATIBLE_VARIANTS, targetComponent, requestedAttributes, capabilitySelectors) {
+    @JvmField
+    private val candidates: ImmutableList<ResolutionCandidateAssessor.AssessedCandidate>
 
-    public NoCompatibleVariantsFailure(ComponentIdentifier targetComponent, AttributeContainerInternal requestedAttributes, ImmutableSet<CapabilitySelector> capabilitySelectors, List<ResolutionCandidateAssessor.AssessedCandidate> candidates) {
-        super(ResolutionFailureProblemId.NO_COMPATIBLE_VARIANTS, targetComponent, requestedAttributes, capabilitySelectors);
-        this.candidates = ImmutableList.copyOf(candidates);
+    init {
+        this.candidates = ImmutableList.copyOf<ResolutionCandidateAssessor.AssessedCandidate>(candidates)
     }
 
-    public ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> getCandidates() {
-        return candidates;
+    fun getCandidates(): ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> {
+        return candidates
     }
 
-    public boolean noCandidatesHaveAttributes() {
-        return getCandidates().stream().allMatch(ResolutionCandidateAssessor.AssessedCandidate::hasNoAttributes);
+    fun noCandidatesHaveAttributes(): Boolean {
+        return getCandidates().stream().allMatch { hasNoAttributes() }
     }
 }

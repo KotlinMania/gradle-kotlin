@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import org.jspecify.annotations.Nullable;
-
-public interface ErroringResolveResult<E extends Throwable> extends ResolveResult {
+interface ErroringResolveResult<E : Throwable?> : ResolveResult {
     /**
      * Marks the resolution as failed with the given failure.
      */
-    void failed(E error);
+    fun failed(error: E?)
 
     /**
      * {@inheritDoc}
      */
-    @Nullable
-    @Override
-    E getFailure();
+    override fun getFailure(): E?
 }

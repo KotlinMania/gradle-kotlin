@@ -13,202 +13,203 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.ForcingDependencyMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Factory
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata.isExternalVariant
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata.isExternalVariant
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
+import org.gradle.internal.component.model.ConfigurationGraphResolveMetadata.isVisible
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.ForcingDependencyMetadata
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getAttributes
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getCapabilities
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getName
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.isExternalVariant
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.isTransitive
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata.isExternalVariant
 
 /**
  * Effectively immutable implementation of ConfigurationMetadata.
  * Used to represent Ivy and Maven modules in the dependency graph.
  */
-public class DefaultConfigurationMetadata extends AbstractConfigurationMetadata {
+class DefaultConfigurationMetadata : AbstractConfigurationMetadata {
+    private val componentMetadataRules: VariantMetadataRules
 
-    private final VariantMetadataRules componentMetadataRules;
-
-    private List<? extends ModuleDependencyMetadata> calculatedDependencies;
-    private ImmutableList<? extends ModuleComponentArtifactMetadata> calculatedArtifacts;
+    private var calculatedDependencies: MutableList<out ModuleDependencyMetadata?>? = null
+    private var calculatedArtifacts: ImmutableList<out ModuleComponentArtifactMetadata?>? = null
 
     // Could be precomputed, but we avoid doing so if attributes are never requested
-    private ImmutableAttributes computedAttributes;
-    private ImmutableCapabilities computedCapabilities;
+    private var computedAttributes: ImmutableAttributes? = null
+    private var computedCapabilities: ImmutableCapabilities? = null
 
     // Fields used for performance optimizations: we avoid computing the derived dependencies (withConstraints, withoutConstraints, ...)
     // eagerly because it's very likely that those methods would only be called on the selected variant. Therefore it's a waste of time
     // to compute them eagerly when those filtering methods are called. We cannot use a dedicated, lazy wrapper over configuration metadata
     // because we need the attributes to be computes lazily too, because of component metadata rules.
-    private final DependencyFilter dependencyFilter;
-    private ImmutableList<ModuleDependencyMetadata> filteredConfigDependencies;
+    private val dependencyFilter: DependencyFilter
+    private var filteredConfigDependencies: ImmutableList<ModuleDependencyMetadata>? = null
 
-    public DefaultConfigurationMetadata(
-        String name,
-        VariantIdentifier id,
-        ModuleComponentIdentifier componentId,
-        boolean transitive,
-        boolean visible,
-        ImmutableSet<String> hierarchy,
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts,
-        VariantMetadataRules componentMetadataRules,
-        ImmutableList<ExcludeMetadata> excludes,
-        ImmutableAttributes componentLevelAttributes,
-        boolean externalVariant
+    constructor(
+        name: String?,
+        id: VariantIdentifier?,
+        componentId: ModuleComponentIdentifier?,
+        transitive: Boolean,
+        visible: Boolean,
+        hierarchy: ImmutableSet<String?>?,
+        artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?,
+        componentMetadataRules: VariantMetadataRules,
+        excludes: ImmutableList<ExcludeMetadata?>?,
+        componentLevelAttributes: ImmutableAttributes?,
+        externalVariant: Boolean
+    ) : super(
+        name,
+        id,
+        componentId,
+        transitive,
+        visible,
+        artifacts,
+        hierarchy,
+        excludes,
+        componentLevelAttributes,
+        null as ImmutableList<ModuleDependencyMetadata?>?,
+        ImmutableCapabilities.Companion.EMPTY,
+        externalVariant
     ) {
-        super(name, id, componentId, transitive, visible, artifacts, hierarchy, excludes, componentLevelAttributes, (ImmutableList<ModuleDependencyMetadata>) null, ImmutableCapabilities.EMPTY, externalVariant);
-        this.componentMetadataRules = componentMetadataRules;
-        this.dependencyFilter = DependencyFilter.ALL;
+        this.componentMetadataRules = componentMetadataRules
+        this.dependencyFilter = DependencyFilter.ALL
     }
 
-    private DefaultConfigurationMetadata(
-        String name,
-        VariantIdentifier id,
-        ModuleComponentIdentifier componentId,
-        boolean transitive,
-        boolean visible,
-        ImmutableSet<String> hierarchy,
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts,
-        VariantMetadataRules componentMetadataRules,
-        ImmutableList<ExcludeMetadata> excludes,
-        ImmutableAttributes attributes,
-        Factory<List<ModuleDependencyMetadata>> configDependenciesFactory,
-        DependencyFilter dependencyFilter,
-        ImmutableCapabilities capabilities,
-        boolean externalVariant
-    ) {
-        super(name, id, componentId, transitive, visible, artifacts, hierarchy, excludes, attributes, configDependenciesFactory, capabilities, externalVariant);
-        this.componentMetadataRules = componentMetadataRules;
-        this.dependencyFilter = dependencyFilter;
+    private constructor(
+        name: String?,
+        id: VariantIdentifier?,
+        componentId: ModuleComponentIdentifier?,
+        transitive: Boolean,
+        visible: Boolean,
+        hierarchy: ImmutableSet<String?>?,
+        artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?,
+        componentMetadataRules: VariantMetadataRules,
+        excludes: ImmutableList<ExcludeMetadata?>?,
+        attributes: ImmutableAttributes?,
+        configDependenciesFactory: Factory<MutableList<ModuleDependencyMetadata?>?>?,
+        dependencyFilter: DependencyFilter,
+        capabilities: ImmutableCapabilities?,
+        externalVariant: Boolean
+    ) : super(name, id, componentId, transitive, visible, artifacts, hierarchy, excludes, attributes, configDependenciesFactory, capabilities, externalVariant) {
+        this.componentMetadataRules = componentMetadataRules
+        this.dependencyFilter = dependencyFilter
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        if (computedAttributes == null) {
-            computedAttributes = componentMetadataRules.applyVariantAttributeRules(this, super.getAttributes());
+    val attributes: ImmutableAttributes?
+        get() {
+            if (computedAttributes == null) {
+                computedAttributes = componentMetadataRules.applyVariantAttributeRules(this, super.getAttributes())
+            }
+            return computedAttributes
         }
-        return computedAttributes;
-    }
 
-    @Override
-    ImmutableList<ModuleDependencyMetadata> getConfigDependencies() {
+    override fun getConfigDependencies(): ImmutableList<ModuleDependencyMetadata>? {
         if (filteredConfigDependencies != null) {
-            return filteredConfigDependencies;
+            return filteredConfigDependencies
         }
-        ImmutableList<ModuleDependencyMetadata> filtered = super.getConfigDependencies();
-        switch (dependencyFilter) {
-            case CONSTRAINTS_ONLY:
-            case FORCED_CONSTRAINTS_ONLY:
-                filtered = withConstraints(true, filtered);
-                break;
-            case DEPENDENCIES_ONLY:
-            case FORCED_DEPENDENCIES_ONLY:
-                filtered = withConstraints(false, filtered);
-                break;
-            default:
-                break;
+        var filtered = super.getConfigDependencies()
+        when (dependencyFilter) {
+            DependencyFilter.CONSTRAINTS_ONLY, DependencyFilter.FORCED_CONSTRAINTS_ONLY -> filtered = withConstraints(true, filtered)
+            DependencyFilter.DEPENDENCIES_ONLY, DependencyFilter.FORCED_DEPENDENCIES_ONLY -> filtered = withConstraints(false, filtered)
+            else -> {}
         }
-        switch (dependencyFilter) {
-            case FORCED_ALL:
-            case FORCED_CONSTRAINTS_ONLY:
-            case FORCED_DEPENDENCIES_ONLY:
-                filtered = force(filtered);
-                break;
-            default:
-                break;
+        when (dependencyFilter) {
+            DependencyFilter.FORCED_ALL, DependencyFilter.FORCED_CONSTRAINTS_ONLY, DependencyFilter.FORCED_DEPENDENCIES_ONLY -> filtered = force(filtered)
+            else -> {}
         }
-        filteredConfigDependencies = filtered;
-        return filteredConfigDependencies;
+        filteredConfigDependencies = filtered
+        return filteredConfigDependencies
     }
 
-    private ImmutableList<? extends ModuleComponentArtifactMetadata> getOriginalArtifacts() {
-        return super.getArtifacts();
-    }
+    private val originalArtifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?
+        get() = super.getArtifacts()
 
-    @Override
-    public ImmutableList<? extends ModuleComponentArtifactMetadata> getArtifacts() {
-        if (calculatedArtifacts == null) {
-            calculatedArtifacts = componentMetadataRules.applyVariantFilesMetadataRulesToArtifacts(this, getOriginalArtifacts(), getComponentId());
-        }
-        return calculatedArtifacts;
-    }
-
-    @Override
-    public List<? extends ModuleDependencyMetadata> getDependencies() {
-        if (calculatedDependencies == null) {
-            calculatedDependencies = componentMetadataRules.applyDependencyMetadataRules(this, getConfigDependencies());
-        }
-        return calculatedDependencies;
-    }
-
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        if (computedCapabilities == null) {
-            computedCapabilities = componentMetadataRules.applyCapabilitiesRules(this, super.getCapabilities());
-        }
-        return computedCapabilities;
-    }
-
-    private ImmutableCapabilities getRawCapabilities() {
-        // We need the raw capabilities when deriving a variant since we pass down the component metadata rules as well
-        return super.getCapabilities();
-    }
-
-    private Factory<List<ModuleDependencyMetadata>> lazyConfigDependencies() {
-        return new Factory<List<ModuleDependencyMetadata>>() {
-            @Override
-            public List<ModuleDependencyMetadata> create() {
-                return DefaultConfigurationMetadata.super.getConfigDependencies();
+    val artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>
+        get() {
+            if (calculatedArtifacts == null) {
+                calculatedArtifacts = componentMetadataRules.applyVariantFilesMetadataRulesToArtifacts(this, this.originalArtifacts, getComponentId())
             }
-        };
+            return calculatedArtifacts
+        }
+
+    val dependencies: MutableList<out ModuleDependencyMetadata?>?
+        get() {
+            if (calculatedDependencies == null) {
+                calculatedDependencies = componentMetadataRules.applyDependencyMetadataRules<ModuleDependencyMetadata?>(this, getConfigDependencies())
+            }
+            return calculatedDependencies
+        }
+
+    val capabilities: ImmutableCapabilities?
+        get() {
+            if (computedCapabilities == null) {
+                computedCapabilities = componentMetadataRules.applyCapabilitiesRules(this, super.getCapabilities())
+            }
+            return computedCapabilities
+        }
+
+    private val rawCapabilities: ImmutableCapabilities?
+        get() =// We need the raw capabilities when deriving a variant since we pass down the component metadata rules as well
+            super.getCapabilities()
+
+    private fun lazyConfigDependencies(): Factory<MutableList<ModuleDependencyMetadata?>?> {
+        return object : Factory<MutableList<ModuleDependencyMetadata?>?> {
+            override fun create(): MutableList<ModuleDependencyMetadata> {
+                return super@DefaultConfigurationMetadata.getConfigDependencies()
+            }
+        }
     }
 
-    private ImmutableList<ModuleDependencyMetadata> force(ImmutableList<ModuleDependencyMetadata> configDependencies) {
-        ImmutableList.Builder<ModuleDependencyMetadata> dependencies = new ImmutableList.Builder<>();
-        for (ModuleDependencyMetadata configDependency : configDependencies) {
-            if (configDependency instanceof ForcingDependencyMetadata) {
-                dependencies.add((ModuleDependencyMetadata) ((ForcingDependencyMetadata) configDependency).forced());
+    private fun force(configDependencies: ImmutableList<ModuleDependencyMetadata>): ImmutableList<ModuleDependencyMetadata> {
+        val dependencies = ImmutableList.Builder<ModuleDependencyMetadata?>()
+        for (configDependency in configDependencies) {
+            if (configDependency is ForcingDependencyMetadata) {
+                dependencies.add((configDependency as ForcingDependencyMetadata).forced() as ModuleDependencyMetadata?)
             } else {
-                dependencies.add(new ForcedDependencyMetadataWrapper(configDependency));
+                dependencies.add(ForcedDependencyMetadataWrapper(configDependency))
             }
         }
-        return dependencies.build();
+        return dependencies.build()
     }
 
-    private ImmutableList<ModuleDependencyMetadata> withConstraints(boolean constraint, ImmutableList<ModuleDependencyMetadata> configDependencies) {
+    private fun withConstraints(constraint: Boolean, configDependencies: ImmutableList<ModuleDependencyMetadata>): ImmutableList<ModuleDependencyMetadata> {
         if (configDependencies.isEmpty()) {
-            return ImmutableList.of();
+            return ImmutableList.of<ModuleDependencyMetadata?>()
         }
-        int count = 0;
-        ImmutableList.Builder<ModuleDependencyMetadata> filtered = null;
-        for (ModuleDependencyMetadata configDependency : configDependencies) {
-            if (configDependency.isConstraint() == constraint) {
+        var count = 0
+        var filtered: ImmutableList.Builder<ModuleDependencyMetadata?>? = null
+        for (configDependency in configDependencies) {
+            if (configDependency.isConstraint === constraint) {
                 if (filtered == null) {
-                    filtered = new ImmutableList.Builder<>();
+                    filtered = ImmutableList.Builder<ModuleDependencyMetadata?>()
                 }
-                filtered.add(configDependency);
-                count++;
+                filtered.add(configDependency)
+                count++
             }
         }
-        if (count == configDependencies.size()) {
+        if (count == configDependencies.size) {
             // Avoid creating a copy if the resulting configuration is identical
-            return configDependencies;
+            return configDependencies
         }
-        return filtered == null ? ImmutableList.of() : filtered.build();
+        return if (filtered == null) ImmutableList.of<ModuleDependencyMetadata?>() else filtered.build()
     }
 
-    public Builder mutate() {
-        return new Builder();
+    fun mutate(): Builder {
+        return DefaultConfigurationMetadata.Builder()
     }
 
-    private enum DependencyFilter {
+    private enum class DependencyFilter {
         ALL,
         CONSTRAINTS_ONLY,
         DEPENDENCIES_ONLY,
@@ -216,110 +217,98 @@ public class DefaultConfigurationMetadata extends AbstractConfigurationMetadata 
         FORCED_CONSTRAINTS_ONLY,
         FORCED_DEPENDENCIES_ONLY;
 
-        DependencyFilter forcing() {
-            switch (this) {
-                case ALL:
-                    return FORCED_ALL;
-                case CONSTRAINTS_ONLY:
-                    return FORCED_CONSTRAINTS_ONLY;
-                case DEPENDENCIES_ONLY:
-                    return FORCED_DEPENDENCIES_ONLY;
-                default:
-                    break;
+        fun forcing(): DependencyFilter {
+            when (this) {
+                DependencyFilter.ALL -> return DependencyFilter.FORCED_ALL
+                DependencyFilter.CONSTRAINTS_ONLY -> return DependencyFilter.FORCED_CONSTRAINTS_ONLY
+                DependencyFilter.DEPENDENCIES_ONLY -> return DependencyFilter.FORCED_DEPENDENCIES_ONLY
+                else -> {}
             }
-            return this;
+            return this
         }
 
-        DependencyFilter dependenciesOnly() {
-            switch (this) {
-                case ALL:
-                    return DEPENDENCIES_ONLY;
-                case FORCED_ALL:
-                    return FORCED_DEPENDENCIES_ONLY;
-                case DEPENDENCIES_ONLY:
-                    return this;
-                default:
-                    break;
+        fun dependenciesOnly(): DependencyFilter {
+            when (this) {
+                DependencyFilter.ALL -> return DependencyFilter.DEPENDENCIES_ONLY
+                DependencyFilter.FORCED_ALL -> return DependencyFilter.FORCED_DEPENDENCIES_ONLY
+                DependencyFilter.DEPENDENCIES_ONLY -> return this
+                else -> {}
             }
-            throw new IllegalStateException("Cannot set dependencies only when constraints only has already been called");
+            throw IllegalStateException("Cannot set dependencies only when constraints only has already been called")
         }
 
-        DependencyFilter constraintsOnly() {
-            switch (this) {
-                case ALL:
-                    return CONSTRAINTS_ONLY;
-                case FORCED_ALL:
-                    return FORCED_CONSTRAINTS_ONLY;
-                case CONSTRAINTS_ONLY:
-                    return this;
-                default:
-                    break;
+        fun constraintsOnly(): DependencyFilter {
+            when (this) {
+                DependencyFilter.ALL -> return DependencyFilter.CONSTRAINTS_ONLY
+                DependencyFilter.FORCED_ALL -> return DependencyFilter.FORCED_CONSTRAINTS_ONLY
+                DependencyFilter.CONSTRAINTS_ONLY -> return this
+                else -> {}
             }
-            throw new IllegalStateException("Cannot set constraints only when dependencies only has already been called");
+            throw IllegalStateException("Cannot set constraints only when dependencies only has already been called")
         }
     }
 
-    public class Builder {
-        private String name = DefaultConfigurationMetadata.this.getName();
-        private DependencyFilter dependencyFilter = DependencyFilter.ALL;
-        private ImmutableCapabilities capabilities;
-        private ImmutableAttributes attributes;
-        private ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts;
+    inner class Builder {
+        private var name: String = this@DefaultConfigurationMetadata.getName()
+        private var dependencyFilter = DependencyFilter.ALL
+        private var capabilities: ImmutableCapabilities? = null
+        private var attributes: ImmutableAttributes? = null
+        private var artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>? = null
 
-        Builder withName(String name) {
-            this.name = name;
-            return this;
+        fun withName(name: String): Builder {
+            this.name = name
+            return this
         }
 
-        public Builder withArtifacts(ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts) {
-            this.artifacts = artifacts;
-            return this;
+        fun withArtifacts(artifacts: ImmutableList<out ModuleComponentArtifactMetadata?>?): Builder {
+            this.artifacts = artifacts
+            return this
         }
 
-        Builder withAttributes(ImmutableAttributes attributes) {
-            this.attributes = attributes;
-            return this;
+        fun withAttributes(attributes: ImmutableAttributes?): Builder {
+            this.attributes = attributes
+            return this
         }
 
-        public Builder withoutConstraints() {
-            dependencyFilter = dependencyFilter.dependenciesOnly();
-            return this;
+        fun withoutConstraints(): Builder {
+            dependencyFilter = dependencyFilter.dependenciesOnly()
+            return this
         }
 
-        Builder withForcedDependencies() {
-            dependencyFilter = dependencyFilter.forcing();
-            return this;
+        fun withForcedDependencies(): Builder {
+            dependencyFilter = dependencyFilter.forcing()
+            return this
         }
 
-        Builder withConstraintsOnly() {
-            dependencyFilter = dependencyFilter.constraintsOnly();
-            artifacts = ImmutableList.of();
-            return this;
+        fun withConstraintsOnly(): Builder {
+            dependencyFilter = dependencyFilter.constraintsOnly()
+            artifacts = ImmutableList.of<ModuleComponentArtifactMetadata?>()
+            return this
         }
 
-        Builder withCapabilities(ImmutableCapabilities capabilities) {
-            this.capabilities = capabilities;
-            return this;
+        fun withCapabilities(capabilities: ImmutableCapabilities?): Builder {
+            this.capabilities = capabilities
+            return this
         }
 
-        public DefaultConfigurationMetadata build() {
-            VariantIdentifier id = new NamedVariantIdentifier(getId().getComponentId(), name);
-            return new DefaultConfigurationMetadata(
+        fun build(): DefaultConfigurationMetadata {
+            val id: VariantIdentifier = NamedVariantIdentifier(getId()!!.componentId, name)
+            return DefaultConfigurationMetadata(
                 name,
                 id,
                 getComponentId(),
                 isTransitive(),
                 isVisible(),
                 getHierarchy(),
-                artifacts == null ? DefaultConfigurationMetadata.this.getOriginalArtifacts() : artifacts,
+                if (artifacts == null) this@DefaultConfigurationMetadata.originalArtifacts else artifacts,
                 componentMetadataRules,
                 getExcludes(),
-                attributes == null ? DefaultConfigurationMetadata.super.getAttributes() : attributes,
+                if (attributes == null) super@DefaultConfigurationMetadata.getAttributes() else attributes,
                 lazyConfigDependencies(),
                 dependencyFilter,
-                capabilities == null ? DefaultConfigurationMetadata.this.getRawCapabilities() : capabilities,
+                if (capabilities == null) this@DefaultConfigurationMetadata.rawCapabilities else capabilities,
                 isExternalVariant()
-            );
+            )
         }
     }
 }

@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.internal.reflect.Instantiator;
+package org.gradle.api.internal.artifacts
 
 /**
  * Provides context for metadata resolution, sourced from a repository definition.
  *
  * @see ComponentMetadataProcessorFactory
  */
-public interface MetadataResolutionContext {
-
+interface MetadataResolutionContext {
     /**
      * The cache policy of a repository
      *
      * @return the cache policy
      */
-    CacheExpirationControl getCacheExpirationControl();
+    @JvmField
+    val cacheExpirationControl: CacheExpirationControl?
 
     /**
      * Provides an injecting instantiator, giving access to services potentially contextual to a repository.
      *
      * @return a injecting instantiator
      */
-    Instantiator getInjectingInstantiator();
+    @JvmField
+    val injectingInstantiator: Instantiator?
 }

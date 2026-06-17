@@ -114,7 +114,7 @@ import java.util.Set;
 @ServiceScope(Scope.Project.class)
 public class ResolutionExecutor {
 
-    private static final Spec<DependencyMetadata> IS_LOCAL_EDGE = element -> element.getSelector() instanceof ProjectComponentSelector;
+    private static final Spec<DependencyMetadata> IS_LOCAL_EDGE = element -> element.selector instanceof ProjectComponentSelector;
 
     private final DependencyGraphResolver dependencyGraphResolver;
     private final ResolutionResultsStoreFactory storeFactory;
@@ -430,9 +430,9 @@ public class ResolutionExecutor {
             resolvers.getComponentIdResolver(),
             resolvers.getComponentResolver(),
             params.getModuleReplacements(),
-            legacyParams.getDependencySubstitutionRules(),
+            legacyParams.dependencySubstitutionRules,
             params.getModuleConflictResolutionStrategy(),
-            legacyParams.getCapabilityConflictResolutionRules(),
+            legacyParams.capabilityConflictResolutionRules,
             params.isFailingOnDynamicVersions(),
             params.isFailingOnChangingVersions(),
             params.getFailureResolutions(),
@@ -460,7 +460,7 @@ public class ResolutionExecutor {
         resolvers.add(externalResolverFactory.createResolvers(
             repositories,
             componentMetadataProcessorFactory,
-            legacyParams.getComponentSelectionRules(),
+            legacyParams.componentSelectionRules,
             params.isDependencyVerificationEnabled(),
             params.getCacheExpirationControl(),
             params.getRootComponent().getMetadata().getAttributesSchema()

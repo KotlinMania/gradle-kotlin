@@ -13,139 +13,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ModuleConfigurationMetadata.getDependencies
 
 /**
- * An immutable {@link ConfigurationMetadata} wrapper around a {@link ComponentVariant}.
+ * An immutable [ConfigurationMetadata] wrapper around a [ComponentVariant].
  */
-class LazyVariantBackedConfigurationMetadata extends AbstractVariantBackedConfigurationMetadata {
-    private final VariantMetadataRules variantMetadataRules;
+internal class LazyVariantBackedConfigurationMetadata(
+    componentId: ModuleComponentIdentifier,
+    variant: ComponentVariant,
+    componentLevelAttributes: ImmutableAttributes?,
+    attributesFactory: AttributesFactory,
+    private val variantMetadataRules: VariantMetadataRules
+) : AbstractVariantBackedConfigurationMetadata(
+    componentId, RuleAwareVariant(
+        componentId, variant, attributesFactory, componentLevelAttributes,
+        variantMetadataRules
+    )
+) {
+    private var calculatedDependencies: MutableList<out ModuleDependencyMetadata?>? = null
 
-    private List<? extends ModuleDependencyMetadata> calculatedDependencies;
-
-    LazyVariantBackedConfigurationMetadata(ModuleComponentIdentifier componentId, ComponentVariant variant, ImmutableAttributes componentLevelAttributes, AttributesFactory attributesFactory, VariantMetadataRules variantMetadataRules) {
-        super(componentId, new RuleAwareVariant(componentId, variant, attributesFactory, componentLevelAttributes, variantMetadataRules));
-        this.variantMetadataRules = variantMetadataRules;
-    }
-
-    @Override
-    public List<? extends ModuleDependencyMetadata> getDependencies() {
-        if (calculatedDependencies == null) {
-            calculatedDependencies = variantMetadataRules.applyDependencyMetadataRules(getVariant(), super.getDependencies());
+    val dependencies: MutableList<out ModuleDependencyMetadata?>?
+        get() {
+            if (calculatedDependencies == null) {
+                calculatedDependencies = variantMetadataRules.applyDependencyMetadataRules(getVariant(), super.getDependencies())
+            }
+            return calculatedDependencies
         }
-        return calculatedDependencies;
-    }
 
     /**
      * This class wraps the component variant so that attribute rules are executed once
      * for all, and passed correctly to the various consumers. In particular, we need to make sure
      * that the attributes are the same whenever we resolve the graph for dependencies and artifacts.
      */
-    private static class RuleAwareVariant implements ComponentVariant {
-        private final ModuleComponentIdentifier componentId;
-        private final AttributesFactory attributesFactory;
-        private final ComponentVariant delegate;
-        private final ImmutableAttributes componentLevelAttributes;
-        private final VariantMetadataRules variantMetadataRules;
+    private class RuleAwareVariant(
+        private val componentId: ModuleComponentIdentifier,
+        private val delegate: ComponentVariant,
+        private val attributesFactory: AttributesFactory,
+        private val componentLevelAttributes: ImmutableAttributes?,
+        private val variantMetadataRules: VariantMetadataRules
+    ) : ComponentVariant {
+        private var computedAttributes: ImmutableAttributes? = null
+        private var computedCapabilities: ImmutableCapabilities? = null
+        private var computedArtifacts: ImmutableList<out ComponentArtifactMetadata?>? = null
 
-        private ImmutableAttributes computedAttributes;
-        private ImmutableCapabilities computedCapabilities;
-        private ImmutableList<? extends ComponentArtifactMetadata> computedArtifacts;
+        val name: String
+            get() = delegate.name!!
 
-        RuleAwareVariant(ModuleComponentIdentifier componentId, ComponentVariant delegate, AttributesFactory attributesFactory, ImmutableAttributes componentLevelAttributes, VariantMetadataRules variantMetadataRules) {
-            this.componentId = componentId;
-            this.attributesFactory = attributesFactory;
-            this.delegate = delegate;
-            this.componentLevelAttributes = componentLevelAttributes;
-            this.variantMetadataRules = variantMetadataRules;
+        val identifier: VariantResolveMetadata.Identifier
+            get() = delegate.identifier
+
+        override fun asDescribable(): DisplayName? {
+            return delegate.asDescribable()
         }
 
-        @Override
-        public String getName() {
-            return delegate.getName();
-        }
-
-        @Override
-        public Identifier getIdentifier() {
-            return delegate.getIdentifier();
-        }
-
-        @Override
-        public DisplayName asDescribable() {
-            return delegate.asDescribable();
-        }
-
-        /**
-         * Returns the complete set of attributes of this variant, which consists of a view of the union
-         * of the component level attributes and the variant attributes as found in metadata, potentially
-         * modified by rules.
-         *
-         * @return the updated variant attributes
-         */
-        @Override
-        public ImmutableAttributes getAttributes() {
-            if (computedAttributes == null) {
-                computedAttributes = variantMetadataRules.applyVariantAttributeRules(delegate, mergeComponentAndVariantAttributes(delegate.getAttributes()));
+        val attributes: ImmutableAttributes
+            /**
+             * Returns the complete set of attributes of this variant, which consists of a view of the union
+             * of the component level attributes and the variant attributes as found in metadata, potentially
+             * modified by rules.
+             *
+             * @return the updated variant attributes
+             */
+            get() {
+                if (computedAttributes == null) {
+                    computedAttributes = variantMetadataRules.applyVariantAttributeRules(delegate, mergeComponentAndVariantAttributes(delegate.attributes)!!)
+                }
+                return computedAttributes
             }
-            return computedAttributes;
-        }
 
-        @Override
-        public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-            if (computedArtifacts == null) {
-                computedArtifacts = variantMetadataRules.applyVariantFilesMetadataRulesToArtifacts(delegate, delegate.getArtifacts(), componentId);
+        val artifacts: ImmutableList<out ComponentArtifactMetadata?>
+            get() {
+                if (computedArtifacts == null) {
+                    computedArtifacts =
+                        variantMetadataRules.applyVariantFilesMetadataRulesToArtifacts<ComponentArtifactMetadata?>(delegate, delegate.artifacts, componentId)
+                }
+                return computedArtifacts
             }
-            return computedArtifacts;
+
+        override fun getDependencies(): ImmutableList<out ComponentVariant.Dependency?>? {
+            return delegate.getDependencies()
         }
 
-        @Override
-        public ImmutableList<? extends Dependency> getDependencies() {
-            return delegate.getDependencies();
+        override fun getDependencyConstraints(): ImmutableList<out ComponentVariant.DependencyConstraint?>? {
+            return delegate.getDependencyConstraints()
         }
 
-        @Override
-        public ImmutableList<? extends DependencyConstraint> getDependencyConstraints() {
-            return delegate.getDependencyConstraints();
+        override fun getFiles(): ImmutableList<out ComponentVariant.File?>? {
+            return delegate.getFiles()
         }
 
-        @Override
-        public ImmutableList<? extends File> getFiles() {
-            return delegate.getFiles();
-        }
-
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            if (computedCapabilities == null) {
-                computedCapabilities = variantMetadataRules.applyCapabilitiesRules(delegate, delegate.getCapabilities());
+        val capabilities: ImmutableCapabilities
+            get() {
+                if (computedCapabilities == null) {
+                    computedCapabilities = variantMetadataRules.applyCapabilitiesRules(delegate, delegate.capabilities)
+                }
+                return computedCapabilities!!
             }
-            return computedCapabilities;
+
+        override fun isExternalVariant(): Boolean {
+            return delegate.isExternalVariant()
         }
 
-        @Override
-        public boolean isExternalVariant() {
-            return delegate.isExternalVariant();
+        override fun isEligibleForCaching(): Boolean {
+            return delegate.isEligibleForCaching()
         }
 
-        @Override
-        public boolean isEligibleForCaching() {
-            return delegate.isEligibleForCaching();
+        fun mergeComponentAndVariantAttributes(variantAttributes: AttributeContainerInternal): AttributeContainerInternal? {
+            return attributesFactory.concat(componentLevelAttributes, variantAttributes.asImmutable())
         }
-
-        private AttributeContainerInternal mergeComponentAndVariantAttributes(AttributeContainerInternal variantAttributes) {
-            return attributesFactory.concat(componentLevelAttributes, variantAttributes.asImmutable());
-        }
-
     }
 }

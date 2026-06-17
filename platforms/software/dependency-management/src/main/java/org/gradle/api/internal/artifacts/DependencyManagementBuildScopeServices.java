@@ -128,7 +128,7 @@ import java.util.List;
 class DependencyManagementBuildScopeServices implements ServiceRegistrationProvider {
     void configure(ServiceRegistration registration) {
         registration.add(TransformStepNodeDependencyResolver.class);
-        registration.add(FileResourceRepository.class, FileResourceConnector.class);
+        registration.<FileResourceConnector>add(FileResourceRepository.class, FileResourceConnector.class);
         registration.add(ResolvedArtifactSetResolver.class);
         registration.add(ExternalModuleComponentResolverFactory.class);
         registration.add(ResolverProviderFactories.class);
@@ -144,7 +144,7 @@ class DependencyManagementBuildScopeServices implements ServiceRegistrationProvi
         ObjectFactory objects,
         CollectionCallbackActionDecorator collectionCallbackActionDecorator
     ) {
-        return instantiator.newInstance(DefaultDependencyResolutionManagement.class,
+        return instantiator.<DefaultDependencyResolutionManagement>newInstance(DefaultDependencyResolutionManagement.class,
             context,
             dependencyManagementServices,
             objects,
@@ -244,9 +244,9 @@ class DependencyManagementBuildScopeServices implements ServiceRegistrationProvi
 
     @Provides
     TextUriResourceLoader.Factory createTextUrlResourceLoaderFactory(FileStoreAndIndexProvider fileStoreAndIndexProvider, RepositoryTransportFactory repositoryTransportFactory, RelativeFilePathResolver resolver) {
-        final HashSet<String> schemas = Sets.newHashSet("https", "http");
+        final HashSet<String> schemas = Sets.<String>newHashSet("https", "http");
         return redirectVerifier -> {
-            RepositoryTransport transport = repositoryTransportFactory.createTransport(schemas, "resources http", Collections.emptyList(), redirectVerifier);
+            RepositoryTransport transport = repositoryTransportFactory.createTransport(schemas, "resources http", Collections.<org.gradle.authentication.Authentication>emptyList(), redirectVerifier);
             ExternalResourceAccessor externalResourceAccessor = new DefaultExternalResourceAccessor(fileStoreAndIndexProvider.getExternalResourceFileStore(), transport.getResourceAccessor());
             return new CachingTextUriResourceLoader(externalResourceAccessor, schemas, resolver);
         };
@@ -294,7 +294,7 @@ class DependencyManagementBuildScopeServices implements ServiceRegistrationProvi
         ChecksumService checksumService,
         StartParameterResolutionOverride startParameterResolutionOverride
     ) {
-        return artifactCachesProvider.withWritableCache((md, manager) -> new RepositoryTransportFactory(
+        return artifactCachesProvider.<RepositoryTransportFactory>withWritableCache((md, manager) -> new RepositoryTransportFactory(
             resourceConnectorFactories,
             temporaryFileProvider,
             fileStoreAndIndexProvider.getExternalResourceIndex(),
@@ -326,7 +326,7 @@ class DependencyManagementBuildScopeServices implements ServiceRegistrationProvi
             signatureVerificationServiceFactory,
             documentationRegistry,
             timeProvider,
-            () -> serviceRegistry.get(GradleProperties.class),
+            () -> serviceRegistry.<GradleProperties>get(GradleProperties.class),
             fileResourceListener
         );
         registerBuildFinishedHooks(listenerManager, override);
@@ -430,11 +430,11 @@ class DependencyManagementBuildScopeServices implements ServiceRegistrationProvi
         CapabilityNotationParser capabilityNotationParser,
         InputFingerprinter inputFingerprinter
     ) {
-        return objectFactory.newInstance(DefaultDependenciesAccessors.class, registry, workspace, factory, featureFlags, executionEngine, fileCollectionFactory, inputFingerprinter, attributesFactory, capabilityNotationParser);
+        return objectFactory.<DefaultDependenciesAccessors>newInstance(DefaultDependenciesAccessors.class, registry, workspace, factory, featureFlags, executionEngine, fileCollectionFactory, inputFingerprinter, attributesFactory, capabilityNotationParser);
     }
 
     @Provides
     TransformExecutionListener createTransformExecutionListener(ListenerManager listenerManager) {
-        return listenerManager.getBroadcaster(TransformExecutionListener.class);
+        return listenerManager.<TransformExecutionListener>getBroadcaster(TransformExecutionListener.class);
     }
 }

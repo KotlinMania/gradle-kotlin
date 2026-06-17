@@ -193,7 +193,7 @@ public class DefaultArtifactResolutionQuery implements ArtifactResolutionQuery {
     private ComponentArtifactsResult buildComponentResult(ComponentIdentifier componentId, ComponentMetaDataResolver componentMetaDataResolver, ArtifactResolver artifactResolver) {
         BuildableComponentResolveResult moduleResolveResult = new DefaultBuildableComponentResolveResult();
         componentMetaDataResolver.resolve(componentId, DefaultComponentOverrideMetadata.EMPTY, moduleResolveResult);
-        ComponentArtifactResolveMetadata component = moduleResolveResult.getState().prepareForArtifactResolution().getArtifactMetadata();
+        ComponentArtifactResolveMetadata component = moduleResolveResult.state.prepareForArtifactResolution().getArtifactMetadata();
         DefaultComponentArtifactsResult componentResult = new DefaultComponentArtifactsResult(component.getId());
         for (Class<? extends Artifact> artifactType : artifactTypes) {
             addArtifacts(componentResult, artifactType, component, artifactResolver);
@@ -211,7 +211,7 @@ public class DefaultArtifactResolutionQuery implements ArtifactResolutionQuery {
         ArtifactType artifactType = componentTypeRegistry.getComponentRegistration(componentType).getArtifactType(type);
         artifactResolver.resolveArtifactsWithType(component, artifactType, artifactSetResolveResult);
 
-        for (ComponentArtifactMetadata artifactMetaData : artifactSetResolveResult.getResult()) {
+        for (ComponentArtifactMetadata artifactMetaData : artifactSetResolveResult.result) {
             BuildableArtifactResolveResult resolveResult = new DefaultBuildableArtifactResolveResult();
             artifactResolver.resolveArtifact(component, artifactMetaData, resolveResult);
             try {

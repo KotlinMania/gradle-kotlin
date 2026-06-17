@@ -13,22 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.api.artifacts.repositories.AuthenticationContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultPolymorphicDomainObjectContainer
+import org.gradle.authentication.Authentication
+import org.gradle.internal.reflect.Instantiator
+import javax.inject.Inject
 
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultPolymorphicDomainObjectContainer;
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.reflect.Instantiator;
-
-import javax.inject.Inject;
-
-public class DefaultAuthenticationContainer extends DefaultPolymorphicDomainObjectContainer<Authentication> implements AuthenticationContainer {
-
-    @Inject
-    public DefaultAuthenticationContainer(Instantiator instantiator, CollectionCallbackActionDecorator callbackDecorator) {
-        super(Authentication.class, instantiator, instantiator, callbackDecorator);
-    }
-
-}
+class DefaultAuthenticationContainer @Inject constructor(instantiator: Instantiator, callbackDecorator: CollectionCallbackActionDecorator) :
+    DefaultPolymorphicDomainObjectContainer<Authentication?>(Authentication::class.java, instantiator, instantiator, callbackDecorator), AuthenticationContainer

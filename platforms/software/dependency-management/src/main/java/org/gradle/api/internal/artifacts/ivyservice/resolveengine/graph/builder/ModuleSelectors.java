@@ -148,7 +148,7 @@ public class ModuleSelectors<T extends ResolvableSelectorState> implements Itera
     }
 
     private static boolean isDynamicSelector(ResolvableSelectorState selector) {
-        return selector.getVersionConstraint() != null && selector.getVersionConstraint().isDynamic();
+        return selector.getVersionConstraint() != null && selector.getVersionConstraint().isDynamic;
     }
 
     private static boolean hasLatestSelector(ResolvableSelectorState selector) {
@@ -158,7 +158,7 @@ public class ModuleSelectors<T extends ResolvableSelectorState> implements Itera
 
     private static boolean hasLatestSelector(ResolvedVersionConstraint vc) {
         // Latest is only given priority if it's in a require
-        return hasLatestSelector(vc.getRequiredSelector());
+        return hasLatestSelector(vc.requiredSelector);
     }
 
     private static boolean hasLatestSelector(@Nullable VersionSelector versionSelector) {
@@ -170,7 +170,7 @@ public class ModuleSelectors<T extends ResolvableSelectorState> implements Itera
         if (versionConstraint == null) {
             return emptyVersion;
         }
-        return versionOf(versionConstraint.getRequiredSelector());
+        return versionOf(versionConstraint.requiredSelector);
     }
 
     private Version preferredVersion(ResolvableSelectorState selector) {
@@ -178,7 +178,7 @@ public class ModuleSelectors<T extends ResolvableSelectorState> implements Itera
         if (versionConstraint == null) {
             return emptyVersion;
         }
-        return versionOf(versionConstraint.getPreferredSelector());
+        return versionOf(versionConstraint.preferredSelector);
     }
 
     private Version versionOf(@Nullable VersionSelector selector) {

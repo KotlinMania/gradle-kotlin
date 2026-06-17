@@ -13,26 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.internal.classpath.ClassPath;
-import org.gradle.internal.logging.text.TreeFormatter;
+import org.gradle.internal.classpath.ClassPath
+import org.gradle.internal.logging.text.TreeFormatter
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.util.stream.Collectors
+import javax.tools.Diagnostic
+import javax.tools.DiagnosticCollector
+import javax.tools.JavaFileObject
+import javax.tools.ToolProvider
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-class SimpleGeneratedJavaClassCompiler {
+internal object SimpleGeneratedJavaClassCompiler {
     /**
      * Compiles generated Java source files.
      *
@@ -41,80 +36,85 @@ class SimpleGeneratedJavaClassCompiler {
      * @param classes the classes to compile
      * @param classPath the classpath to use for compilation
      */
-    public static void compile(File srcDir, File dstDir, List<ClassSource> classes, ClassPath classPath) throws GeneratedClassCompilationException {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    @Throws(GeneratedClassCompilationException::class)
+    fun compile(srcDir: File, dstDir: File, classes: MutableList<ClassSource>, classPath: ClassPath) {
+        val compiler = ToolProvider.getSystemJavaCompiler()
         if (compiler == null) {
-            throw new GeneratedClassCompilationException("No Java compiler found, please ensure you are running Gradle with a JDK");
+            throw GeneratedClassCompilationException("No Java compiler found, please ensure you are running Gradle with a JDK")
         }
-        DiagnosticCollector<JavaFileObject> ds = new DiagnosticCollector<>();
-        try (StandardJavaFileManager mgr = compiler.getStandardFileManager(ds, null, null)) {
-            List<String> options = buildOptions(dstDir, classPath);
-            List<File> filesToCompile = outputSourceFilesToSourceDir(srcDir, classes);
-            if (dstDir.exists() || dstDir.mkdirs()) {
-                Iterable<? extends JavaFileObject> sources = mgr.getJavaFileObjectsFromFiles(filesToCompile);
-                JavaCompiler.CompilationTask task = compiler.getTask(null, mgr, ds, options, null, sources);
-                task.call();
-            } else {
-                throw new GeneratedClassCompilationException("Unable to create output classes directory");
+        val ds = DiagnosticCollector<JavaFileObject>()
+        try {
+            compiler.getStandardFileManager(ds, null, null).use { mgr ->
+                val options = buildOptions(dstDir, classPath)
+                val filesToCompile = outputSourceFilesToSourceDir(srcDir, classes)
+                if (dstDir.exists() || dstDir.mkdirs()) {
+                    val sources = mgr.getJavaFileObjectsFromFiles(filesToCompile)
+                    val task = compiler.getTask(null, mgr, ds, options, null, sources)
+                    task.call()
+                } else {
+                    throw GeneratedClassCompilationException("Unable to create output classes directory")
+                }
             }
-        } catch (IOException e) {
-            throw new GeneratedClassCompilationException("Unable to compile generated classes", e);
+        } catch (e: IOException) {
+            throw GeneratedClassCompilationException("Unable to compile generated classes", e)
         }
-        List<Diagnostic<? extends JavaFileObject>> diagnostics = ds.getDiagnostics().stream()
-            .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
-            .collect(Collectors.toList());
+        val diagnostics = ds.getDiagnostics().stream()
+            .filter { d: Diagnostic<out JavaFileObject?>? -> d!!.getKind() == Diagnostic.Kind.ERROR }
+            .collect(Collectors.toList())
         if (!diagnostics.isEmpty()) {
-            throwCompilationError(diagnostics);
+            throwCompilationError(diagnostics)
         }
     }
 
-    private static void throwCompilationError(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
-        TreeFormatter formatter = new TreeFormatter();
-        formatter.node("Unable to compile generated sources");
-        formatter.startChildren();
-        for (Diagnostic<? extends JavaFileObject> d : diagnostics) {
-            JavaFileObject source = d.getSource();
-            String srcFile = source == null ? "unknown" : new File(source.toUri()).getName();
-            String diagLine = String.format("File %s, line: %d, %s", srcFile, d.getLineNumber(), d.getMessage(null));
-            formatter.node(diagLine);
+    private fun throwCompilationError(diagnostics: MutableList<Diagnostic<out JavaFileObject>>) {
+        val formatter = TreeFormatter()
+        formatter.node("Unable to compile generated sources")
+        formatter.startChildren()
+        for (d in diagnostics) {
+            val source: JavaFileObject = d.getSource()
+            val srcFile = if (source == null) "unknown" else File(source.toUri()).getName()
+            val diagLine = String.format("File %s, line: %d, %s", srcFile, d.getLineNumber(), d.getMessage(null))
+            formatter.node(diagLine)
         }
-        formatter.endChildren();
-        throw new GeneratedClassCompilationException(formatter.toString());
+        formatter.endChildren()
+        throw GeneratedClassCompilationException(formatter.toString())
     }
 
-    private static List<File> outputSourceFilesToSourceDir(File srcDir, List<ClassSource> classes) throws IOException {
-        List<File> filesToCompile = new ArrayList<>(classes.size());
-        for (ClassSource classSource : classes) {
-            String packageName = classSource.getPackageName();
-            String className = classSource.getSimpleClassName();
-            String classCode = classSource.getSource();
-            File file = sourceFile(srcDir, packageName, className);
-            writeSourceFile(classCode, file);
-            filesToCompile.add(file);
+    @Throws(IOException::class)
+    private fun outputSourceFilesToSourceDir(srcDir: File, classes: MutableList<ClassSource>): MutableList<File> {
+        val filesToCompile: MutableList<File> = ArrayList<File>(classes.size)
+        for (classSource in classes) {
+            val packageName = classSource.getPackageName()
+            val className = classSource.getSimpleClassName()
+            val classCode = classSource.getSource()
+            val file = sourceFile(srcDir, packageName, className)
+            writeSourceFile(classCode, file)
+            filesToCompile.add(file)
         }
-        return filesToCompile;
+        return filesToCompile
     }
 
-    private static void writeSourceFile(String classCode, File file) throws IOException {
-        file.getParentFile().mkdirs();
-        Files.write(file.toPath(), classCode.getBytes(StandardCharsets.UTF_8));
+    @Throws(IOException::class)
+    private fun writeSourceFile(classCode: String, file: File) {
+        file.getParentFile().mkdirs()
+        Files.write(file.toPath(), classCode.toByteArray(StandardCharsets.UTF_8))
     }
 
-    private static File sourceFile(File srcDir, String packageName, String className) {
-        return new File(srcDir, packageName.replace('.', '/') + "/" + className + ".java");
+    private fun sourceFile(srcDir: File, packageName: String, className: String): File {
+        return File(srcDir, packageName.replace('.', '/') + "/" + className + ".java")
     }
 
-    private static List<String> buildOptions(File dstDir, ClassPath classPath) {
-        List<String> options = new ArrayList<>();
-        options.add("-source");
-        options.add("1.8");
-        options.add("-target");
-        options.add("1.8");
-        options.add("-classpath");
-        String cp = classPath.getAsFiles().stream().map(File::getAbsolutePath).collect(Collectors.joining(File.pathSeparator));
-        options.add(cp);
-        options.add("-d");
-        options.add(dstDir.getAbsolutePath());
-        return options;
+    private fun buildOptions(dstDir: File, classPath: ClassPath): MutableList<String> {
+        val options: MutableList<String> = ArrayList<String>()
+        options.add("-source")
+        options.add("1.8")
+        options.add("-target")
+        options.add("1.8")
+        options.add("-classpath")
+        val cp = classPath.getAsFiles().stream().map<String> { obj: File? -> obj!!.getAbsolutePath() }.collect(Collectors.joining(File.pathSeparator))
+        options.add(cp)
+        options.add("-d")
+        options.add(dstDir.getAbsolutePath())
+        return options
     }
 }

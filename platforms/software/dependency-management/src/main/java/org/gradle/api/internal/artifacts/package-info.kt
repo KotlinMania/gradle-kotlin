@@ -13,8 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-@NullMarked
-package org.gradle.api.internal.artifacts;
+import org.gradle.internal.serialize.Decoder.readString
+import org.gradle.internal.serialize.Decoder.readSmallInt
+import org.gradle.internal.serialize.Decoder.readNullableString
+import org.gradle.internal.serialize.Encoder.writeString
+import org.gradle.internal.serialize.Encoder.writeSmallInt
+import org.gradle.internal.serialize.Encoder.writeNullableString
+import org.gradle.internal.component.model.DefaultIvyArtifactName.Companion.forFile
+import org.gradle.internal.exceptions.DefaultMultiCauseException.getCauses
+import org.gradle.internal.exceptions.DefaultMultiCauseException.getResolutions
+import org.gradle.api.internal.DocumentationRegistry.getDocumentationRecommendationFor
 
-import org.jspecify.annotations.NullMarked;

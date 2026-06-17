@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.resolve.ArtifactResolveException;
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.resolve.ArtifactResolveException
 
-import java.util.Collection;
-
-public interface BuildableArtifactSetResolveResult extends ResolveResult, BuildableTypedResolveResult<Collection<? extends ComponentArtifactMetadata>, ArtifactResolveException> {
-    boolean isSuccessful();
+interface BuildableArtifactSetResolveResult : ResolveResult, BuildableTypedResolveResult<MutableCollection<out ComponentArtifactMetadata?>?, ArtifactResolveException?> {
+    val isSuccessful: Boolean
 }

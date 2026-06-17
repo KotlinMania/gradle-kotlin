@@ -13,13 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * Provides the API that plugins can use to contribute additional types of builds to the {@code init} task.
+ * Provides the API that plugins can use to contribute additional types of builds to the `init` task.
  *
  * @since 8.11
  */
-@NullMarked
-package org.gradle.buildinit.specs;
+package org.gradle.buildinit.specs
 
-import org.jspecify.annotations.NullMarked;

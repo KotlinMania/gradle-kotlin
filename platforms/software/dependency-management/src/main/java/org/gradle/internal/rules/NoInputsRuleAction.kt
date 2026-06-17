@@ -13,46 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import org.gradle.api.Action
 
-import org.gradle.api.Action;
-
-import java.util.Collections;
-import java.util.List;
-
-public class NoInputsRuleAction<T> implements RuleAction<T> {
-    private final Action<? super T> action;
-
-    public NoInputsRuleAction(Action<? super T> action) {
-        this.action = action;
+class NoInputsRuleAction<T>(private val action: Action<in T?>) : RuleAction<T?> {
+    override fun getInputTypes(): MutableList<Class<*>?> {
+        return mutableListOf<Class<*>?>()
     }
 
-    @Override
-    public List<Class<?>> getInputTypes() {
-        return Collections.emptyList();
+    override fun execute(subject: T?, inputs: MutableList<*>?) {
+        action.execute(subject)
     }
 
-    @Override
-    public void execute(T subject, List<?> inputs) {
-        action.execute(subject);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        NoInputsRuleAction<?> that = (NoInputsRuleAction<?>) o;
-        return action.equals(that.action);
+        val that = o as NoInputsRuleAction<*>
+        return action == that.action
     }
 
-    @Override
-    public int hashCode() {
-        return action.hashCode();
+    override fun hashCode(): Int {
+        return action.hashCode()
     }
 }

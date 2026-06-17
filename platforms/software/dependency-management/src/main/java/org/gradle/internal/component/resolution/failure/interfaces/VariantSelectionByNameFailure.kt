@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.resolution.failure.interfaces;
+package org.gradle.internal.component.resolution.failure.interfaces
 
 /**
- * Represents a specific type of {@link VariantSelectionFailure} where the failure occurred
+ * Represents a specific type of [VariantSelectionFailure] where the failure occurred
  * due to a failure to select a variant of a component based on the requested configuration name.
  */
-public interface VariantSelectionByNameFailure extends VariantSelectionFailure {
+interface VariantSelectionByNameFailure : VariantSelectionFailure {
     /**
      * Gets the name of the configuration that was requested directly by name.
      *
      * @return the name of the configuration that was requested
      */
-    String getRequestedConfigurationName();
+    fun getRequestedConfigurationName(): String?
 }

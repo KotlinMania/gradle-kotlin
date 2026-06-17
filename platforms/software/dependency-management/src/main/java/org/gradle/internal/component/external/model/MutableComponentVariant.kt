@@ -13,49 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+interface MutableComponentVariant {
+    val name: String?
 
-import java.util.List;
-import java.util.Set;
+    val files: MutableList<out ComponentVariant.File>?
 
-public interface MutableComponentVariant {
+    fun addFile(name: String, uri: String)
 
-    String getName();
+    fun removeFile(file: ComponentVariant.File): Boolean
 
-    List<? extends ComponentVariant.File> getFiles();
+    val dependencies: MutableList<ComponentVariant.Dependency>?
 
-    void addFile(String name, String uri);
+    fun addDependency(
+        group: String,
+        module: String,
+        versionConstraint: VersionConstraint,
+        excludes: MutableList<ExcludeMetadata>,
+        reason: String,
+        attributes: ImmutableAttributes,
+        requestedCapabilities: MutableSet<CapabilitySelector>,
+        endorsing: Boolean,
+        artifact: IvyArtifactName?
+    )
 
-    boolean removeFile(ComponentVariant.File file);
+    val dependencyConstraints: MutableList<ComponentVariant.DependencyConstraint>?
 
-    List<ComponentVariant.Dependency> getDependencies();
+    fun addDependencyConstraint(group: String, module: String, versionConstraint: VersionConstraint, reason: String, attributes: ImmutableAttributes)
 
-    void addDependency(String group, String module, VersionConstraint versionConstraint, List<ExcludeMetadata> excludes, String reason, ImmutableAttributes attributes, Set<CapabilitySelector> requestedCapabilities, boolean endorsing, @Nullable IvyArtifactName artifact);
+    val capabilities: MutableSet<Capability>?
 
-    List<ComponentVariant.DependencyConstraint> getDependencyConstraints();
+    fun addCapability(group: String, name: String, version: String)
 
-    void addDependencyConstraint(String group, String module, VersionConstraint versionConstraint, String reason, ImmutableAttributes attributes);
+    fun addCapability(capability: Capability)
 
-    Set<Capability> getCapabilities();
+    val attributes: ImmutableAttributes?
 
-    void addCapability(String group, String name, String version);
+    fun copy(variantName: String, attributes: ImmutableAttributes, capability: Capability): MutableComponentVariant?
 
-    void addCapability(Capability capability);
-
-    ImmutableAttributes getAttributes();
-
-    MutableComponentVariant copy(String variantName, ImmutableAttributes attributes, Capability capability);
-
-    boolean isAvailableExternally();
-
-    void setAvailableExternally(boolean availableExternally);
+    var isAvailableExternally: Boolean
 }

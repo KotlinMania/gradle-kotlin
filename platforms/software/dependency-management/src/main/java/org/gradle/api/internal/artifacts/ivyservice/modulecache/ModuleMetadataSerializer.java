@@ -132,23 +132,23 @@ public class ModuleMetadataSerializer {
         private void write(MavenModuleResolveMetadata metadata, Map<ExternalDependencyDescriptor, Integer> deduplicationDependencyCache) throws IOException {
             encoder.writeByte(TYPE_MAVEN);
             writeInfoSection(metadata);
-            writeNullableString(metadata.getSnapshotTimestamp());
-            writeMavenDependencies(metadata.getDependencies(), deduplicationDependencyCache);
+            writeNullableString(metadata.snapshotTimestamp);
+            writeMavenDependencies(metadata.dependencies, deduplicationDependencyCache);
             writeSharedInfo(metadata);
             // NOTE: This looks nullable, but only non-null Strings are provided. Changing this to write a non-null string would not be backwards compatible.
-            writeNullableString(metadata.getPackaging());
-            writeBoolean(metadata.isRelocated());
+            writeNullableString(metadata.packaging);
+            writeBoolean(metadata.isRelocated);
             writeVariants(metadata);
         }
 
         private void writeVariants(ModuleComponentResolveMetadata metadata) throws IOException {
             encoder.writeSmallInt(metadata.getVariants().size());
             for (ComponentVariant variant : metadata.getVariants()) {
-                encoder.writeString(variant.getName());
-                writeAttributes(variant.getAttributes());
-                writeVariantDependencies(variant.getDependencies());
-                writeVariantConstraints(variant.getDependencyConstraints());
-                writeVariantFiles(variant.getFiles());
+                encoder.writeString(variant.name);
+                writeAttributes(variant.attributes);
+                writeVariantDependencies(variant.dependencies);
+                writeVariantConstraints(variant.dependencyConstraints);
+                writeVariantFiles(variant.files);
                 writeVariantCapabilities(variant.getCapabilities());
                 encoder.writeBoolean(variant.isExternalVariant());
             }
@@ -157,27 +157,27 @@ public class ModuleMetadataSerializer {
         private void writeVariantConstraints(ImmutableList<? extends ComponentVariant.DependencyConstraint> constraints) throws IOException {
             encoder.writeSmallInt(constraints.size());
             for (ComponentVariant.DependencyConstraint constraint : constraints) {
-                componentSelectorSerializer.write(encoder, constraint.getGroup(), constraint.getModule(), constraint.getVersionConstraint(), constraint.getAttributes(), Collections.emptySet());
-                encoder.writeNullableString(constraint.getReason());
+                componentSelectorSerializer.write(encoder, constraint.group, constraint.module, constraint.versionConstraint, constraint.attributes, Collections.emptySet());
+                encoder.writeNullableString(constraint.reason);
             }
         }
 
         private void writeVariantDependencies(List<? extends ComponentVariant.Dependency> dependencies) throws IOException {
             encoder.writeSmallInt(dependencies.size());
             for (ComponentVariant.Dependency dependency : dependencies) {
-                componentSelectorSerializer.write(encoder, dependency.getGroup(), dependency.getModule(), dependency.getVersionConstraint(), dependency.getAttributes(), dependency.getCapabilitySelectors());
-                encoder.writeNullableString(dependency.getReason());
-                writeVariantDependencyExcludes(dependency.getExcludes());
-                encoder.writeBoolean(dependency.isEndorsingStrictVersions());
-                writeNullableArtifact(dependency.getDependencyArtifact());
+                componentSelectorSerializer.write(encoder, dependency.group, dependency.module, dependency.versionConstraint, dependency.attributes, dependency.capabilitySelectors);
+                encoder.writeNullableString(dependency.reason);
+                writeVariantDependencyExcludes(dependency.excludes);
+                encoder.writeBoolean(dependency.isEndorsingStrictVersions);
+                writeNullableArtifact(dependency.dependencyArtifact);
             }
         }
 
         private void writeVariantDependencyExcludes(List<ExcludeMetadata> excludes) throws IOException {
             writeCount(excludes.size());
             for (ExcludeMetadata exclude : excludes) {
-                writeString(exclude.getModuleId().getGroup());
-                writeString(exclude.getModuleId().getName());
+                writeString(exclude.moduleId.getGroup());
+                writeString(exclude.moduleId.getName());
             }
         }
 
@@ -188,8 +188,8 @@ public class ModuleMetadataSerializer {
         private void writeVariantFiles(List<? extends ComponentVariant.File> files) throws IOException {
             encoder.writeSmallInt(files.size());
             for (ComponentVariant.File file : files) {
-                encoder.writeString(file.getName());
-                encoder.writeString(file.getUri());
+                encoder.writeString(file.name);
+                encoder.writeString(file.uri);
             }
         }
 
@@ -215,23 +215,23 @@ public class ModuleMetadataSerializer {
         private void write(IvyModuleResolveMetadata metadata) throws IOException {
             encoder.writeByte(TYPE_IVY);
             writeInfoSection(metadata);
-            writeExtraInfo(metadata.getExtraAttributes());
-            writeConfigurations(metadata.getConfigurationDefinitions().values());
-            writeIvyDependencies(metadata.getDependencies());
-            writeArtifacts(metadata.getArtifactDefinitions());
-            writeExcludeRules(metadata.getExcludes());
+            writeExtraInfo(metadata.extraAttributes);
+            writeConfigurations(metadata.configurationDefinitions.values());
+            writeIvyDependencies(metadata.dependencies);
+            writeArtifacts(metadata.artifactDefinitions);
+            writeExcludeRules(metadata.excludes);
             writeSharedInfo(metadata);
-            writeNullableString(metadata.getBranch());
+            writeNullableString(metadata.branch);
             writeVariants(metadata);
         }
 
         private void writeSharedInfo(ModuleComponentResolveMetadata metadata) throws IOException {
-            encoder.writeBoolean(metadata.isMissing());
-            encoder.writeBoolean(metadata.isChanging());
+            encoder.writeBoolean(metadata.isMissing);
+            encoder.writeBoolean(metadata.isChanging);
             encoder.writeBoolean(metadata.isExternalVariant());
-            encoder.writeString(metadata.getStatus());
-            writeStringList(metadata.getStatusScheme());
-            moduleSourcesSerializer.write(encoder, metadata.getSources());
+            encoder.writeString(metadata.status);
+            writeStringList(metadata.statusScheme);
+            moduleSourcesSerializer.write(encoder, metadata.sources);
         }
 
         private void writeId(ModuleComponentIdentifier componentIdentifier) throws IOException {
@@ -242,7 +242,7 @@ public class ModuleMetadataSerializer {
 
         private void writeInfoSection(ModuleComponentResolveMetadata metadata) throws IOException {
             writeId(metadata.getId());
-            writeAttributes(metadata.getAttributes());
+            writeAttributes(metadata.attributes);
         }
 
         private void writeExtraInfo(Map<NamespaceId, String> extraInfo) throws IOException {
@@ -263,17 +263,17 @@ public class ModuleMetadataSerializer {
         }
 
         private void writeConfiguration(Configuration conf) throws IOException {
-            writeString(conf.getName());
+            writeString(conf.name);
             writeBoolean(conf.isTransitive());
             writeBoolean(conf.isVisible());
-            writeStringList(conf.getExtendsFrom());
+            writeStringList(conf.extendsFrom);
         }
 
         private void writeArtifacts(List<Artifact> artifacts) throws IOException {
             writeCount(artifacts.size());
             for (Artifact artifact : artifacts) {
-                IvyArtifactNameSerializer.INSTANCE.write(encoder, artifact.getArtifactName());
-                writeStringSet(artifact.getConfigurations());
+                IvyArtifactNameSerializer.INSTANCE.write(encoder, artifact.artifactName);
+                writeStringSet(artifact.configurations);
             }
         }
 
@@ -292,11 +292,11 @@ public class ModuleMetadataSerializer {
         }
 
         private void writeIvyDependency(IvyDependencyDescriptor ivyDependency) throws IOException {
-            componentSelectorSerializer.write(encoder, ivyDependency.getSelector());
+            componentSelectorSerializer.write(encoder, ivyDependency.selector);
             writeDependencyConfigurationMapping(ivyDependency);
-            writeArtifacts(ivyDependency.getDependencyArtifacts());
+            writeArtifacts(ivyDependency.dependencyArtifacts);
             writeExcludeRules(ivyDependency.getAllExcludes());
-            writeString(ivyDependency.getDynamicConstraintVersion());
+            writeString(ivyDependency.dynamicConstraintVersion);
             writeBoolean(ivyDependency.isChanging());
             writeBoolean(ivyDependency.isTransitive());
             writeBoolean(ivyDependency.isOptional());
@@ -314,12 +314,12 @@ public class ModuleMetadataSerializer {
         private void writeExcludeRules(List<Exclude> excludes) throws IOException {
             writeCount(excludes.size());
             for (Exclude exclude : excludes) {
-                writeString(exclude.getModuleId().getGroup());
-                writeString(exclude.getModuleId().getName());
-                IvyArtifactName artifact = exclude.getArtifact();
+                writeString(exclude.moduleId.getGroup());
+                writeString(exclude.moduleId.getName());
+                IvyArtifactName artifact = exclude.artifact;
                 writeNullableArtifact(artifact);
-                writeStringArray(exclude.getConfigurations().toArray(new String[0]));
-                writeNullableString(exclude.getMatcher());
+                writeStringArray(exclude.configurations.toArray(new String[0]));
+                writeNullableString(exclude.matcher);
             }
         }
 
@@ -331,11 +331,11 @@ public class ModuleMetadataSerializer {
                 encoder.writeSmallInt(mapping);
             } else {
                 encoder.writeSmallInt(nextMapping);
-                componentSelectorSerializer.write(encoder, mavenDependency.getSelector());
-                writeNullableArtifact(mavenDependency.getDependencyArtifact());
+                componentSelectorSerializer.write(encoder, mavenDependency.selector);
+                writeNullableArtifact(mavenDependency.dependencyArtifact);
                 writeMavenExcludeRules(mavenDependency.getAllExcludes());
-                encoder.writeSmallInt(mavenDependency.getScope().ordinal());
-                encoder.writeSmallInt(mavenDependency.getType().ordinal());
+                encoder.writeSmallInt(mavenDependency.scope.ordinal());
+                encoder.writeSmallInt(mavenDependency.type.ordinal());
             }
         }
 
@@ -351,8 +351,8 @@ public class ModuleMetadataSerializer {
         private void writeMavenExcludeRules(List<ExcludeMetadata> excludes) throws IOException {
             writeCount(excludes.size());
             for (ExcludeMetadata exclude : excludes) {
-                writeString(exclude.getModuleId().getGroup());
-                writeString(exclude.getModuleId().getName());
+                writeString(exclude.moduleId.getGroup());
+                writeString(exclude.moduleId.getName());
             }
         }
 
@@ -453,10 +453,10 @@ public class ModuleMetadataSerializer {
             List<MavenDependencyDescriptor> dependencies = readMavenDependencies(deduplicationDependencyCache);
             MutableMavenModuleResolveMetadata metadata = mavenMetadataFactory.create(id, dependencies);
             readSharedInfo(metadata);
-            metadata.setSnapshotTimestamp(snapshotTimestamp);
+            metadata.snapshotTimestamp = snapshotTimestamp;
             // NOTE: this looks nullable, but only non-null Strings are written
-            metadata.setPackaging(readNullableString());
-            metadata.setRelocated(readBoolean());
+            metadata.packaging = readNullableString();
+            metadata.isRelocated = readBoolean();
             metadata.setAttributes(attributes);
             readVariants(metadata);
             return metadata;
@@ -542,7 +542,7 @@ public class ModuleMetadataSerializer {
             MutableIvyModuleResolveMetadata metadata = ivyMetadataFactory.create(id, dependencies, configurations, artifacts, excludes);
             readSharedInfo(metadata);
             String branch = readNullableString();
-            metadata.setBranch(branch);
+            metadata.branch = branch;
             metadata.setExtraAttributes(extraAttributes);
             metadata.setAttributes(attributes);
             readVariants(metadata);

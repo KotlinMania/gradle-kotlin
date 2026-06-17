@@ -13,91 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
 
 /**
- * A {@link DependencyMetadata} implementation which delegates all method calls to a provided {@code delegate}.
+ * A [DependencyMetadata] implementation which delegates all method calls to a provided `delegate`.
  */
-public abstract class DelegatingDependencyMetadata implements DependencyMetadata {
-
-    private final DependencyMetadata delegate;
-
-    public DelegatingDependencyMetadata(DependencyMetadata delegate) {
-        this.delegate = delegate;
+abstract class DelegatingDependencyMetadata(private val delegate: DependencyMetadata) : DependencyMetadata {
+    override fun getSelector(): ComponentSelector {
+        return delegate.getSelector()
     }
 
-    @Override
-    public ComponentSelector getSelector() {
-        return delegate.getSelector();
+    override fun overrideVariantSelection(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState>? {
+        return delegate.overrideVariantSelection(variantSelector, consumerAttributes, targetComponentState, consumerSchema)
     }
 
-    @Override
-    public @Nullable List<? extends VariantGraphResolveState> overrideVariantSelection(GraphVariantSelector variantSelector, ImmutableAttributes consumerAttributes, ComponentGraphResolveState targetComponentState, ImmutableAttributesSchema consumerSchema) {
-        return delegate.overrideVariantSelection(variantSelector, consumerAttributes, targetComponentState, consumerSchema);
+    override fun selectLegacyVariants(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState> {
+        return delegate.selectLegacyVariants(variantSelector, consumerAttributes, targetComponentState, consumerSchema)
     }
 
-    @Override
-    public List<? extends VariantGraphResolveState> selectLegacyVariants(GraphVariantSelector variantSelector, ImmutableAttributes consumerAttributes, ComponentGraphResolveState targetComponentState, ImmutableAttributesSchema consumerSchema) {
-        return delegate.selectLegacyVariants(variantSelector, consumerAttributes, targetComponentState, consumerSchema);
+    override fun getExcludes(): ImmutableList<ExcludeMetadata> {
+        return delegate.getExcludes()
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return delegate.getExcludes();
+    override fun getArtifacts(): ImmutableList<IvyArtifactName> {
+        return delegate.getArtifacts()
     }
 
-    @Override
-    public ImmutableList<IvyArtifactName> getArtifacts() {
-        return delegate.getArtifacts();
+    override fun withTarget(target: ComponentSelector): DependencyMetadata {
+        return delegate.withTarget(target)
     }
 
-    @Override
-    public DependencyMetadata withTarget(ComponentSelector target) {
-        return delegate.withTarget(target);
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): DependencyMetadata {
+        return delegate.withTargetAndArtifacts(target, artifacts)
     }
 
-    @Override
-    public DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-        return delegate.withTargetAndArtifacts(target, artifacts);
+    override fun isChanging(): Boolean {
+        return delegate.isChanging()
     }
 
-    @Override
-    public boolean isChanging() {
-        return delegate.isChanging();
+    override fun isTransitive(): Boolean {
+        return delegate.isTransitive()
     }
 
-    @Override
-    public boolean isTransitive() {
-        return delegate.isTransitive();
+    override fun isConstraint(): Boolean {
+        return delegate.isConstraint()
     }
 
-    @Override
-    public boolean isConstraint() {
-        return delegate.isConstraint();
+    override fun isEndorsingStrictVersions(): Boolean {
+        return delegate.isEndorsingStrictVersions()
     }
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return delegate.isEndorsingStrictVersions();
+    override fun getReason(): String? {
+        return delegate.getReason()
     }
 
-    @Override
-    public @Nullable String getReason() {
-        return delegate.getReason();
+    override fun withReason(reason: String): DependencyMetadata {
+        return delegate.withReason(reason)
     }
-
-    @Override
-    public DependencyMetadata withReason(String reason) {
-        return delegate.withReason(reason);
-    }
-
 }

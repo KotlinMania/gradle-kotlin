@@ -13,32 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import org.gradle.api.internal.artifacts.transform.AttributeMatchingArtifactVariantSelector;
-import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure;
-
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure
 
 /**
  * Represents a failure during variant selection when an artifact variant of a component cannot be selected
- * from the result of {@link org.gradle.internal.component.resolution.failure.interfaces Variant Selection} by the {@link AttributeMatchingArtifactVariantSelector AttributeMatchingArtifactVariantSelector}.
+ * from the result of [Variant Selection][org.gradle.internal.component.resolution.failure.interfaces] by the [AttributeMatchingArtifactVariantSelector].
  *
- * Note: Temporarily non-{@code final}, so long as {@link org.gradle.internal.component.AmbiguousVariantSelectionException} is not yet removed.
+ * Note: Temporarily non-`final`, so long as [org.gradle.internal.component.AmbiguousVariantSelectionException] is not yet removed.
  */
-@SuppressWarnings("deprecation")
-public class ArtifactSelectionException extends AbstractResolutionFailureException {
-    public ArtifactSelectionException(String message, ArtifactSelectionFailure failure, List<String> resolutions) {
-        super(message, failure, resolutions);
-    }
+@Suppress("deprecation")
+open class ArtifactSelectionException : AbstractResolutionFailureException {
+    constructor(message: String, failure: ArtifactSelectionFailure, resolutions: MutableList<String>) : super(message, failure, resolutions)
 
-    public ArtifactSelectionException(String message, ArtifactSelectionFailure failure, List<String> resolutions, Throwable cause) {
-        super(message, failure, resolutions, cause);
-    }
+    constructor(message: String, failure: ArtifactSelectionFailure, resolutions: MutableList<String>, cause: Throwable) : super(message, failure, resolutions, cause)
 
-    @Override
-    public ArtifactSelectionFailure getFailure() {
-        return (ArtifactSelectionFailure) failure;
+    override fun getFailure(): ArtifactSelectionFailure {
+        return failure as ArtifactSelectionFailure
     }
 }

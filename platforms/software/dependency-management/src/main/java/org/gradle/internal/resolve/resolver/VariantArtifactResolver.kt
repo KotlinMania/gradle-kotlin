@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-
-public interface VariantArtifactResolver {
-
+interface VariantArtifactResolver {
     /**
      * Creates an adhoc resolved variant which resolves the provided artifacts of the component.
      */
-    ResolvedVariant resolveAdhocVariant(ComponentArtifactResolveMetadata component, VariantIdentifier sourceVariantId, ImmutableList<? extends ComponentArtifactMetadata> artifacts);
+    fun resolveAdhocVariant(component: ComponentArtifactResolveMetadata, sourceVariantId: VariantIdentifier, artifacts: ImmutableList<out ComponentArtifactMetadata>): ResolvedVariant?
 
     /**
      * Resolve the artifacts described by the given variant artifact metadata, owned by the given component.
      */
-    ResolvedVariant resolveVariantArtifactSet(ComponentArtifactResolveMetadata component, VariantIdentifier sourceVariantId, VariantResolveMetadata variantArtifacts);
-
+    fun resolveVariantArtifactSet(component: ComponentArtifactResolveMetadata, sourceVariantId: VariantIdentifier, variantArtifacts: VariantResolveMetadata): ResolvedVariant?
 }

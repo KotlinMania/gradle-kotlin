@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.NonExtensible;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.NonExtensible
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
 
 /**
  * Variant derivation strategies should be stateless. If they aren't singletons,
  * implementors must make sure that equals/hashcode returns true for all instances.
  */
 @NonExtensible
-public interface VariantDerivationStrategy {
-    boolean derivesVariants();
-    ImmutableList<? extends ModuleConfigurationMetadata> derive(ModuleComponentResolveMetadata metadata);
+interface VariantDerivationStrategy {
+    fun derivesVariants(): Boolean
+    fun derive(metadata: ModuleComponentResolveMetadata): ImmutableList<out ModuleConfigurationMetadata>?
 }

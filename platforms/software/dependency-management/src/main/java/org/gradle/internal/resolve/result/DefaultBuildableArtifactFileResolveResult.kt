@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.internal.resolve.ArtifactNotFoundException
+import org.gradle.internal.resolve.ArtifactResolveException
+import java.io.File
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.internal.resolve.ArtifactNotFoundException;
-import org.gradle.internal.resolve.ArtifactResolveException;
-
-import java.io.File;
-
-public class DefaultBuildableArtifactFileResolveResult extends DefaultBuildableTypedResolveResult<File, ArtifactResolveException> implements BuildableArtifactFileResolveResult {
-    @Override
-    public void notFound(ComponentArtifactIdentifier artifact) {
-        failed(new ArtifactNotFoundException(artifact, getAttempted()));
+open class DefaultBuildableArtifactFileResolveResult : DefaultBuildableTypedResolveResult<File?, ArtifactResolveException?>(), BuildableArtifactFileResolveResult {
+    override fun notFound(artifact: ComponentArtifactIdentifier?) {
+        failed(ArtifactNotFoundException(artifact, getAttempted()))
     }
 }

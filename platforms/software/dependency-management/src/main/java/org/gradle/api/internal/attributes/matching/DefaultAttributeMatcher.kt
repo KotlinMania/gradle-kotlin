@@ -13,98 +13,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes.matching;
+package org.gradle.api.internal.attributes.matching
 
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryLoadingCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import com.google.common.primitives.Ints
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.ImmutableAttributesEntry
+import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.Companion.logging
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryLoadingCache
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.function.Function
 
 /**
- * An {@link AttributeMatcher}, which optimizes for the case of only comparing 0 or 1 candidates
- * and delegates to {@link MultipleCandidateMatcher} for all other cases.
+ * An [AttributeMatcher], which optimizes for the case of only comparing 0 or 1 candidates
+ * and delegates to [MultipleCandidateMatcher] for all other cases.
  */
-public class DefaultAttributeMatcher implements AttributeMatcher {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAttributeMatcher.class);
-
-    private final AttributeSelectionSchema schema;
-
+class DefaultAttributeMatcher(
+    private val schema: AttributeSelectionSchema,
+    cacheFactory: InMemoryCacheFactory
+) : AttributeMatcher {
     /**
      * Attribute matching can be very expensive. In case there are multiple candidates, we
      * cache the result of the query, because it's often the case that we ask for the same
      * disambiguation of attributes several times in a row (but with different candidates).
      */
-    private final InMemoryLoadingCache<CachedQuery, int[]> cachedQueries;
-    private final InMemoryLoadingCache<MatchingCandidateCacheKey, Boolean> matchingCandidatesCache;
+    private val cachedQueries: InMemoryLoadingCache<CachedQuery, IntArray>
+    private val matchingCandidatesCache: InMemoryLoadingCache<MatchingCandidateCacheKey, Boolean>
 
-    public DefaultAttributeMatcher(
-        AttributeSelectionSchema schema,
-        InMemoryCacheFactory cacheFactory
-    ) {
-        this.schema = schema;
-        this.cachedQueries = cacheFactory.create(this::doMatchMultipleCandidates);
-        this.matchingCandidatesCache = cacheFactory.create(this::doIsMatchingCandidate);
+    init {
+        this.cachedQueries = cacheFactory.create<CachedQuery, IntArray>(Function { key: CachedQuery -> this.doMatchMultipleCandidates(key) })
+        this.matchingCandidatesCache = cacheFactory.create<MatchingCandidateCacheKey, Boolean>(Function { k: MatchingCandidateCacheKey -> this.doIsMatchingCandidate(k) })
     }
 
-    @Override
-    public <T> boolean isMatchingValue(Attribute<T> attribute, T candidate, T requested) {
-        return schema.matchValue(attribute, requested, candidate);
+    override fun <T> isMatchingValue(attribute: Attribute<T?>, candidate: T?, requested: T?): Boolean {
+        return schema.matchValue<T?>(attribute, requested, candidate)
     }
 
-    @Override
-    public boolean isMatchingCandidate(ImmutableAttributes candidate, ImmutableAttributes requested) {
-        MatchingCandidateCacheKey key = new MatchingCandidateCacheKey(candidate, requested);
-        return matchingCandidatesCache.get(key);
+    override fun isMatchingCandidate(candidate: ImmutableAttributes, requested: ImmutableAttributes): Boolean {
+        val key = MatchingCandidateCacheKey(candidate, requested)
+        return matchingCandidatesCache.get(key)
     }
 
-    private boolean doIsMatchingCandidate(MatchingCandidateCacheKey k) {
-        return allCommonAttributesSatisfy(k.candidate, k.requested, schema::matchValue);
+    private fun doIsMatchingCandidate(k: MatchingCandidateCacheKey): Boolean {
+        return allCommonAttributesSatisfy(
+            k.candidate,
+            k.requested,
+            DefaultAttributeMatcher.CoercingAttributeValuePredicate { attribute: Attribute<A?>, requested: A?, candidate: A? -> schema.matchValue(attribute, requested, candidate) })
     }
 
-    @Override
-    public boolean areMutuallyCompatible(ImmutableAttributes candidate, ImmutableAttributes requested) {
-        return allCommonAttributesSatisfy(candidate, requested, schema::weakMatchValue);
+    override fun areMutuallyCompatible(candidate: ImmutableAttributes, requested: ImmutableAttributes): Boolean {
+        return allCommonAttributesSatisfy(
+            candidate,
+            requested,
+            DefaultAttributeMatcher.CoercingAttributeValuePredicate { attribute: Attribute<A?>, requested: A?, candidate: A? -> schema.weakMatchValue(attribute, requested, candidate) })
     }
 
     /**
      * Return true iff all common attributes between the candidate and requested
      * attribute sets satisfy the given predicate.
      */
-    private boolean allCommonAttributesSatisfy(
-        ImmutableAttributes candidate,
-        ImmutableAttributes requested,
-        CoercingAttributeValuePredicate predicate
-    ) {
+    private fun allCommonAttributesSatisfy(
+        candidate: ImmutableAttributes,
+        requested: ImmutableAttributes,
+        predicate: CoercingAttributeValuePredicate
+    ): Boolean {
         if (requested.isEmpty() || candidate.isEmpty()) {
-            return true;
+            return true
         }
 
-        for (ImmutableAttributesEntry<?> requestedEntry : requested.getEntries()) {
-            Attribute<?> attribute = requestedEntry.getKey();
-            ImmutableAttributesEntry<?> candidateEntry = candidate.findEntry(attribute.getName());
+        for (requestedEntry in requested.getEntries()) {
+            val attribute: Attribute<*> = requestedEntry.getKey()
+            val candidateEntry = candidate.findEntry(attribute.getName())
 
             if (candidateEntry != null) {
-                Attribute<?> typedAttribute = schema.tryRehydrate(attribute);
+                val typedAttribute = schema.tryRehydrate(attribute)
                 if (!predicate.test(typedAttribute, requestedEntry, candidateEntry)) {
-                    return false;
+                    return false
                 }
             }
         }
 
-        return true;
+        return true
     }
 
     /**
@@ -112,74 +104,71 @@ public class DefaultAttributeMatcher implements AttributeMatcher {
      * that share a common attribute type.
      */
     private interface CoercingAttributeValuePredicate {
-
         /**
          * Test that the candidate attribute value satisfies the requested attribute value.
          */
-        <A> boolean test(Attribute<A> attribute, A requested, A candidate);
+        fun <A> test(attribute: Attribute<A?>, requested: A?, candidate: A?): Boolean
 
         /**
          * Coerce the candidate and requested attribute values to the type of the attribute
          * and test that they match.
          */
-        default <T> boolean test(
-            Attribute<T> attribute,
-            ImmutableAttributesEntry<?> requested,
-            ImmutableAttributesEntry<?> candidate
-        ) {
-            T requestedValue = requested.coerce(attribute);
-            T candidateValue = candidate.coerce(attribute);
-            return test(attribute, requestedValue, candidateValue);
+        fun <T> test(
+            attribute: Attribute<T?>,
+            requested: ImmutableAttributesEntry<*>,
+            candidate: ImmutableAttributesEntry<*>
+        ): Boolean {
+            val requestedValue = requested.coerce<T?>(attribute)
+            val candidateValue = candidate.coerce<T?>(attribute)
+            return test<T?>(attribute, requestedValue, candidateValue)
         }
     }
 
-    @Override
-    @SuppressWarnings({"unchecked", "rawtypes", "MixedMutabilityReturnType"})
-    public List<AttributeMatcher.MatchingDescription<?>> describeMatching(ImmutableAttributes candidate, ImmutableAttributes requested) {
+    override fun describeMatching(candidate: ImmutableAttributes, requested: ImmutableAttributes): MutableList<AttributeMatcher.MatchingDescription<*>> {
         if (requested.isEmpty() || candidate.isEmpty()) {
-            return Collections.emptyList();
+            return mutableListOf<AttributeMatcher.MatchingDescription<*>>()
         }
 
-        CoercingAttributeValuePredicate matches = schema::matchValue;
+        val matches: CoercingAttributeValuePredicate =
+            DefaultAttributeMatcher.CoercingAttributeValuePredicate { attribute: Attribute<A?>, requested: A?, candidate: A? -> schema.matchValue(attribute, requested, candidate) }
 
-        ImmutableCollection<ImmutableAttributesEntry<?>> attributes = requested.getEntries();
-        List<AttributeMatcher.MatchingDescription<?>> result = new ArrayList<>(attributes.size());
-        for (ImmutableAttributesEntry<?> requestedEntry : attributes) {
-            Attribute<?> attribute = requestedEntry.getKey();
-            ImmutableAttributesEntry<?> candidateEntry = candidate.findEntry(attribute.getName());
+        val attributes = requested.getEntries()
+        val result: MutableList<AttributeMatcher.MatchingDescription<*>> = ArrayList<AttributeMatcher.MatchingDescription<*>>(attributes.size)
+        for (requestedEntry in attributes) {
+            val attribute: Attribute<*> = requestedEntry.getKey()
+            val candidateEntry = candidate.findEntry(attribute.getName())
 
             if (candidateEntry != null) {
-                Attribute<?> typedAttribute = schema.tryRehydrate(attribute);
-                boolean match = matches.test(typedAttribute, requestedEntry, candidateEntry);
-                result.add(new AttributeMatcher.MatchingDescription(requestedEntry, candidateEntry, match));
+                val typedAttribute = schema.tryRehydrate(attribute)
+                val match = matches.test(typedAttribute, requestedEntry, candidateEntry)
+                result.add(AttributeMatcher.MatchingDescription<Any?>(requestedEntry, candidateEntry, match))
             } else {
-                result.add(new AttributeMatcher.MatchingDescription(requestedEntry, candidateEntry, false));
+                result.add(AttributeMatcher.MatchingDescription<Any?>(requestedEntry, candidateEntry, false))
             }
         }
-        return result;
+        return result
     }
 
-    @Override
-    public <T extends AttributeMatchingCandidate> List<T> matchMultipleCandidates(
-        List<? extends T> candidates,
-        ImmutableAttributes requested
-    ) {
-        AttributeMatchingExplanationBuilder explanationBuilder = AttributeMatchingExplanationBuilder.logging();
+    override fun <T : AttributeMatchingCandidate?> matchMultipleCandidates(
+        candidates: MutableList<out T>,
+        requested: ImmutableAttributes
+    ): MutableList<T?> {
+        val explanationBuilder = logging()
 
         if (candidates.isEmpty()) {
-            explanationBuilder.noCandidates(requested);
-            return ImmutableList.of();
+            explanationBuilder.noCandidates(requested)
+            return ImmutableList.of<T?>()
         }
 
-        if (candidates.size() == 1) {
-            T candidate = candidates.iterator().next();
-            ImmutableAttributes candidateAttributes = candidate.getAttributes();
+        if (candidates.size == 1) {
+            val candidate: T? = candidates.iterator().next()
+            val candidateAttributes = candidate!!.getAttributes()
             if (isMatchingCandidate(candidateAttributes, requested)) {
-                explanationBuilder.singleMatch(candidateAttributes, ImmutableList.of(candidateAttributes), requested);
-                return Collections.singletonList(candidate);
+                explanationBuilder.singleMatch(candidateAttributes, ImmutableList.of<ImmutableAttributes>(candidateAttributes), requested)
+                return mutableListOf<T?>(candidate)
             }
-            explanationBuilder.candidateDoesNotMatchAttributes(candidateAttributes, requested);
-            return ImmutableList.of();
+            explanationBuilder.candidateDoesNotMatchAttributes(candidateAttributes, requested)
+            return ImmutableList.of<T?>()
         }
 
         // Often times, collections of candidates will themselves differ even though their attributes are the same.
@@ -188,114 +177,105 @@ public class DefaultAttributeMatcher implements AttributeMatcher {
         // The result of this is a list of indices into the original candidate list from which the
         // attributes-to-disambiguate are derived. When retrieving a result from the cache, we use the resulting
         // indices to index back into the original candidates list.
-        CachedQuery query = CachedQuery.from(requested, candidates);
-        int[] indices = cachedQueries.get(query);
-        return CachedQuery.getMatchesFromCandidateIndices(indices, candidates);
+        val query: CachedQuery = CachedQuery.Companion.from(requested, candidates)
+        val indices = cachedQueries.get(query)
+        return CachedQuery.Companion.getMatchesFromCandidateIndices<T?>(indices, candidates)
     }
 
-    private int[] doMatchMultipleCandidates(CachedQuery key) {
-        AttributeMatchingExplanationBuilder explanationBuilder = AttributeMatchingExplanationBuilder.logging();
-        int[] matches = new MultipleCandidateMatcher(schema, key.candidates, key.requestedAttributes, explanationBuilder).getMatches();
-        LOGGER.debug("Selected matches {} from candidates {} for {}", Ints.asList(matches), key.candidates, key.requestedAttributes);
-        return matches;
+    private fun doMatchMultipleCandidates(key: CachedQuery): IntArray {
+        val explanationBuilder = logging()
+        val matches = MultipleCandidateMatcher(schema, key.candidates, key.requestedAttributes, explanationBuilder).getMatches()
+        LOGGER.debug("Selected matches {} from candidates {} for {}", Ints.asList(*matches), key.candidates, key.requestedAttributes)
+        return matches
     }
 
-    private static class CachedQuery {
-        private final ImmutableAttributes requestedAttributes;
-        private final ImmutableAttributes[] candidates;
-        private final int hashCode;
+    private class CachedQuery(private val requestedAttributes: ImmutableAttributes, private val candidates: Array<ImmutableAttributes>) {
+        private val hashCode: Int
 
-        private CachedQuery(ImmutableAttributes requestedAttributes, ImmutableAttributes[] candidates) {
-            this.requestedAttributes = requestedAttributes;
-            this.candidates = candidates;
-            this.hashCode = computeHashCode(requestedAttributes, candidates);
+        init {
+            this.hashCode = computeHashCode(requestedAttributes, candidates)
         }
 
-        private static int computeHashCode(ImmutableAttributes requestedAttributes, ImmutableAttributes[] candidates) {
-            int hash = requestedAttributes.hashCode();
-            for (ImmutableAttributes candidate : candidates) {
-                hash = 31 * hash + candidate.hashCode();
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            return hash;
-        }
-
-        public static <T extends AttributeMatchingCandidate> CachedQuery from(ImmutableAttributes requestedAttributes, List<T> candidates) {
-            int size = candidates.size();
-            ImmutableAttributes[] attributes = new ImmutableAttributes[size];
-            for (int i = 0; i < size; i++) {
-                attributes[i] = candidates.get(i).getAttributes();
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            return new CachedQuery(requestedAttributes, attributes);
-        }
-
-        @SuppressWarnings("MixedMutabilityReturnType")
-        private static <T extends AttributeMatchingCandidate> List<T> getMatchesFromCandidateIndices(int[] indices, List<? extends T> candidates) {
-            if (indices.length == 0) {
-                return Collections.emptyList();
-            }
-
-            List<T> matches = new ArrayList<>(indices.length);
-            for (int index : indices) {
-                matches.add(candidates.get(index));
-            }
-
-            return matches;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            CachedQuery that = (CachedQuery) o;
+            val that = o as CachedQuery
             return hashCode == that.hashCode &&
-                requestedAttributes.equals(that.requestedAttributes) &&
-                Arrays.equals(candidates, that.candidates);
+                    requestedAttributes == that.requestedAttributes && candidates.contentEquals(that.candidates)
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
 
-        @Override
-        public String toString() {
+        override fun toString(): String {
             return "CachedQuery{" +
-                "requestedAttributes=" + requestedAttributes +
-                ", candidates=" + Arrays.toString(candidates) +
-                '}';
+                    "requestedAttributes=" + requestedAttributes +
+                    ", candidates=" + candidates.contentToString() +
+                    '}'
+        }
+
+        companion object {
+            private fun computeHashCode(requestedAttributes: ImmutableAttributes, candidates: Array<ImmutableAttributes>): Int {
+                var hash = requestedAttributes.hashCode()
+                for (candidate in candidates) {
+                    hash = 31 * hash + candidate.hashCode()
+                }
+                return hash
+            }
+
+            fun <T : AttributeMatchingCandidate?> from(requestedAttributes: ImmutableAttributes, candidates: MutableList<T?>): CachedQuery {
+                val size = candidates.size
+                val attributes: Array<ImmutableAttributes> = arrayOfNulls<ImmutableAttributes>(size)
+                for (i in 0..<size) {
+                    attributes[i] = candidates.get(i)!!.getAttributes()
+                }
+                return CachedQuery(requestedAttributes, attributes)
+            }
+
+            private fun <T : AttributeMatchingCandidate?> getMatchesFromCandidateIndices(indices: IntArray, candidates: MutableList<out T>): MutableList<T?> {
+                if (indices.size == 0) {
+                    return mutableListOf<T?>()
+                }
+
+                val matches: MutableList<T?> = ArrayList<T?>(indices.size)
+                for (index in indices) {
+                    matches.add(candidates.get(index))
+                }
+
+                return matches
+            }
         }
     }
 
-    private static class MatchingCandidateCacheKey {
-        private final ImmutableAttributes candidate;
-        private final ImmutableAttributes requested;
-        private final int hashCode;
+    private class MatchingCandidateCacheKey(private val candidate: ImmutableAttributes, private val requested: ImmutableAttributes) {
+        private val hashCode: Int
 
-        public MatchingCandidateCacheKey(ImmutableAttributes candidate, ImmutableAttributes requested) {
-            this.candidate = candidate;
-            this.requested = requested;
-            this.hashCode = 31 * candidate.hashCode() + requested.hashCode();
+        init {
+            this.hashCode = 31 * candidate.hashCode() + requested.hashCode()
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            MatchingCandidateCacheKey cacheKey = (MatchingCandidateCacheKey) o;
-            return candidate.equals(cacheKey.candidate) && requested.equals(cacheKey.requested);
+            val cacheKey = o as MatchingCandidateCacheKey
+            return candidate == cacheKey.candidate && requested == cacheKey.requested
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultAttributeMatcher::class.java)
     }
 }

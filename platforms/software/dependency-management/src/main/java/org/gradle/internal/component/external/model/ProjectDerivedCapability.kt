@@ -13,92 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.base.Objects;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.capabilities.CapabilityInternal;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.util.internal.TextUtil;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Objects
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.capabilities.CapabilityInternal
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.util.internal.TextUtil
+import kotlin.concurrent.Volatile
 
-public class ProjectDerivedCapability implements CapabilityInternal {
+class ProjectDerivedCapability @JvmOverloads constructor(private val project: ProjectInternal, private val featureName: String? = null) : CapabilityInternal {
+    @Volatile
+    private var capabilityName: String? = null
 
-    private final ProjectInternal project;
-    private final String featureName;
-
-    private volatile String capabilityName;
-
-    public ProjectDerivedCapability(ProjectInternal project) {
-        this(project, null);
+    override fun getGroup(): String {
+        return notNull("group", project.getGroup())
     }
 
-    public ProjectDerivedCapability(ProjectInternal project, @Nullable String featureName) {
-        this.project = project;
-        this.featureName = featureName;
-    }
-
-    @Override
-    public String getGroup() {
-        return notNull("group", project.getGroup());
-    }
-
-    @Override
-    public String getName() {
+    override fun getName(): String {
         if (capabilityName == null) {
-            capabilityName = computeCapabilityName(project, featureName);
+            capabilityName = computeCapabilityName(project, featureName)
         }
-        return capabilityName;
+        return capabilityName!!
     }
 
-    private static String computeCapabilityName(ProjectInternal project, @Nullable String featureName) {
-        String projectName = project.getOwner().getIdentity().getProjectName();
-        if (featureName == null) {
-            return projectName;
-        }
-        return projectName + "-" + TextUtil.camelToKebabCase(featureName);
+    override fun getVersion(): String {
+        return notNull("version", project.getVersion())
     }
 
-    @Override
-    public String getVersion() {
-        return notNull("version", project.getVersion());
-    }
-
-    @Override
-    public int hashCode() {
+    override fun hashCode(): Int {
         // See DefaultImmutableCapability#computeHashcode
-        int hash = getVersion().hashCode();
-        hash = 31 * hash + getName().hashCode();
-        hash = 31 * hash + getGroup().hashCode();
-        return  hash;
+        var hash = getVersion().hashCode()
+        hash = 31 * hash + getName().hashCode()
+        hash = 31 * hash + getGroup().hashCode()
+        return hash
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (!(o instanceof Capability)) {
-            return false;
+        if (o !is Capability) {
+            return false
         }
 
-        Capability that = (Capability) o;
+        val that = o
         return Objects.equal(getGroup(), that.getGroup())
-            && Objects.equal(getName(), that.getName())
-            && Objects.equal(getVersion(), that.getVersion());
-
+                && Objects.equal(getName(), that.getName())
+                && Objects.equal(getVersion(), that.getVersion())
     }
 
-    private static String notNull(String id, Object o) {
-        if (o == null) {
-            throw new InvalidUserDataException(id + " must not be null");
+    override fun getCapabilityId(): String {
+        return getGroup() + ":" + getName()
+    }
+
+    companion object {
+        private fun computeCapabilityName(project: ProjectInternal, featureName: String?): String {
+            val projectName = project.getOwner().getIdentity().getProjectName()
+            if (featureName == null) {
+                return projectName
+            }
+            return projectName + "-" + TextUtil.camelToKebabCase(featureName)
         }
-        return o.toString();
-    }
 
-    @Override
-    public String getCapabilityId() {
-        return getGroup() + ":" + getName();
+        private fun notNull(id: String, o: Any): String {
+            if (o == null) {
+                throw InvalidUserDataException(id + " must not be null")
+            }
+            return o.toString()
+        }
     }
 }

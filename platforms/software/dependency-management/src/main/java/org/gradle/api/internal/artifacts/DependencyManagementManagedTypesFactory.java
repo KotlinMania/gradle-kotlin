@@ -44,7 +44,7 @@ public class DependencyManagementManagedTypesFactory {
 
     @ManagedObjectCreator
     public DependencyCollector dependencyCollector() {
-        return instantiator.newInstance(DefaultDependencyCollector.class);
+        return instantiator.<DefaultDependencyCollector>newInstance(DefaultDependencyCollector.class);
     }
 
 }

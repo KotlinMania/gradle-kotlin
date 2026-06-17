@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.internal.artifacts.transform.TransformStep;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+package org.gradle.api.internal.artifacts
 
 /**
  * Registration of an artifact transform.
  */
-public interface TransformRegistration {
+interface TransformRegistration {
     /**
      * Attributes that match the variant that is consumed.
      */
-    ImmutableAttributes getFrom();
+    @JvmField
+    val from: ImmutableAttributes?
 
     /**
      * Attributes that match the variant that is produced.
      */
-    ImmutableAttributes getTo();
+    @JvmField
+    val to: ImmutableAttributes?
 
     /**
      * Transform step for artifacts of the variant.
      */
-    TransformStep getTransformStep();
+    @JvmField
+    val transformStep: TransformStep?
 }

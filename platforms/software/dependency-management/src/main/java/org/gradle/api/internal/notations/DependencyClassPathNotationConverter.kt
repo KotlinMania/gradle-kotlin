@@ -13,176 +13,150 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import org.gradle.api.artifacts.FileCollectionDependency;
-import org.gradle.api.internal.ClassPathRegistry;
-import org.gradle.api.internal.artifacts.dependencies.DefaultFileCollectionDependency;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarFactory;
-import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarType;
-import org.gradle.internal.component.local.model.OpaqueComponentIdentifier;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.TypeConversionException;
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Lists
+import org.gradle.api.artifacts.FileCollectionDependency
+import org.gradle.api.internal.ClassPathRegistry
+import org.gradle.api.internal.artifacts.dependencies.DefaultFileCollectionDependency
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarFactory
+import org.gradle.api.internal.runtimeshaded.RuntimeShadedJarType
+import org.gradle.internal.component.local.model.OpaqueComponentIdentifier
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.TypeConversionException
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+class DependencyClassPathNotationConverter(
+    private val instantiator: Instantiator,
+    private val classPathRegistry: ClassPathRegistry,
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val runtimeShadedJarFactory: RuntimeShadedJarFactory
+) : NotationConverter<DependencyFactoryInternal.ClassPathNotation?, FileCollectionDependency?> {
+    private val internCache: ConcurrentMap<DependencyFactoryInternal.ClassPathNotation?, FileCollectionDependency?> =
+        ConcurrentHashMap<DependencyFactoryInternal.ClassPathNotation?, FileCollectionDependency?>()
 
-import static org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal.ClassPathNotation.GRADLE_API;
-import static org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal.ClassPathNotation.GRADLE_TEST_KIT;
-import static org.gradle.api.internal.artifacts.dsl.dependencies.DependencyFactoryInternal.ClassPathNotation.LOCAL_GROOVY;
-
-public class DependencyClassPathNotationConverter implements NotationConverter<DependencyFactoryInternal.ClassPathNotation, FileCollectionDependency> {
-
-    private final ClassPathRegistry classPathRegistry;
-    private final Instantiator instantiator;
-    private final FileCollectionFactory fileCollectionFactory;
-    private final RuntimeShadedJarFactory runtimeShadedJarFactory;
-    private final ConcurrentMap<DependencyFactoryInternal.ClassPathNotation, FileCollectionDependency> internCache = new ConcurrentHashMap<>();
-
-    public DependencyClassPathNotationConverter(
-        Instantiator instantiator,
-        ClassPathRegistry classPathRegistry,
-        FileCollectionFactory fileCollectionFactory,
-        RuntimeShadedJarFactory runtimeShadedJarFactory
-    ) {
-        this.instantiator = instantiator;
-        this.classPathRegistry = classPathRegistry;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.runtimeShadedJarFactory = runtimeShadedJarFactory;
+    override fun describe(visitor: DiagnosticsVisitor) {
+        visitor.candidate("ClassPathNotation").example("gradleApi()")
     }
 
-    @Override
-    public void describe(DiagnosticsVisitor visitor) {
-        visitor.candidate("ClassPathNotation").example("gradleApi()");
-    }
-
-    @Override
-    public void convert(DependencyFactoryInternal.ClassPathNotation notation, NotationConvertResult<? super FileCollectionDependency> result) throws TypeConversionException {
-        FileCollectionDependency dependency = internCache.get(notation);
+    @Throws(TypeConversionException::class)
+    override fun convert(notation: DependencyFactoryInternal.ClassPathNotation, result: NotationConvertResult<in FileCollectionDependency?>) {
+        var dependency = internCache.get(notation)
         if (dependency == null) {
-            dependency = create(notation);
+            dependency = create(notation)
         }
-        result.converted(dependency);
+        result.converted(dependency)
     }
 
-    private FileCollectionDependency create(final DependencyFactoryInternal.ClassPathNotation notation) {
-        FileCollectionInternal fileCollectionInternal;
-        if (notation.equals(GRADLE_API)) {
-            fileCollectionInternal = fileCollectionFactory.create(new GeneratedFileCollection(notation.displayName) {
-                @Override
-                Set<File> generateFileCollection() {
-                    return gradleApiFileCollection(getClassPath(notation));
+    private fun create(notation: DependencyFactoryInternal.ClassPathNotation): FileCollectionDependency {
+        val fileCollectionInternal: FileCollectionInternal?
+        if (notation == DependencyFactoryInternal.ClassPathNotation.GRADLE_API) {
+            fileCollectionInternal = fileCollectionFactory.create(object : GeneratedFileCollection(notation.displayName) {
+                override fun generateFileCollection(): MutableSet<File> {
+                    return gradleApiFileCollection(getClassPath(notation))
                 }
-            });
-        } else if (notation.equals(GRADLE_TEST_KIT)) {
-            fileCollectionInternal = fileCollectionFactory.create(new GeneratedFileCollection(notation.displayName) {
-                @Override
-                Set<File> generateFileCollection() {
-                    return gradleTestKitFileCollection(getClassPath(notation));
+            })
+        } else if (notation == DependencyFactoryInternal.ClassPathNotation.GRADLE_TEST_KIT) {
+            fileCollectionInternal = fileCollectionFactory.create(object : GeneratedFileCollection(notation.displayName) {
+                override fun generateFileCollection(): MutableSet<File?> {
+                    return gradleTestKitFileCollection(getClassPath(notation))
                 }
-            });
+            })
         } else {
-            fileCollectionInternal = fileCollectionFactory.resolving(getClassPath(notation));
+            fileCollectionInternal = fileCollectionFactory.resolving(getClassPath(notation))
         }
-        FileCollectionDependency dependency = instantiator.newInstance(DefaultFileCollectionDependency.class, new OpaqueComponentIdentifier(notation), fileCollectionInternal);
-        FileCollectionDependency alreadyPresent = internCache.putIfAbsent(notation, dependency);
-        return alreadyPresent != null ? alreadyPresent : dependency;
+        val dependency: FileCollectionDependency =
+            instantiator.newInstance<DefaultFileCollectionDependency>(DefaultFileCollectionDependency::class.java, OpaqueComponentIdentifier(notation), fileCollectionInternal)
+        val alreadyPresent = internCache.putIfAbsent(notation, dependency)
+        return if (alreadyPresent != null) alreadyPresent else dependency
     }
 
-    private List<File> getClassPath(DependencyFactoryInternal.ClassPathNotation notation) {
-        return Lists.newArrayList(classPathRegistry.getClassPath(notation.name()).getAsFiles());
+    private fun getClassPath(notation: DependencyFactoryInternal.ClassPathNotation): MutableList<File> {
+        return Lists.newArrayList<File?>(classPathRegistry.getClassPath(notation.name).getAsFiles())
     }
 
-    private Set<File> gradleApiFileCollection(Collection<File> apiClasspath) {
+    private fun gradleApiFileCollection(apiClasspath: MutableCollection<File>): MutableSet<File> {
         // Don't inline the Groovy jar as the Groovy "tools locator" searches for it by name
-        List<File> groovyImpl = classPathRegistry.getClassPath(LOCAL_GROOVY.name()).getAsFiles();
-        List<File> kotlinImpl = kotlinImplFrom(apiClasspath);
-        List<File> installationBeacon = classPathRegistry.getClassPath("GRADLE_INSTALLATION_BEACON").getAsFiles();
-        apiClasspath.removeAll(groovyImpl);
-        apiClasspath.removeAll(installationBeacon);
+        val groovyImpl = classPathRegistry.getClassPath(DependencyFactoryInternal.ClassPathNotation.LOCAL_GROOVY.name).getAsFiles()
+        val kotlinImpl = kotlinImplFrom(apiClasspath)
+        val installationBeacon = classPathRegistry.getClassPath("GRADLE_INSTALLATION_BEACON").getAsFiles()
+        apiClasspath.removeAll(groovyImpl)
+        apiClasspath.removeAll(installationBeacon)
         // Remove Kotlin DSL and Kotlin jars
-        removeKotlin(apiClasspath);
+        removeKotlin(apiClasspath)
 
-        ImmutableSet.Builder<File> builder = ImmutableSet.builder();
-        builder.add(relocatedDepsJar(apiClasspath, RuntimeShadedJarType.API));
-        builder.addAll(groovyImpl);
-        builder.addAll(kotlinImpl);
-        builder.addAll(installationBeacon);
-        return builder.build();
+        val builder = ImmutableSet.builder<File?>()
+        builder.add(relocatedDepsJar(apiClasspath, RuntimeShadedJarType.API))
+        builder.addAll(groovyImpl)
+        builder.addAll(kotlinImpl)
+        builder.addAll(installationBeacon)
+        return builder.build()
     }
 
-    private void removeKotlin(Collection<File> apiClasspath) {
-        Iterator<File> iterator = apiClasspath.iterator();
+    private fun removeKotlin(apiClasspath: MutableCollection<File>) {
+        val iterator: MutableIterator<File?> = apiClasspath.iterator()
         while (iterator.hasNext()) {
-            String name = iterator.next().getName();
+            val name = iterator.next()!!.getName()
             if (name.startsWith("kotlin-") || name.startsWith("gradle-kotlin-")) {
-                iterator.remove();
+                iterator.remove()
             }
         }
     }
 
-    private List<File> kotlinImplFrom(Collection<File> classPath) {
-        ArrayList<File> files = new ArrayList<>();
-        for (File file : classPath) {
-            String name = file.getName();
+    private fun kotlinImplFrom(classPath: MutableCollection<File>): MutableList<File> {
+        val files = ArrayList<File>()
+        for (file in classPath) {
+            val name = file.getName()
             if (name.startsWith("kotlin-stdlib-") || name.startsWith("kotlin-reflect-")) {
-                files.add(file);
+                files.add(file)
             }
         }
-        return files;
+        return files
     }
 
-    private Set<File> gradleTestKitFileCollection(Collection<File> testKitClasspath) {
-        List<File> gradleApi = getClassPath(GRADLE_API);
-        testKitClasspath.removeAll(gradleApi);
+    private fun gradleTestKitFileCollection(testKitClasspath: MutableCollection<File>): MutableSet<File?> {
+        val gradleApi = getClassPath(DependencyFactoryInternal.ClassPathNotation.GRADLE_API)
+        testKitClasspath.removeAll(gradleApi)
 
-        ImmutableSet.Builder<File> builder = ImmutableSet.builder();
-        builder.add(relocatedDepsJar(testKitClasspath, RuntimeShadedJarType.TEST_KIT));
-        builder.addAll(gradleApiFileCollection(gradleApi));
-        return builder.build();
+        val builder = ImmutableSet.builder<File?>()
+        builder.add(relocatedDepsJar(testKitClasspath, RuntimeShadedJarType.TEST_KIT))
+        builder.addAll(gradleApiFileCollection(gradleApi))
+        return builder.build()
     }
 
-    private File relocatedDepsJar(Collection<File> classpath, RuntimeShadedJarType runtimeShadedJarType) {
-        return runtimeShadedJarFactory.get(runtimeShadedJarType, classpath);
+    private fun relocatedDepsJar(classpath: MutableCollection<File>?, runtimeShadedJarType: RuntimeShadedJarType): File? {
+        return runtimeShadedJarFactory.get(runtimeShadedJarType, classpath)
     }
 
-    abstract static class GeneratedFileCollection implements MinimalFileSet {
+    internal abstract class GeneratedFileCollection(notation: String?) : MinimalFileSet {
+        private val displayName: String
+        private var generateFiles: MutableSet<File?>? = null
 
-        private final String displayName;
-        private Set<File> generateFiles;
-
-        public GeneratedFileCollection(String notation) {
-            this.displayName = notation + " files";
+        init {
+            this.displayName = notation + " files"
         }
 
-        @Override
-        public String getDisplayName() {
-            return displayName;
+        override fun getDisplayName(): String {
+            return displayName
         }
 
-        @Override
-        public Set<File> getFiles() {
+        override fun getFiles(): MutableSet<File?> {
             if (generateFiles == null) {
-                generateFiles = generateFileCollection();
+                generateFiles = generateFileCollection()
             }
-            return generateFiles;
+            return generateFiles!!
         }
 
-        abstract Set<File> generateFileCollection();
+        abstract fun generateFileCollection(): MutableSet<File?>?
     }
 }

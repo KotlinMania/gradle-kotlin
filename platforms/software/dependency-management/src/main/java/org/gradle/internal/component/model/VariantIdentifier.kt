@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+package org.gradle.internal.component.model
 
 /**
  * An opaque immutable identifier for a variant of a component.
  */
-public interface VariantIdentifier {
-
+interface VariantIdentifier {
     /**
      * Get the identity of the component that owns this variant.
      */
-    ComponentIdentifier getComponentId();
+    @JvmField
+    val componentId: ComponentIdentifier?
 
     /**
      * Returns a human-readable display name for this identifier.
      */
-    String getDisplayName();
-
+    val displayName: String?
 }

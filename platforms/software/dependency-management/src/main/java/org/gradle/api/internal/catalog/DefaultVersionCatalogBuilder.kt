@@ -13,625 +13,574 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Interner;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.artifacts.DependencyResolutionServices;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
-import org.gradle.api.internal.catalog.parser.DependenciesModelHelper;
-import org.gradle.api.internal.catalog.parser.StrictVersionParser;
-import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
-import org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder;
-import org.gradle.api.internal.catalog.problems.VersionCatalogProblemId;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.problems.ProblemSpec;
-import org.gradle.api.problems.internal.GradleCoreProblemGroup;
-import org.gradle.api.problems.internal.ProblemInternal;
-import org.gradle.api.problems.internal.ProblemSpecInternal;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.FileUtils;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.classpath.Instrumented;
-import org.gradle.internal.lazy.Lazy;
-import org.gradle.internal.management.VersionCatalogBuilderInternal;
-import org.gradle.util.internal.TextUtil;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Interner
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.Usage
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+import org.gradle.api.internal.artifacts.DependencyResolutionServices
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint
+import org.gradle.api.internal.catalog.parser.DependenciesModelHelper
+import org.gradle.api.internal.catalog.parser.StrictVersionParser
+import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser
+import org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder
+import org.gradle.api.internal.catalog.problems.VersionCatalogProblemId
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.problems.ProblemSpec
+import org.gradle.api.problems.internal.ProblemInternal
+import org.gradle.api.problems.internal.ProblemSpecInternal
+import org.gradle.api.problems.internal.ProblemSpecInternal.contextualLabel
+import org.gradle.api.problems.internal.ProblemSpecInternal.documentedAt
+import org.gradle.api.problems.internal.ProblemsInternal
+import org.gradle.api.provider.Property
+import org.gradle.internal.FileUtils
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.classpath.Instrumented
+import org.gradle.internal.deprecation.Documentation.Companion.userManual
+import org.gradle.internal.lazy.Lazy.Companion.unsafe
+import org.gradle.internal.management.VersionCatalogBuilderInternal
+import org.gradle.util.internal.TextUtil
+import java.io.File
+import java.io.IOException
+import java.util.function.Supplier
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Supplier;
-
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static org.apache.commons.lang3.StringUtils.uncapitalize;
-import static org.gradle.api.internal.catalog.parser.DependenciesModelHelper.ALIAS_REGEX;
-import static org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder.VERSION_CATALOG_PROBLEMS;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.ALIAS_NOT_FINISHED;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.CATALOG_FILE_DOES_NOT_EXIST;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.INVALID_ALIAS_NOTATION;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.INVALID_DEPENDENCY_NOTATION;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.NO_IMPORT_FILES;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.RESERVED_ALIAS_NAME;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.TOO_MANY_IMPORT_FILES;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.TOO_MANY_IMPORT_INVOCATION;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNDEFINED_ALIAS_REFERENCE;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNDEFINED_VERSION_REFERENCE;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNSUPPORTED_FILE_FORMAT;
-import static org.gradle.internal.RenderingUtils.quotedOxfordListOf;
-import static org.gradle.internal.deprecation.Documentation.userManual;
-
-public abstract class DefaultVersionCatalogBuilder implements VersionCatalogBuilderInternal {
-
-    private enum AliasType {
+abstract class DefaultVersionCatalogBuilder @Inject constructor(
+    private val name: String,
+    private val strings: Interner<String>,
+    private val versionConstraintInterner: Interner<ImmutableVersionConstraint>,
+    private val objects: ObjectFactory,
+    private val dependencyResolutionServicesSupplier: Supplier<DependencyResolutionServices>
+) : VersionCatalogBuilderInternal {
+    private enum class AliasType {
         LIBRARY,
         PLUGIN,
         BUNDLE,
         VERSION,
+
         // To be removed.
         ALIAS;
 
-        @Override
-        public String toString() {
-            return name().toLowerCase(Locale.ROOT);
+        override fun toString(): String {
+            return name.lowercase()
         }
     }
 
-    private final static Logger LOGGER = Logging.getLogger(DefaultVersionCatalogBuilder.class);
-    public final static List<String> FORBIDDEN_LIBRARY_ALIAS_PREFIX = ImmutableList.of("bundles", "versions", "plugins");
-    public final static Set<String> RESERVED_ALIAS_NAMES = ImmutableSet.of("extensions", "convention");
-    /**
-     * names that are forbidden in generated accessors because we can't override getClass()
-     */
-    public final static Set<String> RESERVED_JAVA_NAMES = ImmutableSet.of("class");
+    private val versionConstraints: MutableMap<String, VersionModel> = LinkedHashMap<String, VersionModel>()
+    private val libraries: MutableMap<String, Supplier<DependencyModel>> = LinkedHashMap<String, Supplier<DependencyModel>>()
 
-    private final Interner<String> strings;
-    private final Interner<ImmutableVersionConstraint> versionConstraintInterner;
-    private final ObjectFactory objects;
-    private final String name;
-    private final Map<String, VersionModel> versionConstraints = new LinkedHashMap<>();
-    private final Map<String, Supplier<DependencyModel>> libraries = new LinkedHashMap<>();
     /**
      * Aliases that are being constructed, used to detect unfinished builders.
      */
-    private final Set<String> aliasesInProgress = new LinkedHashSet<>();
-    private final Map<String, Supplier<PluginModel>> plugins = new LinkedHashMap<>();
-    private final Map<String, BundleModel> bundles = new LinkedHashMap<>();
-    private final Lazy<DefaultVersionCatalog> model = Lazy.unsafe().of(this::doBuild);
-    private final Supplier<DependencyResolutionServices> dependencyResolutionServicesSupplier;
-    private @Nullable Import importedCatalog = null;
-    private final StrictVersionParser strictVersionParser;
+    private val aliasesInProgress: MutableSet<String> = LinkedHashSet<String>()
+    private val plugins: MutableMap<String, Supplier<PluginModel>> = LinkedHashMap<String, Supplier<PluginModel>>()
+    private val bundles: MutableMap<String, BundleModel> = LinkedHashMap<String, BundleModel>()
+    private val model = unsafe().of<DefaultVersionCatalog?>(Supplier { this.doBuild() })
+    private var importedCatalog: Import? = null
+    private val strictVersionParser: StrictVersionParser
 
-    private final Property<String> description;
+    private val description: Property<String>
 
-    private @Nullable String currentContext;
+    private var currentContext: String? = null
 
-    @Inject
-    public DefaultVersionCatalogBuilder(
-        String name,
-        Interner<String> strings,
-        Interner<ImmutableVersionConstraint> versionConstraintInterner,
-        ObjectFactory objects,
-        Supplier<DependencyResolutionServices> dependencyResolutionServicesSupplier
-    ) {
-        this.name = name;
-        this.strings = strings;
-        this.versionConstraintInterner = versionConstraintInterner;
-        this.objects = objects;
-        this.dependencyResolutionServicesSupplier = dependencyResolutionServicesSupplier;
-        this.strictVersionParser = new StrictVersionParser(strings, getProblemsService());
-        this.description = objects.property(String.class).convention("A catalog of dependencies accessible via the {@code " + name + "} extension.");
+    init {
+        this.strictVersionParser = StrictVersionParser(strings, this.problemsService)
+        this.description = objects.property<String>(String::class.java).convention("A catalog of dependencies accessible via the {@code " + name + "} extension.")
     }
 
-    @Inject
-    protected abstract ProblemsInternal getProblemsService();
+    @get:Inject
+    protected abstract val problemsService: ProblemsInternal?
 
-    @Override
-    public String getLibrariesExtensionName() {
-        return name;
+    override fun getLibrariesExtensionName(): String {
+        return name
     }
 
-    @Override
-    public Property<String> getDescription() {
-        return description;
+    override fun getDescription(): Property<String> {
+        return description
     }
 
-    @Override
-    public DefaultVersionCatalog build() {
-        return model.get();
+    override fun build(): DefaultVersionCatalog {
+        return model.get()!!
     }
 
-    @Override
-    public void withContext(String context, Runnable action) {
-        String oldContext = currentContext;
-        currentContext = intern(context);
+    override fun withContext(context: String, action: Runnable) {
+        val oldContext = currentContext
+        currentContext = intern(context)
         try {
-            action.run();
+            action.run()
         } finally {
-            currentContext = oldContext;
+            currentContext = oldContext
         }
     }
 
-    private DefaultVersionCatalog doBuild() {
-        maybeImportCatalogs();
+    private fun doBuild(): DefaultVersionCatalog {
+        maybeImportCatalogs()
         if (!aliasesInProgress.isEmpty()) {
-            String alias = aliasesInProgress.iterator().next();
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + "dependency alias builder '" + alias + "' was not finished", ALIAS_NOT_FINISHED)
-                    .details("A version was not set or explicitly declared as not wanted")
-                    .solution("Call `.version()` to give the alias a version")
-                    .solution("Call `.withoutVersion()` to explicitly declare that the alias should not have a version")));
+            val alias = aliasesInProgress.iterator().next()
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(builder, this.problemInVersionCatalog + "dependency alias builder '" + alias + "' was not finished", VersionCatalogProblemId.ALIAS_NOT_FINISHED)
+                    .details("A version was not set or explicitly declared as not wanted")!!
+                    .solution("Call `.version()` to give the alias a version")!!
+                    .solution("Call `.withoutVersion()` to explicitly declare that the alias should not have a version")
+            }))
         }
-        for (Map.Entry<String, BundleModel> entry : bundles.entrySet()) {
-            String bundleName = entry.getKey();
-            List<String> aliases = entry.getValue().getComponents();
-            for (String alias : aliases) {
+        for (entry in bundles.entries) {
+            val bundleName = entry.key
+            val aliases = entry.value.getComponents()
+            for (alias in aliases) {
                 if (!libraries.containsKey(alias)) {
-                    throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                        configureVersionCatalogError(builder, getProblemInVersionCatalog() + "a bundle with name '" + bundleName + "' declares a dependency on '" + alias +
-                            "' which doesn't exist", UNDEFINED_ALIAS_REFERENCE)
-                            .details("Bundles can only contain references to existing library aliases.")
-                            .solution("Make sure that the library alias '" + alias + "' is declared")
-                            .solution("Remove '" + alias + "' from bundle '" + bundleName + "'.")));
+                    throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                        org.gradle.api.internal.catalog.DefaultVersionCatalogBuilder.Companion.configureVersionCatalogError(
+                            builder, this.problemInVersionCatalog + "a bundle with name '" + bundleName + "' declares a dependency on '" + alias +
+                                    "' which doesn't exist", org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNDEFINED_ALIAS_REFERENCE
+                        )
+                            .details("Bundles can only contain references to existing library aliases.")!!
+                            .solution("Make sure that the library alias '" + alias + "' is declared")!!
+                            .solution("Remove '" + alias + "' from bundle '" + bundleName + "'.")
+                    }))
                 }
             }
         }
-        ImmutableMap.Builder<String, DependencyModel> realizedLibs = ImmutableMap.builderWithExpectedSize(libraries.size());
-        for (Map.Entry<String, Supplier<DependencyModel>> entry : libraries.entrySet()) {
-            realizedLibs.put(entry.getKey(), entry.getValue().get());
+        val realizedLibs = ImmutableMap.builderWithExpectedSize<String, DependencyModel>(libraries.size)
+        for (entry in libraries.entries) {
+            realizedLibs.put(entry.key, entry.value.get())
         }
-        ImmutableMap.Builder<String, PluginModel> realizedPlugins = ImmutableMap.builderWithExpectedSize(plugins.size());
-        for (Map.Entry<String, Supplier<PluginModel>> entry : plugins.entrySet()) {
-            realizedPlugins.put(entry.getKey(), entry.getValue().get());
+        val realizedPlugins = ImmutableMap.builderWithExpectedSize<String, PluginModel>(plugins.size)
+        for (entry in plugins.entries) {
+            realizedPlugins.put(entry.key, entry.value.get())
         }
-        return new DefaultVersionCatalog(name, description.getOrElse(""), realizedLibs.build(), ImmutableMap.copyOf(bundles), ImmutableMap.copyOf(versionConstraints), realizedPlugins.build());
+        return DefaultVersionCatalog(
+            name,
+            description.getOrElse(""),
+            realizedLibs.build(),
+            ImmutableMap.copyOf<String, BundleModel>(bundles),
+            ImmutableMap.copyOf<String, VersionModel>(versionConstraints),
+            realizedPlugins.build()
+        )
     }
 
-    private static ProblemSpecInternal configureVersionCatalogError(ProblemSpecInternal builder, String message, VersionCatalogProblemId catalogProblemId) {
-        return builder.
-            id(TextUtil.screamingSnakeToKebabCase(catalogProblemId.name()), catalogProblemId.getDisplayName(), GradleCoreProblemGroup.versionCatalog())
-            .contextualLabel(message)
-            .documentedAt(userManual(VERSION_CATALOG_PROBLEMS, catalogProblemId.name().toLowerCase(Locale.ROOT)));
-    }
+    private val problemInVersionCatalog: String
+        get() = DefaultCatalogProblemBuilder.getProblemInVersionCatalog(name) + ", "
 
-    private static RuntimeException throwVersionCatalogProblemException(ProblemsInternal problemsService, ProblemInternal problem) {
-        throw problemsService.reporter.throwing(new InvalidUserDataException(), problem);
-    }
-
-    private String getProblemInVersionCatalog() {
-        return DefaultCatalogProblemBuilder.getProblemInVersionCatalog(name) + ", ";
-    }
-
-    private void maybeImportCatalogs() {
+    private fun maybeImportCatalogs() {
         if (importedCatalog == null) {
-            return;
+            return
         }
-        DependencyResolutionServices drs = dependencyResolutionServicesSupplier.get();
-        Configuration cnf = createResolvableConfiguration(drs);
-        addImportsToResolvableConfiguration(drs, cnf, importedCatalog);
+        val drs = dependencyResolutionServicesSupplier.get()
+        val cnf = createResolvableConfiguration(drs)
+        addImportsToResolvableConfiguration(drs, cnf, importedCatalog!!)
 
-        Set<ResolvedArtifactResult> artifacts = cnf.getIncoming().getArtifacts().getArtifacts();
-        if (artifacts.size() > 1) {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + uncapitalize(TOO_MANY_IMPORT_FILES.getDisplayName()), TOO_MANY_IMPORT_FILES)
-                    .details("The import consists of multiple files")
-                    .solution("Only import a single file")));
+        val artifacts = cnf.getIncoming().getArtifacts().getArtifacts()
+        if (artifacts.size > 1) {
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(
+                    builder, this.problemInVersionCatalog + StringUtils.uncapitalize(
+                        VersionCatalogProblemId.TOO_MANY_IMPORT_FILES.getDisplayName()
+                    ), VersionCatalogProblemId.TOO_MANY_IMPORT_FILES
+                )
+                    .details("The import consists of multiple files")!!
+                    .solution("Only import a single file")
+            }))
         }
 
         // We need to fall back to if-else with the Optional, as the Problems API cannot return an instance of an exception, only throw
-        Optional<ResolvedArtifactResult> maybeResolvedArtifactResult = artifacts.stream().findFirst();
+        val maybeResolvedArtifactResult = artifacts.stream().findFirst()
         if (maybeResolvedArtifactResult.isPresent()) {
-            ResolvedArtifactResult resolvedArtifactResult = maybeResolvedArtifactResult.get();
-            File file = resolvedArtifactResult.getFile();
-            withContext("catalog " + resolvedArtifactResult.getVariant().getOwner(), () -> importCatalogFromFile(file));
+            val resolvedArtifactResult = maybeResolvedArtifactResult.get()
+            val file = resolvedArtifactResult.getFile()
+            withContext("catalog " + resolvedArtifactResult.getVariant().getOwner(), Runnable { importCatalogFromFile(file) })
         } else {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + uncapitalize(NO_IMPORT_FILES.getDisplayName()), NO_IMPORT_FILES)
-                    .details("The imported dependency doesn't resolve into any file")
-                    .solution("Check the import statement, it should resolve into a single file")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(
+                    builder, this.problemInVersionCatalog + StringUtils.uncapitalize(
+                        VersionCatalogProblemId.NO_IMPORT_FILES.getDisplayName()
+                    ), VersionCatalogProblemId.NO_IMPORT_FILES
+                )
+                    .details("The imported dependency doesn't resolve into any file")!!
+                    .solution("Check the import statement, it should resolve into a single file")
+            }))
         }
     }
 
-    private void addImportsToResolvableConfiguration(DependencyResolutionServices drs, Configuration cnf, Import imported) {
-        Object notation = imported.notation;
-        Dependency dependency = drs.getDependencyHandler().create(notation);
-        cnf.getDependencies().add(dependency);
+    private fun addImportsToResolvableConfiguration(drs: DependencyResolutionServices, cnf: Configuration, imported: Import) {
+        val notation = imported.notation
+        val dependency = drs.getDependencyHandler().create(notation)
+        cnf.getDependencies().add(dependency)
     }
 
-    @SuppressWarnings("deprecation")
-    private Configuration createResolvableConfiguration(DependencyResolutionServices drs) {
+    @Suppress("deprecation")
+    private fun createResolvableConfiguration(drs: DependencyResolutionServices): Configuration {
         // The zero at the end of the configuration comes from the previous implementation;
         // Multiple files could be imported, and all members of the list were given their own configuration, postfixed by the index in the array.
         // After moving this into a single-file import, we didn't want to break the lock files generated for the configuration, so we simply kept the zero.
-        String confName = "incomingCatalogFor" + StringUtils.capitalize(name) + "0";
-        return ((RoleBasedConfigurationContainerInternal) drs.getConfigurationContainer()).resolvableDependencyScopeLocked(confName, conf -> {
-            conf.getResolutionStrategy().activateDependencyLocking();
-            conf.attributes(attrs -> {
-                attrs.attribute(Category.CATEGORY_ATTRIBUTE, attrs.named(Category.class, Category.REGULAR_PLATFORM));
-                attrs.attribute(Usage.USAGE_ATTRIBUTE, attrs.named(Usage.class, Usage.VERSION_CATALOG));
-            });
-        });
+        val confName = "incomingCatalogFor" + StringUtils.capitalize(name) + "0"
+        return (drs.getConfigurationContainer() as RoleBasedConfigurationContainerInternal).resolvableDependencyScopeLocked(confName, Action { conf: Configuration? ->
+            conf!!.getResolutionStrategy().activateDependencyLocking()
+            conf.attributes(Action { attrs: AttributeContainer? ->
+                attrs!!.attribute<Category>(Category.CATEGORY_ATTRIBUTE, attrs.named<Category>(Category::class.java, Category.REGULAR_PLATFORM))
+                attrs.attribute<Usage>(Usage.USAGE_ATTRIBUTE, attrs.named<Usage>(Usage::class.java, Usage.VERSION_CATALOG))
+            })
+        })
     }
 
-    @Override
-    public void from(Object dependencyNotation) {
+    override fun from(dependencyNotation: Any) {
         if (importedCatalog == null) {
-            importedCatalog = new Import(dependencyNotation);
+            importedCatalog = Import(dependencyNotation)
         } else {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + "you can only call the 'from' method a single time", TOO_MANY_IMPORT_INVOCATION)
-                    .details("The method was called more than once")
-                    .solution("Remove further usages of the method call")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(builder, this.problemInVersionCatalog + "you can only call the 'from' method a single time", VersionCatalogProblemId.TOO_MANY_IMPORT_INVOCATION)
+                    .details("The method was called more than once")!!
+                    .solution("Remove further usages of the method call")
+            }))
         }
     }
 
-    private void importCatalogFromFile(File modelFile) {
+    private fun importCatalogFromFile(modelFile: File) {
         if (!FileUtils.hasExtensionIgnoresCase(modelFile.getName(), "toml")) {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + "File " + modelFile.getName() + " isn't a supported", UNSUPPORTED_FILE_FORMAT)
-                    .details("Only .toml files are allowed when importing catalogs")
-                    .solution("Use a TOML file instead, with the .toml extension")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(builder, this.problemInVersionCatalog + "File " + modelFile.getName() + " isn't a supported", VersionCatalogProblemId.UNSUPPORTED_FILE_FORMAT)
+                    .details("Only .toml files are allowed when importing catalogs")!!
+                    .solution("Use a TOML file instead, with the .toml extension")
+            }))
         }
         if (!modelFile.exists()) {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + uncapitalize(CATALOG_FILE_DOES_NOT_EXIST.getDisplayName()), CATALOG_FILE_DOES_NOT_EXIST)
-                    .details("File '" + modelFile + "' doesn't exist")
-                    .solution("Make sure that the catalog file '" + modelFile.getName() + "' exists before importing it")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(
+                    builder, this.problemInVersionCatalog + StringUtils.uncapitalize(
+                        VersionCatalogProblemId.CATALOG_FILE_DOES_NOT_EXIST.getDisplayName()
+                    ), VersionCatalogProblemId.CATALOG_FILE_DOES_NOT_EXIST
+                )
+                    .details("File '" + modelFile + "' doesn't exist")!!
+                    .solution("Make sure that the catalog file '" + modelFile.getName() + "' exists before importing it")
+            }))
         }
 
-        Instrumented.fileOpened(modelFile, getClass().getName());
+        Instrumented.fileOpened(modelFile, javaClass.getName())
         try {
-            TomlCatalogFileParser.parse(modelFile.toPath(), this, this::getProblemsService);
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            TomlCatalogFileParser.parse(modelFile.toPath(), this, Supplier { this.problemsService })
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
-    @Override
-    public String version(String alias, Action<? super MutableVersionConstraint> versionSpec) {
-        validateAlias(AliasType.VERSION, alias);
-        alias = intern(AliasNormalizer.normalize(alias));
+    override fun version(alias: String, versionSpec: Action<in MutableVersionConstraint>): String {
+        var alias = alias
+        validateAlias(AliasType.VERSION, alias)
+        alias = intern(AliasNormalizer.normalize(alias))!!
         if (versionConstraints.containsKey(alias)) {
             // For versions, in order to allow overriding whatever is declared by
             // a platform, we want to silence overrides
-            return alias;
+            return alias
         }
-        MutableVersionConstraint versionBuilder = new DefaultMutableVersionConstraint("");
-        versionSpec.execute(versionBuilder);
-        ImmutableVersionConstraint version = versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder));
-        versionConstraints.put(alias, new VersionModel(version, currentContext));
-        return alias;
+        val versionBuilder: MutableVersionConstraint = DefaultMutableVersionConstraint("")
+        versionSpec.execute(versionBuilder)
+        val version = versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder))
+        versionConstraints.put(alias, VersionModel(version, currentContext))
+        return alias
     }
 
-    @Override
-    public String version(String alias, String version) {
-        StrictVersionParser.RichVersion richVersion = strictVersionParser.parse(version);
-        version(alias, vc -> {
-            configureRequiredRichVersion(vc, richVersion);
-        });
-        return alias;
+    override fun version(alias: String, version: String): String {
+        val richVersion = strictVersionParser.parse(version)
+        version(alias, Action { vc: MutableVersionConstraint ->
+            configureRequiredRichVersion(vc, richVersion)
+        })
+        return alias
     }
 
-    @Override
-    public LibraryAliasBuilder library(String alias, String group, String artifact) {
-        String normalizedAlias = normalizeAndValidateAlias(AliasType.LIBRARY, alias);
-        return objects.newInstance(DefaultLibraryAliasBuilder.class, DefaultVersionCatalogBuilder.this, normalizedAlias, group, artifact);
+    override fun library(alias: String, group: String, artifact: String): VersionCatalogBuilder.LibraryAliasBuilder {
+        val normalizedAlias = normalizeAndValidateAlias(AliasType.LIBRARY, alias)
+        return objects.newInstance<DefaultLibraryAliasBuilder>(DefaultLibraryAliasBuilder::class.java, this@DefaultVersionCatalogBuilder, normalizedAlias, group, artifact)
     }
 
-    @Override
-    public void library(String alias, String groupArtifactVersion) {
-        String normalizedAlias = normalizeAndValidateAlias(AliasType.LIBRARY, alias);
+    override fun library(alias: String, groupArtifactVersion: String) {
+        val normalizedAlias = normalizeAndValidateAlias(AliasType.LIBRARY, alias)
 
-        String[] coordinates = groupArtifactVersion.split(":");
-        if (coordinates.length == 3) {
-            objects.newInstance(DefaultLibraryAliasBuilder.class, DefaultVersionCatalogBuilder.this, normalizedAlias, coordinates[0], coordinates[1]).version(coordinates[2]);
+        val coordinates = groupArtifactVersion.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        if (coordinates.size == 3) {
+            objects.newInstance<DefaultLibraryAliasBuilder>(DefaultLibraryAliasBuilder::class.java, this@DefaultVersionCatalogBuilder, normalizedAlias, coordinates[0], coordinates[1])
+                .version(coordinates[2])
         } else {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + "on alias '" + alias + "' notation '" + groupArtifactVersion + "' is not a valid dependency notation", INVALID_DEPENDENCY_NOTATION)
-                    .details("The 'to(String)' method only supports 'group:artifact:version' coordinates")
-                    .solution("Make sure that the coordinates consist of 3 parts separated by colons, eg: my.group:artifact:1.2")
-                    .solution("Use the to(group, name) method instead")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(
+                    builder,
+                    this.problemInVersionCatalog + "on alias '" + alias + "' notation '" + groupArtifactVersion + "' is not a valid dependency notation",
+                    VersionCatalogProblemId.INVALID_DEPENDENCY_NOTATION
+                )
+                    .details("The 'to(String)' method only supports 'group:artifact:version' coordinates")!!
+                    .solution("Make sure that the coordinates consist of 3 parts separated by colons, eg: my.group:artifact:1.2")!!
+                    .solution("Use the to(group, name) method instead")
+            }))
         }
     }
 
-    @Override
-    public PluginAliasBuilder plugin(String alias, String id) {
-        String normalizedAlias = normalizeAndValidateAlias(AliasType.PLUGIN, alias);
-        return objects.newInstance(DefaultPluginAliasBuilder.class, DefaultVersionCatalogBuilder.this, normalizedAlias, id);
+    override fun plugin(alias: String, id: String): VersionCatalogBuilder.PluginAliasBuilder {
+        val normalizedAlias = normalizeAndValidateAlias(AliasType.PLUGIN, alias)
+        return objects.newInstance<DefaultPluginAliasBuilder>(DefaultPluginAliasBuilder::class.java, this@DefaultVersionCatalogBuilder, normalizedAlias, id)
     }
 
-    private String normalizeAndValidateAlias(AliasType type, String alias) {
-        validateAlias(type, alias);
-        String normalizedAlias = AliasNormalizer.normalize(alias);
-        validateNormalizedAlias(type, alias, normalizedAlias);
-        return normalizedAlias;
+    private fun normalizeAndValidateAlias(type: AliasType, alias: String): String {
+        validateAlias(type, alias)
+        val normalizedAlias: String = AliasNormalizer.normalize(alias)!!
+        validateNormalizedAlias(type, alias, normalizedAlias)
+        return normalizedAlias
     }
 
-    private void validateNormalizedAlias(AliasType type, String alias, String normalizedAlias) {
+    private fun validateNormalizedAlias(type: AliasType, alias: String, normalizedAlias: String) {
         if (!aliasesInProgress.add(normalizedAlias)) {
-            LOGGER.warn("Duplicate alias builder registered for {}", normalizedAlias);
+            LOGGER.warn("Duplicate alias builder registered for {}", normalizedAlias)
         }
 
         if (type == AliasType.LIBRARY) {
-            for (String prefix : FORBIDDEN_LIBRARY_ALIAS_PREFIX) {
-                if (normalizedAlias.equals(prefix) || normalizedAlias.startsWith(prefix + ".")) {
-                    throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                        configureVersionCatalogError(builder, getProblemInVersionCatalog() + "alias '" + alias + "' is a reserved alias", RESERVED_ALIAS_NAME)
-                            .details("Prefix for dependency shouldn't be equal to '" + prefix + "'")
-                            .solution("Use a different alias which prefix is not equal to " + quotedOxfordListOf(FORBIDDEN_LIBRARY_ALIAS_PREFIX, "or"))));
+            for (prefix in FORBIDDEN_LIBRARY_ALIAS_PREFIX) {
+                if (normalizedAlias == prefix || normalizedAlias.startsWith(prefix + ".")) {
+                    throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                        configureVersionCatalogError(builder, this.problemInVersionCatalog + "alias '" + alias + "' is a reserved alias", VersionCatalogProblemId.RESERVED_ALIAS_NAME)
+                            .details("Prefix for dependency shouldn't be equal to '" + prefix + "'")!!
+                            .solution("Use a different alias which prefix is not equal to " + quotedOxfordListOf(FORBIDDEN_LIBRARY_ALIAS_PREFIX, "or"))
+                    }))
                 }
             }
         }
         if (RESERVED_ALIAS_NAMES.contains(normalizedAlias)) {
-            throw throwAliasCatalogException(alias, RESERVED_ALIAS_NAMES);
+            throw throwAliasCatalogException(alias, RESERVED_ALIAS_NAMES)
         }
 
-        for (String name : normalizedAlias.split("\\.")) {
+        for (name in normalizedAlias.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
             if (RESERVED_JAVA_NAMES.contains(name)) {
-                throw throwAliasCatalogException(alias, RESERVED_JAVA_NAMES);
+                throw throwAliasCatalogException(alias, RESERVED_JAVA_NAMES)
             }
         }
     }
 
-    private RuntimeException throwAliasCatalogException(String alias, Collection<String> reservedNames) {
-        throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-            configureVersionCatalogError(builder, getProblemInVersionCatalog() + "alias '" + alias + "' is a reserved alias", RESERVED_ALIAS_NAME)
-                .details("Alias '" + alias + "' is a reserved name in Gradle which prevents generation of accessors.")
-                .solution("Use a different alias which doesn't contain " + getExcludedNames(reservedNames) + ".")));
+    private fun throwAliasCatalogException(alias: String, reservedNames: MutableCollection<String>): RuntimeException? {
+        throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+            configureVersionCatalogError(builder, this.problemInVersionCatalog + "alias '" + alias + "' is a reserved alias", VersionCatalogProblemId.RESERVED_ALIAS_NAME)
+                .details("Alias '" + alias + "' is a reserved name in Gradle which prevents generation of accessors.")!!
+                .solution("Use a different alias which doesn't contain " + getExcludedNames(reservedNames) + ".")
+        }))
     }
 
-    public static String getExcludedNames(Collection<String> reservedNames) {
-        String namesOrName = quotedOxfordListOf(reservedNames, "or");
-        if (reservedNames.size() == 1) {
-            return namesOrName;
-        }
-        return "any of " + namesOrName;
-    }
-
-    private void validateAlias(AliasType type, String value) {
+    private fun validateAlias(type: AliasType, value: String) {
         if (!DependenciesModelHelper.ALIAS_PATTERN.matcher(value).matches()) {
-            throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemInVersionCatalog() + "invalid " + type + " alias '" + value + "'", INVALID_ALIAS_NOTATION)
-                    .details(type + " aliases must match the following regular expression: " + ALIAS_REGEX)
-                    .solution("Make sure the alias matches the " + ALIAS_REGEX + " regular expression")));
+            throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                configureVersionCatalogError(builder, this.problemInVersionCatalog + "invalid " + type + " alias '" + value + "'", VersionCatalogProblemId.INVALID_ALIAS_NOTATION)
+                    .details(type.toString() + " aliases must match the following regular expression: " + org.gradle.api.internal.catalog.parser.DependenciesModelHelper.ALIAS_REGEX)!!
+                    .solution("Make sure the alias matches the " + DependenciesModelHelper.ALIAS_REGEX + " regular expression")
+            }))
         }
     }
 
-    @Override
-    public void bundle(String alias, List<String> aliases) {
-        validateAlias(AliasType.BUNDLE, alias);
-        ImmutableList<String> components = aliases.stream()
-            .map(AliasNormalizer::normalize)
-            .map(this::intern)
-            .collect(toImmutableList());
-        BundleModel previous = bundles.put(AliasNormalizer.normalize(intern(alias)), new BundleModel(components, currentContext));
+    override fun bundle(alias: String, aliases: MutableList<String>) {
+        validateAlias(AliasType.BUNDLE, alias)
+        val components = aliases.stream()
+            .map<String?> { obj: String? -> AliasNormalizer.normalize() }
+            .map<String?> { value: String? -> this.intern(value) }
+            .collect(ImmutableList.toImmutableList<String>())
+        val previous = bundles.put(AliasNormalizer.normalize(intern(alias))!!, BundleModel(components, currentContext))
         if (previous != null) {
-            LOGGER.warn("Duplicate entry for bundle '{}': {} is replaced with {}", alias, previous.getComponents(), components);
+            LOGGER.warn("Duplicate entry for bundle '{}': {} is replaced with {}", alias, previous.getComponents(), components)
         }
     }
 
-    @Nullable
-    private String intern(@Nullable String value) {
+    private fun intern(value: String?): String? {
         if (value == null) {
-            return null;
+            return null
         }
-        return strings.intern(value);
+        return strings.intern(value)
     }
 
-    public boolean containsLibraryAlias(String name) {
-        return libraries.containsKey(name);
+    fun containsLibraryAlias(name: String): Boolean {
+        return libraries.containsKey(name)
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    private class VersionReferencingDependencyModel implements Supplier<DependencyModel> {
-        private final String group;
-        private final String name;
-        private final String versionRef;
-        private final @Nullable String context;
+    private inner class VersionReferencingDependencyModel(private val group: String, private val name: String, private val versionRef: String) : Supplier<DependencyModel> {
+        private val context: String?
 
-        private VersionReferencingDependencyModel(String group, String name, String versionRef) {
-            this.group = group;
-            this.name = name;
-            this.versionRef = versionRef;
-            this.context = currentContext;
+        init {
+            this.context = currentContext
         }
 
-        @Override
-        public DependencyModel get() {
-            VersionModel model = versionConstraints.get(versionRef);
+        override fun get(): DependencyModel {
+            val model: VersionModel = versionConstraints.get(versionRef)!!
             if (model == null) {
-                throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder -> {
-                    ProblemSpec configurator = configureVersionCatalogError(builder, getProblemInVersionCatalog() + "version reference '" + versionRef + "' doesn't exist", UNDEFINED_VERSION_REFERENCE)
-                        .details("Dependency '" + group + ":" + name + "' references version '" + versionRef + "' which doesn't exist")
-                        .solution("Declare '" + versionRef + "' in the catalog");
+                throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                    val configurator: ProblemSpec? = org.gradle.api.internal.catalog.DefaultVersionCatalogBuilder.Companion.configureVersionCatalogError(
+                        builder,
+                        this.problemInVersionCatalog + "version reference '" + versionRef + "' doesn't exist",
+                        org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNDEFINED_VERSION_REFERENCE
+                    )
+                        .details("Dependency '" + group + ":" + name + "' references version '" + versionRef + "' which doesn't exist")!!
+                        .solution("Declare '" + versionRef + "' in the catalog")
                     if (!versionConstraints.isEmpty()) {
-                        configurator.solution("Use one of the following existing versions: " + quotedOxfordListOf(versionConstraints.keySet(), "or"));
+                        configurator!!.solution("Use one of the following existing versions: " + quotedOxfordListOf(versionConstraints.keys, "or"))
                     }
-                }));
+                }))
             } else {
-                return new DependencyModel(group, name, versionRef, model.getVersion(), context);
+                return DependencyModel(group, name, versionRef, model.getVersion(), context)
             }
         }
     }
 
-    private class VersionReferencingPluginModel implements Supplier<PluginModel> {
-        private final String id;
-        private final String versionRef;
-        private final @Nullable String context;
+    private inner class VersionReferencingPluginModel(private val id: String, private val versionRef: String) : Supplier<PluginModel> {
+        private val context: String?
 
-        private VersionReferencingPluginModel(String id, String versionRef) {
-            this.id = id;
-            this.versionRef = versionRef;
-            this.context = currentContext;
+        init {
+            this.context = currentContext
         }
 
-        @Override
-        public PluginModel get() {
-            VersionModel model = versionConstraints.get(versionRef);
+        override fun get(): PluginModel {
+            val model: VersionModel = versionConstraints.get(versionRef)!!
             if (model == null) {
-                throw throwVersionCatalogProblemException(getProblemsService(), getProblemsService().internalReporter.internalCreate(builder -> {
-                    ProblemSpec configurator = configureVersionCatalogError(builder, getProblemInVersionCatalog() + "version reference '" + versionRef + "' doesn't exist", UNDEFINED_VERSION_REFERENCE)
-                        .details("Plugin '" + id + "' references version '" + versionRef + "' which doesn't exist")
-                        .solution("Declare '" + versionRef + "' in the catalog");
+                throw throwVersionCatalogProblemException(this.problemsService, this.problemsService.internalReporter.internalCreate({ builder ->
+                    val configurator: ProblemSpec? = org.gradle.api.internal.catalog.DefaultVersionCatalogBuilder.Companion.configureVersionCatalogError(
+                        builder,
+                        this.problemInVersionCatalog + "version reference '" + versionRef + "' doesn't exist",
+                        org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.UNDEFINED_VERSION_REFERENCE
+                    )
+                        .details("Plugin '" + id + "' references version '" + versionRef + "' which doesn't exist")!!
+                        .solution("Declare '" + versionRef + "' in the catalog")
                     if (!versionConstraints.isEmpty()) {
-                        configurator.solution("Use one of the following existing versions: " + quotedOxfordListOf(versionConstraints.keySet(), "or"));
+                        configurator!!.solution("Use one of the following existing versions: " + quotedOxfordListOf(versionConstraints.keys, "or"))
                     }
-                }));
+                }))
             } else {
-                return new PluginModel(id, versionRef, model.getVersion(), context);
+                return PluginModel(id, versionRef, model.getVersion(), context)
             }
         }
     }
 
     // static public for injection!
-    public static class DefaultLibraryAliasBuilder implements LibraryAliasBuilder {
-        private final DefaultVersionCatalogBuilder owner;
-        private final String alias;
-        private final String group;
-        private final String name;
-
-        @Inject
-        public DefaultLibraryAliasBuilder(DefaultVersionCatalogBuilder owner, String alias, String group, String name) {
-            this.owner = owner;
-            this.alias = alias;
-            this.group = group;
-            this.name = name;
-        }
-
-        @Override
-        public void version(Action<? super MutableVersionConstraint> versionSpec) {
-            MutableVersionConstraint versionBuilder = new DefaultMutableVersionConstraint("");
-            versionSpec.execute(versionBuilder);
-            owner.aliasesInProgress.remove(alias);
-            ImmutableVersionConstraint version = owner.versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder));
-            DependencyModel model = new DependencyModel(owner.intern(group), owner.intern(name), null, version, owner.currentContext);
-            Supplier<DependencyModel> previous = owner.libraries.put(owner.intern(alias), () -> model);
+    class DefaultLibraryAliasBuilder @Inject constructor(private val owner: DefaultVersionCatalogBuilder, private val alias: String, private val group: String, private val name: String) :
+        VersionCatalogBuilder.LibraryAliasBuilder {
+        override fun version(versionSpec: Action<in MutableVersionConstraint>) {
+            val versionBuilder: MutableVersionConstraint = DefaultMutableVersionConstraint("")
+            versionSpec.execute(versionBuilder)
+            owner.aliasesInProgress.remove(alias)
+            val version = owner.versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder))
+            val model = DependencyModel(owner.intern(group)!!, owner.intern(name)!!, null, version, owner.currentContext)
+            val previous = owner.libraries.put(owner.intern(alias)!!, Supplier { model })
             if (previous != null) {
-                LOGGER.warn("Duplicate entry for alias '{}': {} is replaced with {}", alias, previous.get(), model);
+                LOGGER.warn("Duplicate entry for alias '{}': {} is replaced with {}", alias, previous.get(), model)
             }
         }
 
-        @Override
-        public void version(String version) {
-            StrictVersionParser.RichVersion richVersion = owner.strictVersionParser.parse(version);
-            version(vc -> {
-                configureRequiredRichVersion(vc, richVersion);
-            });
+        override fun version(version: String) {
+            val richVersion = owner.strictVersionParser.parse(version)
+            version(Action { vc: MutableVersionConstraint ->
+                configureRequiredRichVersion(vc, richVersion)
+            })
         }
 
-        @Override
-        public void versionRef(String versionRef) {
-            owner.aliasesInProgress.remove(alias);
-            owner.createAliasWithVersionRef(alias, group, name, versionRef);
+        override fun versionRef(versionRef: String) {
+            owner.aliasesInProgress.remove(alias)
+            owner.createAliasWithVersionRef(alias, group, name, versionRef)
         }
 
-        @Override
-        public void withoutVersion() {
-            version("");
-        }
-    }
-
-    private static void configureRequiredRichVersion(MutableVersionConstraint vc, StrictVersionParser.RichVersion richVersion) {
-        if (richVersion.require != null) {
-            vc.require(richVersion.require);
-        }
-        if (richVersion.prefer != null) {
-            vc.prefer(richVersion.prefer);
-        }
-        if (richVersion.strictly != null) {
-            vc.strictly(richVersion.strictly);
+        override fun withoutVersion() {
+            version("")
         }
     }
 
     // static public for injection!
-    public static class DefaultPluginAliasBuilder implements PluginAliasBuilder {
-        private final DefaultVersionCatalogBuilder owner;
-        private final String alias;
-        private final String id;
-
-        @Inject
-        public DefaultPluginAliasBuilder(DefaultVersionCatalogBuilder owner, String alias, String id) {
-            this.owner = owner;
-            this.alias = alias;
-            this.id = id;
-        }
-
-        @Override
-        public void version(Action<? super MutableVersionConstraint> versionSpec) {
-            MutableVersionConstraint versionBuilder = new DefaultMutableVersionConstraint("");
-            versionSpec.execute(versionBuilder);
-            owner.aliasesInProgress.remove(alias);
-            ImmutableVersionConstraint version = owner.versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder));
-            PluginModel model = new PluginModel(owner.intern(id), null, version, owner.currentContext);
-            Supplier<PluginModel> previous = owner.plugins.put(owner.intern(alias), () -> model);
+    class DefaultPluginAliasBuilder @Inject constructor(private val owner: DefaultVersionCatalogBuilder, private val alias: String, private val id: String) : VersionCatalogBuilder.PluginAliasBuilder {
+        override fun version(versionSpec: Action<in MutableVersionConstraint>) {
+            val versionBuilder: MutableVersionConstraint = DefaultMutableVersionConstraint("")
+            versionSpec.execute(versionBuilder)
+            owner.aliasesInProgress.remove(alias)
+            val version = owner.versionConstraintInterner.intern(DefaultImmutableVersionConstraint.of(versionBuilder))
+            val model = PluginModel(owner.intern(id)!!, null, version, owner.currentContext)
+            val previous = owner.plugins.put(owner.intern(alias)!!, Supplier { model })
             if (previous != null) {
-                LOGGER.warn("Duplicate entry for plugin '{}': {} is replaced with {}", alias, previous.get(), model);
+                LOGGER.warn("Duplicate entry for plugin '{}': {} is replaced with {}", alias, previous.get(), model)
             }
         }
 
-        @Override
-        public void version(String version) {
-            StrictVersionParser.RichVersion richVersion = owner.strictVersionParser.parse(version);
-            version(vc -> {
-                configureRequiredRichVersion(vc, richVersion);
-            });
+        override fun version(version: String) {
+            val richVersion = owner.strictVersionParser.parse(version)
+            version(Action { vc: MutableVersionConstraint ->
+                configureRequiredRichVersion(vc, richVersion)
+            })
         }
 
-        @Override
-        public void versionRef(String versionRef) {
-            owner.aliasesInProgress.remove(alias);
-            owner.createPluginAliasWithVersionRef(alias, id, versionRef);
+        override fun versionRef(versionRef: String) {
+            owner.aliasesInProgress.remove(alias)
+            owner.createPluginAliasWithVersionRef(alias, id, versionRef)
         }
     }
 
-    private void createAliasWithVersionRef(String alias, String group, String name, String versionRef) {
-        Supplier<DependencyModel> previous = libraries.put(intern(AliasNormalizer.normalize(alias)), new VersionReferencingDependencyModel(group, name, AliasNormalizer.normalize(versionRef)));
+    private fun createAliasWithVersionRef(alias: String, group: String, name: String, versionRef: String) {
+        val previous = libraries.put(intern(AliasNormalizer.normalize(alias))!!, DefaultVersionCatalogBuilder.VersionReferencingDependencyModel(group, name, AliasNormalizer.normalize(versionRef)))
         if (previous != null) {
-            LOGGER.warn("Duplicate entry for alias '{}': {} is replaced with {}", alias, previous.get(), model);
+            LOGGER.warn("Duplicate entry for alias '{}': {} is replaced with {}", alias, previous.get(), model)
         }
     }
 
-    private void createPluginAliasWithVersionRef(String alias, String id, String versionRef) {
-        Supplier<PluginModel> previous = plugins.put(intern(AliasNormalizer.normalize(alias)), new VersionReferencingPluginModel(id, AliasNormalizer.normalize(versionRef)));
+    private fun createPluginAliasWithVersionRef(alias: String, id: String, versionRef: String) {
+        val previous = plugins.put(intern(AliasNormalizer.normalize(alias))!!, DefaultVersionCatalogBuilder.VersionReferencingPluginModel(id, AliasNormalizer.normalize(versionRef)))
         if (previous != null) {
-            LOGGER.warn("Duplicate entry for plugin '{}': {} is replaced with {}", alias, previous.get(), model);
+            LOGGER.warn("Duplicate entry for plugin '{}': {} is replaced with {}", alias, previous.get(), model)
         }
     }
 
-    private static class Import {
-        private final Object notation;
+    private class Import(private val notation: Any)
+    companion object {
+        private val LOGGER: Logger = getLogger(DefaultVersionCatalogBuilder::class.java)!!
+        val FORBIDDEN_LIBRARY_ALIAS_PREFIX: MutableList<String> = ImmutableList.of<String>("bundles", "versions", "plugins")
+        val RESERVED_ALIAS_NAMES: MutableSet<String> = ImmutableSet.of<String>("extensions", "convention")
 
-        private Import(Object notation) {
-            this.notation = notation;
+        /**
+         * names that are forbidden in generated accessors because we can't override getClass()
+         */
+        val RESERVED_JAVA_NAMES: MutableSet<String> = ImmutableSet.of<String>("class")
+
+        private fun configureVersionCatalogError(builder: ProblemSpecInternal, message: String, catalogProblemId: VersionCatalogProblemId): ProblemSpecInternal {
+            return builder.id
+            (TextUtil.screamingSnakeToKebabCase(catalogProblemId.name), catalogProblemId.getDisplayName(), org.gradle.api.problems.internal.GradleCoreProblemGroup.versionCatalog())
+            .contextualLabel(message)
+                .documentedAt(userManual(DefaultCatalogProblemBuilder.VERSION_CATALOG_PROBLEMS, catalogProblemId.name.lowercase()))
+        }
+
+        private fun throwVersionCatalogProblemException(problemsService: ProblemsInternal, problem: ProblemInternal): RuntimeException? {
+            throw problemsService.reporter!!.throwing(InvalidUserDataException(), problem)
+        }
+
+        fun getExcludedNames(reservedNames: MutableCollection<String>): String {
+            val namesOrName: String = quotedOxfordListOf(reservedNames, "or")
+            if (reservedNames.size == 1) {
+                return namesOrName
+            }
+            return "any of " + namesOrName
+        }
+
+        private fun configureRequiredRichVersion(vc: MutableVersionConstraint, richVersion: StrictVersionParser.RichVersion) {
+            if (richVersion.require != null) {
+                vc.require(richVersion.require)
+            }
+            if (richVersion.prefer != null) {
+                vc.prefer(richVersion.prefer)
+            }
+            if (richVersion.strictly != null) {
+                vc.strictly(richVersion.strictly)
+            }
         }
     }
 }

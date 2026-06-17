@@ -13,95 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import org.bouncycastle.openpgp.PGPObjectFactory;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPUtil;
-import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.time.ExponentialBackoff;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceReadResult;
-import org.gradle.internal.resource.ExternalResourceRepository;
+import org.bouncycastle.openpgp.PGPObjectFactory
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPUtil
+import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.time.ExponentialBackoff
+import org.gradle.internal.time.ExponentialBackoff.Companion.of
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
+import java.net.URISyntaxException
+import java.util.ArrayDeque
+import java.util.Collections
+import java.util.Deque
+import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import static org.gradle.security.internal.SecuritySupport.toLongIdHexString;
-
-public class PublicKeyDownloadService implements PublicKeyService {
-    private final static Logger LOGGER = Logging.getLogger(PublicKeyDownloadService.class);
-
-    private final List<URI> keyServers;
-    private final ExternalResourceRepository client;
-
-    public PublicKeyDownloadService(List<URI> keyServers, ExternalResourceRepository client) {
-        this.keyServers = keyServers;
-        this.client = client;
+class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, private val client: ExternalResourceRepository) : PublicKeyService {
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
+        val servers: MutableList<URI?> = ArrayList<URI?>(keyServers)
+        Collections.shuffle(servers)
+        tryDownloadKeyFromServer(SecuritySupport.toLongIdHexString(keyId), servers, builder, Consumer { keyring: PGPPublicKeyRing? -> findMatchingKey(keyId, keyring!!, builder) })
     }
 
-    @Override
-    public void findByLongId(long keyId, PublicKeyResultBuilder builder) {
-        List<URI> servers = new ArrayList<>(keyServers);
-        Collections.shuffle(servers);
-        tryDownloadKeyFromServer(toLongIdHexString(keyId), servers, builder, keyring -> findMatchingKey(keyId, keyring, builder));
+    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder) {
+        val servers: MutableList<URI?> = ArrayList<URI?>(keyServers)
+        Collections.shuffle(servers)
+        tryDownloadKeyFromServer(Fingerprint.Companion.wrap(fingerprint).toString(), servers, builder, Consumer { keyring: PGPPublicKeyRing? -> findMatchingKey(fingerprint, keyring!!, builder) })
     }
 
-    @Override
-    public void findByFingerprint(byte[] fingerprint, PublicKeyResultBuilder builder) {
-        List<URI> servers = new ArrayList<>(keyServers);
-        Collections.shuffle(servers);
-        tryDownloadKeyFromServer(Fingerprint.wrap(fingerprint).toString(), servers, builder, keyring -> findMatchingKey(fingerprint, keyring, builder));
-    }
-
-    @SuppressWarnings("OptionalAssignedToNull")
-    private void tryDownloadKeyFromServer(String fingerprint, List<URI> baseUris, PublicKeyResultBuilder builder, Consumer<? super PGPPublicKeyRing> onKeyring) {
-        Deque<URI> serversLeft = new ArrayDeque<>(baseUris);
+    private fun tryDownloadKeyFromServer(fingerprint: String?, baseUris: MutableList<URI?>, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing?>) {
+        val serversLeft: Deque<URI?> = ArrayDeque<URI?>(baseUris)
         try {
-            ExponentialBackoff<ExponentialBackoff.Signal> backoff = ExponentialBackoff.of(5, TimeUnit.SECONDS, 50, TimeUnit.MILLISECONDS);
-            backoff.retryUntil(() -> {
-                URI baseUri = serversLeft.poll();
+            val backoff: ExponentialBackoff<ExponentialBackoff.Signal?> = of(5, TimeUnit.SECONDS, 50, TimeUnit.MILLISECONDS)
+            backoff.retryUntil<T?>(ExponentialBackoff.Query {
+                val baseUri = serversLeft.poll()
                 if (baseUri == null) {
                     // no more servers left despite retries
-                    return ExponentialBackoff.Result.successful(false);
+                    return@retryUntil ExponentialBackoff.Result.successful(false)
                 }
                 try {
-                    ExternalResourceName query = toQuery(baseUri, fingerprint);
-                    ExternalResourceReadResult<ExponentialBackoff.Result<Boolean>> response = client.resource(query).withContentIfPresent(inputStream -> {
-                        extractKeyRing(inputStream, builder, onKeyring);
-                        return ExponentialBackoff.Result.successful(true);
-                    });
+                    val query = toQuery(baseUri, fingerprint)
+                    val response = client.resource(query).withContentIfPresent<ExponentialBackoff.Result<Boolean?>?>(ExternalResource.ContentAction { inputStream: InputStream? ->
+                        extractKeyRing(inputStream!!, builder, onKeyring)
+                        ExponentialBackoff.Result.successful(true)
+                    })
                     if (response != null) {
-                        return response.getResult();
+                        return@retryUntil response.getResult()
                     } else {
-                        logKeyDownloadAttempt(fingerprint, baseUri);
+                        logKeyDownloadAttempt(fingerprint, baseUri)
                         // null means the resource is missing from this repo
                     }
-                } catch (Exception e) {
-                    logKeyDownloadAttempt(fingerprint, baseUri);
+                } catch (e: Exception) {
+                    logKeyDownloadAttempt(fingerprint, baseUri)
                     // add for retry
-                    serversLeft.add(baseUri);
+                    serversLeft.add(baseUri)
                 }
-                // retry
-                return ExponentialBackoff.Result.notSuccessful(false);
-            });
-        } catch (InterruptedException | IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+                ExponentialBackoff.Result.notSuccessful(false)
+            })
+        } catch (e: InterruptedException) {
+            throw throwAsUncheckedException(e)
+        } catch (e: IOException) {
+            throw throwAsUncheckedException(e)
         }
     }
 
@@ -109,11 +90,11 @@ public class PublicKeyDownloadService implements PublicKeyService {
      * A response was sent from the server. This is a keyring, we need to find
      * within the keyring the matching key.
      */
-    private void findMatchingKey(long id, PGPPublicKeyRing keyRing, PublicKeyResultBuilder builder) {
-        for (PGPPublicKey publicKey : keyRing) {
+    private fun findMatchingKey(id: Long, keyRing: PGPPublicKeyRing, builder: PublicKeyResultBuilder) {
+        for (publicKey in keyRing) {
             if (publicKey.getKeyID() == id) {
-                builder.publicKey(publicKey);
-                return;
+                builder.publicKey(publicKey)
+                return
             }
         }
     }
@@ -122,43 +103,48 @@ public class PublicKeyDownloadService implements PublicKeyService {
      * A response was sent from the server. This is a keyring, we need to find
      * within the keyring the matching key.
      */
-    private void findMatchingKey(byte[] fingerprint, PGPPublicKeyRing keyRing, PublicKeyResultBuilder builder) {
-        for (PGPPublicKey publicKey : keyRing) {
-            if (Arrays.equals(publicKey.getFingerprint(), fingerprint)) {
-                builder.publicKey(publicKey);
-                return;
+    private fun findMatchingKey(fingerprint: ByteArray?, keyRing: PGPPublicKeyRing, builder: PublicKeyResultBuilder) {
+        for (publicKey in keyRing) {
+            if (publicKey.getFingerprint().contentEquals(fingerprint)) {
+                builder.publicKey(publicKey)
+                return
             }
         }
     }
 
-    private void extractKeyRing(InputStream stream, PublicKeyResultBuilder builder, Consumer<? super PGPPublicKeyRing> onKeyring) throws IOException {
-        try (InputStream decoderStream = PGPUtil.getDecoderStream(stream)) {
-            KeyFingerPrintCalculator fingerprintCalculator = new BcKeyFingerprintCalculator();
-            PGPObjectFactory objectFactory = new PGPObjectFactory(decoderStream, fingerprintCalculator);
-            PGPPublicKeyRing keyring = (PGPPublicKeyRing) objectFactory.nextObject();
+    @Throws(IOException::class)
+    private fun extractKeyRing(stream: InputStream, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing?>) {
+        PGPUtil.getDecoderStream(stream).use { decoderStream ->
+            val fingerprintCalculator: KeyFingerPrintCalculator = BcKeyFingerprintCalculator()
+            val objectFactory = PGPObjectFactory(decoderStream, fingerprintCalculator)
+            val keyring = objectFactory.nextObject() as PGPPublicKeyRing
 
-            PGPPublicKeyRing strippedKeyRing = KeyringStripper.strip(keyring, fingerprintCalculator);
+            val strippedKeyRing = KeyringStripper.strip(keyring, fingerprintCalculator)
 
-            onKeyring.accept(strippedKeyRing);
-            builder.keyRing(strippedKeyRing);
+            onKeyring.accept(strippedKeyRing)
+            builder.keyRing(strippedKeyRing)
         }
     }
 
-    private static void logKeyDownloadAttempt(String fingerprint, URI baseUri) {
-        LOGGER.debug("Cannot download public key " + fingerprint + " from " + baseUri.getHost());
-    }
-
-    private ExternalResourceName toQuery(URI baseUri, String fingerprint) throws URISyntaxException {
-        String scheme = baseUri.getScheme();
-        int port = baseUri.getPort();
-        if ("hkp".equals(scheme)) {
-            scheme = "http";
-            port = 11371;
+    @Throws(URISyntaxException::class)
+    private fun toQuery(baseUri: URI, fingerprint: String?): ExternalResourceName {
+        var scheme = baseUri.getScheme()
+        var port = baseUri.getPort()
+        if ("hkp" == scheme) {
+            scheme = "http"
+            port = 11371
         }
-        return new ExternalResourceName(new URI(scheme, null, baseUri.getHost(), port, "/pks/lookup", "op=get&options=mr&search=0x" + fingerprint, null));
+        return ExternalResourceName(URI(scheme, null, baseUri.getHost(), port, "/pks/lookup", "op=get&options=mr&search=0x" + fingerprint, null))
     }
 
-    @Override
-    public void close() {
+    override fun close() {
+    }
+
+    companion object {
+        private val LOGGER = getLogger(PublicKeyDownloadService::class.java)
+
+        private fun logKeyDownloadAttempt(fingerprint: String?, baseUri: URI) {
+            LOGGER!!.debug("Cannot download public key " + fingerprint + " from " + baseUri.getHost())
+        }
     }
 }

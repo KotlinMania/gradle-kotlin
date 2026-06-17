@@ -13,34 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.interfaces
 
-package org.gradle.internal.component.resolution.failure.interfaces;
-
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.Set;
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
- * Represents a specific type of {@link VariantSelectionFailure} where the failure occurred
+ * Represents a specific type of [VariantSelectionFailure] where the failure occurred
  * due to a failure to select a variant of a component based on the requested attributes.
  */
-public interface VariantSelectionByAttributesFailure extends VariantSelectionFailure {
+interface VariantSelectionByAttributesFailure : VariantSelectionFailure {
     /**
      * Gets the attributes that were used to attempt to select a variant.
-     * <p>
+     *
+     *
      * This includes the original request attributes from the root variant and any additional attributes added
-     * to the specific dependency used to select the {@link #getTargetComponent()} represented by this edge in the graph.
+     * to the specific dependency used to select the [.getTargetComponent] represented by this edge in the graph.
      *
      * @return the requested attributes that were used to attempt to select a variant
      */
-    ImmutableAttributes getRequestedAttributes();
+    fun getRequestedAttributes(): ImmutableAttributes?
 
     /**
-     * Gets the capabilities requested on the dependency that selected the {@link #getTargetComponent()}
+     * Gets the capabilities requested on the dependency that selected the [.getTargetComponent]
      * represented by this edge in the graph.
      *
      * @return the capabilities selectors used to select a variant
      */
-    Set<CapabilitySelector> getCapabilitySelectors();
+    fun getCapabilitySelectors(): MutableSet<CapabilitySelector>?
 }

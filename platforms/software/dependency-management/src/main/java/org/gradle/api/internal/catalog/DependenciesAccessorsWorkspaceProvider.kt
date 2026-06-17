@@ -13,29 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.internal.cache.CacheConfigurationsInternal;
-import org.gradle.cache.FineGrainedCacheCleanupStrategyFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider;
-import org.gradle.internal.execution.workspace.impl.CacheBasedImmutableWorkspaceProvider;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.cache.CacheConfigurationsInternal
+import org.gradle.cache.FineGrainedCacheCleanupStrategyFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider
+import org.gradle.internal.execution.workspace.impl.CacheBasedImmutableWorkspaceProvider
+import org.gradle.internal.file.FileAccessTimeJournal
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.Closeable
 
-import java.io.Closeable;
+@ServiceScope(Scope.BuildSession::class)
+class DependenciesAccessorsWorkspaceProvider(
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    fileAccessTimeJournal: FileAccessTimeJournal,
+    cacheConfigurations: CacheConfigurationsInternal,
+    cacheCleanupStrategyFactory: FineGrainedCacheCleanupStrategyFactory
+) : ImmutableWorkspaceProvider, Closeable {
+    private val delegate: CacheBasedImmutableWorkspaceProvider
 
-@ServiceScope(Scope.BuildSession.class)
-public class DependenciesAccessorsWorkspaceProvider implements ImmutableWorkspaceProvider, Closeable {
-    private final CacheBasedImmutableWorkspaceProvider delegate;
-
-    public DependenciesAccessorsWorkspaceProvider(
-        GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-        FileAccessTimeJournal fileAccessTimeJournal,
-        CacheConfigurationsInternal cacheConfigurations,
-        FineGrainedCacheCleanupStrategyFactory cacheCleanupStrategyFactory
-    ) {
+    init {
         this.delegate = CacheBasedImmutableWorkspaceProvider.createWorkspaceProvider(
             cacheBuilderFactory
                 .createFineGrainedCacheBuilder("dependencies-accessors")
@@ -43,16 +42,14 @@ public class DependenciesAccessorsWorkspaceProvider implements ImmutableWorkspac
             fileAccessTimeJournal,
             cacheConfigurations,
             cacheCleanupStrategyFactory
-        );
+        )
     }
 
-    @Override
-    public ImmutableWorkspace getWorkspace(String path) {
-        return delegate.getWorkspace(path);
+    override fun getWorkspace(path: String): ImmutableWorkspaceProvider.ImmutableWorkspace {
+        return delegate.getWorkspace(path)
     }
 
-    @Override
-    public void close() {
-        delegate.close();
+    override fun close() {
+        delegate.close()
     }
 }

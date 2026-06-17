@@ -13,84 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.VariantIdentifier;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
 
 /**
- * Default implementation of {@link LocalVariantGraphResolveMetadata} used to represent a single local variant.
+ * Default implementation of [LocalVariantGraphResolveMetadata] used to represent a single local variant.
  */
-public final class DefaultLocalVariantGraphResolveMetadata implements LocalVariantGraphResolveMetadata {
-
-    private final VariantIdentifier id;
-    private final String name;
-    private final boolean transitive;
-    private final ImmutableAttributes attributes;
-    private final boolean deprecatedForConsumption;
-    private final ImmutableCapabilities capabilities;
-
-    public DefaultLocalVariantGraphResolveMetadata(
-        VariantIdentifier id,
-        String name,
-        boolean transitive,
-        ImmutableAttributes attributes,
-        ImmutableCapabilities capabilities,
-        boolean deprecatedForConsumption
-    ) {
-        this.id = id;
-        this.name = name;
-        this.transitive = transitive;
-        this.attributes = attributes;
-        this.capabilities = capabilities;
-        this.deprecatedForConsumption = deprecatedForConsumption;
+class DefaultLocalVariantGraphResolveMetadata(
+    private val id: VariantIdentifier,
+    private val name: String,
+    private val transitive: Boolean,
+    private val attributes: ImmutableAttributes,
+    private val capabilities: ImmutableCapabilities,
+    private val deprecatedForConsumption: Boolean
+) : LocalVariantGraphResolveMetadata {
+    override fun getId(): VariantIdentifier {
+        return id
     }
 
-    @Override
-    public VariantIdentifier getId() {
-        return id;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getConfigurationName(): String {
+        return name
     }
 
-    @Override
-    public String getConfigurationName() {
-        return name;
+    override fun isTransitive(): Boolean {
+        return transitive
     }
 
-    @Override
-    public boolean isTransitive() {
-        return transitive;
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    override fun isDeprecated(): Boolean {
+        return deprecatedForConsumption
     }
 
-    @Override
-    public boolean isDeprecated() {
-        return deprecatedForConsumption;
+    override fun getCapabilities(): ImmutableCapabilities {
+        return capabilities
     }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return capabilities;
+    override fun isExternalVariant(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isExternalVariant() {
-        return false;
+    override fun toString(): String {
+        return "variant " + name
     }
-
-    @Override
-    public String toString() {
-        return "variant " + name;
-    }
-
 }

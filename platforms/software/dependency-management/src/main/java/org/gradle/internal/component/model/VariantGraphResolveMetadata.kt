@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.ImmutableCapabilities
 
 /**
  * Immutable metadata for a variant of a component, intended for use during graph resolution.
- * <p>
+ *
+ *
  * This metadata does not provide any information about the available dependencies or artifacts
  * of this variant, as they may be expensive to resolve. Expensive information about this variant
- * can be accessed via the methods of {@link VariantGraphResolveState}.
+ * can be accessed via the methods of [VariantGraphResolveState].
  */
-public interface VariantGraphResolveMetadata {
-
+interface VariantGraphResolveMetadata {
     /**
      * Returns the name for this variant, which is unique for the variants of its owning component.
      *
@@ -35,34 +34,34 @@ public interface VariantGraphResolveMetadata {
      * should instead identify nodes based on their integer node ID. This method should only be used for
      * diagnostics/reporting and for implementing existing public API methods that require this field.
      *
-     * Prefer {@link #getDisplayName()}.
+     * Prefer [.getDisplayName].
      */
-    String getName();
+    fun getName(): String
 
     /**
      * Get a name for this variant to be used when displaying it.
      */
-    default String getDisplayName() {
-        return getName();
+    fun getDisplayName(): String {
+        return getName()
     }
 
     /**
      * Get the ID of this variant.
      */
-    VariantIdentifier getId();
+    fun getId(): VariantIdentifier?
 
-    ImmutableAttributes getAttributes();
+    fun getAttributes(): ImmutableAttributes?
 
-    ImmutableCapabilities getCapabilities();
+    fun getCapabilities(): ImmutableCapabilities?
 
-    boolean isTransitive();
+    fun isTransitive(): Boolean
 
-    boolean isExternalVariant();
+    fun isExternalVariant(): Boolean
 
     /**
      * Returns true if this variant is deprecated and consuming it in a dependency graph should emit a warning. False otherwise.
      */
-    default boolean isDeprecated() {
-        return false;
+    fun isDeprecated(): Boolean {
+        return false
     }
 }

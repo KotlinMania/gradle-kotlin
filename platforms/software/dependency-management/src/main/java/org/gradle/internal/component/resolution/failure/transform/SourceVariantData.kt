@@ -13,56 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.transform
 
-package org.gradle.internal.component.resolution.failure.transform;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.Objects;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import java.util.Objects
 
 /**
- * A lightweight replacement for {@link org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant ResolvedVariant}
+ * A lightweight replacement for [ResolvedVariant][org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant]
  * that contains the data in the root variant that is used to begin an artifact transformation chain.
- * <p>
+ *
+ *
  * Immutable data class.  Meant to be easily serialized as part of build operation recording and tracing.
- * <p>
- * This type is also used as a part of a {@link TransformationChainData.TransformationChainFingerprint}, and must
- * properly implement {@link #equals(Object)} and {@link #hashCode()}.
+ *
+ *
+ * This type is also used as a part of a [TransformationChainData.TransformationChainFingerprint], and must
+ * properly implement [.equals] and [.hashCode].
  */
-public final class SourceVariantData {
-    private final String variantDisplayName;
-    private final ImmutableAttributes attributes;
-
-    public SourceVariantData(String variantDisplayName, ImmutableAttributes attributes) {
-        this.variantDisplayName = variantDisplayName;
-        this.attributes = attributes;
+class SourceVariantData(private val variantDisplayName: String, private val attributes: ImmutableAttributes) {
+    fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    fun getVariantDisplayName(): String {
+        return variantDisplayName
     }
 
-    public String getVariantDisplayName() {
-        return variantDisplayName;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        SourceVariantData that = (SourceVariantData) o;
-        return Objects.equals(variantDisplayName, that.variantDisplayName) && Objects.equals(attributes, that.attributes);
+        val that = o as SourceVariantData
+        return variantDisplayName == that.variantDisplayName && attributes == that.attributes
     }
 
-    @Override
-    public int hashCode() {
-        int result = Objects.hashCode(variantDisplayName);
-        result = 31 * result + Objects.hashCode(attributes);
-        return result;
+    override fun hashCode(): Int {
+        var result = Objects.hashCode(variantDisplayName)
+        result = 31 * result + Objects.hashCode(attributes)
+        return result
     }
 }

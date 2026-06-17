@@ -13,17 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import org.gradle.internal.component.external.model.ExternalModuleVariantGraphResolveMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
 
-import org.gradle.internal.component.external.model.ExternalModuleVariantGraphResolveMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-
-import java.util.List;
-
-public interface ModuleConfigurationMetadata extends ConfigurationMetadata, ConfigurationGraphResolveMetadata, ExternalModuleVariantGraphResolveMetadata, VariantResolveMetadata {
-
-    @Override
-    List<? extends ModuleDependencyMetadata> getDependencies();
-
+interface ModuleConfigurationMetadata : ConfigurationMetadata, ConfigurationGraphResolveMetadata, ExternalModuleVariantGraphResolveMetadata, VariantResolveMetadata {
+    override fun getDependencies(): MutableList<out ModuleDependencyMetadata>?
 }

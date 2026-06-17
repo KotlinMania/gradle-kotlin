@@ -339,9 +339,9 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
         }
 
         ResolverResults resolvedState = currentState.get();
-        if (resolvedState.getVisitedGraph().hasAnyFailure()) {
+        if (resolvedState.visitedGraph.hasAnyFailure()) {
             return State.RESOLVED_WITH_FAILURES;
-        } else if (resolvedState.isFullyResolved()) {
+        } else if (resolvedState.isFullyResolved) {
             return State.RESOLVED;
         } else {
             return State.UNRESOLVED;
@@ -560,7 +560,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
     @Override
     public ResolvedConfiguration getResolvedConfiguration() {
         warnOrFailOnInvalidUsage("getResolvedConfiguration()", ProperMethodUsage.RESOLVABLE);
-        return resolutionAccess.getResults().getValue().getLegacyResults().getResolvedConfiguration();
+        return resolutionAccess.getResults().getValue().legacyResults.resolvedConfiguration;
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -692,7 +692,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
                 // because:
                 // 1. the `failed` method will have been called with the user facing error
                 // 2. such an error may still lead to a valid dependency graph
-                VisitedGraphResults visitedGraph = results.getVisitedGraph();
+                VisitedGraphResults visitedGraph = results.visitedGraph;
                 context.setResult(new ResolveConfigurationResolutionBuildOperationResult(
                     visitedGraph.getResolvedGraphResultSource(),
                     visitedGraph.getRequestedAttributes(),
@@ -747,7 +747,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
 
         assertThatConsistentResolutionIsPropertyConfigured();
         ResolverResults consistentResolutionResults = consistentResolutionSource.getResolutionAccess().getResults().getValue();
-        GraphStructure structure = consistentResolutionResults.getVisitedGraph().getGraphStructureSource().get();
+        GraphStructure structure = consistentResolutionResults.visitedGraph.getGraphStructureSource().get();
 
         GraphStructure.Components components = structure.components();
         int numComponents = components.count();

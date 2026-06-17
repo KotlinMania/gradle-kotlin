@@ -69,11 +69,11 @@ import org.gradle.work.NormalizeLineEndings;
 class DependencyManagementGlobalScopeServices implements ServiceRegistrationProvider {
     void configure(ServiceRegistration registration) {
         registration.add(VersionParser.class);
-        registration.add(IvyContextManager.class, DefaultIvyContextManager.class);
-        registration.add(ImmutableModuleIdentifierFactory.class, DefaultImmutableModuleIdentifierFactory.class);
-        registration.add(ExcludeRuleConverter.class, DefaultExcludeRuleConverter.class);
-        registration.add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactAnnotationHandler.class);
-        registration.add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactDependenciesAnnotationHandler.class);
+        registration.<DefaultIvyContextManager>add(IvyContextManager.class, DefaultIvyContextManager.class);
+        registration.<DefaultImmutableModuleIdentifierFactory>add(ImmutableModuleIdentifierFactory.class, DefaultImmutableModuleIdentifierFactory.class);
+        registration.<DefaultExcludeRuleConverter>add(ExcludeRuleConverter.class, DefaultExcludeRuleConverter.class);
+        registration.<InputArtifactAnnotationHandler>add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactAnnotationHandler.class);
+        registration.<InputArtifactDependenciesAnnotationHandler>add(PropertyAnnotationHandler.class, InjectAnnotationHandler.class, InputArtifactDependenciesAnnotationHandler.class);
     }
 
     @Provides
@@ -91,7 +91,7 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
 
     @Provides
     ProducerGuard<ExternalResourceName> createProducerAccess() {
-        return ProducerGuard.adaptive();
+        return ProducerGuard.<ExternalResourceName>adaptive();
     }
 
     @Provides
@@ -108,7 +108,7 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
     TransformParameterScheme createTransformParameterScheme(InspectionSchemeFactory inspectionSchemeFactory, InstantiatorFactory instantiatorFactory) {
         InstantiationScheme instantiationScheme = instantiatorFactory.decorateScheme();
         InspectionScheme inspectionScheme = inspectionSchemeFactory.inspectionScheme(
-            ImmutableSet.of(
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
                 Console.class,
                 Input.class,
                 InputDirectory.class,
@@ -119,7 +119,7 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
                 ReplacedBy.class,
                 ServiceReference.class
             ),
-            ImmutableSet.of(
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
                 Classpath.class,
                 CompileClasspath.class,
                 Incremental.class,
@@ -128,7 +128,7 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
                 IgnoreEmptyDirectories.class,
                 NormalizeLineEndings.class
             ),
-            ImmutableSet.of(),
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(),
             instantiationScheme
         );
         return new TransformParameterScheme(instantiationScheme, inspectionScheme);
@@ -136,16 +136,16 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
 
     @Provides
     TransformActionScheme createTransformActionScheme(InspectionSchemeFactory inspectionSchemeFactory, InstantiatorFactory instantiatorFactory) {
-        InstantiationScheme instantiationScheme = instantiatorFactory.injectScheme(ImmutableSet.of(
+        InstantiationScheme instantiationScheme = instantiatorFactory.injectScheme(ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
             InputArtifact.class,
             InputArtifactDependencies.class
         ));
         InspectionScheme inspectionScheme = inspectionSchemeFactory.inspectionScheme(
-            ImmutableSet.of(
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
                 InputArtifact.class,
                 InputArtifactDependencies.class
             ),
-            ImmutableSet.of(
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(
                 Classpath.class,
                 CompileClasspath.class,
                 Incremental.class,
@@ -154,7 +154,7 @@ class DependencyManagementGlobalScopeServices implements ServiceRegistrationProv
                 IgnoreEmptyDirectories.class,
                 NormalizeLineEndings.class
             ),
-            ImmutableSet.of(),
+            ImmutableSet.<Class<? extends java.lang.annotation.Annotation>>of(),
             instantiationScheme
         );
         return new TransformActionScheme(instantiationScheme, inspectionScheme);

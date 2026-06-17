@@ -13,63 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport
 
-package org.gradle.internal.resource.transport;
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.cache.internal.ProducerGuard
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.cached.CachedExternalResourceIndex
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.gradle.internal.resource.transfer.DefaultCacheAwareExternalResourceAccessor
+import org.gradle.internal.resource.transfer.DefaultExternalResourceRepository
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
+import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceAccessor
+import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceLister
+import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceUploader
+import org.gradle.util.internal.BuildCommencedTimeProvider
 
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.resource.transfer.DefaultExternalResourceRepository;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.cached.CachedExternalResourceIndex;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.DefaultCacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceLister;
-import org.gradle.internal.resource.transfer.ProgressLoggingExternalResourceUploader;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
+class ResourceConnectorRepositoryTransport(
+    name: String?,
+    temporaryFileProvider: TemporaryFileProvider,
+    cachedExternalResourceIndex: CachedExternalResourceIndex<String?>,
+    timeProvider: BuildCommencedTimeProvider,
+    cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator,
+    connector: ExternalResourceConnector,
+    buildOperationRunner: BuildOperationRunner,
+    cachePolicy: ExternalResourceCachePolicy,
+    producerGuard: ProducerGuard<ExternalResourceName?>,
+    fileResourceRepository: FileResourceRepository,
+    checksumService: ChecksumService
+) : AbstractRepositoryTransport(name) {
+    private val repository: ExternalResourceRepository
+    private val resourceAccessor: DefaultCacheAwareExternalResourceAccessor
 
-public class ResourceConnectorRepositoryTransport extends AbstractRepositoryTransport {
-    private final ExternalResourceRepository repository;
-    private final DefaultCacheAwareExternalResourceAccessor resourceAccessor;
-
-    public ResourceConnectorRepositoryTransport(String name,
-                                                TemporaryFileProvider temporaryFileProvider,
-                                                CachedExternalResourceIndex<String> cachedExternalResourceIndex,
-                                                BuildCommencedTimeProvider timeProvider,
-                                                ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator,
-                                                ExternalResourceConnector connector,
-                                                BuildOperationRunner buildOperationRunner,
-                                                ExternalResourceCachePolicy cachePolicy,
-                                                ProducerGuard<ExternalResourceName> producerGuard,
-                                                FileResourceRepository fileResourceRepository,
-                                                ChecksumService checksumService) {
-        super(name);
-        ProgressLoggingExternalResourceUploader loggingUploader = new ProgressLoggingExternalResourceUploader(connector, buildOperationRunner);
-        ProgressLoggingExternalResourceAccessor loggingAccessor = new ProgressLoggingExternalResourceAccessor(connector, buildOperationRunner);
-        ProgressLoggingExternalResourceLister loggingLister = new ProgressLoggingExternalResourceLister(connector, buildOperationRunner);
-        repository = new DefaultExternalResourceRepository(name, loggingAccessor, loggingUploader, loggingLister);
-        resourceAccessor = new DefaultCacheAwareExternalResourceAccessor(repository, cachedExternalResourceIndex, timeProvider, temporaryFileProvider, cacheAccessCoordinator, cachePolicy, producerGuard, fileResourceRepository, checksumService);
+    init {
+        val loggingUploader = ProgressLoggingExternalResourceUploader(connector, buildOperationRunner)
+        val loggingAccessor = ProgressLoggingExternalResourceAccessor(connector, buildOperationRunner)
+        val loggingLister = ProgressLoggingExternalResourceLister(connector, buildOperationRunner)
+        repository = DefaultExternalResourceRepository(name, loggingAccessor, loggingUploader, loggingLister)
+        resourceAccessor = DefaultCacheAwareExternalResourceAccessor(
+            repository,
+            cachedExternalResourceIndex,
+            timeProvider,
+            temporaryFileProvider,
+            cacheAccessCoordinator,
+            cachePolicy,
+            producerGuard,
+            fileResourceRepository,
+            checksumService
+        )
     }
 
-    @Override
-    public ExternalResourceRepository getRepository() {
-        return repository;
+    override fun getRepository(): ExternalResourceRepository {
+        return repository
     }
 
-    @Override
-    public CacheAwareExternalResourceAccessor getResourceAccessor() {
-        return resourceAccessor;
+    override fun getResourceAccessor(): CacheAwareExternalResourceAccessor {
+        return resourceAccessor
     }
 
-    @Override
-    public boolean isLocal() {
-        return false;
+    override fun isLocal(): Boolean {
+        return false
     }
 }

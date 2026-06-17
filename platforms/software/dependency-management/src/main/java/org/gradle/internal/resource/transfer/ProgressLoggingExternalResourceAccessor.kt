@@ -13,174 +13,117 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.logging.progress.ProgressLoggingInputStream
+import org.gradle.internal.logging.progress.ResourceOperation
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.CallableBuildOperation
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceReadBuildOperationType
+import org.gradle.internal.resource.ExternalResourceReadMetadataBuildOperationType
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.InputStream
+import java.net.URI
+import java.util.concurrent.atomic.AtomicReference
 
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.logging.progress.ProgressLoggingInputStream;
-import org.gradle.internal.logging.progress.ResourceOperation;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.CallableBuildOperation;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceReadBuildOperationType;
-import org.gradle.internal.resource.ExternalResourceReadMetadataBuildOperationType;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.concurrent.atomic.AtomicReference;
-
-public class ProgressLoggingExternalResourceAccessor extends AbstractProgressLoggingHandler implements ExternalResourceAccessor {
-    private final ExternalResourceAccessor delegate;
-    private final BuildOperationRunner buildOperationRunner;
-
-    public ProgressLoggingExternalResourceAccessor(ExternalResourceAccessor delegate, BuildOperationRunner buildOperationRunner) {
-        this.delegate = delegate;
-        this.buildOperationRunner = buildOperationRunner;
+class ProgressLoggingExternalResourceAccessor(private val delegate: ExternalResourceAccessor, private val buildOperationRunner: BuildOperationRunner) : AbstractProgressLoggingHandler(),
+    ExternalResourceAccessor {
+    @Throws(ResourceException::class)
+    override fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>): T? {
+        return buildOperationRunner.call<T?>(ProgressLoggingExternalResourceAccessor.DownloadOperation<T?>(location, revalidate, action))
     }
 
-    @Nullable
-    @Override
-    public <T> T withContent(ExternalResourceName location, boolean revalidate, ExternalResource.ContentAndMetadataAction<T> action) throws ResourceException {
-        return buildOperationRunner.call(new DownloadOperation<>(location, revalidate, action));
+    override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
+        return buildOperationRunner.call<ExternalResourceMetaData>(ProgressLoggingExternalResourceAccessor.MetadataOperation(location, revalidate))
     }
 
-    @Override
-    @Nullable
-    public ExternalResourceMetaData getMetaData(ExternalResourceName location, boolean revalidate) {
-        return buildOperationRunner.call(new MetadataOperation(location, revalidate));
-    }
-
-    private BuildOperationDescriptor.Builder createBuildOperationDetails(ExternalResourceName resourceName) {
-        ExternalResourceReadBuildOperationType.Details operationDetails = new ReadOperationDetails(resourceName.getUri());
+    private fun createBuildOperationDetails(resourceName: ExternalResourceName): BuildOperationDescriptor.Builder {
+        val operationDetails: ExternalResourceReadBuildOperationType.Details = ReadOperationDetails(resourceName.getUri())
         return BuildOperationDescriptor
             .displayName("Download " + resourceName.getUri())
             .progressDisplayName(resourceName.getShortDisplayName())
-            .details(operationDetails);
+            .details(operationDetails)
     }
 
-    private static class MetadataOperationDetails extends LocationDetails implements ExternalResourceReadMetadataBuildOperationType.Details {
-        private MetadataOperationDetails(URI location) {
-            super(location);
-        }
-
-        @Override
-        public String toString() {
-            return "ExternalResourceReadMetadataBuildOperationType.Details{location=" + getLocation() + ", " + '}';
+    private class MetadataOperationDetails(location: URI) : LocationDetails(location), ExternalResourceReadMetadataBuildOperationType.Details {
+        override fun toString(): String {
+            return "ExternalResourceReadMetadataBuildOperationType.Details{location=" + getLocation() + ", " + '}'
         }
     }
 
-    private final static ExternalResourceReadMetadataBuildOperationType.Result METADATA_RESULT = new ExternalResourceReadMetadataBuildOperationType.Result() {
-    };
-
-    private static class ReadOperationDetails extends LocationDetails implements ExternalResourceReadBuildOperationType.Details {
-        private ReadOperationDetails(URI location) {
-            super(location);
-        }
-
-        @Override
-        public String toString() {
-            return "ExternalResourceReadBuildOperationType.Details{location=" + getLocation() + ", " + '}';
+    private class ReadOperationDetails(location: URI) : LocationDetails(location), ExternalResourceReadBuildOperationType.Details {
+        override fun toString(): String {
+            return "ExternalResourceReadBuildOperationType.Details{location=" + getLocation() + ", " + '}'
         }
     }
 
-    private static class ReadOperationResult implements ExternalResourceReadBuildOperationType.Result {
-
-        private final long bytesRead;
-        private final boolean missing;
-
-        private ReadOperationResult(long bytesRead, boolean missing) {
-            this.bytesRead = bytesRead;
-            this.missing = missing;
-        }
-
-        @Override
-        public long getBytesRead() {
-            return bytesRead;
-        }
-
-        @Override
-        public boolean isMissing() {
-            return missing;
-        }
-
-        @Override
-        public String toString() {
+    private class ReadOperationResult(val bytesRead: Long, val isMissing: Boolean) : ExternalResourceReadBuildOperationType.Result {
+        override fun toString(): String {
             return "ExternalResourceReadBuildOperationType.Result{" +
-                "bytesRead=" + bytesRead +
-                ", missing=" + missing +
-                '}';
+                    "bytesRead=" + bytesRead +
+                    ", missing=" + this.isMissing +
+                    '}'
         }
     }
 
-    private class DownloadOperation<T> implements CallableBuildOperation<T> {
-        private final ExternalResourceName location;
-        private final boolean revalidate;
-        private final ExternalResource.ContentAndMetadataAction<T> action;
-
-        public DownloadOperation(ExternalResourceName location, boolean revalidate, ExternalResource.ContentAndMetadataAction<T> action) {
-            this.location = location;
-            this.revalidate = revalidate;
-            this.action = action;
-        }
-
-        @Override
-        public T call(BuildOperationContext context) {
-            ResourceOperation downloadOperation = createResourceOperation(context, ResourceOperation.Type.download);
-            AtomicReference<ExternalResourceMetaData> metadata = new AtomicReference<>();
+    private inner class DownloadOperation<T>(private val location: ExternalResourceName, private val revalidate: Boolean, private val action: ExternalResource.ContentAndMetadataAction<T?>) :
+        CallableBuildOperation<T?> {
+        override fun call(context: BuildOperationContext): T? {
+            val downloadOperation = createResourceOperation(context, ResourceOperation.Type.download)
+            val metadata = AtomicReference<ExternalResourceMetaData>()
             try {
-                return delegate.withContent(location, revalidate, (inputStream, metaData) -> {
-                    downloadOperation.setContentLength(metaData.getContentLength());
-                    metadata.set(metaData);
-                    if(metaData.wasMissing()) {
-                        context.failed(ResourceExceptions.getMissing(metaData.getLocation()));
-                        return null;
+                return delegate.withContent<T?>(location, revalidate, ExternalResource.ContentAndMetadataAction { inputStream: InputStream?, metaData: ExternalResourceMetaData? ->
+                    downloadOperation.setContentLength(metaData!!.getContentLength())
+                    metadata.set(metaData)
+                    if (metaData.wasMissing()) {
+                        context.failed(ResourceExceptions.getMissing(metaData.getLocation()))
+                        return@withContent null
                     }
-                    ProgressLoggingInputStream stream = new ProgressLoggingInputStream(inputStream, downloadOperation::logProcessedBytes);
-                    return action.execute(stream, metaData);
-                });
+                    val stream = ProgressLoggingInputStream(
+                        inputStream!!,
+                        org.gradle.internal.logging.progress.ProgressLoggingInputStreamListener { processedBytes: Int -> downloadOperation.logProcessedBytes(processedBytes) })
+                    action.execute(stream, metaData)
+                })
             } finally {
-                ExternalResourceMetaData externalResourceMetaData = metadata.get();
-                context.setResult(new ReadOperationResult(
-                    downloadOperation.getTotalProcessedBytes(),
-                    externalResourceMetaData != null && externalResourceMetaData.wasMissing()
-                ));
+                val externalResourceMetaData = metadata.get()
+                context.setResult(
+                    ReadOperationResult(
+                        downloadOperation.totalProcessedBytes,
+                        externalResourceMetaData != null && externalResourceMetaData.wasMissing()
+                    )
+                )
             }
         }
 
-        @Override
-        public BuildOperationDescriptor.Builder description() {
-            return createBuildOperationDetails(location);
+        override fun description(): BuildOperationDescriptor.Builder {
+            return createBuildOperationDetails(location)
         }
     }
 
-    private class MetadataOperation implements CallableBuildOperation<ExternalResourceMetaData> {
-        private final ExternalResourceName location;
-        private final boolean revalidate;
-
-        public MetadataOperation(ExternalResourceName location, boolean revalidate) {
-            this.location = location;
-            this.revalidate = revalidate;
-        }
-
-        @Override
-        public ExternalResourceMetaData call(BuildOperationContext context) {
+    private inner class MetadataOperation(private val location: ExternalResourceName, private val revalidate: Boolean) : CallableBuildOperation<ExternalResourceMetaData> {
+        override fun call(context: BuildOperationContext): ExternalResourceMetaData {
             try {
-                return delegate.getMetaData(location, revalidate);
+                return delegate.getMetaData(location, revalidate)!!
             } finally {
-                context.setResult(METADATA_RESULT);
+                context.setResult(METADATA_RESULT)
             }
         }
 
-        @Override
-        public BuildOperationDescriptor.Builder description() {
+        override fun description(): BuildOperationDescriptor.Builder {
             return BuildOperationDescriptor
                 .displayName("Metadata of " + location.getDisplayName())
-                .details(new MetadataOperationDetails(location.getUri()));
+                .details(MetadataOperationDetails(location.getUri()))
+        }
+    }
+
+    companion object {
+        private val METADATA_RESULT: ExternalResourceReadMetadataBuildOperationType.Result = object : ExternalResourceReadMetadataBuildOperationType.Result {
         }
     }
 }

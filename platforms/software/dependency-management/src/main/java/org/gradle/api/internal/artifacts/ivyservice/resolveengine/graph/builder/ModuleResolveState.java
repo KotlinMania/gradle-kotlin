@@ -349,9 +349,9 @@ public class ModuleResolveState implements CandidateModule {
     private ImmutableAttributes appendAttributes(ImmutableAttributes dependencyAttributes, SelectorState selectorState) {
         try {
             DependencyMetadata dependencyMetadata = selectorState.getDependencyMetadata();
-            boolean constraint = dependencyMetadata.isConstraint();
+            boolean constraint = dependencyMetadata.isConstraint;
             if (constraint) {
-                ComponentSelector selector = dependencyMetadata.getSelector();
+                ComponentSelector selector = dependencyMetadata.selector;
                 ImmutableAttributes attributes = ((AttributeContainerInternal) selector.getAttributes()).asImmutable();
                 dependencyAttributes = attributesFactory.safeConcat(attributes, dependencyAttributes);
             }
@@ -426,7 +426,7 @@ public class ModuleResolveState implements CandidateModule {
 
     private void disconnectIncomingConstraint(NodeState removalSource, EdgeState incomingEdge) {
         // Since we are back to pending, any edges targeting this module must be a constraint.
-        assert incomingEdge.getDependencyMetadata().isConstraint();
+        assert incomingEdge.getDependencyMetadata().isConstraint;
 
         NodeState from = incomingEdge.getFrom();
         if (from != removalSource) {

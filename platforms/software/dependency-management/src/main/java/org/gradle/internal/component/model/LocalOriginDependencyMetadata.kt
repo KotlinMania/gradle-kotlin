@@ -13,28 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
 
 /**
  * A dependency that is defined locally in a build script, not resolved from a repository.
  */
-public interface LocalOriginDependencyMetadata extends ForcingDependencyMetadata {
+interface LocalOriginDependencyMetadata : ForcingDependencyMetadata {
+    override fun withTarget(target: ComponentSelector): LocalOriginDependencyMetadata?
 
-    @Override
-    LocalOriginDependencyMetadata withTarget(ComponentSelector target);
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): LocalOriginDependencyMetadata?
 
-    @Override
-    LocalOriginDependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts);
-
-    @Override
-    LocalOriginDependencyMetadata forced();
+    override fun forced(): LocalOriginDependencyMetadata?
 
     /**
      * Is this a dependency constraint created for a dependency lock?
      */
-    boolean isFromLock();
+    fun isFromLock(): Boolean
 }

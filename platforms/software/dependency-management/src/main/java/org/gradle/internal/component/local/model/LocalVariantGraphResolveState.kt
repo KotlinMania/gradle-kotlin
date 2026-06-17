@@ -13,31 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-
-import java.util.List;
-import java.util.Set;
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
+import org.gradle.internal.component.model.VariantGraphResolveState
 
 /**
- * {@link VariantGraphResolveState} for variants of local components.
+ * [VariantGraphResolveState] for variants of local components.
  */
-public interface LocalVariantGraphResolveState extends VariantGraphResolveState {
+interface LocalVariantGraphResolveState : VariantGraphResolveState {
+    override fun getMetadata(): LocalVariantGraphResolveMetadata?
 
-    @Override
-    LocalVariantGraphResolveMetadata getMetadata();
-
-    @Override
-    List<LocalOriginDependencyMetadata> getDependencies();
+    override fun getDependencies(): MutableList<LocalOriginDependencyMetadata>?
 
     /**
      * Returns the file dependencies attached to this variant, if any.
-     * <p>
+     *
+     *
      * These should be represented as dependencies, but are currently represented as files as a migration step.
      */
-    Set<LocalFileDependencyMetadata> getFiles();
-
+    val files: MutableSet<LocalFileDependencyMetadata>?
 }

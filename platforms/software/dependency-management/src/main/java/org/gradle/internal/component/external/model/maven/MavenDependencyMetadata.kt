@@ -13,71 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.maven
 
-package org.gradle.internal.component.external.model.maven;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.external.model.ExternalModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.component.external.model.ExternalModuleDependencyMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
 /**
  * Represents a dependency declared in a Maven POM file.
  */
-public class MavenDependencyMetadata extends ExternalModuleDependencyMetadata {
+open class MavenDependencyMetadata private constructor(@JvmField val dependencyDescriptor: MavenDependencyDescriptor, reason: String?, endorsing: Boolean, artifacts: ImmutableList<IvyArtifactName>) :
+    ExternalModuleDependencyMetadata(reason, endorsing, artifacts) {
+    @JvmOverloads
+    constructor(dependencyDescriptor: MavenDependencyDescriptor, reason: String? = null, endorsing: Boolean = false) : this(
+        dependencyDescriptor,
+        reason,
+        endorsing,
+        dependencyDescriptor.getConfigurationArtifacts()
+    )
 
-    private final MavenDependencyDescriptor dependencyDescriptor;
+    val excludes: ImmutableList<ExcludeMetadata>
+        get() = dependencyDescriptor.getConfigurationExcludes()
 
-    public MavenDependencyMetadata(MavenDependencyDescriptor dependencyDescriptor) {
-        this(dependencyDescriptor, null, false);
+    override fun withReason(reason: String): ModuleDependencyMetadata {
+        return MavenDependencyMetadata(dependencyDescriptor, reason, isEndorsingStrictVersions, artifacts)
     }
 
-    public MavenDependencyMetadata(MavenDependencyDescriptor dependencyDescriptor, @Nullable String reason, boolean endorsing) {
-        this(dependencyDescriptor, reason, endorsing, dependencyDescriptor.getConfigurationArtifacts());
+    override fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata {
+        return MavenDependencyMetadata(dependencyDescriptor, reason, endorse, artifacts)
     }
 
-    private MavenDependencyMetadata(MavenDependencyDescriptor dependencyDescriptor, @Nullable String reason, boolean endorsing, ImmutableList<IvyArtifactName> artifacts) {
-        super(reason, endorsing, artifacts);
-        this.dependencyDescriptor = dependencyDescriptor;
+    override fun withRequested(newSelector: ModuleComponentSelector): ModuleDependencyMetadata {
+        val newDescriptor = dependencyDescriptor.withRequested(newSelector)
+        return MavenDependencyMetadata(newDescriptor, reason, isEndorsingStrictVersions, artifacts)
     }
 
-    @Override
-    public MavenDependencyDescriptor getDependencyDescriptor() {
-        return dependencyDescriptor;
+    override fun withArtifacts(newArtifacts: ImmutableList<IvyArtifactName>): ModuleDependencyMetadata {
+        return MavenDependencyMetadata(dependencyDescriptor, reason, isEndorsingStrictVersions, newArtifacts)
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return getDependencyDescriptor().getConfigurationExcludes();
-    }
-
-    @Override
-    public ModuleDependencyMetadata withReason(String reason) {
-        return new MavenDependencyMetadata(dependencyDescriptor, reason, isEndorsingStrictVersions(), getArtifacts());
-    }
-
-    @Override
-    public ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse) {
-        return new MavenDependencyMetadata(dependencyDescriptor, getReason(), endorse, getArtifacts());
-    }
-
-    @Override
-    protected ModuleDependencyMetadata withRequested(ModuleComponentSelector newSelector) {
-        MavenDependencyDescriptor newDescriptor = dependencyDescriptor.withRequested(newSelector);
-        return new MavenDependencyMetadata(newDescriptor, getReason(), isEndorsingStrictVersions(), getArtifacts());
-    }
-
-    @Override
-    protected ModuleDependencyMetadata withArtifacts(ImmutableList<IvyArtifactName> newArtifacts) {
-        return new MavenDependencyMetadata(dependencyDescriptor, getReason(), isEndorsingStrictVersions(), newArtifacts);
-    }
-
-    @Override
-    protected ModuleDependencyMetadata withRequestedAndArtifacts(ModuleComponentSelector newSelector, ImmutableList<IvyArtifactName> newArtifacts) {
-        MavenDependencyDescriptor newDelegate = dependencyDescriptor.withRequested(newSelector);
-        return new MavenDependencyMetadata(newDelegate, getReason(), isEndorsingStrictVersions(), newArtifacts);
+    override fun withRequestedAndArtifacts(newSelector: ModuleComponentSelector, newArtifacts: ImmutableList<IvyArtifactName>): ModuleDependencyMetadata {
+        val newDelegate = dependencyDescriptor.withRequested(newSelector)
+        return MavenDependencyMetadata(newDelegate, reason, isEndorsingStrictVersions, newArtifacts)
     }
 }

@@ -13,60 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.DisplayName
+import java.io.File
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.DisplayName;
+class OpaqueComponentArtifactIdentifier(file: File) : ComponentArtifactIdentifier, ComponentIdentifier, DisplayName {
+    val file: File
 
-import java.io.File;
-
-public class OpaqueComponentArtifactIdentifier implements ComponentArtifactIdentifier, ComponentIdentifier, DisplayName {
-    private final File file;
-
-    public OpaqueComponentArtifactIdentifier(File file) {
-        this.file = file;
+    init {
+        this.file = file
     }
 
-    @Override
-    public ComponentIdentifier getComponentIdentifier() {
-        return this;
+    override fun getComponentIdentifier(): ComponentIdentifier {
+        return this
     }
 
-    @Override
-    public String getDisplayName() {
-        return file.getName();
+    override fun getDisplayName(): String {
+        return file.getName()
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        OpaqueComponentArtifactIdentifier other = (OpaqueComponentArtifactIdentifier) obj;
-        return file.equals(other.file);
+        val other = obj as OpaqueComponentArtifactIdentifier
+        return file == other.file
     }
 
-    @Override
-    public int hashCode() {
-        return file.hashCode();
-    }
-
-    public File getFile() {
-        return file;
+    override fun hashCode(): Int {
+        return file.hashCode()
     }
 }

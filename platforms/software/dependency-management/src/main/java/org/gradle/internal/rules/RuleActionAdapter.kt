@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import groovy.lang.Closure
+import org.gradle.api.Action
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
+interface RuleActionAdapter {
+    fun <T> createFromClosure(subjectType: Class<T?>?, closure: Closure<*>?): RuleAction<in T?>?
 
-public interface RuleActionAdapter {
-    <T> RuleAction<? super T> createFromClosure(Class<T> subjectType, Closure<?> closure);
+    fun <T> createFromAction(action: Action<in T?>?): RuleAction<in T?>?
 
-    <T> RuleAction<? super T> createFromAction(Action<? super T> action);
-
-    @Deprecated
-    <T> RuleAction<? super T> createFromRuleSource(Class<T> subjectType, Object ruleSource);
+    @Deprecated("")
+    fun <T> createFromRuleSource(subjectType: Class<T?>?, ruleSource: Any?): RuleAction<in T?>?
 }

@@ -13,33 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
 
 /**
- * A specialization of {@link VariantSelectionByAttributesFailure} that represents the situation when multiple variants are
+ * A specialization of [VariantSelectionByAttributesFailure] that represents the situation when multiple variants are
  * available for attribute matching that would satisfy the request attributes.
  */
-public final class AmbiguousVariantsFailure extends AbstractVariantSelectionByAttributesFailure {
-    private final ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> candidates;
+class AmbiguousVariantsFailure(
+    targetComponent: ComponentIdentifier,
+    requestedAttributes: AttributeContainerInternal,
+    capabilitySelectors: ImmutableSet<CapabilitySelector>,
+    candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>
+) : AbstractVariantSelectionByAttributesFailure(ResolutionFailureProblemId.AMBIGUOUS_VARIANTS, targetComponent, requestedAttributes, capabilitySelectors) {
+    private val candidates: ImmutableList<ResolutionCandidateAssessor.AssessedCandidate>
 
-    public AmbiguousVariantsFailure(ComponentIdentifier targetComponent, AttributeContainerInternal requestedAttributes, ImmutableSet<CapabilitySelector> capabilitySelectors, List<ResolutionCandidateAssessor.AssessedCandidate> candidates) {
-        super(ResolutionFailureProblemId.AMBIGUOUS_VARIANTS, targetComponent, requestedAttributes, capabilitySelectors);
-        this.candidates = ImmutableList.copyOf(candidates);
+    init {
+        this.candidates = ImmutableList.copyOf<ResolutionCandidateAssessor.AssessedCandidate>(candidates)
     }
 
-    public List<ResolutionCandidateAssessor.AssessedCandidate> getCandidates() {
-        return candidates;
+    fun getCandidates(): MutableList<ResolutionCandidateAssessor.AssessedCandidate> {
+        return candidates
     }
 }

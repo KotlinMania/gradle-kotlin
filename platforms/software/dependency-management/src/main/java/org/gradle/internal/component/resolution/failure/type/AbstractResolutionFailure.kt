@@ -13,25 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure
 
 /**
- * An abstract {@link ResolutionFailure} that represents a resolution failure and can provide
- * a {@link ResolutionFailureProblemId} identifying the problem to the Problems API.
+ * An abstract [ResolutionFailure] that represents a resolution failure and can provide
+ * a [ResolutionFailureProblemId] identifying the problem to the Problems API.
  */
-public abstract class AbstractResolutionFailure implements ResolutionFailure {
-    private final ResolutionFailureProblemId problemId;
-
-    public AbstractResolutionFailure(ResolutionFailureProblemId problemId) {
-        this.problemId = problemId;
-    }
-
-    @Override
-    public ResolutionFailureProblemId getProblemId() {
-        return problemId;
+abstract class AbstractResolutionFailure(private val problemId: ResolutionFailureProblemId) : ResolutionFailure {
+    override fun getProblemId(): ResolutionFailureProblemId {
+        return problemId
     }
 }

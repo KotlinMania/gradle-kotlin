@@ -13,35 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.security.internal
 
-package org.gradle.security.internal;
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import java.lang.reflect.Field
+import java.nio.charset.StandardCharsets
+import java.util.function.Consumer
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-
-import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-
-public final class PGPUtils {
-
-    private static final Field KEYS_FIELD = getKeysField();
-    private PGPUtils() {
-    }
+object PGPUtils {
+    private val KEYS_FIELD: Field = keysField
 
     /**
      * A custom method to get user ids since original method `PGPPublicKey.getUserIDs()` can fail fast in case user id is not correctly encoded in UTF-8.
      * The original method fails because it is very strict at conversion from bytes to UTF-8 string.
-     * <p>
+     *
+     *
      * Example of dependencies with "broken" public key is `com.google.auto.value:auto-value-annotations`.
      */
-    public static List<String> getUserIDs(PGPPublicKey pk) {
-        List<String> userIds = new ArrayList<>();
-        pk.getRawUserIDs().forEachRemaining(id -> {
-            userIds.add(new String(id, StandardCharsets.UTF_8));
-        });
-        return userIds;
+    @JvmStatic
+    fun getUserIDs(pk: PGPPublicKey): MutableList<String?> {
+        val userIds: MutableList<String?> = ArrayList<String?>()
+        pk.getRawUserIDs().forEachRemaining(Consumer { id: ByteArray? ->
+            userIds.add(kotlin.text.String(id!!, StandardCharsets.UTF_8))
+        })
+        return userIds
     }
 
     /**
@@ -49,23 +45,23 @@ public final class PGPUtils {
      * There is no public API to do this, so we use reflection to access the private field.
      * Public keys iterator is not used because it would require O(n) time to count the keys.
      */
-    @SuppressWarnings("unchecked")
-    public static int getSize(PGPPublicKeyRing keyring) {
+    @JvmStatic
+    fun getSize(keyring: PGPPublicKeyRing?): Int {
         try {
-            return ((List<PGPPublicKey>) KEYS_FIELD.get(keyring)).size();
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            return (KEYS_FIELD.get(keyring) as MutableList<PGPPublicKey?>).size
+        } catch (e: IllegalAccessException) {
+            throw RuntimeException(e)
         }
     }
 
-    private static Field getKeysField() {
-        try {
-            Field keysField = PGPPublicKeyRing.class.getDeclaredField("keys");
-            keysField.setAccessible(true);
-            return keysField;
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
+    private val keysField: Field
+        get() {
+            try {
+                val keysField = PGPPublicKeyRing::class.java.getDeclaredField("keys")
+                keysField.setAccessible(true)
+                return keysField
+            } catch (e: NoSuchFieldException) {
+                throw RuntimeException(e)
+            }
         }
-    }
-
 }

@@ -13,17 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
 
 /**
  * Subtype to provide `ModuleDescriptorArtifactMetadata` marker interface.
  */
-public class DefaultModuleDescriptorArtifactMetadata extends DefaultModuleComponentArtifactMetadata implements ModuleDescriptorArtifactMetadata {
-    public DefaultModuleDescriptorArtifactMetadata(ModuleComponentIdentifier componentIdentifier, IvyArtifactName artifact) {
-        super(componentIdentifier, artifact);
-    }
-}
+class DefaultModuleDescriptorArtifactMetadata(componentIdentifier: ModuleComponentIdentifier, artifact: IvyArtifactName) : DefaultModuleComponentArtifactMetadata(componentIdentifier, artifact),
+    ModuleDescriptorArtifactMetadata

@@ -65,7 +65,7 @@ import java.util.List;
 
 public class DependencyManagementValueSnapshotterSerializerRegistry extends DefaultSerializerRegistry implements ValueSnapshotterSerializerRegistry {
 
-    private static final List<Class<?>> SUPPORTED_TYPES = ImmutableList.of(
+    private static final List<Class<?>> SUPPORTED_TYPES = ImmutableList.<Class<?>>of(
         Capability.class,
         ModuleVersionIdentifier.class,
         PublishArtifactLocalArtifactMetadata.class,
@@ -96,23 +96,23 @@ public class DependencyManagementValueSnapshotterSerializerRegistry extends Defa
         ModuleVersionIdentifierSerializer moduleVersionIdentifierSerializer = new ModuleVersionIdentifierSerializer(moduleIdentifierFactory);
         Serializer<ComponentSelector> componentSelectorSerializer = new ComponentSelectorSerializer(attributeContainerSerializer, capabilitySelectorSerializer);
 
-        register(Capability.class, new CapabilitySerializer());
-        register(ModuleVersionIdentifier.class, moduleVersionIdentifierSerializer);
-        register(PublishArtifactLocalArtifactMetadata.class, new PublishArtifactLocalArtifactMetadataSerializer(componentIdentifierSerializer));
-        register(OpaqueComponentArtifactIdentifier.class, new OpaqueComponentArtifactIdentifierSerializer());
-        register(DefaultModuleComponentArtifactIdentifier.class, new ComponentArtifactIdentifierSerializer());
-        register(ModuleComponentFileArtifactIdentifier.class, new ModuleComponentFileArtifactIdentifierSerializer());
-        register(ComponentFileArtifactIdentifier.class, new ComponentFileArtifactIdentifierSerializer());
-        register(TransformedComponentFileArtifactIdentifier.class, new TransformedComponentFileArtifactIdentifierSerializer());
-        register(DefaultModuleComponentIdentifier.class, Cast.uncheckedCast(componentIdentifierSerializer));
-        register(DefaultProjectComponentIdentifier.class, Cast.uncheckedCast(componentIdentifierSerializer));
-        register(AttributeContainer.class, attributeContainerSerializer);
-        registerWithFactory(ResolvedVariantResult.class, () -> new ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer));
-        register(ComponentSelectionDescriptorInternal.class, new ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory));
+        <Capability>register(Capability.class, new CapabilitySerializer());
+        <ModuleVersionIdentifier>register(ModuleVersionIdentifier.class, moduleVersionIdentifierSerializer);
+        <PublishArtifactLocalArtifactMetadata>register(PublishArtifactLocalArtifactMetadata.class, new PublishArtifactLocalArtifactMetadataSerializer(componentIdentifierSerializer));
+        <OpaqueComponentArtifactIdentifier>register(OpaqueComponentArtifactIdentifier.class, new OpaqueComponentArtifactIdentifierSerializer());
+        <DefaultModuleComponentArtifactIdentifier>register(DefaultModuleComponentArtifactIdentifier.class, new ComponentArtifactIdentifierSerializer());
+        <ModuleComponentFileArtifactIdentifier>register(ModuleComponentFileArtifactIdentifier.class, new ModuleComponentFileArtifactIdentifierSerializer());
+        <ComponentFileArtifactIdentifier>register(ComponentFileArtifactIdentifier.class, new ComponentFileArtifactIdentifierSerializer());
+        <TransformedComponentFileArtifactIdentifier>register(TransformedComponentFileArtifactIdentifier.class, new TransformedComponentFileArtifactIdentifierSerializer());
+        <DefaultModuleComponentIdentifier>register(DefaultModuleComponentIdentifier.class, Cast.<@org.jetbrains.annotations.Nullable Serializer<DefaultModuleComponentIdentifier>>uncheckedCast(componentIdentifierSerializer));
+        <DefaultProjectComponentIdentifier>register(DefaultProjectComponentIdentifier.class, Cast.<@org.jetbrains.annotations.Nullable Serializer<DefaultProjectComponentIdentifier>>uncheckedCast(componentIdentifierSerializer));
+        <AttributeContainer>register(AttributeContainer.class, attributeContainerSerializer);
+        <ResolvedVariantResult>registerWithFactory(ResolvedVariantResult.class, () -> new ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer));
+        <ComponentSelectionDescriptorInternal>register(ComponentSelectionDescriptorInternal.class, new ComponentSelectionDescriptorSerializer(componentSelectionDescriptorFactory));
         ComponentSelectionReasonSerializer componentSelectionReasonSerializer = new ComponentSelectionReasonSerializer(componentSelectionDescriptorFactory);
-        register(ComponentSelectionReasonInternal.class, componentSelectionReasonSerializer);
-        register(ComponentSelector.class, componentSelectorSerializer);
-        registerWithFactory(ResolvedComponentResult.class, () -> {
+        <ComponentSelectionReasonInternal>register(ComponentSelectionReasonInternal.class, componentSelectionReasonSerializer);
+        <ComponentSelector>register(ComponentSelector.class, componentSelectorSerializer);
+        <ResolvedComponentResult>registerWithFactory(ResolvedComponentResult.class, () -> {
             ResolvedVariantResultSerializer resolvedVariantResultSerializer = new ResolvedVariantResultSerializer(componentIdentifierSerializer, attributeContainerSerializer);
             return new ResolvedComponentResultSerializer(moduleVersionIdentifierSerializer, componentIdentifierSerializer, componentSelectorSerializer, resolvedVariantResultSerializer, componentSelectionReasonSerializer);
         });
@@ -125,7 +125,7 @@ public class DependencyManagementValueSnapshotterSerializerRegistry extends Defa
 
     @Override
     public <T> Serializer<T> build(Class<T> baseType) {
-        return super.build(Cast.uncheckedCast(baseTypeOf(baseType)));
+        return super.<T>build(Cast.<@org.jetbrains.annotations.NotNull Class<T>>uncheckedCast(baseTypeOf(baseType)));
     }
 
     private static Class<?> baseTypeOf(Class<?> type) {

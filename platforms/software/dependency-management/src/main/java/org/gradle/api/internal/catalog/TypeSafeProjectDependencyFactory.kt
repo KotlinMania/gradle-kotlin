@@ -13,27 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.artifacts.dsl.dependencies.ProjectFinder;
+import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.artifacts.dsl.dependencies.ProjectFinder
 
-public abstract class TypeSafeProjectDependencyFactory {
-    private final DefaultProjectDependencyFactory factory;
-    private final ProjectFinder finder;
-
-    protected TypeSafeProjectDependencyFactory(DefaultProjectDependencyFactory factory, ProjectFinder finder) {
-        this.factory = factory;
-        this.finder = finder;
+abstract class TypeSafeProjectDependencyFactory protected constructor(private val factory: DefaultProjectDependencyFactory, private val finder: ProjectFinder) {
+    fun create(path: String): ProjectDependencyInternal {
+        return factory.create(finder.resolveIdentityPath(path)) as ProjectDependencyInternal
     }
 
-    protected ProjectDependencyInternal create(String path) {
-        return (ProjectDependencyInternal) factory.create(finder.resolveIdentityPath(path));
-    }
-
-    protected TypeSafeProjectDependencyFactory getFactory() {
-        return this;
+    protected fun getFactory(): TypeSafeProjectDependencyFactory {
+        return this
     }
 }
 

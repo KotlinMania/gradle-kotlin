@@ -50,7 +50,7 @@ public class GlobalDependencyResolutionRules {
 
         @Override
         public Action<DependencySubstitution> getRuleAction() {
-            return Actions.composite(CollectionUtils.collect(ruleProviders, DependencySubstitutionRules::getRuleAction));
+            return Actions.<DependencySubstitution>composite(CollectionUtils.<Action<DependencySubstitution>,DependencySubstitutionRules>collect(ruleProviders, DependencySubstitutionRules::getRuleAction));
         }
 
         @Override

@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.GradleException;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.GradleException
 
-class GeneratedClassCompilationException extends GradleException {
-    public GeneratedClassCompilationException(String message) {
-        super(message);
-    }
+internal class GeneratedClassCompilationException : GradleException {
+    constructor(message: String) : super(message)
 
-    public GeneratedClassCompilationException(String message, @Nullable Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String, cause: Throwable?) : super(message, cause)
 }

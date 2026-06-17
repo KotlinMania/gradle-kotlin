@@ -13,70 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.MutableVariantFilesMetadata;
-import org.gradle.api.artifacts.VariantFileMetadata;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.repositories.resolver.DefaultMutableVariantFilesMetadata;
-import org.gradle.internal.Cast;
-import org.gradle.internal.component.external.model.AbstractMutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ComponentVariant;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.UrlBackedArtifactMetadata;
-import org.gradle.internal.component.external.model.VariantMetadataRules;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.MutableVariantFilesMetadata
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.repositories.resolver.DefaultMutableVariantFilesMetadata
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.component.external.model.AbstractMutableModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.ComponentVariant
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.UrlBackedArtifactMetadata
+import org.gradle.internal.component.external.model.VariantMetadataRules
+import java.util.LinkedList
 
-import java.util.LinkedList;
-import java.util.List;
+class VariantFilesRules {
+    private val actions: MutableList<VariantMetadataRules.VariantAction<in MutableVariantFilesMetadata>> = LinkedList<VariantMetadataRules.VariantAction<in MutableVariantFilesMetadata>>()
 
-public class VariantFilesRules {
-    private final List<VariantMetadataRules.VariantAction<? super MutableVariantFilesMetadata>> actions = new LinkedList<>();
-
-    public void addFilesAction(VariantMetadataRules.VariantAction<? super MutableVariantFilesMetadata> action) {
-        actions.add(action);
+    fun addFilesAction(action: VariantMetadataRules.VariantAction<in MutableVariantFilesMetadata>) {
+        actions.add(action)
     }
 
-    public <T extends ComponentVariant.File> ImmutableList<T> executeForFiles(VariantResolveMetadata variant, ImmutableList<T> declaredFiles, ModuleComponentIdentifier componentIdentifier) {
-        DefaultMutableVariantFilesMetadata filesMetadata = execute(variant);
+    fun <T : ComponentVariant.File?> executeForFiles(variant: VariantResolveMetadata, declaredFiles: ImmutableList<T?>, componentIdentifier: ModuleComponentIdentifier): ImmutableList<T?> {
+        val filesMetadata = execute(variant)
         if (filesMetadata.getFiles().isEmpty()) {
-            return declaredFiles;
+            return declaredFiles
         }
-        ImmutableList.Builder<T> builder = new ImmutableList.Builder<>();
+        val builder = ImmutableList.Builder<T?>()
         if (!filesMetadata.isClearExistingFiles()) {
-            builder.addAll(declaredFiles);
+            builder.addAll(declaredFiles)
         }
-        for (VariantFileMetadata file : filesMetadata.getFiles()) {
-            builder.add(Cast.<T>uncheckedNonnullCast(new AbstractMutableModuleComponentResolveMetadata.FileImpl(file.getName(), file.getUrl())));
+        for (file in filesMetadata.getFiles()) {
+            builder.add(uncheckedNonnullCast<T?>(AbstractMutableModuleComponentResolveMetadata.FileImpl(file.getName(), file.getUrl())))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    public <T extends ComponentArtifactMetadata> ImmutableList<T> executeForArtifacts(VariantResolveMetadata variant, ImmutableList<T> artifacts, ModuleComponentIdentifier componentIdentifier) {
-        DefaultMutableVariantFilesMetadata filesMetadata = execute(variant);
+    fun <T : ComponentArtifactMetadata?> executeForArtifacts(variant: VariantResolveMetadata, artifacts: ImmutableList<T?>, componentIdentifier: ModuleComponentIdentifier): ImmutableList<T?> {
+        val filesMetadata = execute(variant)
         if (filesMetadata.getFiles().isEmpty()) {
-            return artifacts;
+            return artifacts
         }
-        ImmutableList.Builder<T> builder = new ImmutableList.Builder<>();
+        val builder = ImmutableList.Builder<T?>()
         if (!filesMetadata.isClearExistingFiles()) {
-            for (T existingArtifact : artifacts) {
-                if (isFilePathUnambiguous(existingArtifact)) {
-                    builder.add(existingArtifact);
+            for (existingArtifact in artifacts) {
+                if (isFilePathUnambiguous<T?>(existingArtifact)) {
+                    builder.add(existingArtifact)
                 }
             }
         }
-        for (VariantFileMetadata file : filesMetadata.getFiles()) {
-            builder.add(Cast.<T>uncheckedNonnullCast(new UrlBackedArtifactMetadata(componentIdentifier, file.getName(), file.getUrl())));
+        for (file in filesMetadata.getFiles()) {
+            builder.add(uncheckedNonnullCast<T?>(UrlBackedArtifactMetadata(componentIdentifier, file.getName(), file.getUrl())))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private DefaultMutableVariantFilesMetadata execute(VariantResolveMetadata variant) {
-        DefaultMutableVariantFilesMetadata filesMetadata = new DefaultMutableVariantFilesMetadata();
-        for (VariantMetadataRules.VariantAction<? super MutableVariantFilesMetadata> action : actions) {
-            action.maybeExecute(variant, filesMetadata);
+    private fun execute(variant: VariantResolveMetadata): DefaultMutableVariantFilesMetadata {
+        val filesMetadata = DefaultMutableVariantFilesMetadata()
+        for (action in actions) {
+            action.maybeExecute(variant, filesMetadata)
         }
-        return filesMetadata;
+        return filesMetadata
     }
 
     /**
@@ -84,7 +81,7 @@ public class VariantFilesRules {
      * we don't know if the extension of the artifact is the one indicated by the packaging or 'jar'.
      * So we remove the artifact such that the user can explicitly add it in the rule.
      */
-    private <T extends ComponentArtifactMetadata> boolean isFilePathUnambiguous(T existingArtifact) {
-        return !(existingArtifact instanceof DefaultModuleComponentArtifactMetadata) || "jar".equals(existingArtifact.getName().getExtension());
+    private fun <T : ComponentArtifactMetadata?> isFilePathUnambiguous(existingArtifact: T?): Boolean {
+        return existingArtifact !is DefaultModuleComponentArtifactMetadata || "jar" == existingArtifact.getName().getExtension()
     }
 }

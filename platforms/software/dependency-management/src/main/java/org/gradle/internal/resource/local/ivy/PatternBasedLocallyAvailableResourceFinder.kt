@@ -13,52 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local.ivy;
+package org.gradle.internal.resource.local.ivy
 
-import org.gradle.api.file.EmptyFileVisitor;
-import org.gradle.api.file.FileVisitDetails;
-import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern;
-import org.gradle.api.internal.file.collections.MinimalFileTree;
-import org.gradle.api.internal.file.collections.SingleIncludePatternFileTree;
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resource.local.AbstractLocallyAvailableResourceFinder;
+import org.gradle.api.file.EmptyFileVisitor
+import org.gradle.api.file.FileVisitDetails
+import org.gradle.api.internal.artifacts.repositories.resolver.ResourcePattern
+import org.gradle.api.internal.file.collections.MinimalFileTree
+import org.gradle.api.internal.file.collections.SingleIncludePatternFileTree
+import org.gradle.internal.Factory
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resource.local.AbstractLocallyAvailableResourceFinder
+import java.io.File
+import java.util.LinkedList
+import java.util.function.Function
 
-import java.io.File;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.function.Function;
-
-public class PatternBasedLocallyAvailableResourceFinder extends AbstractLocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> {
-
-    public PatternBasedLocallyAvailableResourceFinder(File baseDir, ResourcePattern pattern, ChecksumService checksumService) {
-        super(createProducer(baseDir, pattern), checksumService);
-    }
-
-    private static Function<ModuleComponentArtifactMetadata, Factory<List<File>>> createProducer(final File baseDir, final ResourcePattern pattern) {
-        return new Function<ModuleComponentArtifactMetadata, Factory<List<File>>>() {
-            @Override
-            public Factory<List<File>> apply(final ModuleComponentArtifactMetadata artifact) {
-                return () -> {
-                    final List<File> files = new LinkedList<>();
-                    if (artifact != null) {
-                        getMatchingFiles(artifact).visit(new EmptyFileVisitor() {
-                            @Override
-                            public void visitFile(FileVisitDetails fileDetails) {
-                                files.add(fileDetails.getFile());
-                            }
-                        });
+class PatternBasedLocallyAvailableResourceFinder(baseDir: File, pattern: ResourcePattern, checksumService: ChecksumService?) : AbstractLocallyAvailableResourceFinder<ModuleComponentArtifactMetadata?>(
+    createProducer(baseDir, pattern), checksumService
+) {
+    companion object {
+        private fun createProducer(baseDir: File, pattern: ResourcePattern): Function<ModuleComponentArtifactMetadata?, Factory<MutableList<File?>?>?> {
+            return object : Function<ModuleComponentArtifactMetadata?, Factory<MutableList<File?>?>?> {
+                override fun apply(artifact: ModuleComponentArtifactMetadata?): Factory<MutableList<File?>?> {
+                    return org.gradle.internal.Factory {
+                        val files: MutableList<File?> = LinkedList<File?>()
+                        if (artifact != null) {
+                            getMatchingFiles(artifact).visit(object : EmptyFileVisitor() {
+                                override fun visitFile(fileDetails: FileVisitDetails) {
+                                    files.add(fileDetails.getFile())
+                                }
+                            })
+                        }
+                        files
                     }
-                    return files;
-                };
-            }
+                }
 
-            private MinimalFileTree getMatchingFiles(ModuleComponentArtifactMetadata artifact) {
-                String patternString = pattern.getLocation(artifact).getPath();
-                return new SingleIncludePatternFileTree(baseDir, patternString);
+                fun getMatchingFiles(artifact: ModuleComponentArtifactMetadata): MinimalFileTree {
+                    val patternString = pattern.getLocation(artifact).getPath()
+                    return SingleIncludePatternFileTree(baseDir, patternString)
+                }
             }
-
-        };
+        }
     }
 }

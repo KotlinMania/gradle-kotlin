@@ -13,33 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import com.google.common.base.Throwables;
-import org.gradle.internal.resource.transport.http.HttpErrorStatusCodeException;
+import com.google.common.base.Throwables
+import org.gradle.internal.resource.transport.http.HttpErrorStatusCodeException
+import java.io.InterruptedIOException
+import java.net.UnknownHostException
 
-import java.io.InterruptedIOException;
-import java.net.UnknownHostException;
-
-public class ResolveExceptionAnalyzer {
-
-    public static boolean isCriticalFailure(Throwable throwable) {
-        Throwable rootCause = Throwables.getRootCause(throwable);
-        return isTimeoutException(rootCause) || isUnrecoverable5xxStatusCode(rootCause) || isUnknownHostException(rootCause);
+object ResolveExceptionAnalyzer {
+    @JvmStatic
+    fun isCriticalFailure(throwable: Throwable): Boolean {
+        val rootCause = Throwables.getRootCause(throwable)
+        return isTimeoutException(rootCause) || isUnrecoverable5xxStatusCode(rootCause) || isUnknownHostException(rootCause)
     }
 
-    private static boolean isUnknownHostException(Throwable rootCause) {
-        return rootCause instanceof UnknownHostException;
+    private fun isUnknownHostException(rootCause: Throwable?): Boolean {
+        return rootCause is UnknownHostException
     }
 
     /**
-     * See <a href="http://hc.apache.org/httpclient-3.x/exception-handling.html">HTTPClient exception handling</a> for more information.
+     * See [HTTPClient exception handling](http://hc.apache.org/httpclient-3.x/exception-handling.html) for more information.
      */
-    private static boolean isTimeoutException(Throwable rootCause) {
-        return rootCause instanceof InterruptedIOException;
+    private fun isTimeoutException(rootCause: Throwable?): Boolean {
+        return rootCause is InterruptedIOException
     }
 
-    private static boolean isUnrecoverable5xxStatusCode(Throwable rootCause) {
-        return rootCause instanceof HttpErrorStatusCodeException && ((HttpErrorStatusCodeException) rootCause).isServerError();
+    private fun isUnrecoverable5xxStatusCode(rootCause: Throwable?): Boolean {
+        return rootCause is HttpErrorStatusCodeException && rootCause.isServerError()
     }
 }

@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.specs
 
-package org.gradle.buildinit.specs;
-
-import org.gradle.api.Incubating;
+import org.gradle.api.Incubating
 
 /**
- * Represents a parameter that can be provided to a {@link BuildInitSpec} to configure it
+ * Represents a parameter that can be provided to a [BuildInitSpec] to configure it
  * with custom information about this particular project to be generated.
  *
  * @param <T> The type of this parameter
  * @since 8.12
- */
+</T> */
 @Incubating
-public interface BuildInitParameter<T> {
+interface BuildInitParameter<T> {
     /**
      * Returns the name of the parameter.
      *
      * @return the name of the parameter
      * @since 8.12
      */
-    String getName();
+    val name: String?
 
     /**
      * Returns the type of the parameter.
@@ -41,5 +40,5 @@ public interface BuildInitParameter<T> {
      * @return the type of the parameter
      * @since 8.12
      */
-    T getParameterType();
+    val parameterType: T?
 }

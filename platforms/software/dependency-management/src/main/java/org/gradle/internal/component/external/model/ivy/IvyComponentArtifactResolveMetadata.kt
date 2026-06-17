@@ -13,24 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
-
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
 
 /**
  * Metadata used to resolve artifacts of an Ivy component.
  */
-public interface IvyComponentArtifactResolveMetadata extends ComponentArtifactResolveMetadata {
+interface IvyComponentArtifactResolveMetadata : ComponentArtifactResolveMetadata {
     /**
      * Get the artifacts for the given configuration.
      *
      * @return Null if the configuration does not exist.
      */
-    @Nullable
-    List<? extends ComponentArtifactMetadata> getConfigurationArtifacts(String configurationName);
+    fun getConfigurationArtifacts(configurationName: String): MutableList<out ComponentArtifactMetadata>?
 }

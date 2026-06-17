@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-public interface ClassSource {
-    String getPackageName();
-    String getSimpleClassName();
-    String getSource();
+interface ClassSource {
+    val packageName: String?
+    val simpleClassName: String?
+    val source: String?
 }

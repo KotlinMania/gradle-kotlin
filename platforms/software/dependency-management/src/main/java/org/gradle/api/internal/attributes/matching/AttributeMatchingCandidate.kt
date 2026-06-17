@@ -13,25 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.internal.attributes.matching;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.List;
+package org.gradle.api.internal.attributes.matching
 
 /**
  * Something that can participate in multiple-candidate attribute matching. During multiple-candidate
  * matching, candidates are compared based on their attributes and the best match is selected. Compatibility
  * and disambiguation rules from attribute schemas are used to determine the best match.
  *
- * @see AttributeMatcher#matchMultipleCandidates(List, ImmutableAttributes)
+ * @see AttributeMatcher.matchMultipleCandidates
  */
-public interface AttributeMatchingCandidate {
-
+interface AttributeMatchingCandidate {
     /**
      * Get the attributes that describe this candidate.
      */
-    ImmutableAttributes getAttributes();
-
+    val attributes: ImmutableAttributes?
 }

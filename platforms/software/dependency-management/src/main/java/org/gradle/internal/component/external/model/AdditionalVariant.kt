@@ -13,35 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.jspecify.annotations.Nullable;
-
-public class AdditionalVariant {
-    private final String name;
-    private final String base;
-    private final boolean lenient;
-
-    public AdditionalVariant(String name) {
-        this(name, null, false);
-    }
-
-    public AdditionalVariant(String name, @Nullable String base, boolean lenient) {
-        this.name = name;
-        this.base = base;
-        this.lenient = lenient;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getBase() {
-        return base;
-    }
-
-    public boolean isLenient() {
-        return lenient;
-    }
-}
+class AdditionalVariant @JvmOverloads constructor(@JvmField val name: String?, @JvmField val base: String? = null, val isLenient: Boolean = false)

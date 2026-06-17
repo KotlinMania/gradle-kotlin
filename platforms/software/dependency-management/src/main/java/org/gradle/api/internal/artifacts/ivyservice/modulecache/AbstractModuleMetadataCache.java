@@ -48,7 +48,7 @@ public abstract class AbstractModuleMetadataCache implements ModuleMetadataCache
 
     @Override
     public CachedMetadata cacheMetaData(ModuleComponentRepository<?> repository, ModuleComponentIdentifier id, ModuleComponentResolveMetadata metadata) {
-        LOGGER.debug("Recording module descriptor in cache: {} [changing = {}]", metadata.getId(), metadata.isChanging());
+        LOGGER.debug("Recording module descriptor in cache: {} [changing = {}]", metadata.getId(), metadata.isChanging);
         final ModuleComponentAtRepositoryKey key = createKey(repository, id);
         ModuleMetadataCacheEntry entry = createEntry(metadata);
         DefaultCachedMetadata cachedMetaData = new DefaultCachedMetadata(entry, metadata, timeProvider);

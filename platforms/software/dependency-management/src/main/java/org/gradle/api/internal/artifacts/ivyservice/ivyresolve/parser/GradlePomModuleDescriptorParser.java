@@ -92,11 +92,11 @@ public final class GradlePomModuleDescriptorParser extends AbstractModuleDescrip
         MutableMavenModuleResolveMetadata metadata = metadataFactory.create(cid, dependencies);
         metadata.setStatus(mdBuilder.getStatus());
         if (pomReader.getRelocation() != null) {
-            metadata.setPackaging("pom");
-            metadata.setRelocated(true);
+            metadata.packaging = "pom";
+            metadata.isRelocated = true;
         } else {
-            metadata.setPackaging(pomReader.getPackaging());
-            metadata.setRelocated(false);
+            metadata.packaging = pomReader.getPackaging();
+            metadata.isRelocated = false;
         }
         return ParseResult.of(metadata, pomReader.hasGradleMetadataMarker());
     }

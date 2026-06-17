@@ -13,83 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.dsl.ArtifactFile;
-import org.gradle.api.internal.artifacts.repositories.resolver.MavenUniqueSnapshotComponentIdentifier;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.dsl.ArtifactFile
+import org.gradle.api.internal.artifacts.repositories.resolver.MavenUniqueSnapshotComponentIdentifier
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
 
 /**
  * An artifact located relative to some module.
  */
-public class UrlBackedArtifactMetadata implements ModuleComponentArtifactMetadata {
-    private final ModuleComponentIdentifier componentIdentifier;
-    private final String fileName;
-    private final String relativeUrl;
-    private final ModuleComponentArtifactIdentifier id;
+class UrlBackedArtifactMetadata(private val componentIdentifier: ModuleComponentIdentifier, val fileName: String, val relativeUrl: String) : ModuleComponentArtifactMetadata {
+    private val id: ModuleComponentArtifactIdentifier
 
-    private IvyArtifactName ivyArtifactName;
+    private var ivyArtifactName: IvyArtifactName? = null
 
-    public UrlBackedArtifactMetadata(ModuleComponentIdentifier componentIdentifier, String fileName, String relativeUrl) {
-        this.componentIdentifier = componentIdentifier;
-        this.fileName = fileName;
-        this.relativeUrl = relativeUrl;
-        id = createArtifactId(componentIdentifier, fileName);
+    init {
+        id = createArtifactId(componentIdentifier, fileName)
     }
 
-    private ModuleComponentArtifactIdentifier createArtifactId(ModuleComponentIdentifier componentIdentifier, String fileName) {
-        if (componentIdentifier instanceof MavenUniqueSnapshotComponentIdentifier) {
+    private fun createArtifactId(componentIdentifier: ModuleComponentIdentifier, fileName: String): ModuleComponentArtifactIdentifier {
+        if (componentIdentifier is MavenUniqueSnapshotComponentIdentifier) {
             // This special case is for Maven snapshots with Gradle Module Metadata when we need to remap the file name, which
             // corresponds to the unique timestamp, to the SNAPSHOT version, for backwards compatibility
-            return new DefaultModuleComponentArtifactIdentifier(
+            return DefaultModuleComponentArtifactIdentifier(
                 componentIdentifier,
                 getName()
-            );
+            )
         }
-        return new ModuleComponentFileArtifactIdentifier(componentIdentifier, fileName);
+        return ModuleComponentFileArtifactIdentifier(componentIdentifier, fileName)
     }
 
-    @Override
-    public ModuleComponentIdentifier getComponentId() {
-        return componentIdentifier;
+    override fun getComponentId(): ModuleComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ModuleComponentArtifactIdentifier getId() {
-        return id;
+    override fun getId(): ModuleComponentArtifactIdentifier {
+        return id
     }
 
-    public String getFileName() {
-        return fileName;
-    }
-
-    public String getRelativeUrl() {
-        return relativeUrl;
-    }
-
-    @Override
-    public IvyArtifactName getName() {
+    override fun getName(): IvyArtifactName {
         if (ivyArtifactName == null) {
-            ArtifactFile names = new ArtifactFile(relativeUrl, uniqueVersion());
-            ivyArtifactName = new DefaultIvyArtifactName(names.getName(), names.getExtension(), names.getExtension(), names.getClassifier());
+            val names = ArtifactFile(relativeUrl, uniqueVersion())
+            ivyArtifactName = DefaultIvyArtifactName(names.getName(), names.getExtension(), names.getExtension(), names.getClassifier())
         }
-        return ivyArtifactName;
+        return ivyArtifactName!!
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
+    override fun getBuildDependencies(): TaskDependency {
+        return TaskDependencyInternal.EMPTY
     }
 
-    private String uniqueVersion() {
-        if (componentIdentifier instanceof MavenUniqueSnapshotComponentIdentifier) {
-            return ((MavenUniqueSnapshotComponentIdentifier) componentIdentifier).getTimestampedVersion();
+    private fun uniqueVersion(): String {
+        if (componentIdentifier is MavenUniqueSnapshotComponentIdentifier) {
+            return componentIdentifier.getTimestampedVersion()
         }
-        return componentIdentifier.getVersion();
+        return componentIdentifier.getVersion()
     }
 }

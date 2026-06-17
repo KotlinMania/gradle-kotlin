@@ -161,7 +161,7 @@ public class RepositoryChainComponentMetaDataResolver implements ComponentMetaDa
             ComponentMetaDataResolveState request = queue.removeFirst();
             BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> metaDataResolveResult;
             metaDataResolveResult = request.resolve();
-            switch (metaDataResolveResult.getState()) {
+            switch (metaDataResolveResult.state) {
                 case Failed:
                     ModuleVersionResolveException failure = metaDataResolveResult.getFailure();
                     assert failure != null; // Failure cannot be null in Failed state
@@ -179,14 +179,14 @@ public class RepositoryChainComponentMetaDataResolver implements ComponentMetaDa
                     }
                     break;
                 case Resolved:
-                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, metaDataResolveResult.getMetaData());
-                    if (!metaDataResolveResult.getMetaData().getMetadata().isMissing()) {
+                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, metaDataResolveResult.metaData);
+                    if (!metaDataResolveResult.metaData.getMetadata().isMissing()) {
                         return moduleResolution;
                     }
                     best = best != null ? best : moduleResolution;
                     break;
                 default:
-                    throw new IllegalStateException("Unexpected state for resolution: " + metaDataResolveResult.getState());
+                    throw new IllegalStateException("Unexpected state for resolution: " + metaDataResolveResult.state);
             }
         }
 

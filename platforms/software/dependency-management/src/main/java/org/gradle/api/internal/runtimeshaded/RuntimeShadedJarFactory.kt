@@ -13,92 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.runtimeshaded
 
-package org.gradle.api.internal.runtimeshaded;
+import org.gradle.api.Action
+import org.gradle.api.internal.classpath.RuntimeApiInfo
+import org.gradle.cache.internal.GeneratedGradleJarCache
+import org.gradle.internal.classpath.ClasspathBuilder
+import org.gradle.internal.classpath.ClasspathWalker
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.net.URL
 
-import org.gradle.api.internal.classpath.RuntimeApiInfo;
-import org.gradle.cache.internal.GeneratedGradleJarCache;
-import org.gradle.internal.classpath.ClasspathBuilder;
-import org.gradle.internal.classpath.ClasspathWalker;
-import org.gradle.internal.logging.progress.ProgressLoggerFactory;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+@ServiceScope(Scope.Build::class)
+class RuntimeShadedJarFactory(
+    private val cache: GeneratedGradleJarCache,
+    private val progressLoggerFactory: ProgressLoggerFactory,
+    private val classpathWalker: ClasspathWalker,
+    private val classpathBuilder: ClasspathBuilder,
+    private val buildOperationRunner: BuildOperationRunner,
+    private val buildOperationExecutor: BuildOperationExecutor,
+    private val runtimeApiInfo: RuntimeApiInfo
+) {
+    fun get(type: RuntimeShadedJarType, classpath: MutableCollection<out File?>): File {
+        val jarFile = cache.get(type.getIdentifier(), Action { file: File? ->
+            buildOperationRunner.run(object : RunnableBuildOperation {
+                override fun run(context: BuildOperationContext) {
+                    val resource = getPackageListUrl(type)
+                    val creator = RuntimeShadedJarCreator(
+                        progressLoggerFactory,
+                        buildOperationExecutor,
+                        ImplementationDependencyRelocator(resource),
+                        classpathWalker,
+                        classpathBuilder
+                    )
+                    creator.create(type, file!!, classpath)
+                }
 
-import java.io.File;
-import java.net.URL;
-import java.util.Collection;
-
-@ServiceScope(Scope.Build.class)
-public class RuntimeShadedJarFactory {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeShadedJarFactory.class);
-
-    private final GeneratedGradleJarCache cache;
-    private final ProgressLoggerFactory progressLoggerFactory;
-    private final ClasspathWalker classpathWalker;
-    private final ClasspathBuilder classpathBuilder;
-    private final BuildOperationRunner buildOperationRunner;
-    private final BuildOperationExecutor buildOperationExecutor;
-    private final RuntimeApiInfo runtimeApiInfo;
-
-    public RuntimeShadedJarFactory(
-        GeneratedGradleJarCache cache,
-        ProgressLoggerFactory progressLoggerFactory,
-        ClasspathWalker classpathWalker,
-        ClasspathBuilder classpathBuilder,
-        BuildOperationRunner buildOperationRunner,
-        BuildOperationExecutor buildOperationExecutor,
-        RuntimeApiInfo runtimeApiInfo
-    ) {
-        this.cache = cache;
-        this.progressLoggerFactory = progressLoggerFactory;
-        this.classpathWalker = classpathWalker;
-        this.classpathBuilder = classpathBuilder;
-        this.buildOperationRunner = buildOperationRunner;
-        this.buildOperationExecutor = buildOperationExecutor;
-        this.runtimeApiInfo = runtimeApiInfo;
+                override fun description(): BuildOperationDescriptor.Builder {
+                    return@get BuildOperationDescriptor
+                        .displayName("Generate " + type.getDisplayName())
+                        .progressDisplayName("Generating " + type.getDisplayName())
+                }
+            })
+        })
+        LOGGER.debug("Using Gradle runtime shaded JAR file: {}", jarFile)
+        return jarFile
     }
 
-    public File get(final RuntimeShadedJarType type, final Collection<? extends File> classpath) {
-        final File jarFile = cache.get(type.getIdentifier(), file -> buildOperationRunner.run(new RunnableBuildOperation() {
-            @Override
-            public void run(BuildOperationContext context) {
-                URL resource = getPackageListUrl(type);
-                RuntimeShadedJarCreator creator = new RuntimeShadedJarCreator(
-                    progressLoggerFactory,
-                    buildOperationExecutor,
-                    new ImplementationDependencyRelocator(resource),
-                    classpathWalker,
-                    classpathBuilder
-                );
-                creator.create(type, file, classpath);
-            }
-
-            @Override
-            public BuildOperationDescriptor.Builder description() {
-                return BuildOperationDescriptor
-                    .displayName("Generate " + type.getDisplayName())
-                    .progressDisplayName("Generating " + type.getDisplayName());
-            }
-        }));
-        LOGGER.debug("Using Gradle runtime shaded JAR file: {}", jarFile);
-        return jarFile;
-    }
-
-    private URL getPackageListUrl(RuntimeShadedJarType type) {
-        switch (type) {
-            case API: return runtimeApiInfo.getRelocatedApiPackagesResource();
-            case TEST_KIT: return RuntimeShadedJarFactory.class.getResource(type.getIdentifier() + "-relocated.txt");
+    private fun getPackageListUrl(type: RuntimeShadedJarType): URL? {
+        when (type) {
+            RuntimeShadedJarType.API -> return runtimeApiInfo.getRelocatedApiPackagesResource()
+            RuntimeShadedJarType.TEST_KIT -> return RuntimeShadedJarFactory::class.java.getResource(type.getIdentifier() + "-relocated.txt")
         }
 
-        throw new IllegalArgumentException("Unsupported runtime shaded jar type: " + type);
+        throw IllegalArgumentException("Unsupported runtime shaded jar type: " + type)
     }
 
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(RuntimeShadedJarFactory::class.java)
+    }
 }

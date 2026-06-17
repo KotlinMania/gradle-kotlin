@@ -13,57 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.capabilities.CapabilitiesMetadata;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.capabilities.MutableCapabilitiesMetadata;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.capabilities.CapabilitiesMetadata
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.capabilities.MutableCapabilitiesMetadata
+import org.gradle.api.internal.capabilities.ImmutableCapability
 
 /**
- * Default implementation of {@link MutableCapabilitiesMetadata}.
+ * Default implementation of [MutableCapabilitiesMetadata].
  *
- * <p>If possible, try to avoid using this type unless interfacing with the public API.</p>
+ *
+ * If possible, try to avoid using this type unless interfacing with the public API.
  */
-public class DefaultMutableCapabilitiesMetadata implements MutableCapabilitiesMetadata {
-    private final Set<ImmutableCapability> descriptors;
+class DefaultMutableCapabilitiesMetadata(capabilities: ImmutableCapabilities) : MutableCapabilitiesMetadata {
+    private val descriptors: MutableSet<ImmutableCapability>
 
-    public DefaultMutableCapabilitiesMetadata(ImmutableCapabilities capabilities) {
-        this.descriptors = new LinkedHashSet<>(capabilities.asSet());
+    init {
+        this.descriptors = LinkedHashSet<ImmutableCapability>(capabilities.asSet())
     }
 
-    @Override
-    public void addCapability(String group, String name, String version) {
-        for (Capability descriptor : descriptors) {
-            if (descriptor.getGroup().equals(group) && descriptor.getName().equals(name) && !descriptor.getVersion().equals(version)) {
-                throw new InvalidUserDataException("Cannot add capability " + group + ":" + name + " with version " + version + " because it's already defined with version " + descriptor.getVersion());
+    override fun addCapability(group: String?, name: String?, version: String?) {
+        for (descriptor in descriptors) {
+            if (descriptor.getGroup() == group && descriptor.getName() == name && (descriptor.getVersion() != version)) {
+                throw InvalidUserDataException("Cannot add capability " + group + ":" + name + " with version " + version + " because it's already defined with version " + descriptor.getVersion())
             }
         }
-        descriptors.add(new DefaultImmutableCapability(group, name, version));
+        descriptors.add(DefaultImmutableCapability(group, name, version))
     }
 
-    @Override
-    public void removeCapability(String group, String name) {
-        descriptors.removeIf(next -> next.getGroup().equals(group) && next.getName().equals(name));
+    override fun removeCapability(group: String?, name: String?) {
+        descriptors.removeIf { next: ImmutableCapability? -> next!!.getGroup() == group && next.getName() == name }
     }
 
-    @Override
-    public CapabilitiesMetadata asImmutable() {
-        return new DefaultCapabilitiesMetadata(asImmutableCapabilities());
+    override fun asImmutable(): CapabilitiesMetadata {
+        return DefaultCapabilitiesMetadata(asImmutableCapabilities())
     }
 
-    @Override
-    public ImmutableList<? extends Capability> getCapabilities() {
-        return ImmutableList.copyOf(descriptors);
+    override fun getCapabilities(): ImmutableList<out Capability?> {
+        return ImmutableList.copyOf<ImmutableCapability?>(descriptors)
     }
 
-    public ImmutableCapabilities asImmutableCapabilities() {
-        return new ImmutableCapabilities(ImmutableSet.copyOf(descriptors));
+    fun asImmutableCapabilities(): ImmutableCapabilities {
+        return ImmutableCapabilities(ImmutableSet.copyOf<ImmutableCapability?>(descriptors))
     }
 }

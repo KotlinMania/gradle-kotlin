@@ -13,181 +13,132 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.jspecify.annotations.Nullable;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ModuleDependencyCapabilitiesHandler
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.project.ProjectIdentity
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-@SuppressWarnings("unused")
-public class DelegatingProjectDependency implements ProjectDependencyInternal {
-    private final TypeSafeProjectDependencyFactory factory;
-    private final ProjectDependencyInternal delegate;
-
-    public DelegatingProjectDependency(TypeSafeProjectDependencyFactory factory, ProjectDependencyInternal delegate) {
-        this.factory = factory;
-        this.delegate = delegate;
+@Suppress("unused")
+class DelegatingProjectDependency(protected val factory: TypeSafeProjectDependencyFactory, private val delegate: ProjectDependencyInternal) : ProjectDependencyInternal {
+    protected fun create(path: String): ProjectDependencyInternal {
+        return factory.create(path)
     }
 
-    protected ProjectDependencyInternal create(String path) {
-        return factory.create(path);
+    override fun getTargetProjectIdentity(): ProjectIdentity {
+        return delegate.getTargetProjectIdentity()
     }
 
-    protected TypeSafeProjectDependencyFactory getFactory() {
-        return factory;
+    override fun getPath(): String {
+        return delegate.getPath()
     }
 
-    @Override
-    public ProjectIdentity getTargetProjectIdentity() {
-        return delegate.getTargetProjectIdentity();
+    override fun copy(): ProjectDependency {
+        return delegate.copy()
     }
 
-    @Override
-    public String getPath() {
-        return delegate.getPath();
+    override fun exclude(excludeProperties: MutableMap<String, String>): ModuleDependency {
+        return delegate.exclude(excludeProperties)
     }
 
-    @Override
-    public ProjectDependency copy() {
-        return delegate.copy();
+    override fun getExcludeRules(): MutableSet<ExcludeRule> {
+        return delegate.getExcludeRules()
     }
 
-    @Override
-    public ModuleDependency exclude(Map<String, String> excludeProperties) {
-        return delegate.exclude(excludeProperties);
+    override fun getArtifacts(): MutableSet<DependencyArtifact> {
+        return delegate.getArtifacts()
     }
 
-    @Override
-    public Set<ExcludeRule> getExcludeRules() {
-        return delegate.getExcludeRules();
+    override fun addArtifact(artifact: DependencyArtifact): ModuleDependency {
+        return delegate.addArtifact(artifact)
     }
 
-    @Override
-    public Set<DependencyArtifact> getArtifacts() {
-        return delegate.getArtifacts();
+    override fun artifact(configureClosure: Closure<*>): DependencyArtifact {
+        return delegate.artifact(configureClosure)
     }
 
-    @Override
-    public ModuleDependency addArtifact(DependencyArtifact artifact) {
-        return delegate.addArtifact(artifact);
+    override fun artifact(configureAction: Action<in DependencyArtifact>): DependencyArtifact {
+        return delegate.artifact(configureAction)
     }
 
-    @Override
-    @SuppressWarnings("rawtypes")
-    public DependencyArtifact artifact(Closure configureClosure) {
-        return delegate.artifact(configureClosure);
+    override fun isTransitive(): Boolean {
+        return delegate.isTransitive()
     }
 
-    @Override
-    public DependencyArtifact artifact(Action<? super DependencyArtifact> configureAction) {
-        return delegate.artifact(configureAction);
+    override fun setTransitive(transitive: Boolean): ModuleDependency {
+        return delegate.setTransitive(transitive)
     }
 
-    @Override
-    public boolean isTransitive() {
-        return delegate.isTransitive();
+    override fun getTargetConfiguration(): String? {
+        return delegate.getTargetConfiguration()
     }
 
-    @Override
-    public ModuleDependency setTransitive(boolean transitive) {
-        return delegate.setTransitive(transitive);
+    override fun setTargetConfiguration(name: String?) {
+        delegate.setTargetConfiguration(name)
     }
 
-    @Override
-    @Nullable
-    public String getTargetConfiguration() {
-        return delegate.getTargetConfiguration();
+    override fun getAttributes(): AttributeContainer {
+        return delegate.getAttributes()
     }
 
-    @Override
-    public void setTargetConfiguration(@Nullable String name) {
-        delegate.setTargetConfiguration(name);
+    override fun attributes(configureAction: Action<in AttributeContainer>): ModuleDependency {
+        return delegate.attributes(configureAction)
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return delegate.getAttributes();
+    override fun capabilities(configureAction: Action<in ModuleDependencyCapabilitiesHandler>): ModuleDependency {
+        return delegate.capabilities(configureAction)
     }
 
-    @Override
-    public ModuleDependency attributes(Action<? super AttributeContainer> configureAction) {
-        return delegate.attributes(configureAction);
+    override fun getRequestedCapabilities(): MutableList<Capability> {
+        return delegate.getRequestedCapabilities()
     }
 
-    @Override
-    public ModuleDependency capabilities(Action<? super ModuleDependencyCapabilitiesHandler> configureAction) {
-        return delegate.capabilities(configureAction);
+    override fun getCapabilitySelectors(): MutableSet<CapabilitySelector> {
+        return delegate.getCapabilitySelectors()
     }
 
-    @Override
-    public List<Capability> getRequestedCapabilities() {
-        return delegate.getRequestedCapabilities();
+    override fun endorseStrictVersions() {
+        delegate.endorseStrictVersions()
     }
 
-    @Override
-    public Set<CapabilitySelector> getCapabilitySelectors() {
-        return delegate.getCapabilitySelectors();
+    override fun doNotEndorseStrictVersions() {
+        delegate.doNotEndorseStrictVersions()
     }
 
-    @Override
-    public void endorseStrictVersions() {
-        delegate.endorseStrictVersions();
+    override fun isEndorsingStrictVersions(): Boolean {
+        return delegate.isEndorsingStrictVersions()
     }
 
-    @Override
-    public void doNotEndorseStrictVersions() {
-        delegate.doNotEndorseStrictVersions();
+    override fun getGroup(): String? {
+        return delegate.getGroup()
     }
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return delegate.isEndorsingStrictVersions();
+    override fun getName(): String {
+        return delegate.getName()
     }
 
-    @Override
-    @Nullable
-    public String getGroup() {
-        return delegate.getGroup();
+    override fun getVersion(): String? {
+        return delegate.getVersion()
     }
 
-    @Override
-    public String getName() {
-        return delegate.getName();
+    override fun getReason(): String? {
+        return delegate.getReason()
     }
 
-    @Override
-    @Nullable
-    public String getVersion() {
-        return delegate.getVersion();
+    override fun because(reason: String?) {
+        delegate.because(reason)
     }
 
-    @Override
-    @Nullable
-    public String getReason() {
-        return delegate.getReason();
-    }
-
-    @Override
-    public void because(@Nullable String reason) {
-        delegate.because(reason);
-    }
-
-    @Override
-    public String toString() {
-        return delegate.toString();
+    override fun toString(): String {
+        return delegate.toString()
     }
 }

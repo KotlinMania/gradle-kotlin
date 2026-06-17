@@ -13,28 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.internal.exceptions.ResolutionProvider
 
-import org.gradle.internal.exceptions.ResolutionProvider;
+class InvalidLockFileException : RuntimeException, ResolutionProvider {
+    private val resolutionMessage: String
 
-import java.util.Collections;
-import java.util.List;
-
-public class InvalidLockFileException extends RuntimeException implements ResolutionProvider {
-    private final String resolutionMessage;
-
-    public InvalidLockFileException(String displayName, Exception cause, String resolutionMessage) {
-        super("Invalid lock state for " + displayName, cause);
-        this.resolutionMessage = resolutionMessage;
-    }
-    public InvalidLockFileException(String displayName, String resolutionMessage) {
-        super("Invalid lock state for " + displayName);
-        this.resolutionMessage = resolutionMessage;
+    constructor(displayName: String, cause: Exception, resolutionMessage: String) : super("Invalid lock state for " + displayName, cause) {
+        this.resolutionMessage = resolutionMessage
     }
 
-    @Override
-    public List<String> getResolutions() {
-        return Collections.singletonList(resolutionMessage);
+    constructor(displayName: String, resolutionMessage: String) : super("Invalid lock state for " + displayName) {
+        this.resolutionMessage = resolutionMessage
     }
+
+    val resolutions: MutableList<String>
+        get() = mutableListOf<String>(resolutionMessage)
 }

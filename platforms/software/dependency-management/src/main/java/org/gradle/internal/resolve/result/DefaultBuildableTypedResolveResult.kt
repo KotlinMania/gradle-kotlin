@@ -13,55 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+open class DefaultBuildableTypedResolveResult<T, E : Throwable?> : DefaultResourceAwareResolveResult(), BuildableTypedResolveResult<T?, E?> {
+    private var result: T? = null
+    private var failure: E? = null
 
-import org.jspecify.annotations.Nullable;
-
-public class DefaultBuildableTypedResolveResult<T, E extends Throwable> extends DefaultResourceAwareResolveResult implements BuildableTypedResolveResult<T, E> {
-    private T result;
-    private E failure;
-
-    @Override
-    public void failed(E failure) {
-        this.result = null;
-        this.failure = failure;
+    override fun failed(failure: E?) {
+        this.result = null
+        this.failure = failure
     }
 
-    @Override
-    public void resolved(T result) {
-        this.result = result;
-        this.failure = null;
+    override fun resolved(result: T?) {
+        this.result = result
+        this.failure = null
     }
 
-    @Override
-    public T getResult() throws E {
-        assertHasResult();
+    @Throws(E::class)
+    override fun getResult(): T? {
+        assertHasResult()
         if (failure != null) {
-            throw failure;
+            throw failure
         }
-        return result;
+        return result
     }
 
-    @Nullable
-    @Override
-    public E getFailure() {
-        assertHasResult();
-        return failure;
+    override fun getFailure(): E? {
+        assertHasResult()
+        return failure
     }
 
-    public boolean isSuccessful() {
-        return result != null;
+    val isSuccessful: Boolean
+        get() = result != null
+
+    override fun hasResult(): Boolean {
+        return failure != null || result != null
     }
 
-    @Override
-    public boolean hasResult() {
-        return failure != null || result != null;
-    }
-
-    protected void assertHasResult() {
-        if (!hasResult()) {
-            throw new IllegalStateException("No result has been specified.");
-        }
+    protected fun assertHasResult() {
+        check(hasResult()) { "No result has been specified." }
     }
 }

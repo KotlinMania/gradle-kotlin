@@ -13,34 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource.cached;
-
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Date;
+package org.gradle.internal.resource.cached
 
 /**
  * A record of some kind of external resource that has been cached locally (typically into the filestore).
  */
-public interface CachedExternalResource extends CachedItem {
-
+interface CachedExternalResource : CachedItem {
     /**
      * Always the actual content length of the cached file, not the external source.
      *
      * @return The content length of the cached file.
      */
-    long getContentLength();
+    val contentLength: Long
 
-    @Nullable
-    ExternalResourceMetaData getExternalResourceMetaData();
+    val externalResourceMetaData: ExternalResourceMetaData?
 
     /**
      * Null safe shortcut for getExternalResourceMetaData().getLastModified();
      *
      * @return The external last modified, or null if unavailable.
      */
-    Date getExternalLastModified();
-
+    val externalLastModified: Date?
 }

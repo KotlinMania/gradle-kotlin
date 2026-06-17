@@ -13,34 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-
-public interface BuildableComponentResolveResult extends ComponentResolveResult, ResourceAwareResolveResult {
+interface BuildableComponentResolveResult : ComponentResolveResult, ResourceAwareResolveResult {
     /**
      * Marks the component as resolved, with the given graph resolution state.
      */
-    void resolved(ComponentGraphResolveState state, ComponentGraphSpecificResolveState graphState);
+    fun resolved(state: ComponentGraphResolveState?, graphState: ComponentGraphSpecificResolveState?)
 
     /**
      * Marks the resolve as failed with the given exception.
      */
-    BuildableComponentResolveResult failed(ModuleVersionResolveException failure);
+    fun failed(failure: ModuleVersionResolveException?): BuildableComponentResolveResult?
 
     /**
      * Marks the component as not found.
      */
-    void notFound(ModuleComponentIdentifier versionIdentifier);
+    fun notFound(versionIdentifier: ModuleComponentIdentifier?)
 
     /**
      * Replaces the graph resolution state in the result. Result must already be resolved.
      */
-    void setResult(ComponentGraphResolveState state);
+    fun setResult(state: ComponentGraphResolveState?)
 
-    void applyTo(BuildableComponentResolveResult target);
+    fun applyTo(target: BuildableComponentResolveResult?)
 }

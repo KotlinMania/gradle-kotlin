@@ -13,34 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
+import org.gradle.api.attributes.AttributesSchema
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributesSchema;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Map;
-import java.util.Set;
-
-@ServiceScope(Scope.Project.class)
-public interface AttributesSchemaInternal extends AttributesSchema {
-
+@ServiceScope(Scope.Project::class)
+interface AttributesSchemaInternal : AttributesSchema {
     /**
      * Get all configured attribute matching strategies. The returned collection
      * reflects a live view of the configured strategies, but is unmodifiable.
-     * <p>
+     *
+     *
      * Used to finalize this schema to its immutable counterpart.
      */
-    Map<Attribute<?>, DefaultAttributeMatchingStrategy<?>> getStrategies();
+    val strategies: MutableMap<Attribute<*>, DefaultAttributeMatchingStrategy<*>>?
 
     /**
      * Get the configured attribute matching precedence. The returned collection
      * reflects a live view of the configured attribute precedence, but is unmodifiable.
-     * <p>
+     *
+     *
      * Used to finalize this schema to its immutable counterpart.
      */
-    Set<Attribute<?>> getAttributePrecedence();
-
+    val attributePrecedence: MutableSet<Attribute<*>>?
 }

@@ -13,40 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.transform
 
-package org.gradle.internal.component.resolution.failure.transform;
-
-import org.gradle.api.artifacts.transform.TransformAction;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
- * A lightweight replacement for {@link org.gradle.api.internal.artifacts.transform.TransformStep TransformStep}
+ * A lightweight replacement for [TransformStep][org.gradle.api.internal.artifacts.transform.TransformStep]
  * that contains the data in each ArtifactTransform step that comprises an artifact transformation chain.
- * <p>
+ *
+ *
  * Immutable data class.  Meant to be easily serialized as part of build operation recording and tracing.
- * <p>
- * This type is also used as a part of a {@link TransformationChainData.TransformationChainFingerprint}, and must
- * properly implement {@link #equals(Object)} and {@link #hashCode()}.
+ *
+ *
+ * This type is also used as a part of a [TransformationChainData.TransformationChainFingerprint], and must
+ * properly implement [.equals] and [.hashCode].
  */
-public final class TransformData {
-    private final Class<? extends TransformAction<?>> transformActionClass;
-    private final String transformName;
-    private final ImmutableAttributes fromAttributes;
-    private final ImmutableAttributes toAttributes;
-
-    public TransformData(Class<? extends TransformAction<?>> transformActionClass, String transformName, ImmutableAttributes fromAttributes, ImmutableAttributes toAttributes) {
-        this.transformActionClass = transformActionClass;
-        this.transformName = transformName;
-        this.fromAttributes = fromAttributes;
-        this.toAttributes = toAttributes;
+class TransformData(
+    private val transformActionClass: Class<out TransformAction<*>>,
+    private val transformName: String,
+    private val fromAttributes: ImmutableAttributes,
+    private val toAttributes: ImmutableAttributes
+) {
+    fun getTransformActionClass(): Class<out TransformAction<*>> {
+        return transformActionClass
     }
 
-    public Class<? extends TransformAction<?>> getTransformActionClass() {
-        return transformActionClass;
-    }
-
-    public String getTransformName() {
-        return transformName;
+    fun getTransformName(): String {
+        return transformName
     }
 
     /**
@@ -54,8 +48,8 @@ public final class TransformData {
      *
      * @return attributes as described
      */
-    public ImmutableAttributes getFromAttributes() {
-        return fromAttributes;
+    fun getFromAttributes(): ImmutableAttributes {
+        return fromAttributes
     }
 
     /**
@@ -63,28 +57,26 @@ public final class TransformData {
      *
      * @return attributes as described
      */
-    public ImmutableAttributes getToAttributes() {
-        return toAttributes;
+    fun getToAttributes(): ImmutableAttributes {
+        return toAttributes
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        TransformData that = (TransformData) o;
-        return transformActionClass.equals(that.transformActionClass) && fromAttributes.equals(that.fromAttributes) && toAttributes.equals(that.toAttributes);
+        val that = o as TransformData
+        return transformActionClass == that.transformActionClass && fromAttributes == that.fromAttributes && toAttributes == that.toAttributes
     }
 
-    @Override
-    public int hashCode() {
-        int result = transformActionClass.hashCode();
-        result = 31 * result + fromAttributes.hashCode();
-        result = 31 * result + toAttributes.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = transformActionClass.hashCode()
+        result = 31 * result + fromAttributes.hashCode()
+        result = 31 * result + toAttributes.hashCode()
+        return result
     }
 }

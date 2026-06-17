@@ -13,191 +13,140 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
 
 /**
  * Information about a locally resolved dependency.
  */
-public class LocalComponentDependencyMetadata implements LocalOriginDependencyMetadata {
+class LocalComponentDependencyMetadata(
+    private val selector: ComponentSelector,
+    private val dependencyConfiguration: String?,
+    private val artifactNames: ImmutableList<IvyArtifactName>,
+    private val excludes: ImmutableList<ExcludeMetadata>,
+    private val force: Boolean, private val changing: Boolean, private val transitive: Boolean,
+    private val constraint: Boolean, private val endorsing: Boolean, private val fromLock: Boolean,
+    private val reason: String?
+) : LocalOriginDependencyMetadata {
+    constructor(
+        selector: ComponentSelector,
+        dependencyConfiguration: String?,
+        artifactNames: ImmutableList<IvyArtifactName>,
+        excludes: ImmutableList<ExcludeMetadata>,
+        force: Boolean, changing: Boolean, transitive: Boolean, constraint: Boolean, endorsing: Boolean,
+        reason: String?
+    ) : this(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, false, reason)
 
-    private final ComponentSelector selector;
-    private final @Nullable String dependencyConfiguration;
-    private final ImmutableList<ExcludeMetadata> excludes;
-    private final ImmutableList<IvyArtifactName> artifactNames;
-    private final boolean force;
-    private final boolean changing;
-    private final boolean transitive;
-    private final boolean constraint;
-    private final boolean endorsing;
-    private final boolean fromLock;
-    private final @Nullable String reason;
-
-    public LocalComponentDependencyMetadata(
-        ComponentSelector selector,
-        @Nullable String dependencyConfiguration,
-        ImmutableList<IvyArtifactName> artifactNames,
-        ImmutableList<ExcludeMetadata> excludes,
-        boolean force, boolean changing, boolean transitive, boolean constraint, boolean endorsing,
-        @Nullable String reason
-    ) {
-        this(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, false, reason);
+    override fun toString(): String {
+        return selector.toString()
     }
 
-    public LocalComponentDependencyMetadata(
-        ComponentSelector selector,
-        @Nullable String dependencyConfiguration,
-        ImmutableList<IvyArtifactName> artifactNames,
-        ImmutableList<ExcludeMetadata> excludes,
-        boolean force, boolean changing, boolean transitive,
-        boolean constraint, boolean endorsing, boolean fromLock,
-        @Nullable String reason
-    ) {
-        this.selector = selector;
-        this.dependencyConfiguration = dependencyConfiguration;
-        this.artifactNames = artifactNames;
-        this.excludes = excludes;
-        this.force = force;
-        this.changing = changing;
-        this.transitive = transitive;
-        this.constraint = constraint;
-        this.endorsing = endorsing;
-        this.fromLock = fromLock;
-        this.reason = reason;
+    override fun getSelector(): ComponentSelector {
+        return selector
     }
 
-    @Override
-    public String toString() {
-        return selector.toString();
-    }
-
-    @Override
-    public ComponentSelector getSelector() {
-        return selector;
-    }
-
-    @Override
-    public @Nullable List<? extends VariantGraphResolveState> overrideVariantSelection(
-        GraphVariantSelector variantSelector,
-        ImmutableAttributes consumerAttributes,
-        ComponentGraphResolveState targetComponentState,
-        ImmutableAttributesSchema consumerSchema
-    ) {
+    override fun overrideVariantSelection(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState>? {
         if (dependencyConfiguration != null) {
-            VariantGraphResolveState selected = variantSelector.selectVariantByConfigurationName(
+            val selected = variantSelector.selectVariantByConfigurationName(
                 dependencyConfiguration,
                 consumerAttributes,
                 targetComponentState,
                 consumerSchema
-            );
+            )
 
-            return Collections.singletonList(selected);
+            return mutableListOf<VariantGraphResolveState>(selected)
         }
 
-        return null;
+        return null
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return excludes;
+    override fun getExcludes(): ImmutableList<ExcludeMetadata> {
+        return excludes
     }
 
-    @Override
-    public boolean isChanging() {
-        return changing;
+    override fun isChanging(): Boolean {
+        return changing
     }
 
-    @Override
-    public boolean isTransitive() {
-        return transitive;
+    override fun isTransitive(): Boolean {
+        return transitive
     }
 
-    @Override
-    public boolean isForce() {
-        return force;
+    override fun isForce(): Boolean {
+        return force
     }
 
-    @Override
-    public boolean isConstraint() {
-        return constraint;
+    override fun isConstraint(): Boolean {
+        return constraint
     }
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return endorsing;
+    override fun isEndorsingStrictVersions(): Boolean {
+        return endorsing
     }
 
-    @Override
-    public @Nullable String getReason() {
-        return reason;
+    override fun getReason(): String? {
+        return reason
     }
 
-    @Override
-    public ImmutableList<IvyArtifactName> getArtifacts() {
-        return artifactNames;
+    override fun getArtifacts(): ImmutableList<IvyArtifactName> {
+        return artifactNames
     }
 
-    @Override
-    public LocalOriginDependencyMetadata withTarget(ComponentSelector target) {
-        if (selector.equals(target)) {
-            return this;
+    override fun withTarget(target: ComponentSelector): LocalOriginDependencyMetadata {
+        if (selector == target) {
+            return this
         }
-        return copyWithTarget(target);
+        return copyWithTarget(target)
     }
 
-    @Override
-    public LocalOriginDependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-        if (selector.equals(target) && artifacts.equals(getArtifacts())) {
-            return this;
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): LocalOriginDependencyMetadata {
+        if (selector == target && artifacts == getArtifacts()) {
+            return this
         }
-        return copyWithTargetAndArtifacts(target, artifacts);
+        return copyWithTargetAndArtifacts(target, artifacts)
     }
 
-    @Override
-    public LocalOriginDependencyMetadata forced() {
+    override fun forced(): LocalOriginDependencyMetadata {
         if (force) {
-            return this;
+            return this
         }
-        return copyWithForce();
+        return copyWithForce()
     }
 
-    @Override
-    public boolean isFromLock() {
-        return fromLock;
+    override fun isFromLock(): Boolean {
+        return fromLock
     }
 
-    @Override
-    public DependencyMetadata withReason(String reason) {
+    override fun withReason(reason: String): DependencyMetadata {
         if (Objects.equal(reason, this.reason)) {
-            return this;
+            return this
         }
-        return copyWithReason(reason);
+        return copyWithReason(reason)
     }
 
-    private LocalOriginDependencyMetadata copyWithTarget(ComponentSelector selector) {
-        return new LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason);
+    private fun copyWithTarget(selector: ComponentSelector): LocalOriginDependencyMetadata {
+        return LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason)
     }
 
-    private LocalOriginDependencyMetadata copyWithTargetAndArtifacts(ComponentSelector selector, ImmutableList<IvyArtifactName> artifactNames) {
-        return new LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason);
+    private fun copyWithTargetAndArtifacts(selector: ComponentSelector, artifactNames: ImmutableList<IvyArtifactName>): LocalOriginDependencyMetadata {
+        return LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason)
     }
 
-    private LocalOriginDependencyMetadata copyWithReason(String reason) {
-        return new LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason);
+    private fun copyWithReason(reason: String): LocalOriginDependencyMetadata {
+        return LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, force, changing, transitive, constraint, endorsing, fromLock, reason)
     }
 
-    private LocalOriginDependencyMetadata copyWithForce() {
-        return new LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, true, changing, transitive, constraint, endorsing, fromLock, reason);
+    private fun copyWithForce(): LocalOriginDependencyMetadata {
+        return LocalComponentDependencyMetadata(selector, dependencyConfiguration, artifactNames, excludes, true, changing, transitive, constraint, endorsing, fromLock, reason)
     }
-
 }

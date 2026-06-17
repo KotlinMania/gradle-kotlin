@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import java.io.Closeable;
+import java.io.Closeable
 
-public interface PublicKeyService extends Closeable {
-    void findByLongId(long keyId, PublicKeyResultBuilder builder);
-    void findByFingerprint(byte[] fingerprint, PublicKeyResultBuilder builder);
+interface PublicKeyService : Closeable {
+    fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder?)
+    fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder?)
 }

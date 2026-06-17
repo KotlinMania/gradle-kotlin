@@ -13,43 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+class DefaultComponentOverrideMetadata private constructor(private val changing: Boolean, private val artifact: IvyArtifactName?) : ComponentOverrideMetadata {
+    override fun withChanging(): ComponentOverrideMetadata {
+        return DefaultComponentOverrideMetadata(true, artifact)
+    }
 
-import org.jspecify.annotations.Nullable;
+    override fun getArtifact(): IvyArtifactName? {
+        return artifact
+    }
 
-public class DefaultComponentOverrideMetadata implements ComponentOverrideMetadata {
-    public static final ComponentOverrideMetadata EMPTY = new DefaultComponentOverrideMetadata(false, null);
+    override fun isChanging(): Boolean {
+        return changing
+    }
 
-    private final boolean changing;
-    private final IvyArtifactName artifact;
+    companion object {
+        @JvmField
+        val EMPTY: ComponentOverrideMetadata = DefaultComponentOverrideMetadata(false, null)
 
-    public static ComponentOverrideMetadata forDependency(boolean changing, @Nullable IvyArtifactName mainArtifact) {
-        if (!changing && mainArtifact == null) {
-            return EMPTY;
+        @JvmStatic
+        fun forDependency(changing: Boolean, mainArtifact: IvyArtifactName?): ComponentOverrideMetadata {
+            if (!changing && mainArtifact == null) {
+                return EMPTY
+            }
+            return DefaultComponentOverrideMetadata(changing, mainArtifact)
         }
-        return new DefaultComponentOverrideMetadata(changing, mainArtifact);
     }
-
-    private DefaultComponentOverrideMetadata(boolean changing, @Nullable IvyArtifactName artifact) {
-        this.changing = changing;
-        this.artifact = artifact;
-    }
-
-    @Override
-    public ComponentOverrideMetadata withChanging() {
-        return new DefaultComponentOverrideMetadata(true, artifact);
-    }
-
-    @Nullable
-    @Override
-    public IvyArtifactName getArtifact() {
-        return artifact;
-    }
-
-    @Override
-    public boolean isChanging() {
-        return changing;
-    }
-
 }

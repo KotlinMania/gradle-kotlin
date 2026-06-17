@@ -57,8 +57,8 @@ public class AdhocRootComponentProvider implements RootComponentProvider {
     public LocalComponentGraphResolveState getRootComponent(boolean detached) {
         Module module = new AnonymousModule();
 
-        String status = module.getStatus();
-        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.getGroup(), module.getName(), module.getVersion());
+        String status = module.status;
+        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group, module.name, module.version);
 
         ImmutableAttributesSchema immutableSchema = attributesSchemaFactory.create(schema);
 

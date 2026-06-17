@@ -13,28 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import org.gradle.internal.component.resolution.failure.type.AbstractComponentSelectionFailure;
-
-import java.util.Collections;
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.type.AbstractComponentSelectionFailure
 
 /**
  * An exception that indicates that component selection failed.
  */
-public class ComponentSelectionException extends AbstractResolutionFailureException {
-    public ComponentSelectionException(String message, AbstractComponentSelectionFailure failure) {
-        this(message, failure, Collections.emptyList());
-    }
-
-    public ComponentSelectionException(String message, AbstractComponentSelectionFailure failure, List<String> resolutions) {
-        super(message, failure, resolutions);
-    }
-
-    @Override
-    public AbstractComponentSelectionFailure getFailure() {
-        return (AbstractComponentSelectionFailure) failure;
+open class ComponentSelectionException @JvmOverloads constructor(message: String, failure: AbstractComponentSelectionFailure, resolutions: MutableList<String> = mutableListOf<String>()) :
+    AbstractResolutionFailureException(message, failure, resolutions) {
+    override fun getFailure(): AbstractComponentSelectionFailure {
+        return failure as AbstractComponentSelectionFailure
     }
 }

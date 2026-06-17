@@ -13,55 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.credentials
 
-package org.gradle.api.credentials;
-
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
 
 /**
  * Represents credentials used to authenticate with Amazon Web Services.
  */
-public interface AwsCredentials extends Credentials {
-
-    /**
-     * Returns the access key to use to authenticate with AWS.
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getAccessKey();
-
+interface AwsCredentials : Credentials {
     /**
      * Sets the access key to use to authenticate with AWS.
      */
-    void setAccessKey(@Nullable String accessKey);
-
-    /**
-     * Returns the secret key to use to authenticate with AWS.
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getSecretKey();
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    var accessKey: String?
 
     /**
      * Sets the secret key to use to authenticate with AWS.
      */
-    void setSecretKey(@Nullable String secretKey);
-
-    /**
-     * Returns the secret key to use to authenticate with AWS.
-     *
-     * @since 3.3
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getSessionToken();
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    var secretKey: String?
 
     /**
      * Sets the secret key to use to authenticate with AWS.
      *
      * @since 3.3
      */
-    void setSessionToken(@Nullable String token);
-
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    var sessionToken: String?
 }

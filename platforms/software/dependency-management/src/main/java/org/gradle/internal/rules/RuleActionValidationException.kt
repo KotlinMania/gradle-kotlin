@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import org.gradle.api.GradleException
 
-import org.gradle.api.GradleException;
+class RuleActionValidationException : GradleException {
+    constructor(message: String?) : super(message)
 
-public class RuleActionValidationException extends GradleException {
-    public RuleActionValidationException(String message) {
-        super(message);
-    }
-
-    public RuleActionValidationException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 }

@@ -74,7 +74,7 @@ public class DefaultResolutionResult implements ResolutionResult {
     }
 
     private ResolvedGraphResult getGraph() {
-        return resolutionAccess.getResults().getValue().getVisitedGraph().getResolvedGraphResultSource().get();
+        return resolutionAccess.getResults().getValue().visitedGraph.getResolvedGraphResultSource().get();
     }
 
     @Override

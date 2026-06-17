@@ -13,33 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import java.io.IOException;
+import java.io.IOException
 
-public class EmptyPublicKeyService implements PublicKeyService {
-    private final static EmptyPublicKeyService EMPTY = new EmptyPublicKeyService();
-
-    private EmptyPublicKeyService() {
-
+class EmptyPublicKeyService private constructor() : PublicKeyService {
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder?) {
     }
 
-    public static EmptyPublicKeyService getInstance() {
-        return EMPTY;
+    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder?) {
     }
 
-    @Override
-    public void findByLongId(long keyId, PublicKeyResultBuilder builder) {
-
+    @Throws(IOException::class)
+    override fun close() {
     }
 
-    @Override
-    public void findByFingerprint(byte[] fingerprint, PublicKeyResultBuilder builder) {
-
-    }
-
-    @Override
-    public void close() throws IOException {
-
+    companion object {
+        val instance: EmptyPublicKeyService = EmptyPublicKeyService()
     }
 }

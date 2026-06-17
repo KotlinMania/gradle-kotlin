@@ -13,39 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.IOException;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
 /**
- * A thread-safe and reusable serializer for {@link ModuleVersionIdentifier} if and only if the passed in
- * {@link ImmutableModuleIdentifierFactory} is itself thread-safe.
+ * A thread-safe and reusable serializer for [ModuleVersionIdentifier] if and only if the passed in
+ * [ImmutableModuleIdentifierFactory] is itself thread-safe.
  */
-public class ModuleVersionIdentifierSerializer implements Serializer<ModuleVersionIdentifier> {
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-
-    public ModuleVersionIdentifierSerializer(ImmutableModuleIdentifierFactory moduleIdentifierFactory) {
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
+class ModuleVersionIdentifierSerializer(private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory) : Serializer<ModuleVersionIdentifier?> {
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: ModuleVersionIdentifier) {
+        encoder.writeString(value.getGroup())
+        encoder.writeString(value.getName())
+        encoder.writeString(value.getVersion())
     }
 
-    @Override
-    public void write(Encoder encoder, ModuleVersionIdentifier value) throws IOException {
-        encoder.writeString(value.getGroup());
-        encoder.writeString(value.getName());
-        encoder.writeString(value.getVersion());
-    }
-
-    @Override
-    public ModuleVersionIdentifier read(Decoder decoder) throws IOException {
-        String group = decoder.readString();
-        String module = decoder.readString();
-        String version = decoder.readString();
-        return moduleIdentifierFactory.moduleWithVersion(group, module, version);
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ModuleVersionIdentifier {
+        val group = decoder.readString()
+        val module = decoder.readString()
+        val version = decoder.readString()
+        return moduleIdentifierFactory.moduleWithVersion(group!!, module!!, version!!)
     }
 }

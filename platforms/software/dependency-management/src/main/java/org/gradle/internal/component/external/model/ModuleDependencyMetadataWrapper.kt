@@ -13,43 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.model.DelegatingDependencyMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.component.model.DelegatingDependencyMetadata
+import org.gradle.internal.component.model.DependencyMetadata
 
-public class ModuleDependencyMetadataWrapper extends DelegatingDependencyMetadata implements ModuleDependencyMetadata {
-    private final DependencyMetadata delegate;
-
-    public ModuleDependencyMetadataWrapper(DependencyMetadata delegate) {
-        super(delegate);
-        this.delegate = delegate;
+class ModuleDependencyMetadataWrapper(private val delegate: DependencyMetadata) : DelegatingDependencyMetadata(delegate), ModuleDependencyMetadata {
+    override fun withRequestedVersion(requestedVersion: VersionConstraint): ModuleDependencyMetadata {
+        val selector: ModuleComponentSelector = getSelector()
+        val newSelector = DefaultModuleComponentSelector.newSelector(selector.getModuleIdentifier(), requestedVersion, selector.getAttributes(), selector.getCapabilitySelectors())
+        return ModuleDependencyMetadataWrapper(delegate.withTarget(newSelector)!!)
     }
 
-    @Override
-    public ModuleDependencyMetadata withRequestedVersion(VersionConstraint requestedVersion) {
-        ModuleComponentSelector selector = getSelector();
-        ModuleComponentSelector newSelector = DefaultModuleComponentSelector.newSelector(selector.getModuleIdentifier(), requestedVersion, selector.getAttributes(), selector.getCapabilitySelectors());
-        return new ModuleDependencyMetadataWrapper(delegate.withTarget(newSelector));
+    override fun withReason(reason: String): ModuleDependencyMetadata {
+        return ModuleDependencyMetadataWrapper(delegate.withReason(reason)!!)
     }
 
-    @Override
-    public ModuleDependencyMetadata withReason(String reason) {
-        return new ModuleDependencyMetadataWrapper(delegate.withReason(reason));
-    }
-
-    @Override
-    public ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse) {
-        if (delegate instanceof ModuleDependencyMetadata) {
-            return new ModuleDependencyMetadataWrapper(((ModuleDependencyMetadata) delegate).withEndorseStrictVersions(endorse));
+    override fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata {
+        if (delegate is ModuleDependencyMetadata) {
+            return ModuleDependencyMetadataWrapper(delegate.withEndorseStrictVersions(endorse))
         }
-        return this;
+        return this
     }
 
-    @Override
-    public ModuleComponentSelector getSelector() {
-        return (ModuleComponentSelector) delegate.getSelector();
+    override fun getSelector(): ModuleComponentSelector {
+        return delegate.selector as ModuleComponentSelector
     }
 }

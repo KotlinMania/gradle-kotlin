@@ -35,7 +35,7 @@ public final class MessageBuilderHelper {
 
     public static List<String> formattedPathsTo(DependencyGraphEdge edge) {
         return findPathsTo(edge).stream().map(path -> {
-            String header = Iterables.getLast(path).getDependencyMetadata().isConstraint() ? "Constraint" : "Dependency";
+            String header = Iterables.getLast(path).getDependencyMetadata().isConstraint ? "Constraint" : "Dependency";
             String formattedPath = streamNodeNames(path)
                 .collect(Collectors.joining(" --> "));
 

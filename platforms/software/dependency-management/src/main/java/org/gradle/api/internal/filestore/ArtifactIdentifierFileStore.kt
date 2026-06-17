@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.filestore;
+package org.gradle.api.internal.filestore
 
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.FileStoreSearcher;
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.FileStoreSearcher
+import java.io.File
 
-import java.io.File;
+interface ArtifactIdentifierFileStore : FileStore<ModuleComponentArtifactIdentifier?>, FileStoreSearcher<ModuleComponentArtifactIdentifier?> {
+    fun whereIs(artifactId: ModuleComponentArtifactIdentifier?, checksum: String?): File?
 
-public interface ArtifactIdentifierFileStore extends FileStore<ModuleComponentArtifactIdentifier>, FileStoreSearcher<ModuleComponentArtifactIdentifier> {
-    File whereIs(ModuleComponentArtifactIdentifier artifactId, String checksum);
-
-    FileAccessTracker getFileAccessTracker();
+    val fileAccessTracker: FileAccessTracker?
 }

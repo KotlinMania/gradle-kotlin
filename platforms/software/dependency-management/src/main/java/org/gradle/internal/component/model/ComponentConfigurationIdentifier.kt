@@ -13,44 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
 /**
  * Identifies the "implicit" artifact variant for a graph variant.
  */
-public class ComponentConfigurationIdentifier implements VariantResolveMetadata.Identifier {
-    private final ComponentIdentifier component;
-    private final String configurationName;
-    private final int hashCode;
+class ComponentConfigurationIdentifier(private val component: ComponentIdentifier, private val configurationName: String) : VariantResolveMetadata.Identifier {
+    private val hashCode: Int
 
-    public ComponentConfigurationIdentifier(ComponentIdentifier component, String configurationName) {
-        this.component = component;
-        this.configurationName = configurationName;
-
-        this.hashCode = computeHashCode(component, configurationName);
+    init {
+        this.hashCode = computeHashCode(component, configurationName)
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        ComponentConfigurationIdentifier other = (ComponentConfigurationIdentifier) obj;
-        return component.equals(other.component) && configurationName.equals(other.configurationName);
+        val other = obj as ComponentConfigurationIdentifier
+        return component == other.component && configurationName == other.configurationName
     }
 
-    private static int computeHashCode(ComponentIdentifier component, String configurationName) {
-        return 31 * component.hashCode() + configurationName.hashCode();
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    companion object {
+        private fun computeHashCode(component: ComponentIdentifier, configurationName: String): Int {
+            return 31 * component.hashCode() + configurationName.hashCode()
+        }
     }
 }

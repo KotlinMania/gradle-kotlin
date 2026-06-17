@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
 
 /**
  * Represents a module descriptor artifact.
  */
-public interface ModuleDescriptorArtifactMetadata extends ModuleComponentArtifactMetadata {
-}
+interface ModuleDescriptorArtifactMetadata : ModuleComponentArtifactMetadata

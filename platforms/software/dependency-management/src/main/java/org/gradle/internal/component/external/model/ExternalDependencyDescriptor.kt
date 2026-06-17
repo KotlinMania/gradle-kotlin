@@ -13,26 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 
 /**
  * Represents dependency information as stored in an external descriptor file (POM or IVY.XML).
  * This information is able to be transformed into a `ModuleDependencyMetadata` instance.
  */
-public abstract class ExternalDependencyDescriptor {
+abstract class ExternalDependencyDescriptor {
+    abstract val selector: ModuleComponentSelector?
 
-    public abstract ModuleComponentSelector getSelector();
+    abstract val isOptional: Boolean
 
-    public abstract boolean isOptional();
+    abstract val isConstraint: Boolean
 
-    public abstract boolean isConstraint();
+    abstract val isChanging: Boolean
 
-    public abstract boolean isChanging();
+    abstract val isTransitive: Boolean
 
-    public abstract boolean isTransitive();
-
-    protected abstract ExternalDependencyDescriptor withRequested(ModuleComponentSelector newRequested);
+    protected abstract fun withRequested(newRequested: ModuleComponentSelector?): ExternalDependencyDescriptor?
 }

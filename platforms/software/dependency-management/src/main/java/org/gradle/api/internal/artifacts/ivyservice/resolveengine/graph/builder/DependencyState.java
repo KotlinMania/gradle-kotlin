@@ -91,7 +91,7 @@ public class DependencyState {
      */
     public ModuleIdentifier getModuleIdentifier(ComponentSelectorConverter componentSelectorConverter) {
         if (moduleIdentifier == null) {
-            ComponentSelector componentSelector = dependency.getSelector();
+            ComponentSelector componentSelector = dependency.selector;
             if (componentSelector instanceof ModuleComponentSelector) {
                 moduleIdentifier = ((ModuleComponentSelector) componentSelector).getModuleIdentifier();
             } else {
@@ -119,7 +119,7 @@ public class DependencyState {
 
     @Override
     public String toString() {
-        if (requested.equals(dependency.getSelector())) {
+        if (requested.equals(dependency.selector)) {
             return dependency.toString();
         } else {
             return dependency + " (requested " + requested + ")";

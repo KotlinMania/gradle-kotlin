@@ -13,31 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.VariantGraphResolveMetadata;
-
-import java.util.List;
+import org.gradle.internal.component.model.VariantGraphResolveMetadata
 
 /**
  * A variant of an external module component.
- * <p>
+ *
+ *
  * Unlike local variants, the dependencies of external variants are known statically,
  * and are available as part of the metadata.
  */
-public interface ExternalModuleVariantGraphResolveMetadata extends VariantGraphResolveMetadata {
-
+interface ExternalModuleVariantGraphResolveMetadata : VariantGraphResolveMetadata {
     /**
      * Get the dependencies for this variant.
      */
-    List<? extends DependencyMetadata> getDependencies();
+    val dependencies: MutableList<out DependencyMetadata?>?
 
     /**
      * Get exclusions to apply to the dependencies and artifacts of this variant.
      */
-    List<? extends ExcludeMetadata> getExcludes();
-
+    val excludes: MutableList<out ExcludeMetadata?>?
 }

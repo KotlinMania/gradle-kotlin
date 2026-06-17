@@ -13,63 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-import org.gradle.api.Action;
-import org.gradle.api.attributes.MultipleCandidatesDetails;
+import org.gradle.api.Action
+import org.gradle.api.attributes.MultipleCandidatesDetails
+import java.lang.Boolean
+import kotlin.Any
+import kotlin.Comparator
+import kotlin.Int
 
-import java.util.Comparator;
-import java.util.Set;
-
-public class DefaultOrderedDisambiguationRule<T> implements Action<MultipleCandidatesDetails<T>> {
-    private final Comparator<? super T> comparator;
-    private final boolean pickFirst;
-
-    public DefaultOrderedDisambiguationRule(Comparator<? super T> comparator, boolean pickFirst) {
-        this.comparator = comparator;
-        this.pickFirst = pickFirst;
-    }
-
-    @Override
-    public void execute(MultipleCandidatesDetails<T> details) {
-        Set<T> candidateValues = details.getCandidateValues();
-        T min = null;
-        T max = null;
-        for (T value : candidateValues) {
+class DefaultOrderedDisambiguationRule<T>(private val comparator: Comparator<in T?>, private val pickFirst: Boolean) : Action<MultipleCandidatesDetails<T?>?> {
+    override fun execute(details: MultipleCandidatesDetails<T?>) {
+        val candidateValues = details.getCandidateValues()
+        var min: T? = null
+        var max: T? = null
+        for (value in candidateValues) {
             if (min == null || comparator.compare(value, min) < 0) {
-                min = value;
+                min = value
             }
             if (max == null || comparator.compare(value, max) > 0) {
-                max = value;
+                max = value
             }
         }
-        T cmp = pickFirst ? min : max;
+        val cmp = if (pickFirst) min else max
         if (cmp != null) {
-            for (T value : candidateValues) {
-                if (value.equals(cmp)) {
-                    details.closestMatch(value);
+            for (value in candidateValues) {
+                if (value == cmp) {
+                    details.closestMatch(value)
                 }
             }
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultOrderedDisambiguationRule<?> that = (DefaultOrderedDisambiguationRule<?>) o;
-        return pickFirst == that.pickFirst && comparator.equals(that.comparator);
+        val that = o as DefaultOrderedDisambiguationRule<*>
+        return pickFirst == that.pickFirst && comparator == that.comparator
     }
 
-    @Override
-    public int hashCode() {
-        int result = comparator.hashCode();
-        result = 31 * result + Boolean.hashCode(pickFirst);
-        return result;
+    override fun hashCode(): Int {
+        var result = comparator.hashCode()
+        result = 31 * result + Boolean.hashCode(pickFirst)
+        return result
     }
 }

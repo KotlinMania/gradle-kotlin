@@ -13,244 +13,243 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencyConstraintMetadata;
-import org.gradle.api.artifacts.DependencyConstraintsMetadata;
-import org.gradle.api.artifacts.DirectDependenciesMetadata;
-import org.gradle.api.artifacts.DirectDependencyMetadata;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.MutableVariantFilesMetadata;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.MutableCapabilitiesMetadata;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.DependencyMetadataRules;
-import org.gradle.internal.component.model.VariantAttributesRules;
-import org.gradle.internal.component.model.VariantFilesRules;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencyConstraintMetadata
+import org.gradle.api.artifacts.DependencyConstraintsMetadata
+import org.gradle.api.artifacts.DirectDependenciesMetadata
+import org.gradle.api.artifacts.DirectDependencyMetadata
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.MutableVariantFilesMetadata
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.MutableCapabilitiesMetadata
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.DependencyMetadataRules
+import org.gradle.internal.component.model.VariantAttributesRules
+import org.gradle.internal.component.model.VariantFilesRules
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
+import java.util.concurrent.ConcurrentHashMap
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+open class VariantMetadataRules private constructor(
+    private val attributesFactory: AttributesFactory,
+    private val moduleVersionId: ModuleVersionIdentifier,
+    private val baseAttributes: AttributeContainerInternal
+) {
+    val additionalVariants: MutableList<AdditionalVariant> = ArrayList<AdditionalVariant>()
 
-public class VariantMetadataRules {
-    private final AttributesFactory attributesFactory;
-    private final ModuleVersionIdentifier moduleVersionId;
-    private final List<AdditionalVariant> additionalVariants = new ArrayList<>();
+    private var dependencyMetadataRules: DependencyMetadataRules? = null
+    private var variantAttributesRules: VariantAttributesRules? = null
+    private var capabilitiesRules: MutableList<VariantAction<in MutableCapabilitiesMetadata>>? = null
+    private var variantFilesRules: VariantFilesRules? = null
 
-    private DependencyMetadataRules dependencyMetadataRules;
-    private VariantAttributesRules variantAttributesRules;
-    private List<VariantMetadataRules.VariantAction<? super MutableCapabilitiesMetadata>> capabilitiesRules;
-    private VariantFilesRules variantFilesRules;
-
-    private final AttributeContainerInternal baseAttributes;
     // If two configurations have a dependency on the same module, there is a chance they can be
     // resolved concurrently. Dependency resolution exercises this code when performing attribute
     // matching, so this map must support concurrent modification.
-    private final Map<String, AttributeContainerInternal> variantAttributes = new ConcurrentHashMap<>();
+    private val variantAttributes: MutableMap<String, AttributeContainerInternal> = ConcurrentHashMap<String, AttributeContainerInternal>()
 
-    public VariantMetadataRules(AttributesFactory attributesFactory, ModuleVersionIdentifier moduleVersionId) {
-        this(attributesFactory, moduleVersionId, attributesFactory.mutable());
-    }
+    constructor(attributesFactory: AttributesFactory, moduleVersionId: ModuleVersionIdentifier) : this(attributesFactory, moduleVersionId, attributesFactory.mutable())
 
-    private VariantMetadataRules(AttributesFactory attributesFactory, ModuleVersionIdentifier moduleVersionId, AttributeContainerInternal baseAttributes) {
-        this.attributesFactory = attributesFactory;
-        this.moduleVersionId = moduleVersionId;
-        this.baseAttributes = baseAttributes;
-    }
-
-    public AttributeContainerInternal getAttributes(@Nullable String variantName) {
+    open fun getAttributes(variantName: String?): AttributeContainerInternal {
         if (variantName == null) {
-            return baseAttributes;
+            return baseAttributes
         } else {
-            return variantAttributes.computeIfAbsent(variantName, name -> attributesFactory.mutable(baseAttributes));
+            return variantAttributes.computeIfAbsent(variantName) { name: String? -> attributesFactory.mutable(baseAttributes) }
         }
     }
 
-    protected AttributeContainerInternal joinVariantAttributes(VariantResolveMetadata variant, AttributeContainerInternal parent) {
-        AttributeContainerInternal variantAttrs = getAttributes(variant.getName());
-        return attributesFactory.join(parent, variantAttrs);
+    protected open fun joinVariantAttributes(variant: VariantResolveMetadata, parent: AttributeContainerInternal): AttributeContainerInternal {
+        val variantAttrs = getAttributes(variant.name)
+        return attributesFactory.join(parent, variantAttrs)
     }
 
-    public ImmutableAttributes applyVariantAttributeRules(VariantResolveMetadata variant, AttributeContainerInternal parent) {
-        AttributeContainerInternal joined = joinVariantAttributes(variant, parent);
+    fun applyVariantAttributeRules(variant: VariantResolveMetadata, parent: AttributeContainerInternal): ImmutableAttributes {
+        val joined = joinVariantAttributes(variant, parent)
         if (variantAttributesRules != null) {
-            return variantAttributesRules.execute(variant, joined);
+            return variantAttributesRules!!.execute(variant, joined)
         }
-        return joined.asImmutable();
+        return joined.asImmutable()
     }
 
-    public ImmutableCapabilities applyCapabilitiesRules(VariantResolveMetadata variant, ImmutableCapabilities capabilities) {
+    fun applyCapabilitiesRules(variant: VariantResolveMetadata, capabilities: ImmutableCapabilities): ImmutableCapabilities {
         if (capabilitiesRules == null) {
-            return capabilities;
+            return capabilities
         }
 
-        DefaultMutableCapabilitiesMetadata mutableCapabilities;
+        val mutableCapabilities: DefaultMutableCapabilitiesMetadata?
         if (capabilities.asSet().isEmpty()) {
             // we must add the implicit capability here because it is assumed that if there's a rule
             // "addCapability" would effectively _add_ a capability, so the implicit one must not be forgotten
-            mutableCapabilities = new DefaultMutableCapabilitiesMetadata(ImmutableCapabilities.of(
-                new DefaultImmutableCapability(moduleVersionId.getGroup(), moduleVersionId.getName(), moduleVersionId.getVersion()))
-            );
+            mutableCapabilities = DefaultMutableCapabilitiesMetadata(
+                ImmutableCapabilities.of(
+                    DefaultImmutableCapability(moduleVersionId.getGroup(), moduleVersionId.getName(), moduleVersionId.getVersion())
+                )
+            )
         } else {
-            mutableCapabilities = new DefaultMutableCapabilitiesMetadata(capabilities);
+            mutableCapabilities = DefaultMutableCapabilitiesMetadata(capabilities)
         }
 
-        for (VariantMetadataRules.VariantAction<? super MutableCapabilitiesMetadata> action : capabilitiesRules) {
-            action.maybeExecute(variant, mutableCapabilities);
+        for (action in capabilitiesRules) {
+            action.maybeExecute(variant, mutableCapabilities)
         }
 
-        return mutableCapabilities.asImmutableCapabilities();
+        return mutableCapabilities.asImmutableCapabilities()
     }
 
-    public <T extends ModuleDependencyMetadata> List<? extends ModuleDependencyMetadata> applyDependencyMetadataRules(VariantResolveMetadata variant, List<T> configDependencies) {
+    fun <T : ModuleDependencyMetadata?> applyDependencyMetadataRules(variant: VariantResolveMetadata, configDependencies: MutableList<T?>): MutableList<out ModuleDependencyMetadata> {
         if (dependencyMetadataRules != null) {
-            return dependencyMetadataRules.execute(variant, configDependencies);
+            return dependencyMetadataRules!!.execute<T?>(variant, configDependencies)
         }
-        return configDependencies;
+        return configDependencies
     }
 
-    public <T extends ComponentArtifactMetadata> ImmutableList<T> applyVariantFilesMetadataRulesToArtifacts(VariantResolveMetadata variant, ImmutableList<T> declaredArtifacts, ModuleComponentIdentifier componentIdentifier) {
+    fun <T : ComponentArtifactMetadata?> applyVariantFilesMetadataRulesToArtifacts(
+        variant: VariantResolveMetadata,
+        declaredArtifacts: ImmutableList<T?>,
+        componentIdentifier: ModuleComponentIdentifier
+    ): ImmutableList<T?> {
         if (variantFilesRules != null) {
-            return variantFilesRules.executeForArtifacts(variant, declaredArtifacts, componentIdentifier);
+            return variantFilesRules!!.executeForArtifacts<T?>(variant, declaredArtifacts, componentIdentifier)
         }
-        return declaredArtifacts;
+        return declaredArtifacts
     }
 
-    public <T extends ComponentVariant.File> ImmutableList<T> applyVariantFilesMetadataRulesToFiles(VariantResolveMetadata variant, ImmutableList<T> declaredFiles, ModuleComponentIdentifier componentIdentifier) {
+    fun <T : ComponentVariant.File?> applyVariantFilesMetadataRulesToFiles(
+        variant: VariantResolveMetadata,
+        declaredFiles: ImmutableList<T?>,
+        componentIdentifier: ModuleComponentIdentifier
+    ): ImmutableList<T?> {
         if (variantFilesRules != null) {
-            return variantFilesRules.executeForFiles(variant, declaredFiles, componentIdentifier);
+            return variantFilesRules!!.executeForFiles<T?>(variant, declaredFiles, componentIdentifier)
         }
-        return declaredFiles;
+        return declaredFiles
     }
 
-    public void addDependencyAction(Instantiator instantiator, NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser, NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser, VariantAction<? super DirectDependenciesMetadata> action) {
+    open fun addDependencyAction(
+        instantiator: Instantiator,
+        dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+        dependencyConstraintNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+        action: VariantAction<in DirectDependenciesMetadata>
+    ) {
         if (dependencyMetadataRules == null) {
-            dependencyMetadataRules = new DependencyMetadataRules(instantiator, dependencyNotationParser, dependencyConstraintNotationParser, attributesFactory);
+            dependencyMetadataRules = DependencyMetadataRules(instantiator, dependencyNotationParser, dependencyConstraintNotationParser, attributesFactory)
         }
-        dependencyMetadataRules.addDependencyAction(action);
+        dependencyMetadataRules!!.addDependencyAction(action)
     }
 
-    public void addDependencyConstraintAction(Instantiator instantiator, NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser, NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser, VariantAction<? super DependencyConstraintsMetadata> action) {
+    open fun addDependencyConstraintAction(
+        instantiator: Instantiator,
+        dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+        dependencyConstraintNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+        action: VariantAction<in DependencyConstraintsMetadata>
+    ) {
         if (dependencyMetadataRules == null) {
-            dependencyMetadataRules = new DependencyMetadataRules(instantiator, dependencyNotationParser, dependencyConstraintNotationParser, attributesFactory);
+            dependencyMetadataRules = DependencyMetadataRules(instantiator, dependencyNotationParser, dependencyConstraintNotationParser, attributesFactory)
         }
-        dependencyMetadataRules.addDependencyConstraintAction(action);
+        dependencyMetadataRules!!.addDependencyConstraintAction(action)
     }
 
-    public void addAttributesAction(AttributesFactory attributesFactory, VariantAction<? super AttributeContainer> action) {
+    open fun addAttributesAction(attributesFactory: AttributesFactory, action: VariantAction<in AttributeContainer>) {
         if (variantAttributesRules == null) {
-            variantAttributesRules = new VariantAttributesRules(attributesFactory);
+            variantAttributesRules = VariantAttributesRules(attributesFactory)
         }
-        variantAttributesRules.addAttributesAction(action);
+        variantAttributesRules!!.addAttributesAction(action)
     }
 
-    public void addCapabilitiesAction(VariantAction<? super MutableCapabilitiesMetadata> action) {
+    open fun addCapabilitiesAction(action: VariantAction<in MutableCapabilitiesMetadata>) {
         if (capabilitiesRules == null) {
-            capabilitiesRules = new ArrayList<>(1);
+            capabilitiesRules = ArrayList<VariantAction<in MutableCapabilitiesMetadata>>(1)
         }
-        capabilitiesRules.add(action);
+        capabilitiesRules!!.add(action)
     }
 
-    public void addVariantFilesAction(VariantAction<? super MutableVariantFilesMetadata> action) {
+    fun addVariantFilesAction(action: VariantAction<in MutableVariantFilesMetadata>) {
         if (variantFilesRules == null) {
-            variantFilesRules = new VariantFilesRules();
+            variantFilesRules = VariantFilesRules()
         }
-        variantFilesRules.addFilesAction(action);
+        variantFilesRules!!.addFilesAction(action)
     }
 
-    public void addVariant(String name) {
-        additionalVariants.add(new AdditionalVariant(name));
+    fun addVariant(name: String) {
+        additionalVariants.add(AdditionalVariant(name))
     }
 
-    public void addVariant(String name, String basedOn, boolean lenient) {
-        additionalVariants.add(new AdditionalVariant(name, basedOn, lenient));
-    }
-
-    public List<AdditionalVariant> getAdditionalVariants() {
-        return additionalVariants;
-    }
-
-    public static VariantMetadataRules noOp() {
-        return ImmutableRules.INSTANCE;
+    fun addVariant(name: String, basedOn: String, lenient: Boolean) {
+        additionalVariants.add(AdditionalVariant(name, basedOn, lenient))
     }
 
     /**
      * A variant action is an action which is only executed if it matches the name of the variant.
      * @param <T> the type of the action subject
-     */
-    public static class VariantAction<T> {
-        private final String variantName;
-        private final Action<? super T> delegate;
-
-        /**
-         * @param variantName The variant name to match. If null, all variants are matched.
-         * @param delegate The action to execute upon matching.
-         */
-        public VariantAction(@Nullable String variantName, Action<? super T> delegate) {
-            this.variantName = variantName;
-            this.delegate = delegate;
-        }
-
+    </T> */
+    class VariantAction<T>
+    /**
+     * @param variantName The variant name to match. If null, all variants are matched.
+     * @param delegate The action to execute upon matching.
+     */(private val variantName: String?, private val delegate: Action<in T?>) {
         /**
          * Executes the underlying action if the supplied variant matches.
          *
          * @param variant the variant metadata, used to check if the rule applies
          * @param subject the subject of the rule
          */
-        public void maybeExecute(VariantResolveMetadata variant, T subject) {
-            if (variantName == null || variantName.equals(variant.getName())) {
-                delegate.execute(subject);
+        fun maybeExecute(variant: VariantResolveMetadata, subject: T?) {
+            if (variantName == null || variantName == variant.name) {
+                delegate.execute(subject)
             }
         }
     }
 
-    private static class ImmutableRules extends VariantMetadataRules {
-        private final static ImmutableRules INSTANCE = new ImmutableRules();
-
-        private ImmutableRules() {
-            super(null, null, null);
+    private class ImmutableRules : VariantMetadataRules(null, null, null) {
+        override fun getAttributes(variantName: String?): AttributeContainerInternal {
+            return ImmutableAttributes.EMPTY
         }
 
-        @Override
-        public AttributeContainerInternal getAttributes(@Nullable String variantName) {
-            return ImmutableAttributes.EMPTY;
+        override fun joinVariantAttributes(variant: VariantResolveMetadata, parent: AttributeContainerInternal): AttributeContainerInternal {
+            return parent
         }
 
-        @Override
-        protected AttributeContainerInternal joinVariantAttributes(VariantResolveMetadata variant, AttributeContainerInternal parent) {
-            return parent;
+        override fun addDependencyAction(
+            instantiator: Instantiator,
+            dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+            dependencyConstraintNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+            action: VariantAction<in DirectDependenciesMetadata>
+        ) {
+            throw UnsupportedOperationException("You are probably trying to add a dependency rule to something that wasn't supposed to be mutable")
         }
 
-        @Override
-        public void addDependencyAction(Instantiator instantiator, NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser, NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser, VariantAction<? super DirectDependenciesMetadata> action) {
-            throw new UnsupportedOperationException("You are probably trying to add a dependency rule to something that wasn't supposed to be mutable");
+        override fun addDependencyConstraintAction(
+            instantiator: Instantiator,
+            dependencyNotationParser: NotationParser<Any, DirectDependencyMetadata>,
+            dependencyConstraintNotationParser: NotationParser<Any, DependencyConstraintMetadata>,
+            action: VariantAction<in DependencyConstraintsMetadata>
+        ) {
+            throw UnsupportedOperationException("You are probably trying to add a dependency constraint rule to something that wasn't supposed to be mutable")
         }
 
-        @Override
-        public void addDependencyConstraintAction(Instantiator instantiator, NotationParser<Object, DirectDependencyMetadata> dependencyNotationParser, NotationParser<Object, DependencyConstraintMetadata> dependencyConstraintNotationParser, VariantAction<? super DependencyConstraintsMetadata> action) {
-            throw new UnsupportedOperationException("You are probably trying to add a dependency constraint rule to something that wasn't supposed to be mutable");
+        override fun addAttributesAction(attributesFactory: AttributesFactory, action: VariantAction<in AttributeContainer>) {
+            throw UnsupportedOperationException("You are probably trying to add a variant attribute to something that wasn't supposed to be mutable")
         }
 
-        @Override
-        public void addAttributesAction(AttributesFactory attributesFactory, VariantAction<? super AttributeContainer> action) {
-            throw new UnsupportedOperationException("You are probably trying to add a variant attribute to something that wasn't supposed to be mutable");
+        override fun addCapabilitiesAction(action: VariantAction<in MutableCapabilitiesMetadata>) {
+            throw UnsupportedOperationException("You are probably trying to change capabilities of something that wasn't supposed to be mutable")
         }
 
-        @Override
-        public void addCapabilitiesAction(VariantAction<? super MutableCapabilitiesMetadata> action) {
-            throw new UnsupportedOperationException("You are probably trying to change capabilities of something that wasn't supposed to be mutable");
+        companion object {
+            private val INSTANCE = ImmutableRules()
         }
     }
 
+    companion object {
+        fun noOp(): VariantMetadataRules {
+            return ImmutableRules.Companion.INSTANCE
+        }
+    }
 }

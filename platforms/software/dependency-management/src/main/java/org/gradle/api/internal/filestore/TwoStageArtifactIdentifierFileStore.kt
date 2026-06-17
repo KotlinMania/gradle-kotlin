@@ -13,66 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.filestore;
+package org.gradle.api.internal.filestore
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Action;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.resource.local.FileStoreException;
-import org.gradle.internal.resource.local.LocallyAvailableResource;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.file.FileAccessTracker
+import org.gradle.internal.resource.local.FileStoreException
+import org.gradle.internal.resource.local.LocallyAvailableResource
+import java.io.File
 
-import java.io.File;
-import java.util.Set;
+class TwoStageArtifactIdentifierFileStore(private val readOnlyStore: ArtifactIdentifierFileStore, private val writableStore: ArtifactIdentifierFileStore) : ArtifactIdentifierFileStore {
+    private val fileAccessTracker: FileAccessTracker
 
-public class TwoStageArtifactIdentifierFileStore implements ArtifactIdentifierFileStore {
-    private final ArtifactIdentifierFileStore readOnlyStore;
-    private final ArtifactIdentifierFileStore writableStore;
-    private final FileAccessTracker fileAccessTracker;
-
-    public TwoStageArtifactIdentifierFileStore(ArtifactIdentifierFileStore readOnlyStore, ArtifactIdentifierFileStore writableStore) {
-        this.readOnlyStore = readOnlyStore;
-        this.writableStore = writableStore;
-        this.fileAccessTracker = new DelegatingFileAccessTracker();
+    init {
+        this.fileAccessTracker = TwoStageArtifactIdentifierFileStore.DelegatingFileAccessTracker()
     }
 
-    @Override
-    public File whereIs(ModuleComponentArtifactIdentifier artifactId, String checksum) {
-        File file = writableStore.whereIs(artifactId, checksum);
+    override fun whereIs(artifactId: ModuleComponentArtifactIdentifier?, checksum: String?): File {
+        val file = writableStore.whereIs(artifactId, checksum)
         if (file.exists()) {
-            return file;
+            return file
         }
-        return readOnlyStore.whereIs(artifactId, checksum);
+        return readOnlyStore.whereIs(artifactId, checksum)
     }
 
-    @Override
-    public FileAccessTracker getFileAccessTracker() {
-        return fileAccessTracker;
+    override fun getFileAccessTracker(): FileAccessTracker {
+        return fileAccessTracker
     }
 
-    @Override
-    public LocallyAvailableResource move(ModuleComponentArtifactIdentifier key, File source) throws FileStoreException {
-        return writableStore.move(key, source);
+    @Throws(FileStoreException::class)
+    override fun move(key: ModuleComponentArtifactIdentifier?, source: File?): LocallyAvailableResource? {
+        return writableStore.move(key, source)
     }
 
-    @Override
-    public LocallyAvailableResource add(ModuleComponentArtifactIdentifier key, Action<File> addAction) throws FileStoreException {
-        return writableStore.add(key, addAction);
+    @Throws(FileStoreException::class)
+    override fun add(key: ModuleComponentArtifactIdentifier?, addAction: Action<File?>?): LocallyAvailableResource? {
+        return writableStore.add(key, addAction)
     }
 
-    @Override
-    public Set<? extends LocallyAvailableResource> search(ModuleComponentArtifactIdentifier key) {
-        ImmutableSet.Builder<LocallyAvailableResource> builder = ImmutableSet.builder();
-        builder.addAll(writableStore.search(key));
-        builder.addAll(readOnlyStore.search(key));
-        return builder.build();
+    override fun search(key: ModuleComponentArtifactIdentifier?): MutableSet<out LocallyAvailableResource?> {
+        val builder = ImmutableSet.builder<LocallyAvailableResource?>()
+        builder.addAll(writableStore.search(key))
+        builder.addAll(readOnlyStore.search(key))
+        return builder.build()
     }
 
-    private class DelegatingFileAccessTracker implements FileAccessTracker {
-        @Override
-        public void markAccessed(File file) {
-            readOnlyStore.getFileAccessTracker().markAccessed(file);
-            writableStore.getFileAccessTracker().markAccessed(file);
+    private inner class DelegatingFileAccessTracker : FileAccessTracker {
+        override fun markAccessed(file: File) {
+            readOnlyStore.getFileAccessTracker().markAccessed(file)
+            writableStore.getFileAccessTracker().markAccessed(file)
         }
     }
 }

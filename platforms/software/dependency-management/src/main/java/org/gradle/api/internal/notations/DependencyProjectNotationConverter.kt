@@ -13,39 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.notations
 
-package org.gradle.api.internal.notations;
+import org.gradle.api.Project
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.TypeConversionException
 
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.TypeConversionException;
-
-public class DependencyProjectNotationConverter implements NotationConverter<Project, ProjectDependency> {
-
-    private final DefaultProjectDependencyFactory factory;
-
-    public DependencyProjectNotationConverter(DefaultProjectDependencyFactory factory) {
-        this.factory = factory;
+class DependencyProjectNotationConverter(private val factory: DefaultProjectDependencyFactory) : NotationConverter<Project?, ProjectDependency?> {
+    override fun describe(visitor: DiagnosticsVisitor) {
+        visitor.candidate("Projects").example("project(':some:project:path')")
     }
 
-    @Override
-    public void describe(DiagnosticsVisitor visitor) {
-        visitor.candidate("Projects").example("project(':some:project:path')");
-    }
-
-    @Override
-    public void convert(Project notation, NotationConvertResult<? super ProjectDependency> result) throws TypeConversionException {
-        DeprecationLogger.deprecateAction("Using a Project object as a dependency notation")
-            .withAdvice("Please use the project(String) method on DependencyHandler or the createProjectDependency(String) method on DependencyFactory instead.")
+    @Throws(TypeConversionException::class)
+    override fun convert(notation: Project, result: NotationConvertResult<in ProjectDependency?>) {
+        deprecateAction("Using a Project object as a dependency notation")
+            .withAdvice("Please use the project(String) method on DependencyHandler or the createProjectDependency(String) method on DependencyFactory instead.")!!
             .willBecomeAnErrorInGradle10()
-            .withUpgradeGuideSection(9, "dependency_project_notation")
-            .nagUser();
-        result.converted(factory.create(((ProjectInternal) notation).getOwner()));
+            .withUpgradeGuideSection(9, "dependency_project_notation")!!
+            .nagUser()
+        result.converted(factory.create((notation as ProjectInternal).getOwner()))
     }
 }

@@ -13,78 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.api.problems.Problem;
-import org.gradle.api.problems.internal.GradleCoreProblemGroup;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.api.problems.internal.ResolutionFailureDataSpec;
-import org.gradle.internal.component.resolution.failure.ReportableAsProblem;
-import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
-import org.gradle.internal.exceptions.Contextual;
-import org.gradle.internal.exceptions.ResolutionProvider;
-import org.gradle.internal.exceptions.StyledException;
-import org.gradle.util.internal.TextUtil;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-
-import static org.gradle.internal.deprecation.Documentation.userManual;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.api.problems.Problem
+import org.gradle.api.problems.internal.GradleCoreProblemGroup.variantResolution
+import org.gradle.api.problems.internal.ProblemsInternal
+import org.gradle.api.problems.internal.ResolutionFailureDataSpec
+import org.gradle.internal.component.resolution.failure.ReportableAsProblem
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure
+import org.gradle.internal.deprecation.Documentation.Companion.userManual
+import org.gradle.internal.exceptions.Contextual
+import org.gradle.internal.exceptions.ResolutionProvider
+import org.gradle.internal.exceptions.StyledException
+import org.gradle.util.internal.TextUtil
 
 /**
- * Abstract base class for all {@link ResolutionFailure}s occurring during dependency resolution that can be handled
- * by the {@link ResolutionFailureHandler ResolutionFailureHandler}.
- * <p>
- * This exception type carries information about the failure, and implements {@link ResolutionProvider} to provide a
+ * Abstract base class for all [ResolutionFailure]s occurring during dependency resolution that can be handled
+ * by the [ResolutionFailureHandler].
+ *
+ *
+ * This exception type carries information about the failure, and implements [ResolutionProvider] to provide a
  * list of resolutions that may help the user to fix the problem.  This class is meant to be immutable.
  *
  * @implNote This class should not be subclassed beyond the existing
- * {@link VariantSelectionByNameException}, {@link ArtifactSelectionException}, {@link GraphValidationException} and
- * {@link VariantSelectionByAttributesException} subtypes.  All subtypes should remain immutable.
+ * [VariantSelectionByNameException], [ArtifactSelectionException], [GraphValidationException] and
+ * [VariantSelectionByAttributesException] subtypes.  All subtypes should remain immutable.
  */
 @Contextual
-public abstract class AbstractResolutionFailureException extends StyledException implements ResolutionProvider, ReportableAsProblem {
-    protected static final Logger LOGGER = Logging.getLogger(AbstractResolutionFailureException.class);
+abstract class AbstractResolutionFailureException @JvmOverloads constructor(message: String, protected val failure: ResolutionFailure, resolutions: MutableList<String>, cause: Throwable? = null) :
+    StyledException(message, cause), ResolutionProvider, ReportableAsProblem {
+    private val resolutions: ImmutableList<String>
 
-    private final ImmutableList<String> resolutions;
-    protected final ResolutionFailure failure;
+    init {
+        this.resolutions = ImmutableList.copyOf<String>(resolutions)
 
-    public AbstractResolutionFailureException(String message, ResolutionFailure failure, List<String> resolutions) {
-        this(message, failure, resolutions, null);
+        LOGGER.info("Variant Selection Exception: {} caused by Resolution Failure: {}", this.javaClass.getName(), getFailure()!!.javaClass.getName())
     }
 
-    public AbstractResolutionFailureException(String message, ResolutionFailure failure, List<String> resolutions, @Nullable Throwable cause) {
-        super(message, cause);
-        this.failure = failure;
-        this.resolutions = ImmutableList.copyOf(resolutions);
+    abstract fun getFailure(): ResolutionFailure?
 
-        LOGGER.info("Variant Selection Exception: {} caused by Resolution Failure: {}", this.getClass().getName(), getFailure().getClass().getName());
+    public override fun getResolutions(): ImmutableList<String> {
+        return resolutions
     }
 
-    public abstract ResolutionFailure getFailure();
+    override fun reportAsProblem(problemsService: ProblemsInternal): AbstractResolutionFailureException {
+        val problem: Problem? = problemsService.internalReporter!!.internalCreate({ builder ->
+            val problemId = getFailure()!!.getProblemId()
+            builder.id(TextUtil.screamingSnakeToKebabCase(problemId.name), problemId.getDisplayName(), variantResolution())!!
+                .contextualLabel(message!!)!!
+                .documentedAt(userManual("variant_model", "sec:variant-select-errors"))!!
+                .additionalDataInternal(ResolutionFailureDataSpec::class.java, { data -> data!!.from(getFailure()) })
+        })
+        problemsService.internalReporter!!.reportError(problem!!)
 
-    @Override
-    public ImmutableList<String> getResolutions() {
-        return resolutions;
+        return this
     }
 
-    @Override
-    public AbstractResolutionFailureException reportAsProblem(ProblemsInternal problemsService) {
-        Problem problem = problemsService.internalReporter.internalCreate(builder -> {
-            ResolutionFailureProblemId problemId = getFailure().getProblemId();
-            builder.id(TextUtil.screamingSnakeToKebabCase(problemId.name()), problemId.getDisplayName(), GradleCoreProblemGroup.variantResolution())
-                .contextualLabel(getMessage())
-                .documentedAt(userManual("variant_model", "sec:variant-select-errors"))
-                .additionalDataInternal(ResolutionFailureDataSpec.class, data -> data.from(getFailure()));
-        });
-        problemsService.internalReporter.reportError(problem);
-
-        return this;
+    companion object {
+        protected val LOGGER: Logger = getLogger(AbstractResolutionFailureException::class.java)!!
     }
 }

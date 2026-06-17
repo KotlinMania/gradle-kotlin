@@ -183,15 +183,15 @@ public class DependencyVerifierBuilder {
         }
 
         void addChecksum(ModuleComponentArtifactIdentifier artifact, ChecksumKind kind, String value, @Nullable String origin, @Nullable String reason) {
-            byArtifact.computeIfAbsent(artifact.getFileName(), id -> new ArtifactVerificationBuilder()).addChecksum(kind, value, origin, reason);
+            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addChecksum(kind, value, origin, reason);
         }
 
         void addTrustedKey(ModuleComponentArtifactIdentifier artifact, String key) {
-            byArtifact.computeIfAbsent(artifact.getFileName(), id -> new ArtifactVerificationBuilder()).addTrustedKey(key);
+            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addTrustedKey(key);
         }
 
         void addIgnoredKey(ModuleComponentArtifactIdentifier artifact, IgnoredKey key) {
-            byArtifact.computeIfAbsent(artifact.getFileName(), id -> new ArtifactVerificationBuilder()).addIgnoredKey(key);
+            byArtifact.computeIfAbsent(artifact.fileName, id -> new ArtifactVerificationBuilder()).addIgnoredKey(key);
         }
 
         private static ArtifactVerificationMetadata toArtifactVerification(Map.Entry<String, ArtifactVerificationBuilder> entry) throws InvalidGpgKeyIdsException {

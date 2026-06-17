@@ -13,298 +13,274 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.model.ExternalDependencyDescriptor;
-import org.gradle.internal.component.model.ConfigurationGraphResolveState;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.Exclude;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSetMultimap
+import com.google.common.collect.ListMultimap
+import com.google.common.collect.Multimap
+import com.google.common.collect.SetMultimap
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.component.external.descriptor.Artifact
+import org.gradle.internal.component.external.model.ExternalDependencyDescriptor
+import org.gradle.internal.component.model.ConfigurationGraphResolveState
+import org.gradle.internal.component.model.ConfigurationMetadata
+import org.gradle.internal.component.model.Exclude
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.VariantGraphResolveState
+import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler
+import java.util.LinkedList
 
 /**
  * Represents a dependency as represented in an Ivy module descriptor file.
  */
-public class IvyDependencyDescriptor extends ExternalDependencyDescriptor {
-    private final ModuleComponentSelector selector;
-    private final String dynamicConstraintVersion;
-    private final boolean changing;
-    private final boolean transitive;
-    private final boolean optional;
-    private final SetMultimap<String, String> confs;
-    private final List<Exclude> excludes;
-    private final List<Artifact> dependencyArtifacts;
+class IvyDependencyDescriptor(
+    @JvmField val selector: ModuleComponentSelector,
+    @JvmField val dynamicConstraintVersion: String,
+    val isChanging: Boolean,
+    val isTransitive: Boolean,
+    val isOptional: Boolean,
+    confMappings: Multimap<String, String>,
+    artifacts: MutableList<Artifact>,
+    excludes: MutableList<Exclude>
+) : ExternalDependencyDescriptor() {
+    val confMappings: SetMultimap<String, String>
+    val allExcludes: MutableList<Exclude>
+    @JvmField
+    val dependencyArtifacts: MutableList<Artifact>
 
-    public IvyDependencyDescriptor(ModuleComponentSelector selector, String dynamicConstraintVersion, boolean changing, boolean transitive, boolean optional, Multimap<String, String> confMappings, List<Artifact> artifacts, List<Exclude> excludes) {
-        this.selector = selector;
-        this.dynamicConstraintVersion = dynamicConstraintVersion;
-        this.changing = changing;
-        this.transitive = transitive;
-        this.optional = optional;
-        this.confs = ImmutableSetMultimap.copyOf(confMappings);
-        dependencyArtifacts = ImmutableList.copyOf(artifacts);
-        this.excludes = ImmutableList.copyOf(excludes);
+    init {
+        this.confMappings = ImmutableSetMultimap.copyOf<String, String>(confMappings)
+        dependencyArtifacts = ImmutableList.copyOf<Artifact>(artifacts)
+        this.allExcludes = ImmutableList.copyOf<Exclude>(excludes)
     }
 
-    public IvyDependencyDescriptor(ModuleComponentSelector requested, ListMultimap<String, String> confMappings) {
-        this(requested, requested.getVersion(), false, true, false, confMappings, Collections.emptyList(), Collections.emptyList());
+    constructor(requested: ModuleComponentSelector, confMappings: ListMultimap<String, String>) : this(
+        requested,
+        requested.getVersion(),
+        false,
+        true,
+        false,
+        confMappings,
+        mutableListOf<Artifact>(),
+        mutableListOf<Exclude>()
+    )
+
+    override fun toString(): String {
+        return "dependency: " + selector + ", confs: " + this.confMappings
     }
 
-    @Override
-    public String toString() {
-        return "dependency: " + getSelector() + ", confs: " + confs;
-    }
+    val isConstraint: Boolean
+        get() = false
 
-    @Override
-    public ModuleComponentSelector getSelector() {
-        return selector;
-    }
-
-    @Override
-    public boolean isOptional() {
-        return optional;
-    }
-
-    @Override
-    public boolean isConstraint() {
-        return false;
-    }
-
-    @Override
-    public boolean isChanging() {
-        return changing;
-    }
-
-    @Override
-    public boolean isTransitive() {
-        return transitive;
-    }
-
-    public String getDynamicConstraintVersion() {
-        return dynamicConstraintVersion;
-    }
-
-    public SetMultimap<String, String> getConfMappings() {
-        return confs;
-    }
-
-    @Override
-    protected IvyDependencyDescriptor withRequested(ModuleComponentSelector newRequested) {
-        return new IvyDependencyDescriptor(newRequested, dynamicConstraintVersion, changing, transitive, isOptional(), confs, getDependencyArtifacts(), excludes);
+    public override fun withRequested(newRequested: ModuleComponentSelector): IvyDependencyDescriptor {
+        return IvyDependencyDescriptor(
+            newRequested, dynamicConstraintVersion,
+            this.isChanging,
+            this.isTransitive, isOptional,
+            this.confMappings,
+            this.dependencyArtifacts,
+            this.allExcludes
+        )
     }
 
     /**
      * Choose a set of configurations from the target component.
-     * The set chosen is based on a) the name of the configuration that declared this dependency and b) the {@link #confs} mapping for this dependency.
+     * The set chosen is based on a) the name of the configuration that declared this dependency and b) the [.confs] mapping for this dependency.
      *
      * The `confs` mapping is structured as `fromConfiguration -&gt; [targetConf...]`. Targets are collected for all configurations in the `fromConfiguration` hierarchy.
-     *   - '*' is a wildcard key, that matches _all_ `fromConfiguration values.
-     *       - '*, !A' is a key that matches _all_ `fromConfiguration values _except_ 'A'.
-     *   - '%' is a key that matches a `fromConfiguration` value that is not matched by any of the other keys.
-     *   - '@' and '#' are special values for matching target configurations. See <a href="http://ant.apache.org/ivy/history/latest-milestone/ivyfile/dependency.html">the Ivy docs</a> for details.
+     * - '*' is a wildcard key, that matches _all_ `fromConfiguration values.
+     * - '*, !A' is a key that matches _all_ `fromConfiguration values _except_ 'A'.
+     * - '%' is a key that matches a `fromConfiguration` value that is not matched by any of the other keys.
+     * - '@' and '#' are special values for matching target configurations. See [the Ivy docs](http://ant.apache.org/ivy/history/latest-milestone/ivyfile/dependency.html) for details.
      */
-    public List<? extends VariantGraphResolveState> selectLegacyConfigurations(
-        ConfigurationMetadata fromConfiguration,
-        IvyComponentGraphResolveState ivyComponent,
-        ResolutionFailureHandler resolutionFailureHandler
-    ) {
+    fun selectLegacyConfigurations(
+        fromConfiguration: ConfigurationMetadata,
+        ivyComponent: IvyComponentGraphResolveState,
+        resolutionFailureHandler: ResolutionFailureHandler
+    ): MutableList<out VariantGraphResolveState> {
         // TODO - all this matching stuff is constant for a given DependencyMetadata instance
-        List<ConfigurationGraphResolveState> targets = new LinkedList<>();
-        boolean matched = false;
-        String fromConfigName = fromConfiguration.getName();
-        for (String config : fromConfiguration.getHierarchy()) {
-            if (confs.containsKey(config)) {
-                Set<String> targetPatterns = confs.get(config);
+        val targets: MutableList<ConfigurationGraphResolveState> = LinkedList<ConfigurationGraphResolveState>()
+        var matched = false
+        val fromConfigName: String = fromConfiguration.name!!
+        for (config in fromConfiguration.hierarchy) {
+            if (confMappings.containsKey(config)) {
+                val targetPatterns = confMappings.get(config)
                 if (!targetPatterns.isEmpty()) {
-                    matched = true;
+                    matched = true
                 }
-                for (String targetPattern : targetPatterns) {
-                    findMatches(ivyComponent, fromConfigName, config, targetPattern, targets, resolutionFailureHandler);
+                for (targetPattern in targetPatterns) {
+                    findMatches(ivyComponent, fromConfigName, config, targetPattern, targets, resolutionFailureHandler)
                 }
             }
         }
-        if (!matched && confs.containsKey("%")) {
-            for (String targetPattern : confs.get("%")) {
-                findMatches(ivyComponent, fromConfigName, fromConfigName, targetPattern, targets, resolutionFailureHandler);
+        if (!matched && confMappings.containsKey("%")) {
+            for (targetPattern in confMappings.get("%")) {
+                findMatches(ivyComponent, fromConfigName, fromConfigName, targetPattern, targets, resolutionFailureHandler)
             }
         }
 
         // TODO - this is not quite right, eg given *,!A->A;*,!B->B the result should be B->A and A->B but will in fact be B-> and A->
-        Set<String> wildcardPatterns = confs.get("*");
+        val wildcardPatterns = confMappings.get("*")
         if (!wildcardPatterns.isEmpty()) {
-            boolean excludeWildcards = false;
-            for (String confName : fromConfiguration.getHierarchy()) {
-                if (confs.containsKey("!" + confName)) {
-                    excludeWildcards = true;
-                    break;
+            var excludeWildcards = false
+            for (confName in fromConfiguration.hierarchy) {
+                if (confMappings.containsKey("!" + confName)) {
+                    excludeWildcards = true
+                    break
                 }
             }
             if (!excludeWildcards) {
-                for (String targetPattern : wildcardPatterns) {
-                    findMatches(ivyComponent, fromConfigName, fromConfigName, targetPattern, targets, resolutionFailureHandler);
+                for (targetPattern in wildcardPatterns) {
+                    findMatches(ivyComponent, fromConfigName, fromConfigName, targetPattern, targets, resolutionFailureHandler)
                 }
             }
         }
 
-        ImmutableList.Builder<VariantGraphResolveState> builder = ImmutableList.builderWithExpectedSize(targets.size());
-        for (ConfigurationGraphResolveState target : targets) {
-            builder.add(target.asVariant());
+        val builder = ImmutableList.builderWithExpectedSize<VariantGraphResolveState>(targets.size)
+        for (target in targets) {
+            builder.add(target.asVariant()!!)
         }
 
-        return builder.build();
+        return builder.build()
     }
 
-    private void findMatches(IvyComponentGraphResolveState targetComponent, String fromConfiguration, String patternConfiguration, String targetPattern, List<ConfigurationGraphResolveState> targetConfigurations, ResolutionFailureHandler resolutionFailureHandler) {
-        int startFallback = targetPattern.indexOf('(');
+    private fun findMatches(
+        targetComponent: IvyComponentGraphResolveState,
+        fromConfiguration: String,
+        patternConfiguration: String,
+        targetPattern: String,
+        targetConfigurations: MutableList<ConfigurationGraphResolveState>,
+        resolutionFailureHandler: ResolutionFailureHandler
+    ) {
+        var targetPattern = targetPattern
+        val startFallback = targetPattern.indexOf('(')
         if (startFallback >= 0) {
             if (targetPattern.endsWith(")")) {
-                String preferred = targetPattern.substring(0, startFallback);
-                ConfigurationGraphResolveState configuration = targetComponent.getConfiguration(preferred);
+                val preferred = targetPattern.substring(0, startFallback)
+                val configuration = targetComponent.getConfiguration(preferred)
                 if (configuration != null) {
-                    maybeAddConfiguration(targetConfigurations, configuration);
-                    return;
+                    maybeAddConfiguration(targetConfigurations, configuration)
+                    return
                 }
-                targetPattern = targetPattern.substring(startFallback + 1, targetPattern.length() - 1);
+                targetPattern = targetPattern.substring(startFallback + 1, targetPattern.length - 1)
             }
         }
 
-        if (targetPattern.equals("*")) {
-            for (String targetName : targetComponent.getConfigurationNames()) {
-                ConfigurationGraphResolveState configuration = targetComponent.getConfiguration(targetName);
-                if (configuration.getMetadata().isVisible()) {
-                    maybeAddConfiguration(targetConfigurations, configuration);
+        if (targetPattern == "*") {
+            for (targetName in targetComponent.getConfigurationNames()) {
+                val configuration = targetComponent.getConfiguration(targetName)
+                if (configuration!!.getMetadata()!!.isVisible()) {
+                    maybeAddConfiguration(targetConfigurations, configuration)
                 }
             }
-            return;
+            return
         }
 
-        if (targetPattern.equals("@")) {
-            targetPattern = patternConfiguration;
-        } else if (targetPattern.equals("#")) {
-            targetPattern = fromConfiguration;
+        if (targetPattern == "@") {
+            targetPattern = patternConfiguration
+        } else if (targetPattern == "#") {
+            targetPattern = fromConfiguration
         }
 
-        ConfigurationGraphResolveState configuration = targetComponent.getConfiguration(targetPattern);
+        val configuration = targetComponent.getConfiguration(targetPattern)
         if (configuration == null) {
-            throw resolutionFailureHandler.configurationDoesNotExistFailure(targetComponent, targetPattern);
+            throw resolutionFailureHandler.configurationDoesNotExistFailure(targetComponent, targetPattern)
         }
-        maybeAddConfiguration(targetConfigurations, configuration);
+        maybeAddConfiguration(targetConfigurations, configuration)
     }
 
-    private void maybeAddConfiguration(List<ConfigurationGraphResolveState> configurations, ConfigurationGraphResolveState toAdd) {
-        Iterator<ConfigurationGraphResolveState> iter = configurations.iterator();
+    private fun maybeAddConfiguration(configurations: MutableList<ConfigurationGraphResolveState>, toAdd: ConfigurationGraphResolveState) {
+        val iter = configurations.iterator()
         while (iter.hasNext()) {
-            ConfigurationGraphResolveState configuration = iter.next();
-            if (configuration.getMetadata().getHierarchy().contains(toAdd.getName())) {
+            val configuration = iter.next()
+            if (configuration.getMetadata()!!.getHierarchy()!!.contains(toAdd.getName()!!)) {
                 // this configuration is a child of toAdd, so no need to add it
-                return;
+                return
             }
-            if (toAdd.getMetadata().getHierarchy().contains(configuration.getName())) {
+            if (toAdd.getMetadata()!!.getHierarchy()!!.contains(configuration.getName()!!)) {
                 // toAdd is a child, so implies this configuration
-                iter.remove();
+                iter.remove()
             }
         }
-        configurations.add(toAdd);
+        configurations.add(toAdd)
     }
 
-    public List<Exclude> getAllExcludes() {
-        return excludes;
-    }
-
-    public ImmutableList<ExcludeMetadata> getConfigurationExcludes(Collection<String> configurations) {
-        if (excludes.isEmpty()) {
-            return ImmutableList.of();
+    fun getConfigurationExcludes(configurations: MutableCollection<String>): ImmutableList<ExcludeMetadata> {
+        if (allExcludes.isEmpty()) {
+            return ImmutableList.of<ExcludeMetadata>()
         }
-        ImmutableList.Builder<ExcludeMetadata> rules = ImmutableList.builderWithExpectedSize(excludes.size());
-        for (Exclude exclude : excludes) {
-            Set<String> ruleConfigurations = exclude.getConfigurations();
+        val rules = ImmutableList.builderWithExpectedSize<ExcludeMetadata>(
+            allExcludes.size
+        )
+        for (exclude in this.allExcludes) {
+            val ruleConfigurations: MutableSet<String> = exclude.configurations!!
             if (include(ruleConfigurations, configurations)) {
-                rules.add(exclude);
+                rules.add(exclude)
             }
         }
-        return rules.build();
+        return rules.build()
     }
 
-    public List<Artifact> getDependencyArtifacts() {
-        return dependencyArtifacts;
-    }
-
-    public ImmutableList<IvyArtifactName> getConfigurationArtifacts(ConfigurationMetadata fromConfiguration) {
+    fun getConfigurationArtifacts(fromConfiguration: ConfigurationMetadata): ImmutableList<IvyArtifactName> {
         if (dependencyArtifacts.isEmpty()) {
-            return ImmutableList.of();
+            return ImmutableList.of<IvyArtifactName>()
         }
 
-        Collection<String> includedConfigurations = fromConfiguration.getHierarchy();
-        ImmutableList.Builder<IvyArtifactName> artifacts = ImmutableList.builder();
-        for (Artifact depArtifact : dependencyArtifacts) {
-            Set<String> artifactConfigurations = depArtifact.getConfigurations();
+        val includedConfigurations: MutableCollection<String> = fromConfiguration.hierarchy
+        val artifacts = ImmutableList.builder<IvyArtifactName>()
+        for (depArtifact in dependencyArtifacts) {
+            val artifactConfigurations = depArtifact.configurations
             if (include(artifactConfigurations, includedConfigurations)) {
-                IvyArtifactName ivyArtifactName = depArtifact.getArtifactName();
-                artifacts.add(ivyArtifactName);
+                val ivyArtifactName = depArtifact.artifactName
+                artifacts.add(ivyArtifactName)
             }
         }
-        return artifacts.build();
+        return artifacts.build()
     }
 
-    protected static boolean include(Iterable<String> configurations, Collection<String> acceptedConfigurations) {
-        for (String configuration : configurations) {
-            if (configuration.equals("*")) {
-                return true;
-            }
-            if (acceptedConfigurations.contains(configuration)) {
-                return true;
-            }
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
+        }
+
+        val that = o as IvyDependencyDescriptor
+        return this.isChanging == that.isChanging && this.isTransitive == that.isTransitive && this.isOptional == that.isOptional && Objects.equal(selector, that.selector)
+                && Objects.equal(dynamicConstraintVersion, that.dynamicConstraintVersion)
+                && Objects.equal(this.confMappings, that.confMappings)
+                && Objects.equal(this.allExcludes, that.allExcludes)
+                && Objects.equal(dependencyArtifacts, that.dependencyArtifacts)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        IvyDependencyDescriptor that = (IvyDependencyDescriptor) o;
-        return changing == that.changing
-            && transitive == that.transitive
-            && optional == that.optional
-            && Objects.equal(selector, that.selector)
-            && Objects.equal(dynamicConstraintVersion, that.dynamicConstraintVersion)
-            && Objects.equal(confs, that.confs)
-            && Objects.equal(excludes, that.excludes)
-            && Objects.equal(dependencyArtifacts, that.dependencyArtifacts);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(selector,
+    override fun hashCode(): Int {
+        return Objects.hashCode(
+            selector,
             dynamicConstraintVersion,
-            changing,
-            transitive,
-            optional,
-            confs,
-            excludes,
-            dependencyArtifacts);
+            this.isChanging,
+            this.isTransitive,
+            this.isOptional,
+            this.confMappings,
+            this.allExcludes,
+            dependencyArtifacts
+        )
+    }
+
+    companion object {
+        protected fun include(configurations: Iterable<String>, acceptedConfigurations: MutableCollection<String>): Boolean {
+            for (configuration in configurations) {
+                if (configuration == "*") {
+                    return true
+                }
+                if (acceptedConfigurations.contains(configuration)) {
+                    return true
+                }
+            }
+            return false
+        }
     }
 }

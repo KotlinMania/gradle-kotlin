@@ -41,7 +41,7 @@ public class DefaultArtifactSelectionDetails implements ArtifactSelectionDetails
     @Override
     public List<DependencyArtifactSelector> getRequestedSelectors() {
         return Lists.transform(requestedArtifacts, artifact ->
-            new DefaultDependencyArtifactSelector(artifact.getType(), artifact.getExtension(), artifact.getClassifier())
+            new DefaultDependencyArtifactSelector(artifact.type, artifact.extension, artifact.classifier)
         );
     }
 

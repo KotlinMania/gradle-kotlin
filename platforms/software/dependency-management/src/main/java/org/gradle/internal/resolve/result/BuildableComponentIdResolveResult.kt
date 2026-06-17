@@ -13,38 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.RejectedVersion
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.RejectedVersion;
-
-import java.util.Collection;
-
-public interface BuildableComponentIdResolveResult extends ComponentIdResolveResult, ResourceAwareResolveResult {
+interface BuildableComponentIdResolveResult : ComponentIdResolveResult, ResourceAwareResolveResult {
     /**
      * Marks the component selector as resolved to the specified id.
      */
-    void resolved(ComponentIdentifier id, ModuleVersionIdentifier moduleVersionIdentifier);
+    fun resolved(id: ComponentIdentifier?, moduleVersionIdentifier: ModuleVersionIdentifier?)
 
     /**
      * Marks the component selector as resolved to the specified id, but rejected.
      */
-    void rejected(ComponentIdentifier id, ModuleVersionIdentifier moduleVersionIdentifier);
+    fun rejected(id: ComponentIdentifier?, moduleVersionIdentifier: ModuleVersionIdentifier?)
 
     /**
      * Marks the component selector as resolved, with the provided state. The id is taken from the metadata.
      */
-    void resolved(ComponentGraphResolveState state, ComponentGraphSpecificResolveState graphState);
+    fun resolved(state: ComponentGraphResolveState?, graphState: ComponentGraphSpecificResolveState?)
 
     /**
      * Marks the component selection as failed.
      */
-    void failed(ModuleVersionResolveException failure);
+    fun failed(failure: ModuleVersionResolveException?)
 
     /**
      * Registers the list of versions that were attempted for this module, but didn't match
@@ -53,7 +50,7 @@ public interface BuildableComponentIdResolveResult extends ComponentIdResolveRes
      *
      * @param unmatchedVersions a collection of unmatched versions
      */
-    void unmatched(Collection<String> unmatchedVersions);
+    fun unmatched(unmatchedVersions: MutableCollection<String?>?)
 
     /**
      * Registers the list of rejections that happened during resolution for this module.
@@ -62,5 +59,5 @@ public interface BuildableComponentIdResolveResult extends ComponentIdResolveRes
      *
      * @param rejections a collection of rejected versions
      */
-    void rejections(Collection<RejectedVersion> rejections);
+    fun rejections(rejections: MutableCollection<RejectedVersion?>?)
 }

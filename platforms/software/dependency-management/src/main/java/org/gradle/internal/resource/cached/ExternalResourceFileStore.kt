@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.cached;
+package org.gradle.internal.resource.cached
 
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.resource.local.FileStore;
-import org.gradle.internal.resource.local.FileStoreSearcher;
+import org.gradle.internal.resource.local.FileStore
+import org.gradle.internal.resource.local.FileStoreSearcher
 
-public interface ExternalResourceFileStore extends FileStore<String>, FileStoreSearcher<String> {
-    FileAccessTracker getFileAccessTracker();
+interface ExternalResourceFileStore : FileStore<String?>, FileStoreSearcher<String?> {
+    @JvmField
+    val fileAccessTracker: FileAccessTracker?
 }

@@ -13,62 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.specs
 
-package org.gradle.buildinit.specs;
-
-import org.gradle.api.Describable;
-import org.gradle.api.Incubating;
-
-import java.util.Collections;
-import java.util.List;
+import org.apache.commons.lang3.text.WordUtils
+import org.gradle.api.Describable
+import org.gradle.api.Incubating
 
 /**
- * Represents a specification for a new type of project that the {@code init} task can generate.
+ * Represents a specification for a new type of project that the `init` task can generate.
  *
  * @implSpec Meant to be implemented by plugins that want to provide additional project types, with implementations
- * being discoverable by a {@link java.util.ServiceLoader}.
+ * being discoverable by a [java.util.ServiceLoader].
  * @since 8.12
  */
 @Incubating
-public interface BuildInitSpec extends Describable {
+interface BuildInitSpec : Describable {
     /**
      * The name of the type of project this spec will generate.
-     * <p>
-     * This will be used to allow the user to select a project type when running the {@code init} task.  By
-     * default, this is the proper-cased version of {@link #getType()}.
+     *
+     *
+     * This will be used to allow the user to select a project type when running the `init` task.  By
+     * default, this is the proper-cased version of [.getType].
      *
      * @return a name providing a brief description of this type of project
      * @since 8.12
      */
-    @Override
-    default String getDisplayName() {
-        String spaced = getType().replace("-", " ");
-        @SuppressWarnings("deprecation")
-        String capitalized =  org.apache.commons.lang3.text.WordUtils.capitalizeFully(spaced);
-        return capitalized;
+    override fun getDisplayName(): String {
+        val spaced = this.type!!.replace("-", " ")
+        @Suppress("deprecation") val capitalized = WordUtils.capitalizeFully(spaced)
+        return capitalized
     }
 
     /**
      * An identifier for the type of project this spec will generate.
-     * <p>
-     * This will be used to allow the user to select a project type when running the {@code init} task
-     * non-interactively by supplying the {@code --type} parameter to the init task.
-     * <p>
-     * Each project type can be registered to only a single {@link BuildInitGenerator}.
+     *
+     *
+     * This will be used to allow the user to select a project type when running the `init` task
+     * non-interactively by supplying the `--type` parameter to the init task.
+     *
+     *
+     * Each project type can be registered to only a single [BuildInitGenerator].
      *
      * @return type id for this type of project
      * @implSpec Must be unique amongst all project types contributed by a plugin.
      * @since 8.12
      */
-    String getType();
+    val type: String?
 
-    /**
-     * Returns the parameters that can be provided to configure this project during generation.
-     *
-     * @return the parameters for this type of project specification
-     * @since 8.12
-     */
-    default List<BuildInitParameter<?>> getParameters() {
-        return Collections.emptyList();
-    }
+    val parameters: MutableList<BuildInitParameter<*>>
+        /**
+         * Returns the parameters that can be provided to configure this project during generation.
+         *
+         * @return the parameters for this type of project specification
+         * @since 8.12
+         */
+        get() = mutableListOf<BuildInitParameter<*>>()
 }

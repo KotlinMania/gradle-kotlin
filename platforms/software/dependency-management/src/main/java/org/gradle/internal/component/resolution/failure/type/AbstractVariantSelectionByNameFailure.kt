@@ -13,39 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByNameFailure;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByNameFailure
 
 /**
- * An abstract {@link VariantSelectionByNameFailure} that represents the situation when a variant is requested
+ * An abstract [VariantSelectionByNameFailure] that represents the situation when a variant is requested
  * via a configuration name and this request fails.
  */
-public abstract class AbstractVariantSelectionByNameFailure extends AbstractResolutionFailure implements VariantSelectionByNameFailure {
-    private final ComponentIdentifier targetComponent;
-    private final String requestedConfigurationName;
-
-    public AbstractVariantSelectionByNameFailure(ResolutionFailureProblemId problemId, ComponentIdentifier targetComponent, String requestedConfigurationName) {
-        super(problemId);
-        this.targetComponent = targetComponent;
-        this.requestedConfigurationName = requestedConfigurationName;
+abstract class AbstractVariantSelectionByNameFailure(problemId: ResolutionFailureProblemId, private val targetComponent: ComponentIdentifier, private val requestedConfigurationName: String) :
+    AbstractResolutionFailure(problemId), VariantSelectionByNameFailure {
+    override fun describeRequestTarget(): String {
+        return requestedConfigurationName
     }
 
-    @Override
-    public String describeRequestTarget() {
-        return requestedConfigurationName;
+    override fun getTargetComponent(): ComponentIdentifier {
+        return targetComponent
     }
 
-    @Override
-    public ComponentIdentifier getTargetComponent() {
-        return targetComponent;
-    }
-
-    @Override
-    public String getRequestedConfigurationName() {
-        return requestedConfigurationName;
+    override fun getRequestedConfigurationName(): String {
+        return requestedConfigurationName
     }
 }

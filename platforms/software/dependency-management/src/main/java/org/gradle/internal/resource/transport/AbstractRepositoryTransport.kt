@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport
 
-package org.gradle.internal.resource.transport;
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport
 
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-
-public abstract class AbstractRepositoryTransport implements RepositoryTransport {
-    protected final String name;
-
-    protected AbstractRepositoryTransport(String name) {
-        this.name = name;
-    }
-}
+abstract class AbstractRepositoryTransport protected constructor(protected val name: String?) : RepositoryTransport

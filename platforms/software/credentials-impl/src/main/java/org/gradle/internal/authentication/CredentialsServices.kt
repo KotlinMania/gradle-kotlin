@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
-
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class CredentialsServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.add(AuthenticationSchemeRegistry.class, DefaultAuthenticationSchemeRegistry.class);
+class CredentialsServices : AbstractGradleModuleServices() {
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.add<DefaultAuthenticationSchemeRegistry?>(AuthenticationSchemeRegistry::class.java, DefaultAuthenticationSchemeRegistry::class.java)
     }
 }

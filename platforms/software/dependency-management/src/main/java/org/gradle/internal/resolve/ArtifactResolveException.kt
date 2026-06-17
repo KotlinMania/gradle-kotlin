@@ -13,67 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import org.gradle.api.GradleException;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.exceptions.Contextual;
-import org.gradle.util.internal.GUtil;
+import org.gradle.api.GradleException
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.exceptions.Contextual
+import org.gradle.util.internal.GUtil
 
 @Contextual
-public class ArtifactResolveException extends GradleException {
-    public ArtifactResolveException(String message) {
-        super(message);
-    }
+open class ArtifactResolveException : GradleException {
+    constructor(message: String?) : super(message)
 
-    public ArtifactResolveException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 
-    public ArtifactResolveException(ComponentIdentifier component, Throwable cause) {
-        super(format(component, ""), cause);
-    }
+    constructor(component: ComponentIdentifier, cause: Throwable?) : super(format(component, ""), cause)
 
-    public ArtifactResolveException(ComponentIdentifier component, String message) {
-        super(format(component, message));
-    }
+    constructor(component: ComponentIdentifier, message: String?) : super(format(component, message))
 
-    public ArtifactResolveException(ComponentIdentifier component, String message, Throwable cause) {
-        super(format(component, message), cause);
-    }
+    constructor(component: ComponentIdentifier, message: String?, cause: Throwable?) : super(format(component, message), cause)
 
-    public ArtifactResolveException(ComponentArtifactIdentifier artifact, Throwable cause) {
-        super(format(artifact, ""), cause);
-    }
+    constructor(artifact: ComponentArtifactIdentifier, cause: Throwable?) : super(format(artifact, ""), cause)
 
-    public ArtifactResolveException(ComponentArtifactIdentifier artifact, String message) {
-        super(format(artifact, message));
-    }
+    constructor(artifact: ComponentArtifactIdentifier, message: String?) : super(format(artifact, message))
 
-    public ArtifactResolveException(ComponentArtifactIdentifier artifact, String message, Throwable cause) {
-        super(format(artifact, message), cause);
-    }
+    constructor(artifact: ComponentArtifactIdentifier, message: String?, cause: Throwable?) : super(format(artifact, message), cause)
 
-    private static String format(ComponentArtifactIdentifier artifact, String message) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Could not download ");
-        builder.append(artifact.getDisplayName());
-        if (GUtil.isTrue(message)) {
-            builder.append(": ");
-            builder.append(message);
+    companion object {
+        private fun format(artifact: ComponentArtifactIdentifier, message: String?): String {
+            val builder = StringBuilder()
+            builder.append("Could not download ")
+            builder.append(artifact.getDisplayName())
+            if (GUtil.isTrue(message)) {
+                builder.append(": ")
+                builder.append(message)
+            }
+            return builder.toString()
         }
-        return builder.toString();
-    }
 
-    private static String format(ComponentIdentifier component, String message) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Could not determine artifacts for ");
-        builder.append(component.getDisplayName());
-        if (GUtil.isTrue(message)) {
-            builder.append(": ");
-            builder.append(message);
+        private fun format(component: ComponentIdentifier, message: String?): String {
+            val builder = StringBuilder()
+            builder.append("Could not determine artifacts for ")
+            builder.append(component.getDisplayName())
+            if (GUtil.isTrue(message)) {
+                builder.append(": ")
+                builder.append(message)
+            }
+            return builder.toString()
         }
-        return builder.toString();
     }
 }

@@ -13,82 +13,74 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.RejectedVersion;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.Set;
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
 /**
  * The result of resolving a module version selector to a particular component id.
  * The result may optionally include the graph resolution state for the selected component, if it is cheaply available (for example, it was used to select the component).
  */
-public interface ComponentIdResolveResult extends ResolveResult {
+interface ComponentIdResolveResult : ResolveResult {
     /**
      * Returns the resolve failure, if any.
      */
-    @Override
-    @Nullable
-    ModuleVersionResolveException getFailure();
+    override fun getFailure(): ModuleVersionResolveException?
 
     /**
      * Returns the identifier of the component.
      *
-     * @throws org.gradle.internal.resolve.ModuleVersionResolveException If resolution was unsuccessful and the id is unknown.
+     * @throws ModuleVersionResolveException If resolution was unsuccessful and the id is unknown.
      */
-    ComponentIdentifier getId();
+    @JvmField
+    val id: ComponentIdentifier?
 
     /**
      * Returns the module version id of the component.
      *
-     * @throws org.gradle.internal.resolve.ModuleVersionResolveException If resolution was unsuccessful and the id is unknown.
+     * @throws ModuleVersionResolveException If resolution was unsuccessful and the id is unknown.
      */
-    ModuleVersionIdentifier getModuleVersionId();
+    @JvmField
+    val moduleVersionId: ModuleVersionIdentifier?
 
     /**
      * Returns the graph resolution state for the component, if it was available at resolve time.
      *
      * @throws ModuleVersionResolveException If resolution was unsuccessful and the descriptor is not available.
      */
-    @Nullable
-    ComponentGraphResolveState getState();
+    @JvmField
+    val state: ComponentGraphResolveState?
 
     /**
      * Returns the graph specific resolution state for the component, if it was available at resolve time.
      *
      * @throws ModuleVersionResolveException If resolution was unsuccessful and the descriptor is not available.
      */
-    @Nullable
-    ComponentGraphSpecificResolveState getGraphState();
+    @JvmField
+    val graphState: ComponentGraphSpecificResolveState?
 
     /**
      * Returns true if the component id was resolved, but it was rejected by constraint.
      */
-    boolean isRejected();
+    @JvmField
+    val isRejected: Boolean
 
     /**
      * @return the set of unmatched versions, that is to say versions which were listed but didn't match the selector
      */
-    Set<String> getUnmatchedVersions();
+    @JvmField
+    val unmatchedVersions: MutableSet<String?>?
 
     /**
      * @return the list of versions which were considered for this module but rejected.
      */
-    Collection<RejectedVersion> getRejectedVersions();
+    @JvmField
+    val rejectedVersions: MutableCollection<RejectedVersion?>?
 
     /**
      * Tags this resolve result, for visiting. This is a performance optimization. It will return
      * true if the last tagged object is different, false otherwise. This is meant to replace the
      * use of a hash set to collect the visited items.
      */
-    boolean mark(Object o);
-
+    fun mark(o: Any?): Boolean
 }

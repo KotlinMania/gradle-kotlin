@@ -13,90 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
 
-public class DependencyModel extends AbstractContextAwareModel {
-    private final String group;
-    private final String name;
-    private final ImmutableVersionConstraint version;
-    private final String versionRef;
-    private final int hashCode;
+class DependencyModel(
+    val group: String,
+    val name: String,
+    versionRef: String?,
+    version: ImmutableVersionConstraint,
+    context: String?
+) : AbstractContextAwareModel(context) {
+    private val version: ImmutableVersionConstraint?
+    val versionRef: String?
+    private val hashCode: Int
 
-    public DependencyModel(String group,
-                           String name,
-                           @Nullable String versionRef,
-                           ImmutableVersionConstraint version,
-                           @Nullable String context) {
-        super(context);
-        this.group = group;
-        this.name = name;
-        this.version = version;
-        this.versionRef = versionRef;
-        this.hashCode = doComputeHashCode();
+    init {
+        this.version = version
+        this.versionRef = versionRef
+        this.hashCode = doComputeHashCode()
     }
 
-    public String getGroup() {
-        return group;
+    fun getVersion(): ImmutableVersionConstraint {
+        return version!!
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public ImmutableVersionConstraint getVersion() {
-        return version;
-    }
-
-    @Nullable
-    public String getVersionRef() {
-        return versionRef;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DependencyModel that = (DependencyModel) o;
+        val that = o as DependencyModel
 
-        if (!group.equals(that.group)) {
-            return false;
+        if (group != that.group) {
+            return false
         }
-        if (!name.equals(that.name)) {
-            return false;
+        if (name != that.name) {
+            return false
         }
-        if (version != null ? !version.equals(that.version) : that.version != null) {
-            return false;
+        if (if (version != null) (version != that.version) else that.version != null) {
+            return false
         }
-        return versionRef != null ? versionRef.equals(that.versionRef) : that.versionRef == null;
+        return if (versionRef != null) (versionRef == that.versionRef) else that.versionRef == null
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private int doComputeHashCode() {
-        int result = group.hashCode();
-        result = 31 * result + name.hashCode();
-        result = 31 * result + (version != null ? version.hashCode() : 0);
-        result = 31 * result + (versionRef != null ? versionRef.hashCode() : 0);
-        return result;
+    private fun doComputeHashCode(): Int {
+        var result = group.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + (if (version != null) version.hashCode() else 0)
+        result = 31 * result + (if (versionRef != null) versionRef.hashCode() else 0)
+        return result
     }
 
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "dependency {" +
-            "group='" + group + '\'' +
-            ", name='" + name + '\'' +
-            ", version='" + version + '\'' +
-            '}';
+                "group='" + group + '\'' +
+                ", name='" + name + '\'' +
+                ", version='" + version + '\'' +
+                '}'
     }
 }

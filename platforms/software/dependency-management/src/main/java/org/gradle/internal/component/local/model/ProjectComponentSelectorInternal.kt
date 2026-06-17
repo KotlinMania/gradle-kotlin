@@ -13,27 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.util.Path;
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal
 
 /**
- * Internal counterpart to {@link ProjectComponentSelector}
+ * Internal counterpart to [ProjectComponentSelector]
  */
-public interface ProjectComponentSelectorInternal extends ProjectComponentSelector, ComponentSelectorInternal {
-
+interface ProjectComponentSelectorInternal : ProjectComponentSelector, ComponentSelectorInternal {
     /**
      * Returns a unique path for the target project within the current build tree.
      */
-    Path getIdentityPath();
+    val identityPath: Path?
 
     /**
      * Returns the identity of the target project.
      */
-    ProjectIdentity getProjectIdentity();
-
+    val projectIdentity: ProjectIdentity?
 }

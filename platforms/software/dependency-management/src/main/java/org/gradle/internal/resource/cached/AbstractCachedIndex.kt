@@ -13,85 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.cached
 
-package org.gradle.internal.resource.cached;
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.cache.IndexedCache
+import org.gradle.internal.file.FileAccessTracker
+import org.gradle.internal.serialize.Serializer
+import java.io.File
+import java.util.function.Supplier
 
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.cache.IndexedCache;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.File;
-
-public abstract class AbstractCachedIndex<K, V extends CachedItem> {
-    private final String persistentCacheName;
-    private final Serializer<K> keySerializer;
-    private final Serializer<V> valueSerializer;
-    private final ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator;
-    private final FileAccessTracker fileAccessTracker;
-
-    private IndexedCache<K, V> indexedCache;
-
-    public AbstractCachedIndex(String persistentCacheName, Serializer<K> keySerializer, Serializer<V> valueSerializer, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, FileAccessTracker fileAccessTracker) {
-
-        this.persistentCacheName = persistentCacheName;
-        this.keySerializer = keySerializer;
-        this.valueSerializer = valueSerializer;
-        this.cacheAccessCoordinator = cacheAccessCoordinator;
-        this.fileAccessTracker = fileAccessTracker;
-    }
-
-    private IndexedCache<K, V> getIndexedCache() {
-        if (indexedCache == null) {
-            indexedCache = initPersistentCache();
-        }
-        return indexedCache;
-    }
-
-    private IndexedCache<K, V> initPersistentCache() {
-        return cacheAccessCoordinator.createCache(persistentCacheName, keySerializer, valueSerializer);
-    }
-
-    public V lookup(final K key) {
-        assertKeyNotNull(key);
-
-        V result = cacheAccessCoordinator.useCache(() -> {
-            V found = getIndexedCache().getIfPresent(key);
-            if (found == null) {
-                return null;
-            } else if (found.isMissing() || found.getCachedFile().exists()) {
-                return found;
-            } else {
-                clear(key);
-                return null;
+abstract class AbstractCachedIndex<K, V : CachedItem?>(
+    private val persistentCacheName: String,
+    private val keySerializer: Serializer<K?>,
+    private val valueSerializer: Serializer<V?>,
+    private val cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator,
+    private val fileAccessTracker: FileAccessTracker
+) {
+    private var indexedCache: IndexedCache<K?, V?>? = null
+        get() {
+            if (field == null) {
+                field = initPersistentCache()
             }
-        });
+            return field
+        }
+
+    private fun initPersistentCache(): IndexedCache<K?, V?> {
+        return cacheAccessCoordinator.createCache<K?, V?>(persistentCacheName, keySerializer, valueSerializer)
+    }
+
+    open fun lookup(key: K?): V? {
+        assertKeyNotNull(key)
+
+        val result: V? = cacheAccessCoordinator.useCache<V?>(Supplier {
+            val found = this.indexedCache!!.getIfPresent(key)
+            if (found == null) {
+                return@useCache null
+            } else if (found.isMissing() || found.getCachedFile()!!.exists()) {
+                return@useCache found
+            } else {
+                clear(key)
+                return@useCache null
+            }
+        })
 
         if (result != null && result.getCachedFile() != null) {
-            fileAccessTracker.markAccessed(result.getCachedFile());
+            fileAccessTracker.markAccessed(result.getCachedFile()!!)
         }
 
-        return result;
+        return result
     }
 
-    protected void storeInternal(final K key, final V entry) {
-        cacheAccessCoordinator.useCache(() -> getIndexedCache().put(key, entry));
+    protected open fun storeInternal(key: K?, entry: V?) {
+        cacheAccessCoordinator.useCache(Runnable { this.indexedCache!!.put(key, entry) })
     }
 
-    protected void assertKeyNotNull(K key) {
-        if (key == null) {
-            throw new IllegalArgumentException("key cannot be null");
-        }
+    protected fun assertKeyNotNull(key: K?) {
+        requireNotNull(key) { "key cannot be null" }
     }
 
-    protected void assertArtifactFileNotNull(File artifactFile) {
-        if (artifactFile == null) {
-            throw new IllegalArgumentException("artifactFile cannot be null");
-        }
+    protected fun assertArtifactFileNotNull(artifactFile: File) {
+        requireNotNull(artifactFile) { "artifactFile cannot be null" }
     }
 
-    public void clear(final K key) {
-        assertKeyNotNull(key);
-        cacheAccessCoordinator.useCache(() -> getIndexedCache().remove(key));
+    open fun clear(key: K?) {
+        assertKeyNotNull(key)
+        cacheAccessCoordinator.useCache(Runnable { this.indexedCache!!.remove(key) })
     }
 }

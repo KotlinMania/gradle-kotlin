@@ -13,78 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
+import com.google.common.collect.ImmutableSet
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
-import java.util.Collection;
-import java.util.Set;
+class DefaultBuildableModuleVersionListingResolveResult : DefaultResourceAwareResolveResult(), BuildableModuleVersionListingResolveResult {
+    private var state: BuildableModuleVersionListingResolveResult.State? = BuildableModuleVersionListingResolveResult.State.Unknown
+    private var failure: ModuleVersionResolveException? = null
+    private var versions: MutableSet<String?>? = null
+    private var authoritative = false
 
-public class DefaultBuildableModuleVersionListingResolveResult extends DefaultResourceAwareResolveResult implements BuildableModuleVersionListingResolveResult {
-    private State state = State.Unknown;
-    private ModuleVersionResolveException failure;
-    private Set<String> versions;
-    private boolean authoritative;
-
-    private void reset(State state) {
-        this.state = state;
-        versions = null;
-        failure = null;
-        authoritative = false;
+    private fun reset(state: BuildableModuleVersionListingResolveResult.State?) {
+        this.state = state
+        versions = null
+        failure = null
+        authoritative = false
     }
 
-    @Override
-    public State getState() {
-        return state;
+    override fun getState(): BuildableModuleVersionListingResolveResult.State? {
+        return state
     }
 
-    @Override
-    public boolean hasResult() {
-        return state != State.Unknown;
+    override fun hasResult(): Boolean {
+        return state != BuildableModuleVersionListingResolveResult.State.Unknown
     }
 
-    @Override
-    public Set<String> getVersions() throws ModuleVersionResolveException {
-        assertHasResult();
-        return versions;
+    @Throws(ModuleVersionResolveException::class)
+    override fun getVersions(): MutableSet<String?>? {
+        assertHasResult()
+        return versions
     }
 
-    @Override
-    public ModuleVersionResolveException getFailure() {
-        assertHasResult();
-        return failure;
+    override fun getFailure(): ModuleVersionResolveException? {
+        assertHasResult()
+        return failure
     }
 
-    @Override
-    public void listed(Collection<String> versions) {
-        reset(State.Listed);
-        this.versions = ImmutableSet.copyOf(versions);
-        this.authoritative = true;
+    override fun listed(versions: MutableCollection<String?>) {
+        reset(BuildableModuleVersionListingResolveResult.State.Listed)
+        this.versions = ImmutableSet.copyOf<String?>(versions)
+        this.authoritative = true
     }
 
-    @Override
-    public void failed(ModuleVersionResolveException failure) {
-        reset(State.Failed);
-        this.failure = failure;
-        this.authoritative = true;
+    override fun failed(failure: ModuleVersionResolveException?) {
+        reset(BuildableModuleVersionListingResolveResult.State.Failed)
+        this.failure = failure
+        this.authoritative = true
     }
 
-    @Override
-    public boolean isAuthoritative() {
-        assertHasResult();
-        return authoritative;
+    override fun isAuthoritative(): Boolean {
+        assertHasResult()
+        return authoritative
     }
 
-    @Override
-    public void setAuthoritative(boolean authoritative) {
-        assertHasResult();
-        this.authoritative = authoritative;
+    override fun setAuthoritative(authoritative: Boolean) {
+        assertHasResult()
+        this.authoritative = authoritative
     }
 
-    private void assertHasResult() {
-        if (!hasResult()) {
-            throw new IllegalStateException("No result has been specified.");
-        }
+    private fun assertHasResult() {
+        check(hasResult()) { "No result has been specified." }
     }
 }

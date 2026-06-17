@@ -13,130 +13,106 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.maven
 
-package org.gradle.internal.component.external.model.maven;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradlePomModuleDescriptorBuilder
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata.equals
+import org.gradle.internal.component.external.model.AbstractModuleComponentResolveMetadata.equals
+import org.gradle.internal.component.external.model.AbstractMutableModuleComponentResolveMetadata
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradlePomModuleDescriptorBuilder;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.model.AbstractMutableModuleComponentResolveMetadata;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
+class DefaultMutableMavenModuleResolveMetadata : AbstractMutableModuleComponentResolveMetadata, MutableMavenModuleResolveMetadata {
+    val objectInstantiator: NamedObjectInstantiator
 
-import java.util.Collection;
+    private var packaging = "jar"
+    private var relocated = false
+    private var snapshotTimestamp: String? = null
+    private val dependencies: ImmutableList<MavenDependencyDescriptor>
+    protected val configurationDefinitions: ImmutableMap<String, Configuration>
 
-import static org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata.JAR_PACKAGINGS;
-import static org.gradle.internal.component.external.model.maven.DefaultMavenModuleResolveMetadata.POM_PACKAGING;
-
-public class DefaultMutableMavenModuleResolveMetadata extends AbstractMutableModuleComponentResolveMetadata implements MutableMavenModuleResolveMetadata {
-
-    private final NamedObjectInstantiator objectInstantiator;
-
-    private String packaging = "jar";
-    private boolean relocated;
-    private String snapshotTimestamp;
-    private final ImmutableList<MavenDependencyDescriptor> dependencies;
-    private final ImmutableMap<String, Configuration> configurationDefinitions;
-
-    public DefaultMutableMavenModuleResolveMetadata(ModuleVersionIdentifier id,
-                                                    ModuleComponentIdentifier componentIdentifier,
-                                                    Collection<MavenDependencyDescriptor> dependencies,
-                                                    AttributesFactory attributesFactory,
-                                                    NamedObjectInstantiator objectInstantiator,
-                                                    ImmutableAttributesSchema schema) {
-        super(attributesFactory, id, componentIdentifier, schema);
-        this.dependencies = ImmutableList.copyOf(dependencies);
-        this.objectInstantiator = objectInstantiator;
-        this.configurationDefinitions = GradlePomModuleDescriptorBuilder.MAVEN2_CONFIGURATIONS;
+    constructor(
+        id: ModuleVersionIdentifier,
+        componentIdentifier: ModuleComponentIdentifier,
+        dependencies: MutableCollection<MavenDependencyDescriptor>,
+        attributesFactory: AttributesFactory,
+        objectInstantiator: NamedObjectInstantiator,
+        schema: ImmutableAttributesSchema
+    ) : super(attributesFactory, id, componentIdentifier, schema) {
+        this.dependencies = ImmutableList.copyOf<MavenDependencyDescriptor>(dependencies)
+        this.objectInstantiator = objectInstantiator
+        this.configurationDefinitions = GradlePomModuleDescriptorBuilder.MAVEN2_CONFIGURATIONS
     }
 
-    public DefaultMutableMavenModuleResolveMetadata(ModuleVersionIdentifier id,
-                                                    ModuleComponentIdentifier componentIdentifier,
-                                                    Collection<MavenDependencyDescriptor> dependencies,
-                                                    AttributesFactory attributesFactory,
-                                                    NamedObjectInstantiator objectInstantiator,
-                                                    ImmutableAttributesSchema schema,
-                                                    ImmutableMap<String, Configuration> configurationDefinitions) {
-        super(attributesFactory, id, componentIdentifier, schema);
-        this.dependencies = ImmutableList.copyOf(dependencies);
-        this.objectInstantiator = objectInstantiator;
-        this.configurationDefinitions = configurationDefinitions;
+    constructor(
+        id: ModuleVersionIdentifier,
+        componentIdentifier: ModuleComponentIdentifier,
+        dependencies: MutableCollection<MavenDependencyDescriptor>,
+        attributesFactory: AttributesFactory,
+        objectInstantiator: NamedObjectInstantiator,
+        schema: ImmutableAttributesSchema,
+        configurationDefinitions: ImmutableMap<String, Configuration>
+    ) : super(attributesFactory, id, componentIdentifier, schema) {
+        this.dependencies = ImmutableList.copyOf<MavenDependencyDescriptor>(dependencies)
+        this.objectInstantiator = objectInstantiator
+        this.configurationDefinitions = configurationDefinitions
     }
 
-    DefaultMutableMavenModuleResolveMetadata(MavenModuleResolveMetadata metadata,
-                                             NamedObjectInstantiator objectInstantiator) {
-        super(metadata);
-        this.packaging = metadata.getPackaging();
-        this.relocated = metadata.isRelocated();
-        this.snapshotTimestamp = metadata.getSnapshotTimestamp();
-        this.dependencies = metadata.getDependencies();
-        this.objectInstantiator = objectInstantiator;
-        this.configurationDefinitions = GradlePomModuleDescriptorBuilder.MAVEN2_CONFIGURATIONS;
+    internal constructor(
+        metadata: MavenModuleResolveMetadata,
+        objectInstantiator: NamedObjectInstantiator
+    ) : super(metadata) {
+        this.packaging = metadata.getPackaging()
+        this.relocated = metadata.isRelocated()
+        this.snapshotTimestamp = metadata.getSnapshotTimestamp()
+        this.dependencies = metadata.getDependencies()
+        this.objectInstantiator = objectInstantiator
+        this.configurationDefinitions = GradlePomModuleDescriptorBuilder.MAVEN2_CONFIGURATIONS
     }
 
-    @Override
-    public MavenModuleResolveMetadata asImmutable() {
-        return new DefaultMavenModuleResolveMetadata(this);
+    override fun asImmutable(): MavenModuleResolveMetadata {
+        return DefaultMavenModuleResolveMetadata(this)
     }
 
-    @Override
-    protected ImmutableMap<String, Configuration> getConfigurationDefinitions() {
-        return configurationDefinitions;
+    override fun getSnapshotTimestamp(): String? {
+        return snapshotTimestamp
     }
 
-    @Nullable
-    @Override
-    public String getSnapshotTimestamp() {
-        return snapshotTimestamp;
+    override fun setSnapshotTimestamp(snapshotTimestamp: String?) {
+        this.snapshotTimestamp = snapshotTimestamp
     }
 
-    @Override
-    public void setSnapshotTimestamp(@Nullable String snapshotTimestamp) {
-        this.snapshotTimestamp = snapshotTimestamp;
+    override fun isRelocated(): Boolean {
+        return relocated
     }
 
-    @Override
-    public boolean isRelocated() {
-        return relocated;
+    override fun setRelocated(relocated: Boolean) {
+        this.relocated = relocated
     }
 
-    @Override
-    public void setRelocated(boolean relocated) {
-        this.relocated = relocated;
+    override fun getPackaging(): String {
+        return packaging
     }
 
-    @Override
-    public @NonNull String getPackaging() {
-        return packaging;
+    override fun setPackaging(packaging: String) {
+        this.packaging = packaging
     }
 
-    @Override
-    public void setPackaging(@NonNull String packaging) {
-        this.packaging = packaging;
+    override fun isPomPackaging(): Boolean {
+        return DefaultMavenModuleResolveMetadata.Companion.POM_PACKAGING == packaging
     }
 
-    @Override
-    public boolean isPomPackaging() {
-        return POM_PACKAGING.equals(packaging);
+    override fun isKnownJarPackaging(): Boolean {
+        return DefaultMavenModuleResolveMetadata.Companion.JAR_PACKAGINGS.contains(packaging)
     }
 
-    @Override
-    public boolean isKnownJarPackaging() {
-        return JAR_PACKAGINGS.contains(packaging);
-    }
-
-    @Override
-    public ImmutableList<MavenDependencyDescriptor> getDependencies() {
-        return dependencies;
-    }
-
-    NamedObjectInstantiator getObjectInstantiator() {
-        return objectInstantiator;
+    override fun getDependencies(): ImmutableList<MavenDependencyDescriptor> {
+        return dependencies
     }
 }

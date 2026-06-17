@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.specs
 
-package org.gradle.buildinit.specs;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.file.Directory;
+import org.gradle.api.Incubating
+import org.gradle.api.file.Directory
 
 /**
- * Generates a new project from a configured {@link BuildInitConfig}.
+ * Generates a new project from a configured [BuildInitConfig].
  *
- * @implSpec Implementations should be {@code public}, {@code abstract} and provide an (implicit or explicit)
+ * @implSpec Implementations should be `public`, `abstract` and provide an (implicit or explicit)
  * 0-argument constructor, as Gradle will instantiate them and inject any specified services.  Generators are
- * <strong>NOT</strong> expected to generate Gradle wrapper files.
+ * **NOT** expected to generate Gradle wrapper files.
  * @since 8.12
  */
 @Incubating
-public interface BuildInitGenerator {
+interface BuildInitGenerator {
     /**
      * Generates a project from the given configuration in the given directory.
      *
@@ -36,5 +35,5 @@ public interface BuildInitGenerator {
      * @param projectDir the directory that will contain the new project
      * @since 8.12
      */
-    void generate(BuildInitConfig config, Directory projectDir);
+    fun generate(config: BuildInitConfig, projectDir: Directory)
 }

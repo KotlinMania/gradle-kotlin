@@ -13,99 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.descriptor
 
-package org.gradle.internal.component.external.descriptor;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.internal.component.model.Exclude
+import org.gradle.internal.component.model.IvyArtifactName
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.internal.component.model.Exclude;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+class DefaultExclude : Exclude {
+    val moduleId: ModuleIdentifier
+    val artifact: IvyArtifactName?
+    val configurations: MutableSet<String?>
+    val matcher: String?
 
-import java.util.Objects;
-import java.util.Set;
-
-public class DefaultExclude implements Exclude {
-    private final ModuleIdentifier moduleId;
-    private final IvyArtifactName artifact;
-    private final Set<String> configurations;
-    private final String patternMatcher;
-
-    public DefaultExclude(ModuleIdentifier id, IvyArtifactName artifact, String[] configurations, @Nullable String patternMatcher) {
-        this.moduleId = id;
-        this.artifact = artifact;
-        this.patternMatcher = patternMatcher;
-        this.configurations = ImmutableSet.copyOf(configurations);
+    constructor(id: ModuleIdentifier, artifact: IvyArtifactName?, configurations: Array<String?>, patternMatcher: String?) {
+        this.moduleId = id
+        this.artifact = artifact
+        this.matcher = patternMatcher
+        this.configurations = ImmutableSet.copyOf<String?>(configurations)
     }
 
-    public DefaultExclude(ModuleIdentifier id, String[] configurations, @Nullable String patternMatcher) {
-        this.moduleId = id;
-        this.artifact = null;
-        this.patternMatcher = patternMatcher;
-        this.configurations = ImmutableSet.copyOf(configurations);
+    constructor(id: ModuleIdentifier, configurations: Array<String?>, patternMatcher: String?) {
+        this.moduleId = id
+        this.artifact = null
+        this.matcher = patternMatcher
+        this.configurations = ImmutableSet.copyOf<String?>(configurations)
     }
 
-    public DefaultExclude(ModuleIdentifier id) {
-        this.moduleId = id;
-        this.artifact = null;
-        this.patternMatcher = null;
-        this.configurations = ImmutableSet.of();
+    constructor(id: ModuleIdentifier) {
+        this.moduleId = id
+        this.artifact = null
+        this.matcher = null
+        this.configurations = ImmutableSet.of<String?>()
     }
 
-    @Override
-    public String toString() {
-        return "{exclude moduleId: " + moduleId + ", artifact: " + artifact + "}";
+    override fun toString(): String {
+        return "{exclude moduleId: " + moduleId + ", artifact: " + artifact + "}"
     }
 
-    @Override
-    public ModuleIdentifier getModuleId() {
-        return moduleId;
-    }
-
-    @Override
-    public IvyArtifactName getArtifact() {
-        return artifact;
-    }
-
-    @Override
-    public Set<String> getConfigurations() {
-        return configurations;
-    }
-
-    @Override
-    public String getMatcher() {
-        return patternMatcher;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultExclude that = (DefaultExclude) o;
+        val that = o as DefaultExclude
 
-        if (!moduleId.equals(that.moduleId)) {
-            return false;
+        if (moduleId != that.moduleId) {
+            return false
         }
-        if (!Objects.equals(artifact, that.artifact)) {
-            return false;
+        if (artifact != that.artifact) {
+            return false
         }
-        if (!configurations.equals(that.configurations)) {
-            return false;
+        if (configurations != that.configurations) {
+            return false
         }
-        return Objects.equals(patternMatcher, that.patternMatcher);
+        return this.matcher == that.matcher
     }
 
-    @Override
-    public int hashCode() {
-        int result = moduleId.hashCode();
-        result = 31 * result + (artifact != null ? artifact.hashCode() : 0);
-        result = 31 * result + configurations.hashCode();
-        result = 31 * result + (patternMatcher != null ? patternMatcher.hashCode() : 0);
-        return result;
+    override fun hashCode(): Int {
+        var result = moduleId.hashCode()
+        result = 31 * result + (if (artifact != null) artifact.hashCode() else 0)
+        result = 31 * result + configurations.hashCode()
+        result = 31 * result + (if (this.matcher != null) matcher.hashCode() else 0)
+        return result
     }
 }

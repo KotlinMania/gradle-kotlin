@@ -75,7 +75,7 @@ public class ValidatingIvyPublisher implements IvyPublisher {
         moduleName.matches(moduleId.getName());
         revision.matches(moduleId.getVersion());
 
-        field(publication, "branch", metadata.getBranch())
+        field(publication, "branch", metadata.branch)
                 .optionalNotEmpty()
                 .doesNotContainSpecialCharacters(true);
 

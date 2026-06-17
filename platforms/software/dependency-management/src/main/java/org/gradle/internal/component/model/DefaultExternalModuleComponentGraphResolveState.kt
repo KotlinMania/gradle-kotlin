@@ -13,224 +13,180 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.lazy.Lazy;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.external.model.ExternalComponentResolveMetadata
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveMetadata
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.lazy.Lazy
+import org.gradle.internal.lazy.Lazy.Companion.locking
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import java.util.function.Supplier
+import java.util.stream.Collectors
 
 /**
- * Default implementation of {@link ExternalModuleComponentGraphResolveState}
- * <p>
+ * Default implementation of [ExternalModuleComponentGraphResolveState]
+ *
+ *
  * The aim is to create only a single instance of this type per component and reuse that
  * for all resolution that happens in a build tree. This isn't quite the case yet.
  */
-public class DefaultExternalModuleComponentGraphResolveState<G extends ExternalModuleComponentGraphResolveMetadata, A extends ExternalComponentResolveMetadata> extends AbstractComponentGraphResolveState<G> implements ExternalModuleComponentGraphResolveState {
-
-    private final ComponentIdGenerator idGenerator;
-    private final A legacyMetadata;
-
+open class DefaultExternalModuleComponentGraphResolveState<G : ExternalModuleComponentGraphResolveMetadata?, A : ExternalComponentResolveMetadata?>(
+    instanceId: Long,
+    graphMetadata: G?,
+    private val legacyMetadata: A?,
+    private val idGenerator: ComponentIdGenerator
+) : AbstractComponentGraphResolveState<G?>(instanceId, graphMetadata), ExternalModuleComponentGraphResolveState {
     // The resolve state for each configuration of this component
-    private final ConcurrentMap<ModuleConfigurationMetadata, DefaultConfigurationGraphResolveState> variants = new ConcurrentHashMap<>();
+    private val variants: ConcurrentMap<ModuleConfigurationMetadata, DefaultConfigurationGraphResolveState> = ConcurrentHashMap<ModuleConfigurationMetadata, DefaultConfigurationGraphResolveState>()
 
     // The variants to use for variant selection during graph resolution
-    private final Lazy<List<? extends VariantGraphResolveState>> allVariantsForGraphResolution;
+    private val allVariantsForGraphResolution: Lazy<MutableList<out VariantGraphResolveState>?>
 
-    public DefaultExternalModuleComponentGraphResolveState(long instanceId, G graphMetadata, A legacyMetadata, ComponentIdGenerator idGenerator) {
-        super(instanceId, graphMetadata);
-        this.legacyMetadata = legacyMetadata;
-        this.allVariantsForGraphResolution = Lazy.locking().of(() ->
-            graphMetadata.getVariantsForGraphTraversal().stream()
-                .map(ModuleConfigurationMetadata.class::cast)
-                .map(variant -> resolveStateFor(variant).asVariant())
+    init {
+        this.allVariantsForGraphResolution = locking().of<MutableList<out VariantGraphResolveState>?>(Supplier {
+            graphMetadata!!.variantsForGraphTraversal.stream()
+                .map<ModuleConfigurationMetadata> { obj: Any? -> ModuleConfigurationMetadata::class.java.cast(obj) }
+                .map<VariantGraphResolveState> { variant: ModuleConfigurationMetadata? -> resolveStateFor(variant!!).asVariant() }
                 .collect(Collectors.toList())
-        );
-        this.idGenerator = idGenerator;
+        }
+        )
     }
 
-    @Override
-    public ModuleComponentIdentifier getId() {
-        return getMetadata().getId();
+    override fun getId(): ModuleComponentIdentifier {
+        return getMetadata()!!.getId()
     }
 
-    @Override
-    @Deprecated
-    public A getLegacyMetadata() {
-        return legacyMetadata;
+    @Deprecated("")
+    override fun getLegacyMetadata(): A? {
+        return legacyMetadata
     }
 
-    @Override
-    public ComponentArtifactResolveMetadata getArtifactMetadata() {
-        A legacyMetadata = getLegacyMetadata();
-        return new ExternalArtifactResolveMetadata(legacyMetadata);
+    override fun getArtifactMetadata(): ComponentArtifactResolveMetadata {
+        val legacyMetadata: A? = getLegacyMetadata()
+        return DefaultExternalModuleComponentGraphResolveState.ExternalArtifactResolveMetadata(legacyMetadata!!)
     }
 
-    @Override
-    public GraphSelectionCandidates getCandidatesForGraphVariantSelection() {
-        return new ExternalGraphSelectionCandidates(this);
+    override fun getCandidatesForGraphVariantSelection(): GraphSelectionCandidates {
+        return ExternalGraphSelectionCandidates(this)
     }
 
-    protected ConfigurationGraphResolveState resolveStateFor(ModuleConfigurationMetadata configuration) {
-        return variants.computeIfAbsent(configuration, c -> newVariantState(configuration));
+    protected fun resolveStateFor(configuration: ModuleConfigurationMetadata): ConfigurationGraphResolveState {
+        return variants.computeIfAbsent(configuration) { c: ModuleConfigurationMetadata? -> newVariantState(configuration) }
     }
 
-    private DefaultConfigurationGraphResolveState newVariantState(ModuleConfigurationMetadata configuration) {
-        return new DefaultConfigurationGraphResolveState(idGenerator.nextVariantId(), configuration);
+    private fun newVariantState(configuration: ModuleConfigurationMetadata): DefaultConfigurationGraphResolveState {
+        return DefaultConfigurationGraphResolveState(idGenerator.nextVariantId(), configuration)
     }
 
-    private static class DefaultConfigurationGraphResolveState implements VariantGraphResolveState, ConfigurationGraphResolveState {
-        private final long instanceId;
-        private final ModuleConfigurationMetadata configuration;
-        private final DefaultConfigurationArtifactResolveState artifactResolveState;
+    private class DefaultConfigurationGraphResolveState(private val instanceId: Long, private val configuration: ModuleConfigurationMetadata) : VariantGraphResolveState,
+        ConfigurationGraphResolveState {
+        private val artifactResolveState: DefaultConfigurationArtifactResolveState
 
-        public DefaultConfigurationGraphResolveState(long instanceId, ModuleConfigurationMetadata configuration) {
-            this.instanceId = instanceId;
-            this.configuration = configuration;
-            this.artifactResolveState = new DefaultConfigurationArtifactResolveState(configuration);
+        init {
+            this.artifactResolveState = DefaultConfigurationArtifactResolveState(configuration)
         }
 
-        @Override
-        public long getInstanceId() {
-            return instanceId;
+        override fun getInstanceId(): Long {
+            return instanceId
         }
 
-        @Override
-        public String getName() {
-            return configuration.getName();
+        override fun getName(): String {
+            return configuration.getName()
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return configuration.getAttributes();
+        override fun getAttributes(): ImmutableAttributes {
+            return configuration.getAttributes()
         }
 
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            return configuration.getCapabilities();
+        override fun getCapabilities(): ImmutableCapabilities {
+            return configuration.getCapabilities()
         }
 
-        @Override
-        public List<? extends DependencyMetadata> getDependencies() {
-            return configuration.getDependencies();
+        override fun getDependencies(): MutableList<out DependencyMetadata> {
+            return configuration.getDependencies()
         }
 
-        @Override
-        public List<? extends ExcludeMetadata> getExcludes() {
-            return configuration.getExcludes();
+        override fun getExcludes(): MutableList<out ExcludeMetadata> {
+            return configuration.excludes
         }
 
-        @Override
-        public ConfigurationGraphResolveMetadata getMetadata() {
-            return configuration;
+        override fun getMetadata(): ConfigurationGraphResolveMetadata {
+            return configuration
         }
 
-        @Override
-        public VariantGraphResolveState asVariant() {
-            return this;
+        override fun asVariant(): VariantGraphResolveState {
+            return this
         }
 
-        @Override
-        public VariantArtifactResolveState prepareForArtifactResolution() {
-            return artifactResolveState;
+        override fun prepareForArtifactResolution(): VariantArtifactResolveState {
+            return artifactResolveState
         }
     }
 
-    private static class DefaultConfigurationArtifactResolveState implements VariantArtifactResolveState {
-        private final ConfigurationMetadata configuration;
-
-        public DefaultConfigurationArtifactResolveState(ConfigurationMetadata configuration) {
-            this.configuration = configuration;
-        }
-
-        @Override
-        public ImmutableList<ComponentArtifactMetadata> getAdhocArtifacts(List<IvyArtifactName> dependencyArtifacts) {
-            ImmutableList.Builder<ComponentArtifactMetadata> artifacts = ImmutableList.builderWithExpectedSize(dependencyArtifacts.size());
-            for (IvyArtifactName dependencyArtifact : dependencyArtifacts) {
-                artifacts.add(configuration.artifact(dependencyArtifact));
+    private class DefaultConfigurationArtifactResolveState(private val configuration: ConfigurationMetadata) : VariantArtifactResolveState {
+        override fun getAdhocArtifacts(dependencyArtifacts: MutableList<IvyArtifactName>): ImmutableList<ComponentArtifactMetadata> {
+            val artifacts = ImmutableList.builderWithExpectedSize<ComponentArtifactMetadata>(dependencyArtifacts.size)
+            for (dependencyArtifact in dependencyArtifacts) {
+                artifacts.add(configuration.artifact(dependencyArtifact))
             }
-            return artifacts.build();
+            return artifacts.build()
         }
 
-        @Override
-        public Set<? extends VariantResolveMetadata> getArtifactVariants() {
-            return configuration.getArtifactVariants();
-        }
-    }
-
-    protected static class ExternalArtifactResolveMetadata implements ComponentArtifactResolveMetadata {
-        private final ExternalComponentResolveMetadata metadata;
-
-        public ExternalArtifactResolveMetadata(ExternalComponentResolveMetadata metadata) {
-            this.metadata = metadata;
-        }
-
-        @Override
-        public ComponentIdentifier getId() {
-            return metadata.getId();
-        }
-
-        @Override
-        public ModuleVersionIdentifier getModuleVersionId() {
-            return metadata.getModuleVersionId();
-        }
-
-        @Override
-        public ModuleSources getSources() {
-            return metadata.getSources();
-        }
-
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return metadata.getAttributes();
-        }
-
-        @Override
-        public ImmutableAttributesSchema getAttributesSchema() {
-            return metadata.getAttributesSchema();
+        override fun getArtifactVariants(): MutableSet<out VariantResolveMetadata> {
+            return configuration.getArtifactVariants()
         }
     }
 
-    private static class ExternalGraphSelectionCandidates implements GraphSelectionCandidates {
-        private final List<? extends VariantGraphResolveState> variants;
-        private final DefaultExternalModuleComponentGraphResolveState<?, ?> component;
-
-        public ExternalGraphSelectionCandidates(DefaultExternalModuleComponentGraphResolveState<?, ?> component) {
-            this.variants = component.allVariantsForGraphResolution.get();
-            this.component = component;
+    protected open class ExternalArtifactResolveMetadata(private val metadata: ExternalComponentResolveMetadata) : ComponentArtifactResolveMetadata {
+        override fun getId(): ComponentIdentifier {
+            return metadata.id
         }
 
-        @Override
-        public List<? extends VariantGraphResolveState> getVariantsForAttributeMatching() {
-            return variants;
+        override fun getModuleVersionId(): ModuleVersionIdentifier {
+            return metadata.moduleVersionId
         }
 
-        @Nullable
-        @Override
-        public VariantGraphResolveState getLegacyVariant() {
-            ConfigurationGraphResolveMetadata defaultVariant = component.getMetadata().getConfiguration(Dependency.DEFAULT_CONFIGURATION);
+        override fun getSources(): ModuleSources {
+            return metadata.sources
+        }
+
+        override fun getAttributes(): ImmutableAttributes {
+            return metadata.attributes
+        }
+
+        override fun getAttributesSchema(): ImmutableAttributesSchema {
+            return metadata.attributesSchema
+        }
+    }
+
+    private class ExternalGraphSelectionCandidates(private val component: DefaultExternalModuleComponentGraphResolveState<*, *>) : GraphSelectionCandidates {
+        private val variants: MutableList<out VariantGraphResolveState>
+
+        init {
+            this.variants = component.allVariantsForGraphResolution.get()!!
+        }
+
+        override fun getVariantsForAttributeMatching(): MutableList<out VariantGraphResolveState> {
+            return variants
+        }
+
+        override fun getLegacyVariant(): VariantGraphResolveState? {
+            val defaultVariant = component.getMetadata()!!.getConfiguration(Dependency.DEFAULT_CONFIGURATION)
             if (defaultVariant == null) {
-                return null;
+                return null
             }
 
-            return component.resolveStateFor((ModuleConfigurationMetadata) defaultVariant).asVariant();
+            return component.resolveStateFor(defaultVariant as ModuleConfigurationMetadata).asVariant()
         }
-
     }
 }

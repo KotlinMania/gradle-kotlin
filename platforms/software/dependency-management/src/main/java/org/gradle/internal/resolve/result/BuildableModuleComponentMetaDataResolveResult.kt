@@ -13,71 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
 /**
  * The result of attempting to resolve a component id to the meta-data for the component.
  *
  * @param <T> the resolution result type
- */
-public interface BuildableModuleComponentMetaDataResolveResult<T> extends ResourceAwareResolveResult, ErroringResolveResult<ModuleVersionResolveException> {
-    enum State {
+</T> */
+interface BuildableModuleComponentMetaDataResolveResult<T> : ResourceAwareResolveResult, ErroringResolveResult<ModuleVersionResolveException?> {
+    enum class State {
         Resolved, Missing, Failed, Unknown, Redirect
     }
 
     /**
      * Returns the current state of this descriptor.
      */
-    State getState();
+    @JvmField
+    val state: State?
 
-    /**
-     * Returns the meta-data.
-     *
-     * @throws ModuleVersionResolveException If the resolution was not successful.
-     */
-    T getMetaData() throws ModuleVersionResolveException;
+    @JvmField
+    @get:Throws(ModuleVersionResolveException::class)
+    val metaData: T?
 
-    @Override
-    @Nullable
-    ModuleVersionResolveException getFailure();
+    override fun getFailure(): ModuleVersionResolveException?
 
     /**
      * Marks the module version as resolved, with the given meta-data.
      */
-    void resolved(T metaData);
+    fun resolved(metaData: T?)
 
     /**
      * Replaces the meta-data for this result. This result must already be resolved.
      */
-    void setMetadata(T metaData);
+    fun setMetadata(metaData: T?)
 
     /**
      * Marks the resolve as failed with the given exception.
      */
-    @Override
-    void failed(ModuleVersionResolveException failure);
+    override fun failed(failure: ModuleVersionResolveException?)
 
     /**
      * Marks the module version as definitely missing.
      */
-    void missing();
+    fun missing()
 
     /**
      * Returns true if the result is from an authoritative source. Defaults to true.
      */
-    boolean isAuthoritative();
-
-    void setAuthoritative(boolean authoritative);
+    @JvmField
+    var isAuthoritative: Boolean
 
     /**
      * Marks this result as being redirected to Gradle metadata, which
      * is a temporary performance only optimization
      */
-    void redirectToGradleMetadata();
+    fun redirectToGradleMetadata()
 
-    boolean shouldUseGradleMetatada();
+    fun shouldUseGradleMetatada(): Boolean
 }

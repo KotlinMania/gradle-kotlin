@@ -13,70 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceAccessor
+import org.gradle.internal.file.RelativeFilePathResolver
+import org.gradle.internal.resource.DownloadedUriTextResource
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.TextResource
+import org.gradle.internal.resource.TextUriResourceLoader
+import org.gradle.internal.resource.UriTextResource
+import java.net.URI
 
-import org.gradle.api.internal.artifacts.repositories.resolver.ExternalResourceAccessor;
-import org.gradle.internal.file.RelativeFilePathResolver;
-import org.gradle.internal.resource.DownloadedUriTextResource;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.TextResource;
-import org.gradle.internal.resource.TextUriResourceLoader;
-import org.gradle.internal.resource.UriTextResource;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-
-import java.net.URI;
-import java.util.Set;
-
-public class CachingTextUriResourceLoader implements TextUriResourceLoader {
-
-    private final ExternalResourceAccessor externalResourceAccessor;
-    private final Set<String> cachedSchemes;
-    private final RelativeFilePathResolver resolver;
-
-    public CachingTextUriResourceLoader(ExternalResourceAccessor externalResourceAccessor, Set<String> cachedSchemes, RelativeFilePathResolver resolver) {
-        this.externalResourceAccessor = externalResourceAccessor;
-        this.cachedSchemes = cachedSchemes;
-        this.resolver = resolver;
-    }
-
-    @Override
-    public TextResource loadUri(String description, URI source) {
+class CachingTextUriResourceLoader(private val externalResourceAccessor: ExternalResourceAccessor, private val cachedSchemes: MutableSet<String>, private val resolver: RelativeFilePathResolver) :
+    TextUriResourceLoader {
+    override fun loadUri(description: String, source: URI): TextResource {
         if (isCacheable(source)) {
-            LocallyAvailableExternalResource resource = externalResourceAccessor.resolveUri(source);
+            val resource = externalResourceAccessor.resolveUri(source)
             if (resource == null) {
-                throw ResourceExceptions.getMissing(source);
+                throw ResourceExceptions.getMissing(source)
             }
-            ExternalResourceMetaData metaData = resource.getMetaData();
-            String contentType = metaData == null ? null : metaData.getContentType();
-            return new DownloadedUriTextResource(description, source, contentType, resource.getFile(), resolver);
+            val metaData = resource.getMetaData()
+            val contentType = if (metaData == null) null else metaData.getContentType()
+            return DownloadedUriTextResource(description, source, contentType, resource.getFile(), resolver)
         }
 
         // fallback to old behavior of always loading the resource
-        return new UriTextResource(description, source, resolver);
+        return UriTextResource(description, source, resolver)
     }
 
-    private boolean isCacheable(URI source) {
-        return isCacheableScheme(source) && isCacheableResource(source);
+    private fun isCacheable(source: URI): Boolean {
+        return isCacheableScheme(source) && isCacheableResource(source)
     }
 
     /**
-     * Is {@code source} a cacheable transport scheme (e.g., http)?
+     * Is `source` a cacheable transport scheme (e.g., http)?
      *
      * Schemes like file:// are not cacheable.
      */
-    private boolean isCacheableScheme(URI source) {
-        return cachedSchemes.contains(source.getScheme());
+    private fun isCacheableScheme(source: URI): Boolean {
+        return cachedSchemes.contains(source.getScheme())
     }
 
     /**
-     * Is {@code source} a cacheable URL?
+     * Is `source` a cacheable URL?
      *
      * A URI is not cacheable if it uses a query string because our underlying infrastructure
      * relies on paths to uniquely identify resources and not path+query components.
      */
-    private boolean isCacheableResource(URI source) {
-        return source.getRawQuery() == null;
+    private fun isCacheableResource(source: URI): Boolean {
+        return source.getRawQuery() == null
     }
 }

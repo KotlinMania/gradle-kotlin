@@ -13,697 +13,479 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentConfigurationIdentifier
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.ImmutableModuleSources.Companion.of
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.MutableModuleSources
+import org.gradle.internal.component.model.MutableModuleSources.Companion.of
+import org.gradle.internal.component.model.VariantResolveMetadata
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentConfigurationIdentifier;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.MutableModuleSources;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
+abstract class AbstractMutableModuleComponentResolveMetadata : MutableModuleComponentResolveMetadata {
+    @JvmField
+    val attributesFactory: AttributesFactory
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+    private var componentId: ModuleComponentIdentifier?
+    var moduleVersionId: ModuleVersionIdentifier
+        private set
+    var isChanging: Boolean = false
+    var isMissing: Boolean = false
+    var isExternalVariant: Boolean = false
+    var isComponentMetadataRuleCachingEnabled: Boolean
+    var statusScheme: MutableList<String?>? = ExternalComponentResolveMetadata.Companion.DEFAULT_STATUS_SCHEME
+    private var moduleSources: MutableModuleSources
+    private /*Mutable*/ var componentLevelAttributes: AttributeContainerInternal
+    val attributesSchema: ImmutableAttributesSchema?
 
-import static org.gradle.internal.component.external.model.ExternalComponentResolveMetadata.DEFAULT_STATUS_SCHEME;
+    val variantMetadataRules: VariantMetadataRules
+    val variantDerivationStrategy: VariantDerivationStrategy?
 
-public abstract class AbstractMutableModuleComponentResolveMetadata implements MutableModuleComponentResolveMetadata {
-    private static final String DEFAULT_STATUS = "integration";
+    private var newVariants: MutableList<MutableComponentVariant>? = null
+    private var variants: ImmutableList<out ComponentVariant?>? = null
+    private var owners: MutableSet<VirtualComponentIdentifier?>? = null
 
-    private final AttributesFactory attributesFactory;
-
-    private ModuleComponentIdentifier componentId;
-    private ModuleVersionIdentifier moduleVersionId;
-    private boolean changing;
-    private boolean missing;
-    private boolean externalVariant;
-    private boolean isComponentMetadataRuleCachingEnabled;
-    private List<String> statusScheme = DEFAULT_STATUS_SCHEME;
-    private MutableModuleSources moduleSources;
-    private /*Mutable*/AttributeContainerInternal componentLevelAttributes;
-    private final ImmutableAttributesSchema schema;
-
-    private final VariantMetadataRules variantMetadataRules;
-    private final VariantDerivationStrategy variantDerivationStrategy;
-
-    private List<MutableComponentVariant> newVariants;
-    private ImmutableList<? extends ComponentVariant> variants;
-    private Set<VirtualComponentIdentifier> owners;
-
-    protected AbstractMutableModuleComponentResolveMetadata(
-        AttributesFactory attributesFactory,
-        ModuleVersionIdentifier moduleVersionId,
-        ModuleComponentIdentifier componentIdentifier,
-        ImmutableAttributesSchema schema) {
-        this.attributesFactory = attributesFactory;
-        this.componentId = componentIdentifier;
-        this.moduleVersionId = moduleVersionId;
-        this.componentLevelAttributes = defaultAttributes(attributesFactory);
-        this.schema = schema;
-        this.variantMetadataRules = new VariantMetadataRules(attributesFactory, moduleVersionId);
-        this.moduleSources = new MutableModuleSources();
-        this.variantDerivationStrategy = NoOpDerivationStrategy.getInstance();
-        this.isComponentMetadataRuleCachingEnabled = true;
+    protected constructor(
+        attributesFactory: AttributesFactory,
+        moduleVersionId: ModuleVersionIdentifier,
+        componentIdentifier: ModuleComponentIdentifier?,
+        schema: ImmutableAttributesSchema?
+    ) {
+        this.attributesFactory = attributesFactory
+        this.componentId = componentIdentifier
+        this.moduleVersionId = moduleVersionId
+        this.componentLevelAttributes = defaultAttributes(attributesFactory)
+        this.attributesSchema = schema
+        this.variantMetadataRules = VariantMetadataRules(attributesFactory, moduleVersionId)
+        this.moduleSources = MutableModuleSources()
+        this.variantDerivationStrategy = NoOpDerivationStrategy.getInstance()
+        this.isComponentMetadataRuleCachingEnabled = true
     }
 
-    protected AbstractMutableModuleComponentResolveMetadata(ModuleComponentResolveMetadata metadata) {
-        this.componentId = metadata.getId();
-        this.moduleVersionId = metadata.getModuleVersionId();
-        this.changing = metadata.isChanging();
-        this.missing = metadata.isMissing();
-        this.statusScheme = metadata.getStatusScheme();
-        this.moduleSources = MutableModuleSources.of(metadata.getSources());
-        this.variants = metadata.getVariants();
-        this.attributesFactory = metadata.getAttributesFactory();
-        this.schema = metadata.getAttributesSchema();
-        this.componentLevelAttributes = attributesFactory.mutable(metadata.getAttributes());
-        this.variantDerivationStrategy = metadata.getVariantDerivationStrategy();
-        this.variantMetadataRules = new VariantMetadataRules(attributesFactory, moduleVersionId);
-        this.externalVariant = metadata.isExternalVariant();
-        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled();
+    protected constructor(metadata: ModuleComponentResolveMetadata) {
+        this.componentId = metadata.getId()
+        this.moduleVersionId = metadata.getModuleVersionId()!!
+        this.isChanging = metadata.isChanging()
+        this.isMissing = metadata.isMissing()
+        this.statusScheme = metadata.getStatusScheme()
+        this.moduleSources = MutableModuleSources.of(metadata.getSources())
+        this.variants = metadata.variants
+        this.attributesFactory = metadata.attributesFactory
+        this.attributesSchema = metadata.getAttributesSchema()
+        this.componentLevelAttributes = attributesFactory.mutable(metadata.getAttributes())
+        this.variantDerivationStrategy = metadata.variantDerivationStrategy
+        this.variantMetadataRules = VariantMetadataRules(attributesFactory, moduleVersionId)
+        this.isExternalVariant = metadata.isExternalVariant
+        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled
     }
 
-    private static AttributeContainerInternal defaultAttributes(AttributesFactory attributesFactory) {
-        return (AttributeContainerInternal) attributesFactory.mutable().attribute(ProjectInternal.STATUS_ATTRIBUTE, DEFAULT_STATUS);
-    }
-
-    @Override
-    public ModuleComponentIdentifier getId() {
-        return componentId;
-    }
-
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        return moduleVersionId;
-    }
-
-    @Override
-    public void setId(ModuleComponentIdentifier componentId) {
-        this.componentId = componentId;
-        this.moduleVersionId = DefaultModuleVersionIdentifier.newId(componentId);
-    }
-
-    public VariantDerivationStrategy getVariantDerivationStrategy() {
-        return variantDerivationStrategy;
-    }
-
-    @Override
-    public String getStatus() {
-        return componentLevelAttributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE);
-    }
-
-    protected abstract ImmutableMap<String, Configuration> getConfigurationDefinitions();
-
-    @Override
-    public void setStatus(String status) {
-        AttributeContainerInternal attributes = this.componentLevelAttributes;
-        attributes.attribute(ProjectInternal.STATUS_ATTRIBUTE, status);
-        componentLevelAttributes = attributes;
-    }
-
-    @Override
-    public List<String> getStatusScheme() {
-        return statusScheme;
-    }
-
-    @Override
-    public void setStatusScheme(List<String> statusScheme) {
-        this.statusScheme = statusScheme;
-    }
-
-    @Override
-    public boolean isMissing() {
-        return missing;
-    }
-
-    @Override
-    public void setMissing(boolean missing) {
-        this.missing = missing;
-    }
-
-    @Override
-    public boolean isChanging() {
-        return changing;
-    }
-
-    @Override
-    public void setChanging(boolean changing) {
-        this.changing = changing;
-    }
-
-    @Override
-    public boolean isExternalVariant() {
-        return externalVariant;
-    }
-
-    @Override
-    public void setExternalVariant(boolean externalVariant) {
-        this.externalVariant = externalVariant;
-    }
-
-    @Override
-    public boolean isComponentMetadataRuleCachingEnabled() {
-        return isComponentMetadataRuleCachingEnabled;
-    }
-
-    @Override
-    public void setComponentMetadataRuleCachingEnabled(boolean componentMetadataRuleCachingEnabled) {
-        this.isComponentMetadataRuleCachingEnabled = componentMetadataRuleCachingEnabled;
-    }
-
-    @Override
-    public MutableModuleSources getSources() {
-        return moduleSources;
-    }
-
-    @Override
-    public void setSources(ModuleSources sources) {
-        this.moduleSources = MutableModuleSources.of(sources);
-    }
-
-    @Override
-    public void setAttributes(AttributeContainer attributes) {
-        this.componentLevelAttributes = attributesFactory.mutable((AttributeContainerInternal) attributes);
-        // the "status" attribute is mandatory, so if it's missing, we need to add it
-        if (!attributes.contains(ProjectInternal.STATUS_ATTRIBUTE)) {
-            componentLevelAttributes.attribute(ProjectInternal.STATUS_ATTRIBUTE, DEFAULT_STATUS);
+    var id: ModuleComponentIdentifier
+        get() = componentId
+        set(componentId) {
+            this.componentId = componentId
+            this.moduleVersionId = DefaultModuleVersionIdentifier.newId(componentId)
         }
+
+    var status: String?
+        get() = componentLevelAttributes.getAttribute<String?>(ProjectInternal.STATUS_ATTRIBUTE)
+        set(status) {
+            val attributes = this.componentLevelAttributes
+            attributes.attribute<String?>(ProjectInternal.STATUS_ATTRIBUTE, status)
+            componentLevelAttributes = attributes
+        }
+
+    abstract val configurationDefinitions: ImmutableMap<String?, Configuration?>?
+
+    var sources: MutableModuleSources
+        get() = moduleSources
+        set(sources) {
+            this.moduleSources = MutableModuleSources.of(sources)
+        }
+
+    var attributes: AttributeContainer
+        get() = componentLevelAttributes
+        set(attributes) {
+            this.componentLevelAttributes = attributesFactory.mutable(attributes as AttributeContainerInternal?)
+            // the "status" attribute is mandatory, so if it's missing, we need to add it
+            if (!attributes.contains(ProjectInternal.STATUS_ATTRIBUTE)) {
+                componentLevelAttributes.attribute<String?>(
+                    ProjectInternal.STATUS_ATTRIBUTE,
+                    DEFAULT_STATUS
+                )
+            }
+        }
+
+    override fun artifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata? {
+        val ivyArtifactName: IvyArtifactName = DefaultIvyArtifactName(moduleVersionId.getName(), type, extension, classifier)
+        return DefaultModuleComponentArtifactMetadata(id, ivyArtifactName)
     }
 
-    @Override
-    public AttributeContainer getAttributes() {
-        return componentLevelAttributes;
+    override fun addVariant(variantName: String?, attributes: ImmutableAttributes?): MutableComponentVariant? {
+        return addVariant(MutableVariantImpl(variantName, attributes))
     }
 
-    @Override
-    public ModuleComponentArtifactMetadata artifact(String type, @Nullable String extension, @Nullable String classifier) {
-        IvyArtifactName ivyArtifactName = new DefaultIvyArtifactName(getModuleVersionId().getName(), type, extension, classifier);
-        return new DefaultModuleComponentArtifactMetadata(getId(), ivyArtifactName);
-    }
-
-    @Override
-    public VariantMetadataRules getVariantMetadataRules() {
-        return variantMetadataRules;
-    }
-
-    @Override
-    public MutableComponentVariant addVariant(String variantName, ImmutableAttributes attributes) {
-        return addVariant(new MutableVariantImpl(variantName, attributes));
-    }
-
-    @Override
-    public MutableComponentVariant addVariant(MutableComponentVariant variant) {
+    override fun addVariant(variant: MutableComponentVariant?): MutableComponentVariant? {
         if (newVariants == null) {
-            newVariants = new ArrayList<>();
+            newVariants = ArrayList<MutableComponentVariant>()
         }
-        newVariants.add(variant);
-        return variant;
+        newVariants!!.add(variant!!)
+        return variant
     }
 
-    public ImmutableList<? extends ComponentVariant> getVariants() {
+    fun getVariants(): ImmutableList<out ComponentVariant?> {
         if (variants == null && newVariants == null) {
-            return ImmutableList.of();
+            return ImmutableList.of<ComponentVariant?>()
         }
         if (variants != null && newVariants == null) {
-            return variants;
+            return variants!!
         }
-        ImmutableList.Builder<ComponentVariant> builder = new ImmutableList.Builder<>();
+        val builder = ImmutableList.Builder<ComponentVariant?>()
         if (variants != null) {
-            builder.addAll(variants);
+            builder.addAll(variants!!)
         }
-        for (MutableComponentVariant variant : newVariants) {
-            builder.add(new ImmutableVariantImpl(getId(), variant.getName(), variant.getAttributes(), ImmutableList.copyOf(variant.getDependencies()), ImmutableList.copyOf(variant.getDependencyConstraints()), ImmutableList.copyOf(variant.getFiles()), ImmutableCapabilities.of(variant.getCapabilities()), variant.isAvailableExternally()));
+        for (variant in newVariants!!) {
+            builder.add(
+                AbstractMutableModuleComponentResolveMetadata.ImmutableVariantImpl(
+                    id,
+                    variant.name!!,
+                    variant.attributes,
+                    ImmutableList.copyOf<ComponentVariant.Dependency>(variant.dependencies),
+                    ImmutableList.copyOf<ComponentVariant.DependencyConstraint>(variant.dependencyConstraints),
+                    ImmutableList.copyOf(variant.files),
+                    ImmutableCapabilities.Companion.of(variant.capabilities),
+                    variant.isAvailableExternally
+                )
+            )
         }
-        return builder.build();
+        return builder.build()
     }
 
-    @Override
-    public List<? extends MutableComponentVariant> getMutableVariants() {
-        return newVariants;
-    }
+    val mutableVariants: MutableList<out MutableComponentVariant>?
+        get() = newVariants
 
-    @Override
-    public AttributesFactory getAttributesFactory() {
-        return attributesFactory;
-    }
-
-    public ImmutableAttributesSchema getAttributesSchema() {
-        return schema;
-    }
-
-    @Override
-    public void belongsTo(VirtualComponentIdentifier platform) {
+    override fun belongsTo(platform: VirtualComponentIdentifier?) {
         if (owners == null) {
-            owners = new LinkedHashSet<>();
+            owners = LinkedHashSet<VirtualComponentIdentifier?>()
         }
-        owners.add(platform);
+        owners!!.add(platform)
     }
 
-    @Override
-    public Set<? extends VirtualComponentIdentifier> getPlatformOwners() {
-        return owners;
-    }
+    val platformOwners: MutableSet<out VirtualComponentIdentifier?>?
+        get() = owners
 
-    protected static class MutableVariantImpl implements MutableComponentVariant {
-        private final String name;
-        private final List<ComponentVariant.Dependency> dependencies = new ArrayList<>();
-        private final List<ComponentVariant.DependencyConstraint> dependencyConstraints = new ArrayList<>();
-        private final List<FileImpl> files = new ArrayList<>();
-        private final Set<Capability> capabilities = new LinkedHashSet<>();
-        private boolean availableExternally;
+    protected class MutableVariantImpl internal constructor(val name: String?, val attributes: ImmutableAttributes?) : MutableComponentVariant {
+        val dependencies: MutableList<ComponentVariant.Dependency?> = ArrayList<ComponentVariant.Dependency?>()
+        val dependencyConstraints: MutableList<ComponentVariant.DependencyConstraint?> = ArrayList<ComponentVariant.DependencyConstraint?>()
+        private val files: MutableList<FileImpl?> = ArrayList<FileImpl?>()
+        val capabilities: MutableSet<Capability?> = LinkedHashSet<Capability?>()
+        private var availableExternally = false
 
-        private ImmutableAttributes attributes;
-
-        MutableVariantImpl(String name, ImmutableAttributes attributes) {
-            this.name = name;
-            this.attributes = attributes;
-        }
-
-        @Override
-        public List<ComponentVariant.Dependency> getDependencies() {
-            return dependencies;
-        }
-
-        @Override
-        public List<ComponentVariant.DependencyConstraint> getDependencyConstraints() {
-            return dependencyConstraints;
-        }
-
-        @Override
-        public Set<Capability> getCapabilities() {
-            return capabilities;
-        }
-
-        @Override
-        public void addDependency(String group, String module, VersionConstraint versionConstraint, List<ExcludeMetadata> excludes, String reason, ImmutableAttributes attributes, Set<CapabilitySelector> requestedCapabilities, boolean endorsing, @Nullable IvyArtifactName artifact) {
-            dependencies.add(new DependencyImpl(group, module, versionConstraint, excludes, reason, attributes, requestedCapabilities, endorsing, artifact));
-        }
-
-        @Override
-        public void addDependencyConstraint(String group, String module, VersionConstraint versionConstraint, String reason, ImmutableAttributes attributes) {
-            dependencyConstraints.add(new DependencyConstraintImpl(group, module, versionConstraint, reason, attributes));
-        }
-
-        @Override
-        public void addCapability(String group, String name, String version) {
-            capabilities.add(new DefaultImmutableCapability(group, name, version));
-        }
-
-        @Override
-        public void addCapability(Capability capability) {
-            capabilities.add(capability);
-        }
-
-        @Override
-        public List<? extends ComponentVariant.File> getFiles() {
-            return files;
-        }
-
-        @Override
-        public boolean removeFile(ComponentVariant.File file) {
-            return files.remove(file);
-        }
-
-        @Override
-        public void addFile(String name, String uri) {
-            files.add(new FileImpl(name, uri));
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return attributes;
-        }
-
-        @Override
-        public MutableComponentVariant copy(String variantName, ImmutableAttributes attributes, Capability capability) {
-            MutableVariantImpl copy = new MutableVariantImpl(variantName, attributes);
-            copy.dependencies.addAll(this.dependencies);
-            copy.dependencyConstraints.addAll(this.dependencyConstraints);
-            copy.files.addAll(this.files);
-            copy.capabilities.add(capability);
-            copy.availableExternally = this.availableExternally;
-            return copy;
-        }
-
-        @Override
-        public boolean isAvailableExternally() {
-            return availableExternally;
-        }
-
-        @Override
-        public void setAvailableExternally(boolean availableExternally) {
-            this.availableExternally = availableExternally;
-        }
-    }
-
-    public static class FileImpl implements ComponentVariant.File {
-        private final String name;
-        private final String uri;
-
-        public FileImpl(String name, String uri) {
-            this.name = name;
-            this.uri = uri;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public String getUri() {
-            return uri;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            FileImpl file = (FileImpl) o;
-            return Objects.equal(name, file.name)
-                && Objects.equal(uri, file.uri);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(name, uri);
-        }
-    }
-
-    protected static class DependencyImpl implements ComponentVariant.Dependency {
-        private final String group;
-        private final String module;
-        private final VersionConstraint versionConstraint;
-        private final ImmutableList<ExcludeMetadata> excludes;
-        private final String reason;
-        private final ImmutableAttributes attributes;
-        private final Set<CapabilitySelector> requestedCapabilities;
-        private final boolean endorsing;
-        private final IvyArtifactName dependencyArtifact;
-
-        DependencyImpl(
-            String group,
-            String module,
-            VersionConstraint versionConstraint,
-            List<ExcludeMetadata> excludes,
-            String reason,
-            ImmutableAttributes attributes,
-            Set<CapabilitySelector> capabilitySelectors,
-            boolean endorsing,
-            @Nullable IvyArtifactName dependencyArtifact
+        override fun addDependency(
+            group: String?,
+            module: String?,
+            versionConstraint: VersionConstraint?,
+            excludes: MutableList<ExcludeMetadata?>,
+            reason: String?,
+            attributes: ImmutableAttributes?,
+            requestedCapabilities: MutableSet<CapabilitySelector?>?,
+            endorsing: Boolean,
+            artifact: IvyArtifactName?
         ) {
-            this.group = group;
-            this.module = module;
-            this.versionConstraint = versionConstraint;
-            this.excludes = ImmutableList.copyOf(excludes);
-            this.reason = reason;
-            this.attributes = attributes;
-            this.requestedCapabilities = capabilitySelectors;
-            this.endorsing = endorsing;
-            this.dependencyArtifact = dependencyArtifact;
+            dependencies.add(DependencyImpl(group, module, versionConstraint, excludes, reason, attributes, requestedCapabilities, endorsing, artifact))
         }
 
-        @Override
-        public String getGroup() {
-            return group;
+        override fun addDependencyConstraint(group: String?, module: String?, versionConstraint: VersionConstraint?, reason: String?, attributes: ImmutableAttributes?) {
+            dependencyConstraints.add(DependencyConstraintImpl(group, module, versionConstraint, reason, attributes))
         }
 
-        @Override
-        public String getModule() {
-            return module;
+        override fun addCapability(group: String?, name: String?, version: String?) {
+            capabilities.add(DefaultImmutableCapability(group, name, version))
         }
 
-        @Override
-        public VersionConstraint getVersionConstraint() {
-            return versionConstraint;
+        override fun addCapability(capability: Capability?) {
+            capabilities.add(capability)
         }
 
-        @Override
-        public ImmutableList<ExcludeMetadata> getExcludes() {
-            return excludes;
+        override fun getFiles(): MutableList<out ComponentVariant.File?> {
+            return files
         }
 
-        @Override
-        public String getReason() {
-            return reason;
+        override fun removeFile(file: ComponentVariant.File?): Boolean {
+            return files.remove(file)
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return attributes;
+        override fun addFile(name: String?, uri: String?) {
+            files.add(FileImpl(name, uri))
         }
 
-        @Override
-        public Set<CapabilitySelector> getCapabilitySelectors() {
-            return requestedCapabilities;
+        override fun copy(variantName: String?, attributes: ImmutableAttributes?, capability: Capability?): MutableComponentVariant {
+            val copy = MutableVariantImpl(variantName, attributes)
+            copy.dependencies.addAll(this.dependencies)
+            copy.dependencyConstraints.addAll(this.dependencyConstraints)
+            copy.files.addAll(this.files)
+            copy.capabilities.add(capability)
+            copy.availableExternally = this.availableExternally
+            return copy
         }
 
-        @Override
-        public boolean isEndorsingStrictVersions() {
-            return endorsing;
+        override fun isAvailableExternally(): Boolean {
+            return availableExternally
         }
 
-        @Override
-        @Nullable
-        public IvyArtifactName getDependencyArtifact() {
-            return dependencyArtifact;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            DependencyImpl that = (DependencyImpl) o;
-            return Objects.equal(group, that.group)
-                && Objects.equal(module, that.module)
-                && Objects.equal(versionConstraint, that.versionConstraint)
-                && Objects.equal(excludes, that.excludes)
-                && Objects.equal(reason, that.reason)
-                && Objects.equal(attributes, that.attributes)
-                && Objects.equal(requestedCapabilities, that.requestedCapabilities)
-                && endorsing == that.endorsing
-                && Objects.equal(dependencyArtifact, that.dependencyArtifact);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(group, module, versionConstraint, excludes, reason, attributes, endorsing, dependencyArtifact);
+        override fun setAvailableExternally(availableExternally: Boolean) {
+            this.availableExternally = availableExternally
         }
     }
 
-    protected static class DependencyConstraintImpl implements ComponentVariant.DependencyConstraint {
-        private final String group;
-        private final String module;
-        private final VersionConstraint versionConstraint;
-        private final String reason;
-        private final ImmutableAttributes attributes;
-
-        DependencyConstraintImpl(String group, String module, VersionConstraint versionConstraint, String reason, ImmutableAttributes attributes) {
-            this.group = group;
-            this.module = module;
-            this.versionConstraint = versionConstraint;
-            this.reason = reason;
-            this.attributes = attributes;
+    class FileImpl(private val name: String?, private val uri: String?) : ComponentVariant.File {
+        override fun getName(): String? {
+            return name
         }
 
-        @Override
-        public String getGroup() {
-            return group;
+        override fun getUri(): String? {
+            return uri
         }
 
-        @Override
-        public String getModule() {
-            return module;
-        }
-
-        @Override
-        public VersionConstraint getVersionConstraint() {
-            return versionConstraint;
-        }
-
-        @Override
-        public String getReason() {
-            return reason;
-        }
-
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return attributes;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            DependencyConstraintImpl that = (DependencyConstraintImpl) o;
-            return Objects.equal(group, that.group)
-                && Objects.equal(module, that.module)
-                && Objects.equal(versionConstraint, that.versionConstraint)
-                && Objects.equal(reason, that.reason)
-                && Objects.equal(attributes, that.attributes);
+            val file = o as FileImpl
+            return Objects.equal(name, file.name)
+                    && Objects.equal(uri, file.uri)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(group, module, versionConstraint, reason, attributes);
+        override fun hashCode(): Int {
+            return Objects.hashCode(name, uri)
         }
     }
 
-    protected static class ImmutableVariantImpl implements ComponentVariant, VariantResolveMetadata {
-        private final ModuleComponentIdentifier componentId;
-        private final String name;
-        private final ImmutableAttributes attributes;
-        private final ImmutableList<? extends Dependency> dependencies;
-        private final ImmutableList<? extends DependencyConstraint> dependencyConstraints;
-        private final ImmutableList<? extends File> files;
-        private final ImmutableCapabilities capabilities;
-        private final boolean externalVariant;
+    protected class DependencyImpl internal constructor(
+        private val group: String?,
+        private val module: String?,
+        private val versionConstraint: VersionConstraint?,
+        excludes: MutableList<ExcludeMetadata?>,
+        private val reason: String?,
+        private val attributes: ImmutableAttributes?,
+        private val requestedCapabilities: MutableSet<CapabilitySelector?>?,
+        private val endorsing: Boolean,
+        private val dependencyArtifact: IvyArtifactName?
+    ) : ComponentVariant.Dependency {
+        private val excludes: ImmutableList<ExcludeMetadata?>
 
-        ImmutableVariantImpl(ModuleComponentIdentifier componentId,
-                             String name,
-                             ImmutableAttributes attributes,
-                             ImmutableList<? extends Dependency> dependencies,
-                             ImmutableList<? extends DependencyConstraint> dependencyConstraints,
-                             ImmutableList<? extends File> files,
-                             ImmutableCapabilities capabilities,
-                             boolean externalVariant) {
-            this.componentId = componentId;
-            this.name = name;
-            this.attributes = attributes;
-            this.dependencies = dependencies;
-            this.dependencyConstraints = dependencyConstraints;
-            this.files = files;
-            this.capabilities = capabilities;
-            this.externalVariant = externalVariant;
+        init {
+            this.excludes = ImmutableList.copyOf<ExcludeMetadata?>(excludes)
         }
 
-        @Override
-        public String getName() {
-            return name;
+        override fun getGroup(): String? {
+            return group
         }
 
-        @Override
-        public Identifier getIdentifier() {
-            return new ComponentConfigurationIdentifier(componentId, name);
+        override fun getModule(): String? {
+            return module
         }
 
-        @Override
-        public DisplayName asDescribable() {
-            return Describables.of(componentId, "variant", name);
+        override fun getVersionConstraint(): VersionConstraint? {
+            return versionConstraint
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return attributes;
+        override fun getExcludes(): ImmutableList<ExcludeMetadata?> {
+            return excludes
         }
 
-        @Override
-        public ImmutableList<? extends Dependency> getDependencies() {
-            return dependencies;
+        override fun getReason(): String? {
+            return reason
         }
 
-        @Override
-        public ImmutableList<? extends DependencyConstraint> getDependencyConstraints() {
-            return dependencyConstraints;
+        override fun getAttributes(): ImmutableAttributes? {
+            return attributes
         }
 
-        @Override
-        public ImmutableList<? extends File> getFiles() {
-            return files;
+        override fun getCapabilitySelectors(): MutableSet<CapabilitySelector?>? {
+            return requestedCapabilities
         }
 
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            return capabilities;
+        override fun isEndorsingStrictVersions(): Boolean {
+            return endorsing
         }
 
-        @Override
-        public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-            ImmutableList.Builder<ComponentArtifactMetadata> artifacts = new ImmutableList.Builder<>();
-            for (ComponentVariant.File file : files) {
-                artifacts.add(new UrlBackedArtifactMetadata(componentId, file.getName(), file.getUri()));
+        override fun getDependencyArtifact(): IvyArtifactName? {
+            return dependencyArtifact
+        }
+
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            return artifacts.build();
-        }
-
-        @Override
-        public boolean isExternalVariant() {
-            return externalVariant;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            ImmutableVariantImpl that = (ImmutableVariantImpl) o;
+            val that = o as DependencyImpl
+            return Objects.equal(group, that.group)
+                    && Objects.equal(module, that.module)
+                    && Objects.equal(versionConstraint, that.versionConstraint)
+                    && Objects.equal(excludes, that.excludes)
+                    && Objects.equal(reason, that.reason)
+                    && Objects.equal(attributes, that.attributes)
+                    && Objects.equal(requestedCapabilities, that.requestedCapabilities)
+                    && endorsing == that.endorsing && Objects.equal(dependencyArtifact, that.dependencyArtifact)
+        }
+
+        override fun hashCode(): Int {
+            return Objects.hashCode(group, module, versionConstraint, excludes, reason, attributes, endorsing, dependencyArtifact)
+        }
+    }
+
+    protected class DependencyConstraintImpl internal constructor(
+        private val group: String?,
+        private val module: String?,
+        private val versionConstraint: VersionConstraint?,
+        private val reason: String?,
+        private val attributes: ImmutableAttributes?
+    ) : ComponentVariant.DependencyConstraint {
+        override fun getGroup(): String? {
+            return group
+        }
+
+        override fun getModule(): String? {
+            return module
+        }
+
+        override fun getVersionConstraint(): VersionConstraint? {
+            return versionConstraint
+        }
+
+        override fun getReason(): String? {
+            return reason
+        }
+
+        override fun getAttributes(): ImmutableAttributes? {
+            return attributes
+        }
+
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+
+            val that = o as DependencyConstraintImpl
+            return Objects.equal(group, that.group)
+                    && Objects.equal(module, that.module)
+                    && Objects.equal(versionConstraint, that.versionConstraint)
+                    && Objects.equal(reason, that.reason)
+                    && Objects.equal(attributes, that.attributes)
+        }
+
+        override fun hashCode(): Int {
+            return Objects.hashCode(group, module, versionConstraint, reason, attributes)
+        }
+    }
+
+    class ImmutableVariantImpl internal constructor(
+        private val componentId: ModuleComponentIdentifier,
+        val name: String,
+        val attributes: ImmutableAttributes?,
+        private val dependencies: ImmutableList<out ComponentVariant.Dependency?>?,
+        private val dependencyConstraints: ImmutableList<out ComponentVariant.DependencyConstraint?>?,
+        private val files: ImmutableList<out ComponentVariant.File>,
+        val capabilities: ImmutableCapabilities,
+        private val externalVariant: Boolean
+    ) : ComponentVariant, VariantResolveMetadata {
+        val identifier: VariantResolveMetadata.Identifier
+            get() = ComponentConfigurationIdentifier(componentId, name)
+
+        override fun asDescribable(): DisplayName? {
+            return Describables.of(componentId, "variant", name)
+        }
+
+        override fun getDependencies(): ImmutableList<out ComponentVariant.Dependency?>? {
+            return dependencies
+        }
+
+        override fun getDependencyConstraints(): ImmutableList<out ComponentVariant.DependencyConstraint?>? {
+            return dependencyConstraints
+        }
+
+        override fun getFiles(): ImmutableList<out ComponentVariant.File> {
+            return files
+        }
+
+        val artifacts: ImmutableList<out ComponentArtifactMetadata?>
+            get() {
+                val artifacts =
+                    ImmutableList.Builder<ComponentArtifactMetadata?>()
+                for (file in files) {
+                    artifacts.add(UrlBackedArtifactMetadata(componentId, file.getName(), file.getUri()))
+                }
+                return artifacts.build()
+            }
+
+        override fun isExternalVariant(): Boolean {
+            return externalVariant
+        }
+
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+
+            val that = o as ImmutableVariantImpl
             return Objects.equal(componentId, that.componentId)
-                && Objects.equal(name, that.name)
-                && Objects.equal(attributes, that.attributes)
-                && Objects.equal(dependencies, that.dependencies)
-                && Objects.equal(dependencyConstraints, that.dependencyConstraints)
-                && Objects.equal(files, that.files)
-                && externalVariant == that.externalVariant;
+                    && Objects.equal(name, that.name)
+                    && Objects.equal(attributes, that.attributes)
+                    && Objects.equal(dependencies, that.dependencies)
+                    && Objects.equal(dependencyConstraints, that.dependencyConstraints)
+                    && Objects.equal(files, that.files)
+                    && externalVariant == that.externalVariant
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(componentId,
+        override fun hashCode(): Int {
+            return Objects.hashCode(
+                componentId,
                 name,
                 attributes,
                 dependencies,
                 dependencyConstraints,
                 files,
-                externalVariant);
+                externalVariant
+            )
         }
     }
 
+    companion object {
+        private const val DEFAULT_STATUS = "integration"
+
+        private fun defaultAttributes(attributesFactory: AttributesFactory): AttributeContainerInternal {
+            return attributesFactory.mutable().attribute<String?>(ProjectInternal.STATUS_ATTRIBUTE, DEFAULT_STATUS) as AttributeContainerInternal
+        }
+    }
 }

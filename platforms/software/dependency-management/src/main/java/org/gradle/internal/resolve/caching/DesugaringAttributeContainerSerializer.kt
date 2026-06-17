@@ -13,84 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
+package org.gradle.internal.resolve.caching
 
-import org.gradle.api.Named;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot;
-
-import java.io.IOException;
+import org.gradle.api.Named
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.snapshot.impl.CoercingStringValueSnapshot
+import java.io.IOException
 
 /**
  * A thread-safe and reusable attribute container serializer that will desugar typed attributes.
  *
- * Attributes that are of types different than {@code String} or {@code boolean} will be desugared
- * before serialization. The process requires the attribute type to implement {@link Named}.
+ * Attributes that are of types different than `String` or `boolean` will be desugared
+ * before serialization. The process requires the attribute type to implement [Named].
  */
-public class DesugaringAttributeContainerSerializer implements AttributeContainerSerializer {
-    private final AttributesFactory attributesFactory;
-    private final NamedObjectInstantiator namedObjectInstantiator;
-
-    private static final byte STRING_ATTRIBUTE = 1;
-    private static final byte BOOLEAN_ATTRIBUTE = 2;
-    private static final byte DESUGARED_ATTRIBUTE = 3;
-    private static final byte INTEGER_ATTRIBUTE = 4;
-
-    public DesugaringAttributeContainerSerializer(AttributesFactory attributesFactory, NamedObjectInstantiator namedObjectInstantiator) {
-        this.attributesFactory = attributesFactory;
-        this.namedObjectInstantiator = namedObjectInstantiator;
-    }
-
-    @Override
-    public ImmutableAttributes read(Decoder decoder) throws IOException {
-        ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
-        int count = decoder.readSmallInt();
-        for (int i = 0; i < count; i++) {
-            String name = decoder.readString();
-            byte type = decoder.readByte();
+class DesugaringAttributeContainerSerializer(private val attributesFactory: AttributesFactory, private val namedObjectInstantiator: NamedObjectInstantiator?) : AttributeContainerSerializer {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ImmutableAttributes {
+        var attributes = ImmutableAttributes.EMPTY
+        val count = decoder.readSmallInt()
+        for (i in 0..<count) {
+            val name = decoder.readString()
+            val type = decoder.readByte()
             if (type == BOOLEAN_ATTRIBUTE) {
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, Boolean.class), decoder.readBoolean());
-            } else if (type == STRING_ATTRIBUTE){
-                String value = decoder.readString();
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, String.class), value);
-            } else if (type == INTEGER_ATTRIBUTE){
-                int value = decoder.readInt();
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, Integer.class), value);
+                attributes = attributesFactory.concat<Boolean?>(attributes, Attribute.of<Boolean?>(name, Boolean::class.java), decoder.readBoolean())
+            } else if (type == STRING_ATTRIBUTE) {
+                val value = decoder.readString()
+                attributes = attributesFactory.concat<String?>(attributes, Attribute.of<String?>(name, String::class.java), value)
+            } else if (type == INTEGER_ATTRIBUTE) {
+                val value = decoder.readInt()
+                attributes = attributesFactory.concat<Int?>(attributes, Attribute.of<Int?>(name, Int::class.java), value)
             } else if (type == DESUGARED_ATTRIBUTE) {
-                String value = decoder.readString();
-                attributes = attributesFactory.concat(attributes, Attribute.of(name, String.class), new CoercingStringValueSnapshot(value, namedObjectInstantiator));
+                val value = decoder.readString()
+                attributes = attributesFactory.concat<String?>(attributes, Attribute.of<String?>(name, String::class.java), CoercingStringValueSnapshot(value!!, namedObjectInstantiator!!))
             }
         }
-        return attributes;
+        return attributes
     }
 
-    @Override
-    public void write(Encoder encoder, AttributeContainer container) throws IOException {
-        encoder.writeSmallInt(container.keySet().size());
-        for (Attribute<?> attribute : container.keySet()) {
-            encoder.writeString(attribute.getName());
-            if (attribute.getType().equals(Boolean.class)) {
-                encoder.writeByte(BOOLEAN_ATTRIBUTE);
-                encoder.writeBoolean((Boolean) container.getAttribute(attribute));
-            } else if (attribute.getType().equals(String.class)){
-                encoder.writeByte(STRING_ATTRIBUTE);
-                encoder.writeString((String) container.getAttribute(attribute));
-            } else if (attribute.getType().equals(Integer.class)){
-                encoder.writeByte(INTEGER_ATTRIBUTE);
-                encoder.writeInt((Integer) container.getAttribute(attribute));
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, container: AttributeContainer) {
+        encoder.writeSmallInt(container.keySet().size)
+        for (attribute in container.keySet()) {
+            encoder.writeString(attribute.getName())
+            if (attribute.getType() == Boolean::class.java) {
+                encoder.writeByte(BOOLEAN_ATTRIBUTE)
+                encoder.writeBoolean((container.getAttribute(attribute) as kotlin.Boolean?)!!)
+            } else if (attribute.getType() == String::class.java) {
+                encoder.writeByte(STRING_ATTRIBUTE)
+                encoder.writeString(container.getAttribute(attribute) as String?)
+            } else if (attribute.getType() == Int::class.java) {
+                encoder.writeByte(INTEGER_ATTRIBUTE)
+                encoder.writeInt((container.getAttribute(attribute) as kotlin.Int?)!!)
             } else {
-                assert Named.class.isAssignableFrom(attribute.getType());
-                Named attributeValue = (Named) container.getAttribute(attribute);
-                encoder.writeByte(DESUGARED_ATTRIBUTE);
-                encoder.writeString(attributeValue.getName());
+                assert(Named::class.java.isAssignableFrom(attribute.getType()))
+                val attributeValue = container.getAttribute(attribute) as Named?
+                encoder.writeByte(DESUGARED_ATTRIBUTE)
+                encoder.writeString(attributeValue!!.getName())
             }
         }
+    }
+
+    companion object {
+        private const val STRING_ATTRIBUTE: Byte = 1
+        private const val BOOLEAN_ATTRIBUTE: Byte = 2
+        private const val DESUGARED_ATTRIBUTE: Byte = 3
+        private const val INTEGER_ATTRIBUTE: Byte = 4
     }
 }

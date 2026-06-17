@@ -13,183 +13,145 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.Describables;
-import org.gradle.internal.component.model.AbstractComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.gradle.internal.component.model.ImmutableModuleSources;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.gradle.internal.model.CalculatedValue;
-import org.gradle.internal.model.CalculatedValueContainerFactory;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.internal.Describables
+import org.gradle.internal.component.model.AbstractComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata
+import org.gradle.internal.component.model.ImmutableModuleSources
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.component.model.VariantGraphResolveState
+import org.gradle.internal.model.CalculatedValue
+import org.gradle.internal.model.CalculatedValueContainerFactory
+import org.gradle.internal.model.ValueCalculator
+import java.util.function.Consumer
 
 /**
  * Holds the resolution state for a local component. The state is calculated as required, and an instance can be used for multiple resolutions across a build tree.
  *
- * <p>The aim is to create only a single instance of this type per project and reuse that for all resolution that happens in a build tree. This isn't quite the case yet.
+ *
+ * The aim is to create only a single instance of this type per project and reuse that for all resolution that happens in a build tree. This isn't quite the case yet.
  */
-public class DefaultLocalComponentGraphResolveState extends AbstractComponentGraphResolveState<LocalComponentGraphResolveMetadata> implements LocalComponentGraphResolveState {
-
-    private final boolean adHoc;
-
+class DefaultLocalComponentGraphResolveState(
+    instanceId: Long,
+    metadata: LocalComponentGraphResolveMetadata,
+    private val adHoc: Boolean,
+    variantFactory: LocalVariantGraphResolveStateFactory,
+    calculatedValueContainerFactory: CalculatedValueContainerFactory
+) : AbstractComponentGraphResolveState<LocalComponentGraphResolveMetadata?>(instanceId, metadata), LocalComponentGraphResolveState {
     // The variants to use for variant selection during graph resolution
-    private final CalculatedValue<LocalComponentGraphSelectionCandidates> graphSelectionCandidates;
+    private val graphSelectionCandidates: CalculatedValue<LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates>
 
-    public DefaultLocalComponentGraphResolveState(
-        long instanceId,
-        LocalComponentGraphResolveMetadata metadata,
-        boolean adHoc,
-        LocalVariantGraphResolveStateFactory variantFactory,
-        CalculatedValueContainerFactory calculatedValueContainerFactory
-    ) {
-        super(instanceId, metadata);
-        this.adHoc = adHoc;
-
-        this.graphSelectionCandidates = calculatedValueContainerFactory.create(Describables.of("variants of", getMetadata()), context ->
-            computeGraphSelectionCandidates(variantFactory)
-        );
+    init {
+        this.graphSelectionCandidates =
+            calculatedValueContainerFactory.create<LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates, ValueCalculator<out LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates>>(
+                Describables.of("variants of", getMetadata()), ValueCalculator { context: NodeExecutionContext? -> computeGraphSelectionCandidates(variantFactory) }
+            )
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        return getMetadata().getModuleVersionId();
+    override fun getModuleVersionId(): ModuleVersionIdentifier {
+        return getMetadata().getModuleVersionId()
     }
 
-    @Override
-    public boolean isAdHoc() {
-        return adHoc;
+    override fun isAdHoc(): Boolean {
+        return adHoc
     }
 
-    @Override
-    public ComponentArtifactResolveMetadata getArtifactMetadata() {
-        return new LocalComponentArtifactResolveMetadata(getMetadata());
+    override fun getArtifactMetadata(): ComponentArtifactResolveMetadata {
+        return LocalComponentArtifactResolveMetadata(getMetadata())
     }
 
-    @Override
-    public LocalComponentGraphSelectionCandidates getCandidatesForGraphVariantSelection() {
-        graphSelectionCandidates.finalizeIfNotAlready();
-        return graphSelectionCandidates.get();
+    override fun getCandidatesForGraphVariantSelection(): LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates {
+        graphSelectionCandidates.finalizeIfNotAlready()
+        return graphSelectionCandidates.get()
     }
 
-    private static LocalComponentGraphSelectionCandidates computeGraphSelectionCandidates(
-        LocalVariantGraphResolveStateFactory variantFactory
-    ) {
-        ImmutableList.Builder<LocalVariantGraphResolveState> variantsWithAttributes = new ImmutableList.Builder<>();
-        ImmutableMap.Builder<String, LocalVariantGraphResolveState> variantsByConfigurationName = ImmutableMap.builder();
-
-        variantFactory.visitConsumableVariants(variantState -> {
-            if (!variantState.getAttributes().isEmpty()) {
-                variantsWithAttributes.add(variantState);
-            }
-
-            if (variantState.getMetadata().getConfigurationName() != null) {
-                variantsByConfigurationName.put(variantState.getMetadata().getConfigurationName(), variantState);
-            }
-        });
-
-        return new DefaultLocalComponentGraphSelectionCandidates(
-            variantsWithAttributes.build(),
-            variantsByConfigurationName.build()
-        );
-    }
-
-    private static class LocalComponentArtifactResolveMetadata implements ComponentArtifactResolveMetadata {
-        private final ComponentGraphResolveMetadata metadata;
-
-        public LocalComponentArtifactResolveMetadata(ComponentGraphResolveMetadata metadata) {
-            this.metadata = metadata;
+    private class LocalComponentArtifactResolveMetadata(private val metadata: ComponentGraphResolveMetadata) : ComponentArtifactResolveMetadata {
+        override fun getId(): ComponentIdentifier {
+            return metadata.getId()!!
         }
 
-        @Override
-        public ComponentIdentifier getId() {
-            return metadata.getId();
+        override fun getModuleVersionId(): ModuleVersionIdentifier {
+            return metadata.getModuleVersionId()!!
         }
 
-        @Override
-        public ModuleVersionIdentifier getModuleVersionId() {
-            return metadata.getModuleVersionId();
+        override fun getSources(): ModuleSources {
+            return ImmutableModuleSources.of()
         }
 
-        @Override
-        public ModuleSources getSources() {
-            return ImmutableModuleSources.of();
+        override fun getAttributes(): ImmutableAttributes {
+            return ImmutableAttributes.EMPTY
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return ImmutableAttributes.EMPTY;
-        }
-
-        @Override
-        public ImmutableAttributesSchema getAttributesSchema() {
-            return metadata.getAttributesSchema();
+        override fun getAttributesSchema(): ImmutableAttributesSchema {
+            return metadata.getAttributesSchema()!!
         }
     }
 
-    private static class DefaultLocalComponentGraphSelectionCandidates implements LocalComponentGraphSelectionCandidates {
-        private final List<? extends LocalVariantGraphResolveState> variantsWithAttributes;
-        private final Map<String, LocalVariantGraphResolveState> variantsByConfigurationName;
-
-        public DefaultLocalComponentGraphSelectionCandidates(
-            List<? extends LocalVariantGraphResolveState> variantsWithAttributes,
-            Map<String, LocalVariantGraphResolveState> variantsByConfigurationName
-        ) {
-            this.variantsWithAttributes = variantsWithAttributes;
-            this.variantsByConfigurationName = variantsByConfigurationName;
+    private class DefaultLocalComponentGraphSelectionCandidates(
+        private val variantsWithAttributes: MutableList<out LocalVariantGraphResolveState>,
+        private val variantsByConfigurationName: MutableMap<String, LocalVariantGraphResolveState>
+    ) : LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates {
+        override fun getVariantsForAttributeMatching(): MutableList<out LocalVariantGraphResolveState> {
+            return variantsWithAttributes
         }
 
-        @Override
-        public List<? extends LocalVariantGraphResolveState> getVariantsForAttributeMatching() {
-            return variantsWithAttributes;
+        override fun getLegacyVariant(): VariantGraphResolveState? {
+            return getVariantByConfigurationName(Dependency.DEFAULT_CONFIGURATION)
         }
 
-        @Nullable
-        @Override
-        public VariantGraphResolveState getLegacyVariant() {
-            return getVariantByConfigurationName(Dependency.DEFAULT_CONFIGURATION);
+        override fun getVariantByConfigurationName(name: String): LocalVariantGraphResolveState? {
+            return variantsByConfigurationName.get(name)
         }
 
-        @Nullable
-        @Override
-        public LocalVariantGraphResolveState getVariantByConfigurationName(String name) {
-            return variantsByConfigurationName.get(name);
-        }
-
-        @Override
-        public List<LocalVariantGraphResolveState> getAllSelectableVariants() {
+        override fun getAllSelectableVariants(): MutableList<LocalVariantGraphResolveState> {
             // Find the names of all selectable variants that are not in the variantsWithAttributes
-            Set<String> configurationNames = new HashSet<>(variantsByConfigurationName.keySet());
-            for (LocalVariantGraphResolveState variant : variantsWithAttributes) {
+            val configurationNames: MutableSet<String> = HashSet<String>(variantsByConfigurationName.keys)
+            for (variant in variantsWithAttributes) {
                 if (variant.getMetadata().getConfigurationName() != null) {
-                    configurationNames.remove(variant.getMetadata().getConfigurationName());
+                    configurationNames.remove(variant.getMetadata().getConfigurationName())
                 }
             }
 
             // Join the list of variants with attributes with the list of variants by configuration name
-            List<LocalVariantGraphResolveState> result = new ArrayList<>(variantsWithAttributes);
-            for (String configurationName : configurationNames) {
-                result.add(variantsByConfigurationName.get(configurationName));
+            val result: MutableList<LocalVariantGraphResolveState> = ArrayList<LocalVariantGraphResolveState>(variantsWithAttributes)
+            for (configurationName in configurationNames) {
+                result.add(variantsByConfigurationName.get(configurationName)!!)
             }
 
-            return result;
+            return result
         }
     }
 
+    companion object {
+        private fun computeGraphSelectionCandidates(
+            variantFactory: LocalVariantGraphResolveStateFactory
+        ): LocalComponentGraphResolveState.LocalComponentGraphSelectionCandidates {
+            val variantsWithAttributes = ImmutableList.Builder<LocalVariantGraphResolveState>()
+            val variantsByConfigurationName = ImmutableMap.builder<String, LocalVariantGraphResolveState>()
+
+            variantFactory.visitConsumableVariants(Consumer { variantState: LocalVariantGraphResolveState? ->
+                if (!variantState!!.getAttributes().isEmpty()) {
+                    variantsWithAttributes.add(variantState)
+                }
+                if (variantState.getMetadata().getConfigurationName() != null) {
+                    variantsByConfigurationName.put(variantState.getMetadata().getConfigurationName()!!, variantState)
+                }
+            })
+
+            return DefaultLocalComponentGraphSelectionCandidates(
+                variantsWithAttributes.build(),
+                variantsByConfigurationName.build()
+            )
+        }
+    }
 }

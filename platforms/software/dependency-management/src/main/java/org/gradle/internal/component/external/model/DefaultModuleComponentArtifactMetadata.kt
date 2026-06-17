@@ -13,67 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import java.util.Optional
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+open class DefaultModuleComponentArtifactMetadata @JvmOverloads constructor(
+    moduleComponentArtifactIdentifier: ModuleComponentArtifactIdentifier?,
+    private val alternativeArtifact: ComponentArtifactMetadata? = null
+) : ModuleComponentArtifactMetadata {
+    private val id: DefaultModuleComponentArtifactIdentifier
 
-import java.util.Optional;
+    @JvmOverloads
+    constructor(componentIdentifier: ModuleComponentIdentifier, artifact: IvyArtifactName?, alternativeArtifact: ComponentArtifactMetadata? = null) : this(
+        DefaultModuleComponentArtifactIdentifier(
+            componentIdentifier,
+            artifact
+        ), alternativeArtifact
+    )
 
-public class DefaultModuleComponentArtifactMetadata implements ModuleComponentArtifactMetadata {
-    private final DefaultModuleComponentArtifactIdentifier id;
-    private final ComponentArtifactMetadata alternativeArtifact;
-
-    public DefaultModuleComponentArtifactMetadata(ModuleComponentIdentifier componentIdentifier, IvyArtifactName artifact) {
-        this(componentIdentifier, artifact, null);
+    init {
+        this.id = moduleComponentArtifactIdentifier as DefaultModuleComponentArtifactIdentifier
     }
 
-    public DefaultModuleComponentArtifactMetadata(ModuleComponentIdentifier componentIdentifier, IvyArtifactName artifact, @Nullable ComponentArtifactMetadata alternativeArtifact) {
-        this(new DefaultModuleComponentArtifactIdentifier(componentIdentifier, artifact), alternativeArtifact);
+    override fun toString(): String {
+        return id.toString()
     }
 
-    public DefaultModuleComponentArtifactMetadata(ModuleComponentArtifactIdentifier moduleComponentArtifactIdentifier) {
-        this(moduleComponentArtifactIdentifier, null);
+    override fun getId(): ModuleComponentArtifactIdentifier {
+        return id
     }
 
-    public DefaultModuleComponentArtifactMetadata(ModuleComponentArtifactIdentifier moduleComponentArtifactIdentifier, @Nullable ComponentArtifactMetadata alternativeArtifact) {
-        this.id = (DefaultModuleComponentArtifactIdentifier) moduleComponentArtifactIdentifier;
-        this.alternativeArtifact = alternativeArtifact;
+    override fun getComponentId(): ComponentIdentifier? {
+        return id.getComponentIdentifier()
     }
 
-    @Override
-    public String toString() {
-        return id.toString();
+    override fun getName(): IvyArtifactName? {
+        return id.getName()
     }
 
-    @Override
-    public ModuleComponentArtifactIdentifier getId() {
-        return id;
+    override fun getBuildDependencies(): TaskDependency? {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    public ComponentIdentifier getComponentId() {
-        return id.getComponentIdentifier();
-    }
-
-    @Override
-    public IvyArtifactName getName() {
-        return id.getName();
-    }
-
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
-    }
-
-    @Override
-    public Optional<ComponentArtifactMetadata> getAlternativeArtifact() {
-        return Optional.ofNullable(alternativeArtifact);
+    override fun getAlternativeArtifact(): Optional<ComponentArtifactMetadata?> {
+        return Optional.ofNullable<ComponentArtifactMetadata?>(alternativeArtifact)
     }
 }

@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
 /**
  * A memento for any resolution state that is relevant to locate the artifacts of a resolved module version.
@@ -22,13 +21,12 @@ package org.gradle.internal.component.model;
  * Implementations must retain as little state as possible and must be immutable. There are two different kinds
  * of module sources:
  *
- * <ul>
- *     <li>sources which can be reconstructed from the caches, for example, the repository source</li>
- *     <li>sources which can't be reconstructed because the cache format loses information, for example a descriptor converted to binary</li>
- * </ul>
  *
- * The 2d kind, sources which must be stored into the metadata cache, have to implement the {@link PersistentModuleSource}
+ *  * sources which can be reconstructed from the caches, for example, the repository source
+ *  * sources which can't be reconstructed because the cache format loses information, for example a descriptor converted to binary
+ *
+ *
+ * The 2d kind, sources which must be stored into the metadata cache, have to implement the [PersistentModuleSource]
  * interface instead.
  */
-public interface ModuleSource {
-}
+interface ModuleSource

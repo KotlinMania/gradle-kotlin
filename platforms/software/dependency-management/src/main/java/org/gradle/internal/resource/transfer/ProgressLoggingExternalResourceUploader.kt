@@ -13,107 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.internal.logging.progress.ProgressLoggingInputStream
+import org.gradle.internal.logging.progress.ResourceOperation
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationInvocationException
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceWriteBuildOperationType
+import org.gradle.internal.resource.ReadableContent
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
 
-import org.gradle.internal.logging.progress.ProgressLoggingInputStream;
-import org.gradle.internal.logging.progress.ResourceOperation;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationInvocationException;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceWriteBuildOperationType;
-import org.gradle.internal.resource.ReadableContent;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-
-public class ProgressLoggingExternalResourceUploader extends AbstractProgressLoggingHandler implements ExternalResourceUploader {
-    private final ExternalResourceUploader delegate;
-    private final BuildOperationRunner buildOperationRunner;
-
-    public ProgressLoggingExternalResourceUploader(ExternalResourceUploader delegate, BuildOperationRunner buildOperationRunner) {
-        this.delegate = delegate;
-        this.buildOperationRunner = buildOperationRunner;
-    }
-
-    @Override
-    public void upload(final ReadableContent resource, ExternalResourceName destination) throws IOException {
+class ProgressLoggingExternalResourceUploader(private val delegate: ExternalResourceUploader, private val buildOperationRunner: BuildOperationRunner) : AbstractProgressLoggingHandler(),
+    ExternalResourceUploader {
+    @Throws(IOException::class)
+    override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
         try {
-            buildOperationRunner.run(new UploadOperation(destination, resource));
-        } catch (BuildOperationInvocationException e) {
-            if (e.getCause() instanceof IOException) {
-                throw (IOException) e.getCause();
+            buildOperationRunner.run(ProgressLoggingExternalResourceUploader.UploadOperation(destination, resource))
+        } catch (e: BuildOperationInvocationException) {
+            if (e.cause is IOException) {
+                throw e.cause as IOException?
             }
-            throw e;
+            throw e
         }
     }
 
-    private static class ProgressLoggingReadableContent implements ReadableContent {
-        private final ReadableContent delegate;
-        private final ResourceOperation uploadOperation;
-
-        private ProgressLoggingReadableContent(ReadableContent delegate, ResourceOperation uploadOperation) {
-            this.delegate = delegate;
-            this.uploadOperation = uploadOperation;
+    private class ProgressLoggingReadableContent(private val delegate: ReadableContent, private val uploadOperation: ResourceOperation) : ReadableContent {
+        override fun open(): InputStream {
+            return ProgressLoggingInputStream(
+                delegate.open(),
+                org.gradle.internal.logging.progress.ProgressLoggingInputStreamListener { processedBytes: Int -> uploadOperation.logProcessedBytes(processedBytes) })
         }
 
-        @Override
-        public InputStream open() {
-            return new ProgressLoggingInputStream(delegate.open(), uploadOperation::logProcessedBytes);
-        }
-
-        @Override
-        public long getContentLength() {
-            return delegate.getContentLength();
+        override fun getContentLength(): Long {
+            return delegate.getContentLength()
         }
     }
 
-    private static class PutOperationDetails extends LocationDetails implements ExternalResourceWriteBuildOperationType.Details {
-        private PutOperationDetails(URI location) {
-            super(location);
-        }
-
-        @Override
-        public String toString() {
-            return "ExternalResourceWriteBuildOperationType.Details{location=" + getLocation() + ", " + '}';
+    private class PutOperationDetails(location: URI) : LocationDetails(location), ExternalResourceWriteBuildOperationType.Details {
+        override fun toString(): String {
+            return "ExternalResourceWriteBuildOperationType.Details{location=" + getLocation() + ", " + '}'
         }
     }
 
-    private class UploadOperation implements RunnableBuildOperation {
-        private final ExternalResourceName destination;
-        private final ReadableContent resource;
-
-        public UploadOperation(ExternalResourceName destination, ReadableContent resource) {
-            this.destination = destination;
-            this.resource = resource;
-        }
-
-        @Override
-        public void run(BuildOperationContext context) throws IOException {
-            ResourceOperation uploadOperation = createResourceOperation(context, ResourceOperation.Type.upload);
-            uploadOperation.setContentLength(resource.getContentLength());
+    private inner class UploadOperation(private val destination: ExternalResourceName, private val resource: ReadableContent) : RunnableBuildOperation {
+        @Throws(IOException::class)
+        override fun run(context: BuildOperationContext) {
+            val uploadOperation = createResourceOperation(context, ResourceOperation.Type.upload)
+            uploadOperation.setContentLength(resource.getContentLength())
             try {
-                delegate.upload(new ProgressLoggingReadableContent(resource, uploadOperation), destination);
+                delegate.upload(ProgressLoggingReadableContent(resource, uploadOperation), destination)
             } finally {
-                context.setResult(new ExternalResourceWriteBuildOperationType.Result() {
-                    @Override
-                    public long getBytesWritten() {
-                        return uploadOperation.getTotalProcessedBytes();
+                context.setResult(object : ExternalResourceWriteBuildOperationType.Result {
+                    override fun getBytesWritten(): Long {
+                        return uploadOperation.totalProcessedBytes
                     }
-                });
+                })
             }
         }
 
-        @Override
-        public BuildOperationDescriptor.Builder description() {
+        override fun description(): BuildOperationDescriptor.Builder {
             return BuildOperationDescriptor
                 .displayName("Upload " + destination.getUri())
                 .progressDisplayName(destination.getShortDisplayName())
-                .details(new PutOperationDetails(destination.getUri()));
+                .details(PutOperationDetails(destination.getUri()))
         }
     }
 }

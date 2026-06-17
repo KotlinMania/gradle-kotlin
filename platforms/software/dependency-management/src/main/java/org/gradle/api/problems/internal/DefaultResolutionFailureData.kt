@@ -13,52 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.problems.internal
 
-package org.gradle.api.problems.internal;
-
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure
 
 /**
- * Default implementation of {@link ResolutionFailureData}.
+ * Default implementation of [ResolutionFailureData].
  */
-public class DefaultResolutionFailureData implements ResolutionFailureData {
-    private final ResolutionFailure resolutionFailure;
-
-    public static AdditionalDataBuilder<ResolutionFailureData> builder(@Nullable ResolutionFailureData resolutionFailure) {
-        if (resolutionFailure == null) {
-            return new DefaultResolutionFailureDataBuilder();
-        }
-        return new DefaultResolutionFailureDataBuilder(resolutionFailure);
+class DefaultResolutionFailureData(private val resolutionFailure: ResolutionFailure?) : ResolutionFailureData {
+    override fun getResolutionFailure(): ResolutionFailure? {
+        return resolutionFailure
     }
 
-    public DefaultResolutionFailureData(ResolutionFailure resolutionFailure) {
-        this.resolutionFailure = resolutionFailure;
-    }
+    private class DefaultResolutionFailureDataBuilder : ResolutionFailureDataSpec, AdditionalDataBuilder<ResolutionFailureData?> {
+        private var failure: ResolutionFailure? = null
 
-    @Override
-    public ResolutionFailure getResolutionFailure() {
-        return resolutionFailure;
-    }
-
-    private static class DefaultResolutionFailureDataBuilder implements ResolutionFailureDataSpec, AdditionalDataBuilder<ResolutionFailureData> {
-        private ResolutionFailure failure;
-
-        public DefaultResolutionFailureDataBuilder(ResolutionFailureData from) {
-            this.failure = from.getResolutionFailure();
+        constructor(from: ResolutionFailureData) {
+            this.failure = from.getResolutionFailure()
         }
 
-        public DefaultResolutionFailureDataBuilder() { /* empty */ }
+        constructor()
 
-        @Override
-        public ResolutionFailureDataSpec from(ResolutionFailure failure){
-            this.failure = failure;
-            return this;
+        override fun from(failure: ResolutionFailure?): ResolutionFailureDataSpec {
+            this.failure = failure
+            return this
         }
 
-        @Override
-        public ResolutionFailureData build() {
-            return new DefaultResolutionFailureData(failure);
+        override fun build(): ResolutionFailureData {
+            return DefaultResolutionFailureData(failure)
+        }
+    }
+
+    companion object {
+        fun builder(resolutionFailure: ResolutionFailureData?): AdditionalDataBuilder<ResolutionFailureData?> {
+            if (resolutionFailure == null) {
+                return DefaultResolutionFailureDataBuilder()
+            }
+            return DefaultResolutionFailureDataBuilder(resolutionFailure)
         }
     }
 }

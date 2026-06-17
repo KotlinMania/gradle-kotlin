@@ -37,7 +37,7 @@ class ModuleMetadataCacheEntry {
     }
 
     public static ModuleMetadataCacheEntry forMetaData(ModuleComponentResolveMetadata metaData, long createTimestamp) {
-        return new ModuleMetadataCacheEntry(TYPE_PRESENT, metaData.isChanging(), createTimestamp);
+        return new ModuleMetadataCacheEntry(TYPE_PRESENT, metaData.isChanging, createTimestamp);
     }
 
     public boolean isMissing() {

@@ -13,191 +13,194 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model.ivy;
+package org.gradle.internal.component.external.model.ivy
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.NamespaceId;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.DefaultConfigurationMetadata;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.VariantDerivationStrategy;
-import org.gradle.internal.component.external.model.VariantMetadataRules;
-import org.gradle.internal.component.model.Exclude;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.util.internal.CollectionUtils;
-
-import java.util.IdentityHashMap;
-import java.util.List;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.NamespaceId
+import org.gradle.internal.component.external.descriptor.Artifact
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.DefaultConfigurationMetadata
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector.Companion.newSelector
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.VariantDerivationStrategy
+import org.gradle.internal.component.external.model.VariantMetadataRules
+import org.gradle.internal.component.model.Exclude
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.util.internal.CollectionUtils.collect
+import java.util.IdentityHashMap
+import java.util.function.Function
 
 /**
- * {@link AbstractLazyModuleComponentResolveMetadata Lazy version} of a {@link IvyModuleResolveMetadata}.
+ * [Lazy version][AbstractLazyModuleComponentResolveMetadata] of a [IvyModuleResolveMetadata].
  *
  * @see RealisedIvyModuleResolveMetadata
  */
-public class DefaultIvyModuleResolveMetadata extends AbstractLazyModuleComponentResolveMetadata implements IvyModuleResolveMetadata {
-    private final ImmutableMap<String, Configuration> configurationDefinitions;
-    private final ImmutableList<IvyDependencyDescriptor> dependencies;
-    private final ImmutableList<Artifact> artifactDefinitions;
-    private final ImmutableList<Exclude> excludes;
-    private final ImmutableMap<NamespaceId, String> extraAttributes;
-    private final String branch;
+class DefaultIvyModuleResolveMetadata : AbstractLazyModuleComponentResolveMetadata, IvyModuleResolveMetadata {
+    private val configurationDefinitions: ImmutableMap<String, Configuration>
+    private val dependencies: ImmutableList<IvyDependencyDescriptor>
+    private val artifactDefinitions: ImmutableList<Artifact>
+    private val excludes: ImmutableList<Exclude>
+    private val extraAttributes: ImmutableMap<NamespaceId, String>
+    private val branch: String
+
     // Since a single `Artifact` is shared between configurations, share the metadata type as well.
-    private IdentityHashMap<Artifact, ModuleComponentArtifactMetadata> artifacts;
+    private var artifacts: IdentityHashMap<Artifact, ModuleComponentArtifactMetadata>? = null
 
-    DefaultIvyModuleResolveMetadata(DefaultMutableIvyModuleResolveMetadata metadata) {
-        super(metadata);
-        this.configurationDefinitions = metadata.getConfigurationDefinitions();
-        this.branch = metadata.getBranch();
-        this.artifactDefinitions = metadata.getArtifactDefinitions();
-        this.dependencies = metadata.getDependencies();
-        this.excludes = metadata.getExcludes();
-        this.extraAttributes = metadata.getExtraAttributes();
+    internal constructor(metadata: DefaultMutableIvyModuleResolveMetadata) : super(metadata) {
+        this.configurationDefinitions = metadata.configurationDefinitions
+        this.branch = metadata.getBranch()!!
+        this.artifactDefinitions = metadata.getArtifactDefinitions()
+        this.dependencies = metadata.getDependencies()
+        this.excludes = metadata.getExcludes()
+        this.extraAttributes = metadata.getExtraAttributes()
     }
 
-    private DefaultIvyModuleResolveMetadata(DefaultIvyModuleResolveMetadata metadata, ModuleSources sources, VariantDerivationStrategy variantDerivationStrategy) {
-        super(metadata, sources, variantDerivationStrategy);
-        this.configurationDefinitions = metadata.configurationDefinitions;
-        this.branch = metadata.branch;
-        this.artifactDefinitions = metadata.artifactDefinitions;
-        this.dependencies = metadata.dependencies;
-        this.excludes = metadata.excludes;
-        this.extraAttributes = metadata.extraAttributes;
+    private constructor(metadata: DefaultIvyModuleResolveMetadata, sources: ModuleSources, variantDerivationStrategy: VariantDerivationStrategy) : super(metadata, sources, variantDerivationStrategy) {
+        this.configurationDefinitions = metadata.configurationDefinitions
+        this.branch = metadata.branch
+        this.artifactDefinitions = metadata.artifactDefinitions
+        this.dependencies = metadata.dependencies
+        this.excludes = metadata.excludes
+        this.extraAttributes = metadata.extraAttributes
 
-        copyCachedState(metadata, metadata.getVariantDerivationStrategy() != variantDerivationStrategy);
+        copyCachedState(metadata, metadata.variantDerivationStrategy !== variantDerivationStrategy)
     }
 
-    private DefaultIvyModuleResolveMetadata(DefaultIvyModuleResolveMetadata metadata, List<IvyDependencyDescriptor> dependencies) {
-        super(metadata, metadata.getSources(), metadata.getVariantDerivationStrategy());
-        this.configurationDefinitions = metadata.configurationDefinitions;
-        this.branch = metadata.branch;
-        this.artifactDefinitions = metadata.artifactDefinitions;
-        this.dependencies = ImmutableList.copyOf(dependencies);
-        this.excludes = metadata.excludes;
-        this.extraAttributes = metadata.extraAttributes;
+    private constructor(metadata: DefaultIvyModuleResolveMetadata, dependencies: MutableList<IvyDependencyDescriptor>) : super(metadata, metadata.getSources(), metadata.variantDerivationStrategy) {
+        this.configurationDefinitions = metadata.configurationDefinitions
+        this.branch = metadata.branch
+        this.artifactDefinitions = metadata.artifactDefinitions
+        this.dependencies = ImmutableList.copyOf<IvyDependencyDescriptor>(dependencies)
+        this.excludes = metadata.excludes
+        this.extraAttributes = metadata.extraAttributes
 
         // Cached state is not copied, since dependency inputs are different.
     }
 
-    @Override
-    protected DefaultConfigurationMetadata createConfiguration(ModuleComponentIdentifier componentId, String name, boolean transitive, boolean visible, ImmutableSet<String> hierarchy, VariantMetadataRules componentMetadataRules) {
+    override fun createConfiguration(
+        componentId: ModuleComponentIdentifier,
+        name: String,
+        transitive: Boolean,
+        visible: Boolean,
+        hierarchy: ImmutableSet<String>,
+        componentMetadataRules: VariantMetadataRules
+    ): DefaultConfigurationMetadata {
         if (artifacts == null) {
-            artifacts = new IdentityHashMap<>();
+            artifacts = IdentityHashMap<Artifact, ModuleComponentArtifactMetadata>()
         }
-        IvyConfigurationHelper configurationHelper = new IvyConfigurationHelper(artifactDefinitions, artifacts, excludes, dependencies, componentId);
-        ImmutableList<ModuleComponentArtifactMetadata> artifacts = configurationHelper.filterArtifacts(name, hierarchy);
-        ImmutableList<ExcludeMetadata> excludesForConfiguration = configurationHelper.filterExcludes(hierarchy);
+        val configurationHelper = IvyConfigurationHelper(artifactDefinitions, artifacts!!, excludes, dependencies, componentId)
+        val artifacts = configurationHelper.filterArtifacts(name, hierarchy)
+        val excludesForConfiguration = configurationHelper.filterExcludes(hierarchy)
 
-        VariantIdentifier id = new NamedVariantIdentifier(componentId, name);
-        DefaultConfigurationMetadata configuration = new DefaultConfigurationMetadata(name, id, componentId, transitive, visible, hierarchy, ImmutableList.copyOf(artifacts), componentMetadataRules, excludesForConfiguration, getAttributes().asImmutable(), false);
-        configuration.setDependencies(configurationHelper.filterDependencies(configuration));
-        return configuration;
+        val id: VariantIdentifier = NamedVariantIdentifier(componentId, name)
+        val configuration = DefaultConfigurationMetadata(
+            name,
+            id,
+            componentId,
+            transitive,
+            visible,
+            hierarchy,
+            ImmutableList.copyOf<ModuleComponentArtifactMetadata>(artifacts),
+            componentMetadataRules,
+            excludesForConfiguration,
+            getAttributes().asImmutable(),
+            false
+        )
+        configuration.setDependencies(configurationHelper.filterDependencies(configuration))
+        return configuration
     }
 
-    @Override
-    public MutableIvyModuleResolveMetadata asMutable() {
-        return new DefaultMutableIvyModuleResolveMetadata(this);
+    override fun asMutable(): MutableIvyModuleResolveMetadata {
+        return DefaultMutableIvyModuleResolveMetadata(this)
     }
 
-    @Override
-    public DefaultIvyModuleResolveMetadata withSources(ModuleSources sources) {
-        return new DefaultIvyModuleResolveMetadata(this, sources, getVariantDerivationStrategy());
+    override fun withSources(sources: ModuleSources): DefaultIvyModuleResolveMetadata {
+        return DefaultIvyModuleResolveMetadata(this, sources, variantDerivationStrategy!!)
     }
 
 
-    @Override
-    public ModuleComponentResolveMetadata withDerivationStrategy(VariantDerivationStrategy derivationStrategy) {
-        if (getVariantDerivationStrategy() == derivationStrategy) {
-            return this;
+    override fun withDerivationStrategy(derivationStrategy: VariantDerivationStrategy): ModuleComponentResolveMetadata {
+        if (variantDerivationStrategy === derivationStrategy) {
+            return this
         }
-        return new DefaultIvyModuleResolveMetadata(this, getSources(), derivationStrategy);
+        return DefaultIvyModuleResolveMetadata(this, getSources(), derivationStrategy)
     }
 
-    @Override
-    public ImmutableMap<String, Configuration> getConfigurationDefinitions() {
-        return configurationDefinitions;
+    override fun getConfigurationDefinitions(): ImmutableMap<String, Configuration> {
+        return configurationDefinitions
     }
 
-    @Override
-    public ImmutableList<Artifact> getArtifactDefinitions() {
-        return artifactDefinitions;
+    override fun getArtifactDefinitions(): ImmutableList<Artifact> {
+        return artifactDefinitions
     }
 
-    @Override
-    public ImmutableList<Exclude> getExcludes() {
-        return excludes;
+    override fun getExcludes(): ImmutableList<Exclude> {
+        return excludes
     }
 
-    @Override
-    public String getBranch() {
-        return branch;
+    override fun getBranch(): String {
+        return branch
     }
 
-    @Override
-    public ImmutableMap<NamespaceId, String> getExtraAttributes() {
-        return extraAttributes;
+    override fun getExtraAttributes(): ImmutableMap<NamespaceId, String> {
+        return extraAttributes
     }
 
-    @Override
-    public IvyModuleResolveMetadata withDynamicConstraintVersions() {
-        List<IvyDependencyDescriptor> transformed = CollectionUtils.collect(getDependencies(), dependency -> {
-            ModuleComponentSelector selector = dependency.getSelector();
-                String dynamicConstraintVersion = dependency.getDynamicConstraintVersion();
-                ModuleComponentSelector newSelector = DefaultModuleComponentSelector.newSelector(selector.getModuleIdentifier(), dynamicConstraintVersion);
-                return dependency.withRequested(newSelector);
-        });
-        return this.withDependencies(transformed);
+    override fun withDynamicConstraintVersions(): IvyModuleResolveMetadata {
+        val transformed: MutableList<IvyDependencyDescriptor> = collect<IvyDependencyDescriptor?, IvyDependencyDescriptor?>(getDependencies(), Function { dependency: IvyDependencyDescriptor? ->
+            val selector = dependency!!.selector
+            val dynamicConstraintVersion = dependency.getDynamicConstraintVersion()
+            val newSelector = newSelector(selector.getModuleIdentifier(), dynamicConstraintVersion)
+            dependency.withRequested(newSelector)
+        })
+        return this.withDependencies(transformed)
     }
 
-    private IvyModuleResolveMetadata withDependencies(List<IvyDependencyDescriptor> transformed) {
-        return new DefaultIvyModuleResolveMetadata(this, transformed);
+    private fun withDependencies(transformed: MutableList<IvyDependencyDescriptor>): IvyModuleResolveMetadata {
+        return DefaultIvyModuleResolveMetadata(this, transformed)
     }
 
-    @Override
-    public ImmutableList<IvyDependencyDescriptor> getDependencies() {
-        return dependencies;
+    override fun getDependencies(): ImmutableList<IvyDependencyDescriptor> {
+        return dependencies
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
         if (!super.equals(o)) {
-            return false;
+            return false
         }
 
-        DefaultIvyModuleResolveMetadata that = (DefaultIvyModuleResolveMetadata) o;
+        val that = o as DefaultIvyModuleResolveMetadata
         return Objects.equal(dependencies, that.dependencies)
-            && Objects.equal(artifactDefinitions, that.artifactDefinitions)
-            && Objects.equal(excludes, that.excludes)
-            && Objects.equal(extraAttributes, that.extraAttributes)
-            && Objects.equal(branch, that.branch)
-            && Objects.equal(artifacts, that.artifacts);
+                && Objects.equal(artifactDefinitions, that.artifactDefinitions)
+                && Objects.equal(excludes, that.excludes)
+                && Objects.equal(extraAttributes, that.extraAttributes)
+                && Objects.equal(branch, that.branch)
+                && Objects.equal(artifacts, that.artifacts)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(super.hashCode(),
+    override fun hashCode(): Int {
+        return Objects.hashCode(
+            super.hashCode(),
             dependencies,
             artifactDefinitions,
             excludes,
             extraAttributes,
             branch,
-            artifacts);
+            artifacts
+        )
     }
 }

@@ -204,7 +204,7 @@ public abstract class ExternalResourceResolver implements ConfiguredModuleCompon
 
         tryListingViaRule(module, result);
 
-        if (result.hasResult() && result.isAuthoritative()) {
+        if (result.hasResult() && result.isAuthoritative) {
             return;
         }
 
@@ -217,7 +217,7 @@ public abstract class ExternalResourceResolver implements ConfiguredModuleCompon
         // Iterate over the metadata sources to see if they can provide the version list
         for (MetadataSource<?> metadataSource : metadataSources.sources()) {
             metadataSource.listModuleVersions(selector, overrideMetadata, completeIvyPatterns, completeArtifactPatterns, versionLister, result);
-            if (result.hasResult() && result.isAuthoritative()) {
+            if (result.hasResult() && result.isAuthoritative) {
                 return;
             }
         }
@@ -306,7 +306,7 @@ public abstract class ExternalResourceResolver implements ConfiguredModuleCompon
 
     public void publish(ModuleComponentArtifactMetadata artifact, File src) {
         ResourcePattern destinationPattern;
-        if ("ivy".equals(artifact.getName().getType()) && !ivyPatterns.isEmpty()) {
+        if ("ivy".equals(artifact.getName().type) && !ivyPatterns.isEmpty()) {
             destinationPattern = ivyPatterns.get(0);
         } else if (!artifactPatterns.isEmpty()) {
             destinationPattern = artifactPatterns.get(0);

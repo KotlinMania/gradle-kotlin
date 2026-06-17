@@ -13,36 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.internal.component.resolution.failure.exception.ArtifactSelectionException;
-import org.gradle.internal.component.resolution.failure.type.UnknownArtifactSelectionFailure;
-
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.exception.ArtifactSelectionException
+import org.gradle.internal.component.resolution.failure.type.UnknownArtifactSelectionFailure
 
 /**
- * A {@link ResolutionFailureDescriber} that describes an {@link UnknownArtifactSelectionFailure}.
+ * A [ResolutionFailureDescriber] that describes an [UnknownArtifactSelectionFailure].
  *
- * This type also will wrap an existing exception of unknown type into an {@link ArtifactSelectionException}.  If a
- * {@link ArtifactSelectionException} is already the cause of the failure, it will be returned directly, with resolution
+ * This type also will wrap an existing exception of unknown type into an [ArtifactSelectionException].  If a
+ * [ArtifactSelectionException] is already the cause of the failure, it will be returned directly, with resolution
  * information added as necessary.
  */
-public abstract class UnknownArtifactSelectionFailureDescriber extends AbstractResolutionFailureDescriber<UnknownArtifactSelectionFailure> {
-    @Override
-    public ArtifactSelectionException describeFailure(UnknownArtifactSelectionFailure failure) {
-        final ArtifactSelectionException result;
-        if (failure.getCause() instanceof ArtifactSelectionException) {
-            result = (ArtifactSelectionException) failure.getCause();
+abstract class UnknownArtifactSelectionFailureDescriber : AbstractResolutionFailureDescriber<UnknownArtifactSelectionFailure?>() {
+    override fun describeFailure(failure: UnknownArtifactSelectionFailure): ArtifactSelectionException {
+        val result: ArtifactSelectionException
+        if (failure.getCause() is ArtifactSelectionException) {
+            result = failure.getCause() as ArtifactSelectionException
         } else {
-            String message = buildFailureMsg(failure);
-            List<String> resolutions = buildResolutions(suggestReviewAlgorithm());
-            result = new ArtifactSelectionException(message, failure, resolutions, failure.getCause());
+            val message = buildFailureMsg(failure)
+            val resolutions = buildResolutions(suggestReviewAlgorithm())
+            result = ArtifactSelectionException(message, failure, resolutions, failure.getCause())
         }
-        return result;
+        return result
     }
 
-    private String buildFailureMsg(UnknownArtifactSelectionFailure failure) {
-        return String.format("Could not select a variant of %s that matches the consumer attributes.", failure.describeRequestTarget());
+    private fun buildFailureMsg(failure: UnknownArtifactSelectionFailure): String {
+        return String.format("Could not select a variant of %s that matches the consumer attributes.", failure.describeRequestTarget())
     }
 }

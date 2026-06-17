@@ -13,30 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.SelectionReasonAssessor;
-import org.gradle.internal.component.resolution.failure.SelectionReasonAssessor.AssessedSelection;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.SelectionReasonAssessor
 
 /**
- * An abstract {@link AbstractResolutionFailure} that represents the situation when component selection fails.
+ * An abstract [AbstractResolutionFailure] that represents the situation when component selection fails.
  */
-public abstract class AbstractComponentSelectionFailure extends AbstractResolutionFailure {
-    private final SelectionReasonAssessor.AssessedSelection assessedSelection;
-
-    public AbstractComponentSelectionFailure(ResolutionFailureProblemId problemId, AssessedSelection assessedSelection) {
-        super(problemId);
-        this.assessedSelection = assessedSelection;
+abstract class AbstractComponentSelectionFailure(problemId: ResolutionFailureProblemId, private val assessedSelection: SelectionReasonAssessor.AssessedSelection) :
+    AbstractResolutionFailure(problemId) {
+    fun getModuleIdentifier(): ModuleIdentifier {
+        return assessedSelection.getModuleId()
     }
 
-    public ModuleIdentifier getModuleIdentifier() {
-        return assessedSelection.getModuleId();
-    }
-
-    public SelectionReasonAssessor.AssessedSelection getAssessedSelection() {
-        return assessedSelection;
+    fun getAssessedSelection(): SelectionReasonAssessor.AssessedSelection {
+        return assessedSelection
     }
 }

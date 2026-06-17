@@ -13,58 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.internal.component.external.model.DefaultImmutableCapability
 
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.gradle.internal.component.external.model.DefaultImmutableCapability;
+abstract class AbstractComponentGraphResolveState<T : ComponentGraphResolveMetadata?>(private val instanceId: Long, private val graphMetadata: T?) : ComponentGraphResolveState,
+    ComponentArtifactResolveState {
+    private val implicitCapability: ImmutableCapability
 
-public abstract class AbstractComponentGraphResolveState<T extends ComponentGraphResolveMetadata> implements ComponentGraphResolveState, ComponentArtifactResolveState {
-
-    private final long instanceId;
-    private final T graphMetadata;
-    private final ImmutableCapability implicitCapability;
-
-    public AbstractComponentGraphResolveState(long instanceId, T graphMetadata) {
-        this.instanceId = instanceId;
-        this.graphMetadata = graphMetadata;
-        this.implicitCapability =  DefaultImmutableCapability.defaultCapabilityForComponent(graphMetadata.getModuleVersionId());
+    init {
+        this.implicitCapability = DefaultImmutableCapability.defaultCapabilityForComponent(graphMetadata!!.getModuleVersionId())
     }
 
-    @Override
-    public String toString() {
-        return getId().toString();
+    override fun toString(): String {
+        return getId().toString()
     }
 
-    @Override
-    public long getInstanceId() {
-        return instanceId;
+    override fun getInstanceId(): Long {
+        return instanceId
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        return graphMetadata.getId();
+    override fun getId(): ComponentIdentifier {
+        return graphMetadata!!.getId()
     }
 
-    @Override
-    public T getMetadata() {
-        return graphMetadata;
+    override fun getMetadata(): T? {
+        return graphMetadata
     }
 
-    @Override
-    public boolean isAdHoc() {
-        return false;
+    override fun isAdHoc(): Boolean {
+        return false
     }
 
-    @Override
-    public ComponentArtifactResolveState prepareForArtifactResolution() {
-        return this;
+    override fun prepareForArtifactResolution(): ComponentArtifactResolveState {
+        return this
     }
 
-    @Override
-    public ImmutableCapability getDefaultCapability() {
-        return implicitCapability;
+    override fun getDefaultCapability(): ImmutableCapability {
+        return implicitCapability
     }
-
 }

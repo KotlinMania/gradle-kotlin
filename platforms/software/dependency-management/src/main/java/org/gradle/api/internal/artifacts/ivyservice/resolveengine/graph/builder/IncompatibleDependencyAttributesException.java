@@ -80,7 +80,7 @@ public class IncompatibleDependencyAttributesException extends GraphValidationEx
                 continue;
             }
             SelectorState selector = edge.getSelector();
-            boolean isConstraint = edge.getDependencyMetadata().isConstraint();
+            boolean isConstraint = edge.getDependencyMetadata().isConstraint;
             for (String path : MessageBuilderHelper.formattedPathsTo(edge)) {
                 String quotelessPath = stripSingleQuotesFromPath(path);
                 fmt.node(quotelessPath + " " + formatAttributeQuery(selector, attribute, value, isConstraint));

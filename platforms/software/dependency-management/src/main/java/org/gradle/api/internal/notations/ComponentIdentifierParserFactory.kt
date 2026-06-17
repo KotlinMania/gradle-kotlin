@@ -13,61 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.internal.Factory;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypedNotationConverter;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.internal.Factory
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypedNotationConverter
 
-import static org.gradle.api.internal.notations.ModuleNotationValidation.validate;
-
-public class ComponentIdentifierParserFactory implements Factory<NotationParser<Object, ComponentIdentifier>> {
-
-    @Override
-    public NotationParser<Object, ComponentIdentifier> create() {
-        return NotationParserBuilder.toType(ComponentIdentifier.class)
-            .fromCharSequence(new StringNotationConverter())
-            .converter(new ComponentIdentifierMapNotationConverter())
-            .toComposite();
+class ComponentIdentifierParserFactory : Factory<NotationParser<Any?, ComponentIdentifier?>?> {
+    override fun create(): NotationParser<Any?, ComponentIdentifier?>? {
+        return NotationParserBuilder.toType<ComponentIdentifier?>(ComponentIdentifier::class.java)
+            .fromCharSequence(StringNotationConverter())
+            .converter(ComponentIdentifierMapNotationConverter())
+            .toComposite()
     }
 
-    static class ComponentIdentifierMapNotationConverter extends MapNotationConverter<ModuleComponentIdentifier> {
-        protected ModuleComponentIdentifier parseMap(
-            @MapKey("group") String group,
-            @MapKey("name") String name,
-            @MapKey("version") String version) {
-
-            return DefaultModuleComponentIdentifier.newId(
-                DefaultModuleIdentifier.newId(validate(group.trim()), validate(name.trim())),
-                validate(version.trim())
-            );
+    internal class ComponentIdentifierMapNotationConverter : MapNotationConverter<ModuleComponentIdentifier?>() {
+        protected fun parseMap(
+            @MapKey("group") group: String,
+            @MapKey("name") name: String,
+            @MapKey("version") version: String
+        ): ModuleComponentIdentifier {
+            return newId(
+                DefaultModuleIdentifier.newId(validate(group.trim { it <= ' ' }), validate(name.trim { it <= ' ' })),
+                validate(version.trim { it <= ' ' })
+            )
         }
     }
 
-    static class StringNotationConverter extends TypedNotationConverter<String, ModuleComponentIdentifier> {
-
-        StringNotationConverter() {
-            super(String.class);
-        }
-
-        @Override
-        protected ModuleComponentIdentifier parseType(String notation) {
-            String[] parts = notation.split(":");
-            if (parts.length != 3) {
-                throw new InvalidUserDataException("Invalid module component notation: " + notation + " : must be a valid 3 part identifier, eg.: org.gradle:gradle:1.0");
+    internal class StringNotationConverter : TypedNotationConverter<String?, ModuleComponentIdentifier?>(String::class.java) {
+        override fun parseType(notation: String): ModuleComponentIdentifier {
+            val parts: Array<String?> = notation.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            if (parts.size != 3) {
+                throw InvalidUserDataException("Invalid module component notation: " + notation + " : must be a valid 3 part identifier, eg.: org.gradle:gradle:1.0")
             }
-            return DefaultModuleComponentIdentifier.newId(
-                DefaultModuleIdentifier.newId(validate(parts[0].trim(), notation), validate(parts[1].trim(), notation)),
-                validate(parts[2].trim(), notation)
-            );
+            return newId(
+                DefaultModuleIdentifier.newId(ModuleNotationValidation.validate(parts[0]!!.trim { it <= ' ' }, notation), ModuleNotationValidation.validate(parts[1]!!.trim { it <= ' ' }, notation)),
+                ModuleNotationValidation.validate(parts[2]!!.trim { it <= ' ' }, notation)
+            )
         }
     }
 }

@@ -13,48 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.resolve.result.DefaultBuildableArtifactResolveResult;
-
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ComponentArtifactResolveMetadata
+import org.gradle.internal.resolve.result.DefaultBuildableArtifactResolveResult
 
 /**
- * Default implementation of {@link ComponentArtifactResolver}.
+ * Default implementation of [ComponentArtifactResolver].
  */
-public class DefaultComponentArtifactResolver implements ComponentArtifactResolver {
-
-    private final ComponentArtifactResolveMetadata component;
-    private final ArtifactResolver artifactResolver;
-
-    public DefaultComponentArtifactResolver(ComponentArtifactResolveMetadata component, ArtifactResolver artifactResolver) {
-        this.component = component;
-        this.artifactResolver = artifactResolver;
-    }
-
-    @Override
-    public Set<ResolvableArtifact> resolveArtifacts(List<? extends ComponentArtifactMetadata> artifacts) {
-        ImmutableSet.Builder<ResolvableArtifact> resolvedArtifacts = ImmutableSet.builderWithExpectedSize(artifacts.size());
-        for (ComponentArtifactMetadata artifact : artifacts) {
-            DefaultBuildableArtifactResolveResult result = new DefaultBuildableArtifactResolveResult();
-            artifactResolver.resolveArtifact(component, artifact, result);
+class DefaultComponentArtifactResolver(private val component: ComponentArtifactResolveMetadata, private val artifactResolver: ArtifactResolver) : ComponentArtifactResolver {
+    override fun resolveArtifacts(artifacts: MutableList<out ComponentArtifactMetadata>): MutableSet<ResolvableArtifact> {
+        val resolvedArtifacts = ImmutableSet.builderWithExpectedSize<ResolvableArtifact>(artifacts.size)
+        for (artifact in artifacts) {
+            val result = DefaultBuildableArtifactResolveResult()
+            artifactResolver.resolveArtifact(component, artifact, result)
             if (artifact.isOptionalArtifact()) {
                 try {
                     // probe if the artifact exists
-                    result.getResult().getFile();
-                } catch (Exception e) {
+                    result.getResult()!!.getFile()
+                } catch (e: Exception) {
                     // Optional artifact is not available
-                    continue;
+                    continue
                 }
             }
-            resolvedArtifacts.add(result.getResult());
+            resolvedArtifacts.add(result.getResult()!!)
         }
-        return resolvedArtifacts.build();
+        return resolvedArtifacts.build()
     }
 }

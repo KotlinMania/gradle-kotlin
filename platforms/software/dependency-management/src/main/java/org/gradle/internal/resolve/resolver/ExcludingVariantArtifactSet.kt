@@ -13,126 +13,100 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Objects;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs.ExcludeSpec
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.component.model.VariantResolveMetadata
+import java.util.Objects
+import java.util.function.Predicate
 
 /**
- * A {@link ResolvedVariant} that applies artifact exclusions to a delegate {@link ResolvedVariant}.
+ * A [ResolvedVariant] that applies artifact exclusions to a delegate [ResolvedVariant].
  */
-public class ExcludingVariantArtifactSet implements ResolvedVariant, VariantResolveMetadata.Identifier {
+class ExcludingVariantArtifactSet(private val delegate: ResolvedVariant, private val moduleId: ModuleIdentifier, private val exclusions: ExcludeSpec) : ResolvedVariant,
+    VariantResolveMetadata.Identifier {
+    private val id: VariantResolveMetadata.Identifier
 
-    private final ResolvedVariant delegate;
-    private final ModuleIdentifier moduleId;
-    private final ExcludeSpec exclusions;
-
-    private final VariantResolveMetadata.Identifier id;
-
-    public ExcludingVariantArtifactSet(ResolvedVariant delegate, ModuleIdentifier moduleId, ExcludeSpec exclusions) {
-        this.delegate = delegate;
-        this.moduleId = moduleId;
-        this.exclusions = exclusions;
-
-        this.id = new ExcludingIdentifier(delegate.getIdentifier(), moduleId, exclusions);
+    init {
+        this.id = ExcludingIdentifier(delegate.getIdentifier(), moduleId, exclusions)
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return Describables.of(delegate.asDescribable(), exclusions);
+    override fun asDescribable(): DisplayName {
+        return Describables.of(delegate.asDescribable(), exclusions)
     }
 
-    @Override
-    public VariantResolveMetadata.@Nullable Identifier getIdentifier() {
-        return id;
+    override fun getIdentifier(): VariantResolveMetadata.Identifier? {
+        return id
     }
 
-    @Override
-    public VariantIdentifier getSourceVariantId() {
-        return delegate.getSourceVariantId();
+    override fun getSourceVariantId(): VariantIdentifier {
+        return delegate.getSourceVariantId()
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return delegate.getAttributes();
+    override fun getAttributes(): ImmutableAttributes {
+        return delegate.getAttributes()
     }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return delegate.getCapabilities();
+    override fun getCapabilities(): ImmutableCapabilities {
+        return delegate.getCapabilities()
     }
 
-    @Override
-    public ResolvedArtifactSet getArtifacts() {
-        ResolvedArtifactSet artifacts = delegate.getArtifacts();
-        return new FilteringResolvedArtifactSet(artifacts, this::include);
+    override fun getArtifacts(): ResolvedArtifactSet {
+        val artifacts = delegate.getArtifacts()
+        return FilteringResolvedArtifactSet(artifacts, Predicate { artifact: ResolvableArtifact? -> this.include(artifact!!) })
     }
 
-    private boolean include(ResolvableArtifact artifact) {
-        return !exclusions.excludesArtifact(moduleId, artifact.getArtifactName());
+    private fun include(artifact: ResolvableArtifact): Boolean {
+        return !exclusions.excludesArtifact(moduleId, artifact.getArtifactName())
     }
 
-    private static class ExcludingIdentifier implements VariantResolveMetadata.Identifier {
-        private final VariantResolveMetadata.Identifier identifier;
-        private final ModuleIdentifier moduleId;
-        private final ExcludeSpec exclusions;
-
-        public ExcludingIdentifier(
-            VariantResolveMetadata.@Nullable Identifier identifier,
-            ModuleIdentifier moduleId,
-            ExcludeSpec exclusions
-        ) {
-            this.identifier = identifier;
-            this.moduleId = moduleId;
-            this.exclusions = exclusions;
+    private class ExcludingIdentifier(
+        private val identifier: VariantResolveMetadata.Identifier?,
+        private val moduleId: ModuleIdentifier,
+        private val exclusions: ExcludeSpec
+    ) : VariantResolveMetadata.Identifier {
+        override fun hashCode(): Int {
+            var result = Objects.hashCode(identifier)
+            result = 31 * result + moduleId.hashCode()
+            result = 31 * result + exclusions.hashCode()
+            return result
         }
 
-        @Override
-        public int hashCode() {
-            int result = Objects.hashCode(identifier);
-            result = 31 * result + moduleId.hashCode();
-            result = 31 * result + exclusions.hashCode();
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
+        override fun equals(obj: Any): Boolean {
+            if (obj === this) {
+                return true
             }
-            if (obj == null || obj.getClass() != getClass()) {
-                return false;
+            if (obj == null || obj.javaClass != javaClass) {
+                return false
             }
-            ExcludingIdentifier other = (ExcludingIdentifier) obj;
+            val other = obj as ExcludingIdentifier
             return areIdsEqual(identifier, other.identifier) &&
-                moduleId.equals(other.moduleId) &&
-                exclusions.equals(other.exclusions);
+                    moduleId == other.moduleId &&
+                    exclusions == other.exclusions
         }
 
-        private static boolean areIdsEqual(
-            VariantResolveMetadata.@Nullable Identifier id1,
-            VariantResolveMetadata.@Nullable Identifier id2
-        ) {
-            // Artifact sets without ID are adhoc.
-            // We cannot compare them by ID so assume they are not equal.
-            if (id1 == null || id2 == null) {
-                return false;
-            }
+        companion object {
+            private fun areIdsEqual(
+                id1: VariantResolveMetadata.Identifier?,
+                id2: VariantResolveMetadata.Identifier?
+            ): Boolean {
+                // Artifact sets without ID are adhoc.
+                // We cannot compare them by ID so assume they are not equal.
+                if (id1 == null || id2 == null) {
+                    return false
+                }
 
-            return id1.equals(id2);
+                return id1 == id2
+            }
         }
     }
 }

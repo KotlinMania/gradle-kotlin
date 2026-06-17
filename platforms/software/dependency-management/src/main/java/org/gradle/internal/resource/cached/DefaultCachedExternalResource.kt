@@ -13,61 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.cached
 
-package org.gradle.internal.resource.cached;
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.File
+import java.io.Serializable
+import java.util.Date
 
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
+class DefaultCachedExternalResource : CachedExternalResource, Serializable {
+    private val cachedFile: File?
+    private val cachedAt: Long
+    private val externalResourceMetaData: ExternalResourceMetaData?
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.Date;
-
-public class DefaultCachedExternalResource implements CachedExternalResource, Serializable {
-    private final File cachedFile;
-    private final long cachedAt;
-    private final ExternalResourceMetaData externalResourceMetaData;
-
-    public DefaultCachedExternalResource(File cachedFile, long cachedAt, ExternalResourceMetaData externalResourceMetaData) {
-        this.cachedFile = cachedFile;
-        this.cachedAt = cachedAt;
-        this.externalResourceMetaData = externalResourceMetaData;
+    constructor(cachedFile: File?, cachedAt: Long, externalResourceMetaData: ExternalResourceMetaData?) {
+        this.cachedFile = cachedFile
+        this.cachedAt = cachedAt
+        this.externalResourceMetaData = externalResourceMetaData
     }
 
-    public DefaultCachedExternalResource(long cachedAt) {
-        this.cachedAt = cachedAt;
+    constructor(cachedAt: Long) {
+        this.cachedAt = cachedAt
 
-        this.cachedFile = null;
-        this.externalResourceMetaData = null;
+        this.cachedFile = null
+        this.externalResourceMetaData = null
     }
 
-    @Override
-    public boolean isMissing() {
-        return cachedFile == null;
+    override fun isMissing(): Boolean {
+        return cachedFile == null
     }
 
-    @Override
-    public File getCachedFile() {
-        return cachedFile;
+    override fun getCachedFile(): File? {
+        return cachedFile
     }
 
-    @Override
-    public long getCachedAt() {
-        return cachedAt;
+    override fun getCachedAt(): Long {
+        return cachedAt
     }
 
-    @Override
-    public ExternalResourceMetaData getExternalResourceMetaData() {
-        return externalResourceMetaData;
+    override fun getExternalResourceMetaData(): ExternalResourceMetaData? {
+        return externalResourceMetaData
     }
 
-    @Override
-    public Date getExternalLastModified() {
-        return externalResourceMetaData != null ? externalResourceMetaData.getLastModified() : null;
+    override fun getExternalLastModified(): Date? {
+        return if (externalResourceMetaData != null) externalResourceMetaData.getLastModified() else null
     }
 
-    @Override
-    public long getContentLength() {
-        return isMissing() ? -1 : cachedFile.length();
+    override fun getContentLength(): Long {
+        return if (isMissing()) -1 else cachedFile!!.length()
     }
-
 }

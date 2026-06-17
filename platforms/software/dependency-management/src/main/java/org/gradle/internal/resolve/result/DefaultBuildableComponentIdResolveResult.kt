@@ -13,161 +13,138 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.RejectedVersion
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.RejectedVersion;
-import org.jspecify.annotations.Nullable;
+class DefaultBuildableComponentIdResolveResult : DefaultResourceAwareResolveResult(), BuildableComponentIdResolveResult {
+    private var failure: ModuleVersionResolveException? = null
+    private var state: ComponentGraphResolveState? = null
+    private var graphState: ComponentGraphSpecificResolveState? = null
+    private var id: ComponentIdentifier? = null
+    private var moduleVersionId: ModuleVersionIdentifier? = null
+    private var rejected = false
+    private var unmatchedVersions: ImmutableSet.Builder<String?>? = null
+    private var rejections: ImmutableSet.Builder<RejectedVersion?>? = null
+    private var mark: Any? = null
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-
-public class DefaultBuildableComponentIdResolveResult extends DefaultResourceAwareResolveResult implements BuildableComponentIdResolveResult {
-    private ModuleVersionResolveException failure;
-    private ComponentGraphResolveState state;
-    private ComponentGraphSpecificResolveState graphState;
-    private ComponentIdentifier id;
-    private ModuleVersionIdentifier moduleVersionId;
-    private boolean rejected;
-    private ImmutableSet.Builder<String> unmatchedVersions;
-    private ImmutableSet.Builder<RejectedVersion> rejections;
-    private Object mark;
-
-    @Override
-    public boolean hasResult() {
-        return id != null || failure != null;
+    override fun hasResult(): Boolean {
+        return id != null || failure != null
     }
 
-    @Override
-    public ModuleVersionResolveException getFailure() {
-        return failure;
+    override fun getFailure(): ModuleVersionResolveException? {
+        return failure
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        assertResolved();
-        return id;
+    override fun getId(): ComponentIdentifier? {
+        assertResolved()
+        return id
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        assertResolved();
-        return moduleVersionId;
+    override fun getModuleVersionId(): ModuleVersionIdentifier? {
+        assertResolved()
+        return moduleVersionId
     }
 
-    @Override
-    public ComponentGraphResolveState getState() {
-        assertResolved();
-        return state;
+    override fun getState(): ComponentGraphResolveState? {
+        assertResolved()
+        return state
     }
 
-    @Nullable
-    @Override
-    public ComponentGraphSpecificResolveState getGraphState() {
-        assertResolved();
-        return graphState;
+    override fun getGraphState(): ComponentGraphSpecificResolveState? {
+        assertResolved()
+        return graphState
     }
 
-    @Override
-    public boolean isRejected() {
-        return rejected;
+    override fun isRejected(): Boolean {
+        return rejected
     }
 
-    @Override
-    public void resolved(ComponentIdentifier id, ModuleVersionIdentifier moduleVersionIdentifier) {
-        reset();
-        this.id = id;
-        this.moduleVersionId = moduleVersionIdentifier;
+    override fun resolved(id: ComponentIdentifier?, moduleVersionIdentifier: ModuleVersionIdentifier?) {
+        reset()
+        this.id = id
+        this.moduleVersionId = moduleVersionIdentifier
     }
 
-    @Override
-    public void rejected(ComponentIdentifier id, ModuleVersionIdentifier moduleVersionIdentifier) {
-        resolved(id, moduleVersionIdentifier);
-        rejected = true;
+    override fun rejected(id: ComponentIdentifier?, moduleVersionIdentifier: ModuleVersionIdentifier?) {
+        resolved(id, moduleVersionIdentifier)
+        rejected = true
     }
 
-    @Override
-    public void resolved(ComponentGraphResolveState state, ComponentGraphSpecificResolveState graphState) {
-        resolved(state.getId(), state.getMetadata().getModuleVersionId());
-        this.state = state;
-        this.graphState = graphState;
+    override fun resolved(state: ComponentGraphResolveState, graphState: ComponentGraphSpecificResolveState?) {
+        resolved(state.getId(), state.getMetadata().getModuleVersionId())
+        this.state = state
+        this.graphState = graphState
     }
 
-    @Override
-    public void failed(ModuleVersionResolveException failure) {
-        reset();
-        this.failure = failure;
+    override fun failed(failure: ModuleVersionResolveException?) {
+        reset()
+        this.failure = failure
     }
 
-    @Override
-    public void unmatched(Collection<String> unmatchedVersions) {
+    override fun unmatched(unmatchedVersions: MutableCollection<String?>) {
         if (unmatchedVersions.isEmpty()) {
-            return;
+            return
         }
         if (this.unmatchedVersions == null) {
-            this.unmatchedVersions = new ImmutableSet.Builder<>();
+            this.unmatchedVersions = ImmutableSet.Builder<String?>()
         }
-        this.unmatchedVersions.addAll(unmatchedVersions);
+        this.unmatchedVersions!!.addAll(unmatchedVersions)
     }
 
-    @Override
-    public void rejections(Collection<RejectedVersion> rejections) {
+    override fun rejections(rejections: MutableCollection<RejectedVersion?>) {
         if (rejections.isEmpty()) {
-            return;
+            return
         }
         if (this.rejections == null) {
-            this.rejections = new ImmutableSet.Builder<>();
+            this.rejections = ImmutableSet.Builder<RejectedVersion?>()
         }
-        this.rejections.addAll(rejections);
+        this.rejections!!.addAll(rejections)
     }
 
-    @Override
-    public Set<String> getUnmatchedVersions() {
-        return safeBuild(unmatchedVersions);
+    override fun getUnmatchedVersions(): MutableSet<String?> {
+        return safeBuild<String?>(unmatchedVersions)
     }
 
-    @Override
-    public Collection<RejectedVersion> getRejectedVersions() {
-        return safeBuild(rejections);
+    override fun getRejectedVersions(): MutableCollection<RejectedVersion?> {
+        return safeBuild<RejectedVersion?>(rejections)
     }
 
-    @Override
-    public boolean mark(Object o) {
-        if (mark == o) {
-            return false;
+    override fun mark(o: Any?): Boolean {
+        if (mark === o) {
+            return false
         }
-        mark = o;
-        return true;
+        mark = o
+        return true
     }
 
-    private static <T> Set<T> safeBuild(ImmutableSet.Builder<T> builder) {
-        if (builder == null) {
-            return Collections.emptySet();
-        }
-        return builder.build();
-    }
-
-    private void assertResolved() {
+    private fun assertResolved() {
         if (failure != null) {
-            throw failure;
+            throw failure
         }
-        if (id == null) {
-            throw new IllegalStateException("Not resolved.");
-        }
+        checkNotNull(id) { "Not resolved." }
     }
 
-    private void reset() {
-        failure = null;
-        state = null;
-        id = null;
-        moduleVersionId = null;
-        rejected = false;
+    private fun reset() {
+        failure = null
+        state = null
+        id = null
+        moduleVersionId = null
+        rejected = false
+    }
+
+    companion object {
+        private fun <T> safeBuild(builder: ImmutableSet.Builder<T?>?): MutableSet<T?> {
+            if (builder == null) {
+                return mutableSetOf<T?>()
+            }
+            return builder.build()
+        }
     }
 }

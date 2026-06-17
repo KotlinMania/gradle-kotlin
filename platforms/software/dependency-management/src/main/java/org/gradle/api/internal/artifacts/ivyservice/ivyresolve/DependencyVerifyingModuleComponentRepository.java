@@ -123,7 +123,7 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
         }
 
         private boolean hasUsableResult(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result) {
-            return result.hasResult() && result.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+            return result.hasResult() && result.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
         }
 
         @Override
@@ -136,7 +136,7 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
             delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, tmp);
             AtomicBoolean ignore = new AtomicBoolean();
             if (hasUsableResult(tmp)) {
-                ModuleSources sources = tmp.getMetaData().prepareForArtifactResolution().getArtifactMetadata().getSources();
+                ModuleSources sources = tmp.metaData.prepareForArtifactResolution().getArtifactMetadata().getSources();
                 sources.withSources(DefaultMetadataFileSource.class, metadataFileSource -> {
                     ModuleComponentArtifactIdentifier artifact = metadataFileSource.getArtifactId();
                     if (isExternalArtifactId(artifact)) {
@@ -169,9 +169,9 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
         private File maybeFetchComponentMetadataSignatureFile(ModuleSources moduleSources, ModuleComponentArtifactIdentifier artifact) {
             ModuleComponentArtifactIdentifier signatureArtifactId;
             if (artifact instanceof DefaultModuleComponentArtifactIdentifier) {
-                signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), ((DefaultModuleComponentArtifactIdentifier) artifact).getName());
+                signatureArtifactId = createSignatureArtifactIdFromIvyArtifactName(artifact.getComponentIdentifier(), ((DefaultModuleComponentArtifactIdentifier) artifact).name);
             } else {
-                signatureArtifactId = new ModuleComponentFileArtifactIdentifier(artifact.getComponentIdentifier(), artifact.getFileName() + ".asc");
+                signatureArtifactId = new ModuleComponentFileArtifactIdentifier(artifact.getComponentIdentifier(), artifact.fileName + ".asc");
             }
             SignatureArtifactMetadata signatureArtifactMetadata = new SignatureArtifactMetadata(signatureArtifactId);
             return maybeFetchSignatureFile(moduleSources, signatureArtifactMetadata);
@@ -185,8 +185,8 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
         }
 
         private ModuleComponentArtifactIdentifier createSignatureArtifactIdFromIvyArtifactName(ModuleComponentIdentifier moduleComponentIdentifier, IvyArtifactName ivyArtifactName) {
-            String extension = ivyArtifactName.getExtension() != null ? ivyArtifactName.getExtension() : ivyArtifactName.getType();
-            return new DefaultModuleComponentArtifactIdentifier(moduleComponentIdentifier, ivyArtifactName.getName(), "asc", extension + ".asc", ivyArtifactName.getClassifier());
+            String extension = ivyArtifactName.extension != null ? ivyArtifactName.extension : ivyArtifactName.type;
+            return new DefaultModuleComponentArtifactIdentifier(moduleComponentIdentifier, ivyArtifactName.name, "asc", extension + ".asc", ivyArtifactName.classifier);
         }
 
         @Nullable
@@ -218,7 +218,7 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
         @Override
         public void resolveArtifact(ComponentArtifactMetadata artifact, ModuleSources moduleSources, BuildableArtifactFileResolveResult result) {
             delegate.resolveArtifact(artifact, moduleSources, result);
-            if (result.hasResult() && result.isSuccessful()) {
+            if (result.hasResult() && result.isSuccessful) {
                 ComponentArtifactIdentifier id = artifact.getId();
                 if (isExternalArtifactId(id) && isNotChanging(moduleSources)) {
                     ModuleComponentArtifactIdentifier mcai = (ModuleComponentArtifactIdentifier) id;
@@ -277,16 +277,16 @@ public class DependencyVerifyingModuleComponentRepository implements ModuleCompo
             @Override
             public IvyArtifactName getName() {
                 if (artifactIdentifier instanceof DefaultModuleComponentArtifactIdentifier) {
-                    return ((DefaultModuleComponentArtifactIdentifier) artifactIdentifier).getName();
+                    return ((DefaultModuleComponentArtifactIdentifier) artifactIdentifier).name;
                 }
                 // This is a bit hackish but the mapping from file names to ivy artifact names is completely broken
-                String fileName = artifactIdentifier.getFileName().replace("-" + artifactIdentifier.getComponentIdentifier().getVersion(), "");
+                String fileName = artifactIdentifier.fileName.replace("-" + artifactIdentifier.getComponentIdentifier().getVersion(), "");
                 fileName = Files.getNameWithoutExtension(fileName); // removes the .asc
                 IvyArtifactName base = DefaultIvyArtifactName.forFileName(fileName, null);
                 return new DefaultIvyArtifactName(
-                    base.getName(),
+                    base.name,
                     "asc",
-                    base.getExtension() + ".asc"
+                    base.extension + ".asc"
                 );
             }
 

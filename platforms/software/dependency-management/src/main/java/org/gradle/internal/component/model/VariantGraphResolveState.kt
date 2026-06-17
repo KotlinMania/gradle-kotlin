@@ -13,51 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-
-import java.util.List;
+import org.gradle.api.internal.attributes.matching.AttributeMatchingCandidate
+import org.gradle.internal.component.external.model.ImmutableCapabilities
 
 /**
  * State for a variant of a component, intended for use during graph resolution.
- * <p>
+ *
+ *
  * This state type manages expensive operations required to resolve a variant. These include
  * managing dependencies and artifacts, which may not be easily available from the metadata.
  */
-public interface VariantGraphResolveState extends AttributeMatchingCandidate {
-
+interface VariantGraphResolveState : AttributeMatchingCandidate {
     /**
      * A unique id for this variant within the current build tree. Note that this id is not stable across Gradle invocations.
      */
-    long getInstanceId();
+    fun getInstanceId(): Long
 
-    String getName();
+    fun getName(): String?
 
-    ImmutableCapabilities getCapabilities();
+    fun getCapabilities(): ImmutableCapabilities?
 
-    VariantGraphResolveMetadata getMetadata();
+    fun getMetadata(): VariantGraphResolveMetadata?
 
     /**
      * Get the dependencies of this variant.
      */
-    List<? extends DependencyMetadata> getDependencies();
+    fun getDependencies(): MutableList<out DependencyMetadata>?
 
     /**
      * Get the exclusions to apply to the dependencies and artifacts of this variant.
      */
-    List<? extends ExcludeMetadata> getExcludes();
+    fun getExcludes(): MutableList<out ExcludeMetadata>?
 
     /**
      * Returns the state required to select and resolve artifacts for this variant. Does not
      * necessarily download the artifacts.
-     * <p>
+     *
+     *
      * Note that this may be expensive, for example it may block waiting for access to the source
      * project or for network or IO requests to the source repository, and should be used only
      * when required.
      */
-    VariantArtifactResolveState prepareForArtifactResolution();
-
+    fun prepareForArtifactResolution(): VariantArtifactResolveState?
 }

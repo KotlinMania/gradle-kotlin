@@ -112,7 +112,7 @@ public class DefaultBuildTreeLocalComponentProvider implements BuildTreeLocalCom
     private LocalComponentGraphResolveState createLocalComponentState(ProjectInternal project) {
         ProjectState projectState = project.getOwner();
         Module module = project.getServices().get(DependencyMetaDataProvider.class).getModule();
-        ModuleVersionIdentifier moduleVersionIdentifier = moduleIdentifierFactory.moduleWithVersion(module.getGroup(), module.getName(), module.getVersion());
+        ModuleVersionIdentifier moduleVersionIdentifier = moduleIdentifierFactory.moduleWithVersion(module.group, module.name, module.version);
         ProjectComponentIdentifier componentIdentifier = projectState.getComponentIdentifier();
         AttributesSchemaInternal mutableSchema = (AttributesSchemaInternal) project.getDependencies().getAttributesSchema();
         ImmutableAttributesSchema schema = attributesSchemaFactory.create(mutableSchema);
@@ -120,7 +120,7 @@ public class DefaultBuildTreeLocalComponentProvider implements BuildTreeLocalCom
         LocalComponentGraphResolveMetadata metadata = new LocalComponentGraphResolveMetadata(
             moduleVersionIdentifier,
             componentIdentifier,
-            module.getStatus(),
+            module.status,
             schema
         );
 

@@ -13,163 +13,144 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.VariantIdentifier
 
 /**
- * An immutable {@link ConfigurationMetadata} wrapper around a {@link ComponentVariant}.
+ * An immutable [ConfigurationMetadata] wrapper around a [ComponentVariant].
  */
-class AbstractVariantBackedConfigurationMetadata implements ModuleConfigurationMetadata {
+internal open class AbstractVariantBackedConfigurationMetadata : ModuleConfigurationMetadata {
+    private val id: VariantIdentifier
+    private val componentId: ModuleComponentIdentifier
+    protected val variant: ComponentVariant
+    private val dependencies: MutableList<out ModuleDependencyMetadata?>?
 
-    private final VariantIdentifier id;
-    private final ModuleComponentIdentifier componentId;
-    private final ComponentVariant variant;
-    private final List<? extends ModuleDependencyMetadata> dependencies;
-
-    AbstractVariantBackedConfigurationMetadata(ModuleComponentIdentifier componentId, ComponentVariant variant) {
-        this.id = new NamedVariantIdentifier(componentId, variant.getName());
-        this.componentId = componentId;
-        this.variant = variant;
-        List<GradleDependencyMetadata> dependencies = new ArrayList<>(variant.getDependencies().size());
+    constructor(componentId: ModuleComponentIdentifier, variant: ComponentVariant) {
+        this.id = NamedVariantIdentifier(componentId, variant.name!!)
+        this.componentId = componentId
+        this.variant = variant
+        val dependencies: MutableList<GradleDependencyMetadata?> = ArrayList<GradleDependencyMetadata?>(variant.getDependencies().size)
         // Forced dependencies are only supported for enforced platforms, so it is currently hardcoded.
         // Should we want to add this as a first class concept to Gradle metadata, then it should be available on the component variant
         // metadata as well.
-        boolean forcedDependencies = PlatformSupport.hasForcedDependencies(variant);
-        for (ComponentVariant.Dependency dependency : variant.getDependencies()) {
-            ModuleComponentSelector selector = DefaultModuleComponentSelector.newSelector(DefaultModuleIdentifier.newId(dependency.getGroup(), dependency.getModule()), dependency.getVersionConstraint(), dependency.getAttributes(), dependency.getCapabilitySelectors());
-            ImmutableList<ExcludeMetadata> excludes = dependency.getExcludes();
-            IvyArtifactName dependencyArtifact = dependency.getDependencyArtifact();
-            dependencies.add(new GradleDependencyMetadata(selector, excludes, false, dependency.isEndorsingStrictVersions(), dependency.getReason(), forcedDependencies, dependencyArtifact));
+        val forcedDependencies = PlatformSupport.hasForcedDependencies(variant)
+        for (dependency in variant.getDependencies()) {
+            val selector: ModuleComponentSelector = DefaultModuleComponentSelector.Companion.newSelector(
+                DefaultModuleIdentifier.newId(dependency.getGroup(), dependency.getModule()),
+                dependency.getVersionConstraint(),
+                dependency.getAttributes(),
+                dependency.getCapabilitySelectors()
+            )
+            val excludes: ImmutableList<ExcludeMetadata?>? = dependency.getExcludes()
+            val dependencyArtifact = dependency.getDependencyArtifact()
+            dependencies.add(GradleDependencyMetadata(selector, excludes, false, dependency.isEndorsingStrictVersions(), dependency.getReason(), forcedDependencies, dependencyArtifact))
         }
-        for (ComponentVariant.DependencyConstraint dependencyConstraint : variant.getDependencyConstraints()) {
-            dependencies.add(new GradleDependencyMetadata(
-                DefaultModuleComponentSelector.newSelector(DefaultModuleIdentifier.newId(dependencyConstraint.getGroup(), dependencyConstraint.getModule()), dependencyConstraint.getVersionConstraint(), dependencyConstraint.getAttributes(), ImmutableSet.of()),
-                ImmutableList.of(),
-                true,
-                false,
-                dependencyConstraint.getReason(),
-                forcedDependencies,
-                null
-            ));
+        for (dependencyConstraint in variant.getDependencyConstraints()) {
+            dependencies.add(
+                GradleDependencyMetadata(
+                    DefaultModuleComponentSelector.Companion.newSelector(
+                        DefaultModuleIdentifier.newId(dependencyConstraint.getGroup(), dependencyConstraint.getModule()),
+                        dependencyConstraint.getVersionConstraint(),
+                        dependencyConstraint.getAttributes(),
+                        ImmutableSet.of<CapabilitySelector?>()
+                    ),
+                    ImmutableList.of<ExcludeMetadata?>(),
+                    true,
+                    false,
+                    dependencyConstraint.getReason(),
+                    forcedDependencies,
+                    null
+                )
+            )
         }
-        this.dependencies = ImmutableList.copyOf(dependencies);
+        this.dependencies = ImmutableList.copyOf<GradleDependencyMetadata?>(dependencies)
     }
 
-    AbstractVariantBackedConfigurationMetadata(ModuleComponentIdentifier componentId, ComponentVariant variant, List<? extends ModuleDependencyMetadata> dependencies) {
-        this.id = new NamedVariantIdentifier(componentId, variant.getName());
-        this.componentId = componentId;
-        this.variant = variant;
-        this.dependencies = dependencies;
+    constructor(componentId: ModuleComponentIdentifier, variant: ComponentVariant, dependencies: MutableList<out ModuleDependencyMetadata?>?) {
+        this.id = NamedVariantIdentifier(componentId, variant.name!!)
+        this.componentId = componentId
+        this.variant = variant
+        this.dependencies = dependencies
     }
 
-    @Override
-    public VariantIdentifier getId() {
-        return id;
+    override fun getId(): VariantIdentifier {
+        return id
     }
 
-    @Override
-    public String getName() {
-        return variant.getName();
+    override fun getName(): String {
+        return variant.name!!
     }
 
-    @Override
-    public Identifier getIdentifier() {
-        return variant.getIdentifier();
+    val identifier: VariantResolveMetadata.Identifier
+        get() = variant.identifier
+
+    override fun getHierarchy(): ImmutableSet<String?>? {
+        return ImmutableSet.of<String?>(variant.name)
     }
 
-    @Override
-    public ImmutableSet<String> getHierarchy() {
-        return ImmutableSet.of(variant.getName());
+    override fun toString(): String {
+        return asDescribable()!!.getDisplayName()
     }
 
-    @Override
-    public String toString() {
-        return asDescribable().getDisplayName();
+    override fun asDescribable(): DisplayName? {
+        return Describables.of(id.componentId, "variant", variant.name!!)
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return Describables.of(id.getComponentId(), "variant", variant.getName());
+    override fun getAttributes(): ImmutableAttributes {
+        return variant.attributes.asImmutable()
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return variant.getAttributes().asImmutable();
+    val artifactVariants: MutableSet<out VariantResolveMetadata?>?
+        get() = ImmutableSet.of<ComponentVariant?>(variant)
+
+    override fun isTransitive(): Boolean {
+        return true
     }
 
-    @Override
-    public Set<? extends VariantResolveMetadata> getArtifactVariants() {
-        return ImmutableSet.of(variant);
+    override fun isVisible(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isTransitive() {
-        return true;
+    override fun getExcludes(): ImmutableList<ExcludeMetadata?> {
+        return ImmutableList.of<ExcludeMetadata?>()
     }
 
-    @Override
-    public boolean isVisible() {
-        return true;
+    override fun artifact(artifact: IvyArtifactName?): ComponentArtifactMetadata? {
+        return DefaultModuleComponentArtifactMetadata(componentId, artifact)
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return ImmutableList.of();
+    override fun getCapabilities(): ImmutableCapabilities? {
+        return variant.capabilities
     }
 
-    @Override
-    public ComponentArtifactMetadata artifact(IvyArtifactName artifact) {
-        return new DefaultModuleComponentArtifactMetadata(componentId, artifact);
+    val artifacts: ImmutableList<out ComponentArtifactMetadata?>
+        get() = variant.artifacts
+
+    override fun getDependencies(): MutableList<out ModuleDependencyMetadata?>? {
+        return dependencies
     }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return variant.getCapabilities();
+    override fun isExternalVariant(): Boolean {
+        return variant.isExternalVariant()
     }
 
-    @Override
-    public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-        return variant.getArtifacts();
-    }
-
-    @Override
-    public List<? extends ModuleDependencyMetadata> getDependencies() {
-        return dependencies;
-    }
-
-    protected ComponentVariant getVariant() {
-        return variant;
-    }
-
-    @Override
-    public boolean isExternalVariant() {
-        return variant.isExternalVariant();
-    }
-
-    @Override
-    public boolean isEligibleForCaching() {
-        return variant.isEligibleForCaching();
+    override fun isEligibleForCaching(): Boolean {
+        return variant.isEligibleForCaching()
     }
 }

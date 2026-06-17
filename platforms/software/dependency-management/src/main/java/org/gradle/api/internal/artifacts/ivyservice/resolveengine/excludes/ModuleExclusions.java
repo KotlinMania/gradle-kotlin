@@ -76,12 +76,12 @@ public class ModuleExclusions {
     private ExcludeSpec forExclude(ExcludeMetadata r) {
         return metadataToExcludeCache.computeIfAbsent(r, rule -> {
             // For custom ivy pattern matchers, don't inspect the rule any more deeply: this prevents us from doing smart merging later
-            if (!PatternMatchers.isExactMatcher(rule.getMatcher())) {
-                return factory.ivyPatternExclude(rule.getModuleId(), rule.getArtifact(), rule.getMatcher());
+            if (!PatternMatchers.isExactMatcher(rule.matcher)) {
+                return factory.ivyPatternExclude(rule.moduleId, rule.artifact, rule.matcher);
             }
 
-            ModuleIdentifier moduleId = rule.getModuleId();
-            IvyArtifactName artifact = rule.getArtifact();
+            ModuleIdentifier moduleId = rule.moduleId;
+            IvyArtifactName artifact = rule.artifact;
             boolean anyOrganisation = isWildcard(moduleId.getGroup());
             boolean anyModule = isWildcard(moduleId.getName());
 
@@ -97,7 +97,7 @@ public class ModuleExclusions {
                     return factory.everything();
                 }
             } else {
-                return factory.ivyPatternExclude(moduleId, artifact, rule.getMatcher());
+                return factory.ivyPatternExclude(moduleId, artifact, rule.matcher);
             }
         });
     }

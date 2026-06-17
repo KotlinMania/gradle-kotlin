@@ -142,7 +142,7 @@ public class RepositoryTransportFactory {
         for (Authentication authentication : authentications) {
             AuthenticationInternal authenticationInternal = (AuthenticationInternal) authentication;
             boolean isAuthenticationSupported = false;
-            Credentials credentials = authenticationInternal.getCredentials();
+            Credentials credentials = authenticationInternal.credentials;
             boolean needCredentials = authenticationInternal.requiresCredentials();
 
             for (Class<?> authenticationType : factory.getSupportedAuthentication()) {
@@ -168,7 +168,7 @@ public class RepositoryTransportFactory {
                 }
             }
 
-            if (!configuredAuthenticationTypes.add(authenticationInternal.getType())) {
+            if (!configuredAuthenticationTypes.add(authenticationInternal.type)) {
                 throw new InvalidUserDataException(String.format("You cannot configure multiple authentication schemes of the same type.  The duplicate one is %s.", authentication));
             }
         }
@@ -198,7 +198,7 @@ public class RepositoryTransportFactory {
                 return null;
             }
 
-            Credentials credentials = ((AuthenticationInternal) authentications.iterator().next()).getCredentials();
+            Credentials credentials = ((AuthenticationInternal) authentications.iterator().next()).credentials;
 
             if (credentials == null) {
                 return null;

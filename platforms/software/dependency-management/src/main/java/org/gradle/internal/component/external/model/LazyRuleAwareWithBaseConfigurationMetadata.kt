@@ -13,156 +13,126 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.DefaultVariantMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.DefaultVariantMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.VariantIdentifier
 
 /**
  * A configuration representing an additional variant of a published component added by a component metadata rule.
  * It can be backed by an existing configuration/variant (base) or can initially be empty (base = null).
  */
-class LazyRuleAwareWithBaseConfigurationMetadata implements ModuleConfigurationMetadata {
+internal class LazyRuleAwareWithBaseConfigurationMetadata(
+    private val name: String,
+    private val id: VariantIdentifier,
+    private val componentId: ModuleComponentIdentifier,
+    private val base: ModuleConfigurationMetadata?,
+    private val attributesFactory: AttributesFactory,
+    private val componentLevelAttributes: ImmutableAttributes?,
+    private val variantMetadataRules: VariantMetadataRules,
+    private val excludes: ImmutableList<ExcludeMetadata?>?,
+    private val externalVariant: Boolean
+) : ModuleConfigurationMetadata {
+    private var computedDependencies: MutableList<out ModuleDependencyMetadata?>? = null
+    private var computedAttributes: ImmutableAttributes? = null
+    private var computedCapabilities: ImmutableCapabilities? = null
+    private var computedArtifacts: ImmutableList<out ComponentArtifactMetadata?>? = null
 
-    private final String name;
-    private final VariantIdentifier id;
-    private final ModuleComponentIdentifier componentId;
-    private final ModuleConfigurationMetadata base;
-    private final VariantMetadataRules variantMetadataRules;
-    private final AttributesFactory attributesFactory;
-    private final ImmutableAttributes componentLevelAttributes;
-    private final ImmutableList<ExcludeMetadata> excludes;
-    private final boolean externalVariant;
-
-    private List<? extends ModuleDependencyMetadata> computedDependencies;
-    private ImmutableAttributes computedAttributes;
-    private ImmutableCapabilities computedCapabilities;
-    private ImmutableList<? extends ComponentArtifactMetadata> computedArtifacts;
-
-    LazyRuleAwareWithBaseConfigurationMetadata(
-        String name,
-        VariantIdentifier id,
-        ModuleComponentIdentifier componentId,
-        @Nullable ModuleConfigurationMetadata base,
-        AttributesFactory attributesFactory,
-        ImmutableAttributes componentLevelAttributes,
-        VariantMetadataRules variantMetadataRules,
-        ImmutableList<ExcludeMetadata> excludes,
-        boolean externalVariant
-    ) {
-        this.name = name;
-        this.id = id;
-        this.componentId = componentId;
-        this.base = base;
-        this.variantMetadataRules = variantMetadataRules;
-        this.attributesFactory = attributesFactory;
-        this.componentLevelAttributes = componentLevelAttributes;
-        this.excludes = excludes;
-        this.externalVariant = externalVariant;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getId(): VariantIdentifier {
+        return id
     }
 
-    @Override
-    public VariantIdentifier getId() {
-        return id;
-    }
+    val identifier: VariantResolveMetadata.Identifier?
+        get() = null
 
-    @Override
-    public Identifier getIdentifier() {
-        return null;
-    }
-
-    @Override
-    public List<? extends ModuleDependencyMetadata> getDependencies() {
+    override fun getDependencies(): MutableList<out ModuleDependencyMetadata?>? {
         if (computedDependencies == null) {
-            computedDependencies = variantMetadataRules.applyDependencyMetadataRules(this, base == null ? ImmutableList.of() : base.getDependencies());
+            computedDependencies = variantMetadataRules.applyDependencyMetadataRules(this, if (base == null) ImmutableList.of() else base.getDependencies())
         }
-        return computedDependencies;
+        return computedDependencies
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
+    override fun getAttributes(): ImmutableAttributes? {
         if (computedAttributes == null) {
-            computedAttributes = variantMetadataRules.applyVariantAttributeRules(this,
-                base != null ? attributesFactory.concat(base.getAttributes(), componentLevelAttributes) : componentLevelAttributes);
+            computedAttributes = variantMetadataRules.applyVariantAttributeRules(
+                this,
+                (if (base != null) attributesFactory.concat(base.attributes, componentLevelAttributes) else componentLevelAttributes)!!
+            )
         }
-        return computedAttributes;
+        return computedAttributes
     }
 
-    @Override
-    public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-        if (computedArtifacts == null) {
-            computedArtifacts = variantMetadataRules.applyVariantFilesMetadataRulesToArtifacts(this, base == null ? ImmutableList.of() : base.getArtifacts(), componentId);
+    val artifacts: ImmutableList<out ComponentArtifactMetadata?>
+        get() {
+            if (computedArtifacts == null) {
+                computedArtifacts = variantMetadataRules.applyVariantFilesMetadataRulesToArtifacts<ComponentArtifactMetadata?>(
+                    this,
+                    if (base == null) ImmutableList.of<ComponentArtifactMetadata?>() else base.artifacts,
+                    componentId
+                )
+            }
+            return computedArtifacts
         }
-        return computedArtifacts;
-    }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
+    override fun getCapabilities(): ImmutableCapabilities? {
         if (computedCapabilities == null) {
-            computedCapabilities = variantMetadataRules.applyCapabilitiesRules(this, base == null ? ImmutableCapabilities.EMPTY : base.getCapabilities());
+            computedCapabilities = variantMetadataRules.applyCapabilitiesRules(this, if (base == null) ImmutableCapabilities.Companion.EMPTY else base.capabilities)
         }
-        return computedCapabilities;
+        return computedCapabilities
     }
 
-    @Override
-    public Set<? extends VariantResolveMetadata> getArtifactVariants() {
-        return ImmutableSet.of(new DefaultVariantMetadata(name, null, asDescribable(), getAttributes(), getArtifacts(), getCapabilities()));
+    val artifactVariants: MutableSet<out VariantResolveMetadata?>?
+        get() = ImmutableSet.of<DefaultVariantMetadata?>(
+            DefaultVariantMetadata(
+                name,
+                null,
+                asDescribable()!!,
+                getAttributes()!!,
+                this.artifacts,
+                getCapabilities()!!
+            )
+        )
+
+    override fun asDescribable(): DisplayName? {
+        return Describables.of(id.componentId, "configuration", name)
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return Describables.of(id.getComponentId(), "configuration", name);
+    override fun artifact(artifact: IvyArtifactName?): ComponentArtifactMetadata? {
+        return DefaultModuleComponentArtifactMetadata(componentId, artifact)
     }
 
-    @Override
-    public ComponentArtifactMetadata artifact(IvyArtifactName artifact) {
-        return new DefaultModuleComponentArtifactMetadata(componentId, artifact);
+    override fun getHierarchy(): ImmutableSet<String?>? {
+        return ImmutableSet.of<String?>(name)
     }
 
-    @Override
-    public ImmutableSet<String> getHierarchy() {
-        return ImmutableSet.of(name);
+    override fun getExcludes(): ImmutableList<ExcludeMetadata?>? {
+        return excludes
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return excludes;
+    override fun isTransitive(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isTransitive() {
-        return true;
+    override fun isVisible(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isVisible() {
-        return true;
-    }
-
-    @Override
-    public boolean isExternalVariant() {
-        return externalVariant;
+    override fun isExternalVariant(): Boolean {
+        return externalVariant
     }
 }

@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByNameFailure;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
 
 /**
- * A {@link VariantSelectionByNameFailure} that represents the situation when a configuration is requested
+ * A [VariantSelectionByNameFailure] that represents the situation when a configuration is requested
  * by name that does not exist on the target component.
  */
-public final class ConfigurationDoesNotExistFailure extends AbstractVariantSelectionByNameFailure {
-    public ConfigurationDoesNotExistFailure(ComponentIdentifier targetComponent, String requestedConfigurationName) {
-        super(ResolutionFailureProblemId.CONFIGURATION_DOES_NOT_EXIST, targetComponent, requestedConfigurationName);
-    }
-}
+class ConfigurationDoesNotExistFailure(targetComponent: ComponentIdentifier, requestedConfigurationName: String) :
+    AbstractVariantSelectionByNameFailure(ResolutionFailureProblemId.CONFIGURATION_DOES_NOT_EXIST, targetComponent, requestedConfigurationName)

@@ -13,64 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.cached;
+package org.gradle.internal.resource.cached
 
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.Namer;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resource.local.GroupedAndNamedUniqueFileStore;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.Namer
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.internal.file.FileAccessTimeJournal
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resource.local.GroupedAndNamedUniqueFileStore
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
+import javax.inject.Inject
+import kotlin.math.abs
 
-import javax.inject.Inject;
-import java.io.File;
-
-public class DefaultExternalResourceFileStore extends GroupedAndNamedUniqueFileStore<String> implements ExternalResourceFileStore {
-
-    private static final int NUMBER_OF_GROUPING_DIRS = 1;
-    public static final int FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP = NUMBER_OF_GROUPING_DIRS + NUMBER_OF_CHECKSUM_DIRS;
-
-    private static final Grouper<String> GROUPER = new Grouper<String>() {
-        @Override
-        public String determineGroup(String s) {
-            return String.valueOf(Math.abs(s.hashCode() % 100));
-        }
-
-        @Override
-        public int getNumberOfGroupingDirs() {
-            return NUMBER_OF_GROUPING_DIRS;
-        }
-    };
-
-    private static final Namer<String> NAMER = s -> StringUtils.substringAfterLast(s, "/");
-
-    private DefaultExternalResourceFileStore(File baseDir, TemporaryFileProvider tmpProvider, FileAccessTimeJournal fileAccessTimeJournal, ChecksumService checksumService) {
-        super(baseDir, tmpProvider, fileAccessTimeJournal, GROUPER, NAMER, checksumService);
-    }
-
-    @ServiceScope({Scope.BuildTree.class, Scope.Project.class})
-    public static class Factory {
-        private final TemporaryFileProvider temporaryFileProvider;
-        private final FileAccessTimeJournal fileAccessTimeJournal;
-        private final ChecksumService checksumService;
-
-        @Inject
-        public Factory(TemporaryFileProvider temporaryFileProvider, FileAccessTimeJournal fileAccessTimeJournal, ChecksumService checksumService) {
-            this.temporaryFileProvider = temporaryFileProvider;
-            this.fileAccessTimeJournal = fileAccessTimeJournal;
-            this.checksumService = checksumService;
-        }
-
-        public DefaultExternalResourceFileStore create(ArtifactCacheMetadata artifactCacheMetadata) {
-            return new DefaultExternalResourceFileStore(
+class DefaultExternalResourceFileStore private constructor(baseDir: File?, tmpProvider: TemporaryFileProvider?, fileAccessTimeJournal: FileAccessTimeJournal?, checksumService: ChecksumService?) :
+    GroupedAndNamedUniqueFileStore<String?>(baseDir, tmpProvider, fileAccessTimeJournal, GROUPER, NAMER, checksumService), ExternalResourceFileStore {
+    @ServiceScope([Scope.BuildTree::class, Scope.Project::class])
+    class Factory @Inject constructor(
+        private val temporaryFileProvider: TemporaryFileProvider?,
+        private val fileAccessTimeJournal: FileAccessTimeJournal?,
+        private val checksumService: ChecksumService?
+    ) {
+        fun create(artifactCacheMetadata: ArtifactCacheMetadata): DefaultExternalResourceFileStore {
+            return DefaultExternalResourceFileStore(
                 artifactCacheMetadata.getExternalResourcesStoreDirectory(),
                 temporaryFileProvider,
                 fileAccessTimeJournal,
                 checksumService
-            );
+            )
         }
+    }
+
+    companion object {
+        private const val NUMBER_OF_GROUPING_DIRS = 1
+        @JvmField
+        val FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP: Int = NUMBER_OF_GROUPING_DIRS + NUMBER_OF_CHECKSUM_DIRS
+
+        private val GROUPER: Grouper<String?> = object : Grouper<String?> {
+            override fun determineGroup(s: String): String {
+                return abs(s.hashCode() % 100).toString()
+            }
+
+            override fun getNumberOfGroupingDirs(): Int {
+                return NUMBER_OF_GROUPING_DIRS
+            }
+        }
+
+        private val NAMER = Namer { s: String? -> StringUtils.substringAfterLast(s, "/") }
     }
 }

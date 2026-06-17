@@ -123,7 +123,7 @@ public abstract class AbstractAuthenticationSupportedRepository<T extends Reposi
     }
 
     List<String> getAuthenticationSchemes() {
-        return CollectionUtils.collect(getConfiguredAuthentication(), authentication -> Cast.cast(AuthenticationInternal.class, authentication).getType().getSimpleName());
+        return CollectionUtils.collect(getConfiguredAuthentication(), authentication -> Cast.cast(AuthenticationInternal.class, authentication).type.getSimpleName());
     }
 
     boolean usesCredentials() {

@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.jspecify.annotations.Nullable;
+interface ResolvedVersionConstraint {
+    @JvmField
+    val preferredSelector: VersionSelector?
 
-public interface ResolvedVersionConstraint {
-    @Nullable
-    VersionSelector getPreferredSelector();
+    @JvmField
+    val requiredSelector: VersionSelector?
 
-    @Nullable
-    VersionSelector getRequiredSelector();
+    @JvmField
+    val rejectedSelector: VersionSelector?
 
-    @Nullable
-    VersionSelector getRejectedSelector();
+    @JvmField
+    val isRejectAll: Boolean
+    @JvmField
+    val isDynamic: Boolean
+    @JvmField
+    val isStrict: Boolean
 
-    boolean isRejectAll();
-    boolean isDynamic();
-    boolean isStrict();
+    fun accepts(version: String): Boolean
 
-    boolean accepts(String version);
-
-    boolean canBeStable();
+    fun canBeStable(): Boolean
 }

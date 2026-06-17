@@ -43,7 +43,7 @@ public class ModuleSourcesSerializer implements Serializer<ModuleSources> {
             try {
                 if (source instanceof PersistentModuleSource) {
                     PersistentModuleSource persistentModuleSource = (PersistentModuleSource) source;
-                    int codecId = assertValidId(persistentModuleSource.getCodecId());
+                    int codecId = assertValidId(persistentModuleSource.codecId);
                     encoder.writeSmallInt(codecId);
                     PersistentModuleSource.Codec<PersistentModuleSource> codec = Cast.uncheckedCast(moduleSourceCodecs.get(codecId));
                     codec.encode(persistentModuleSource, encoder);

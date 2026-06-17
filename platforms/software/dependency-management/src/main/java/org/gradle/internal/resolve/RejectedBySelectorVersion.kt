@@ -13,38 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
 
-public class RejectedBySelectorVersion extends RejectedVersion {
-    private final VersionSelector rejectionSelector;
-
-    public RejectedBySelectorVersion(ModuleComponentIdentifier id, VersionSelector rejectionSelector) {
-        super(id);
-        this.rejectionSelector = rejectionSelector;
+class RejectedBySelectorVersion(id: ModuleComponentIdentifier?, val rejectionSelector: VersionSelector?) : RejectedVersion(id) {
+    override fun hashCode(): Int {
+        return getId().hashCode()
     }
 
-    public VersionSelector getRejectionSelector() {
-        return rejectionSelector;
-    }
-
-    @Override
-    public int hashCode() {
-        return getId().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        RejectedBySelectorVersion that = (RejectedBySelectorVersion) o;
-        return getId().equals(that.getId());
+        val that = o as RejectedBySelectorVersion
+        return getId() == that.getId()
     }
 }

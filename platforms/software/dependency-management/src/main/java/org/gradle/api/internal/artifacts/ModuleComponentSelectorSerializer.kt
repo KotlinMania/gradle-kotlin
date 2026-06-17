@@ -13,117 +13,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.Serializer
+import java.io.IOException
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.capability.CapabilitySelectorSerializer;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.AttributeContainerSerializer;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.Serializer;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-
-import static org.gradle.internal.component.external.model.DefaultModuleComponentSelector.newSelector;
-
-public class ModuleComponentSelectorSerializer implements Serializer<ModuleComponentSelector> {
-    private final AttributeContainerSerializer attributeContainerSerializer;
-    private final CapabilitySelectorSerializer capabilitySelectorSerializer;
-
-    public ModuleComponentSelectorSerializer(
-        AttributeContainerSerializer attributeContainerSerializer,
-        CapabilitySelectorSerializer capabilitySelectorSerializer
-    ) {
-        this.attributeContainerSerializer = attributeContainerSerializer;
-        this.capabilitySelectorSerializer = capabilitySelectorSerializer;
+class ModuleComponentSelectorSerializer(
+    private val attributeContainerSerializer: AttributeContainerSerializer,
+    private val capabilitySelectorSerializer: CapabilitySelectorSerializer
+) : Serializer<ModuleComponentSelector?> {
+    @Throws(IOException::class)
+    override fun read(decoder: Decoder): ModuleComponentSelector {
+        val group = decoder.readString()
+        val name = decoder.readString()
+        val versionConstraint = readVersionConstraint(decoder)
+        val attributes = readAttributes(decoder)
+        val capabilitySelectors = readCapabilitySelectors(decoder)
+        return newSelector(DefaultModuleIdentifier.newId(group, name!!), versionConstraint, attributes, capabilitySelectors)
     }
 
-    @Override
-    public ModuleComponentSelector read(Decoder decoder) throws IOException {
-        String group = decoder.readString();
-        String name = decoder.readString();
-        VersionConstraint versionConstraint = readVersionConstraint(decoder);
-        ImmutableAttributes attributes = readAttributes(decoder);
-        ImmutableSet<CapabilitySelector> capabilitySelectors = readCapabilitySelectors(decoder);
-        return newSelector(DefaultModuleIdentifier.newId(group, name), versionConstraint, attributes, capabilitySelectors);
-    }
-
-    public VersionConstraint readVersionConstraint(Decoder decoder) throws IOException {
-        String required = decoder.readString();
-        String preferred = decoder.readString();
-        String strictly = decoder.readString();
-        int cpt = decoder.readSmallInt();
-        ImmutableList.Builder<String> rejects = ImmutableList.builderWithExpectedSize(cpt);
-        for (int i = 0; i < cpt; i++) {
-            rejects.add(decoder.readString());
+    @Throws(IOException::class)
+    fun readVersionConstraint(decoder: Decoder): VersionConstraint {
+        val required = decoder.readString()
+        val preferred = decoder.readString()
+        val strictly = decoder.readString()
+        val cpt = decoder.readSmallInt()
+        val rejects = ImmutableList.builderWithExpectedSize<String>(cpt)
+        for (i in 0..<cpt) {
+            rejects.add(decoder.readString()!!)
         }
-        String branch = decoder.readNullableString();
-        return new DefaultImmutableVersionConstraint(preferred, required, strictly, rejects.build(), branch);
+        val branch = decoder.readNullableString()
+        return DefaultImmutableVersionConstraint(preferred!!, required!!, strictly!!, rejects.build(), branch)
     }
 
-    @Override
-    public void write(Encoder encoder, ModuleComponentSelector value) throws IOException {
-        encoder.writeString(value.getGroup());
-        encoder.writeString(value.getModule());
-        writeVersionConstraint(encoder, value.getVersionConstraint());
-        writeAttributes(encoder, ((AttributeContainerInternal)value.getAttributes()).asImmutable());
-        writeCapabilitySelectors(encoder, value.getCapabilitySelectors());
+    @Throws(IOException::class)
+    override fun write(encoder: Encoder, value: ModuleComponentSelector) {
+        encoder.writeString(value.getGroup())
+        encoder.writeString(value.getModule())
+        writeVersionConstraint(encoder, value.getVersionConstraint())
+        writeAttributes(encoder, (value.getAttributes() as AttributeContainerInternal).asImmutable())
+        writeCapabilitySelectors(encoder, value.getCapabilitySelectors())
     }
 
-    public void write(Encoder encoder, String group, String module, VersionConstraint version, ImmutableAttributes attributes, Set<CapabilitySelector> capabilitySelectors) throws IOException {
-        encoder.writeString(group);
-        encoder.writeString(module);
-        writeVersionConstraint(encoder, version);
-        writeAttributes(encoder, attributes);
-        writeCapabilitySelectors(encoder, capabilitySelectors);
+    @Throws(IOException::class)
+    fun write(encoder: Encoder, group: String, module: String, version: VersionConstraint, attributes: ImmutableAttributes, capabilitySelectors: MutableSet<CapabilitySelector>) {
+        encoder.writeString(group)
+        encoder.writeString(module)
+        writeVersionConstraint(encoder, version)
+        writeAttributes(encoder, attributes)
+        writeCapabilitySelectors(encoder, capabilitySelectors)
     }
 
-    public void writeVersionConstraint(Encoder encoder, VersionConstraint cst) throws IOException {
-        encoder.writeString(cst.getRequiredVersion());
-        encoder.writeString(cst.getPreferredVersion());
-        encoder.writeString(cst.getStrictVersion());
-        List<String> rejectedVersions = cst.getRejectedVersions();
-        encoder.writeSmallInt(rejectedVersions.size());
-        for (String rejectedVersion : rejectedVersions) {
-            encoder.writeString(rejectedVersion);
+    @Throws(IOException::class)
+    fun writeVersionConstraint(encoder: Encoder, cst: VersionConstraint) {
+        encoder.writeString(cst.getRequiredVersion())
+        encoder.writeString(cst.getPreferredVersion())
+        encoder.writeString(cst.getStrictVersion())
+        val rejectedVersions = cst.getRejectedVersions()
+        encoder.writeSmallInt(rejectedVersions.size)
+        for (rejectedVersion in rejectedVersions) {
+            encoder.writeString(rejectedVersion)
         }
-        encoder.writeNullableString(cst.getBranch());
+        encoder.writeNullableString(cst.getBranch())
     }
 
-    private ImmutableAttributes readAttributes(Decoder decoder) throws IOException {
-        return attributeContainerSerializer.read(decoder);
+    @Throws(IOException::class)
+    private fun readAttributes(decoder: Decoder): ImmutableAttributes {
+        return attributeContainerSerializer.read(decoder)
     }
 
-    private void writeAttributes(Encoder encoder, ImmutableAttributes attributes) throws IOException {
-        attributeContainerSerializer.write(encoder, attributes);
+    @Throws(IOException::class)
+    private fun writeAttributes(encoder: Encoder, attributes: ImmutableAttributes) {
+        attributeContainerSerializer.write(encoder, attributes)
     }
 
-    private ImmutableSet<CapabilitySelector> readCapabilitySelectors(Decoder decoder) throws IOException {
-        int size = decoder.readSmallInt();
+    @Throws(IOException::class)
+    private fun readCapabilitySelectors(decoder: Decoder): ImmutableSet<CapabilitySelector> {
+        val size = decoder.readSmallInt()
         if (size == 0) {
-            return ImmutableSet.of();
+            return ImmutableSet.of<CapabilitySelector>()
         }
-        ImmutableSet.Builder<CapabilitySelector> builder = ImmutableSet.builderWithExpectedSize(size);
-        for (int i = 0; i < size; i++) {
-            builder.add(capabilitySelectorSerializer.read(decoder));
+        val builder = ImmutableSet.builderWithExpectedSize<CapabilitySelector>(size)
+        for (i in 0..<size) {
+            builder.add(capabilitySelectorSerializer.read(decoder))
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private void writeCapabilitySelectors(Encoder encoder, Set<CapabilitySelector> capabilitySelectors) throws IOException {
-        encoder.writeSmallInt(capabilitySelectors.size());
-        for (CapabilitySelector capabilitySelector : capabilitySelectors) {
-            capabilitySelectorSerializer.write(encoder, capabilitySelector);
+    @Throws(IOException::class)
+    private fun writeCapabilitySelectors(encoder: Encoder, capabilitySelectors: MutableSet<CapabilitySelector>) {
+        encoder.writeSmallInt(capabilitySelectors.size)
+        for (capabilitySelector in capabilitySelectors) {
+            capabilitySelectorSerializer.write(encoder, capabilitySelector)
         }
     }
 }

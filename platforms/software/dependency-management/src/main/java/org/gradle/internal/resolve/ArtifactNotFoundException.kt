@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
 
-import java.util.List;
-
-public class ArtifactNotFoundException extends ArtifactResolveException {
-    public ArtifactNotFoundException(ComponentArtifactIdentifier artifact, List<String> attemptedLocations) {
-        super(format(artifact, attemptedLocations));
-    }
-
-    private static String format(ComponentArtifactIdentifier artifact, List<String> locations) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(String.format("Could not find %s.", artifact.getDisplayName()));
-        if (!locations.isEmpty()) {
-            builder.append(String.format("%nSearched in the following locations:"));
-            for (String location : locations) {
-                builder.append(String.format("%n    %s", location));
+class ArtifactNotFoundException(artifact: ComponentArtifactIdentifier, attemptedLocations: MutableList<String?>) : ArtifactResolveException(format(artifact, attemptedLocations)) {
+    companion object {
+        private fun format(artifact: ComponentArtifactIdentifier, locations: MutableList<String?>): String {
+            val builder = StringBuilder()
+            builder.append(String.format("Could not find %s.", artifact.getDisplayName()))
+            if (!locations.isEmpty()) {
+                builder.append(String.format("%nSearched in the following locations:"))
+                for (location in locations) {
+                    builder.append(String.format("%n    %s", location))
+                }
             }
+            return builder.toString()
         }
-        return builder.toString();
     }
 }

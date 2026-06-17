@@ -13,67 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.internal.component.model.DelegatingDependencyMetadata
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.ForcingDependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.internal.component.model.DelegatingDependencyMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ForcingDependencyMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
+class DefaultProjectDependencyMetadata(selector: ProjectComponentSelector, delegate: DependencyMetadata) : DelegatingDependencyMetadata(delegate), ForcingDependencyMetadata {
+    private val selector: ProjectComponentSelector
+    private val delegate: DependencyMetadata
 
-public class DefaultProjectDependencyMetadata extends DelegatingDependencyMetadata implements ForcingDependencyMetadata {
-    private final ProjectComponentSelector selector;
-    private final DependencyMetadata delegate;
-
-    public DefaultProjectDependencyMetadata(ProjectComponentSelector selector, DependencyMetadata delegate) {
-        super(delegate);
-        this.selector = selector;
-        this.delegate = delegate;
+    init {
+        this.selector = selector
+        this.delegate = delegate
     }
 
-    @Override
-    public ProjectComponentSelector getSelector() {
-        return selector;
+    public override fun getSelector(): ProjectComponentSelector {
+        return selector
     }
 
-    @Override
-    public DependencyMetadata withTarget(ComponentSelector target) {
-        if (target.equals(selector)) {
-            return this;
+    override fun withTarget(target: ComponentSelector): DependencyMetadata {
+        if (target == selector) {
+            return this
         }
-        return delegate.withTarget(target);
+        return delegate.withTarget(target)!!
     }
 
-    @Override
-    public DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-        if (target.equals(selector) && delegate.getArtifacts().equals(artifacts)) {
-            return this;
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): DependencyMetadata {
+        if (target == selector && delegate.artifacts!!.equals(artifacts)) {
+            return this
         }
-        return delegate.withTargetAndArtifacts(target, artifacts);
+        return delegate.withTargetAndArtifacts(target, artifacts)!!
     }
 
-    @Override
-    public boolean isForce() {
-        if (delegate instanceof ForcingDependencyMetadata) {
-            return ((ForcingDependencyMetadata) delegate).isForce();
+    override fun isForce(): Boolean {
+        if (delegate is ForcingDependencyMetadata) {
+            return delegate.isForce()
         }
-        return false;
+        return false
     }
 
-    @Override
-    public ForcingDependencyMetadata forced() {
-        if (delegate instanceof ForcingDependencyMetadata) {
-            ForcingDependencyMetadata forced = ((ForcingDependencyMetadata) delegate).forced();
-            return new DefaultProjectDependencyMetadata(selector, forced);
+    override fun forced(): ForcingDependencyMetadata {
+        if (delegate is ForcingDependencyMetadata) {
+            val forced = delegate.forced()
+            return DefaultProjectDependencyMetadata(selector, forced!!)
         }
-        return this;
+        return this
     }
 
-    @Override
-    public String toString() {
-        return "ProjectDependencyMetadata: " + selector;
+    override fun toString(): String {
+        return "ProjectDependencyMetadata: " + selector
     }
 }

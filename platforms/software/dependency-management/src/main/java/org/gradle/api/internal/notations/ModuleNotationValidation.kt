@@ -13,30 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.typeconversion.UnsupportedNotationException;
-import org.gradle.util.internal.GUtil;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.typeconversion.UnsupportedNotationException
+import org.gradle.util.internal.GUtil
 
-import java.util.List;
+object ModuleNotationValidation {
+    private val INVALID_SPEC_CHARS: MutableList<Char?> = ImmutableList.of<Char?>('*', '[', ']', '(', ')', ',')
 
-public abstract class ModuleNotationValidation {
-    private final static List<Character> INVALID_SPEC_CHARS = ImmutableList.of('*', '[', ']', '(', ')', ',');
-
-    public static String validate(String part, String notation) {
+    @JvmOverloads
+    fun validate(part: String, notation: String? = part): String {
         if (!GUtil.isTrue(part)) {
-            throw new UnsupportedNotationException(notation);
+            throw UnsupportedNotationException(notation)
         }
-        for (char c : INVALID_SPEC_CHARS) {
-            if (part.indexOf(c) != -1) {
-                throw new UnsupportedNotationException(notation);
+        for (c in INVALID_SPEC_CHARS) {
+            if (part.indexOf(c!!) != -1) {
+                throw UnsupportedNotationException(notation)
             }
         }
-        return part;
-    }
-
-    public static String validate(String part) {
-        return validate(part, part);
+        return part
     }
 }

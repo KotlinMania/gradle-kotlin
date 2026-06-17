@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.Action;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.LibraryElements;
-import org.gradle.api.attributes.MultipleCandidatesDetails;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.Action
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.MultipleCandidatesDetails
+import org.gradle.api.attributes.Usage
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
 /**
  * When no consumer attributes are provided, prefer the Java runtime variant over the API variant.
@@ -41,86 +40,68 @@ import java.util.Set;
  * metadata format by default without breaking a bunch of consumers that depend on this assumption,
  * declaring no preference for a particular variant.
  */
-@ServiceScope(Scope.BuildSession.class)
-public class PreferJavaRuntimeVariant {
+@ServiceScope(Scope.BuildSession::class)
+class PreferJavaRuntimeVariant @Inject constructor(
+    instantiator: NamedObjectInstantiator,
+    schemaFactory: ImmutableAttributesSchemaFactory
+) {
+    val schema: ImmutableAttributesSchema
 
-    private final ImmutableAttributesSchema instance;
-
-    @Inject
-    public PreferJavaRuntimeVariant(
-        NamedObjectInstantiator instantiator,
-        ImmutableAttributesSchemaFactory schemaFactory
-    ) {
-        this.instance = create(instantiator, schemaFactory);
+    init {
+        this.schema = create(instantiator, schemaFactory)
     }
 
-    public ImmutableAttributesSchema getSchema() {
-        return instance;
-    }
-
-    private static ImmutableAttributesSchema create(
-        NamedObjectInstantiator instantiator,
-        ImmutableAttributesSchemaFactory schemaFactory
-    ) {
-        Usage runtimeUsage = instantiator.named(Usage.class, Usage.JAVA_RUNTIME);
-        LibraryElements jarLibraryElements = instantiator.named(LibraryElements.class, LibraryElements.JAR);
-
-        PreferRuntimeVariantUsageDisambiguationRule usageDisambiguationRule = new PreferRuntimeVariantUsageDisambiguationRule(runtimeUsage);
-        PreferJarVariantUsageDisambiguationRule formatDisambiguationRule = new PreferJarVariantUsageDisambiguationRule(jarLibraryElements);
-
-        ImmutableMap<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> strategies =
-            ImmutableMap.of(
-                Usage.USAGE_ATTRIBUTE,
-                new ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<>(
-                    ImmutableList.of(),
-                    ImmutableList.of(usageDisambiguationRule)
-                ),
-                LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
-                new ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<>(
-                    ImmutableList.of(),
-                    ImmutableList.of(formatDisambiguationRule)
-                )
-            );
-
-        return schemaFactory.create(
-            strategies,
-            ImmutableList.of(Usage.USAGE_ATTRIBUTE, LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
-        );
-    }
-
-    private static class PreferRuntimeVariantUsageDisambiguationRule implements Action<MultipleCandidatesDetails<Usage>> {
-        private final Usage runtimeUsage;
-
-        public PreferRuntimeVariantUsageDisambiguationRule(Usage runtimeUsage) {
-            this.runtimeUsage = runtimeUsage;
-        }
-
-        @Override
-        public void execute(MultipleCandidatesDetails<Usage> details) {
+    private class PreferRuntimeVariantUsageDisambiguationRule(private val runtimeUsage: Usage) : Action<MultipleCandidatesDetails<Usage>> {
+        override fun execute(details: MultipleCandidatesDetails<Usage>) {
             if (details.getConsumerValue() == null) {
-                Set<Usage> candidates = details.getCandidateValues();
+                val candidates = details.getCandidateValues()
                 if (candidates.contains(runtimeUsage)) {
-                    details.closestMatch(runtimeUsage);
+                    details.closestMatch(runtimeUsage)
                 }
             }
         }
     }
 
-    private static class PreferJarVariantUsageDisambiguationRule implements Action<MultipleCandidatesDetails<LibraryElements>> {
-        private final LibraryElements jarLibraryElements;
-
-        public PreferJarVariantUsageDisambiguationRule(LibraryElements jarLibraryElements) {
-            this.jarLibraryElements = jarLibraryElements;
-        }
-
-        @Override
-        public void execute(MultipleCandidatesDetails<LibraryElements> details) {
+    private class PreferJarVariantUsageDisambiguationRule(private val jarLibraryElements: LibraryElements) : Action<MultipleCandidatesDetails<LibraryElements>> {
+        override fun execute(details: MultipleCandidatesDetails<LibraryElements>) {
             if (details.getConsumerValue() == null) {
-                Set<LibraryElements> candidates = details.getCandidateValues();
+                val candidates = details.getCandidateValues()
                 if (candidates.contains(jarLibraryElements)) {
-                    details.closestMatch(jarLibraryElements);
+                    details.closestMatch(jarLibraryElements)
                 }
             }
+        }
+    }
+
+    companion object {
+        private fun create(
+            instantiator: NamedObjectInstantiator,
+            schemaFactory: ImmutableAttributesSchemaFactory
+        ): ImmutableAttributesSchema {
+            val runtimeUsage = instantiator.named<Usage>(Usage::class.java, Usage.JAVA_RUNTIME)
+            val jarLibraryElements = instantiator.named<LibraryElements>(LibraryElements::class.java, LibraryElements.JAR)
+
+            val usageDisambiguationRule = PreferRuntimeVariantUsageDisambiguationRule(runtimeUsage)
+            val formatDisambiguationRule = PreferJarVariantUsageDisambiguationRule(jarLibraryElements)
+
+            val strategies =
+                ImmutableMap.of<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>>(
+                    Usage.USAGE_ATTRIBUTE,
+                    ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<Usage?>(
+                        ImmutableList.of<Action<in CompatibilityCheckDetails<Usage>>>(),
+                        ImmutableList.of<Action<in MultipleCandidatesDetails<Usage>>>(usageDisambiguationRule)
+                    ),
+                    LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+                    ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<LibraryElements?>(
+                        ImmutableList.of<Action<in CompatibilityCheckDetails<LibraryElements>>>(),
+                        ImmutableList.of<Action<in MultipleCandidatesDetails<LibraryElements>>>(formatDisambiguationRule)
+                    )
+                )
+
+            return schemaFactory.create(
+                strategies,
+                ImmutableList.of<Attribute<*>>(Usage.USAGE_ATTRIBUTE, LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
+            )
         }
     }
 }

@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.model.ExcludeMetadata;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.dsl.dependencies.PlatformSupport
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.VariantGraphResolveMetadata.getName
+import java.util.function.Function
+import java.util.stream.Collectors
 
 /**
- * Utility class to help transform a lazy {@link ModuleComponentResolveMetadata} into a realised one.
+ * Utility class to help transform a lazy [ModuleComponentResolveMetadata] into a realised one.
  */
-public class LazyToRealisedModuleComponentResolveMetadataHelper {
+object LazyToRealisedModuleComponentResolveMetadataHelper {
     /**
      * Method to transform lazy variants into realised ones
      *
@@ -46,111 +44,145 @@ public class LazyToRealisedModuleComponentResolveMetadataHelper {
      * @param variants the variants to transform
      * @return a list of realised variants
      */
-    public static ImmutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> realiseVariants(ModuleComponentResolveMetadata mutableMetadata, VariantMetadataRules variantMetadataRules, ImmutableList<? extends ComponentVariant> variants) {
+    fun realiseVariants(
+        mutableMetadata: ModuleComponentResolveMetadata,
+        variantMetadataRules: VariantMetadataRules,
+        variants: ImmutableList<out ComponentVariant>
+    ): ImmutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>? {
         if (variants.isEmpty()) {
-            return ImmutableList.of();
+            return ImmutableList.of<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>()
         }
-        List<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> realisedVariants = new ArrayList<>(variants.size());
-        for (ComponentVariant variant : variants) {
-            realisedVariants.add(applyRules(variant, variantMetadataRules, mutableMetadata.getId()));
+        val realisedVariants: MutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?> =
+            ArrayList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>(variants.size)
+        for (variant in variants) {
+            realisedVariants.add(LazyToRealisedModuleComponentResolveMetadataHelper.applyRules(variant, variantMetadataRules, mutableMetadata.getId()!!))
         }
-        return addVariantsFromRules(mutableMetadata, realisedVariants, variantMetadataRules);
+        return addVariantsFromRules(mutableMetadata, realisedVariants, variantMetadataRules)
     }
 
-    private static ImmutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> addVariantsFromRules(ModuleComponentResolveMetadata componentMetadata, List<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> declaredVariants, VariantMetadataRules variantMetadataRules) {
-        List<AdditionalVariant> additionalVariants = variantMetadataRules.getAdditionalVariants();
+    private fun addVariantsFromRules(
+        componentMetadata: ModuleComponentResolveMetadata,
+        declaredVariants: MutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>,
+        variantMetadataRules: VariantMetadataRules
+    ): ImmutableList<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?> {
+        val additionalVariants = variantMetadataRules.additionalVariants
         if (additionalVariants.isEmpty()) {
-            return ImmutableList.copyOf(declaredVariants);
+            return ImmutableList.copyOf<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>(declaredVariants)
         }
 
-        ImmutableList.Builder<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl> builder = new ImmutableList.Builder<>();
-        builder.addAll(declaredVariants);
-        Map<String, ComponentVariant> variantsByName = declaredVariants.stream().collect(Collectors.toMap(ComponentVariant::getName, Function.identity()));
-        for (AdditionalVariant additionalVariant : additionalVariants) {
-            String baseName = additionalVariant.getBase();
-            ImmutableAttributes attributes;
-            ImmutableCapabilities capabilities;
-            ImmutableList<? extends ComponentVariant.Dependency> dependencies;
-            ImmutableList<? extends ComponentVariant.DependencyConstraint> dependencyConstraints;
-            ImmutableList<? extends ComponentVariant.File> files;
+        val builder = ImmutableList.Builder<AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl?>()
+        builder.addAll(declaredVariants)
+        val variantsByName: MutableMap<String?, ComponentVariant?> = declaredVariants.stream().collect(Collectors.toMap(ComponentVariant::getName, Function.identity<Any?>()))
+        for (additionalVariant in additionalVariants) {
+            val baseName = additionalVariant.getBase()
+            val attributes: ImmutableAttributes?
+            val capabilities: ImmutableCapabilities?
+            val dependencies: ImmutableList<out ComponentVariant.Dependency>?
+            val dependencyConstraints: ImmutableList<out ComponentVariant.DependencyConstraint>?
+            val files: ImmutableList<out ComponentVariant.File?>?
 
-            ComponentVariant baseVariant = variantsByName.get(baseName);
-            boolean isExternalVariant;
+            val baseVariant = variantsByName.get(baseName)
+            val isExternalVariant: Boolean
             if (baseVariant == null) {
-                attributes = componentMetadata.getAttributes();
-                capabilities = ImmutableCapabilities.EMPTY;
-                dependencies = ImmutableList.of();
-                dependencyConstraints = ImmutableList.of();
-                files = ImmutableList.of();
-                isExternalVariant = false;
+                attributes = componentMetadata.getAttributes()
+                capabilities = ImmutableCapabilities.Companion.EMPTY
+                dependencies = ImmutableList.of<ComponentVariant.Dependency?>()
+                dependencyConstraints = ImmutableList.of<ComponentVariant.DependencyConstraint?>()
+                files = ImmutableList.of<ComponentVariant.File?>()
+                isExternalVariant = false
             } else {
-                attributes = baseVariant.getAttributes();
-                capabilities = baseVariant.getCapabilities();
-                dependencies = baseVariant.getDependencies();
-                dependencyConstraints = baseVariant.getDependencyConstraints();
-                files = baseVariant.getFiles();
-                isExternalVariant = baseVariant.isExternalVariant();
+                attributes = baseVariant.attributes
+                capabilities = baseVariant.capabilities
+                dependencies = baseVariant.getDependencies()
+                dependencyConstraints = baseVariant.getDependencyConstraints()
+                files = baseVariant.getFiles()
+                isExternalVariant = baseVariant.isExternalVariant()
             }
 
             if (baseName == null || baseVariant != null) {
-                AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl variant = applyRules(new AbstractMutableModuleComponentResolveMetadata.ImmutableVariantImpl(
-                        componentMetadata.getId(), additionalVariant.getName(), attributes, dependencies, dependencyConstraints, files, capabilities, isExternalVariant),
-                    variantMetadataRules, componentMetadata.getId());
-                builder.add(variant);
+                val variant = LazyToRealisedModuleComponentResolveMetadataHelper.applyRules(
+                    AbstractMutableModuleComponentResolveMetadata.ImmutableVariantImpl(
+                        componentMetadata.getId(), additionalVariant.getName(), attributes, dependencies, dependencyConstraints, files, capabilities, isExternalVariant
+                    ),
+                    variantMetadataRules, componentMetadata.getId()!!
+                )
+                builder.add(variant)
             } else if (!additionalVariant.isLenient()) {
-                throw new InvalidUserDataException("Variant '" + baseName + "' not defined in module " + componentMetadata.getId().getDisplayName());
+                throw InvalidUserDataException("Variant '" + baseName + "' not defined in module " + componentMetadata.getId()!!.getDisplayName())
             }
         }
-        return builder.build();
+        return builder.build()
     }
 
-    private static AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl applyRules(ComponentVariant variant, VariantMetadataRules variantMetadataRules, ModuleComponentIdentifier id) {
-        ImmutableAttributes attributes = variantMetadataRules.applyVariantAttributeRules(variant, variant.getAttributes());
-        ImmutableCapabilities capabilities = variantMetadataRules.applyCapabilitiesRules(variant, variant.getCapabilities());
-        ImmutableList<? extends ComponentVariant.File> files = variantMetadataRules.applyVariantFilesMetadataRulesToFiles(variant, variant.getFiles(), id);
-        boolean force = PlatformSupport.hasForcedDependencies(variant);
-        List<? extends ModuleDependencyMetadata> dependencies = variantMetadataRules.applyDependencyMetadataRules(variant, convertDependencies(variant.getDependencies(), variant.getDependencyConstraints(), force));
-        return new AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl(id, variant.getName(), attributes,
+    private fun applyRules(
+        variant: ComponentVariant,
+        variantMetadataRules: VariantMetadataRules,
+        id: ModuleComponentIdentifier
+    ): AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl {
+        val attributes = variantMetadataRules.applyVariantAttributeRules(variant, variant.attributes)
+        val capabilities = variantMetadataRules.applyCapabilitiesRules(variant, variant.capabilities)
+        val files: ImmutableList<out ComponentVariant.File?> = variantMetadataRules.applyVariantFilesMetadataRulesToFiles(variant, variant.getFiles(), id)
+        val force = PlatformSupport.hasForcedDependencies(variant)
+        val dependencies: MutableList<out ModuleDependencyMetadata?> =
+            variantMetadataRules.applyDependencyMetadataRules<GradleDependencyMetadata?>(variant, convertDependencies(variant.getDependencies(), variant.getDependencyConstraints(), force))
+        return AbstractRealisedModuleComponentResolveMetadata.ImmutableRealisedVariantImpl(
+            id, variant.name, attributes,
             variant.getDependencies(), variant.getDependencyConstraints(), files,
-            capabilities, dependencies, variant.isExternalVariant());
+            capabilities, dependencies, variant.isExternalVariant()
+        )
     }
 
-    private static List<GradleDependencyMetadata> convertDependencies(List<? extends ComponentVariant.Dependency> dependencies, List<? extends ComponentVariant.DependencyConstraint> dependencyConstraints, boolean force) {
-        List<GradleDependencyMetadata> result = new ArrayList<>(dependencies.size());
-        for (ComponentVariant.Dependency dependency : dependencies) {
-            ModuleComponentSelector selector = DefaultModuleComponentSelector.newSelector(DefaultModuleIdentifier.newId(dependency.getGroup(), dependency.getModule()), dependency.getVersionConstraint(), dependency.getAttributes(), dependency.getCapabilitySelectors());
-            ImmutableList<ExcludeMetadata> excludes = dependency.getExcludes();
-            result.add(new GradleDependencyMetadata(selector, excludes, false, dependency.isEndorsingStrictVersions(), dependency.getReason(), force, dependency.getDependencyArtifact()));
+    private fun convertDependencies(
+        dependencies: MutableList<out ComponentVariant.Dependency>,
+        dependencyConstraints: MutableList<out ComponentVariant.DependencyConstraint>,
+        force: Boolean
+    ): MutableList<GradleDependencyMetadata?> {
+        val result: MutableList<GradleDependencyMetadata?> = ArrayList<GradleDependencyMetadata?>(dependencies.size)
+        for (dependency in dependencies) {
+            val selector: ModuleComponentSelector = DefaultModuleComponentSelector.Companion.newSelector(
+                DefaultModuleIdentifier.newId(dependency.getGroup(), dependency.getModule()),
+                dependency.getVersionConstraint(),
+                dependency.getAttributes(),
+                dependency.getCapabilitySelectors()
+            )
+            val excludes: ImmutableList<ExcludeMetadata?>? = dependency.getExcludes()
+            result.add(GradleDependencyMetadata(selector, excludes, false, dependency.isEndorsingStrictVersions(), dependency.getReason(), force, dependency.getDependencyArtifact()))
         }
-        for (ComponentVariant.DependencyConstraint dependencyConstraint : dependencyConstraints) {
-            result.add(new GradleDependencyMetadata(
-                DefaultModuleComponentSelector.newSelector(DefaultModuleIdentifier.newId(dependencyConstraint.getGroup(), dependencyConstraint.getModule()), dependencyConstraint.getVersionConstraint(), dependencyConstraint.getAttributes(), ImmutableSet.of()),
-                ImmutableList.of(),
-                true,
-                false,
-                dependencyConstraint.getReason(),
-                force,
-                null
-            ));
+        for (dependencyConstraint in dependencyConstraints) {
+            result.add(
+                GradleDependencyMetadata(
+                    DefaultModuleComponentSelector.Companion.newSelector(
+                        DefaultModuleIdentifier.newId(dependencyConstraint.getGroup(), dependencyConstraint.getModule()),
+                        dependencyConstraint.getVersionConstraint(),
+                        dependencyConstraint.getAttributes(),
+                        ImmutableSet.of<CapabilitySelector?>()
+                    ),
+                    ImmutableList.of<ExcludeMetadata?>(),
+                    true,
+                    false,
+                    dependencyConstraint.getReason(),
+                    force,
+                    null
+                )
+            )
         }
-        return result;
+        return result
     }
 
-    public static ImmutableSet<String> constructHierarchy(Configuration descriptorConfiguration, ImmutableMap<String, Configuration> configurationDefinitions) {
-        if (descriptorConfiguration.getExtendsFrom().isEmpty()) {
-            return ImmutableSet.of(descriptorConfiguration.getName());
+    fun constructHierarchy(descriptorConfiguration: Configuration, configurationDefinitions: ImmutableMap<String?, Configuration?>): ImmutableSet<String?> {
+        if (descriptorConfiguration.extendsFrom.isEmpty()) {
+            return ImmutableSet.of<String?>(descriptorConfiguration.name)
         }
-        ImmutableSet.Builder<String> accumulator = new ImmutableSet.Builder<>();
-        populateHierarchy(descriptorConfiguration, configurationDefinitions, accumulator);
-        return accumulator.build();
+        val accumulator = ImmutableSet.Builder<String?>()
+        populateHierarchy(descriptorConfiguration, configurationDefinitions, accumulator)
+        return accumulator.build()
     }
 
-    private static void populateHierarchy(Configuration metadata, ImmutableMap<String, Configuration> configurationDefinitions, ImmutableSet.Builder<String> accumulator) {
-        accumulator.add(metadata.getName());
-        for (String parentName : metadata.getExtendsFrom()) {
-            Configuration parent = configurationDefinitions.get(parentName);
-            populateHierarchy(parent, configurationDefinitions, accumulator);
+    private fun populateHierarchy(metadata: Configuration, configurationDefinitions: ImmutableMap<String?, Configuration?>, accumulator: ImmutableSet.Builder<String?>) {
+        accumulator.add(metadata.name)
+        for (parentName in metadata.extendsFrom) {
+            val parent = configurationDefinitions.get(parentName)
+            LazyToRealisedModuleComponentResolveMetadataHelper.populateHierarchy(parent!!, configurationDefinitions, accumulator)
         }
     }
-
 }

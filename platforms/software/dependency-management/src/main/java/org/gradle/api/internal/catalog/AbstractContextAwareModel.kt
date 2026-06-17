@@ -13,19 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.jspecify.annotations.Nullable;
+import java.io.Serializable
 
-import java.io.Serializable;
-
-public class AbstractContextAwareModel implements Serializable {
-    protected final String context;
-
-    public AbstractContextAwareModel(@Nullable String context) {
-        this.context = context;
-    }
-
+open class AbstractContextAwareModel(
     /**
      * The context where this dependency model was built from, used
      * for debugging and giving hints to the user.
@@ -33,8 +25,5 @@ public class AbstractContextAwareModel implements Serializable {
      *
      * @return the context
      */
-    @Nullable
-    public String getContext() {
-        return context;
-    }
-}
+    val context: String?
+) : Serializable

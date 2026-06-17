@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.maven
 
-package org.gradle.internal.component.external.model.maven;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
 /**
  * Meta-data for a component resolved from a Maven repository.
  */
-public interface MavenModuleResolveMetadata extends ModuleComponentResolveMetadata {
+interface MavenModuleResolveMetadata : ModuleComponentResolveMetadata {
     /**
      * {@inheritDoc}
      */
-    @Override
-    MutableMavenModuleResolveMetadata asMutable();
+    override fun asMutable(): MutableMavenModuleResolveMetadata?
 
-    @NonNull String getPackaging();
-    boolean isRelocated();
-    boolean isPomPackaging();
-    boolean isKnownJarPackaging();
-    @Nullable
-    String getSnapshotTimestamp();
+    @JvmField
+    val packaging: String
+    @JvmField
+    val isRelocated: Boolean
+    val isPomPackaging: Boolean
+    val isKnownJarPackaging: Boolean
+    @JvmField
+    val snapshotTimestamp: String?
 
-    ImmutableList<MavenDependencyDescriptor> getDependencies();
+    @JvmField
+    val dependencies: ImmutableList<MavenDependencyDescriptor>?
 }

@@ -13,56 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.transform
 
-package org.gradle.internal.component.resolution.failure.transform;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Action;
-import org.gradle.api.internal.artifacts.transform.Transform;
-import org.gradle.api.internal.artifacts.transform.TransformStep;
-import org.gradle.api.internal.artifacts.transform.TransformedVariant;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Collection;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Action
+import org.gradle.api.internal.artifacts.transform.TransformStep
+import org.gradle.api.internal.artifacts.transform.TransformedVariant
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.function.Consumer
 
 /**
- * This type is responsible for converting from heavyweight {@link TransformedVariant} instances to
- * lightweight {@link TransformationChainData} instances.
- * <p>
- * See the {@link org.gradle.internal.component.resolution.failure.transform package javadoc} for why.
+ * This type is responsible for converting from heavyweight [TransformedVariant] instances to
+ * lightweight [TransformationChainData] instances.
+ *
+ *
+ * See the [package javadoc][org.gradle.internal.component.resolution.failure.transform] for why.
  */
-@ServiceScope(Scope.Project.class)
-public final class TransformedVariantConverter {
-    public ImmutableList<TransformationChainData> convert(Collection<TransformedVariant> transformedVariants) {
-        ImmutableList.Builder<TransformationChainData> builder = ImmutableList.builder();
-        transformedVariants.forEach(transformedVariant -> builder.add(convert(transformedVariant)));
-        return builder.build();
+@ServiceScope(Scope.Project::class)
+class TransformedVariantConverter {
+    fun convert(transformedVariants: MutableCollection<TransformedVariant>): ImmutableList<TransformationChainData> {
+        val builder = ImmutableList.builder<TransformationChainData>()
+        transformedVariants.forEach(Consumer { transformedVariant: TransformedVariant? -> builder.add(convert(transformedVariant!!)) })
+        return builder.build()
     }
 
-    public TransformationChainData convert(TransformedVariant transformedVariant) {
-        TransformDataRecordingVisitor visitor = new TransformDataRecordingVisitor();
-        transformedVariant.getTransformChain().visitTransformSteps(visitor);
-        SourceVariantData source = new SourceVariantData(transformedVariant.getRoot().asDescribable().getDisplayName(), transformedVariant.getRoot().getAttributes());
-        return new TransformationChainData(source, visitor.getSteps(), transformedVariant.getAttributes());
+    fun convert(transformedVariant: TransformedVariant): TransformationChainData {
+        val visitor = TransformDataRecordingVisitor()
+        transformedVariant.getTransformChain().visitTransformSteps(visitor)
+        val source = SourceVariantData(transformedVariant.getRoot().asDescribable().getDisplayName(), transformedVariant.getRoot().getAttributes())
+        return TransformationChainData(source, visitor.getSteps(), transformedVariant.getAttributes())
     }
 
-    private static final class TransformDataRecordingVisitor implements Action<TransformStep> {
-        private final ImmutableList.Builder<TransformData> stepsBuilder = ImmutableList.builder();
+    private class TransformDataRecordingVisitor : Action<TransformStep> {
+        private val stepsBuilder = ImmutableList.builder<TransformData>()
 
-        @Override
-        public void execute(TransformStep transformStep) {
-            TransformData transformData = convert(transformStep);
-            stepsBuilder.add(transformData);
+        override fun execute(transformStep: TransformStep) {
+            val transformData = convert(transformStep)
+            stepsBuilder.add(transformData)
         }
 
-        public ImmutableList<TransformData> getSteps() {
-            return stepsBuilder.build();
+        fun getSteps(): ImmutableList<TransformData> {
+            return stepsBuilder.build()
         }
 
-        private TransformData convert(TransformStep step) {
-            Transform transform = step.getTransform();
-            return new TransformData(transform.getImplementationClass(), transform.getDisplayName(), transform.getFromAttributes(), transform.getToAttributes());
+        fun convert(step: TransformStep): TransformData {
+            val transform = step.getTransform()
+            return TransformData(transform.getImplementationClass(), transform.getDisplayName(), transform.getFromAttributes(), transform.getToAttributes())
         }
     }
 }

@@ -13,26 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import org.jspecify.annotations.NullMarked;
-
-import java.io.File;
+import org.jspecify.annotations.NullMarked
+import java.io.File
 
 /**
  * Thrown when a PGP signature file (.asc) cannot be parsed, e.g. when it contains
  * invalid armor or otherwise malformed PGP packets.
  */
 @NullMarked
-public class InvalidSignatureFileException extends RuntimeException {
-    private final File signatureFile;
-
-    public InvalidSignatureFileException(File signatureFile, Throwable cause) {
-        super("Could not read signatures from " + signatureFile + ": " + cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
-        this.signatureFile = signatureFile;
-    }
-
-    public File getSignatureFile() {
-        return signatureFile;
-    }
-}
+class InvalidSignatureFileException(val signatureFile: File, cause: Throwable) :
+    RuntimeException("Could not read signatures from " + signatureFile + ": " + cause.javaClass.getSimpleName() + ": " + cause.message, cause)

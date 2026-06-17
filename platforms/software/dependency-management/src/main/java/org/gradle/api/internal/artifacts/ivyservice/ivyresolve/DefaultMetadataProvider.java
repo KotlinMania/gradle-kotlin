@@ -82,7 +82,7 @@ class DefaultMetadataProvider implements MetadataProvider {
             metadata = transformThroughComponentMetadataRules(componentMetadataSupplier, metadata);
         } else if (resolve()) {
             @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = cachedResult.getMetaData().getLegacyMetadata();
+            ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
             metadata = new ComponentMetadataAdapter(legacyMetadata);
         }
         return metadata;
@@ -108,10 +108,10 @@ class DefaultMetadataProvider implements MetadataProvider {
     public IvyModuleDescriptor getIvyModuleDescriptor() {
         if (resolve()) {
             @SuppressWarnings("deprecation")
-            ExternalComponentResolveMetadata legacyMetadata = cachedResult.getMetaData().getLegacyMetadata();
+            ExternalComponentResolveMetadata legacyMetadata = cachedResult.metaData.getLegacyMetadata();
             if (legacyMetadata instanceof IvyModuleResolveMetadata) {
                 IvyModuleResolveMetadata ivyMetadata = (IvyModuleResolveMetadata) legacyMetadata;
-                return new DefaultIvyModuleDescriptor(ivyMetadata.getExtraAttributes(), ivyMetadata.getBranch(), ivyMetadata.getStatus());
+                return new DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status);
             }
         }
         return null;
@@ -121,12 +121,12 @@ class DefaultMetadataProvider implements MetadataProvider {
         if (cachedResult == null) {
             cachedResult = resolveState.resolve();
         }
-        return cachedResult.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+        return cachedResult.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
     }
 
     @Override
     public boolean isUsable() {
-        return cachedResult == null || cachedResult.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
+        return cachedResult == null || cachedResult.state == BuildableModuleComponentMetaDataResolveResult.State.Resolved;
     }
 
     public BuildableModuleComponentMetaDataResolveResult<?> getResult() {

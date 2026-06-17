@@ -13,78 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.caching
 
-package org.gradle.internal.resolve.caching;
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedModuleVersion
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource
+import org.gradle.cache.internal.InMemoryCacheController
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.snapshot.ValueSnapshotter
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.time.Duration
+import java.util.Optional
+import java.util.function.Function
+import java.util.function.Supplier
 
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ComponentMetadataContext;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ResolvedModuleVersion;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.ModuleDescriptorHashModuleSource;
-import org.gradle.cache.internal.InMemoryCacheController;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.snapshot.ValueSnapshotter;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-
-import java.time.Duration;
-
-@ServiceScope(Scope.Build.class)
-public class ComponentMetadataRuleExecutor extends CrossBuildCachingRuleExecutor<ModuleComponentResolveMetadata, ComponentMetadataContext, ModuleComponentResolveMetadata> {
-
-    private static final String CACHE_ID = "md-rule";
-
-    public static boolean isMetadataRuleExecutorCache(InMemoryCacheController controller) {
-        return CACHE_ID.equals(controller.getCacheId());
-    }
-
-    private static Transformer<Object, ModuleComponentResolveMetadata> getKeyToSnapshotableTransformer() {
-        return moduleMetadata -> moduleMetadata.getSources().withSource(ModuleDescriptorHashModuleSource.class, source -> {
-            return source.map(metadataFileSource -> metadataFileSource.getDescriptorHash().toString() + moduleMetadata.getVariantDerivationStrategy().getClass().getName())
-                .orElseThrow(() -> new RuntimeException("Cannot find original content hash"));
-        });
-    }
-
-    private final Serializer<ModuleComponentResolveMetadata> componentMetadataContextSerializer;
-
-    public ComponentMetadataRuleExecutor(
-            GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-            InMemoryCacheDecoratorFactory cacheDecoratorFactory,
-            ValueSnapshotter snapshotter,
-            BuildCommencedTimeProvider timeProvider,
-            Serializer<ModuleComponentResolveMetadata> componentMetadataContextSerializer) {
-        super(CACHE_ID, cacheBuilderFactory, cacheDecoratorFactory, snapshotter, timeProvider, createValidator(timeProvider), getKeyToSnapshotableTransformer(), componentMetadataContextSerializer);
-        this.componentMetadataContextSerializer = componentMetadataContextSerializer;
-    }
-
-    public Serializer<ModuleComponentResolveMetadata> getComponentMetadataContextSerializer() {
-        return componentMetadataContextSerializer;
-    }
-
-    private static EntryValidator<ModuleComponentResolveMetadata> createValidator(final BuildCommencedTimeProvider timeProvider) {
-        return (policy, entry) -> {
-            Duration age = Duration.ofMillis(timeProvider.getCurrentTime() - entry.getTimestamp());
-            final ModuleComponentResolveMetadata result = entry.getResult();
-            return !policy.moduleExpiry(new SimpleResolvedModuleVersion(result.getModuleVersionId()), age, result.isChanging()).isMustCheck();
-        };
-    }
-
-    private static class SimpleResolvedModuleVersion implements ResolvedModuleVersion {
-
-        private final ModuleVersionIdentifier identifier;
-
-        private SimpleResolvedModuleVersion(ModuleVersionIdentifier identifier) {
-            this.identifier = identifier;
-        }
-
-        @Override
-        public ModuleVersionIdentifier getId() {
-            return identifier;
+@ServiceScope(Scope.Build::class)
+class ComponentMetadataRuleExecutor(
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    cacheDecoratorFactory: InMemoryCacheDecoratorFactory?,
+    snapshotter: ValueSnapshotter?,
+    timeProvider: BuildCommencedTimeProvider,
+    @JvmField val componentMetadataContextSerializer: Serializer<ModuleComponentResolveMetadata?>?
+) : CrossBuildCachingRuleExecutor<ModuleComponentResolveMetadata?, ComponentMetadataContext?, ModuleComponentResolveMetadata?>(
+    CACHE_ID, cacheBuilderFactory, cacheDecoratorFactory, snapshotter, timeProvider, createValidator(timeProvider),
+    keyToSnapshotableTransformer,
+    componentMetadataContextSerializer
+) {
+    private class SimpleResolvedModuleVersion(private val identifier: ModuleVersionIdentifier) : ResolvedModuleVersion {
+        override fun getId(): ModuleVersionIdentifier {
+            return identifier
         }
     }
 
+    companion object {
+        private const val CACHE_ID = "md-rule"
+
+        @JvmStatic
+        fun isMetadataRuleExecutorCache(controller: InMemoryCacheController): Boolean {
+            return CACHE_ID == controller.getCacheId()
+        }
+
+        private val keyToSnapshotableTransformer: Transformer<Any?, ModuleComponentResolveMetadata?>
+            get() = Transformer { moduleMetadata: ModuleComponentResolveMetadata? ->
+                moduleMetadata!!.sources.withSource<ModuleDescriptorHashModuleSource?, String?>(
+                    ModuleDescriptorHashModuleSource::class.java,
+                    Function { source: Optional<ModuleDescriptorHashModuleSource?>? ->
+                        source!!.map<String?>(Function { metadataFileSource: ModuleDescriptorHashModuleSource? ->
+                            metadataFileSource!!.getDescriptorHash().toString() + moduleMetadata.getVariantDerivationStrategy().javaClass.getName()
+                        })
+                            .orElseThrow<RuntimeException?>(Supplier { RuntimeException("Cannot find original content hash") })
+                    })
+            }
+
+        private fun createValidator(timeProvider: BuildCommencedTimeProvider): EntryValidator<ModuleComponentResolveMetadata> {
+            return EntryValidator { policy: CacheExpirationControl?, entry: CachedEntry<ModuleComponentResolveMetadata>? ->
+                val age = Duration.ofMillis(timeProvider.getCurrentTime() - entry!!.getTimestamp())
+                val result = entry.getResult()
+                !policy!!.moduleExpiry(SimpleResolvedModuleVersion(result.getModuleVersionId()), age, result.isChanging()).isMustCheck()
+            }
+        }
+    }
 }

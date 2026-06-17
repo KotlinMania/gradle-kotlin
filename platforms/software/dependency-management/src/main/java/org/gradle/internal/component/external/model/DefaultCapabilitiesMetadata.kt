@@ -13,30 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.api.capabilities.CapabilitiesMetadata;
-import org.gradle.api.capabilities.Capability;
-
-import java.util.List;
+import org.gradle.api.capabilities.CapabilitiesMetadata
+import org.gradle.api.capabilities.Capability
 
 /**
- * An immutable implementation of {@link CapabilitiesMetadata}.
+ * An immutable implementation of [CapabilitiesMetadata].
  *
- * <p>If possible, use {@link ImmutableCapabilities} instead of this type. This type
- * should only be used when interfacing with the public API.</p>
+ *
+ * If possible, use [ImmutableCapabilities] instead of this type. This type
+ * should only be used when interfacing with the public API.
  */
-public class DefaultCapabilitiesMetadata implements CapabilitiesMetadata {
-
-    private final ImmutableCapabilities capabilities;
-
-    public DefaultCapabilitiesMetadata(ImmutableCapabilities capabilities) {
-        this.capabilities = capabilities;
-    }
-
-    @Override
-    public List<? extends Capability> getCapabilities() {
-        return capabilities.asSet().asList();
+class DefaultCapabilitiesMetadata(private val capabilities: ImmutableCapabilities) : CapabilitiesMetadata {
+    override fun getCapabilities(): MutableList<out Capability?> {
+        return capabilities.asSet().asList()
     }
 }

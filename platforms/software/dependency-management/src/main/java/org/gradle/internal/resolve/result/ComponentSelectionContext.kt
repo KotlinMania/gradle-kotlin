@@ -13,61 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector;
-import org.gradle.api.internal.artifacts.repositories.ArtifactResolutionDetails;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.gradle.internal.resolve.RejectedByAttributesVersion;
-import org.gradle.internal.resolve.RejectedByRuleVersion;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import org.gradle.internal.resolve.RejectedByAttributesVersion
+import org.gradle.internal.resolve.RejectedByRuleVersion
 
 /**
  * The result of resolving some dynamic version selector to a particular component id.
  */
-public interface ComponentSelectionContext {
-
+interface ComponentSelectionContext {
     /**
      * Marks the given module component identifier as matching.
      *
      * @param moduleComponentIdentifier Chosen module component identifier
      */
-    void matches(ModuleComponentIdentifier moduleComponentIdentifier);
+    fun matches(moduleComponentIdentifier: ModuleComponentIdentifier?)
 
-    void failed(ModuleVersionResolveException failure);
+    fun failed(failure: ModuleVersionResolveException?)
 
     /**
      * Registers that there was no matching module component identifier.
      */
-    void noMatchFound();
+    fun noMatchFound()
 
     /**
      * Adds a candidate version that did not match the provided selector.
      */
-    void notMatched(ModuleComponentIdentifier id, VersionSelector requestedVersionMatcher);
+    fun notMatched(id: ModuleComponentIdentifier?, requestedVersionMatcher: VersionSelector?)
 
     /**
      * Adds a candidate version that matched the provided selector, but was rejected by some rule.
      */
-    void rejectedByRule(RejectedByRuleVersion id);
+    fun rejectedByRule(id: RejectedByRuleVersion?)
 
     /**
      * Adds a candidate version that matched the provided selector, but was rejected by some constraint.
      */
-    void rejectedBySelector(ModuleComponentIdentifier id, VersionSelector versionSelector);
+    fun rejectedBySelector(id: ModuleComponentIdentifier?, versionSelector: VersionSelector?)
 
     /**
      * Adds a candidate that matched the provided selector, but was rejected because it didn't match the consumer attributes.
      * @param rejectedVersion a version rejected by attribute matching
      */
-    void doesNotMatchConsumerAttributes(RejectedByAttributesVersion rejectedVersion);
+    fun doesNotMatchConsumerAttributes(rejectedVersion: RejectedByAttributesVersion?)
 
     /**
      * Returns the repository content filter, if any.
      */
-    @Nullable
-    Action<? super ArtifactResolutionDetails> getContentFilter();
+    @JvmField
+    val contentFilter: Action<in ArtifactResolutionDetails?>?
 }

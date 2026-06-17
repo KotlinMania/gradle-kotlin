@@ -13,43 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.interfaces
 
-package org.gradle.internal.component.resolution.failure.interfaces;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
  * Represents a failure selecting an artifact variant for a selected graph variant
- * during the {@link org.gradle.internal.component.resolution.failure.interfaces Artifact Selection} part of dependency resolution.
- * <p>
+ * during the [Artifact Selection][org.gradle.internal.component.resolution.failure.interfaces] part of dependency resolution.
+ *
+ *
  * When this failure occurs, we have always selected a component and a graph variant,
  * we are now attempting to select an artifact using a possibly different set of
- * attributes from those used during {@link org.gradle.internal.component.resolution.failure.interfaces Variant Selection}
+ * attributes from those used during [Variant Selection][org.gradle.internal.component.resolution.failure.interfaces]
  * to select the graph variant.
  */
-public interface ArtifactSelectionFailure extends ResolutionFailure {
+interface ArtifactSelectionFailure : ResolutionFailure {
     /**
      * Gets the identifier of the component for which an artifact variant could not be selected.
      *
      * @return identifier for the component for which an artifact variant could not be selected
      */
-    ComponentIdentifier getTargetComponent();
+    fun getTargetComponent(): ComponentIdentifier?
 
     /**
      * Gets the name of the variant for which an artifact could not be selected.
      *
      * @return name of the variant for which an artifact could not be selected
      */
-    String getTargetVariant();
+    fun getTargetVariant(): String?
 
     /**
      * Gets the attributes that were used to attempt to select an artifact.
-     * <p>
+     *
+     *
      * This is the combination of originally requested attributes during graph selection and any potential attribute modifications
-     * performed by an {@link org.gradle.api.artifacts.ArtifactView ArtifactView} that is being used to select an artifact.
+     * performed by an [ArtifactView][org.gradle.api.artifacts.ArtifactView] that is being used to select an artifact.
      *
      * @return the attributes that were used to attempt to select an artifact for this variant
      */
-    ImmutableAttributes getRequestedAttributes();
+    fun getRequestedAttributes(): ImmutableAttributes?
 }

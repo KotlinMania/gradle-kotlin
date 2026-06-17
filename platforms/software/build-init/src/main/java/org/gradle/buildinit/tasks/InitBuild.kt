@@ -230,7 +230,7 @@ abstract class InitBuild : DefaultTask() {
         if (userInterrupted) {
             throw BuildCancelledException()
         }
-        getLogger().lifecycle("Generate '{}'", config.getBuildSpec().getDisplayName())
+        getLogger().lifecycle("Generate '{}'", config.buildSpec.getDisplayName())
         val projectDirectory = this.projectDirectory.get()
         generator.generate(config, projectDirectory)
         generateWrapper(projectDirectory)
@@ -261,7 +261,7 @@ abstract class InitBuild : DefaultTask() {
     }
 
     private fun createGenerator(config: BuildInitConfig): BuildInitGenerator {
-        val generator = this.buildInitSpecRegistry.getGeneratorForSpec(config.getBuildSpec())
+        val generator = this.buildInitSpecRegistry.getGeneratorForSpec(config.buildSpec)
         return this.objectFactory.newInstance(generator)
     }
 

@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.jspecify.annotations.Nullable;
+import java.util.regex.Pattern
 
-import java.util.regex.Pattern;
+internal object AliasNormalizer {
+    private val SEPARATOR: Pattern = Pattern.compile("[_.-]")
 
-abstract class AliasNormalizer {
-    private final static Pattern SEPARATOR = Pattern.compile("[_.-]");
-
-    @Nullable
-    static String normalize(@Nullable String name) {
+    fun normalize(name: String?): String? {
         if (name == null) {
-            return null;
+            return null
         }
-        return SEPARATOR.matcher(name).replaceAll(".");
+        return SEPARATOR.matcher(name).replaceAll(".")
     }
 }

@@ -13,71 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.external.model.VirtualComponentIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.external.model.VirtualComponentIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveMetadata
 
 /**
- * Implementation of {@link ComponentGraphResolveMetadata} for local components.
+ * Implementation of [ComponentGraphResolveMetadata] for local components.
  */
-public final class LocalComponentGraphResolveMetadata implements ComponentGraphResolveMetadata {
+class LocalComponentGraphResolveMetadata(
+    moduleVersionId: ModuleVersionIdentifier,
+    componentId: ComponentIdentifier,
+    status: String,
+    attributesSchema: ImmutableAttributesSchema
+) : ComponentGraphResolveMetadata {
+    private val componentId: ComponentIdentifier
+    private val moduleVersionId: ModuleVersionIdentifier
+    private val status: String
+    private val attributesSchema: ImmutableAttributesSchema
 
-    private final ComponentIdentifier componentId;
-    private final ModuleVersionIdentifier moduleVersionId;
-    private final String status;
-    private final ImmutableAttributesSchema attributesSchema;
-
-    public LocalComponentGraphResolveMetadata(
-        ModuleVersionIdentifier moduleVersionId,
-        ComponentIdentifier componentId,
-        String status,
-        ImmutableAttributesSchema attributesSchema
-    ) {
-        this.moduleVersionId = moduleVersionId;
-        this.componentId = componentId;
-        this.status = status;
-        this.attributesSchema = attributesSchema;
+    init {
+        this.moduleVersionId = moduleVersionId
+        this.componentId = componentId
+        this.status = status
+        this.attributesSchema = attributesSchema
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        return componentId;
+    override fun getId(): ComponentIdentifier {
+        return componentId
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        return moduleVersionId;
+    override fun getModuleVersionId(): ModuleVersionIdentifier {
+        return moduleVersionId
     }
 
-    @Override
-    public String toString() {
-        return componentId.getDisplayName();
+    override fun toString(): String {
+        return componentId.getDisplayName()
     }
 
-    @Override
-    public boolean isChanging() {
-        return false;
+    override fun isChanging(): Boolean {
+        return false
     }
 
-    @Override
-    public String getStatus() {
-        return status;
+    override fun getStatus(): String {
+        return status
     }
 
-    @Override
-    public ImmutableList<? extends VirtualComponentIdentifier> getPlatformOwners() {
-        return ImmutableList.of();
+    override fun getPlatformOwners(): ImmutableList<out VirtualComponentIdentifier> {
+        return ImmutableList.of<VirtualComponentIdentifier>()
     }
 
-    @Override
-    public ImmutableAttributesSchema getAttributesSchema() {
-        return attributesSchema;
+    override fun getAttributesSchema(): ImmutableAttributesSchema {
+        return attributesSchema
     }
-
 }

@@ -52,12 +52,12 @@ class IvyModuleResolveMetaDataBuilder {
             throw new IllegalArgumentException("Artifact should be attached to at least one configuration.");
         }
         Artifact artifact = findOrCreate(newArtifact);
-        artifact.getConfigurations().addAll(configurations);
+        artifact.configurations.addAll(configurations);
     }
 
     private Artifact findOrCreate(IvyArtifactName artifactName) {
         for (Artifact existingArtifact : artifacts) {
-            if (existingArtifact.getArtifactName().equals(artifactName)) {
+            if (existingArtifact.artifactName.equals(artifactName)) {
                 return existingArtifact;
             }
         }
@@ -80,7 +80,7 @@ class IvyModuleResolveMetaDataBuilder {
         MutableIvyModuleResolveMetadata metadata = metadataFactory.create(cid, dependencies, configurations, artifacts, excludes);
         metadata.setStatus(ivyDescriptor.getStatus());
         metadata.setExtraAttributes(extraAttributes);
-        metadata.setBranch(ivyDescriptor.getModuleRevisionId().getBranch());
+        metadata.branch = ivyDescriptor.getModuleRevisionId().getBranch();
         return metadata;
     }
 }

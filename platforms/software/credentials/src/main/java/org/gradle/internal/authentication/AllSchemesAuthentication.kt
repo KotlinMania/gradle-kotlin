@@ -13,28 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
-
-import org.gradle.api.credentials.Credentials;
-import org.gradle.authentication.Authentication;
+import org.gradle.api.credentials.Credentials
+import org.gradle.authentication.Authentication
 
 /**
  * Authentication scheme representing all supported schemes for a given protocol
  */
-public class AllSchemesAuthentication extends AbstractAuthentication {
-    public AllSchemesAuthentication(Credentials credentials) {
-        super("all", Authentication.class);
-        this.setCredentials(credentials);
+class AllSchemesAuthentication(credentials: Credentials?) : AbstractAuthentication("all", Authentication::class.java) {
+    init {
+        this.setCredentials(credentials)
     }
 
-    @Override
-    public boolean supports(Credentials credentials) {
-        return true;
+    override fun supports(credentials: Credentials?): Boolean {
+        return true
     }
 
-    @Override
-    public boolean requiresCredentials() {
-        return true;
+    override fun requiresCredentials(): Boolean {
+        return true
     }
 }

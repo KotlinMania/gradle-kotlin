@@ -13,110 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.external.model.ExternalModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.GraphVariantSelector;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.internal.component.external.model.ExternalModuleDependencyMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ConfigurationMetadata
+import org.gradle.internal.component.model.GraphVariantSelector
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.VariantGraphResolveState
 
 /**
  * Represents a dependency declared in an Ivy descriptor file.
- * <p>
+ *
+ *
  * This dependency metadata is bound to a source configuration, since Ivy resolves
  * target components differently based on the configuration that they are sourced from.
- * </p>
+ *
  */
-public class IvyDependencyMetadata extends ExternalModuleDependencyMetadata {
+class IvyDependencyMetadata private constructor(
+    private val configuration: ConfigurationMetadata,
+    @JvmField val dependencyDescriptor: IvyDependencyDescriptor,
+    reason: String?,
+    endorsing: Boolean,
+    artifacts: ImmutableList<IvyArtifactName>
+) : ExternalModuleDependencyMetadata(reason, endorsing, artifacts) {
+    @JvmOverloads
+    constructor(configuration: ConfigurationMetadata, dependencyDescriptor: IvyDependencyDescriptor, reason: String? = null, endorsing: Boolean = false) : this(
+        configuration,
+        dependencyDescriptor,
+        reason,
+        endorsing,
+        dependencyDescriptor.getConfigurationArtifacts(configuration)
+    )
 
-    private final ConfigurationMetadata configuration;
-    private final IvyDependencyDescriptor dependencyDescriptor;
-
-    public IvyDependencyMetadata(ConfigurationMetadata configuration, IvyDependencyDescriptor dependencyDescriptor) {
-        this(configuration, dependencyDescriptor, null, false);
-    }
-
-    public IvyDependencyMetadata(ConfigurationMetadata configuration, IvyDependencyDescriptor dependencyDescriptor, @Nullable String reason, boolean endorsing) {
-        this(configuration, dependencyDescriptor, reason, endorsing, dependencyDescriptor.getConfigurationArtifacts(configuration));
-    }
-
-    private IvyDependencyMetadata(ConfigurationMetadata configuration, IvyDependencyDescriptor dependencyDescriptor, @Nullable String reason, boolean endorsing, ImmutableList<IvyArtifactName> artifacts) {
-        super(reason, endorsing, artifacts);
-        this.configuration = configuration;
-        this.dependencyDescriptor = dependencyDescriptor;
-    }
-
-    @Override
-    public IvyDependencyDescriptor getDependencyDescriptor() {
-        return dependencyDescriptor;
-    }
-
-    @Override
-    public List<? extends VariantGraphResolveState> selectLegacyVariants(
-        GraphVariantSelector variantSelector,
-        ImmutableAttributes consumerAttributes,
-        ComponentGraphResolveState targetComponentState,
-        ImmutableAttributesSchema consumerSchema
-    ) {
+    override fun selectLegacyVariants(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState> {
         // We only want to use ivy's configuration selection mechanism when an ivy component is selecting
         // configurations from another ivy component.
-        if (targetComponentState instanceof IvyComponentGraphResolveState) {
-            IvyComponentGraphResolveState ivyComponent = (IvyComponentGraphResolveState) targetComponentState;
-            return getDependencyDescriptor().selectLegacyConfigurations(configuration, ivyComponent, variantSelector.getFailureHandler());
+        if (targetComponentState is IvyComponentGraphResolveState) {
+            val ivyComponent = targetComponentState
+            return dependencyDescriptor.selectLegacyConfigurations(configuration, ivyComponent, variantSelector.failureHandler)
         }
 
         // We have already verified that the target component does not support attribute matching,
         // so if it is not an ivy component, use the standard legacy selection mechanism.
-        VariantGraphResolveState selected = variantSelector.selectLegacyVariant(consumerAttributes, targetComponentState, consumerSchema, variantSelector.getFailureHandler());
-        return Collections.singletonList(selected);
+        val selected = variantSelector.selectLegacyVariant(consumerAttributes, targetComponentState, consumerSchema, variantSelector.failureHandler)
+        return mutableListOf<VariantGraphResolveState>(selected)
     }
 
-    @Override
-    public ImmutableList<ExcludeMetadata> getExcludes() {
-        return getDependencyDescriptor().getConfigurationExcludes(configuration.getHierarchy());
+    val excludes: ImmutableList<ExcludeMetadata>
+        get() = dependencyDescriptor.getConfigurationExcludes(configuration.hierarchy)
+
+    override fun withReason(reason: String): ModuleDependencyMetadata {
+        return IvyDependencyMetadata(configuration, dependencyDescriptor, reason, isEndorsingStrictVersions, artifacts)
     }
 
-    @Override
-    public ModuleDependencyMetadata withReason(String reason) {
-        return new IvyDependencyMetadata(configuration, dependencyDescriptor, reason, isEndorsingStrictVersions(), getArtifacts());
+    override fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata {
+        return IvyDependencyMetadata(configuration, dependencyDescriptor, reason, endorse, artifacts)
     }
 
-    @Override
-    public ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse) {
-        return new IvyDependencyMetadata(configuration, dependencyDescriptor, getReason(), endorse, getArtifacts());
+    override fun withRequested(newSelector: ModuleComponentSelector): ModuleDependencyMetadata {
+        val newDescriptor = dependencyDescriptor.withRequested(newSelector)
+        return IvyDependencyMetadata(configuration, newDescriptor, reason, isEndorsingStrictVersions, artifacts)
     }
 
-    @Override
-    protected ModuleDependencyMetadata withRequested(ModuleComponentSelector newSelector) {
-        IvyDependencyDescriptor newDescriptor = dependencyDescriptor.withRequested(newSelector);
-        return new IvyDependencyMetadata(configuration, newDescriptor, getReason(), isEndorsingStrictVersions(), getArtifacts());
+    override fun withArtifacts(newArtifacts: ImmutableList<IvyArtifactName>): ModuleDependencyMetadata {
+        return IvyDependencyMetadata(configuration, dependencyDescriptor, reason, isEndorsingStrictVersions, newArtifacts)
     }
 
-    @Override
-    protected ModuleDependencyMetadata withArtifacts(ImmutableList<IvyArtifactName> newArtifacts) {
-        return new IvyDependencyMetadata(configuration, dependencyDescriptor, getReason(), isEndorsingStrictVersions(), newArtifacts);
+    override fun withRequestedAndArtifacts(newSelector: ModuleComponentSelector, newArtifacts: ImmutableList<IvyArtifactName>): ModuleDependencyMetadata {
+        val newDelegate = dependencyDescriptor.withRequested(newSelector)
+        return IvyDependencyMetadata(configuration, newDelegate, reason, isEndorsingStrictVersions, newArtifacts)
     }
 
-    @Override
-    protected ModuleDependencyMetadata withRequestedAndArtifacts(ModuleComponentSelector newSelector, ImmutableList<IvyArtifactName> newArtifacts) {
-        IvyDependencyDescriptor newDelegate = dependencyDescriptor.withRequested(newSelector);
-        return new IvyDependencyMetadata(configuration, newDelegate, getReason(), isEndorsingStrictVersions(), newArtifacts);
-    }
-
-    public ModuleDependencyMetadata withDescriptor(IvyDependencyDescriptor descriptor) {
-        return new IvyDependencyMetadata(configuration, descriptor, getReason(), isEndorsingStrictVersions(), dependencyDescriptor.getConfigurationArtifacts(configuration));
+    fun withDescriptor(descriptor: IvyDependencyDescriptor): ModuleDependencyMetadata {
+        return IvyDependencyMetadata(configuration, descriptor, reason, isEndorsingStrictVersions, dependencyDescriptor.getConfigurationArtifacts(configuration))
     }
 }

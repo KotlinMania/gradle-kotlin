@@ -13,68 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+import org.gradle.internal.component.model.VariantResolveMetadata
 
 /**
  * An _immutable_ view of the variant of a component.
  *
  * TODO - this should replace or merge into VariantResolveMetadata, OutgoingVariant, ConfigurationMetadata
  */
-public interface ComponentVariant extends VariantResolveMetadata {
-    ImmutableList<? extends Dependency> getDependencies();
+interface ComponentVariant : VariantResolveMetadata {
+    @JvmField
+    val dependencies: ImmutableList<out Dependency?>?
 
-    ImmutableList<? extends DependencyConstraint> getDependencyConstraints();
+    @JvmField
+    val dependencyConstraints: ImmutableList<out DependencyConstraint?>?
 
-    ImmutableList<? extends File> getFiles();
+    @JvmField
+    val files: ImmutableList<out File?>?
 
     interface Dependency {
-        String getGroup();
+        @JvmField
+        val group: String?
 
-        String getModule();
+        @JvmField
+        val module: String?
 
-        VersionConstraint getVersionConstraint();
+        @JvmField
+        val versionConstraint: VersionConstraint?
 
-        ImmutableList<ExcludeMetadata> getExcludes();
+        @JvmField
+        val excludes: ImmutableList<ExcludeMetadata?>?
 
-        String getReason();
+        @JvmField
+        val reason: String?
 
-        ImmutableAttributes getAttributes();
+        @JvmField
+        val attributes: ImmutableAttributes?
 
-        Set<CapabilitySelector> getCapabilitySelectors();
+        @JvmField
+        val capabilitySelectors: MutableSet<CapabilitySelector?>?
 
-        boolean isEndorsingStrictVersions();
+        @JvmField
+        val isEndorsingStrictVersions: Boolean
 
-        @Nullable
-        IvyArtifactName getDependencyArtifact();
+        @JvmField
+        val dependencyArtifact: IvyArtifactName?
     }
 
     interface DependencyConstraint {
-        String getGroup();
+        @JvmField
+        val group: String?
 
-        String getModule();
+        @JvmField
+        val module: String?
 
-        VersionConstraint getVersionConstraint();
+        @JvmField
+        val versionConstraint: VersionConstraint?
 
-        String getReason();
+        @JvmField
+        val reason: String?
 
-        ImmutableAttributes getAttributes();
+        @JvmField
+        val attributes: ImmutableAttributes?
     }
 
     interface File {
-        String getName();
+        @JvmField
+        val name: String?
 
-        String getUri();
+        @JvmField
+        val uri: String?
     }
 }

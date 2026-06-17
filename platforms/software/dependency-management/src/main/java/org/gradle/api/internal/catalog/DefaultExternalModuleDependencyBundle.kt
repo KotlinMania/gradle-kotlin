@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.catalog
 
-package org.gradle.api.internal.catalog;
-
-import org.gradle.api.artifacts.ExternalModuleDependencyBundle;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-
-import java.util.ArrayList;
+import org.gradle.api.artifacts.ExternalModuleDependencyBundle
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
 
 /**
- * Default implementation of {@link ExternalModuleDependencyBundle}.
+ * Default implementation of [ExternalModuleDependencyBundle].
  */
-public class DefaultExternalModuleDependencyBundle extends ArrayList<MinimalExternalModuleDependency> implements ExternalModuleDependencyBundle {
-}
+class DefaultExternalModuleDependencyBundle : ArrayList<MinimalExternalModuleDependency?>(), ExternalModuleDependencyBundle

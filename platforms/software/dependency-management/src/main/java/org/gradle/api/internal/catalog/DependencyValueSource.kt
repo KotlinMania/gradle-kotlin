@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ValueSource;
-import org.gradle.api.provider.ValueSourceParameters;
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
 
-public abstract class DependencyValueSource implements ValueSource<DependencyModel, DependencyValueSource.Params> {
-
-    interface Params extends ValueSourceParameters {
-        Property<DependencyModel> getDependencyData();
+abstract class DependencyValueSource : ValueSource<DependencyModel, DependencyValueSource.Params> {
+    internal interface Params : ValueSourceParameters {
+        val dependencyData: Property<DependencyModel>?
     }
 
-    @Override
-    public DependencyModel obtain() {
-        return getParameters().getDependencyData().get();
+    override fun obtain(): DependencyModel {
+        return getParameters().dependencyData.get()
     }
 }

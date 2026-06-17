@@ -13,40 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-
-public class BundleModel extends AbstractContextAwareModel {
-    private final List<String> components;
-
-    public BundleModel(List<String> components, @Nullable String context) {
-        super(context);
-        this.components = components;
-    }
-
-    public List<String> getComponents() {
-        return components;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+class BundleModel(val components: MutableList<String>, context: String?) : AbstractContextAwareModel(context) {
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        BundleModel that = (BundleModel) o;
+        val that = o as BundleModel
 
-        return components.equals(that.components);
+        return components == that.components
     }
 
-    @Override
-    public int hashCode() {
-        return components.hashCode();
+    override fun hashCode(): Int {
+        return components.hashCode()
     }
 }

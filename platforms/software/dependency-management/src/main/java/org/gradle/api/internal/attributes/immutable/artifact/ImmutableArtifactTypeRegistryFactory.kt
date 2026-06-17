@@ -13,44 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.immutable.artifact
 
-package org.gradle.api.internal.attributes.immutable.artifact;
-
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryInterner;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryInterner
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Creates and interns {@link ImmutableArtifactTypeRegistry} instances
- * from {@link ArtifactTypeRegistry} instances.
+ * Creates and interns [ImmutableArtifactTypeRegistry] instances
+ * from [ArtifactTypeRegistry] instances.
  */
-@ServiceScope(Scope.BuildSession.class)
-public class ImmutableArtifactTypeRegistryFactory {
+@ServiceScope(Scope.BuildSession::class)
+class ImmutableArtifactTypeRegistryFactory(
+    cacheFactory: InMemoryCacheFactory,
+    private val attributesFactory: AttributesFactory
+) {
+    private val registries: InMemoryInterner<ImmutableArtifactTypeRegistry>
 
-    private final AttributesFactory attributesFactory;
-    private final InMemoryInterner<ImmutableArtifactTypeRegistry> registries;
-
-    public ImmutableArtifactTypeRegistryFactory(
-        InMemoryCacheFactory cacheFactory,
-        AttributesFactory attributesFactory
-    ) {
-        this.attributesFactory = attributesFactory;
-        this.registries = cacheFactory.createInterner();
+    init {
+        this.registries = cacheFactory.createInterner<ImmutableArtifactTypeRegistry>()
     }
 
-    public ImmutableArtifactTypeRegistry create(ArtifactTypeRegistry registry) {
-        ImmutableMap<String, ImmutableAttributes> artifactTypeMappings = registry.getArtifactTypeMappings();
+    fun create(registry: ArtifactTypeRegistry): ImmutableArtifactTypeRegistry {
+        val artifactTypeMappings = registry.getArtifactTypeMappings()
 
-        return registries.intern(new ImmutableArtifactTypeRegistry(
-            attributesFactory,
-            artifactTypeMappings,
-            registry.getDefaultArtifactAttributes().asImmutable()
-        ));
+        return registries.intern(
+            ImmutableArtifactTypeRegistry(
+                attributesFactory,
+                artifactTypeMappings,
+                registry.getDefaultArtifactAttributes().asImmutable()
+            )
+        )
     }
-
 }

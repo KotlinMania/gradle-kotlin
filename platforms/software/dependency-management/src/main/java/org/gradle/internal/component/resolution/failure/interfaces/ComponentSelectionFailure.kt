@@ -13,26 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.interfaces
 
-package org.gradle.internal.component.resolution.failure.interfaces;
-
-import org.gradle.api.artifacts.component.ComponentSelector;
+import org.gradle.api.artifacts.component.ComponentSelector
 
 /**
  * Represents a failure selecting a component when building the graph
- * during the {@link org.gradle.internal.component.resolution.failure.interfaces Component Selection} part of dependency resolution.
- * <p>
+ * during the [Component Selection][org.gradle.internal.component.resolution.failure.interfaces] part of dependency resolution.
+ *
+ *
  * When this failure occurs, we have only a component selector, and no component, as the
  * selection did not succeed.
- * <p>
+ *
+ *
  * These failures are typically caused by a missing component that does not
  * exist either locally or in any of the searched repositories.
  */
-public interface ComponentSelectionFailure extends ResolutionFailure {
+interface ComponentSelectionFailure : ResolutionFailure {
     /**
      * Gets the component selector that failed to select.
      *
      * @return component selector that failed to select
      */
-    ComponentSelector getSelector();
+    fun getSelector(): ComponentSelector?
 }

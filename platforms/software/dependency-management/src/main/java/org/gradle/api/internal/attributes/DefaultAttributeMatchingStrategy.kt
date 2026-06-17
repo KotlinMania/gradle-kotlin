@@ -13,46 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-import org.gradle.api.attributes.AttributeMatchingStrategy;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.isolation.IsolatableFactory;
+import org.gradle.api.attributes.AttributeMatchingStrategy
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.isolation.IsolatableFactory
 
-import java.util.Comparator;
+class DefaultAttributeMatchingStrategy<T>(instantiatorFactory: InstantiatorFactory, isolatableFactory: IsolatableFactory) : AttributeMatchingStrategy<T?> {
+    private val compatibilityRules: DefaultCompatibilityRuleChain<T?>
+    private val disambiguationRules: DefaultDisambiguationRuleChain<T?>
 
-public class DefaultAttributeMatchingStrategy<T> implements AttributeMatchingStrategy<T> {
-    private final DefaultCompatibilityRuleChain<T> compatibilityRules;
-    private final DefaultDisambiguationRuleChain<T> disambiguationRules;
-
-    @SuppressWarnings("unchecked")
-    public DefaultAttributeMatchingStrategy(InstantiatorFactory instantiatorFactory, IsolatableFactory isolatableFactory) {
-        compatibilityRules = instantiatorFactory.decorateLenient().newInstance(DefaultCompatibilityRuleChain.class, instantiatorFactory.inject(), isolatableFactory);
-        disambiguationRules = instantiatorFactory.decorateLenient().newInstance(DefaultDisambiguationRuleChain.class, instantiatorFactory.inject(), isolatableFactory);
+    init {
+        compatibilityRules =
+            instantiatorFactory.decorateLenient().newInstance<DefaultCompatibilityRuleChain<*>>(DefaultCompatibilityRuleChain::class.java, instantiatorFactory.inject(), isolatableFactory)
+        disambiguationRules =
+            instantiatorFactory.decorateLenient().newInstance<DefaultDisambiguationRuleChain<*>>(DefaultDisambiguationRuleChain::class.java, instantiatorFactory.inject(), isolatableFactory)
     }
 
-    @Override
-    public DefaultCompatibilityRuleChain<T> getCompatibilityRules() {
-        return compatibilityRules;
+    override fun getCompatibilityRules(): DefaultCompatibilityRuleChain<T?> {
+        return compatibilityRules
     }
 
-    @Override
-    public DefaultDisambiguationRuleChain<T> getDisambiguationRules() {
-        return disambiguationRules;
+    override fun getDisambiguationRules(): DefaultDisambiguationRuleChain<T?> {
+        return disambiguationRules
     }
 
-    @Override
-    public void ordered(Comparator<T> comparator) {
-        ordered(true, comparator);
+    override fun ordered(comparator: Comparator<T?>) {
+        ordered(true, comparator)
     }
 
-    @Override
-    public void ordered(boolean pickLast, Comparator<T> comparator) {
-        compatibilityRules.ordered(comparator);
+    override fun ordered(pickLast: Boolean, comparator: Comparator<T?>) {
+        compatibilityRules.ordered(comparator)
         if (pickLast) {
-            disambiguationRules.pickLast(comparator);
+            disambiguationRules.pickLast(comparator)
         } else {
-            disambiguationRules.pickFirst(comparator);
+            disambiguationRules.pickFirst(comparator)
         }
     }
 }

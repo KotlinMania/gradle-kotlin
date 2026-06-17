@@ -13,30 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
 
 /**
- * A specialization of {@link AbstractArtifactSelectionFailure} that represents the situation when multiple artifact variants are
+ * A specialization of [AbstractArtifactSelectionFailure] that represents the situation when multiple artifact variants are
  * available that would satisfy an artifact selection request.
  */
-public final class AmbiguousArtifactsFailure extends AbstractArtifactSelectionFailure {
-    private final ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> candidates;
+class AmbiguousArtifactsFailure(
+    targetComponent: ComponentIdentifier,
+    targetVariant: String,
+    requestedAttributes: AttributeContainerInternal,
+    candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>
+) : AbstractArtifactSelectionFailure(ResolutionFailureProblemId.AMBIGUOUS_ARTIFACTS, targetComponent, targetVariant, requestedAttributes) {
+    private val candidates: ImmutableList<ResolutionCandidateAssessor.AssessedCandidate>
 
-    public AmbiguousArtifactsFailure(ComponentIdentifier targetComponent, String targetVariant, AttributeContainerInternal requestedAttributes, List<ResolutionCandidateAssessor.AssessedCandidate> candidates) {
-        super(ResolutionFailureProblemId.AMBIGUOUS_ARTIFACTS, targetComponent, targetVariant, requestedAttributes);
-        this.candidates = ImmutableList.copyOf(candidates);
+    init {
+        this.candidates = ImmutableList.copyOf<ResolutionCandidateAssessor.AssessedCandidate>(candidates)
     }
 
-    public ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> getCandidates() {
-        return candidates;
+    fun getCandidates(): ImmutableList<ResolutionCandidateAssessor.AssessedCandidate> {
+        return candidates
     }
 }

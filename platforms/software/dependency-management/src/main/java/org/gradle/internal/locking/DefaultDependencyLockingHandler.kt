@@ -13,64 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.artifacts.dsl.DependencyLockingHandler
+import org.gradle.api.artifacts.dsl.LockMode
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import java.util.function.Supplier
 
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.dsl.DependencyLockingHandler;
-import org.gradle.api.artifacts.dsl.LockMode;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.Property;
-
-import java.util.function.Supplier;
-
-public class DefaultDependencyLockingHandler implements DependencyLockingHandler {
-
-    private final Supplier<ConfigurationContainer> configurationContainer;
-    private final DependencyLockingProvider dependencyLockingProvider;
-
-    private ConfigurationContainer configurations;
-
-    public DefaultDependencyLockingHandler(Supplier<ConfigurationContainer> configurationContainer, DependencyLockingProvider dependencyLockingProvider) {
-        this.configurationContainer = configurationContainer;
-        this.dependencyLockingProvider = dependencyLockingProvider;
-    }
-
-    private ConfigurationContainer getConfigurations() {
-        if (configurations == null) {
-            configurations = configurationContainer.get();
+class DefaultDependencyLockingHandler(private val configurationContainer: Supplier<ConfigurationContainer>, private val dependencyLockingProvider: DependencyLockingProvider) :
+    DependencyLockingHandler {
+    private var configurations: ConfigurationContainer? = null
+        get() {
+            if (field == null) {
+                field = configurationContainer.get()
+            }
+            return field
         }
-        return configurations;
+
+    override fun lockAllConfigurations() {
+        this.configurations!!.configureEach(Action { configuration: Configuration? -> configuration!!.getResolutionStrategy().activateDependencyLocking() }
+        )
     }
 
-    @Override
-    public void lockAllConfigurations() {
-        getConfigurations().configureEach(configuration ->
-            configuration.getResolutionStrategy().activateDependencyLocking()
-        );
+    override fun unlockAllConfigurations() {
+        this.configurations!!.configureEach(Action { configuration: Configuration? -> configuration!!.getResolutionStrategy().deactivateDependencyLocking() }
+        )
     }
 
-    @Override
-    public void unlockAllConfigurations() {
-        getConfigurations().configureEach(configuration ->
-            configuration.getResolutionStrategy().deactivateDependencyLocking()
-        );
+    override fun getLockMode(): Property<LockMode> {
+        return dependencyLockingProvider.getLockMode()
     }
 
-    @Override
-    public Property<LockMode> getLockMode() {
-        return dependencyLockingProvider.getLockMode();
+    override fun getLockFile(): RegularFileProperty {
+        return dependencyLockingProvider.getLockFile()
     }
 
-    @Override
-    public RegularFileProperty getLockFile() {
-        return dependencyLockingProvider.getLockFile();
-    }
-
-    @Override
-    public ListProperty<String> getIgnoredDependencies() {
-        return dependencyLockingProvider.getIgnoredDependencies();
+    override fun getIgnoredDependencies(): ListProperty<String> {
+        return dependencyLockingProvider.getIgnoredDependencies()
     }
 }

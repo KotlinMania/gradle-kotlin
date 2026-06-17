@@ -13,19 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-
-import java.util.List;
-import java.util.Set;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.internal.component.model.ComponentArtifactMetadata
 
 /**
  * Resolves artifact metadata into concrete files in the context
  * of a component.
  */
-public interface ComponentArtifactResolver {
-    Set<ResolvableArtifact> resolveArtifacts(List<? extends ComponentArtifactMetadata> artifacts);
+interface ComponentArtifactResolver {
+    fun resolveArtifacts(artifacts: MutableList<out ComponentArtifactMetadata>): MutableSet<ResolvableArtifact>?
 }

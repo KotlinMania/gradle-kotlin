@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.internal.service.scopes.Scope.Global;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-@ServiceScope(Global.class)
-public interface ImmutableModuleIdentifierFactory {
-    ModuleIdentifier module(String group, String name);
-    ModuleVersionIdentifier moduleWithVersion(String group, String name, String version);
-    ModuleVersionIdentifier moduleWithVersion(ModuleIdentifier targetModuleId, String version);
+@ServiceScope(Scope.Global::class)
+interface ImmutableModuleIdentifierFactory {
+    fun module(group: String, name: String): ModuleIdentifier?
+    fun moduleWithVersion(group: String, name: String, version: String): ModuleVersionIdentifier?
+    fun moduleWithVersion(targetModuleId: ModuleIdentifier, version: String): ModuleVersionIdentifier?
 }

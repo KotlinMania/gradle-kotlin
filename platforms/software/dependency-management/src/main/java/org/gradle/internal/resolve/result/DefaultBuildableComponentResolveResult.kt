@@ -13,116 +13,102 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.ComponentGraphSpecificResolveState
+import org.gradle.internal.resolve.ModuleVersionNotFoundException
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ComponentGraphSpecificResolveState;
-import org.gradle.internal.resolve.ModuleVersionNotFoundException;
-import org.gradle.internal.resolve.ModuleVersionResolveException;
+class DefaultBuildableComponentResolveResult : DefaultResourceAwareResolveResult(), BuildableComponentResolveResult {
+    private var state: ComponentGraphResolveState? = null
+    private var graphState: ComponentGraphSpecificResolveState? = null
+    private var failure: ModuleVersionResolveException? = null
 
-public class DefaultBuildableComponentResolveResult extends DefaultResourceAwareResolveResult implements BuildableComponentResolveResult {
-    private ComponentGraphResolveState state;
-    private ComponentGraphSpecificResolveState graphState;
-    private ModuleVersionResolveException failure;
-
-    public DefaultBuildableComponentResolveResult() {
+    override fun failed(failure: ModuleVersionResolveException?): DefaultBuildableComponentResolveResult {
+        state = null
+        this.failure = failure
+        return this
     }
 
-    @Override
-    public DefaultBuildableComponentResolveResult failed(ModuleVersionResolveException failure) {
-        state = null;
-        this.failure = failure;
-        return this;
+    override fun notFound(versionIdentifier: ModuleComponentIdentifier) {
+        failed(ModuleVersionNotFoundException(DefaultModuleVersionIdentifier.newId(versionIdentifier), getAttempted()))
     }
 
-    @Override
-    public void notFound(ModuleComponentIdentifier versionIdentifier) {
-        failed(new ModuleVersionNotFoundException(DefaultModuleVersionIdentifier.newId(versionIdentifier), getAttempted()));
+    override fun resolved(state: ComponentGraphResolveState?, graphState: ComponentGraphSpecificResolveState?) {
+        this.state = state
+        this.graphState = graphState
     }
 
-    @Override
-    public void resolved(ComponentGraphResolveState state, ComponentGraphSpecificResolveState graphState) {
-        this.state = state;
-        this.graphState = graphState;
+    override fun setResult(state: ComponentGraphResolveState?) {
+        assertResolved()
+        this.state = state
     }
 
-    @Override
-    public void setResult(ComponentGraphResolveState state) {
-        assertResolved();
-        this.state = state;
+    override fun getId(): ComponentIdentifier {
+        assertResolved()
+        return state!!.getId()
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        assertResolved();
-        return state.getId();
+    @Throws(ModuleVersionResolveException::class)
+    override fun getModuleVersionId(): ModuleVersionIdentifier {
+        assertResolved()
+        return state!!.getMetadata().getModuleVersionId()
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() throws ModuleVersionResolveException {
-        assertResolved();
-        return state.getMetadata().getModuleVersionId();
+    @Throws(ModuleVersionResolveException::class)
+    override fun getState(): ComponentGraphResolveState? {
+        assertResolved()
+        return state
     }
 
-    @Override
-    public ComponentGraphResolveState getState() throws ModuleVersionResolveException {
-        assertResolved();
-        return state;
+    @Throws(ModuleVersionResolveException::class)
+    override fun getGraphState(): ComponentGraphSpecificResolveState? {
+        assertResolved()
+        return graphState
     }
 
-    @Override
-    public ComponentGraphSpecificResolveState getGraphState() throws ModuleVersionResolveException {
-        assertResolved();
-        return graphState;
+    override fun getFailure(): ModuleVersionResolveException? {
+        assertHasResult()
+        return failure
     }
 
-    @Override
-    public ModuleVersionResolveException getFailure() {
-        assertHasResult();
-        return failure;
-    }
-
-    private void assertResolved() {
-        assertHasResult();
+    private fun assertResolved() {
+        assertHasResult()
         if (failure != null) {
-            throw failure;
+            throw failure
         }
     }
 
-    private void assertHasResult() {
-        if (!hasResult()) {
-            throw new IllegalStateException("No result has been specified.");
-        }
+    private fun assertHasResult() {
+        check(hasResult()) { "No result has been specified." }
     }
 
-    @Override
-    public boolean hasResult() {
-        return failure != null || state != null;
+    override fun hasResult(): Boolean {
+        return failure != null || state != null
     }
 
-    public void applyTo(BuildableComponentIdResolveResult idResolve) {
-        super.applyTo(idResolve);
+    fun applyTo(idResolve: BuildableComponentIdResolveResult) {
+        super.applyTo(idResolve)
         if (failure != null) {
-            idResolve.failed(failure);
+            idResolve.failed(failure)
         }
         if (state != null) {
-            idResolve.resolved(state, graphState);
+            idResolve.resolved(state, graphState)
         }
     }
 
-    @Override
-    public void applyTo(BuildableComponentResolveResult target) {
-        super.applyTo(target);
+    override fun applyTo(target: BuildableComponentResolveResult) {
+        super.applyTo(target)
         if (failure != null) {
-            target.failed(failure);
+            target.failed(failure)
         }
         if (state != null) {
-            target.resolved(state, graphState);
+            target.resolved(state, graphState)
         }
     }
 }

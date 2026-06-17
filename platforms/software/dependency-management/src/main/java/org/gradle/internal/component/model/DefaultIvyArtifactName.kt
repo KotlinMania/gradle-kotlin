@@ -13,117 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import com.google.common.base.Objects
+import com.google.common.io.Files
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.util.internal.GUtil
+import java.io.File
 
-import com.google.common.io.Files;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.Nullable;
+class DefaultIvyArtifactName @JvmOverloads constructor(private val name: String, private val type: String, private val extension: String?, private val classifier: String? = null) : IvyArtifactName {
+    private val hashCode: Int
 
-import java.io.File;
-
-import static com.google.common.base.Objects.equal;
-
-public class DefaultIvyArtifactName implements IvyArtifactName {
-    private final String name;
-    private final String type;
-    private final String extension;
-    private final String classifier;
-    private final int hashCode;
-
-    public static DefaultIvyArtifactName forPublishArtifact(PublishArtifact publishArtifact) {
-        String name = publishArtifact.getName();
-        if (name == null) {
-            name = publishArtifact.getFile().getName();
-        }
-        String classifier = GUtil.elvis(publishArtifact.getClassifier(), null);
-        return new DefaultIvyArtifactName(name, publishArtifact.getType(), publishArtifact.getExtension(), classifier);
+    init {
+        this.hashCode = computeHashCode()
     }
 
-    public static DefaultIvyArtifactName forFile(File file, @Nullable String classifier) {
-        String fileName = file.getName();
-        return forFileName(fileName, classifier);
-    }
-
-    public static DefaultIvyArtifactName forFileName(String fileName, @Nullable String classifier) {
-        String name = Files.getNameWithoutExtension(fileName);
-        String extension = Files.getFileExtension(fileName);
-        return new DefaultIvyArtifactName(name, extension, extension, classifier);
-    }
-
-    public DefaultIvyArtifactName(String name, String type, @Nullable String extension) {
-        this(name, type, extension, null);
-    }
-
-    public DefaultIvyArtifactName(String name, String type, @Nullable String extension, @Nullable String classifier) {
-        this.name = name;
-        this.type = type;
-        this.extension = extension;
-        this.classifier = classifier;
-        this.hashCode = computeHashCode();
-    }
-
-    @Override
-    public String getDisplayName() {
-        StringBuilder result = new StringBuilder();
-        result.append(name);
+    override fun getDisplayName(): String {
+        val result = StringBuilder()
+        result.append(name)
         if (GUtil.isTrue(classifier)) {
-            result.append("-");
-            result.append(classifier);
+            result.append("-")
+            result.append(classifier)
         }
-        if (GUtil.isTrue(extension) && !Files.getFileExtension(name).equals(extension)) {
-            result.append(".");
-            result.append(extension);
+        if (GUtil.isTrue(extension) && Files.getFileExtension(name) != extension) {
+            result.append(".")
+            result.append(extension)
         }
-        return result.toString();
+        return result.toString()
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private int computeHashCode() {
-        int result = name.hashCode();
-        result = 31 * result + type.hashCode();
-        result = 31 * result + (extension != null ? extension.hashCode() : 0);
-        result = 31 * result + (classifier != null ? classifier.hashCode() : 0);
-        return result;
+    private fun computeHashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + type.hashCode()
+        result = 31 * result + (if (extension != null) extension.hashCode() else 0)
+        result = 31 * result + (if (classifier != null) classifier.hashCode() else 0)
+        return result
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        DefaultIvyArtifactName other = (DefaultIvyArtifactName) obj;
-        return equal(name, other.name)
-            && equal(type, other.type)
-            && equal(extension, other.extension)
-            && equal(classifier, other.classifier);
+        val other = obj as DefaultIvyArtifactName
+        return Objects.equal(name, other.name)
+                && Objects.equal(type, other.type)
+                && Objects.equal(extension, other.extension)
+                && Objects.equal(classifier, other.classifier)
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getType() {
-        return type;
+    override fun getType(): String {
+        return type
     }
 
-    @Override
-    public String getExtension() {
-        return extension;
+    override fun getExtension(): String {
+        return extension!!
     }
 
-    @Override
-    public String getClassifier() {
-        return classifier;
+    override fun getClassifier(): String {
+        return classifier!!
+    }
+
+    companion object {
+        @JvmStatic
+        fun forPublishArtifact(publishArtifact: PublishArtifact): DefaultIvyArtifactName {
+            var name = publishArtifact.getName()
+            if (name == null) {
+                name = publishArtifact.getFile().getName()
+            }
+            val classifier = GUtil.elvis<String?>(publishArtifact.getClassifier(), null)
+            return DefaultIvyArtifactName(name, publishArtifact.getType(), publishArtifact.getExtension(), classifier)
+        }
+
+        @JvmStatic
+        fun forFile(file: File, classifier: String?): DefaultIvyArtifactName {
+            val fileName = file.getName()
+            return forFileName(fileName, classifier)
+        }
+
+        @JvmStatic
+        fun forFileName(fileName: String, classifier: String?): DefaultIvyArtifactName {
+            val name = Files.getNameWithoutExtension(fileName)
+            val extension = Files.getFileExtension(fileName)
+            return DefaultIvyArtifactName(name, extension, extension, classifier)
+        }
     }
 }

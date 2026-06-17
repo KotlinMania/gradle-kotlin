@@ -13,61 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model.ivy;
+package org.gradle.internal.component.external.model.ivy
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.internal.artifacts.ivyservice.NamespaceId;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.Exclude;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
 
 /**
  * Meta-data for a component resolved from an Ivy repository.
  */
-public interface IvyModuleResolveMetadata extends ModuleComponentResolveMetadata {
+interface IvyModuleResolveMetadata : ModuleComponentResolveMetadata {
     /**
      * {@inheritDoc}
      */
-    @Override
-    MutableIvyModuleResolveMetadata asMutable();
+    override fun asMutable(): MutableIvyModuleResolveMetadata?
 
     /**
      * Returns the branch attribute for the module.
      *
      * @return the branch attribute for the module
      */
-    @Nullable
-    String getBranch();
+    @JvmField
+    val branch: String?
 
     /**
      * Returns the Ivy definitions for the configurations of this module.
      */
-    ImmutableMap<String, Configuration> getConfigurationDefinitions();
+    @JvmField
+    val configurationDefinitions: ImmutableMap<String, Configuration>?
 
     /**
      * Returns the Ivy definitions for artifacts of this module.
      */
-    ImmutableList<Artifact> getArtifactDefinitions();
+    @JvmField
+    val artifactDefinitions: ImmutableList<Artifact>?
 
     /**
      * Returns the Ivy excludes for this module.
      */
-    ImmutableList<Exclude> getExcludes();
+    @JvmField
+    val excludes: ImmutableList<Exclude>?
 
     /**
      * Returns the extra info for the module.
      *
      * @return the extra info for the module
      */
-    ImmutableMap<NamespaceId, String> getExtraAttributes();
+    @JvmField
+    val extraAttributes: ImmutableMap<NamespaceId, String>?
 
     /**
      * Returns this metadata with all dependencies transformed to use the dynamic constraint version.
      */
-    IvyModuleResolveMetadata withDynamicConstraintVersions();
+    fun withDynamicConstraintVersions(): IvyModuleResolveMetadata?
 
-    ImmutableList<IvyDependencyDescriptor> getDependencies();
+    @JvmField
+    val dependencies: ImmutableList<IvyDependencyDescriptor>?
 }

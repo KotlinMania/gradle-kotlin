@@ -13,781 +13,773 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import com.google.common.base.Splitter;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.GradleException;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.ExternalModuleDependencyBundle;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.MutableVersionConstraint;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.catalog.problems.VersionCatalogProblemId;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.problems.Problems;
-import org.gradle.api.problems.internal.GradleCoreProblemGroup;
-import org.gradle.api.problems.internal.ProblemInternal;
-import org.gradle.api.problems.internal.ProblemSpecInternal;
-import org.gradle.api.problems.internal.ProblemsInternal;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.plugin.use.PluginDependency;
-import org.gradle.util.internal.TextUtil;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Splitter
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.GradleException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.ExternalModuleDependencyBundle
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.api.artifacts.MutableVersionConstraint
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder
+import org.gradle.api.internal.catalog.problems.VersionCatalogProblemId
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.problems.Problems
+import org.gradle.api.problems.internal.ProblemInternal
+import org.gradle.api.problems.internal.ProblemSpecInternal
+import org.gradle.api.problems.internal.ProblemsInternal
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.plugin.use.PluginDependency
+import org.gradle.util.internal.TextUtil
+import org.jspecify.annotations.NullMarked
+import java.io.IOException
+import java.io.Writer
+import java.util.Objects
+import java.util.function.Function
+import java.util.stream.Collectors
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+class LibrariesSourceGenerator(
+    writer: Writer,
+    private val config: DefaultVersionCatalog,
+    problemsService: Problems
+) : AbstractSourceGenerator(writer) {
+    private val problemsService: ProblemsInternal
 
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-import static org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder.VERSION_CATALOG_PROBLEMS;
-import static org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder.getProblemInVersionCatalog;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.ACCESSOR_NAME_CLASH;
-import static org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.TOO_MANY_ENTRIES;
-import static org.gradle.internal.RenderingUtils.oxfordJoin;
-import static org.gradle.internal.deprecation.Documentation.userManual;
-import static org.gradle.util.internal.TextUtil.screamingSnakeToKebabCase;
+    private val classNameCounter: MutableMap<String, Int> = HashMap<String, Int>()
+    private val classNameCache: MutableMap<ClassNode, String> = HashMap<ClassNode, String>()
 
-public class LibrariesSourceGenerator extends AbstractSourceGenerator {
-
-    private static final int MAX_ENTRIES = 30000;
-    public static final String ERROR_HEADER = "Cannot generate dependency accessors";
-    private final DefaultVersionCatalog config;
-    private final ProblemsInternal problemsService;
-
-    private final Map<String, Integer> classNameCounter = new HashMap<>();
-    private final Map<ClassNode, String> classNameCache = new HashMap<>();
-
-    public LibrariesSourceGenerator(
-        Writer writer,
-        DefaultVersionCatalog config,
-        Problems problemsService
-    ) {
-        super(writer);
-        this.config = config;
-        this.problemsService = (ProblemsInternal) problemsService;
+    init {
+        this.problemsService = problemsService as ProblemsInternal
     }
 
-    public static void generateSource(
-        Writer writer,
-        DefaultVersionCatalog config,
-        String packageName,
-        String className,
-        Problems problemsService
-    ) {
-        LibrariesSourceGenerator generator = new LibrariesSourceGenerator(writer, config, problemsService);
-        try {
-            generator.generateProjectExtensionFactoryClass(packageName, className);
-            generator.classNameCounter.clear();
-            generator.classNameCache.clear();
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
+    @Throws(IOException::class)
+    private fun generateProjectExtensionFactoryClass(packageName: String, className: String) {
+        generateFactoryClass(packageName, LibrariesSourceGenerator.ThrowingConsumer { entryPoints: EntryPoints -> writeEntryPoints(className, entryPoints, false) }
+        )
     }
 
-    public static void generatePluginsBlockSource(
-        Writer writer,
-        DefaultVersionCatalog config,
-        String packageName,
-        String className,
-        Problems problemsService
-    ) {
-        LibrariesSourceGenerator generator = new LibrariesSourceGenerator(writer, config, problemsService);
-        try {
-            generator.generatePluginsBlockFactoryClass(packageName, className);
-            generator.classNameCounter.clear();
-            generator.classNameCache.clear();
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
+    @Throws(IOException::class)
+    private fun generatePluginsBlockFactoryClass(packageName: String, className: String) {
+        generateFactoryClass(packageName, LibrariesSourceGenerator.ThrowingConsumer { entryPoints: EntryPoints -> writeEntryPoints(className, entryPoints, true) }
+        )
     }
 
-    private void generateProjectExtensionFactoryClass(String packageName, String className) throws IOException {
-        generateFactoryClass(packageName, entryPoints ->
-            writeEntryPoints(className, entryPoints, false)
-        );
-    }
-
-    private void generatePluginsBlockFactoryClass(String packageName, String className) throws IOException {
-        generateFactoryClass(packageName, entryPoints ->
-            writeEntryPoints(className, entryPoints, true)
-        );
-    }
-
-    private static class EntryPoints {
-
-        private final ClassNode librariesEntryPoint;
-        private final ClassNode versionsEntryPoint;
-        private final ClassNode bundlesEntryPoint;
-        private final ClassNode pluginsEntryPoint;
-
-        private EntryPoints(
-            ClassNode librariesEntryPoint,
-            ClassNode versionsEntryPoint,
-            ClassNode bundlesEntryPoint,
-            ClassNode pluginsEntryPoint
-        ) {
-            this.librariesEntryPoint = librariesEntryPoint;
-            this.versionsEntryPoint = versionsEntryPoint;
-            this.bundlesEntryPoint = bundlesEntryPoint;
-            this.pluginsEntryPoint = pluginsEntryPoint;
-        }
-    }
+    private class EntryPoints(
+        private val librariesEntryPoint: ClassNode,
+        private val versionsEntryPoint: ClassNode,
+        private val bundlesEntryPoint: ClassNode,
+        private val pluginsEntryPoint: ClassNode
+    )
 
     private interface ThrowingConsumer<T> {
-        void accept(T t) throws IOException;
+        @Throws(IOException::class)
+        fun accept(t: T?)
     }
 
-    private void generateFactoryClass(String packageName, ThrowingConsumer<EntryPoints> entryPointsConsumer) throws IOException {
-        writeLn("package " + packageName + ";");
-        writeLn();
-        addImports();
-        writeLn();
-        String description = requireNonNull(TextUtil.normaliseLineSeparators(config.getDescription()));
-        writeLn("/**");
-        for (String descLine : Splitter.on('\n').split(description)) {
-            writeLn(" * " + descLine);
+    @Throws(IOException::class)
+    private fun generateFactoryClass(packageName: String, entryPointsConsumer: ThrowingConsumer<EntryPoints>) {
+        writeLn("package " + packageName + ";")
+        writeLn()
+        addImports()
+        writeLn()
+        val description = Objects.requireNonNull<String?>(TextUtil.normaliseLineSeparators(config.getDescription()))
+        writeLn("/**")
+        for (descLine in Splitter.on('\n').split(description!!)) {
+            writeLn(" * " + descLine)
         }
-        List<String> libraries = config.getLibraryAliases();
-        List<String> bundles = config.getBundleAliases();
-        List<String> versions = config.getVersionAliases();
-        List<String> plugins = config.getPluginAliases();
-        performValidation(libraries, bundles, versions, plugins);
-        entryPointsConsumer.accept(new EntryPoints(
-            toClassNode(libraries, rootNode(AccessorKind.library)),
-            toClassNode(versions, rootNode(AccessorKind.version, "versions")).parent,
-            toClassNode(bundles, rootNode(AccessorKind.bundle, "bundles")).parent,
-            toClassNode(plugins, rootNode(AccessorKind.plugin, "plugins")).parent
-        ));
+        val libraries = config.getLibraryAliases()
+        val bundles = config.getBundleAliases()
+        val versions = config.getVersionAliases()
+        val plugins = config.getPluginAliases()
+        performValidation(libraries, bundles, versions, plugins)
+        entryPointsConsumer.accept(
+            LibrariesSourceGenerator.EntryPoints(
+                toClassNode(libraries, rootNode(AccessorKind.library)),
+                org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.toClassNode(
+                    versions,
+                    org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.rootNode(org.gradle.api.internal.catalog.LibrariesSourceGenerator.AccessorKind.version, "versions")
+                ).parent!!,
+                org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.toClassNode(
+                    bundles,
+                    org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.rootNode(org.gradle.api.internal.catalog.LibrariesSourceGenerator.AccessorKind.bundle, "bundles")
+                ).parent!!,
+                org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.toClassNode(
+                    plugins,
+                    org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.rootNode(org.gradle.api.internal.catalog.LibrariesSourceGenerator.AccessorKind.plugin, "plugins")
+                ).parent!!
+            )
+        )
     }
 
-    private void writeEntryPoints(String className, EntryPoints entryPoints, boolean inPluginsBlock) throws IOException {
-        writeLn(" */");
-        writeLn("@NullMarked");
-        writeLn("public class " + className + " extends AbstractExternalDependencyFactory {");
-        writeLn();
-        indent(() -> {
-            writeLn("private final AbstractExternalDependencyFactory owner = this;");
-            writeSubAccessorFieldsOf(entryPoints.librariesEntryPoint, AccessorKind.library);
-            writeSubAccessorFieldsOf(entryPoints.versionsEntryPoint, AccessorKind.version);
-            writeSubAccessorFieldsOf(entryPoints.bundlesEntryPoint, AccessorKind.bundle);
-            writeSubAccessorFieldsOf(entryPoints.pluginsEntryPoint, AccessorKind.plugin);
-            writeLn();
-            writeLn("@Inject");
-            writeLn("public " + className + "(DefaultVersionCatalog config, ProviderFactory providers, ObjectFactory objects, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser) {");
-            writeLn("    super(config, providers, objects, attributesFactory, capabilityNotationParser);");
-            writeLn("}");
-            writeLn();
-            writeLibraryAccessors(entryPoints.librariesEntryPoint, inPluginsBlock);
-            writeVersionAccessors(entryPoints.versionsEntryPoint);
-            writeBundleAccessors(entryPoints.bundlesEntryPoint, inPluginsBlock);
-            writePluginAccessors(entryPoints.pluginsEntryPoint);
-            writeLibrarySubClasses(entryPoints.librariesEntryPoint, inPluginsBlock);
-            writeVersionSubClasses(entryPoints.versionsEntryPoint);
-            writeBundleSubClasses(entryPoints.bundlesEntryPoint, inPluginsBlock);
-            writePluginSubClasses(entryPoints.pluginsEntryPoint);
-        });
-        writeLn("}");
+    @Throws(IOException::class)
+    private fun writeEntryPoints(className: String, entryPoints: EntryPoints, inPluginsBlock: Boolean) {
+        writeLn(" */")
+        writeLn("@NullMarked")
+        writeLn("public class " + className + " extends AbstractExternalDependencyFactory {")
+        writeLn()
+        indent(WriteAction {
+            writeLn("private final AbstractExternalDependencyFactory owner = this;")
+            writeSubAccessorFieldsOf(entryPoints.librariesEntryPoint, AccessorKind.library)
+            writeSubAccessorFieldsOf(entryPoints.versionsEntryPoint, AccessorKind.version)
+            writeSubAccessorFieldsOf(entryPoints.bundlesEntryPoint, AccessorKind.bundle)
+            writeSubAccessorFieldsOf(entryPoints.pluginsEntryPoint, AccessorKind.plugin)
+            writeLn()
+            writeLn("@Inject")
+            writeLn("public " + className + "(DefaultVersionCatalog config, ProviderFactory providers, ObjectFactory objects, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser) {")
+            writeLn("    super(config, providers, objects, attributesFactory, capabilityNotationParser);")
+            writeLn("}")
+            writeLn()
+            writeLibraryAccessors(entryPoints.librariesEntryPoint, inPluginsBlock)
+            writeVersionAccessors(entryPoints.versionsEntryPoint)
+            writeBundleAccessors(entryPoints.bundlesEntryPoint, inPluginsBlock)
+            writePluginAccessors(entryPoints.pluginsEntryPoint)
+            writeLibrarySubClasses(entryPoints.librariesEntryPoint, inPluginsBlock)
+            writeVersionSubClasses(entryPoints.versionsEntryPoint)
+            writeBundleSubClasses(entryPoints.bundlesEntryPoint, inPluginsBlock)
+            writePluginSubClasses(entryPoints.pluginsEntryPoint)
+        })
+        writeLn("}")
     }
 
-    private void addImports() throws IOException {
-        addImport(NullMarked.class);
-        addImport(MinimalExternalModuleDependency.class);
-        addImport(PluginDependency.class);
-        addImport(ExternalModuleDependencyBundle.class);
-        addImport(MutableVersionConstraint.class);
-        addImport(Provider.class);
-        addImport(ObjectFactory.class);
-        addImport(ProviderFactory.class);
-        addImport(AbstractExternalDependencyFactory.class);
-        addImport(DefaultVersionCatalog.class);
-        addImport(Map.class);
-        addImport(AttributesFactory.class);
-        addImport(CapabilityNotationParser.class);
-        addImport(Inject.class);
-        addImport(GradleException.class);
+    @Throws(IOException::class)
+    private fun addImports() {
+        addImport(NullMarked::class.java)
+        addImport(MinimalExternalModuleDependency::class.java)
+        addImport(PluginDependency::class.java)
+        addImport(ExternalModuleDependencyBundle::class.java)
+        addImport(MutableVersionConstraint::class.java)
+        addImport(Provider::class.java)
+        addImport(ObjectFactory::class.java)
+        addImport(ProviderFactory::class.java)
+        addImport(AbstractExternalDependencyFactory::class.java)
+        addImport(DefaultVersionCatalog::class.java)
+        addImport(MutableMap::class.java)
+        addImport(AttributesFactory::class.java)
+        addImport(CapabilityNotationParser::class.java)
+        addImport(Inject::class.java)
+        addImport(GradleException::class.java)
     }
 
-    private void writeLibrarySubClasses(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        for (ClassNode child : classNode.getChildren()) {
-            writeLibraryAccessorClass(child, inPluginsBlock);
-            writeLibrarySubClasses(child, inPluginsBlock);
-        }
-    }
-
-    private void writeVersionSubClasses(ClassNode classNode) throws IOException {
-        for (ClassNode child : classNode.getChildren()) {
-            writeVersionAccessorClass(child);
-            writeVersionSubClasses(child);
-        }
-    }
-
-    private void writeBundleSubClasses(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        for (ClassNode child : classNode.getChildren()) {
-            writeBundleAccessorClass(child, inPluginsBlock);
-            writeBundleSubClasses(child, inPluginsBlock);
-        }
-    }
-
-    private void writePluginSubClasses(ClassNode classNode) throws IOException {
-        for (ClassNode child : classNode.getChildren()) {
-            writePluginAccessorClass(child);
-            writePluginSubClasses(child);
+    @Throws(IOException::class)
+    private fun writeLibrarySubClasses(classNode: ClassNode, inPluginsBlock: Boolean) {
+        for (child in classNode.getChildren()) {
+            writeLibraryAccessorClass(child, inPluginsBlock)
+            writeLibrarySubClasses(child, inPluginsBlock)
         }
     }
 
-    private void writeBundleAccessorClass(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        boolean isProvider = classNode.isAlsoProvider();
-        String interfaces = isProvider ? " implements BundleNotationSupplier" : "";
-        String bundleClassName = getClassName(classNode);
-        List<String> aliases = classNode.aliases
+    @Throws(IOException::class)
+    private fun writeVersionSubClasses(classNode: ClassNode) {
+        for (child in classNode.getChildren()) {
+            writeVersionAccessorClass(child)
+            writeVersionSubClasses(child)
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun writeBundleSubClasses(classNode: ClassNode, inPluginsBlock: Boolean) {
+        for (child in classNode.getChildren()) {
+            writeBundleAccessorClass(child, inPluginsBlock)
+            writeBundleSubClasses(child, inPluginsBlock)
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun writePluginSubClasses(classNode: ClassNode) {
+        for (child in classNode.getChildren()) {
+            writePluginAccessorClass(child)
+            writePluginSubClasses(child)
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun writeBundleAccessorClass(classNode: ClassNode, inPluginsBlock: Boolean) {
+        val isProvider = classNode.isAlsoProvider
+        val interfaces = if (isProvider) " implements BundleNotationSupplier" else ""
+        val bundleClassName = getClassName(classNode)
+        val aliases = classNode.aliases
             .stream()
             .sorted()
-            .collect(toList());
-        writeLn("public static class " + bundleClassName + " extends BundleFactory " + interfaces + "{");
-        indent(() -> {
-            writeSubAccessorFieldsOf(classNode, AccessorKind.bundle);
-            writeLn();
-            writeLn("public " + bundleClassName + "(ObjectFactory objects, ProviderFactory providers, DefaultVersionCatalog config, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser) { super(objects, providers, config, attributesFactory, capabilityNotationParser); }");
-            writeLn();
+            .collect(Collectors.toList())
+        writeLn("public static class " + bundleClassName + " extends BundleFactory " + interfaces + "{")
+        indent(WriteAction {
+            writeSubAccessorFieldsOf(classNode, AccessorKind.bundle)
+            writeLn()
+            writeLn("public " + bundleClassName + "(ObjectFactory objects, ProviderFactory providers, DefaultVersionCatalog config, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser) { super(objects, providers, config, attributesFactory, capabilityNotationParser); }")
+            writeLn()
             if (isProvider) {
-                String path = classNode.getFullAlias();
-                BundleModel bundle = config.getBundle(path);
-                List<String> coordinates = bundle.getComponents().stream()
-                    .map(config::getDependencyData)
-                    .map(LibrariesSourceGenerator::coordinatesDescriptorFor)
-                    .collect(toList());
-                writeBundle(path, coordinates, bundle.getContext(), true, inPluginsBlock);
+                val path = classNode.fullAlias
+                val bundle = config.getBundle(path)
+                val coordinates = bundle.getComponents().stream()
+                    .map<DependencyModel> { alias: String? -> config.getDependencyData(alias!!) }
+                    .map<String> { dependencyData: DependencyModel? -> Companion.coordinatesDescriptorFor(dependencyData!!) }
+                    .collect(Collectors.toList())
+                writeBundle(path, coordinates, bundle.getContext(), true, inPluginsBlock)
             }
-            for (String alias : aliases) {
-                String childName = leafNodeForAlias(alias);
+            for (alias in aliases) {
+                val childName: String = leafNodeForAlias(alias)
                 if (!classNode.hasChild(childName)) {
-                    BundleModel bundle = config.getBundle(alias);
-                    List<String> coordinates = bundle.getComponents().stream()
-                        .map(config::getDependencyData)
-                        .map(LibrariesSourceGenerator::coordinatesDescriptorFor)
-                        .collect(toList());
-                    writeBundle(alias, coordinates, bundle.getContext(), false, inPluginsBlock);
+                    val bundle = config.getBundle(alias)
+                    val coordinates = bundle.getComponents().stream()
+                        .map<DependencyModel> { alias: String? -> config.getDependencyData(alias!!) }
+                        .map<String> { dependencyData: DependencyModel? -> Companion.coordinatesDescriptorFor(dependencyData!!) }
+                        .collect(Collectors.toList())
+                    writeBundle(alias, coordinates, bundle.getContext(), false, inPluginsBlock)
                 }
             }
-            for (ClassNode child : classNode.getChildren()) {
-                writeSubAccessor(child, AccessorKind.bundle, inPluginsBlock);
+            for (child in classNode.getChildren()) {
+                writeSubAccessor(child, AccessorKind.bundle, inPluginsBlock)
             }
-        });
-        writeLn("}");
-        writeLn();
+        })
+        writeLn("}")
+        writeLn()
     }
 
-    private String getClassName(ClassNode classNode) {
-        return classNameCache.computeIfAbsent(classNode, this::getClassName0);
+    private fun getClassName(classNode: ClassNode): String {
+        return classNameCache.computeIfAbsent(classNode) { classNode: ClassNode? -> this.getClassName0(classNode!!) }
     }
 
-    private String getClassName0(ClassNode classNode) {
-        String name = classNode.getClassName();
-        String loweredName = name.toLowerCase(Locale.ROOT);
+    private fun getClassName0(classNode: ClassNode): String {
+        val name = classNode.className
+        val loweredName = name.lowercase()
         if (!classNameCounter.containsKey(loweredName)) {
-            classNameCounter.put(loweredName, 0);
-            return name;
+            classNameCounter.put(loweredName, 0)
+            return name
         } else {
-            int count = classNameCounter.get(loweredName) + 1;
-            classNameCounter.put(loweredName, count);
-            return name + "$" + count;
+            val count = classNameCounter.get(loweredName)!! + 1
+            classNameCounter.put(loweredName, count)
+            return name + "$" + count
         }
     }
 
-    private void writePluginAccessorClass(ClassNode classNode) throws IOException {
-        boolean isProvider = classNode.isAlsoProvider();
-        String interfaces = isProvider ? " implements PluginNotationSupplier" : "";
-        String pluginClassName = getClassName(classNode);
-        List<String> aliases = classNode.aliases
+    @Throws(IOException::class)
+    private fun writePluginAccessorClass(classNode: ClassNode) {
+        val isProvider = classNode.isAlsoProvider
+        val interfaces = if (isProvider) " implements PluginNotationSupplier" else ""
+        val pluginClassName = getClassName(classNode)
+        val aliases = classNode.aliases
             .stream()
             .sorted()
-            .collect(toList());
-        writeLn("public static class " + pluginClassName + " extends PluginFactory " + interfaces + "{");
-        indent(() -> {
-            writeSubAccessorFieldsOf(classNode, AccessorKind.plugin);
-            writeLn();
-            writeLn("public " + pluginClassName + "(ProviderFactory providers, DefaultVersionCatalog config) { super(providers, config); }");
-            writeLn();
+            .collect(Collectors.toList())
+        writeLn("public static class " + pluginClassName + " extends PluginFactory " + interfaces + "{")
+        indent(WriteAction {
+            writeSubAccessorFieldsOf(classNode, AccessorKind.plugin)
+            writeLn()
+            writeLn("public " + pluginClassName + "(ProviderFactory providers, DefaultVersionCatalog config) { super(providers, config); }")
+            writeLn()
             if (isProvider) {
-                String path = classNode.getFullAlias();
-                PluginModel plugin = config.getPlugin(path);
-                writePlugin(path, plugin, true);
+                val path = classNode.fullAlias
+                val plugin = config.getPlugin(path)
+                writePlugin(path, plugin, true)
             }
-            for (String alias : aliases) {
-                String childName = leafNodeForAlias(alias);
+            for (alias in aliases) {
+                val childName: String = leafNodeForAlias(alias)
                 if (!classNode.hasChild(childName)) {
-                    PluginModel plugin = config.getPlugin(alias);
-                    writePlugin(alias, plugin, false);
+                    val plugin = config.getPlugin(alias)
+                    writePlugin(alias, plugin, false)
                 }
             }
-            for (ClassNode child : classNode.getChildren()) {
-                writeSubAccessor(child, AccessorKind.plugin);
+            for (child in classNode.getChildren()) {
+                writeSubAccessor(child, AccessorKind.plugin)
             }
-        });
-        writeLn("}");
-        writeLn();
+        })
+        writeLn("}")
+        writeLn()
     }
 
-    private void writeLibraryAccessors(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        Set<String> dependencies = classNode.aliases;
-        for (String alias : dependencies) {
-            String childName = leafNodeForAlias(alias);
+    @Throws(IOException::class)
+    private fun writeLibraryAccessors(classNode: ClassNode, inPluginsBlock: Boolean) {
+        val dependencies = classNode.aliases
+        for (alias in dependencies) {
+            val childName: String = leafNodeForAlias(alias)
             if (!classNode.hasChild(childName)) {
-                DependencyModel model = config.getDependencyData(alias);
-                writeDependencyAccessor(alias, model, false, inPluginsBlock);
+                val model = config.getDependencyData(alias)
+                writeDependencyAccessor(alias, model, false, inPluginsBlock)
             }
         }
-        for (ClassNode child : classNode.getChildren()) {
-            writeSubAccessor(child, AccessorKind.library, inPluginsBlock);
+        for (child in classNode.getChildren()) {
+            writeSubAccessor(child, AccessorKind.library, inPluginsBlock)
         }
     }
 
-    private void writeVersionAccessors(ClassNode classNode) throws IOException {
-        Set<String> versionsAliases = classNode.aliases;
-        for (String alias : versionsAliases) {
-            String childName = leafNodeForAlias(alias);
+    @Throws(IOException::class)
+    private fun writeVersionAccessors(classNode: ClassNode) {
+        val versionsAliases = classNode.aliases
+        for (alias in versionsAliases) {
+            val childName: String = leafNodeForAlias(alias)
             if (!classNode.hasChild(childName)) {
-                VersionModel model = config.getVersion(alias);
-                writeSingleVersionAccessor(alias, model.getContext(), model.getVersion().getDisplayName(), false);
+                val model = config.getVersion(alias)
+                writeSingleVersionAccessor(alias, model.getContext(), model.getVersion().getDisplayName(), false)
             }
         }
-        for (ClassNode child : classNode.getChildren()) {
-            writeSubAccessor(child, AccessorKind.version);
+        for (child in classNode.getChildren()) {
+            writeSubAccessor(child, AccessorKind.version)
         }
     }
 
-    private void writeBundleAccessors(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        Set<String> versionsAliases = classNode.aliases;
-        for (String alias : versionsAliases) {
-            String childName = leafNodeForAlias(alias);
+    @Throws(IOException::class)
+    private fun writeBundleAccessors(classNode: ClassNode, inPluginsBlock: Boolean) {
+        val versionsAliases = classNode.aliases
+        for (alias in versionsAliases) {
+            val childName: String = leafNodeForAlias(alias)
             if (!classNode.hasChild(childName)) {
-                BundleModel model = config.getBundle(alias);
-                List<String> coordinates = model.getComponents().stream()
-                    .map(config::getDependencyData)
-                    .map(LibrariesSourceGenerator::coordinatesDescriptorFor)
-                    .collect(toList());
-                writeBundle(alias, coordinates, model.getContext(), false, inPluginsBlock);
+                val model = config.getBundle(alias)
+                val coordinates = model.getComponents().stream()
+                    .map<DependencyModel> { alias: String? -> config.getDependencyData(alias!!) }
+                    .map<String> { dependencyData: DependencyModel? -> Companion.coordinatesDescriptorFor(dependencyData!!) }
+                    .collect(Collectors.toList())
+                writeBundle(alias, coordinates, model.getContext(), false, inPluginsBlock)
             }
         }
-        for (ClassNode child : classNode.getChildren()) {
-            writeSubAccessor(child, AccessorKind.bundle, inPluginsBlock);
+        for (child in classNode.getChildren()) {
+            writeSubAccessor(child, AccessorKind.bundle, inPluginsBlock)
         }
     }
 
-    private void writePluginAccessors(ClassNode classNode) throws IOException {
-        Set<String> versionsAliases = classNode.aliases;
-        for (String alias : versionsAliases) {
-            String childName = leafNodeForAlias(alias);
+    @Throws(IOException::class)
+    private fun writePluginAccessors(classNode: ClassNode) {
+        val versionsAliases = classNode.aliases
+        for (alias in versionsAliases) {
+            val childName: String = leafNodeForAlias(alias)
             if (!classNode.hasChild(childName)) {
-                PluginModel model = config.getPlugin(alias);
-                writePlugin(alias, model, false);
+                val model = config.getPlugin(alias)
+                writePlugin(alias, model, false)
             }
         }
-        for (ClassNode child : classNode.getChildren()) {
-            writeSubAccessor(child, AccessorKind.plugin);
+        for (child in classNode.getChildren()) {
+            writeSubAccessor(child, AccessorKind.plugin)
         }
     }
 
-    private void writeSubAccessorFieldFor(ClassNode classNode, AccessorKind kind) throws IOException {
-        String className = getClassName(classNode);
-        writeLn("private final " + className + " " + kind.accessorVariableNameFor(className) + " = new " + className + "(" + kind.getConstructorParams() + ");");
+    @Throws(IOException::class)
+    private fun writeSubAccessorFieldFor(classNode: ClassNode, kind: AccessorKind) {
+        val className = getClassName(classNode)
+        writeLn("private final " + className + " " + kind.accessorVariableNameFor(className) + " = new " + className + "(" + kind.constructorParams + ");")
     }
 
-    private void writeSubAccessorFieldsOf(ClassNode classNode, AccessorKind kind) throws IOException {
-        for (ClassNode child : classNode.getChildren()) {
-            writeSubAccessorFieldFor(child, kind);
+    @Throws(IOException::class)
+    private fun writeSubAccessorFieldsOf(classNode: ClassNode, kind: AccessorKind) {
+        for (child in classNode.getChildren()) {
+            writeSubAccessorFieldFor(child, kind)
         }
     }
 
-    private void writeLibraryAccessorClass(ClassNode classNode, boolean inPluginsBlock) throws IOException {
-        boolean isProvider = classNode.isAlsoProvider();
-        String interfaces = isProvider ? " implements DependencyNotationSupplier" : "";
-        writeLn("public static class " + getClassName(classNode) + " extends SubDependencyFactory" + interfaces + " {");
-        indent(() -> {
-            writeSubAccessorFieldsOf(classNode, AccessorKind.library);
-            writeLn();
-            writeLn("public " + getClassName(classNode) + "(AbstractExternalDependencyFactory owner) { super(owner); }");
-            writeLn();
+    @Throws(IOException::class)
+    private fun writeLibraryAccessorClass(classNode: ClassNode, inPluginsBlock: Boolean) {
+        val isProvider = classNode.isAlsoProvider
+        val interfaces = if (isProvider) " implements DependencyNotationSupplier" else ""
+        writeLn("public static class " + getClassName(classNode) + " extends SubDependencyFactory" + interfaces + " {")
+        indent(WriteAction {
+            writeSubAccessorFieldsOf(classNode, AccessorKind.library)
+            writeLn()
+            writeLn("public " + getClassName(classNode) + "(AbstractExternalDependencyFactory owner) { super(owner); }")
+            writeLn()
             if (isProvider) {
-                String path = classNode.getFullAlias();
-                DependencyModel model = config.getDependencyData(path);
-                writeDependencyAccessor(path, model, true, inPluginsBlock);
+                val path = classNode.fullAlias
+                val model = config.getDependencyData(path)
+                writeDependencyAccessor(path, model, true, inPluginsBlock)
             }
-            for (String alias : classNode.aliases) {
-                String childName = leafNodeForAlias(alias);
+            for (alias in classNode.aliases) {
+                val childName: String = leafNodeForAlias(alias)
                 if (!classNode.hasChild(childName)) {
-                    DependencyModel model = config.getDependencyData(alias);
-                    writeDependencyAccessor(alias, model, false, inPluginsBlock);
+                    val model = config.getDependencyData(alias)
+                    writeDependencyAccessor(alias, model, false, inPluginsBlock)
                 }
             }
-            for (ClassNode child : classNode.getChildren()) {
-                writeSubAccessor(child, AccessorKind.library, inPluginsBlock);
+            for (child in classNode.getChildren()) {
+                writeSubAccessor(child, AccessorKind.library, inPluginsBlock)
             }
-        });
-        writeLn("}");
-        writeLn();
+        })
+        writeLn("}")
+        writeLn()
     }
 
-    private void writeVersionAccessorClass(ClassNode classNode) throws IOException {
-        boolean isProvider = classNode.isAlsoProvider();
-        String interfaces = isProvider ? " implements VersionNotationSupplier" : "";
-        String versionsClassName = getClassName(classNode);
-        Set<String> versionAliases = classNode.getAliases();
-        writeLn("public static class " + versionsClassName + " extends VersionFactory " + interfaces + " {");
-        writeLn();
-        indent(() -> {
-            writeSubAccessorFieldsOf(classNode, AccessorKind.version);
-            writeLn("public " + versionsClassName + "(ProviderFactory providers, DefaultVersionCatalog config) { super(providers, config); }");
-            writeLn();
+    @Throws(IOException::class)
+    private fun writeVersionAccessorClass(classNode: ClassNode) {
+        val isProvider = classNode.isAlsoProvider
+        val interfaces = if (isProvider) " implements VersionNotationSupplier" else ""
+        val versionsClassName = getClassName(classNode)
+        val versionAliases = classNode.aliases
+        writeLn("public static class " + versionsClassName + " extends VersionFactory " + interfaces + " {")
+        writeLn()
+        indent(WriteAction {
+            writeSubAccessorFieldsOf(classNode, AccessorKind.version)
+            writeLn("public " + versionsClassName + "(ProviderFactory providers, DefaultVersionCatalog config) { super(providers, config); }")
+            writeLn()
             if (isProvider) {
-                String path = classNode.getFullAlias();
-                VersionModel vm = config.getVersion(path);
-                String context = vm.getContext();
-                writeSingleVersionAccessor(path, context, vm.getVersion().getDisplayName(), true);
+                val path = classNode.fullAlias
+                val vm = config.getVersion(path)
+                val context = vm.getContext()
+                writeSingleVersionAccessor(path, context, vm.getVersion().getDisplayName(), true)
             }
-            for (String alias : versionAliases) {
-                String childName = leafNodeForAlias(alias);
+            for (alias in versionAliases) {
+                val childName: String = leafNodeForAlias(alias)
                 if (!classNode.hasChild(childName)) {
-                    VersionModel vm = config.getVersion(alias);
-                    String context = vm.getContext();
-                    writeSingleVersionAccessor(alias, context, vm.getVersion().getDisplayName(), false);
+                    val vm = config.getVersion(alias)
+                    val context = vm.getContext()
+                    writeSingleVersionAccessor(alias, context, vm.getVersion().getDisplayName(), false)
                 }
             }
-            for (ClassNode child : classNode.getChildren()) {
-                writeSubAccessor(child, AccessorKind.version);
+            for (child in classNode.getChildren()) {
+                writeSubAccessor(child, AccessorKind.version)
             }
-        });
-        writeLn("}");
-        writeLn();
+        })
+        writeLn("}")
+        writeLn()
     }
 
-    private void writeSingleVersionAccessor(String versionAlias, @Nullable String context, String version, boolean asProvider) throws IOException {
-        writeLn("/**");
-        writeLn(" * Version alias <b>" + versionAlias + "</b> with value <b>" + version + "</b>");
-        writeLn(" * <p>");
-        writeLn(" * If the version is a rich version and cannot be represented as a");
-        writeLn(" * single version string, an empty string is returned.");
+    @Throws(IOException::class)
+    private fun writeSingleVersionAccessor(versionAlias: String, context: String?, version: String, asProvider: Boolean) {
+        writeLn("/**")
+        writeLn(" * Version alias <b>" + versionAlias + "</b> with value <b>" + version + "</b>")
+        writeLn(" * <p>")
+        writeLn(" * If the version is a rich version and cannot be represented as a")
+        writeLn(" * single version string, an empty string is returned.")
         if (context != null) {
-            writeLn(" * <p>");
-            writeLn(" * This version was declared in " + sanitizeUnicodeEscapes(context));
+            writeLn(" * <p>")
+            writeLn(" * This version was declared in " + sanitizeUnicodeEscapes(context))
         }
-        writeLn(" */");
-        String methodName = asProvider ? "asProvider" : "get" + toJavaName(leafNodeForAlias(versionAlias));
-        writeLn("public Provider<String> " + methodName + "() { return getVersion(\"" + versionAlias + "\"); }");
-        writeLn();
+        writeLn(" */")
+        val methodName = if (asProvider) "asProvider" else "get" + AbstractSourceGenerator.Companion.toJavaName(leafNodeForAlias(versionAlias))
+        writeLn("public Provider<String> " + methodName + "() { return getVersion(\"" + versionAlias + "\"); }")
+        writeLn()
     }
 
-    private void performValidation(List<String> libraries, List<String> bundles, List<String> versions, List<String> plugins) {
-        assertUnique(libraries, "library aliases", "");
-        assertUnique(bundles, "dependency bundles", "Bundle");
-        assertUnique(versions, "dependency versions", "Version");
-        assertUnique(plugins, "plugins", "Plugin");
-        int size = libraries.size() + bundles.size() + versions.size() + plugins.size();
+    private fun performValidation(libraries: MutableList<String>, bundles: MutableList<String>, versions: MutableList<String>, plugins: MutableList<String>) {
+        assertUnique(libraries, "library aliases", "")
+        assertUnique(bundles, "dependency bundles", "Bundle")
+        assertUnique(versions, "dependency versions", "Version")
+        assertUnique(plugins, "plugins", "Plugin")
+        val size = libraries.size + bundles.size + versions.size + plugins.size
         if (size > MAX_ENTRIES) {
-            throw throwVersionCatalogProblemException(problemsService.internalReporter.internalCreate(builder ->
-                configureVersionCatalogError(builder, getProblemPrefix() + "version catalog model contains too many entries (" + size + ")", TOO_MANY_ENTRIES)
-                    .details("The maximum number of aliases in a catalog is " + MAX_ENTRIES)
-                    .solution("Reduce the number of aliases defined in this catalog")
-                    .solution("Split the catalog into multiple catalogs")));
+            throw throwVersionCatalogProblemException(problemsService.internalReporter!!.internalCreate({ builder ->
+                org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.configureVersionCatalogError(
+                    builder,
+                    this.problemPrefix + "version catalog model contains too many entries (" + size + ")",
+                    org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.TOO_MANY_ENTRIES
+                )
+                    .details("The maximum number of aliases in a catalog is " + org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.MAX_ENTRIES)!!
+                    .solution("Reduce the number of aliases defined in this catalog")!!
+                    .solution("Split the catalog into multiple catalogs")
+            })!!)
         }
     }
 
-    private RuntimeException throwVersionCatalogProblemException(ProblemInternal problem) {
-        throw problemsService.reporter.throwing(new InvalidUserDataException(), problem);
+    private fun throwVersionCatalogProblemException(problem: ProblemInternal): RuntimeException? {
+        throw problemsService.reporter!!.throwing(InvalidUserDataException(), problem)
     }
 
-    private static ProblemSpecInternal configureVersionCatalogError(ProblemSpecInternal spec, String message, VersionCatalogProblemId catalogProblemId) {
-        return spec
-            .id(screamingSnakeToKebabCase(catalogProblemId.name()), catalogProblemId.getDisplayName(), GradleCoreProblemGroup.versionCatalog())
-            .contextualLabel(message)
-            .documentedAt(userManual(VERSION_CATALOG_PROBLEMS, catalogProblemId.name().toLowerCase(Locale.ROOT)));
-    }
-
-    private void assertUnique(List<String> names, String prefix, String suffix) {
-        List<ProblemInternal> errors = names.stream()
-            .collect(groupingBy(AbstractSourceGenerator::toJavaName))
-            .entrySet()
+    private fun assertUnique(names: MutableList<String>, prefix: String, suffix: String) {
+        val errors: MutableList<ProblemInternal> = names.stream()
+            .collect(Collectors.groupingBy(Function { alias: String? -> AbstractSourceGenerator.Companion.toJavaName(alias) }))
+            .entries
             .stream()
-            .filter(e -> e.getValue().size() > 1)
-            .map(e -> {
-                String errorValues = e.getValue().stream().sorted().collect(oxfordJoin("and"));
-                return this.problemsService.internalReporter.internalCreate(builder ->
-                    configureVersionCatalogError(builder, getProblemPrefix() + prefix + " " + errorValues + " are mapped to the same accessor name get" + e.getKey() + suffix + "()", ACCESSOR_NAME_CLASH)
-                        .details("A name clash was detected")
-                        .solution("Use a different alias for " + errorValues));
-            })
-            .collect(toList());
+            .filter { e: MutableMap.MutableEntry<String?, MutableList<String?>?>? -> e!!.value!!.size > 1 }
+            .map<Any> { e: MutableMap.MutableEntry<String?, MutableList<String?>?>? ->
+                val errorValues: String = e!!.value!!.stream().sorted().collect(oxfordJoin("and"))
+                this.problemsService.internalReporter!!.internalCreate({ builder ->
+                    org.gradle.api.internal.catalog.LibrariesSourceGenerator.Companion.configureVersionCatalogError(
+                        builder,
+                        this.problemPrefix + prefix + " " + errorValues + " are mapped to the same accessor name get" + e.key + suffix + "()",
+                        org.gradle.api.internal.catalog.problems.VersionCatalogProblemId.ACCESSOR_NAME_CLASH
+                    )
+                        .details("A name clash was detected")!!
+                        .solution("Use a different alias for " + errorValues)
+                })
+            }
+            .collect(Collectors.toList())
         if (!errors.isEmpty()) {
-            throw this.problemsService.reporter.throwing(new InvalidUserDataException(), errors);
+            throw this.problemsService.reporter!!.throwing(InvalidUserDataException(), errors)
         }
     }
 
-    private String getProblemPrefix() {
-        return getProblemInVersionCatalog(config.getName()) + ", ";
-    }
+    private val problemPrefix: String
+        get() = DefaultCatalogProblemBuilder.getProblemInVersionCatalog(config.getName()) + ", "
 
-    private static String coordinatesDescriptorFor(DependencyModel dependencyData) {
-        return dependencyData.getGroup() + ":" + dependencyData.getName();
-    }
-
-    private void writeDependencyAccessor(String alias, DependencyModel dependency, boolean asProvider, boolean inPluginsBlock) throws IOException {
-        String name = leafNodeForAlias(alias);
-        writeLn("/**");
-        writeLn(" * Dependency provider for <b>" + name + "</b> with <b>" + coordinatesDescriptorFor(dependency) + "</b> coordinates and");
-        writeVersionInformation(dependency.getVersionRef(), dependency.getVersion());
-        String context = dependency.getContext();
+    @Throws(IOException::class)
+    private fun writeDependencyAccessor(alias: String, dependency: DependencyModel, asProvider: Boolean, inPluginsBlock: Boolean) {
+        val name: String = leafNodeForAlias(alias)
+        writeLn("/**")
+        writeLn(" * Dependency provider for <b>" + name + "</b> with <b>" + coordinatesDescriptorFor(dependency) + "</b> coordinates and")
+        writeVersionInformation(dependency.getVersionRef(), dependency.getVersion())
+        val context = dependency.getContext()
         if (context != null) {
-            writeLn(" * <p>");
-            writeLn(" * This dependency was declared in " + sanitizeUnicodeEscapes(context));
+            writeLn(" * <p>")
+            writeLn(" * This dependency was declared in " + sanitizeUnicodeEscapes(context))
         }
-        writeLn(" */");
-        String methodName = asProvider ? "asProvider" : "get" + toJavaName(name);
-        writeLn("public Provider<MinimalExternalModuleDependency> " + methodName + "() {");
-        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return create(\"" + alias + "\");"));
-        writeLn("}");
-        writeLn();
+        writeLn(" */")
+        val methodName = if (asProvider) "asProvider" else "get" + AbstractSourceGenerator.Companion.toJavaName(name)
+        writeLn("public Provider<MinimalExternalModuleDependency> " + methodName + "() {")
+        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return create(\"" + alias + "\");"))
+        writeLn("}")
+        writeLn()
     }
 
-    private void writeVersionInformation(@Nullable String versionRef, ImmutableVersionConstraint version) throws IOException {
+    @Throws(IOException::class)
+    private fun writeVersionInformation(versionRef: String?, version: ImmutableVersionConstraint) {
         if (versionRef != null) {
-            writeLn(" * with version reference <b>" + versionRef + "</b>");
+            writeLn(" * with version reference <b>" + versionRef + "</b>")
         } else {
-            String versionDisplay = version.getDisplayName();
+            val versionDisplay = version.getDisplayName()
             if (versionDisplay.isEmpty()) {
-                writeLn(" * with <b>no version specified</b>");
+                writeLn(" * with <b>no version specified</b>")
             } else {
-                writeLn(" * with version <b>" + versionDisplay + "</b>");
+                writeLn(" * with version <b>" + versionDisplay + "</b>")
             }
         }
     }
 
-    private static String leafNodeForAlias(String alias) {
-        List<String> split = nameSplitter().splitToList(alias);
-        return split.get(split.size() - 1);
+    @Throws(IOException::class)
+    private fun writeSubAccessor(classNode: ClassNode, kind: AccessorKind, inPluginsBlock: Boolean = false) {
+        val className = getClassName(classNode)
+        val getter: String? = classNode.name
+        writeLn("/**")
+        writeLn(" * Group of " + kind.description + " at <b>" + classNode.path + "</b>")
+        writeLn(" */")
+        writeLn("public " + className + " get" + AbstractSourceGenerator.Companion.toJavaName(getter) + "() {")
+        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return " + kind.accessorVariableNameFor(className) + ";"))
+        writeLn("}")
+        writeLn()
     }
 
-    private void writeSubAccessor(ClassNode classNode, AccessorKind kind) throws IOException {
-        writeSubAccessor(classNode, kind, false);
-    }
-
-    private void writeSubAccessor(ClassNode classNode, AccessorKind kind, boolean inPluginsBlock) throws IOException {
-        String className = getClassName(classNode);
-        String getter = classNode.name;
-        writeLn("/**");
-        writeLn(" * Group of " + kind.getDescription() + " at <b>" + classNode.getPath() + "</b>");
-        writeLn(" */");
-        writeLn("public " + className + " get" + toJavaName(getter) + "() {");
-        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return " + kind.accessorVariableNameFor(className) + ";"));
-        writeLn("}");
-        writeLn();
-    }
-
-    private void writeBundle(String alias, List<String> coordinates, @Nullable String context, boolean asProvider, boolean inPluginsBlock) throws IOException {
-        writeLn("/**");
+    @Throws(IOException::class)
+    private fun writeBundle(alias: String, coordinates: MutableList<String>, context: String?, asProvider: Boolean, inPluginsBlock: Boolean) {
+        writeLn("/**")
         if (coordinates.isEmpty()) {
-            writeLn(" * Dependency bundle provider for <b>" + alias + "</b> which contains no dependencies");
+            writeLn(" * Dependency bundle provider for <b>" + alias + "</b> which contains no dependencies")
         } else {
-            writeLn(" * Dependency bundle provider for <b>" + alias + "</b> which contains the following dependencies:");
-            writeLn(" * <ul>");
-            for (String coordinate : coordinates) {
-                writeLn(" *    <li>" + coordinate + "</li>");
+            writeLn(" * Dependency bundle provider for <b>" + alias + "</b> which contains the following dependencies:")
+            writeLn(" * <ul>")
+            for (coordinate in coordinates) {
+                writeLn(" *    <li>" + coordinate + "</li>")
             }
-            writeLn(" * </ul>");
+            writeLn(" * </ul>")
         }
         if (context != null) {
-            writeLn(" * <p>");
-            writeLn(" * This bundle was declared in " + sanitizeUnicodeEscapes(context));
+            writeLn(" * <p>")
+            writeLn(" * This bundle was declared in " + sanitizeUnicodeEscapes(context))
         }
-        writeLn(" */");
-        String methodName = asProvider ? "asProvider" : "get" + toJavaName(leafNodeForAlias(alias));
-        writeLn("public Provider<ExternalModuleDependencyBundle> " + methodName + "() {");
-        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return createBundle(\"" + alias + "\");"));
-        writeLn("}");
-        writeLn();
+        writeLn(" */")
+        val methodName = if (asProvider) "asProvider" else "get" + AbstractSourceGenerator.Companion.toJavaName(leafNodeForAlias(alias))
+        writeLn("public Provider<ExternalModuleDependencyBundle> " + methodName + "() {")
+        writeLn(throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock, "    return createBundle(\"" + alias + "\");"))
+        writeLn("}")
+        writeLn()
     }
 
-    private void writePlugin(String alias, PluginModel plugin, boolean asProvider) throws IOException {
-        writeLn("/**");
-        writeLn(" * Plugin provider for <b>" + alias + "</b> with plugin id <b>" + plugin.getId() + "</b> and");
-        writeVersionInformation(plugin.getVersionRef(), plugin.getVersion());
-        String context = plugin.getContext();
+    @Throws(IOException::class)
+    private fun writePlugin(alias: String, plugin: PluginModel, asProvider: Boolean) {
+        writeLn("/**")
+        writeLn(" * Plugin provider for <b>" + alias + "</b> with plugin id <b>" + plugin.getId() + "</b> and")
+        writeVersionInformation(plugin.getVersionRef(), plugin.getVersion())
+        val context = plugin.getContext()
         if (context != null) {
-            writeLn(" * <p>");
-            writeLn(" * This plugin was declared in " + sanitizeUnicodeEscapes(context));
+            writeLn(" * <p>")
+            writeLn(" * This plugin was declared in " + sanitizeUnicodeEscapes(context))
         }
-        writeLn(" */");
-        String methodName = asProvider ? "asProvider" : "get" + toJavaName(leafNodeForAlias(alias));
-        writeLn("public Provider<PluginDependency> " + methodName + "() { return createPlugin(\"" + alias + "\"); }");
-        writeLn();
+        writeLn(" */")
+        val methodName = if (asProvider) "asProvider" else "get" + AbstractSourceGenerator.Companion.toJavaName(leafNodeForAlias(alias))
+        writeLn("public Provider<PluginDependency> " + methodName + "() { return createPlugin(\"" + alias + "\"); }")
+        writeLn()
     }
 
-    private static String throwForUnsupportedFeatureInPluginsBlockOr(boolean inPluginsBlock, String or) {
-        return inPluginsBlock ? "    throw new GradleException(" +
-            "\"Accessing libraries or bundles from version catalogs in the plugins block is not allowed. " +
-            "Only use versions or plugins from catalogs in the plugins block.\");"
-            : or;
-    }
+    private class ClassNode(private val kind: AccessorKind, private val parent: ClassNode?, private val name: String?) {
+        private val children: MutableMap<String, ClassNode> = LinkedHashMap<String, ClassNode>()
+        val aliases: MutableSet<String> = LinkedHashSet<String>()
+        private val leafAliases: MutableSet<String> = LinkedHashSet<String>()
+        var wrapping: Boolean = false
 
-    /**
-     * Java compiler would fail to compile sources that have illegal unicode escape characters, including in the comments.
-     * Such characters could be accidentally introduced by a backslash followed by {@code 'u'},
-     * e.g. in Windows path {@code '..\\user\dir'}.
-     */
-    private static String sanitizeUnicodeEscapes(String s) {
-        // If a backslash precedes 'u', then we replace the backslash with its unicode notation '\\u005c'
-        return s.replace("\\u", "\\u005cu");
-    }
-
-    private static ClassNode rootNode(AccessorKind kind) {
-        return new ClassNode(kind, null, null);
-    }
-
-    private static ClassNode rootNode(AccessorKind kind, String nest) {
-        ClassNode root = rootNode(kind);
-        ClassNode wrappingNode = root.child(nest);
-        wrappingNode.wrapping = true;
-        return wrappingNode;
-    }
-
-    private static ClassNode toClassNode(List<String> aliases, ClassNode root) {
-        for (String alias : aliases) {
-            ClassNode current = root;
-            // foo -> foo is the alias
-            // foo.bar.baz --> baz is the alias
-            List<String> dotted = nameSplitter().splitToList(alias);
-            int last = dotted.size() - 1;
-            for (int i = 0; i < last; i++) {
-                current = current.child(dotted.get(i));
+        val simpleName: String
+            get() {
+                if (parent == null || wrapping) {
+                    return ""
+                }
+                return parent.getSimpleName() + StringUtils.capitalize(name)
             }
-            current.addAlias(alias);
-        }
-        return root;
-    }
 
-    private static class ClassNode {
-        private final ClassNode parent;
-        private final AccessorKind kind;
-        private final String name;
-        private final Map<String, ClassNode> children = new LinkedHashMap<>();
-        private final Set<String> aliases = new LinkedHashSet<>();
-        private final Set<String> leafAliases = new LinkedHashSet<>();
-        public boolean wrapping;
+        val className: String
+            get() = this.simpleName + kind.classNameSuffix
 
-        private ClassNode(AccessorKind kind, @Nullable ClassNode parent, @Nullable String name) {
-            this.kind = kind;
-            this.parent = parent;
-            this.name = name;
+        fun child(name: String): ClassNode {
+            return children.computeIfAbsent(name) { n: String? -> ClassNode(kind, this, n) }
         }
 
-        private String getSimpleName() {
-            if (parent == null || wrapping) {
-                return "";
+        fun addAlias(alias: String) {
+            aliases.add(alias)
+            leafAliases.add(leafNodeForAlias(alias))
+        }
+
+        fun getChildren(): MutableCollection<ClassNode> {
+            return children.values
+        }
+
+        fun hasChild(name: String): Boolean {
+            return children.containsKey(name)
+        }
+
+        val path: String
+            get() {
+                if (parent == null) {
+                    return ""
+                }
+                val parentPath = parent.getPath()
+                return (if (parentPath.isEmpty()) name else parentPath + "." + name)!!
             }
-            return parent.getSimpleName() + StringUtils.capitalize(name);
-        }
 
-        private String getClassName() {
-            return getSimpleName() + kind.getClassNameSuffix();
-        }
-
-        ClassNode child(String name) {
-            return children.computeIfAbsent(name, n -> new ClassNode(kind, this, n));
-        }
-
-        void addAlias(String alias) {
-            aliases.add(alias);
-            leafAliases.add(leafNodeForAlias(alias));
-        }
-
-        public Collection<ClassNode> getChildren() {
-            return children.values();
-        }
-
-        public Set<String> getAliases() {
-            return aliases;
-        }
-
-        public boolean hasChild(String name) {
-            return children.containsKey(name);
-        }
-
-        String getPath() {
-            if (parent == null) {
-                return "";
+        val fullAlias: String
+            get() {
+                if (parent == null || wrapping) {
+                    return ""
+                }
+                val parentPath = parent.getFullAlias()
+                return (if (parentPath.isEmpty()) name else parentPath + "." + name)!!
             }
-            String parentPath = parent.getPath();
-            return parentPath.isEmpty() ? name : parentPath + "." + name;
-        }
 
-        String getFullAlias() {
-            if (parent == null || wrapping) {
-                return "";
-            }
-            String parentPath = parent.getFullAlias();
-            return parentPath.isEmpty() ? name : parentPath + "." + name;
-        }
+        val isAlsoProvider: Boolean
+            get() = parent != null &&
+                    parent.leafAliases.contains(name) &&
+                    parent.children.containsKey(name)
 
-        public boolean isAlsoProvider() {
-            return parent != null &&
-                parent.leafAliases.contains(name) &&
-                parent.children.containsKey(name);
-        }
-
-        @Override
-        public String toString() {
+        override fun toString(): String {
             return "ClassNode{" +
-                "name='" + name + '\'' +
-                ", aliases=" + aliases +
-                '}';
+                    "name='" + name + '\'' +
+                    ", aliases=" + aliases +
+                    '}'
         }
     }
 
-    private enum AccessorKind {
+    private enum class AccessorKind(val description: String, val constructorParams: String) {
         library("libraries", "owner"),
         version("versions", "providers, config"),
         bundle("bundles", "objects, providers, config, attributesFactory, capabilityNotationParser"),
         plugin("plugins", "providers, config");
 
-        private final String description;
-        private final String constructorParams;
-        private final String variablePrefix;
+        private val variablePrefix: String
 
-        AccessorKind(String description, String constructorParams) {
-            this.description = description;
-            this.constructorParams = constructorParams;
-            this.variablePrefix = name().charAt(0) + "acc";
+        init {
+            this.variablePrefix = name.get(0).toString() + "acc"
         }
 
-        public String getDescription() {
-            return description;
+        val classNameSuffix: String
+            get() = StringUtils.capitalize(name) + "Accessors"
+
+        fun accessorVariableNameFor(className: String): String {
+            return variablePrefix + "For" + className
+        }
+    }
+
+    companion object {
+        private const val MAX_ENTRIES = 30000
+        const val ERROR_HEADER: String = "Cannot generate dependency accessors"
+        fun generateSource(
+            writer: Writer,
+            config: DefaultVersionCatalog,
+            packageName: String,
+            className: String,
+            problemsService: Problems
+        ) {
+            val generator = LibrariesSourceGenerator(writer, config, problemsService)
+            try {
+                generator.generateProjectExtensionFactoryClass(packageName, className)
+                generator.classNameCounter.clear()
+                generator.classNameCache.clear()
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
+            }
         }
 
-        public String getClassNameSuffix() {
-            return StringUtils.capitalize(name()) + "Accessors";
+        fun generatePluginsBlockSource(
+            writer: Writer,
+            config: DefaultVersionCatalog,
+            packageName: String,
+            className: String,
+            problemsService: Problems
+        ) {
+            val generator = LibrariesSourceGenerator(writer, config, problemsService)
+            try {
+                generator.generatePluginsBlockFactoryClass(packageName, className)
+                generator.classNameCounter.clear()
+                generator.classNameCache.clear()
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
+            }
         }
 
-        public String getConstructorParams() {
-            return constructorParams;
+        private fun configureVersionCatalogError(spec: ProblemSpecInternal, message: String, catalogProblemId: VersionCatalogProblemId): ProblemSpecInternal {
+            return spec
+                .id(
+                    org.gradle.util.internal.TextUtil.screamingSnakeToKebabCase(catalogProblemId.name),
+                    catalogProblemId.getDisplayName(),
+                    org.gradle.api.problems.internal.GradleCoreProblemGroup.versionCatalog()
+                )
+                .contextualLabel(message)
+                .documentedAt(
+                    org.gradle.internal.deprecation.Documentation.Companion.userManual(
+                        org.gradle.api.internal.catalog.problems.DefaultCatalogProblemBuilder.VERSION_CATALOG_PROBLEMS,
+                        catalogProblemId.name.lowercase()
+                    )
+                )!!
         }
 
-        public String accessorVariableNameFor(String className) {
-            return variablePrefix + "For" + className;
+        private fun coordinatesDescriptorFor(dependencyData: DependencyModel): String {
+            return dependencyData.getGroup() + ":" + dependencyData.getName()
+        }
+
+        private fun leafNodeForAlias(alias: String): String {
+            val split: MutableList<String> = AbstractSourceGenerator.Companion.nameSplitter().splitToList(alias)
+            return split.get(split.size - 1)
+        }
+
+        private fun throwForUnsupportedFeatureInPluginsBlockOr(inPluginsBlock: Boolean, or: String): String {
+            return if (inPluginsBlock)
+                ("    throw new GradleException(" +
+                        "\"Accessing libraries or bundles from version catalogs in the plugins block is not allowed. " +
+                        "Only use versions or plugins from catalogs in the plugins block.\");")
+            else
+                or
+        }
+
+        /**
+         * Java compiler would fail to compile sources that have illegal unicode escape characters, including in the comments.
+         * Such characters could be accidentally introduced by a backslash followed by `'u'`,
+         * e.g. in Windows path `'..\\user\dir'`.
+         */
+        private fun sanitizeUnicodeEscapes(s: String): String {
+            // If a backslash precedes 'u', then we replace the backslash with its unicode notation '\\u005c'
+            return s.replace("\\u", "\\u005cu")
+        }
+
+        private fun rootNode(kind: AccessorKind): ClassNode {
+            return ClassNode(kind, null, null)
+        }
+
+        private fun rootNode(kind: AccessorKind, nest: String): ClassNode {
+            val root: ClassNode = rootNode(kind)
+            val wrappingNode = root.child(nest)
+            wrappingNode.wrapping = true
+            return wrappingNode
+        }
+
+        private fun toClassNode(aliases: MutableList<String>, root: ClassNode): ClassNode {
+            for (alias in aliases) {
+                var current = root
+                // foo -> foo is the alias
+                // foo.bar.baz --> baz is the alias
+                val dotted: MutableList<String> = AbstractSourceGenerator.Companion.nameSplitter().splitToList(alias)
+                val last = dotted.size - 1
+                for (i in 0..<last) {
+                    current = current.child(dotted.get(i))
+                }
+                current.addAlias(alias)
+            }
+            return root
         }
     }
 }

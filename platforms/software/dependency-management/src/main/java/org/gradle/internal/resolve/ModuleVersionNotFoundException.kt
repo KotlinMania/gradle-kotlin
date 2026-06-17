@@ -13,137 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.Factory;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.exceptions.ResolutionProvider;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.jspecify.annotations.NonNull;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.Factory
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.exceptions.ResolutionProvider
+import org.gradle.internal.logging.text.TreeFormatter
+import java.util.function.Consumer
+import kotlin.math.min
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
-public class ModuleVersionNotFoundException extends ModuleVersionResolveException implements ResolutionProvider {
-    private List<String> resolutions = ImmutableList.of();
+class ModuleVersionNotFoundException : ModuleVersionResolveException, ResolutionProvider {
+    private var resolutions: MutableList<String?> = ImmutableList.of<String?>()
 
     /**
-     * This is used by {@link ModuleVersionResolveException#withIncomingPaths(java.util.Collection)}.
+     * This is used by [withIncomingPaths].
      */
-    @SuppressWarnings("UnusedDeclaration")
-    public ModuleVersionNotFoundException(ComponentSelector selector, Factory<String> message, Collection<String> resolutions) {
-        super(selector, message);
-        this.resolutions = ImmutableList.copyOf(resolutions);
+    constructor(selector: ComponentSelector?, message: Factory<String?>?, resolutions: MutableCollection<String?>) : super(selector, message) {
+        this.resolutions = ImmutableList.copyOf<String?>(resolutions)
     }
 
 
-    public ModuleVersionNotFoundException(ModuleComponentSelector selector, Collection<String> attemptedLocations, Collection<String> unmatchedVersions, Collection<RejectedVersion> rejectedVersions) {
-        super(selector, format(selector, attemptedLocations, unmatchedVersions, rejectedVersions));
-        recordPossibleResolution(attemptedLocations);
+    constructor(
+        selector: ModuleComponentSelector,
+        attemptedLocations: MutableCollection<String>,
+        unmatchedVersions: MutableCollection<String>,
+        rejectedVersions: MutableCollection<RejectedVersion?>
+    ) : super(selector, format(selector, attemptedLocations, unmatchedVersions, rejectedVersions)) {
+        recordPossibleResolution(attemptedLocations)
     }
 
-    public ModuleVersionNotFoundException(ModuleVersionIdentifier id, Collection<String> attemptedLocations) {
-        super(id, format(id, attemptedLocations));
-        recordPossibleResolution(attemptedLocations);
+    constructor(id: ModuleVersionIdentifier, attemptedLocations: MutableCollection<String>) : super(id, format(id, attemptedLocations)) {
+        recordPossibleResolution(attemptedLocations)
     }
 
-    public ModuleVersionNotFoundException(ModuleComponentSelector selector, Collection<String> attemptedLocations) {
-        super(selector, format(selector, attemptedLocations));
-        recordPossibleResolution(attemptedLocations);
-    }
-
-    private static Factory<String> format(ModuleComponentSelector selector, Collection<String> locations, Collection<String> unmatchedVersions, Collection<RejectedVersion> rejectedVersions) {
-        return () -> {
-            TreeFormatter builder = new TreeFormatter();
-            if (unmatchedVersions.isEmpty() && rejectedVersions.isEmpty()) {
-                builder.node(String.format("Could not find any matches for %s as no versions of %s:%s are available.", selector, selector.getGroup(), selector.getModule()));
-            } else {
-                builder.node(String.format("Could not find any version that matches %s.", selector));
-                if (!unmatchedVersions.isEmpty()) {
-                    builder.node("Versions that do not match");
-                    appendSizeLimited(builder, unmatchedVersions);
-                }
-                if (!rejectedVersions.isEmpty()) {
-                    Collection<RejectedVersion> byRule = new ArrayList<>(rejectedVersions.size());
-                    Collection<RejectedVersion> byAttributes = new ArrayList<>(rejectedVersions.size());
-                    mapRejections(rejectedVersions, byRule, byAttributes);
-                    if (!byRule.isEmpty()) {
-                        builder.node("Versions rejected by component selection rules");
-                        appendSizeLimited(builder, byRule);
-                    }
-                    if (!byAttributes.isEmpty()) {
-                        builder.node("Versions rejected by attribute matching");
-                        appendSizeLimited(builder, byAttributes);
-                    }
-                }
-            }
-            addLocations(builder, locations);
-            return builder.toString();
-        };
-    }
-
-    private static void mapRejections(Collection<RejectedVersion> in, Collection<RejectedVersion> outByRule, Collection<RejectedVersion> outByAttributes) {
-        for (RejectedVersion version : in) {
-            if (version instanceof RejectedByAttributesVersion) {
-                outByAttributes.add(version);
-            } else {
-                outByRule.add(version);
-            }
-        }
-    }
-
-    private static Factory<String> format(ModuleVersionIdentifier id, Collection<String> locations) {
-        return () -> {
-            TreeFormatter builder = new TreeFormatter();
-            builder.node(String.format("Could not find %s.", id));
-            addLocations(builder, locations);
-            return builder.toString();
-        };
-    }
-
-    private static Factory<String> format(ModuleComponentSelector selector, Collection<String> locations) {
-        return () -> {
-            TreeFormatter builder = new TreeFormatter();
-            builder.node(String.format("Could not find any version that matches %s.", selector));
-            addLocations(builder, locations);
-            return builder.toString();
-        };
-    }
-
-    private static void appendSizeLimited(TreeFormatter builder, Collection<?> values) {
-        builder.startChildren();
-        Iterator<?> iterator = values.iterator();
-        int count = Math.min(5, values.size());
-        for (int i = 0; i < count; i++) {
-            Object next = iterator.next();
-            if (next instanceof RejectedVersion) {
-                ((RejectedVersion) next).describeTo(builder);
-            } else {
-                builder.node(next.toString());
-            }
-        }
-        if (count < values.size()) {
-            builder.node(String.format("+ %d more", values.size() - count));
-        }
-        builder.endChildren();
-    }
-
-    private static void addLocations(TreeFormatter builder, Collection<String> locations) {
-        if (locations.isEmpty()) {
-            return;
-        }
-        builder.node("Searched in the following locations");
-        builder.startChildren();
-
-        locations.forEach(builder::node);
-
-        builder.endChildren();
+    constructor(selector: ModuleComponentSelector?, attemptedLocations: MutableCollection<String>) : super(selector, format(selector, attemptedLocations)) {
+        recordPossibleResolution(attemptedLocations)
     }
 
     /**
@@ -152,36 +60,134 @@ public class ModuleVersionNotFoundException extends ModuleVersionResolveExceptio
      * source should be configured. At this stage, this information is lost, so we do a best effort
      * based on the file locations.
      */
-    private void recordPossibleResolution(Collection<String> locations) {
-        if (locations.size() == 1) {
-            String singleLocation = locations.iterator().next();
-            String format = getFormatName(singleLocation);
+    private fun recordPossibleResolution(locations: MutableCollection<String>) {
+        if (locations.size == 1) {
+            val singleLocation = locations.iterator().next()
+            val format: String? = getFormatName(singleLocation)
             if (format != null) {
-                resolutions = ImmutableList.of(String.format("If the artifact you are trying to retrieve can be found in the repository but without metadata in '%s' format, you need to adjust the 'metadataSources { ... }' of the repository declaration.", format));
+                resolutions = ImmutableList.of<String?>(
+                    String.format(
+                        "If the artifact you are trying to retrieve can be found in the repository but without metadata in '%s' format, you need to adjust the 'metadataSources { ... }' of the repository declaration.",
+                        format
+                    )
+                )
             }
         }
     }
 
-    private static String getFormatName(String singleLocation) {
-        boolean isPom = singleLocation.endsWith(".pom");
-        boolean isIvy = singleLocation.contains("ivy-") && singleLocation.endsWith(".xml");
-        boolean isModule = singleLocation.endsWith(".module");
-        return isPom ? "Maven POM" : (isIvy ? "ivy.xml" : (isModule ? "Gradle module" : null));
+    public override fun getResolutions(): MutableList<String?> {
+        return resolutions
     }
 
-    @Override
-    @NonNull
-    public List<String> getResolutions() {
-        return resolutions;
-    }
-
-    @Override
-    protected ModuleVersionResolveException createCopy() {
+    override fun createCopy(): ModuleVersionResolveException {
         try {
-            String message = getMessage();
-            return getClass().getConstructor(ComponentSelector.class, Factory.class, Collection.class).newInstance(getSelector(), (Factory<String>) () -> message, resolutions);
-        } catch (Exception e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            val message = getMessage()
+            return javaClass.getConstructor(ComponentSelector::class.java, Factory::class.java, MutableCollection::class.java)
+                .newInstance(getSelector(), org.gradle.internal.Factory { message } as Factory<String?>, resolutions)
+        } catch (e: Exception) {
+            throw throwAsUncheckedException(e)
+        }
+    }
+
+    companion object {
+        private fun format(
+            selector: ModuleComponentSelector,
+            locations: MutableCollection<String>,
+            unmatchedVersions: MutableCollection<String>,
+            rejectedVersions: MutableCollection<RejectedVersion?>
+        ): Factory<String?> {
+            return org.gradle.internal.Factory {
+                val builder = TreeFormatter()
+                if (unmatchedVersions.isEmpty() && rejectedVersions.isEmpty()) {
+                    builder.node(String.format("Could not find any matches for %s as no versions of %s:%s are available.", selector, selector.getGroup(), selector.getModule()))
+                } else {
+                    builder.node(String.format("Could not find any version that matches %s.", selector))
+                    if (!unmatchedVersions.isEmpty()) {
+                        builder.node("Versions that do not match")
+                        appendSizeLimited(builder, unmatchedVersions)
+                    }
+                    if (!rejectedVersions.isEmpty()) {
+                        val byRule: MutableCollection<RejectedVersion> = ArrayList<RejectedVersion>(rejectedVersions.size)
+                        val byAttributes: MutableCollection<RejectedVersion> = ArrayList<RejectedVersion>(rejectedVersions.size)
+                        mapRejections(rejectedVersions, byRule, byAttributes)
+                        if (!byRule.isEmpty()) {
+                            builder.node("Versions rejected by component selection rules")
+                            appendSizeLimited(builder, byRule)
+                        }
+                        if (!byAttributes.isEmpty()) {
+                            builder.node("Versions rejected by attribute matching")
+                            appendSizeLimited(builder, byAttributes)
+                        }
+                    }
+                }
+                addLocations(builder, locations)
+                builder.toString()
+            }
+        }
+
+        private fun mapRejections(`in`: MutableCollection<RejectedVersion?>, outByRule: MutableCollection<RejectedVersion>, outByAttributes: MutableCollection<RejectedVersion>) {
+            for (version in `in`) {
+                if (version is RejectedByAttributesVersion) {
+                    outByAttributes.add(version)
+                } else {
+                    outByRule.add(version!!)
+                }
+            }
+        }
+
+        private fun format(id: ModuleVersionIdentifier?, locations: MutableCollection<String>): Factory<String?> {
+            return org.gradle.internal.Factory {
+                val builder = TreeFormatter()
+                builder.node(String.format("Could not find %s.", id))
+                addLocations(builder, locations)
+                builder.toString()
+            }
+        }
+
+        private fun format(selector: ModuleComponentSelector?, locations: MutableCollection<String>): Factory<String?> {
+            return org.gradle.internal.Factory {
+                val builder = TreeFormatter()
+                builder.node(String.format("Could not find any version that matches %s.", selector))
+                addLocations(builder, locations)
+                builder.toString()
+            }
+        }
+
+        private fun appendSizeLimited(builder: TreeFormatter, values: MutableCollection<*>) {
+            builder.startChildren()
+            val iterator: MutableIterator<*> = values.iterator()
+            val count = min(5, values.size)
+            for (i in 0..<count) {
+                val next: Any = iterator.next()!!
+                if (next is RejectedVersion) {
+                    next.describeTo(builder)
+                } else {
+                    builder.node(next.toString())
+                }
+            }
+            if (count < values.size) {
+                builder.node(String.format("+ %d more", values.size - count))
+            }
+            builder.endChildren()
+        }
+
+        private fun addLocations(builder: TreeFormatter, locations: MutableCollection<String>) {
+            if (locations.isEmpty()) {
+                return
+            }
+            builder.node("Searched in the following locations")
+            builder.startChildren()
+
+            locations.forEach(Consumer { text: String? -> builder.node(text) })
+
+            builder.endChildren()
+        }
+
+        private fun getFormatName(singleLocation: String): String? {
+            val isPom = singleLocation.endsWith(".pom")
+            val isIvy = singleLocation.contains("ivy-") && singleLocation.endsWith(".xml")
+            val isModule = singleLocation.endsWith(".module")
+            return if (isPom) "Maven POM" else (if (isIvy) "ivy.xml" else (if (isModule) "Gradle module" else null))
         }
     }
 }

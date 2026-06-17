@@ -71,7 +71,7 @@ public class ExternalResourceResolverDescriptorParseContext implements Descripto
     public LocallyAvailableExternalResource getMetaDataArtifact(ModuleComponentSelector selector, VersionSelector acceptor, ArtifactType artifactType) {
         BuildableComponentIdResolveResult idResolveResult = new DefaultBuildableComponentIdResolveResult();
         mainResolvers.getComponentIdResolver().resolve(selector, DefaultComponentOverrideMetadata.EMPTY, acceptor, null, idResolveResult, ImmutableAttributes.EMPTY);
-        return getMetaDataArtifact((ModuleComponentIdentifier) idResolveResult.getId(), artifactType);
+        return getMetaDataArtifact((ModuleComponentIdentifier) idResolveResult.id, artifactType);
     }
 
     private LocallyAvailableExternalResource resolveMetaDataArtifactFile(
@@ -84,11 +84,11 @@ public class ExternalResourceResolverDescriptorParseContext implements Descripto
         componentResolver.resolve(moduleComponentIdentifier, DefaultComponentOverrideMetadata.EMPTY, moduleVersionResolveResult);
 
         BuildableArtifactSetResolveResult moduleArtifactsResolveResult = new DefaultBuildableArtifactSetResolveResult();
-        ComponentArtifactResolveMetadata artifactMetadata = moduleVersionResolveResult.getState().prepareForArtifactResolution().getArtifactMetadata();
+        ComponentArtifactResolveMetadata artifactMetadata = moduleVersionResolveResult.state.prepareForArtifactResolution().getArtifactMetadata();
         artifactResolver.resolveArtifactsWithType(artifactMetadata, artifactType, moduleArtifactsResolveResult);
 
         BuildableArtifactResolveResult artifactResolveResult = new DefaultBuildableArtifactResolveResult();
-        ComponentArtifactMetadata artifactMetaData = moduleArtifactsResolveResult.getResult().iterator().next();
+        ComponentArtifactMetadata artifactMetaData = moduleArtifactsResolveResult.result.iterator().next();
         artifactResolver.resolveArtifact(artifactMetadata, artifactMetaData, artifactResolveResult);
 
         File file = artifactResolveResult.getResult().getFile();

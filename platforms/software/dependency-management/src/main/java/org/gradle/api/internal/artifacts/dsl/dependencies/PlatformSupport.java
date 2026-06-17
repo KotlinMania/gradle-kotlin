@@ -86,7 +86,7 @@ public class PlatformSupport {
      * @return {@code true} if this represents an {@code enforced-platform}, {@code false} otherwise
      */
     public static boolean hasForcedDependencies(ComponentVariant variant) {
-        return Objects.equal(variant.getAttributes().getAttribute(MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE), Category.ENFORCED_PLATFORM);
+        return Objects.equal(variant.attributes.getAttribute(MavenVariantAttributesFactory.CATEGORY_ATTRIBUTE), Category.ENFORCED_PLATFORM);
     }
 
     public static class ComponentCategoryDisambiguationRule implements AttributeDisambiguationRule<Category> {

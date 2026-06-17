@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-public interface BuildableTypedResolveResult<T, E extends Throwable> extends ErroringResolveResult<E> {
-    /**
-     * Returns the result.
-     *
-     * @throws E if resolution was not successful.
-     */
-    T getResult() throws E;
+interface BuildableTypedResolveResult<T, E : Throwable?> : ErroringResolveResult<E?> {
+    @JvmField
+    @get:Throws(E::class)
+    val result: T?
 
     /**
      * Marks the resolution as completed with the given value.
      */
-    void resolved(T result);
-
+    fun resolved(result: T?)
 }

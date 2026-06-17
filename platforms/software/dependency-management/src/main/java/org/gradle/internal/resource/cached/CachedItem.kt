@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.cached
 
-package org.gradle.internal.resource.cached;
-
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-
-public interface CachedItem {
+interface CachedItem {
     /**
      * True if this cache entry represents that the resource does not exist.
      *
@@ -28,22 +23,22 @@ public interface CachedItem {
      *
      * @return Whether this is a "missing" entry or not.
      */
-    boolean isMissing();
+    @JvmField
+    val isMissing: Boolean
 
     /**
      * The cached version of the external resource as a local file.
      *
-     * @return The cached version of the external resource as a local file, or null if this {@link #isMissing()}.
+     * @return The cached version of the external resource as a local file, or null if this [.isMissing].
      */
-    @Nullable
-    File getCachedFile();
+    @JvmField
+    val cachedFile: File?
 
     /**
      * The timestamp of when this cache entry was created.
      *
      * @return The timestamp of when this cache entry was created.
      */
-    long getCachedAt();
-
-
+    @JvmField
+    val cachedAt: Long
 }

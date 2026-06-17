@@ -13,146 +13,116 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.io.Serializable
+import java.util.stream.Collectors
 
-import static org.gradle.api.internal.catalog.AliasNormalizer.normalize;
+class DefaultVersionCatalog(
+    val name: String,
+// Intentionally not part of state
+    val description: String,
+    private val libraries: MutableMap<String, DependencyModel>,
+    private val bundles: MutableMap<String, BundleModel>,
+    private val versions: MutableMap<String, VersionModel>,
+    private val plugins: MutableMap<String, PluginModel>
+) : Serializable {
+    private val hashCode: Int
 
-public class DefaultVersionCatalog implements Serializable {
-    private final String name;
-    private final String description;
-    private final Map<String, DependencyModel> libraries;
-    private final Map<String, BundleModel> bundles;
-    private final Map<String, VersionModel> versions;
-    private final Map<String, PluginModel> plugins;
-
-    private final int hashCode;
-
-    public DefaultVersionCatalog(String name,
-                                 String description,
-                                 Map<String, DependencyModel> libraries,
-                                 Map<String, BundleModel> bundles,
-                                 Map<String, VersionModel> versions,
-                                 Map<String, PluginModel> plugins) {
-        this.name = name;
-        this.description = description;
-        this.libraries = libraries;
-        this.bundles = bundles;
-        this.versions = versions;
-        this.plugins = plugins;
-        this.hashCode = doComputeHashCode();
+    init {
+        this.hashCode = doComputeHashCode()
     }
 
-    public String getName() {
-        return name;
-    }
-
-    // Intentionally not part of state
-    public String getDescription() {
-        return description;
-    }
-
-    public List<String> getLibraryAliases() {
-        return libraries.keySet()
+    val libraryAliases: MutableList<String>
+        get() = libraries.keys
             .stream()
             .sorted()
-            .collect(Collectors.toList());
-    }
+            .collect(Collectors.toList())
 
-    public List<String> getBundleAliases() {
-        return bundles.keySet()
+    val bundleAliases: MutableList<String>
+        get() = bundles.keys
             .stream()
             .sorted()
-            .collect(Collectors.toList());
+            .collect(Collectors.toList())
+
+    fun getDependencyData(alias: String): DependencyModel {
+        return libraries.get(AliasNormalizer.normalize(alias))!!
     }
 
-    public DependencyModel getDependencyData(String alias) {
-        return libraries.get(normalize(alias));
-    }
-
-    public List<String> getVersionAliases() {
-        return versions.keySet()
+    val versionAliases: MutableList<String>
+        get() = versions.keys
             .stream()
             .sorted()
-            .collect(Collectors.toList());
-    }
+            .collect(Collectors.toList())
 
-    public List<String> getPluginAliases() {
-        return plugins.keySet()
+    val pluginAliases: MutableList<String>
+        get() = plugins.keys
             .stream()
             .sorted()
-            .collect(Collectors.toList());
+            .collect(Collectors.toList())
+
+    fun getBundle(name: String): BundleModel {
+        return bundles.get(AliasNormalizer.normalize(name))!!
     }
 
-    public BundleModel getBundle(String name) {
-        return bundles.get(normalize(name));
+    fun getVersion(name: String): VersionModel {
+        return versions.get(AliasNormalizer.normalize(name))!!
     }
 
-    public VersionModel getVersion(String name) {
-        return versions.get(normalize(name));
+    fun getPlugin(name: String): PluginModel {
+        return plugins.get(AliasNormalizer.normalize(name))!!
     }
 
-    public PluginModel getPlugin(String name) {
-        return plugins.get(normalize(name));
+    fun hasDependency(alias: String): Boolean {
+        return libraries.containsKey(AliasNormalizer.normalize(alias))
     }
 
-    public boolean hasDependency(String alias) {
-        return libraries.containsKey(normalize(alias));
+    fun hasBundle(alias: String): Boolean {
+        return bundles.containsKey(AliasNormalizer.normalize(alias))
     }
 
-    public boolean hasBundle(String alias) {
-        return bundles.containsKey(normalize(alias));
+    fun hasVersion(alias: String): Boolean {
+        return versions.containsKey(AliasNormalizer.normalize(alias))
     }
 
-    public boolean hasVersion(String alias) {
-        return versions.containsKey(normalize(alias));
+    fun hasPlugin(alias: String): Boolean {
+        return plugins.containsKey(AliasNormalizer.normalize(alias))
     }
 
-    public boolean hasPlugin(String alias) {
-        return plugins.containsKey(normalize(alias));
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultVersionCatalog that = (DefaultVersionCatalog) o;
+        val that = o as DefaultVersionCatalog
 
-        if (!libraries.equals(that.libraries)) {
-            return false;
+        if (libraries != that.libraries) {
+            return false
         }
-        if (!bundles.equals(that.bundles)) {
-            return false;
+        if (bundles != that.bundles) {
+            return false
         }
-        if (!versions.equals(that.versions)) {
-            return false;
+        if (versions != that.versions) {
+            return false
         }
-        return plugins.equals(that.plugins);
+        return plugins == that.plugins
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private int doComputeHashCode() {
-        int result = libraries.hashCode();
-        result = 31 * result + bundles.hashCode();
-        result = 31 * result + versions.hashCode();
-        result = 31 * result + plugins.hashCode();
-        return result;
+    private fun doComputeHashCode(): Int {
+        var result = libraries.hashCode()
+        result = 31 * result + bundles.hashCode()
+        result = 31 * result + versions.hashCode()
+        result = 31 * result + plugins.hashCode()
+        return result
     }
 
-    public boolean isNotEmpty() {
-        return !(libraries.isEmpty() && bundles.isEmpty() && versions.isEmpty() && plugins.isEmpty());
-    }
+    val isNotEmpty: Boolean
+        get() = !(libraries.isEmpty() && bundles.isEmpty() && versions.isEmpty() && plugins.isEmpty())
 }

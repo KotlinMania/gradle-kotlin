@@ -13,38 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.internal.component.external.model.ivy.DefaultIvyComponentGraphResolveState
+import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata
+import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata
+import org.gradle.internal.component.model.ComponentIdGenerator
+import org.gradle.internal.component.model.DefaultExternalModuleComponentGraphResolveState
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import javax.inject.Inject
 
-import org.gradle.internal.component.external.model.ivy.DefaultIvyComponentGraphResolveState;
-import org.gradle.internal.component.external.model.ivy.IvyModuleResolveMetadata;
-import org.gradle.internal.component.external.model.maven.MavenModuleResolveMetadata;
-import org.gradle.internal.component.model.ComponentIdGenerator;
-import org.gradle.internal.component.model.DefaultExternalModuleComponentGraphResolveState;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-
-@ServiceScope(Scope.BuildTree.class)
-public class ModuleComponentGraphResolveStateFactory {
-
-    private final ComponentIdGenerator idGenerator;
-
-    @Inject
-    public ModuleComponentGraphResolveStateFactory(ComponentIdGenerator idFactory) {
-        this.idGenerator = idFactory;
-    }
-
-    public ExternalModuleComponentGraphResolveState stateFor(ModuleComponentResolveMetadata metadata) {
-        if (metadata instanceof IvyModuleResolveMetadata ivyMetadata) {
-            return new DefaultIvyComponentGraphResolveState(idGenerator.nextComponentId(), ivyMetadata, idGenerator);
-        } else if (metadata instanceof MavenModuleResolveMetadata) {
-            return new DefaultExternalModuleComponentGraphResolveState<>(idGenerator.nextComponentId(), metadata, metadata, idGenerator);
+@ServiceScope(Scope.BuildTree::class)
+class ModuleComponentGraphResolveStateFactory @Inject constructor(private val idGenerator: ComponentIdGenerator) {
+    fun stateFor(metadata: ModuleComponentResolveMetadata?): ExternalModuleComponentGraphResolveState {
+        if (metadata is IvyModuleResolveMetadata) {
+            return DefaultIvyComponentGraphResolveState(idGenerator.nextComponentId(), metadata, idGenerator)
+        } else if (metadata is MavenModuleResolveMetadata) {
+            return DefaultExternalModuleComponentGraphResolveState<ModuleComponentResolveMetadata?, ModuleComponentResolveMetadata?>(idGenerator.nextComponentId(), metadata, metadata, idGenerator)
         }
 
-        throw new IllegalArgumentException("Unsupported module component metadata type: " + metadata);
+        throw IllegalArgumentException("Unsupported module component metadata type: " + metadata)
     }
-
 }
 

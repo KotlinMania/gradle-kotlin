@@ -13,51 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.matching
 
-package org.gradle.api.internal.attributes.matching;
-
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
  * Exposes operations for working with attributes. These operations are intended to be
- * backed by rules defined in a {@link org.gradle.api.attributes.AttributesSchema}.
+ * backed by rules defined in a [org.gradle.api.attributes.AttributesSchema].
  */
-public interface AttributeSelectionSchema {
-
+interface AttributeSelectionSchema {
     /**
      * Return true iff the given attribute is present in this schema.
      */
-    boolean hasAttribute(Attribute<?> attribute);
+    fun hasAttribute(attribute: Attribute<*>): Boolean
 
     /**
-     * Given a set of candidate attribute values ({@code candidates}) for a given {@code attribute}, produce
-     * a set of matching values from within the candidate set based on the provided {@code requested} value.
+     * Given a set of candidate attribute values (`candidates`) for a given `attribute`, produce
+     * a set of matching values from within the candidate set based on the provided `requested` value.
      *
      * @param attribute The attribute being disambiguated.
-     * @param requested The requested attribute. If null, {@code attribute} is an extra attribute.
+     * @param requested The requested attribute. If null, `attribute` is an extra attribute.
      * @param candidates All candidate values. If a remaining candidates does not include a value
-     *      for {@code attribute}, null is not included in this set.
+     * for `attribute`, null is not included in this set.
      *
-     * @return A subset of {@code candidates} which contain matched attribute values. Or, null if no matches were found.
+     * @return A subset of `candidates` which contain matched attribute values. Or, null if no matches were found.
      */
-    @Nullable
-    <T> Set<T> disambiguate(Attribute<T> attribute, @Nullable T requested, Set<T> candidates);
+    fun <T> disambiguate(attribute: Attribute<T?>, requested: T?, candidates: MutableSet<T?>): MutableSet<T?>?
 
-    <T> boolean matchValue(Attribute<T> attribute, T requested, T candidate);
+    fun <T> matchValue(attribute: Attribute<T?>, requested: T?, candidate: T?): Boolean
 
     /**
      * Determine if two values are compatible with each other. This is a "two directional"
      * match. If the two values mach in any direction, this method returns true.
      */
-    default <T> boolean weakMatchValue(Attribute<T> attribute, T requested, T candidate) {
-        return matchValue(attribute, requested, candidate) || matchValue(attribute, candidate, requested);
+    fun <T> weakMatchValue(attribute: Attribute<T?>, requested: T?, candidate: T?): Boolean {
+        return matchValue<T?>(attribute, requested, candidate) || matchValue<T?>(attribute, candidate, requested)
     }
 
     /**
@@ -68,51 +59,32 @@ public interface AttributeSelectionSchema {
      * @return The attribute in this schema that has the same name as the provided
      * attribute, or the provided attribute if no such attribute exists.
      */
-    default Attribute<?> tryRehydrate(Attribute<?> attribute) {
-        Attribute<?> typedAttribute = getAttribute(attribute.getName());
+    fun tryRehydrate(attribute: Attribute<*>): Attribute<*> {
+        val typedAttribute = getAttribute(attribute.getName())
         if (typedAttribute == null) {
-            return attribute;
+            return attribute
         }
-        return typedAttribute;
+        return typedAttribute
     }
 
-    @Nullable
-    Attribute<?> getAttribute(String name);
+    fun getAttribute(name: String): Attribute<*>?
 
     /**
      * Collects attributes that were present on the candidates, but which the consumer did not ask for.
      */
-    Attribute<?>[] collectExtraAttributes(ImmutableAttributes[] candidates, ImmutableAttributes requested);
+    fun collectExtraAttributes(candidates: Array<ImmutableAttributes>, requested: ImmutableAttributes): Array<Attribute<*>>?
 
-    class PrecedenceResult {
-        private final List<Integer> sortedIndices;
-        private final Collection<Integer> unsortedIndices;
-
-        public PrecedenceResult(List<Integer> sortedIndices, Collection<Integer> unsortedIndices) {
-            this.sortedIndices = sortedIndices;
-            this.unsortedIndices = unsortedIndices;
-        }
-
-        public PrecedenceResult(Collection<Integer> unsortedIndices) {
-            this(Collections.emptyList(), unsortedIndices);
-        }
-
-        public List<Integer> getSortedOrder() {
-            return sortedIndices;
-        }
-
-        public Collection<Integer> getUnsortedOrder() {
-            return unsortedIndices;
-        }
+    class PrecedenceResult(val sortedOrder: MutableList<Int>, val unsortedOrder: MutableCollection<Int>) {
+        constructor(unsortedIndices: MutableCollection<Int>) : this(mutableListOf<Int>(), unsortedIndices)
     }
 
     /**
      * Given a set of attributes, order those attributes based on the precedence defined by
      * this schema.
      *
-     * @param requested The attributes to order. <strong>Must have a consistent iteration ordering and cannot contain duplicates</strong>.
+     * @param requested The attributes to order. **Must have a consistent iteration ordering and cannot contain duplicates**.
      *
      * @return The ordered attributes.
      */
-    PrecedenceResult orderByPrecedence(Collection<Attribute<?>> requested);
+    fun orderByPrecedence(requested: MutableCollection<Attribute<*>>): PrecedenceResult?
 }

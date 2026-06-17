@@ -13,75 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.local.model.DefaultProjectDependencyMetadata;
-import org.gradle.internal.component.model.DelegatingDependencyMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ForcingDependencyMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.internal.component.local.model.DefaultProjectDependencyMetadata
+import org.gradle.internal.component.model.DelegatingDependencyMetadata
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.ForcingDependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
-public class ForcedDependencyMetadataWrapper extends DelegatingDependencyMetadata implements ForcingDependencyMetadata, ModuleDependencyMetadata {
-    private final ModuleDependencyMetadata delegate;
-
-    public ForcedDependencyMetadataWrapper(ModuleDependencyMetadata delegate) {
-        super(delegate);
-        this.delegate = delegate;
+class ForcedDependencyMetadataWrapper(private val delegate: ModuleDependencyMetadata) : DelegatingDependencyMetadata(
+    delegate
+), ForcingDependencyMetadata, ModuleDependencyMetadata {
+    override fun getSelector(): ModuleComponentSelector {
+        return delegate.selector
     }
 
-    @Override
-    public ModuleComponentSelector getSelector() {
-        return delegate.getSelector();
+    override fun withRequestedVersion(requestedVersion: VersionConstraint): ModuleDependencyMetadata? {
+        return ForcedDependencyMetadataWrapper(delegate.withRequestedVersion(requestedVersion)!!)
     }
 
-    @Override
-    public ModuleDependencyMetadata withRequestedVersion(VersionConstraint requestedVersion) {
-        return new ForcedDependencyMetadataWrapper(delegate.withRequestedVersion(requestedVersion));
+    override fun withReason(reason: String): ModuleDependencyMetadata {
+        return ForcedDependencyMetadataWrapper(delegate.withReason(reason)!!)
     }
 
-    @Override
-    public ModuleDependencyMetadata withReason(String reason) {
-        return new ForcedDependencyMetadataWrapper(delegate.withReason(reason));
+    override fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata? {
+        return ForcedDependencyMetadataWrapper(delegate.withEndorseStrictVersions(endorse)!!)
     }
 
-    @Override
-    public ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse) {
-        return new ForcedDependencyMetadataWrapper(delegate.withEndorseStrictVersions(endorse));
-    }
-
-    @Override
-    public DependencyMetadata withTarget(ComponentSelector target) {
-        DependencyMetadata dependencyMetadata = delegate.withTarget(target);
-        if (dependencyMetadata instanceof DefaultProjectDependencyMetadata) {
-            return ((DefaultProjectDependencyMetadata) dependencyMetadata).forced();
+    override fun withTarget(target: ComponentSelector): DependencyMetadata {
+        val dependencyMetadata = delegate.withTarget(target)
+        if (dependencyMetadata is DefaultProjectDependencyMetadata) {
+            return dependencyMetadata.forced()
         }
-        return new ForcedDependencyMetadataWrapper((ModuleDependencyMetadata) dependencyMetadata);
+        return ForcedDependencyMetadataWrapper((dependencyMetadata as org.gradle.internal.component.external.model.ModuleDependencyMetadata?)!!)
     }
 
-    @Override
-    public DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-        DependencyMetadata dependencyMetadata = delegate.withTargetAndArtifacts(target, artifacts);
-        if (dependencyMetadata instanceof DefaultProjectDependencyMetadata) {
-            return ((DefaultProjectDependencyMetadata) dependencyMetadata).forced();
+    override fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName?>): DependencyMetadata {
+        val dependencyMetadata = delegate.withTargetAndArtifacts(target, artifacts)
+        if (dependencyMetadata is DefaultProjectDependencyMetadata) {
+            return dependencyMetadata.forced()
         }
-        return new ForcedDependencyMetadataWrapper((ModuleDependencyMetadata) dependencyMetadata);
+        return ForcedDependencyMetadataWrapper((dependencyMetadata as org.gradle.internal.component.external.model.ModuleDependencyMetadata?)!!)
     }
 
-    @Override
-    public boolean isForce() {
-        return true;
+    override fun isForce(): Boolean {
+        return true
     }
 
-    @Override
-    public ForcingDependencyMetadata forced() {
-        return this;
+    override fun forced(): ForcingDependencyMetadata? {
+        return this
     }
 
-    public ModuleDependencyMetadata unwrap() {
-        return delegate;
+    fun unwrap(): ModuleDependencyMetadata {
+        return delegate
     }
 }

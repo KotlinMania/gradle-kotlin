@@ -13,31 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultPluginDependency;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ValueSource;
-import org.gradle.api.provider.ValueSourceParameters;
-import org.gradle.plugin.use.PluginDependency;
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint
+import org.gradle.api.internal.artifacts.dependencies.DefaultPluginDependency
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
+import org.gradle.plugin.use.PluginDependency
 
-public abstract class PluginDependencyValueSource implements ValueSource<PluginDependency, PluginDependencyValueSource.Params> {
+abstract class PluginDependencyValueSource : ValueSource<PluginDependency?, PluginDependencyValueSource.Params?> {
+    internal interface Params : ValueSourceParameters {
+        val pluginName: Property<String>?
 
-    interface Params extends ValueSourceParameters {
-        Property<String> getPluginName();
-
-        Property<DefaultVersionCatalog> getConfig();
+        val config: Property<DefaultVersionCatalog>?
     }
 
-    @Override
-    public PluginDependency obtain() {
-        String pluginName = getParameters().getPluginName().get();
-        PluginModel data = getParameters().getConfig().get().getPlugin(pluginName);
-        ImmutableVersionConstraint version = data.getVersion();
-        return new DefaultPluginDependency(
-            data.getId(), new DefaultMutableVersionConstraint(version)
-        );
+    override fun obtain(): PluginDependency {
+        val pluginName = getParameters()!!.pluginName.get()
+        val data = getParameters()!!.config.get().getPlugin(pluginName)
+        val version = data.getVersion()
+        return DefaultPluginDependency(
+            data.getId(), DefaultMutableVersionConstraint(version)
+        )
     }
 }

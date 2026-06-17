@@ -13,104 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.DisplayName;
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.DisplayName
 
-public class DefaultModuleComponentIdentifier implements ModuleComponentIdentifier, DisplayName {
-    private final ModuleIdentifier moduleIdentifier;
-    private final String version;
-    private final int hashCode;
+open class DefaultModuleComponentIdentifier(module: ModuleIdentifier, version: String) : ModuleComponentIdentifier, DisplayName {
+    private val moduleIdentifier: ModuleIdentifier
+    private val version: String
+    private val hashCode: Int
 
-    public DefaultModuleComponentIdentifier(ModuleIdentifier module, String version) {
-        assert module != null : "module cannot be null";
-        assert module.getGroup() != null : "group cannot be null";
-        assert module.getName() != null : "name cannot be null";
-        assert version != null : "version cannot be null";
-        this.moduleIdentifier = module;
-        this.version = version;
+    init {
+        checkNotNull(module) { "module cannot be null" }
+        checkNotNull(module.getGroup()) { "group cannot be null" }
+        checkNotNull(module.getName()) { "name cannot be null" }
+        checkNotNull(version) { "version cannot be null" }
+        this.moduleIdentifier = module
+        this.version = version
         // Do NOT change the order of members used in hash code here, it's been empirically
         // tested to reduce the number of collisions on a large dependency graph (performance test)
-        this.hashCode = 31 * version.hashCode() + module.hashCode();
+        this.hashCode = 31 * version.hashCode() + module.hashCode()
     }
 
-    @Override
-    public String getDisplayName() {
-        String group = moduleIdentifier.getGroup();
-        String module = moduleIdentifier.getName();
-        StringBuilder builder = new StringBuilder(group.length() + module.length() + version.length() + 2);
-        builder.append(group);
-        builder.append(":");
-        builder.append(module);
-        builder.append(":");
-        builder.append(version);
-        return builder.toString();
+    override fun getDisplayName(): String {
+        val group = moduleIdentifier.getGroup()
+        val module = moduleIdentifier.getName()
+        val builder = StringBuilder(group.length + module.length + version.length + 2)
+        builder.append(group)
+        builder.append(":")
+        builder.append(module)
+        builder.append(":")
+        builder.append(version)
+        return builder.toString()
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getGroup() {
-        return moduleIdentifier.getGroup();
+    override fun getGroup(): String {
+        return moduleIdentifier.getGroup()
     }
 
-    @Override
-    public String getModule() {
-        return moduleIdentifier.getName();
+    override fun getModule(): String {
+        return moduleIdentifier.getName()
     }
 
-    @Override
-    public String getVersion() {
-        return version;
+    override fun getVersion(): String {
+        return version
     }
 
-    @Override
-    public ModuleIdentifier getModuleIdentifier() {
-        return moduleIdentifier;
+    override fun getModuleIdentifier(): ModuleIdentifier {
+        return moduleIdentifier
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        DefaultModuleComponentIdentifier that = (DefaultModuleComponentIdentifier) o;
+        val that = o as DefaultModuleComponentIdentifier
 
         if (hashCode != that.hashCode) {
-            return false;
+            return false
         }
-        if (!moduleIdentifier.equals(that.moduleIdentifier)) {
-            return false;
+        if (moduleIdentifier != that.moduleIdentifier) {
+            return false
         }
-        return version.equals(that.version);
+        return version == that.version
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    public static ModuleComponentIdentifier newId(ModuleIdentifier module, String version) {
-        return new DefaultModuleComponentIdentifier(module, version);
-    }
+    companion object {
+        @JvmStatic
+        fun newId(module: ModuleIdentifier, version: String): ModuleComponentIdentifier {
+            return DefaultModuleComponentIdentifier(module, version)
+        }
 
-    public static ModuleComponentIdentifier newId(ModuleVersionIdentifier moduleVersionIdentifier) {
-        return new DefaultModuleComponentIdentifier(moduleVersionIdentifier.getModule(), moduleVersionIdentifier.getVersion());
+        @JvmStatic
+        fun newId(moduleVersionIdentifier: ModuleVersionIdentifier): ModuleComponentIdentifier {
+            return DefaultModuleComponentIdentifier(moduleVersionIdentifier.getModule(), moduleVersionIdentifier.getVersion())
+        }
     }
 }
 

@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.internal.project.ProjectInternal
 
 /**
  * Exposes the dependency management identity of a project.
@@ -24,54 +23,47 @@ import org.gradle.api.internal.project.ProjectInternal;
  * TODO: Once any mutable field on this class is accessed, we should consider that as the project being observed.
  * Just like we do with configurations, we should then prohibit any changes to the project that would affect the identity.
  */
-public class ProjectBackedModule implements Module {
+class ProjectBackedModule(project: ProjectInternal) : Module {
+    private val project: ProjectInternal?
 
-    private final ProjectInternal project;
-
-    public ProjectBackedModule(ProjectInternal project) {
-        this.project = project;
+    init {
+        this.project = project
     }
 
-    @Override
-    public String getGroup() {
-        return project.getGroup().toString();
+    override fun getGroup(): String {
+        return project!!.getGroup().toString()
     }
 
-    @Override
-    public String getName() {
-        return project.getName();
+    override fun getName(): String {
+        return project!!.getName()
     }
 
-    @Override
-    public String getVersion() {
-        return project.getVersion().toString();
+    override fun getVersion(): String {
+        return project!!.getVersion().toString()
     }
 
-    @Override
-    public String getStatus() {
-        return project.getStatus().toString();
+    override fun getStatus(): String {
+        return project!!.getStatus().toString()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        ProjectBackedModule that = (ProjectBackedModule) o;
+        val that = o as ProjectBackedModule
 
-        if (project != null ? !project.equals(that.project) : that.project != null) {
-            return false;
+        if (if (project != null) (project != that.project) else that.project != null) {
+            return false
         }
 
-        return true;
+        return true
     }
 
-    @Override
-    public int hashCode() {
-        return project != null ? project.hashCode() : 0;
+    override fun hashCode(): Int {
+        return if (project != null) project.hashCode() else 0
     }
 }

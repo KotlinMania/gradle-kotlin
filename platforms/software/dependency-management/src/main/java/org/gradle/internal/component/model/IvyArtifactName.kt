@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.component.model
 
 /**
  * Represents the 'name' part of an Ivy artifact, independent of which module version the artifact might belong to.
  */
-public interface IvyArtifactName {
-    String getName();
+interface IvyArtifactName {
+    @JvmField
+    val name: String?
 
-    String getType();
+    @JvmField
+    val type: String?
 
-    @Nullable
-    String getExtension();
+    @JvmField
+    val extension: String?
 
-    @Nullable
-    String getClassifier();
+    @JvmField
+    val classifier: String?
 
-    String getDisplayName();
+    @JvmField
+    val displayName: String?
 }

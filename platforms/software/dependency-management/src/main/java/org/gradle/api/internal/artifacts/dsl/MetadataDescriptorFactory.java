@@ -35,7 +35,7 @@ class MetadataDescriptorFactory {
     public <T> T createDescriptor(Class<T> descriptorClass) {
         if (isIvyMetadata(descriptorClass, metadata)) {
             IvyModuleResolveMetadata ivyMetadata = (IvyModuleResolveMetadata) metadata;
-            IvyModuleDescriptor descriptor = new DefaultIvyModuleDescriptor(ivyMetadata.getExtraAttributes(), ivyMetadata.getBranch(), ivyMetadata.getStatus());
+            IvyModuleDescriptor descriptor = new DefaultIvyModuleDescriptor(ivyMetadata.extraAttributes, ivyMetadata.branch, ivyMetadata.status);
             return descriptorClass.cast(descriptor);
         } else if (isPomMetadata(descriptorClass, metadata)) {
             MavenModuleResolveMetadata mavenMetadata = (MavenModuleResolveMetadata) metadata;

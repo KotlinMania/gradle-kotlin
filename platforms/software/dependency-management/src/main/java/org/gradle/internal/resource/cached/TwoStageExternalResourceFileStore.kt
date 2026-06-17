@@ -13,56 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.cached;
+package org.gradle.internal.resource.cached
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Action;
-import org.gradle.internal.file.FileAccessTracker;
-import org.gradle.internal.resource.local.FileStoreException;
-import org.gradle.internal.resource.local.LocallyAvailableResource;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.internal.file.FileAccessTracker
+import org.gradle.internal.resource.local.FileStoreException
+import org.gradle.internal.resource.local.LocallyAvailableResource
+import java.io.File
 
-import java.io.File;
-import java.util.Set;
+class TwoStageExternalResourceFileStore(private val readOnlyStore: ExternalResourceFileStore, private val writableStore: ExternalResourceFileStore) : ExternalResourceFileStore {
+    private val delegatingFileAccessTracker: DelegatingFileAccessTracker
 
-public class TwoStageExternalResourceFileStore implements ExternalResourceFileStore {
-    private final ExternalResourceFileStore readOnlyStore;
-    private final ExternalResourceFileStore writableStore;
-    private final DelegatingFileAccessTracker delegatingFileAccessTracker;
-
-    public TwoStageExternalResourceFileStore(ExternalResourceFileStore readOnlyStore, ExternalResourceFileStore writableStore) {
-        this.readOnlyStore = readOnlyStore;
-        this.writableStore = writableStore;
-        this.delegatingFileAccessTracker = new DelegatingFileAccessTracker();
+    init {
+        this.delegatingFileAccessTracker = TwoStageExternalResourceFileStore.DelegatingFileAccessTracker()
     }
 
-    @Override
-    public FileAccessTracker getFileAccessTracker() {
-        return delegatingFileAccessTracker;
+    override fun getFileAccessTracker(): FileAccessTracker {
+        return delegatingFileAccessTracker
     }
 
-    @Override
-    public LocallyAvailableResource move(String key, File source) throws FileStoreException {
-        return writableStore.move(key, source);
+    @Throws(FileStoreException::class)
+    override fun move(key: String?, source: File?): LocallyAvailableResource? {
+        return writableStore.move(key, source)
     }
 
-    @Override
-    public LocallyAvailableResource add(String key, Action<File> addAction) throws FileStoreException {
-        return writableStore.add(key, addAction);
+    @Throws(FileStoreException::class)
+    override fun add(key: String?, addAction: Action<File?>?): LocallyAvailableResource? {
+        return writableStore.add(key, addAction)
     }
 
-    @Override
-    public Set<? extends LocallyAvailableResource> search(String key) {
-        ImmutableSet.Builder<LocallyAvailableResource> builder = ImmutableSet.builder();
-        builder.addAll(writableStore.search(key));
-        builder.addAll(readOnlyStore.search(key));
-        return builder.build();
+    override fun search(key: String?): MutableSet<out LocallyAvailableResource?> {
+        val builder = ImmutableSet.builder<LocallyAvailableResource?>()
+        builder.addAll(writableStore.search(key))
+        builder.addAll(readOnlyStore.search(key))
+        return builder.build()
     }
 
-    private class DelegatingFileAccessTracker implements FileAccessTracker {
-        @Override
-        public void markAccessed(File file) {
-            readOnlyStore.getFileAccessTracker().markAccessed(file);
-            writableStore.getFileAccessTracker().markAccessed(file);
+    private inner class DelegatingFileAccessTracker : FileAccessTracker {
+        override fun markAccessed(file: File) {
+            readOnlyStore.getFileAccessTracker().markAccessed(file)
+            writableStore.getFileAccessTracker().markAccessed(file)
         }
     }
 }

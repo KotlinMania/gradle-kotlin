@@ -13,39 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.external.model;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.component.external.model
 
 /**
  * This is a deprecated internal class that exists specifically to be used by the
  * Android and Kotlin Android plugins, which expect this type.
- * <p>
- * Be careful to not confuse it with the {@link org.gradle.api.internal.capabilities.ImmutableCapability ImmutableCapability}
+ *
+ *
+ * Be careful to not confuse it with the [ImmutableCapability][org.gradle.api.internal.capabilities.ImmutableCapability]
  * interface.
- * <p>
+ *
+ *
  * Without this class in place these smoke tests fail:
- * <ul>
- * <li>{@code KotlinPluginAndroidKotlinDSLSmokeTest} and {@code KotlinPluginAndroidGroovyDSLSmokeTest} with kotlin 1.6.21, agp 7.3.1 - 8.0.0-alpha11.</li>
- * <li>{@code AndroidPluginsSmokeTest} with 7.3.1 - 8.0.0-alpha11.</li>
- * <li>{@code AndroidSantaTrackerIncrementalCompilationSmokeTest}, {@code AndroidSantaTrackerCachingCompilationSmokeTest}, {@code AndroidSantaTrackerDeprecationSmokeTest} with the same versions.</li>
- * </ul>
+ *
+ *  * `KotlinPluginAndroidKotlinDSLSmokeTest` and `KotlinPluginAndroidGroovyDSLSmokeTest` with kotlin 1.6.21, agp 7.3.1 - 8.0.0-alpha11.
+ *  * `AndroidPluginsSmokeTest` with 7.3.1 - 8.0.0-alpha11.
+ *  * `AndroidSantaTrackerIncrementalCompilationSmokeTest`, `AndroidSantaTrackerCachingCompilationSmokeTest`, `AndroidSantaTrackerDeprecationSmokeTest` with the same versions.
+ *
  * They all fail with some version (different configurations and task names) of:
  *
- * <code>
- *     Could not resolve all dependencies for configuration ':cityquiz:debugRuntimeClasspath'.
- *       Could not create task ':santa-tracker:generateDebugFeatureTransitiveDeps'.
- *         org/gradle/internal/component/external/model/ImmutableCapability
- * </code>
+ * `
+ * Could not resolve all dependencies for configuration ':cityquiz:debugRuntimeClasspath'.
+ * Could not create task ':santa-tracker:generateDebugFeatureTransitiveDeps'.
+ * org/gradle/internal/component/external/model/ImmutableCapability
+` *
  *
- * The task at fault is {@code com.android.build.gradle.internal.tasks.featuresplit.PackagedDependenciesWriterTask`}.
+ * The task at fault is `com.android.build.gradle.internal.tasks.featuresplit.PackagedDependenciesWriterTask``.
  *
- * @deprecated Use {@link DefaultImmutableCapability} instead.
  */
-@Deprecated
-public class ImmutableCapability extends DefaultImmutableCapability {
-    public ImmutableCapability(String group, String name, @Nullable String version) {
-        super(group, name, version);
-    }
-}
+@Deprecated("Use {@link DefaultImmutableCapability} instead.")
+class ImmutableCapability(group: String?, name: String?, version: String?) : DefaultImmutableCapability(group, name, version)

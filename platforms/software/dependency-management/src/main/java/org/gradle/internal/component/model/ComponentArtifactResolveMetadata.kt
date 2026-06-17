@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
 
 /**
  * Metadata used to resolve artifacts of a component.
  */
-public interface ComponentArtifactResolveMetadata {
-    ComponentIdentifier getId();
+interface ComponentArtifactResolveMetadata {
+    fun getId(): ComponentIdentifier?
 
-    ModuleVersionIdentifier getModuleVersionId();
+    fun getModuleVersionId(): ModuleVersionIdentifier?
 
-    ModuleSources getSources();
+    fun getSources(): ModuleSources?
 
-    ImmutableAttributes getAttributes();
+    fun getAttributes(): ImmutableAttributes?
 
-    ImmutableAttributesSchema getAttributesSchema();
+    fun getAttributesSchema(): ImmutableAttributesSchema?
 }

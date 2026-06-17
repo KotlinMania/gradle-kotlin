@@ -35,7 +35,7 @@ import java.util.List;
 public class ComponentSelectionRulesProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(ComponentSelectionRulesProcessor.class);
 
-    private final Spec<SpecRuleAction<? super ComponentSelection>> withNoInputs = element -> element.getAction().getInputTypes().isEmpty();
+    private final Spec<SpecRuleAction<? super ComponentSelection>> withNoInputs = element -> element.action.inputTypes.isEmpty();
     private final Spec<SpecRuleAction<? super ComponentSelection>> withInputs = Specs.negate(withNoInputs);
 
     void apply(ComponentSelectionInternal selection, Collection<SpecRuleAction<? super ComponentSelection>> specRuleActions, MetadataProvider metadataProvider) {
@@ -59,11 +59,11 @@ public class ComponentSelectionRulesProcessor {
     }
 
     private void processRule(SpecRuleAction<? super ComponentSelection> rule, ComponentSelection selection, MetadataProvider metadataProvider) {
-        if (!rule.getSpec().isSatisfiedBy(selection)) {
+        if (!rule.spec.isSatisfiedBy(selection)) {
             return;
         }
 
-        List<Object> inputValues = getInputValues(rule.getAction().getInputTypes(), metadataProvider);
+        List<Object> inputValues = getInputValues(rule.action.inputTypes, metadataProvider);
 
         if (inputValues == null) {
             // Broken meta-data, bail
@@ -76,7 +76,7 @@ public class ComponentSelectionRulesProcessor {
         }
 
         try {
-            rule.getAction().execute(selection, inputValues);
+            rule.action.execute(selection, inputValues);
         } catch (Exception e) {
             throw new InvalidUserCodeException(String.format("There was an error while evaluating a component selection rule for %s.", selection.getCandidate().getDisplayName()), e);
         }

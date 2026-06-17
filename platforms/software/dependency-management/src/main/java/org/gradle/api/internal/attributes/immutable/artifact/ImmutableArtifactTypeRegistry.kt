@@ -13,188 +13,165 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.immutable.artifact
 
-package org.gradle.api.internal.attributes.immutable.artifact;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
-import org.gradle.api.internal.artifacts.TransformRegistration;
-import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-
-import java.io.File;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import static org.gradle.api.artifacts.type.ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE;
+import com.google.common.collect.ImmutableMap
+import com.google.common.io.Files
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.internal.artifacts.TransformRegistration
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import java.io.File
+import java.util.function.Consumer
 
 /**
- * Immutable counterpart to {@link ArtifactTypeRegistry}. Instances should
- * be only created with {@link ImmutableArtifactTypeRegistryFactory}.
- * <p>
+ * Immutable counterpart to [ArtifactTypeRegistry]. Instances should
+ * be only created with [ImmutableArtifactTypeRegistryFactory].
+ *
+ *
  * This class is deeply immutable and thread safe. Instances created with
- * {@link ImmutableArtifactTypeRegistryFactory} are interned and therefore
+ * [ImmutableArtifactTypeRegistryFactory] are interned and therefore
  * can be compared with reference equality.
  */
-public class ImmutableArtifactTypeRegistry {
+class ImmutableArtifactTypeRegistry(
+    private val attributesFactory: AttributesFactory,
+    val mappings: ImmutableMap<String, ImmutableAttributes>,
+    val defaultArtifactAttributes: ImmutableAttributes
+) {
+    private val hashCode: Int
 
-    private final AttributesFactory attributesFactory;
-    private final ImmutableMap<String, ImmutableAttributes> mappings;
-    private final ImmutableAttributes defaultArtifactAttributes;
-
-    private final int hashCode;
-
-    public ImmutableArtifactTypeRegistry(
-        AttributesFactory attributesFactory,
-        ImmutableMap<String, ImmutableAttributes> mappings,
-        ImmutableAttributes defaultArtifactAttributes
-    ) {
-        this.attributesFactory = attributesFactory;
-        this.mappings = mappings;
-        this.defaultArtifactAttributes = defaultArtifactAttributes;
-
-        this.hashCode = computeHashCode(mappings, defaultArtifactAttributes);
+    init {
+        this.hashCode = computeHashCode(mappings, defaultArtifactAttributes)
     }
 
-    public ImmutableMap<String, ImmutableAttributes> getMappings() {
-        return mappings;
-    }
-
-    public ImmutableAttributes getDefaultArtifactAttributes() {
-        return defaultArtifactAttributes;
-    }
-
-    public void visitArtifactTypeAttributes(Collection<TransformRegistration> transformRegistrations, Consumer<? super ImmutableAttributes> action) {
+    fun visitArtifactTypeAttributes(transformRegistrations: MutableCollection<TransformRegistration>, action: Consumer<in ImmutableAttributes>) {
         // Apply default attributes before visiting
-        Consumer<? super ImmutableAttributes> visitor = attributes -> {
-            ImmutableAttributes attributesPlusDefaults = attributesFactory.concat(defaultArtifactAttributes.asImmutable(), attributes);
-            action.accept(attributesPlusDefaults);
-        };
+        val visitor: Consumer<in ImmutableAttributes> = Consumer { attributes: ImmutableAttributes ->
+            val attributesPlusDefaults = attributesFactory.concat(defaultArtifactAttributes.asImmutable(), attributes)
+            action.accept(attributesPlusDefaults)
+        }
 
-        Set<String> seen = new HashSet<>();
-        for (Map.Entry<String, ImmutableAttributes> artifactTypeDefinition : mappings.entrySet()) {
-            if (seen.add(artifactTypeDefinition.getKey())) {
-                ImmutableAttributes attributes = artifactTypeDefinition.getValue();
-                attributes = attributesFactory.concat(attributesFactory.of(ARTIFACT_TYPE_ATTRIBUTE, artifactTypeDefinition.getKey()), attributes);
-                visitor.accept(attributes);
+        val seen: MutableSet<String> = HashSet<String>()
+        for (artifactTypeDefinition in mappings.entries) {
+            if (seen.add(artifactTypeDefinition.key)) {
+                var attributes = artifactTypeDefinition.value
+                attributes = attributesFactory.concat(attributesFactory.of<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, artifactTypeDefinition.key), attributes)
+                visitor.accept(attributes)
             }
         }
 
-        for (TransformRegistration registration : transformRegistrations) {
-            AttributeContainerInternal sourceAttributes = registration.getFrom();
-            String format = sourceAttributes.getAttribute(ARTIFACT_TYPE_ATTRIBUTE);
+        for (registration in transformRegistrations) {
+            val sourceAttributes: AttributeContainerInternal = registration.from
+            val format = sourceAttributes.getAttribute<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)
             if (format != null && seen.add(format)) {
                 // Some artifact type that has not already been visited
-                ImmutableAttributes attributes = attributesFactory.of(ARTIFACT_TYPE_ATTRIBUTE, format);
-                visitor.accept(attributes);
+                val attributes = attributesFactory.of<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, format)
+                visitor.accept(attributes)
             }
         }
 
         if (seen.add(ArtifactTypeDefinition.DIRECTORY_TYPE)) {
-            ImmutableAttributes directory = attributesFactory.of(ARTIFACT_TYPE_ATTRIBUTE, ArtifactTypeDefinition.DIRECTORY_TYPE);
-            visitor.accept(directory);
+            val directory = attributesFactory.of<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, ArtifactTypeDefinition.DIRECTORY_TYPE)
+            visitor.accept(directory)
         }
     }
 
-    public ImmutableAttributes mapAttributesFor(File file) {
-        ImmutableAttributes withoutDefaultAttributes = mapWithoutDefaultAttributesFor(file);
-        return attributesFactory.concat(defaultArtifactAttributes.asImmutable(), withoutDefaultAttributes);
+    fun mapAttributesFor(file: File): ImmutableAttributes {
+        val withoutDefaultAttributes = mapWithoutDefaultAttributesFor(file)
+        return attributesFactory.concat(defaultArtifactAttributes.asImmutable(), withoutDefaultAttributes)
     }
 
-    private ImmutableAttributes mapWithoutDefaultAttributesFor(File file) {
+    private fun mapWithoutDefaultAttributesFor(file: File): ImmutableAttributes {
         if (file.isDirectory()) {
-            return attributesFactory.of(ARTIFACT_TYPE_ATTRIBUTE, ArtifactTypeDefinition.DIRECTORY_TYPE);
+            return attributesFactory.of<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, ArtifactTypeDefinition.DIRECTORY_TYPE)
         } else {
-            ImmutableAttributes attributes = ImmutableAttributes.EMPTY;
-            String extension = Files.getFileExtension(file.getName());
-            attributes = applyForExtension(attributes, extension);
-            return attributesFactory.concat(attributesFactory.of(ARTIFACT_TYPE_ATTRIBUTE, extension), attributes);
+            var attributes = ImmutableAttributes.EMPTY
+            val extension = Files.getFileExtension(file.getName())
+            attributes = applyForExtension(attributes, extension)
+            return attributesFactory.concat(attributesFactory.of<String>(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, extension), attributes)
         }
     }
 
-    public ImmutableAttributes mapAttributesFor(ImmutableAttributes attributes, Iterable<? extends ComponentArtifactMetadata> artifacts) {
-        ImmutableAttributes withoutDefaultAttributes = mapWithoutDefaultAttributesFor(attributes, artifacts);
-        return attributesFactory.concat(defaultArtifactAttributes.asImmutable(), withoutDefaultAttributes);
+    fun mapAttributesFor(attributes: ImmutableAttributes, artifacts: Iterable<out ComponentArtifactMetadata>): ImmutableAttributes {
+        val withoutDefaultAttributes = mapWithoutDefaultAttributesFor(attributes, artifacts)
+        return attributesFactory.concat(defaultArtifactAttributes.asImmutable(), withoutDefaultAttributes)
     }
 
-    private ImmutableAttributes mapWithoutDefaultAttributesFor(ImmutableAttributes attributes, Iterable<? extends ComponentArtifactMetadata> artifacts) {
+    private fun mapWithoutDefaultAttributesFor(attributes: ImmutableAttributes, artifacts: Iterable<out ComponentArtifactMetadata>): ImmutableAttributes {
         // Add attributes to be applied given the extension
+        var attributes = attributes
         if (!mappings.isEmpty()) {
-            String extension = null;
-            for (ComponentArtifactMetadata artifact : artifacts) {
-                String candidateExtension = artifact.getName().getExtension();
+            var extension: String? = null
+            for (artifact in artifacts) {
+                val candidateExtension = artifact.getName()!!.extension
                 if (extension == null) {
-                    extension = candidateExtension;
-                } else if (!extension.equals(candidateExtension)) {
-                    extension = null;
-                    break;
+                    extension = candidateExtension
+                } else if (extension != candidateExtension) {
+                    extension = null
+                    break
                 }
             }
             if (extension != null) {
-                attributes = applyForExtension(attributes, extension);
+                attributes = applyForExtension(attributes, extension)
             }
         }
 
         // Add artifact format as an implicit attribute when all artifacts have the same format
-        if (!attributes.contains(ARTIFACT_TYPE_ATTRIBUTE)) {
-            String format = null;
-            for (ComponentArtifactMetadata artifact : artifacts) {
-                String candidateFormat = artifact.getName().getType();
+        if (!attributes.contains(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE)) {
+            var format: String? = null
+            for (artifact in artifacts) {
+                val candidateFormat = artifact.getName()!!.type
                 if (format == null) {
-                    format = candidateFormat;
-                } else if (!format.equals(candidateFormat)) {
-                    format = null;
-                    break;
+                    format = candidateFormat
+                } else if (format != candidateFormat) {
+                    format = null
+                    break
                 }
             }
             if (format != null) {
-                attributes = attributesFactory.concat(attributes.asImmutable(), ARTIFACT_TYPE_ATTRIBUTE, format);
+                attributes = attributesFactory.concat<String>(attributes.asImmutable(), ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, format)
             }
         }
 
-        return attributes;
+        return attributes
     }
 
-    private ImmutableAttributes applyForExtension(ImmutableAttributes attributes, String extension) {
-        ImmutableAttributes definition = mappings.get(extension);
+    private fun applyForExtension(attributes: ImmutableAttributes, extension: String): ImmutableAttributes {
+        var attributes = attributes
+        val definition = mappings.get(extension)
         if (definition != null) {
-            attributes = attributesFactory.concat(definition, attributes);
+            attributes = attributesFactory.concat(definition, attributes)
         }
-        return attributes;
+        return attributes
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        ImmutableArtifactTypeRegistry that = (ImmutableArtifactTypeRegistry) o;
-        return mappings.equals(that.mappings) &&
-            defaultArtifactAttributes.equals(that.defaultArtifactAttributes);
+        val that = o as ImmutableArtifactTypeRegistry
+        return mappings == that.mappings &&
+                defaultArtifactAttributes == that.defaultArtifactAttributes
     }
 
-    private static int computeHashCode(
-        ImmutableMap<String, ImmutableAttributes> mappings,
-        ImmutableAttributes defaultArtifactAttributes
-    ) {
-        int result = mappings.hashCode();
-        result = 31 * result + defaultArtifactAttributes.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    companion object {
+        private fun computeHashCode(
+            mappings: ImmutableMap<String, ImmutableAttributes>,
+            defaultArtifactAttributes: ImmutableAttributes
+        ): Int {
+            var result = mappings.hashCode()
+            result = 31 * result + defaultArtifactAttributes.hashCode()
+            return result
+        }
     }
 }

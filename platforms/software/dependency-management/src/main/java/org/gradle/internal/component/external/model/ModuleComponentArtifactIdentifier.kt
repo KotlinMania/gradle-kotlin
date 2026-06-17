@@ -13,26 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.DisplayName;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.DisplayName
 
 /**
  * An immutable identifier for an artifact that belongs to some module version.
  */
-public interface ModuleComponentArtifactIdentifier extends ComponentArtifactIdentifier, DisplayName {
+interface ModuleComponentArtifactIdentifier : ComponentArtifactIdentifier, DisplayName {
     /**
      * Returns the id of the component that this artifact belongs to.
      */
-    @Override
-    ModuleComponentIdentifier getComponentIdentifier();
+    override fun getComponentIdentifier(): ModuleComponentIdentifier
 
     /**
      * The base name of the file of the identified artifact.
      */
-    String getFileName();
-
+    @JvmField
+    val fileName: String?
 }

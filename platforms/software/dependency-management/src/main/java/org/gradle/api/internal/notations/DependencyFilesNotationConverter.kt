@@ -13,31 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import org.gradle.api.artifacts.FileCollectionDependency;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.artifacts.dependencies.DefaultFileCollectionDependency;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.TypeConversionException;
+import org.gradle.api.artifacts.FileCollectionDependency
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.artifacts.dependencies.DefaultFileCollectionDependency
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.TypeConversionException
 
-public class DependencyFilesNotationConverter implements NotationConverter<FileCollection, FileCollectionDependency> {
-    private final Instantiator instantiator;
-
-    public DependencyFilesNotationConverter(Instantiator instantiator) {
-        this.instantiator = instantiator;
+class DependencyFilesNotationConverter(private val instantiator: Instantiator) : NotationConverter<FileCollection?, FileCollectionDependency?> {
+    override fun describe(visitor: DiagnosticsVisitor) {
+        visitor.candidate("FileCollections").example("files('some.jar', 'someOther.jar')")
     }
 
-    @Override
-    public void describe(DiagnosticsVisitor visitor) {
-        visitor.candidate("FileCollections").example("files('some.jar', 'someOther.jar')");
-    }
-
-    @Override
-    public void convert(FileCollection notation, NotationConvertResult<? super FileCollectionDependency> result) throws TypeConversionException {
-        result.converted(instantiator.newInstance(DefaultFileCollectionDependency.class, notation));
+    @Throws(TypeConversionException::class)
+    override fun convert(notation: FileCollection, result: NotationConvertResult<in FileCollectionDependency?>) {
+        result.converted(instantiator.newInstance<DefaultFileCollectionDependency?>(DefaultFileCollectionDependency::class.java, notation))
     }
 }

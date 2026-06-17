@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.security.internal;
+package org.gradle.security.internal
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
 
-public interface PublicKeyResultBuilder {
-    void keyRing(PGPPublicKeyRing keyring);
-    void publicKey(PGPPublicKey publicKey);
+interface PublicKeyResultBuilder {
+    fun keyRing(keyring: PGPPublicKeyRing?)
+    fun publicKey(publicKey: PGPPublicKey?)
 }

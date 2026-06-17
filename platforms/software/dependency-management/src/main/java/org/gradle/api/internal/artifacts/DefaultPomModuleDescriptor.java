@@ -24,7 +24,7 @@ public class DefaultPomModuleDescriptor implements PomModuleDescriptor {
     private final String packaging;
 
     public DefaultPomModuleDescriptor(MavenModuleResolveMetadata mavenMetadata) {
-        this.packaging = mavenMetadata.getPackaging();
+        this.packaging = mavenMetadata.packaging;
     }
 
     @Override

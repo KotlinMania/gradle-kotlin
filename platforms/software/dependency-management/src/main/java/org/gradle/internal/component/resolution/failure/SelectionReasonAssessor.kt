@@ -13,79 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure
 
-package org.gradle.internal.component.resolution.failure;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.artifacts.result.ComponentSelectionCause;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.MessageBuilderHelper;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ModuleResolveState;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.result.ComponentSelectionCause
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.DependencyGraphEdge
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.MessageBuilderHelper
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.builder.ModuleResolveState
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal
+import java.util.function.Consumer
 
 /**
- * A static utility class used by {@link ResolutionFailureHandler} to assess and classify
+ * A static utility class used by [ResolutionFailureHandler] to assess and classify
  * component selection failures during graph construction.
- * <p>
+ *
+ *
  * This type will map from types internal to the resolution engine to simple value types
  * defined as static inner types here that are serializable, lightweight, and contain only
  * the information necessary to describe the failure.
  */
-public final class SelectionReasonAssessor {
-    private SelectionReasonAssessor() { /* not instantiable */ }
-
+object SelectionReasonAssessor {
     /**
-     * Assess the reasons for selecting (or failing to select) a component of the given {@link ModuleResolveState}.
+     * Assess the reasons for selecting (or failing to select) a component of the given [ModuleResolveState].
      *
      * @param moduleResolveState the module resolve state to assess
-     * @return an {@link AssessedSelection} instance that summarizes the reasons for selecting (or failing to select) the module
+     * @return an [AssessedSelection] instance that summarizes the reasons for selecting (or failing to select) the module
      */
-    public static AssessedSelection assessSelection(ModuleResolveState moduleResolveState) {
-        ImmutableList.Builder<AssessedSelection.AssessedSelectionReason> assessedReasons = ImmutableList.builder();
-        moduleResolveState.visitAllIncomingEdges((DependencyGraphEdge incomingEdge) -> {
-            String requestedVersion = getRequestedVersion(incomingEdge.getDependencyMetadata().getSelector());
-            ImmutableList<ImmutableList<String>> pathNames = MessageBuilderHelper.findPathNamesTo(incomingEdge);
-            ImmutableSet<ComponentSelectionCause> causes = getCauses(incomingEdge);
+    fun assessSelection(moduleResolveState: ModuleResolveState): AssessedSelection {
+        val assessedReasons = ImmutableList.builder<AssessedSelection.AssessedSelectionReason>()
+        moduleResolveState.visitAllIncomingEdges(Consumer { incomingEdge: DependencyGraphEdge ->
+            val requestedVersion = getRequestedVersion(incomingEdge.getDependencyMetadata().getSelector())
+            val pathNames = MessageBuilderHelper.findPathNamesTo(incomingEdge)
+            val causes = getCauses(incomingEdge)
+            assessedReasons.add(
+                AssessedSelection.AssessedSelectionReason(
+                    pathNames,
+                    requestedVersion,
+                    causes,
+                    incomingEdge.isFromLock()
+                )
+            )
+        })
 
-            assessedReasons.add(new AssessedSelection.AssessedSelectionReason(
-                pathNames,
-                requestedVersion,
-                causes,
-                incomingEdge.isFromLock()
-            ));
-        });
-
-        return new AssessedSelection(moduleResolveState.getId(), assessedReasons.build());
+        return AssessedSelection(moduleResolveState.getId(), assessedReasons.build())
     }
 
-    private static ImmutableSet<ComponentSelectionCause> getCauses(DependencyGraphEdge incomingEdge) {
-        ImmutableSet.Builder<ComponentSelectionCause> causes = ImmutableSet.builder();
-        incomingEdge.visitSelectionReasons(reason -> causes.add(reason.getCause()));
-        return causes.build();
+    private fun getCauses(incomingEdge: DependencyGraphEdge): ImmutableSet<ComponentSelectionCause> {
+        val causes = ImmutableSet.builder<ComponentSelectionCause>()
+        incomingEdge.visitSelectionReasons(Consumer { reason: ComponentSelectionDescriptorInternal? -> causes.add(reason!!.getCause()) })
+        return causes.build()
     }
 
-    private static @Nullable String getRequestedVersion(ComponentSelector selector) {
-        VersionConstraint versionConstraint = getVersionConstraint(selector);
+    private fun getRequestedVersion(selector: ComponentSelector): String? {
+        val versionConstraint = getVersionConstraint(selector)
         if (versionConstraint != null) {
-            return !versionConstraint.getStrictVersion().isEmpty()
-                ? versionConstraint.getStrictVersion()
-                : versionConstraint.getRequiredVersion();
+            return if (!versionConstraint.getStrictVersion().isEmpty())
+                versionConstraint.getStrictVersion()
+            else
+                versionConstraint.getRequiredVersion()
         }
-        return null;
+        return null
     }
 
-    private static @Nullable VersionConstraint getVersionConstraint(ComponentSelector selector) {
-        if (selector instanceof ModuleComponentSelector) {
-            return ((ModuleComponentSelector) selector).getVersionConstraint();
+    private fun getVersionConstraint(selector: ComponentSelector): VersionConstraint? {
+        if (selector is ModuleComponentSelector) {
+            return selector.getVersionConstraint()
         } else {
-            return null;
+            return null
         }
     }
 
@@ -93,64 +92,40 @@ public final class SelectionReasonAssessor {
      * Simple serializable, lightweight value type that represents all the reasons for selecting a
      * specific module.
      */
-    public static final class AssessedSelection {
-
-        private final ModuleIdentifier moduleId;
-        private final ImmutableList<AssessedSelectionReason> reasons;
-
-        public AssessedSelection(ModuleIdentifier moduleId, ImmutableList<AssessedSelectionReason> reasons) {
-            this.moduleId = moduleId;
-            this.reasons = reasons;
+    class AssessedSelection(private val moduleId: ModuleIdentifier, private val reasons: ImmutableList<AssessedSelectionReason>) {
+        fun getModuleId(): ModuleIdentifier {
+            return moduleId
         }
 
-        public ModuleIdentifier getModuleId() {
-            return moduleId;
-        }
-
-        public ImmutableList<AssessedSelectionReason> getReasons() {
-            return reasons;
+        fun getReasons(): ImmutableList<AssessedSelectionReason> {
+            return reasons
         }
 
         /**
          * Simple serializable, lightweight value type that represents a single reason for selecting a specific module,
          * including the version, the cause, and a description.
          */
-        public static final class AssessedSelectionReason {
-
-            private final ImmutableList<ImmutableList<String>> segmentedSelectionPaths;
-            private final @Nullable String requestedVersion;
-            private final ImmutableSet<ComponentSelectionCause> causes;
-            private final boolean isFromLock;
-
-            public AssessedSelectionReason(
-                ImmutableList<ImmutableList<String>> segmentedSelectionPaths,
-                @Nullable String requestedVersion,
-                ImmutableSet<ComponentSelectionCause> causes,
-                boolean isFromLock
-            ) {
-                this.segmentedSelectionPaths = segmentedSelectionPaths;
-                this.requestedVersion = requestedVersion;
-                this.causes = causes;
-                this.isFromLock = isFromLock;
+        class AssessedSelectionReason(
+            private val segmentedSelectionPaths: ImmutableList<ImmutableList<String>>,
+            private val requestedVersion: String?,
+            private val causes: ImmutableSet<ComponentSelectionCause>,
+            private val isFromLock: Boolean
+        ) {
+            fun getSegmentedSelectionPaths(): ImmutableList<ImmutableList<String>> {
+                return segmentedSelectionPaths
             }
 
-            public ImmutableList<ImmutableList<String>> getSegmentedSelectionPaths() {
-                return segmentedSelectionPaths;
+            fun getRequestedVersion(): String? {
+                return requestedVersion
             }
 
-            public @Nullable String getRequestedVersion() {
-                return requestedVersion;
+            fun getCauses(): MutableSet<ComponentSelectionCause> {
+                return causes
             }
 
-            public Set<ComponentSelectionCause> getCauses() {
-                return causes;
+            fun isFromLock(): Boolean {
+                return isFromLock
             }
-
-            public boolean isFromLock() {
-                return isFromLock;
-            }
-
         }
-
     }
 }

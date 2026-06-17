@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.resolution.failure.interfaces;
+package org.gradle.internal.component.resolution.failure.interfaces
 
 /**
  * Represents a failure validating the resulting variant graph
- * during {@link org.gradle.internal.component.resolution.failure.interfaces Graph Validation} during dependency resolution.
- * <p>
+ * during [Graph Validation][org.gradle.internal.component.resolution.failure.interfaces] during dependency resolution.
+ *
+ *
  * When this failure occurs, we have always selected a component, as the entire graph has been resolved and
  * all components are selected.
- * <p>
+ *
+ *
  * This validation is done prior to selecting an artifact variant for each resolved component variant.
  *
  * @implSpec This interface is meant only to be extended by other interfaces, it should not
  * be implemented directly.
  */
-public interface GraphValidationFailure extends ResolutionFailure {
-}
+interface GraphValidationFailure : ResolutionFailure

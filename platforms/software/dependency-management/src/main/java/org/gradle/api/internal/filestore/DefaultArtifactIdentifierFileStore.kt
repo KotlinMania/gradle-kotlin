@@ -13,65 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.filestore
 
-package org.gradle.api.internal.filestore;
+import org.gradle.api.Namer
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier
+import org.gradle.internal.file.FileAccessTimeJournal
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resource.local.GroupedAndNamedUniqueFileStore
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
+import javax.inject.Inject
 
-import org.gradle.api.Namer;
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheMetadata;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
-import org.gradle.internal.file.FileAccessTimeJournal;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resource.local.GroupedAndNamedUniqueFileStore;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
-import java.io.File;
-
-public class DefaultArtifactIdentifierFileStore extends GroupedAndNamedUniqueFileStore<ModuleComponentArtifactIdentifier> implements ArtifactIdentifierFileStore {
-
-    private static final int NUMBER_OF_GROUPING_DIRS = 3;
-    public static final int FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP = NUMBER_OF_GROUPING_DIRS + NUMBER_OF_CHECKSUM_DIRS;
-
-    private static final Grouper<ModuleComponentArtifactIdentifier> GROUPER = new Grouper<ModuleComponentArtifactIdentifier>() {
-        @Override
-        public String determineGroup(ModuleComponentArtifactIdentifier artifactId) {
-            return artifactId.getComponentIdentifier().getGroup() + '/' + artifactId.getComponentIdentifier().getModule() + '/' + artifactId.getComponentIdentifier().getVersion();
-        }
-
-        @Override
-        public int getNumberOfGroupingDirs() {
-            return NUMBER_OF_GROUPING_DIRS;
-        }
-    };
-
-    private static final Namer<ModuleComponentArtifactIdentifier> NAMER = ModuleComponentArtifactIdentifier::getFileName;
-
-    private DefaultArtifactIdentifierFileStore(File baseDir, TemporaryFileProvider temporaryFileProvider, FileAccessTimeJournal fileAccessTimeJournal, ChecksumService checksumService) {
-        super(baseDir, temporaryFileProvider, fileAccessTimeJournal, GROUPER, NAMER, checksumService);
-    }
-
-    @ServiceScope({Scope.BuildTree.class, Scope.Project.class})
-    public static class Factory {
-        private final TemporaryFileProvider temporaryFileProvider;
-        private final FileAccessTimeJournal fileAccessTimeJournal;
-        private final ChecksumService checksumService;
-
-        @Inject
-        public Factory(TemporaryFileProvider temporaryFileProvider, FileAccessTimeJournal fileAccessTimeJournal, ChecksumService checksumService) {
-            this.temporaryFileProvider = temporaryFileProvider;
-            this.fileAccessTimeJournal = fileAccessTimeJournal;
-            this.checksumService = checksumService;
-        }
-
-        public DefaultArtifactIdentifierFileStore create(ArtifactCacheMetadata artifactCacheMetadata) {
-            return new DefaultArtifactIdentifierFileStore(
+class DefaultArtifactIdentifierFileStore private constructor(
+    baseDir: File?,
+    temporaryFileProvider: TemporaryFileProvider?,
+    fileAccessTimeJournal: FileAccessTimeJournal?,
+    checksumService: ChecksumService?
+) : GroupedAndNamedUniqueFileStore<ModuleComponentArtifactIdentifier?>(baseDir, temporaryFileProvider, fileAccessTimeJournal, GROUPER, NAMER, checksumService), ArtifactIdentifierFileStore {
+    @ServiceScope([Scope.BuildTree::class, Scope.Project::class])
+    class Factory @Inject constructor(
+        private val temporaryFileProvider: TemporaryFileProvider?,
+        private val fileAccessTimeJournal: FileAccessTimeJournal?,
+        private val checksumService: ChecksumService?
+    ) {
+        fun create(artifactCacheMetadata: ArtifactCacheMetadata): DefaultArtifactIdentifierFileStore {
+            return DefaultArtifactIdentifierFileStore(
                 artifactCacheMetadata.getFileStoreDirectory(),
                 temporaryFileProvider,
                 fileAccessTimeJournal,
                 checksumService
-            );
+            )
         }
+    }
+
+    companion object {
+        private const val NUMBER_OF_GROUPING_DIRS = 3
+        val FILE_TREE_DEPTH_TO_TRACK_AND_CLEANUP: Int = NUMBER_OF_GROUPING_DIRS + NUMBER_OF_CHECKSUM_DIRS
+
+        private val GROUPER: Grouper<ModuleComponentArtifactIdentifier?> = object : Grouper<ModuleComponentArtifactIdentifier?> {
+            override fun determineGroup(artifactId: ModuleComponentArtifactIdentifier): String {
+                return artifactId.getComponentIdentifier().getGroup() + '/' + artifactId.getComponentIdentifier().getModule() + '/' + artifactId.getComponentIdentifier().getVersion()
+            }
+
+            override fun getNumberOfGroupingDirs(): Int {
+                return NUMBER_OF_GROUPING_DIRS
+            }
+        }
+
+        private val NAMER: Namer<ModuleComponentArtifactIdentifier?> = ModuleComponentArtifactIdentifier::getFileName
     }
 }

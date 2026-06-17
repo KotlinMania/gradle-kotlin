@@ -74,23 +74,23 @@ public class DefaultResolvedArtifact implements ResolvedArtifact {
 
     @Override
     public String getName() {
-        return artifactName.getName();
+        return artifactName.name;
     }
 
     @Override
     public String getType() {
-        return artifactName.getType();
+        return artifactName.type;
     }
 
     @Nullable
     @Override
     public String getExtension() {
-        return artifactName.getExtension();
+        return artifactName.extension;
     }
 
     @Nullable
     @Override
     public String getClassifier() {
-        return artifactName.getClassifier();
+        return artifactName.classifier;
     }
 }

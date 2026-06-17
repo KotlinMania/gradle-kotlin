@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.problems.internal
 
-package org.gradle.api.problems.internal;
-
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure
 
 /**
- * An {@link AdditionalDataSpec} that produces {@link ResolutionFailureDataSpec} instances
- * from {@link ResolutionFailure}s.
+ * An [AdditionalDataSpec] that produces [ResolutionFailureDataSpec] instances
+ * from [ResolutionFailure]s.
  */
-public interface ResolutionFailureDataSpec extends AdditionalDataSpec {
+interface ResolutionFailureDataSpec : AdditionalDataSpec {
     /**
-     * Creates a new {@link ResolutionFailureDataSpec} instance from the given {@link ResolutionFailure}.
+     * Creates a new [ResolutionFailureDataSpec] instance from the given [ResolutionFailure].
      *
      * @param failure the failure to use as the source of data
-     * @return A new instance of a spec used to configure a {@link ResolutionFailureData} instance containing
+     * @return A new instance of a spec used to configure a [ResolutionFailureData] instance containing
      * data from the given failure
      */
-    ResolutionFailureDataSpec from(ResolutionFailure failure);
+    fun from(failure: ResolutionFailure?): ResolutionFailureDataSpec?
 }

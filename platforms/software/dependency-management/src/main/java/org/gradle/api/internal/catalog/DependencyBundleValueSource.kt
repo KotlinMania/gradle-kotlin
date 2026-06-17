@@ -13,32 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ValueSource;
-import org.gradle.api.provider.ValueSourceParameters;
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
+import java.util.stream.Collectors
 
-import java.util.List;
-import java.util.stream.Collectors;
+abstract class DependencyBundleValueSource : ValueSource<MutableList<DependencyModel>, DependencyBundleValueSource.Params> {
+    internal interface Params : ValueSourceParameters {
+        val bundleName: Property<String>?
 
-public abstract class DependencyBundleValueSource implements ValueSource<List<DependencyModel>, DependencyBundleValueSource.Params> {
-
-    interface Params extends ValueSourceParameters {
-        Property<String> getBundleName();
-
-        Property<DefaultVersionCatalog> getConfig();
+        val config: Property<DefaultVersionCatalog>?
     }
 
-    @Override
-    public List<DependencyModel> obtain() {
-        String bundle = getParameters().getBundleName().get();
-        DefaultVersionCatalog config = getParameters().getConfig().get();
-        BundleModel bundleModel = config.getBundle(bundle);
+    override fun obtain(): MutableList<DependencyModel> {
+        val bundle = getParameters().bundleName.get()
+        val config = getParameters().config.get()
+        val bundleModel = config.getBundle(bundle)
         return bundleModel.getComponents().stream()
-            .map(config::getDependencyData)
-            .collect(Collectors.toList());
-
+            .map<DependencyModel> { alias: String? -> config.getDependencyData(alias!!) }
+            .collect(Collectors.toList())
     }
-
 }

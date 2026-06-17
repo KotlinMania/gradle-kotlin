@@ -13,64 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.jspecify.annotations.Nullable;
-
-public class DefaultVariantMetadata implements VariantResolveMetadata {
-    private final String name;
-    private final Identifier identifier;
-    private final DisplayName displayName;
-    private final ImmutableAttributes attributes;
-    private final ImmutableList<? extends ComponentArtifactMetadata> artifacts;
-    private final ImmutableCapabilities capabilitiesMetadata;
-
-    public DefaultVariantMetadata(String name, @Nullable Identifier identifier, DisplayName displayName, ImmutableAttributes attributes, ImmutableList<? extends ComponentArtifactMetadata> artifacts, ImmutableCapabilities capabilitiesMetadata) {
-        this.name = name;
-        this.identifier = identifier;
-        this.displayName = displayName;
-        this.attributes = attributes;
-        this.artifacts = artifacts;
-        this.capabilitiesMetadata = capabilitiesMetadata;
+open class DefaultVariantMetadata(
+    private val name: String,
+    private val identifier: VariantResolveMetadata.Identifier?,
+    private val displayName: DisplayName,
+    private val attributes: ImmutableAttributes,
+    private val artifacts: ImmutableList<out ComponentArtifactMetadata>,
+    private val capabilitiesMetadata: ImmutableCapabilities
+) : VariantResolveMetadata {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getIdentifier(): VariantResolveMetadata.Identifier {
+        return identifier!!
     }
 
-    @Override
-    public Identifier getIdentifier() {
-        return identifier;
+    override fun asDescribable(): DisplayName {
+        return displayName
     }
 
-    @Override
-    public DisplayName asDescribable() {
-        return displayName;
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    override fun getArtifacts(): ImmutableList<out ComponentArtifactMetadata> {
+        return artifacts
     }
 
-    @Override
-    public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-        return artifacts;
+    override fun getCapabilities(): ImmutableCapabilities {
+        return capabilitiesMetadata
     }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return capabilitiesMetadata;
-    }
-
-    @Override
-    public boolean isExternalVariant() {
-        return false;
+    override fun isExternalVariant(): Boolean {
+        return false
     }
 }

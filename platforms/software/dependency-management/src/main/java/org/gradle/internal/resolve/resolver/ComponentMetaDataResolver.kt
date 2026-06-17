@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.component.model.ComponentOverrideMetadata
+import org.gradle.internal.resolve.result.BuildableComponentResolveResult
 
 /**
- * Responsible for resolving a {@link ComponentIdentifier} to a {@link org.gradle.internal.component.model.ComponentGraphResolveState} instance for that component.
+ * Responsible for resolving a [ComponentIdentifier] to a [org.gradle.internal.component.model.ComponentGraphResolveState] instance for that component.
  */
-public interface ComponentMetaDataResolver {
+interface ComponentMetaDataResolver {
     /**
      * Resolves the resolution state for a component instance. Failures should be attached to the returned result.
      */
-    void resolve(ComponentIdentifier identifier, ComponentOverrideMetadata componentOverrideMetadata, BuildableComponentResolveResult result);
+    fun resolve(identifier: ComponentIdentifier, componentOverrideMetadata: ComponentOverrideMetadata, result: BuildableComponentResolveResult)
 
-    boolean isFetchingMetadataCheap(ComponentIdentifier identifier);
+    fun isFetchingMetadataCheap(identifier: ComponentIdentifier): Boolean
 }

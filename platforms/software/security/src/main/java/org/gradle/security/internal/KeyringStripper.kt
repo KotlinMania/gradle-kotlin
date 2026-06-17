@@ -13,124 +13,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.security.internal
 
-package org.gradle.security.internal;
-
-import com.google.common.collect.ImmutableList;
-import org.bouncycastle.bcpg.PublicKeyPacket;
-import org.bouncycastle.bcpg.TrustPacket;
-import org.bouncycastle.bcpg.UserIDPacket;
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
-import org.bouncycastle.openpgp.PGPSignature;
-import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
-
-import java.lang.reflect.Constructor;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import com.google.common.collect.ImmutableList
+import org.bouncycastle.bcpg.PublicKeyPacket
+import org.bouncycastle.bcpg.TrustPacket
+import org.bouncycastle.bcpg.UserIDPacket
+import org.bouncycastle.openpgp.PGPPublicKey
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.PGPSignature
+import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator
+import java.lang.reflect.Constructor
+import java.util.function.Function
+import java.util.stream.Collectors
+import java.util.stream.StreamSupport
 
 /**
  * A utility class to strip unnecessary information from a keyring
  */
-public class KeyringStripper {
-    private static final Constructor<PGPPublicKey> KEY_CONSTRUCTOR;
+object KeyringStripper {
+    private val KEY_CONSTRUCTOR: Constructor<PGPPublicKey>
 
-    private static final Constructor<PGPPublicKey> SUBKEY_CONSTRUCTOR;
+    private val SUBKEY_CONSTRUCTOR: Constructor<PGPPublicKey>
 
-    static {
+    init {
         try {
-            KEY_CONSTRUCTOR = getKeyConstructor();
-            SUBKEY_CONSTRUCTOR = getSubkeyConstructor();
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
+            KEY_CONSTRUCTOR = keyConstructor
+            SUBKEY_CONSTRUCTOR = subkeyConstructor
+        } catch (e: NoSuchMethodException) {
+            throw RuntimeException(e)
         }
     }
 
-    public static PGPPublicKeyRing strip(PGPPublicKeyRing keyring, KeyFingerPrintCalculator fingerprintCalculator) {
-        List<PGPPublicKey> strippedKeys = StreamSupport
-            .stream(keyring.spliterator(), false)
-            .map(key -> stripKey(key, fingerprintCalculator))
-            .collect(Collectors.toList());
+    fun strip(keyring: PGPPublicKeyRing, fingerprintCalculator: KeyFingerPrintCalculator?): PGPPublicKeyRing {
+        val strippedKeys = StreamSupport
+            .stream<PGPPublicKey?>(keyring.spliterator(), false)
+            .map<PGPPublicKey?> { key: PGPPublicKey? -> KeyringStripper.stripKey(key!!, fingerprintCalculator) }
+            .collect(Collectors.toList())
 
-        return new PGPPublicKeyRing(strippedKeys);
+        return PGPPublicKeyRing(strippedKeys)
     }
 
-    @SuppressWarnings("unchecked")
-    private static PGPPublicKey stripKey(PGPPublicKey key, KeyFingerPrintCalculator fingerprintCalculator) {
-        PGPPublicKey stripped;
+    private fun stripKey(key: PGPPublicKey, fingerprintCalculator: KeyFingerPrintCalculator?): PGPPublicKey {
+        val stripped: PGPPublicKey
         try {
             if (key.isMasterKey()) {
-                Optional<String> id = PGPUtils.getUserIDs(key)
+                val id = PGPUtils.getUserIDs(key)
                     .stream()
-                    .filter(KeyringStripper::looksLikeEmail)
-                    .min(Comparator.comparing(String::length));
+                    .filter { obj: String? -> KeyringStripper.looksLikeEmail() }
+                    .min(Comparator.comparing<String?, Int?>(Function { obj: String? -> obj!!.length }))
 
-                List<UserIDPacket> ids;
-                List<List<PGPSignature>> idSignatures;
+                val ids: MutableList<UserIDPacket?>?
+                val idSignatures: MutableList<MutableList<PGPSignature?>?>?
                 if (id.isPresent()) {
-                    ids = Collections.singletonList(new UserIDPacket(id.get()));
-                    idSignatures = Collections.singletonList(Collections.emptyList());
+                    ids = mutableListOf<UserIDPacket?>(UserIDPacket(id.get()))
+                    idSignatures = mutableListOf<MutableList<PGPSignature?>?>(mutableListOf<PGPSignature?>())
                 } else {
-                    ids = Collections.emptyList();
-                    idSignatures = Collections.emptyList();
+                    ids = mutableListOf<UserIDPacket?>()
+                    idSignatures = mutableListOf<MutableList<PGPSignature?>?>()
                 }
 
                 // unfortunately, the PGPPublicKey constructor is package private, so we need to use reflection
                 stripped = KEY_CONSTRUCTOR.newInstance(
                     key.getPublicKeyPacket(),
                     null,
-                    Collections.emptyList(),
+                    mutableListOf<Any?>(),
                     ids,
-                    Collections.singletonList(null),
+                    mutableListOf<Any?>(null),
                     idSignatures,
                     fingerprintCalculator
-                );
+                )
             } else {
                 // unfortunately, the PGPPublicKey subKey constructor is package private, so we need to use reflection
                 stripped = SUBKEY_CONSTRUCTOR.newInstance(
                     key.getPublicKeyPacket(),
                     null,
-                    ImmutableList.copyOf(key.getKeySignatures()),
+                    ImmutableList.copyOf<PGPSignature?>(key.getKeySignatures()),
                     fingerprintCalculator
-                );
+                )
             }
 
-            return stripped;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return stripped
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
     }
 
-    private static boolean looksLikeEmail(String id) {
-        return id.length() >= 5 && id.contains("@");
+    private fun looksLikeEmail(id: String): Boolean {
+        return id.length >= 5 && id.contains("@")
     }
 
-    private static Constructor<PGPPublicKey> getKeyConstructor() throws NoSuchMethodException {
-        Constructor<PGPPublicKey> constructor = PGPPublicKey.class.getDeclaredConstructor(
-            PublicKeyPacket.class,
-            TrustPacket.class,
-            List.class,
-            List.class,
-            List.class,
-            List.class,
-            KeyFingerPrintCalculator.class
-        );
-        constructor.setAccessible(true);
-        return constructor;
-    }
+    @get:Throws(NoSuchMethodException::class)
+    private val keyConstructor: Constructor<PGPPublicKey>
+        get() {
+            val constructor = PGPPublicKey::class.java.getDeclaredConstructor(
+                PublicKeyPacket::class.java,
+                TrustPacket::class.java,
+                MutableList::class.java,
+                MutableList::class.java,
+                MutableList::class.java,
+                MutableList::class.java,
+                KeyFingerPrintCalculator::class.java
+            )
+            constructor.setAccessible(true)
+            return constructor
+        }
 
-    private static Constructor<PGPPublicKey> getSubkeyConstructor() throws NoSuchMethodException {
-        Constructor<PGPPublicKey> constructor = PGPPublicKey.class.getDeclaredConstructor(
-            PublicKeyPacket.class,
-            TrustPacket.class,
-            List.class,
-            KeyFingerPrintCalculator.class
-        );
-        constructor.setAccessible(true);
-        return constructor;
-    }
+    @get:Throws(NoSuchMethodException::class)
+    private val subkeyConstructor: Constructor<PGPPublicKey>
+        get() {
+            val constructor = PGPPublicKey::class.java.getDeclaredConstructor(
+                PublicKeyPacket::class.java,
+                TrustPacket::class.java,
+                MutableList::class.java,
+                KeyFingerPrintCalculator::class.java
+            )
+            constructor.setAccessible(true)
+            return constructor
+        }
 }

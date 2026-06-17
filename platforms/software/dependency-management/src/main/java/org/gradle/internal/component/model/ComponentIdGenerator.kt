@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.concurrent.atomic.AtomicLong;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * A generator of ids for various model and result objects.
  */
-@ServiceScope(Scope.BuildTree.class)
-public class ComponentIdGenerator {
-    private final AtomicLong nextId = new AtomicLong();
+@ServiceScope(Scope.BuildTree::class)
+class ComponentIdGenerator {
+    private val nextId = AtomicLong()
 
-    public long nextComponentId() {
-        return nextId.getAndIncrement();
+    fun nextComponentId(): Long {
+        return nextId.getAndIncrement()
     }
 
-    public long nextVariantId() {
-        return nextId.getAndIncrement();
+    fun nextVariantId(): Long {
+        return nextId.getAndIncrement()
     }
 
-    public long nextGraphNodeId() {
-        return nextId.getAndIncrement();
+    fun nextGraphNodeId(): Long {
+        return nextId.getAndIncrement()
     }
 }

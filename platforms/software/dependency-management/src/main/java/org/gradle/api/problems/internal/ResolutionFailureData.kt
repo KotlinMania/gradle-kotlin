@@ -13,38 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.problems.internal
 
-package org.gradle.api.problems.internal;
-
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.problems.AdditionalData;
-import org.gradle.api.problems.Problem;
-import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure;
+import com.google.common.collect.ImmutableMap
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure.describeRequestTarget
+import org.gradle.internal.component.resolution.failure.interfaces.ResolutionFailure.getProblemId
 
 /**
- * {@link AdditionalData} data for a {@link Problem} that represents a resolution failure.
- * <p>
+ * [AdditionalData] data for a [Problem] that represents a resolution failure.
+ *
+ *
  * Serialized to JSON as a map with the following keys:
- * <ul>
- * <li>RequestTarget - a description of the target of the resolution request that failed</li>
- * <li>ProblemId - the id of the problem</li>
- * <li>ProblemDisplayName - a human-readable description of the problem</li>
- * </ul>
+ *
+ *  * RequestTarget - a description of the target of the resolution request that failed
+ *  * ProblemId - the id of the problem
+ *  * ProblemDisplayName - a human-readable description of the problem
+ *
  */
-public interface ResolutionFailureData extends GeneralData {
+interface ResolutionFailureData : GeneralData {
     /**
      * Getter for the resolution failure that caused the problem.
      *
      * @return the resolution failure
      */
-    ResolutionFailure getResolutionFailure();
+    val resolutionFailure: ResolutionFailure?
 
-    @Override
-    default ImmutableMap<String, String> getAsMap() {
-        return ImmutableMap.<String, String>builder()
-            .put("requestTarget", getResolutionFailure().describeRequestTarget())
-            .put("problemId", getResolutionFailure().getProblemId().name())
-            .put("problemDisplayName", getResolutionFailure().getProblemId().getDisplayName())
-            .build();
-    }
+    val asMap: ImmutableMap<String?, String?>
+        get() = ImmutableMap.builder<String?, String?>()
+            .put("requestTarget", this.resolutionFailure.describeRequestTarget())
+            .put("problemId", this.resolutionFailure.getProblemId().name)
+            .put("problemDisplayName", this.resolutionFailure.getProblemId().getDisplayName())
+            .build()
 }

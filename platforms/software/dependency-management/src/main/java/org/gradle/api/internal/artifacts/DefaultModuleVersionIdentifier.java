@@ -91,7 +91,7 @@ public class DefaultModuleVersionIdentifier implements ModuleVersionIdentifier {
     }
 
     public static ModuleVersionIdentifier newId(Module module) {
-        return new DefaultModuleVersionIdentifier(module.getGroup(), module.getName(), module.getVersion());
+        return new DefaultModuleVersionIdentifier(module.group, module.name, module.version);
     }
 
     public static ModuleVersionIdentifier newId(ModuleIdentifier id, String version) {

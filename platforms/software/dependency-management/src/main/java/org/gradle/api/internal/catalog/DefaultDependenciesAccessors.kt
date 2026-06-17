@@ -13,641 +13,528 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.VersionCatalog;
-import org.gradle.api.artifacts.VersionCatalogsExtension;
-import org.gradle.api.initialization.ProjectDescriptor;
-import org.gradle.api.initialization.Settings;
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.api.internal.ClassPathRegistry;
-import org.gradle.api.internal.FeaturePreviews;
-import org.gradle.api.internal.SettingsInternal;
-import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser;
-import org.gradle.api.internal.artifacts.dsl.dependencies.ProjectFinder;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.initialization.ClassLoaderScope;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.problems.Problems;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.initialization.DependenciesAccessors;
-import org.gradle.initialization.ProjectDescriptorInternal;
-import org.gradle.initialization.ProjectDescriptorRegistry;
-import org.gradle.internal.Cast;
-import org.gradle.internal.buildoption.FeatureFlags;
-import org.gradle.internal.classpath.ClassPath;
-import org.gradle.internal.classpath.DefaultClassPath;
-import org.gradle.internal.execution.ExecutionContext;
-import org.gradle.internal.execution.ExecutionEngine;
-import org.gradle.internal.execution.Identity;
-import org.gradle.internal.execution.ImmutableUnitOfWork;
-import org.gradle.internal.execution.InputFingerprinter;
-import org.gradle.internal.execution.InputVisitor;
-import org.gradle.internal.execution.OutputVisitor;
-import org.gradle.internal.execution.UnitOfWork;
-import org.gradle.internal.execution.WorkOutput;
-import org.gradle.internal.execution.caching.CachingDisabledReason;
-import org.gradle.internal.execution.history.OverlappingOutputs;
-import org.gradle.internal.execution.model.InputNormalizer;
-import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider;
-import org.gradle.internal.file.TreeType;
-import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint;
-import org.gradle.internal.fingerprint.DirectorySensitivity;
-import org.gradle.internal.fingerprint.LineEndingSensitivity;
-import org.gradle.internal.hash.Hasher;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.gradle.internal.management.DependencyResolutionManagementInternal;
-import org.gradle.internal.management.VersionCatalogBuilderInternal;
-import org.gradle.internal.properties.InputBehavior;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.internal.snapshot.ValueSnapshot;
-import org.gradle.util.internal.IncubationLogger;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.VersionCatalog
+import org.gradle.api.artifacts.VersionCatalogsExtension
+import org.gradle.api.initialization.ProjectDescriptor
+import org.gradle.api.initialization.Settings
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+import org.gradle.api.internal.ClassPathRegistry
+import org.gradle.api.internal.FeaturePreviews
+import org.gradle.api.internal.SettingsInternal
+import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser
+import org.gradle.api.internal.artifacts.dsl.dependencies.ProjectFinder
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.initialization.ClassLoaderScope
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.ExtensionContainer
+import org.gradle.api.problems.Problems
+import org.gradle.initialization.DependenciesAccessors
+import org.gradle.initialization.ProjectDescriptorInternal
+import org.gradle.initialization.ProjectDescriptorRegistry
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.buildoption.FeatureFlags
+import org.gradle.internal.classpath.ClassPath
+import org.gradle.internal.classpath.DefaultClassPath
+import org.gradle.internal.execution.ExecutionContext
+import org.gradle.internal.execution.ExecutionEngine
+import org.gradle.internal.execution.Identity
+import org.gradle.internal.execution.ImmutableUnitOfWork
+import org.gradle.internal.execution.InputFingerprinter
+import org.gradle.internal.execution.InputVisitor
+import org.gradle.internal.execution.OutputVisitor
+import org.gradle.internal.execution.UnitOfWork
+import org.gradle.internal.execution.WorkOutput
+import org.gradle.internal.execution.caching.CachingDisabledReason
+import org.gradle.internal.execution.history.OverlappingOutputs
+import org.gradle.internal.execution.model.InputNormalizer
+import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider
+import org.gradle.internal.file.TreeType
+import org.gradle.internal.fingerprint.CurrentFileCollectionFingerprint
+import org.gradle.internal.fingerprint.DirectorySensitivity
+import org.gradle.internal.fingerprint.LineEndingSensitivity
+import org.gradle.internal.hash.Hashing
+import org.gradle.internal.logging.text.TreeFormatter
+import org.gradle.internal.management.DependencyResolutionManagementInternal
+import org.gradle.internal.management.VersionCatalogBuilderInternal
+import org.gradle.internal.properties.InputBehavior
+import org.gradle.internal.snapshot.ValueSnapshot
+import org.gradle.util.internal.IncubationLogger.incubatingFeatureUsed
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.StringWriter
+import java.util.Arrays
+import java.util.Optional
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Supplier
+import java.util.regex.Pattern
+import java.util.stream.Collectors
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.io.File;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+class DefaultDependenciesAccessors @Inject constructor(
+    registry: ClassPathRegistry,
+    private val workspace: DependenciesAccessorsWorkspaceProvider,
+    private val projectDependencyFactory: DefaultProjectDependencyFactory,
+    private val featureFlags: FeatureFlags,
+    private val engine: ExecutionEngine,
+    private val fileCollectionFactory: FileCollectionFactory,
+    private val inputFingerprinter: InputFingerprinter,
+    private val attributesFactory: AttributesFactory,
+    private val capabilityNotationParser: CapabilityNotationParser,
+    private val problemsService: Problems
+) : DependenciesAccessors {
+    private val classPath: ClassPath
+    private val models: MutableList<DefaultVersionCatalog> = ArrayList<DefaultVersionCatalog>()
+    private val factories: MutableMap<String, Class<out ExternalModuleDependencyFactory>> = HashMap<String, Class<out ExternalModuleDependencyFactory>>()
 
-public class DefaultDependenciesAccessors implements DependenciesAccessors {
-    private final static String SUPPORTED_PROJECT_NAMES = "[a-zA-Z]([A-Za-z0-9\\-_])*";
-    private final static Pattern SUPPORTED_PATTERN = Pattern.compile(SUPPORTED_PROJECT_NAMES);
-    private final static String ACCESSORS_PACKAGE = "org.gradle.accessors.dm";
-    private final static String ACCESSORS_CLASSNAME_PREFIX = "LibrariesFor";
-    private final static String ROOT_PROJECT_ACCESSOR_FQCN = ACCESSORS_PACKAGE + "." + RootProjectAccessorSourceGenerator.ROOT_PROJECT_ACCESSOR_CLASSNAME;
+    private var classLoaderScope: ClassLoaderScope? = null
+    private var generatedProjectFactory: Class<out TypeSafeProjectDependencyFactory>? = null
+    private var sources = DefaultClassPath.of()
+    private var classes = DefaultClassPath.of()
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDependenciesAccessors.class);
-
-    private final ClassPath classPath;
-    private final DependenciesAccessorsWorkspaceProvider workspace;
-    private final DefaultProjectDependencyFactory projectDependencyFactory;
-    private final FeatureFlags featureFlags;
-    private final ExecutionEngine engine;
-    private final FileCollectionFactory fileCollectionFactory;
-    private final InputFingerprinter inputFingerprinter;
-    private final AttributesFactory attributesFactory;
-    private final CapabilityNotationParser capabilityNotationParser;
-    private final Problems problemsService;
-    private final List<DefaultVersionCatalog> models = new ArrayList<>();
-    private final Map<String, Class<? extends ExternalModuleDependencyFactory>> factories = new HashMap<>();
-
-    private ClassLoaderScope classLoaderScope;
-    private Class<? extends TypeSafeProjectDependencyFactory> generatedProjectFactory;
-    private ClassPath sources = DefaultClassPath.of();
-    private ClassPath classes = DefaultClassPath.of();
-
-    @Inject
-    public DefaultDependenciesAccessors(
-        ClassPathRegistry registry,
-        DependenciesAccessorsWorkspaceProvider workspace,
-        DefaultProjectDependencyFactory projectDependencyFactory,
-        FeatureFlags featureFlags,
-        ExecutionEngine engine,
-        FileCollectionFactory fileCollectionFactory,
-        InputFingerprinter inputFingerprinter,
-        AttributesFactory attributesFactory,
-        CapabilityNotationParser capabilityNotationParser,
-        Problems problemsService
-    ) {
-        this.classPath = registry.getClassPath("DEPENDENCIES-EXTENSION-COMPILER");
-        this.workspace = workspace;
-        this.projectDependencyFactory = projectDependencyFactory;
-        this.featureFlags = featureFlags;
-        this.engine = engine;
-        this.fileCollectionFactory = fileCollectionFactory;
-        this.inputFingerprinter = inputFingerprinter;
-        this.attributesFactory = attributesFactory;
-        this.capabilityNotationParser = capabilityNotationParser;
-        this.problemsService = problemsService;
+    init {
+        this.classPath = registry.getClassPath("DEPENDENCIES-EXTENSION-COMPILER")
     }
 
-    @Override
-    public void generateAccessors(List<VersionCatalogBuilder> builders, ClassLoaderScope classLoaderScope, Settings settings) {
+    override fun generateAccessors(builders: MutableList<VersionCatalogBuilder>, classLoaderScope: ClassLoaderScope, settings: Settings) {
         try {
-            this.classLoaderScope = classLoaderScope;
-            this.models.clear(); // this is used in tests only, shouldn't happen in real context
-            for (VersionCatalogBuilder builder : builders) {
-                DefaultVersionCatalog model = ((VersionCatalogBuilderInternal) builder).build();
-                models.add(model);
+            this.classLoaderScope = classLoaderScope
+            this.models.clear() // this is used in tests only, shouldn't happen in real context
+            for (builder in builders) {
+                val model = (builder as VersionCatalogBuilderInternal).build()
+                models.add(model!!)
             }
-            if (models.stream().anyMatch(DefaultVersionCatalog::isNotEmpty)) {
-                for (DefaultVersionCatalog model : models) {
+            if (models.stream().anyMatch { obj: DefaultVersionCatalog? -> obj!!.isNotEmpty() }) {
+                for (model in models) {
                     if (model.isNotEmpty()) {
-                        writeDependenciesAccessors(model);
+                        writeDependenciesAccessors(model)
                     }
                 }
             }
             if (featureFlags.isEnabled(FeaturePreviews.Feature.TYPESAFE_PROJECT_ACCESSORS)) {
-                IncubationLogger.incubatingFeatureUsed("Type-safe project accessors");
-                writeProjectAccessors(((SettingsInternal) settings).getProjectRegistry());
+                incubatingFeatureUsed("Type-safe project accessors")
+                writeProjectAccessors((settings as SettingsInternal).getProjectRegistry())
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
     }
 
-    private void writeDependenciesAccessors(DefaultVersionCatalog model) {
-        executeWork(new DependencyAccessorUnitOfWork(model));
+    private fun writeDependenciesAccessors(model: DefaultVersionCatalog) {
+        executeWork(DefaultDependenciesAccessors.DependencyAccessorUnitOfWork(model))
     }
 
-    private void writeProjectAccessors(ProjectDescriptorRegistry projectRegistry) {
+    private fun writeProjectAccessors(projectRegistry: ProjectDescriptorRegistry) {
         if (!assertCanGenerateAccessors(projectRegistry)) {
-            return;
+            return
         }
-        warnIfRootProjectNameNotSetExplicitly(projectRegistry.getRootProject());
-        executeWork(new ProjectAccessorUnitOfWork(projectRegistry));
+        warnIfRootProjectNameNotSetExplicitly(projectRegistry.getRootProject())
+        executeWork(DefaultDependenciesAccessors.ProjectAccessorUnitOfWork(projectRegistry))
     }
 
-    private static void warnIfRootProjectNameNotSetExplicitly(@Nullable ProjectDescriptorInternal project) {
-        if (!project.isExplicitName()) {
-            LOGGER.warn("Project accessors enabled, but root project name not explicitly set for '" + project.getName() +
-                "'. Checking out the project in different folders will impact the generated code and implicitly the buildscript classpath, breaking caching.");
-        }
+    private fun executeWork(work: UnitOfWork) {
+        val result = engine.createRequest(work).execute()
+        val accessors = result.getOutputAs<GeneratedAccessors>(GeneratedAccessors::class.java).get()
+        val generatedClasses = DefaultClassPath.of(accessors.classesDir)
+        sources = sources.plus(DefaultClassPath.of(accessors.sourcesDir))
+        classes = classes.plus(generatedClasses)
+        classLoaderScope!!.export(generatedClasses)
     }
 
-    private void executeWork(UnitOfWork work) {
-        ExecutionEngine.Result result = engine.createRequest(work).execute();
-        GeneratedAccessors accessors = result.getOutputAs(GeneratedAccessors.class).get();
-        ClassPath generatedClasses = DefaultClassPath.of(accessors.classesDir);
-        sources = sources.plus(DefaultClassPath.of(accessors.sourcesDir));
-        classes = classes.plus(generatedClasses);
-        classLoaderScope.export(generatedClasses);
-    }
-
-    private static boolean assertCanGenerateAccessors(ProjectDescriptorRegistry projectRegistry) {
-        List<String> errors = new ArrayList<>();
-        projectRegistry.getAllProjects()
-            .stream()
-            .map(ProjectDescriptor::getName)
-            .filter(p -> !SUPPORTED_PATTERN.matcher(p).matches())
-            .map(name -> "project '" + name + "' doesn't follow the naming convention: " + SUPPORTED_PROJECT_NAMES)
-            .forEach(errors::add);
-        for (ProjectDescriptor project : projectRegistry.getAllProjects()) {
-            project.getChildren()
-                .stream()
-                .map(ProjectDescriptor::getName)
-                .collect(Collectors.groupingBy(AbstractSourceGenerator::toJavaName))
-                .entrySet()
-                .stream()
-                .filter(e -> e.getValue().size() > 1)
-                .forEachOrdered(e -> {
-                    String javaName = e.getKey();
-                    List<String> names = e.getValue();
-                    errors.add("subprojects " + names + " of project " + project.getPath() + " map to the same method name get" + javaName + "()");
-                });
-        }
-        if (!errors.isEmpty()) {
-            TreeFormatter formatter = new TreeFormatter();
-            formatter.node("Cannot generate project dependency accessors");
-            formatter.startChildren();
-            for (String error : errors) {
-                formatter.node("Cannot generate project dependency accessors because " + error);
-            }
-            formatter.endChildren();
-            throw new InvalidUserDataException(formatter.toString());
-        }
-        return errors.isEmpty();
-    }
-
-    @Nullable
-    private static <T> Class<? extends T> loadFactory(ClassLoaderScope classLoaderScope, String className) {
-        Class<? extends T> clazz;
-        try {
-            clazz = Cast.uncheckedCast(classLoaderScope.getExportClassLoader().loadClass(className));
-        } catch (ClassNotFoundException e) {
-            return null;
-        }
-        return clazz;
-    }
-
-    @Override
-    public void createExtensions(ProjectInternal project) {
-        ExtensionContainer container = project.getExtensions();
-        ProviderFactory providerFactory = project.getProviders();
+    override fun createExtensions(project: ProjectInternal) {
+        val container: ExtensionContainer = project.getExtensions()
+        val providerFactory = project.getProviders()
         try {
             if (models.isEmpty()) {
-                addVersionCatalogsProjectExtension(container, Collections.emptyMap());
+                addVersionCatalogsProjectExtension(container, mutableMapOf<String, VersionCatalog>())
             } else {
-                ImmutableMap.Builder<String, VersionCatalog> catalogs = ImmutableMap.builderWithExpectedSize(models.size());
-                for (DefaultVersionCatalog model : models) {
+                val catalogs = ImmutableMap.builderWithExpectedSize<String, VersionCatalog>(models.size)
+                for (model in models) {
                     if (model.isNotEmpty()) {
-                        Class<? extends ExternalModuleDependencyFactory> factory = loadVersionCatalogFactoryClass(accessorClassNameSuffix(model));
+                        val factory = loadVersionCatalogFactoryClass(accessorClassNameSuffix(model))
                         if (factory != null) {
-                            container.create(model.getName(), factory, model);
-                            catalogs.put(model.getName(), new VersionCatalogView(model, providerFactory, project.getObjects(), attributesFactory, capabilityNotationParser));
+                            container.create(model.getName(), factory, model)
+                            catalogs.put(model.getName(), VersionCatalogView(model, providerFactory, project.getObjects(), attributesFactory, capabilityNotationParser))
                         }
                     }
                 }
-                addVersionCatalogsProjectExtension(container, catalogs.build());
+                addVersionCatalogsProjectExtension(container, catalogs.build())
             }
         } finally {
             if (featureFlags.isEnabled(FeaturePreviews.Feature.TYPESAFE_PROJECT_ACCESSORS)) {
-                ServiceRegistry services = project.getServices();
-                DependencyResolutionManagementInternal drm = services.get(DependencyResolutionManagementInternal.class);
-                ProjectFinder projectFinder = services.get(ProjectFinder.class);
-                createProjectsExtension(container, drm, projectFinder);
+                val services = project.getServices()
+                val drm = services.get<DependencyResolutionManagementInternal?>(DependencyResolutionManagementInternal::class.java)
+                val projectFinder = services.get<ProjectFinder?>(ProjectFinder::class.java)
+                createProjectsExtension(container, drm!!, projectFinder!!)
             }
         }
     }
 
-    private void addVersionCatalogsProjectExtension(ExtensionContainer container, Map<String, VersionCatalog> catalogs) {
-        container.create(VersionCatalogsExtension.class, "versionCatalogs", DefaultVersionCatalogsExtension.class, catalogs);
+    private fun addVersionCatalogsProjectExtension(container: ExtensionContainer, catalogs: MutableMap<String, VersionCatalog>) {
+        container.create<VersionCatalogsExtension>(VersionCatalogsExtension::class.java, "versionCatalogs", DefaultVersionCatalogsExtension::class.java, catalogs)
     }
 
-    private String accessorClassNameSuffix(DefaultVersionCatalog model) {
-        return StringUtils.capitalize(model.getName());
+    private fun accessorClassNameSuffix(model: DefaultVersionCatalog): String {
+        return StringUtils.capitalize(model.getName())
     }
 
-    @Override
-    public Map<String, ExternalModuleDependencyFactory> createPluginsBlockFactories(ObjectFactory objects) {
+    override fun createPluginsBlockFactories(objects: ObjectFactory): MutableMap<String, ExternalModuleDependencyFactory> {
         if (!models.isEmpty()) {
-            ImmutableMap.Builder<String, ExternalModuleDependencyFactory> catalogs = ImmutableMap.builderWithExpectedSize(models.size());
-            for (DefaultVersionCatalog model : models) {
+            val catalogs = ImmutableMap.builderWithExpectedSize<String, ExternalModuleDependencyFactory>(models.size)
+            for (model in models) {
                 if (model.isNotEmpty()) {
-                    Class<? extends ExternalModuleDependencyFactory> factory = loadVersionCatalogFactoryClass(pluginsBlockAccessorClassNameSuffix(model));
+                    val factory = loadVersionCatalogFactoryClass(pluginsBlockAccessorClassNameSuffix(model))
                     if (factory != null) {
-                        catalogs.put(model.getName(), objects.newInstance(factory, model));
+                        catalogs.put(model.getName(), objects.newInstance(factory, model))
                     }
                 }
             }
-            return catalogs.build();
+            return catalogs.build()
         }
-        return Collections.emptyMap();
+        return mutableMapOf<String, ExternalModuleDependencyFactory>()
     }
 
-    private String pluginsBlockAccessorClassNameSuffix(DefaultVersionCatalog model) {
-        return accessorClassNameSuffix(model) + IN_PLUGINS_BLOCK_FACTORIES_SUFFIX;
+    private fun pluginsBlockAccessorClassNameSuffix(model: DefaultVersionCatalog): String {
+        return accessorClassNameSuffix(model) + DependenciesAccessors.IN_PLUGINS_BLOCK_FACTORIES_SUFFIX
     }
 
-    @Nullable
-    private Class<? extends ExternalModuleDependencyFactory> loadVersionCatalogFactoryClass(String accessorsClassnameSuffix) {
-        Class<? extends ExternalModuleDependencyFactory> factory;
-        synchronized (this) {
-            factory = factories.computeIfAbsent(accessorsClassnameSuffix, n ->
-                loadFactory(classLoaderScope, ACCESSORS_PACKAGE + "." + ACCESSORS_CLASSNAME_PREFIX + accessorsClassnameSuffix)
-            );
+    private fun loadVersionCatalogFactoryClass(accessorsClassnameSuffix: String): Class<out ExternalModuleDependencyFactory>? {
+        val factory: Class<out ExternalModuleDependencyFactory>?
+        synchronized(this) {
+            factory = factories.computeIfAbsent(accessorsClassnameSuffix) { n: String? ->
+                Companion.loadFactory<ExternalModuleDependencyFactory>(
+                    classLoaderScope!!,
+                    org.gradle.api.internal.catalog.DefaultDependenciesAccessors.Companion.ACCESSORS_PACKAGE + "." + org.gradle.api.internal.catalog.DefaultDependenciesAccessors.Companion.ACCESSORS_CLASSNAME_PREFIX + accessorsClassnameSuffix
+                )!!
+            }
         }
-        return factory;
+        return factory
     }
 
-    private void createProjectsExtension(ExtensionContainer container, DependencyResolutionManagementInternal drm, ProjectFinder projectFinder) {
+    private fun createProjectsExtension(container: ExtensionContainer, drm: DependencyResolutionManagementInternal, projectFinder: ProjectFinder) {
         if (generatedProjectFactory == null) {
-            synchronized (this) {
-                generatedProjectFactory = loadFactory(classLoaderScope, ROOT_PROJECT_ACCESSOR_FQCN);
+            synchronized(this) {
+                generatedProjectFactory = Companion.loadFactory<TypeSafeProjectDependencyFactory>(classLoaderScope!!, ROOT_PROJECT_ACCESSOR_FQCN)
             }
         }
         if (generatedProjectFactory != null) {
-            Property<String> defaultProjectsExtensionName = drm.getDefaultProjectsExtensionName();
-            defaultProjectsExtensionName.finalizeValue();
-            container.create(defaultProjectsExtensionName.get(), generatedProjectFactory, projectDependencyFactory, projectFinder);
+            val defaultProjectsExtensionName = drm.getDefaultProjectsExtensionName()
+            defaultProjectsExtensionName.finalizeValue()
+            container.create(defaultProjectsExtensionName.get(), generatedProjectFactory, projectDependencyFactory, projectFinder)
         }
     }
 
-    @Override
-    public ClassPath getSources() {
-        return sources;
+    override fun getSources(): ClassPath {
+        return sources
     }
 
-    @Override
-    public ClassPath getClasses() {
-        return classes;
+    override fun getClasses(): ClassPath {
+        return classes
     }
 
-    private abstract class AbstractAccessorUnitOfWork implements ImmutableUnitOfWork {
-        private static final String OUT_SOURCES = "sources";
-        private static final String OUT_CLASSES = "classes";
-
-        @Override
-        public Identity identify(Map<String, ValueSnapshot> scalarInputs, Map<String, CurrentFileCollectionFingerprint> fileInputs) {
-            Hasher hasher = Hashing.sha1().newHasher();
-            scalarInputs.values().forEach(s -> s.appendToHasher(hasher));
-            String identity = hasher.hash().toString();
-            return () -> identity;
+    private abstract inner class AbstractAccessorUnitOfWork : ImmutableUnitOfWork {
+        override fun identify(scalarInputs: MutableMap<String, ValueSnapshot>, fileInputs: MutableMap<String, CurrentFileCollectionFingerprint>): Identity {
+            val hasher = Hashing.sha1().newHasher()
+            scalarInputs.values.forEach(Consumer { s: ValueSnapshot? -> s!!.appendToHasher(hasher) })
+            val identity = hasher.hash().toString()
+            return Identity { identity }
         }
 
-        @Override
-        public ImmutableWorkspaceProvider getWorkspaceProvider() {
-            return workspace;
+        override fun getWorkspaceProvider(): ImmutableWorkspaceProvider {
+            return workspace
         }
 
-        @Override
-        public InputFingerprinter getInputFingerprinter() {
-            return inputFingerprinter;
+        override fun getInputFingerprinter(): InputFingerprinter {
+            return inputFingerprinter
         }
 
-        protected abstract List<ClassSource> getClassSources();
+        protected abstract val classSources: MutableList<ClassSource>
 
-        @Override
-        public WorkOutput execute(ExecutionContext executionContext) {
-            File workspace = executionContext.getWorkspace();
-            File srcDir = new File(workspace, OUT_SOURCES);
-            File dstDir = new File(workspace, OUT_CLASSES);
-            List<ClassSource> sources = getClassSources();
-            SimpleGeneratedJavaClassCompiler.compile(srcDir, dstDir, sources, classPath);
-            return new WorkOutput() {
-                @Override
-                public WorkResult getDidWork() {
-                    return WorkResult.DID_WORK;
+        override fun execute(executionContext: ExecutionContext): WorkOutput {
+            val workspace = executionContext.getWorkspace()
+            val srcDir = File(workspace, OUT_SOURCES)
+            val dstDir = File(workspace, OUT_CLASSES)
+            val sources = this.classSources
+            SimpleGeneratedJavaClassCompiler.compile(srcDir, dstDir, sources, classPath)
+            return object : WorkOutput {
+                override fun getDidWork(): WorkOutput.WorkResult {
+                    return WorkOutput.WorkResult.DID_WORK
                 }
 
-                @Override
-                public Object getOutput(File workspace) {
-                    return loadAlreadyProducedOutput(workspace);
+                override fun getOutput(workspace: File): Any {
+                    return loadAlreadyProducedOutput(workspace)
                 }
-            };
+            }
         }
 
-        @Override
-        public Object loadAlreadyProducedOutput(File workspace) {
-            File srcDir = new File(workspace, OUT_SOURCES);
-            File dstDir = new File(workspace, OUT_CLASSES);
-            return new GeneratedAccessors(srcDir, dstDir);
+        override fun loadAlreadyProducedOutput(workspace: File): Any {
+            val srcDir = File(workspace, OUT_SOURCES)
+            val dstDir = File(workspace, OUT_CLASSES)
+            return GeneratedAccessors(srcDir, dstDir)
         }
 
-        @Override
-        public void visitOutputs(File workspace, OutputVisitor visitor) {
-            visitOutputDir(visitor, workspace, OUT_SOURCES);
-            visitOutputDir(visitor, workspace, OUT_CLASSES);
+        override fun visitOutputs(workspace: File, visitor: OutputVisitor) {
+            visitOutputDir(visitor, workspace, OUT_SOURCES)
+            visitOutputDir(visitor, workspace, OUT_CLASSES)
         }
 
-        private void visitOutputDir(OutputVisitor visitor, File workspace, String propertyName) {
-            File dir = new File(workspace, propertyName);
-            visitor.visitOutputProperty(propertyName, TreeType.DIRECTORY, OutputVisitor.OutputFileValueSupplier.fromStatic(dir, fileCollectionFactory.fixed(dir)));
+        fun visitOutputDir(visitor: OutputVisitor, workspace: File, propertyName: String) {
+            val dir = File(workspace, propertyName)
+            visitor.visitOutputProperty(propertyName, TreeType.DIRECTORY, OutputVisitor.OutputFileValueSupplier.fromStatic(dir, fileCollectionFactory.fixed(dir)))
+        }
+
+        companion object {
+            private const val OUT_SOURCES = "sources"
+            private const val OUT_CLASSES = "classes"
         }
     }
 
-    private class DependencyAccessorUnitOfWork extends AbstractAccessorUnitOfWork {
-        private static final String IN_LIBRARIES = "libraries";
-        private static final String IN_BUNDLES = "bundles";
-        private static final String IN_PLUGINS = "plugins";
-        private static final String IN_VERSIONS = "versions";
-        private static final String IN_MODEL_NAME = "modelName";
-        private static final String IN_CLASSPATH = "classpath";
-
-        private final DefaultVersionCatalog model;
-
-        private DependencyAccessorUnitOfWork(DefaultVersionCatalog model) {
-            this.model = model;
-        }
-
-        @Override
-        public Optional<CachingDisabledReason> shouldDisableCaching(@Nullable OverlappingOutputs detectedOverlappingOutputs) {
+    private inner class DependencyAccessorUnitOfWork(private val model: DefaultVersionCatalog) : AbstractAccessorUnitOfWork() {
+        override fun shouldDisableCaching(detectedOverlappingOutputs: OverlappingOutputs?): Optional<CachingDisabledReason> {
             // This was a behaviour before 8.9, where we unified ExecutionEngine in https://github.com/gradle/gradle/pull/29534
-            return Optional.of(NOT_WORTH_CACHING);
+            return Optional.of<CachingDisabledReason>(UnitOfWork.NOT_WORTH_CACHING)
         }
 
-        @Override
-        protected List<ClassSource> getClassSources() {
-            return Arrays.asList(
-                new DependenciesAccessorClassSource(model.getName(), model, problemsService),
-                new PluginsBlockDependenciesAccessorClassSource(model.getName(), model, problemsService)
-            );
+        override fun getClassSources(): MutableList<ClassSource> {
+            return Arrays.asList<ClassSource>(
+                DependenciesAccessorClassSource(model.getName(), model, problemsService),
+                PluginsBlockDependenciesAccessorClassSource(model.getName(), model, problemsService)
+            )
         }
 
-        @Override
-        public void visitImmutableInputs(InputVisitor visitor) {
-            visitor.visitInputProperty(IN_LIBRARIES, model::getLibraryAliases);
-            visitor.visitInputProperty(IN_BUNDLES, model::getBundleAliases);
-            visitor.visitInputProperty(IN_VERSIONS, model::getVersionAliases);
-            visitor.visitInputProperty(IN_PLUGINS, model::getPluginAliases);
-            visitor.visitInputProperty(IN_MODEL_NAME, model::getName);
-            visitor.visitInputFileProperty(IN_CLASSPATH, InputBehavior.NON_INCREMENTAL,
-                new InputVisitor.InputFileValueSupplier(
+        override fun visitImmutableInputs(visitor: InputVisitor) {
+            visitor.visitInputProperty(IN_LIBRARIES, InputVisitor.ValueSupplier { model.getLibraryAliases() })
+            visitor.visitInputProperty(IN_BUNDLES, InputVisitor.ValueSupplier { model.getBundleAliases() })
+            visitor.visitInputProperty(IN_VERSIONS, InputVisitor.ValueSupplier { model.getVersionAliases() })
+            visitor.visitInputProperty(IN_PLUGINS, InputVisitor.ValueSupplier { model.getPluginAliases() })
+            visitor.visitInputProperty(IN_MODEL_NAME, InputVisitor.ValueSupplier { model.getName() })
+            visitor.visitInputFileProperty(
+                IN_CLASSPATH, InputBehavior.NON_INCREMENTAL,
+                InputVisitor.InputFileValueSupplier(
                     classPath,
                     InputNormalizer.RUNTIME_CLASSPATH,
                     DirectorySensitivity.IGNORE_DIRECTORIES,
                     LineEndingSensitivity.DEFAULT,
-                    () -> fileCollectionFactory.fixed(classPath.getAsFiles())));
+                    Supplier { fileCollectionFactory.fixed(classPath.getAsFiles()) })
+            )
         }
 
-        @Override
-        public String getDisplayName() {
-            return "generation of dependency accessors for " + model.getName();
+        override fun getDisplayName(): String {
+            return "generation of dependency accessors for " + model.getName()
+        }
+
+        companion object {
+            private const val IN_LIBRARIES = "libraries"
+            private const val IN_BUNDLES = "bundles"
+            private const val IN_PLUGINS = "plugins"
+            private const val IN_VERSIONS = "versions"
+            private const val IN_MODEL_NAME = "modelName"
+            private const val IN_CLASSPATH = "classpath"
         }
     }
 
-    private class ProjectAccessorUnitOfWork extends AbstractAccessorUnitOfWork {
-        private final static String IN_PROJECTS = "projects";
-        private final ProjectDescriptorRegistry projectRegistry;
-
-        public ProjectAccessorUnitOfWork(ProjectDescriptorRegistry projectRegistry) {
-            this.projectRegistry = projectRegistry;
-        }
-
-        @Override
-        public Optional<CachingDisabledReason> shouldDisableCaching(@Nullable OverlappingOutputs detectedOverlappingOutputs) {
+    private inner class ProjectAccessorUnitOfWork(private val projectRegistry: ProjectDescriptorRegistry) : AbstractAccessorUnitOfWork() {
+        override fun shouldDisableCaching(detectedOverlappingOutputs: OverlappingOutputs?): Optional<CachingDisabledReason> {
             // This was a behaviour before 8.9, where we unified ExecutionEngine in https://github.com/gradle/gradle/pull/29534
-            return Optional.of(NOT_WORTH_CACHING);
+            return Optional.of<CachingDisabledReason>(UnitOfWork.NOT_WORTH_CACHING)
         }
 
-        @Override
-        protected List<ClassSource> getClassSources() {
-            List<ClassSource> sources = new ArrayList<>();
-            sources.add(new RootProjectAccessorSource(projectRegistry.getRootProject()));
-            for (ProjectDescriptor project : projectRegistry.getAllProjects()) {
-                sources.add(new ProjectAccessorClassSource(project));
+        override fun getClassSources(): MutableList<ClassSource> {
+            val sources: MutableList<ClassSource> = ArrayList<ClassSource>()
+            sources.add(DefaultDependenciesAccessors.RootProjectAccessorSource(projectRegistry.getRootProject()!!))
+            for (project in projectRegistry.getAllProjects()) {
+                sources.add(ProjectAccessorClassSource(project))
             }
-            return sources;
+            return sources
         }
 
-        @Override
-        public void visitImmutableInputs(InputVisitor visitor) {
-            visitor.visitInputProperty(IN_PROJECTS, this::buildProjectTree);
+        override fun visitImmutableInputs(visitor: InputVisitor) {
+            visitor.visitInputProperty(IN_PROJECTS, InputVisitor.ValueSupplier { this.buildProjectTree() })
         }
 
-        private String buildProjectTree() {
-            Set<? extends ProjectDescriptor> allprojects = projectRegistry.getAllProjects();
+        fun buildProjectTree(): String {
+            val allprojects: MutableSet<out ProjectDescriptor> = projectRegistry.getAllProjects()
             return allprojects.stream()
-                .map(ProjectDescriptor::getPath)
+                .map<String> { obj: ProjectDescriptor? -> obj!!.getPath() }
                 .sorted()
-                .collect(Collectors.joining(","));
+                .collect(Collectors.joining(","))
         }
 
-        @Override
-        public String getDisplayName() {
-            return "generation of project accessors";
+        override fun getDisplayName(): String {
+            return "generation of project accessors"
         }
 
-    }
-
-    private static class GeneratedAccessors {
-        private final File sourcesDir;
-        private final File classesDir;
-
-        private GeneratedAccessors(File sourcesDir, File classesDir) {
-            this.sourcesDir = sourcesDir;
-            this.classesDir = classesDir;
+        companion object {
+            private const val IN_PROJECTS = "projects"
         }
     }
 
-    private static class DependenciesAccessorClassSource implements ClassSource {
+    private class GeneratedAccessors(private val sourcesDir: File, private val classesDir: File)
 
-        private final String name;
-        private final DefaultVersionCatalog model;
-        private final Problems problemsService;
-
-        private DependenciesAccessorClassSource(String name, DefaultVersionCatalog model, Problems problemsService) {
-            this.name = name;
-            this.model = model;
-            this.problemsService = problemsService;
+    private class DependenciesAccessorClassSource(private val name: String, private val model: DefaultVersionCatalog, private val problemsService: Problems) : ClassSource {
+        override fun getPackageName(): String {
+            return ACCESSORS_PACKAGE
         }
 
-        @Override
-        public String getPackageName() {
-            return ACCESSORS_PACKAGE;
+        override fun getSimpleClassName(): String {
+            return ACCESSORS_CLASSNAME_PREFIX + StringUtils.capitalize(name)
         }
 
-        @Override
-        public String getSimpleClassName() {
-            return ACCESSORS_CLASSNAME_PREFIX + StringUtils.capitalize(name);
-        }
-
-        @Override
-        public String getSource() {
-            StringWriter writer = new StringWriter();
-            LibrariesSourceGenerator.generateSource(writer, model, ACCESSORS_PACKAGE, getSimpleClassName(), problemsService);
-            return writer.toString();
+        override fun getSource(): String {
+            val writer = StringWriter()
+            LibrariesSourceGenerator.Companion.generateSource(writer, model, ACCESSORS_PACKAGE, getSimpleClassName(), problemsService)
+            return writer.toString()
         }
     }
 
-    private static class PluginsBlockDependenciesAccessorClassSource implements ClassSource {
-        private final String name;
-        private final DefaultVersionCatalog model;
-        private final Problems problemsService;
-
-        private PluginsBlockDependenciesAccessorClassSource(String name, DefaultVersionCatalog model, Problems problemsService) {
-            this.name = name;
-            this.model = model;
-            this.problemsService = problemsService;
+    private class PluginsBlockDependenciesAccessorClassSource(private val name: String, private val model: DefaultVersionCatalog, private val problemsService: Problems) : ClassSource {
+        override fun getPackageName(): String {
+            return ACCESSORS_PACKAGE
         }
 
-        @Override
-        public String getPackageName() {
-            return ACCESSORS_PACKAGE;
+        override fun getSimpleClassName(): String {
+            return ACCESSORS_CLASSNAME_PREFIX + StringUtils.capitalize(name) + DependenciesAccessors.IN_PLUGINS_BLOCK_FACTORIES_SUFFIX
         }
 
-        @Override
-        public String getSimpleClassName() {
-            return ACCESSORS_CLASSNAME_PREFIX + StringUtils.capitalize(name) + IN_PLUGINS_BLOCK_FACTORIES_SUFFIX;
-        }
-
-        @Override
-        public String getSource() {
-            StringWriter writer = new StringWriter();
-            LibrariesSourceGenerator.generatePluginsBlockSource(writer, model, ACCESSORS_PACKAGE, getSimpleClassName(), problemsService);
-            return writer.toString();
+        override fun getSource(): String {
+            val writer = StringWriter()
+            LibrariesSourceGenerator.Companion.generatePluginsBlockSource(writer, model, ACCESSORS_PACKAGE, getSimpleClassName(), problemsService)
+            return writer.toString()
         }
     }
 
-    private static class ProjectAccessorClassSource implements ClassSource {
-        private final ProjectDescriptor project;
-        private String className;
-        private String source;
+    private class ProjectAccessorClassSource(private val project: ProjectDescriptor) : ClassSource {
+        private var className: String? = null
+        private var source: String? = null
 
-        private ProjectAccessorClassSource(ProjectDescriptor project) {
-            this.project = project;
+        override fun getPackageName(): String {
+            return ACCESSORS_PACKAGE
         }
 
-        @Override
-        public String getPackageName() {
-            return ACCESSORS_PACKAGE;
+        override fun getSimpleClassName(): String {
+            ensureInitialized()
+            return className!!
         }
 
-        @Override
-        public String getSimpleClassName() {
-            ensureInitialized();
-            return className;
+        override fun getSource(): String {
+            ensureInitialized()
+            return source!!
         }
 
-        @Override
-        public String getSource() {
-            ensureInitialized();
-            return source;
-        }
-
-        private void ensureInitialized() {
+        fun ensureInitialized() {
             if (className == null) {
-                StringWriter writer = new StringWriter();
-                className = ProjectAccessorsSourceGenerator.generateSource(writer, project, ACCESSORS_PACKAGE);
-                source = writer.toString();
+                val writer = StringWriter()
+                className = ProjectAccessorsSourceGenerator.Companion.generateSource(writer, project, ACCESSORS_PACKAGE)
+                source = writer.toString()
             }
         }
     }
 
-    private static class RootProjectAccessorSource implements ClassSource {
-        private final ProjectDescriptor rootProject;
-
-        private RootProjectAccessorSource(ProjectDescriptor rootProject) {
-            this.rootProject = rootProject;
+    private class RootProjectAccessorSource(private val rootProject: ProjectDescriptor) : ClassSource {
+        override fun getPackageName(): String {
+            return ACCESSORS_PACKAGE
         }
 
-        @Override
-        public String getPackageName() {
-            return ACCESSORS_PACKAGE;
+        override fun getSimpleClassName(): String {
+            return RootProjectAccessorSourceGenerator.Companion.ROOT_PROJECT_ACCESSOR_CLASSNAME
         }
 
-        @Override
-        public String getSimpleClassName() {
-            return RootProjectAccessorSourceGenerator.ROOT_PROJECT_ACCESSOR_CLASSNAME;
+        override fun getSource(): String {
+            val writer = StringWriter()
+            RootProjectAccessorSourceGenerator.Companion.generateSource(writer, rootProject, ACCESSORS_PACKAGE)
+            return writer.toString()
         }
-
-        @Override
-        public String getSource() {
-            StringWriter writer = new StringWriter();
-            RootProjectAccessorSourceGenerator.generateSource(writer, rootProject, ACCESSORS_PACKAGE);
-            return writer.toString();
-        }
-
     }
 
     // public for injection
-    public static class DefaultVersionCatalogsExtension implements VersionCatalogsExtension {
-
-        private final Map<String, VersionCatalog> catalogs;
-
-        @Inject
-        public DefaultVersionCatalogsExtension(Map<String, VersionCatalog> catalogs) {
-            this.catalogs = catalogs;
-        }
-
-        @Override
-        public Optional<VersionCatalog> find(String name) {
+    class DefaultVersionCatalogsExtension @Inject constructor(private val catalogs: MutableMap<String, VersionCatalog>) : VersionCatalogsExtension {
+        override fun find(name: String): Optional<VersionCatalog> {
             if (catalogs.containsKey(name)) {
-                return Optional.of(catalogs.get(name));
+                return Optional.of<VersionCatalog>(catalogs.get(name)!!)
             }
-            return Optional.empty();
+            return Optional.empty<VersionCatalog>()
         }
 
-        @Override
-        public Set<String> getCatalogNames() {
-            return ImmutableSet.copyOf(catalogs.keySet());
+        override fun getCatalogNames(): MutableSet<String> {
+            return ImmutableSet.copyOf<String>(catalogs.keys)
         }
 
-        @Override
-        public Iterator<VersionCatalog> iterator() {
-            return catalogs.values().iterator();
+        override fun iterator(): MutableIterator<VersionCatalog> {
+            return catalogs.values.iterator()
+        }
+    }
+
+    companion object {
+        private const val SUPPORTED_PROJECT_NAMES = "[a-zA-Z]([A-Za-z0-9\\-_])*"
+        private val SUPPORTED_PATTERN: Pattern = Pattern.compile(SUPPORTED_PROJECT_NAMES)
+        private const val ACCESSORS_PACKAGE = "org.gradle.accessors.dm"
+        private const val ACCESSORS_CLASSNAME_PREFIX = "LibrariesFor"
+        private val ROOT_PROJECT_ACCESSOR_FQCN: String = ACCESSORS_PACKAGE + "." + RootProjectAccessorSourceGenerator.Companion.ROOT_PROJECT_ACCESSOR_CLASSNAME
+
+        private val LOGGER: Logger = LoggerFactory.getLogger(DefaultDependenciesAccessors::class.java)
+
+        private fun warnIfRootProjectNameNotSetExplicitly(project: ProjectDescriptorInternal?) {
+            if (!project!!.isExplicitName()) {
+                LOGGER.warn(
+                    "Project accessors enabled, but root project name not explicitly set for '" + project.getName() +
+                            "'. Checking out the project in different folders will impact the generated code and implicitly the buildscript classpath, breaking caching."
+                )
+            }
+        }
+
+        private fun assertCanGenerateAccessors(projectRegistry: ProjectDescriptorRegistry): Boolean {
+            val errors: MutableList<String> = ArrayList<String>()
+            projectRegistry.getAllProjects()
+                .stream()
+                .map<String> { obj: ProjectDescriptorInternal? -> obj!!.getName() }
+                .filter { p: String? -> !SUPPORTED_PATTERN.matcher(p).matches() }
+                .map<String> { name: String? -> "project '" + name + "' doesn't follow the naming convention: " + SUPPORTED_PROJECT_NAMES }
+                .forEach { e: String? -> errors.add(e!!) }
+            for (project in projectRegistry.getAllProjects()) {
+                project.getChildren()
+                    .stream()
+                    .map<String> { obj: ProjectDescriptor? -> obj!!.getName() }
+                    .collect(Collectors.groupingBy(Function { alias: String? -> AbstractSourceGenerator.Companion.toJavaName(alias) }))
+                    .entries
+                    .stream()
+                    .filter { e: MutableMap.MutableEntry<String, MutableList<String>>? -> e!!.value.size > 1 }
+                    .forEachOrdered { e: MutableMap.MutableEntry<String, MutableList<String>>? ->
+                        val javaName = e!!.key
+                        val names = e.value
+                        errors.add("subprojects " + names + " of project " + project.getPath() + " map to the same method name get" + javaName + "()")
+                    }
+            }
+            if (!errors.isEmpty()) {
+                val formatter = TreeFormatter()
+                formatter.node("Cannot generate project dependency accessors")
+                formatter.startChildren()
+                for (error in errors) {
+                    formatter.node("Cannot generate project dependency accessors because " + error)
+                }
+                formatter.endChildren()
+                throw InvalidUserDataException(formatter.toString())
+            }
+            return errors.isEmpty()
+        }
+
+        private fun <T> loadFactory(classLoaderScope: ClassLoaderScope, className: String): Class<out T>? {
+            val clazz: Class<out T>
+            try {
+                clazz = uncheckedCast<Class<out T>?>(classLoaderScope.getExportClassLoader().loadClass(className))!!
+            } catch (e: ClassNotFoundException) {
+                return null
+            }
+            return clazz
         }
     }
 }

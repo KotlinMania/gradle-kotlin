@@ -13,74 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.internal.artifacts.dsl.dependencies.ModuleFactoryHelper;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.deprecation.DeprecationMessageBuilder;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.internal.artifacts.dsl.dependencies.ModuleFactoryHelper
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
+import org.gradle.internal.deprecation.DeprecationMessageBuilder
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
 
-public class DependencyMapNotationConverter<T> extends MapNotationConverter<T> {
-
-    private final Instantiator instantiator;
-    private final Class<T> resultingType;
-
-    public DependencyMapNotationConverter(Instantiator instantiator, Class<T> resultingType) {
-        this.instantiator = instantiator;
-        this.resultingType = resultingType;
+class DependencyMapNotationConverter<T>(private val instantiator: Instantiator, private val resultingType: Class<T?>) : MapNotationConverter<T?>() {
+    override fun describe(visitor: DiagnosticsVisitor) {
+        visitor.candidate("Maps").example("[group: 'org.gradle', name: 'gradle-core', version: '1.0']")
     }
 
-    @Override
-    public void describe(DiagnosticsVisitor visitor) {
-        visitor.candidate("Maps").example("[group: 'org.gradle', name: 'gradle-core', version: '1.0']");
-    }
-
-    protected T parseMap(@MapKey("group") @Nullable String group,
-                         @MapKey("name") @Nullable String name,
-                         @MapKey("version") @Nullable String version,
-                         @MapKey("configuration") @Nullable String configuration,
-                         @MapKey("ext") @Nullable String ext,
-                         @MapKey("classifier") @Nullable String classifier
-    ) {
-        DeprecationMessageBuilder.DeprecateAction deprecation =
-            DeprecationLogger.deprecateAction("Declaring dependencies using multi-string notation");
+    protected fun parseMap(
+        @MapKey("group") group: String?,
+        @MapKey("name") name: String?,
+        @MapKey("version") version: String?,
+        @MapKey("configuration") configuration: String?,
+        @MapKey("ext") ext: String?,
+        @MapKey("classifier") classifier: String?
+    ): T? {
+        var deprecation: DeprecationMessageBuilder.DeprecateAction? =
+            deprecateAction("Declaring dependencies using multi-string notation")
 
         if (configuration == null) { // TODO #33919: We have no nice shorthand for configuration dependencies
-            String suggestedNotation = (group == null ? "" : group)  + ":" + name + (version == null ? "" : ":" + version);
+            var suggestedNotation = (if (group == null) "" else group) + ":" + name + (if (version == null) "" else ":" + version)
             if (classifier != null) {
                 if (version == null) {
-                    suggestedNotation += ":";
+                    suggestedNotation += ":"
                 }
-                suggestedNotation += ":" + classifier;
+                suggestedNotation += ":" + classifier
             }
 
             if (ext != null) {
-                suggestedNotation += "@" + ext;
+                suggestedNotation += "@" + ext
             }
 
-            deprecation = deprecation
-                .withAdvice("Please use single-string notation instead: \"" + suggestedNotation + "\".");
+            deprecation = deprecation!!
+                .withAdvice("Please use single-string notation instead: \"" + suggestedNotation + "\".")
         }
 
-        deprecation.willBecomeAnErrorInGradle10()
-            .withUpgradeGuideSection(9, "dependency_multi_string_notation")
-            .nagUser();
+        deprecation!!.willBecomeAnErrorInGradle10()
+            .withUpgradeGuideSection(9, "dependency_multi_string_notation")!!
+            .nagUser()
 
-        T dependency;
+        val dependency: T?
         if (configuration == null) {
-            dependency = instantiator.newInstance(resultingType, group, name, version);
+            dependency = instantiator.newInstance<T?>(resultingType, group, name, version)
         } else {
-            dependency = instantiator.newInstance(resultingType, group, name, version, configuration);
+            dependency = instantiator.newInstance<T?>(resultingType, group, name, version, configuration)
         }
-        if (dependency instanceof ExternalDependency) {
-            ModuleFactoryHelper.addExplicitArtifactsIfDefined((ExternalDependency) dependency, ext, classifier);
+        if (dependency is ExternalDependency) {
+            ModuleFactoryHelper.addExplicitArtifactsIfDefined(dependency as ExternalDependency, ext, classifier)
         }
-        return dependency;
+        return dependency
     }
-
 }

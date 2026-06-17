@@ -13,32 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.descriptor
 
-package org.gradle.internal.component.external.descriptor;
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.gradle.internal.component.model.IvyArtifactName;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class Artifact {
-    private final IvyArtifactName artifactName;
-    private final Set<String> configurations;
-
-    public Artifact(IvyArtifactName artifactName) {
-        this(artifactName, new LinkedHashSet<>());
-    }
-
-    public Artifact(IvyArtifactName artifactName, Set<String> configurations) {
-        this.artifactName = artifactName;
-        this.configurations = configurations;
-    }
-
-    public IvyArtifactName getArtifactName() {
-        return artifactName;
-    }
-
-    public Set<String> getConfigurations() {
-        return configurations;
-    }
-}
+class Artifact @JvmOverloads constructor(@JvmField val artifactName: IvyArtifactName?, @JvmField val configurations: MutableSet<String?>? = LinkedHashSet<String?>())

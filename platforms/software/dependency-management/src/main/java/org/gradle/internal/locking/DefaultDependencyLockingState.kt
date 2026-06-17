@@ -13,48 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingState
+import org.gradle.api.internal.artifacts.dsl.dependencies.LockEntryFilter
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingState;
-import org.gradle.api.internal.artifacts.dsl.dependencies.LockEntryFilter;
+class DefaultDependencyLockingState : DependencyLockingState {
+    private val strictlyValidate: Boolean
+    private val constraints: MutableSet<ModuleComponentIdentifier>
+    private val ignoredEntryFilter: LockEntryFilter
 
-import java.util.Set;
-
-import static java.util.Collections.emptySet;
-
-public class DefaultDependencyLockingState implements DependencyLockingState {
-
-    public static final DefaultDependencyLockingState EMPTY_LOCK_CONSTRAINT = new DefaultDependencyLockingState();
-
-    private final boolean strictlyValidate;
-    private final Set<ModuleComponentIdentifier> constraints;
-    private final LockEntryFilter ignoredEntryFilter;
-
-    private DefaultDependencyLockingState() {
-        strictlyValidate = false;
-        constraints = emptySet();
-        ignoredEntryFilter = LockEntryFilterFactory.FILTERS_NONE;
-    }
-    public DefaultDependencyLockingState(boolean strictlyValidate, Set<ModuleComponentIdentifier> constraints, LockEntryFilter ignoredEntryFilter) {
-        this.strictlyValidate = strictlyValidate;
-        this.constraints = constraints;
-        this.ignoredEntryFilter = ignoredEntryFilter;
+    private constructor() {
+        strictlyValidate = false
+        constraints = mutableSetOf<ModuleComponentIdentifier>()
+        ignoredEntryFilter = LockEntryFilterFactory.FILTERS_NONE
     }
 
-    @Override
-    public boolean mustValidateLockState() {
-        return strictlyValidate;
+    constructor(strictlyValidate: Boolean, constraints: MutableSet<ModuleComponentIdentifier>, ignoredEntryFilter: LockEntryFilter) {
+        this.strictlyValidate = strictlyValidate
+        this.constraints = constraints
+        this.ignoredEntryFilter = ignoredEntryFilter
     }
 
-    @Override
-    public Set<ModuleComponentIdentifier> getLockedDependencies() {
-        return constraints;
+    override fun mustValidateLockState(): Boolean {
+        return strictlyValidate
     }
 
-    @Override
-    public LockEntryFilter getIgnoredEntryFilter() {
-        return ignoredEntryFilter;
+    override fun getLockedDependencies(): MutableSet<ModuleComponentIdentifier> {
+        return constraints
+    }
+
+    override fun getIgnoredEntryFilter(): LockEntryFilter {
+        return ignoredEntryFilter
+    }
+
+    companion object {
+        val EMPTY_LOCK_CONSTRAINT: DefaultDependencyLockingState = DefaultDependencyLockingState()
     }
 }

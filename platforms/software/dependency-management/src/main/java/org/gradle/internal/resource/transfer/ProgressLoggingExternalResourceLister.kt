@@ -13,71 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationRunner
+import org.gradle.internal.operations.CallableBuildOperation
+import org.gradle.internal.resource.ExternalResourceListBuildOperationType
+import org.gradle.internal.resource.ExternalResourceName
+import java.net.URI
 
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationRunner;
-import org.gradle.internal.operations.CallableBuildOperation;
-import org.gradle.internal.resource.ExternalResourceListBuildOperationType;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.List;
-
-public class ProgressLoggingExternalResourceLister extends AbstractProgressLoggingHandler implements ExternalResourceLister {
-    private final ExternalResourceLister delegate;
-    private final BuildOperationRunner buildOperationExecutor;
-
-    public ProgressLoggingExternalResourceLister(ExternalResourceLister delegate, BuildOperationRunner buildOperationRunner) {
-        this.delegate = delegate;
-        this.buildOperationExecutor = buildOperationRunner;
+class ProgressLoggingExternalResourceLister(private val delegate: ExternalResourceLister, private val buildOperationExecutor: BuildOperationRunner) : AbstractProgressLoggingHandler(),
+    ExternalResourceLister {
+    @Throws(ResourceException::class)
+    override fun list(parent: ExternalResourceName): MutableList<String>? {
+        return buildOperationExecutor.call<MutableList<String>>(ProgressLoggingExternalResourceLister.ListOperation(parent))
     }
 
-    @Nullable
-    @Override
-    public List<String> list(ExternalResourceName parent) throws ResourceException {
-        return buildOperationExecutor.call(new ListOperation(parent));
-    }
-
-    private static class ListOperationDetails extends LocationDetails implements ExternalResourceListBuildOperationType.Details {
-        private ListOperationDetails(URI location) {
-            super(location);
-        }
-
-        @Override
-        public String toString() {
-            return "ExternalResourceListBuildOperationType.Details{location=" + getLocation() + ", " + '}';
+    private class ListOperationDetails(location: URI) : LocationDetails(location), ExternalResourceListBuildOperationType.Details {
+        override fun toString(): String {
+            return "ExternalResourceListBuildOperationType.Details{location=" + getLocation() + ", " + '}'
         }
     }
 
-    private final static ExternalResourceListBuildOperationType.Result LIST_RESULT = new ExternalResourceListBuildOperationType.Result() {
-    };
-
-    private class ListOperation implements CallableBuildOperation<List<String>> {
-        private final ExternalResourceName parent;
-
-        public ListOperation(ExternalResourceName parent) {
-            this.parent = parent;
-        }
-
-        @Override
-        public List<String> call(BuildOperationContext context) {
+    private inner class ListOperation(private val parent: ExternalResourceName) : CallableBuildOperation<MutableList<String>> {
+        override fun call(context: BuildOperationContext): MutableList<String> {
             try {
-                return delegate.list(parent);
+                return delegate.list(parent)!!
             } finally {
-                context.setResult(LIST_RESULT);
+                context.setResult(LIST_RESULT)
             }
         }
 
-        @Override
-        public BuildOperationDescriptor.Builder description() {
+        override fun description(): BuildOperationDescriptor.Builder {
             return BuildOperationDescriptor
                 .displayName("List " + parent.getUri())
-                .details(new ListOperationDetails(parent.getUri()));
+                .details(ListOperationDetails(parent.getUri()))
+        }
+    }
+
+    companion object {
+        private val LIST_RESULT: ExternalResourceListBuildOperationType.Result = object : ExternalResourceListBuildOperationType.Result {
         }
     }
 }

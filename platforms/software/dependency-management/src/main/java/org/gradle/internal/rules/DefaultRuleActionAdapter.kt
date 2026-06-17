@@ -13,55 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.model.internal.type.ModelType
 
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.model.internal.type.ModelType;
-
-public class DefaultRuleActionAdapter implements RuleActionAdapter {
-    @SuppressWarnings("InlineFormatString")
-    private static final String INVALID_CLOSURE_ERROR = "The closure provided is not valid as a rule for '%s'.";
-    @SuppressWarnings("InlineFormatString")
-    private static final String INVALID_ACTION_ERROR = "The action provided is not valid as a rule for '%s'.";
-    @SuppressWarnings("InlineFormatString")
-    private static final String INVALID_RULE_SOURCE_ERROR = "The rule source provided does not provide a valid rule for '%s'.";
-
-    private final RuleActionValidator ruleActionValidator;
-    private final String context;
-
-    public DefaultRuleActionAdapter(RuleActionValidator ruleActionValidator, String context) {
-        this.ruleActionValidator = ruleActionValidator;
-        this.context = context;
-    }
-
-    @Override
-    public <T> RuleAction<? super T> createFromClosure(Class<T> subjectType, Closure<?> closure) {
+class DefaultRuleActionAdapter(private val ruleActionValidator: RuleActionValidator, private val context: String?) : RuleActionAdapter {
+    override fun <T> createFromClosure(subjectType: Class<T?>?, closure: Closure<*>?): RuleAction<in T?>? {
         try {
-            return ruleActionValidator.validate(new ClosureBackedRuleAction<>(subjectType, closure));
-        } catch (RuleActionValidationException e) {
-            throw new InvalidUserCodeException(String.format(INVALID_CLOSURE_ERROR, context), e);
+            return ruleActionValidator.validate<T?>(ClosureBackedRuleAction<T?>(subjectType, closure))
+        } catch (e: RuleActionValidationException) {
+            throw InvalidUserCodeException(String.format(INVALID_CLOSURE_ERROR, context), e)
         }
     }
 
-    @Override
-    public <T> RuleAction<? super T> createFromAction(Action<? super T> action) {
+    override fun <T> createFromAction(action: Action<in T?>?): RuleAction<in T?>? {
         try {
-            return ruleActionValidator.validate(new NoInputsRuleAction<>(action));
-        } catch (RuleActionValidationException e) {
-            throw new InvalidUserCodeException(String.format(INVALID_ACTION_ERROR, context), e);
+            return ruleActionValidator.validate<T?>(NoInputsRuleAction<T?>(action))
+        } catch (e: RuleActionValidationException) {
+            throw InvalidUserCodeException(String.format(INVALID_ACTION_ERROR, context), e)
         }
     }
 
-    @Override
-    @Deprecated
-    public <T> RuleAction<? super T> createFromRuleSource(Class<T> subjectType, Object ruleSource) {
+    @Deprecated("")
+    override fun <T> createFromRuleSource(subjectType: Class<T?>?, ruleSource: Any?): RuleAction<in T?>? {
         try {
-            return ruleActionValidator.validate(RuleSourceBackedRuleAction.create(ModelType.of(subjectType), ruleSource));
-        } catch (RuleActionValidationException e) {
-            throw new InvalidUserCodeException(String.format(INVALID_RULE_SOURCE_ERROR, context), e);
+            return ruleActionValidator.validate<T?>(RuleSourceBackedRuleAction.Companion.create<Any?, T?>(ModelType.of<T?>(subjectType), ruleSource))
+        } catch (e: RuleActionValidationException) {
+            throw InvalidUserCodeException(String.format(INVALID_RULE_SOURCE_ERROR, context), e)
         }
+    }
+
+    companion object {
+        private const val INVALID_CLOSURE_ERROR = "The closure provided is not valid as a rule for '%s'."
+        private const val INVALID_ACTION_ERROR = "The action provided is not valid as a rule for '%s'."
+        private const val INVALID_RULE_SOURCE_ERROR = "The rule source provided does not provide a valid rule for '%s'."
     }
 }

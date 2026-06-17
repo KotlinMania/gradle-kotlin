@@ -132,7 +132,7 @@ public class PublishArtifactNotationParserFactory implements Factory<NotationPar
         @Override
         protected ConfigurablePublishArtifact parseType(Provider<?> notation) {
             Module module = metaDataProvider.getModule();
-            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new LazyPublishArtifact(notation, module.getVersion(), fileResolver, taskDependencyFactory));
+            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new LazyPublishArtifact(notation, module.version, fileResolver, taskDependencyFactory));
         }
     }
 
@@ -150,7 +150,7 @@ public class PublishArtifactNotationParserFactory implements Factory<NotationPar
         @Override
         protected ConfigurablePublishArtifact parseType(FileSystemLocation notation) {
             Module module = metaDataProvider.getModule();
-            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new FileSystemPublishArtifact(notation, module.getVersion()));
+            return objectFactory.newInstance(DecoratingPublishArtifact.class, taskDependencyFactory, new FileSystemPublishArtifact(notation, module.version));
         }
     }
 
@@ -162,7 +162,7 @@ public class PublishArtifactNotationParserFactory implements Factory<NotationPar
         @Override
         protected ConfigurablePublishArtifact parseType(File file) {
             Module module = metaDataProvider.getModule();
-            ArtifactFile artifactFile = new ArtifactFile(file, module.getVersion());
+            ArtifactFile artifactFile = new ArtifactFile(file, module.version);
             DefaultPublishArtifact defaultPublishArtifact = objectFactory.newInstance(DefaultPublishArtifact.class, taskDependencyFactory);
             defaultPublishArtifact.setName(artifactFile.getName());
             defaultPublishArtifact.setExtension(artifactFile.getExtension());

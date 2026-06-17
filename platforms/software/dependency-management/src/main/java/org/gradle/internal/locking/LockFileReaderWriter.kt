@@ -13,254 +13,270 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.DocumentationRegistry
+import org.gradle.api.internal.DomainObjectContext
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.resource.local.FileResourceListener
+import org.gradle.util.internal.GFileUtils
+import java.io.File
+import java.io.IOException
+import java.lang.String
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Collections
+import java.util.TreeMap
+import java.util.function.Predicate
+import java.util.stream.Collectors
+import kotlin.Boolean
+import kotlin.RuntimeException
+import kotlin.checkNotNull
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.MutableSet
+import kotlin.collections.dropLastWhile
+import kotlin.collections.plus
+import kotlin.collections.toTypedArray
+import kotlin.plus
+import kotlin.sequences.plus
+import kotlin.text.isEmpty
+import kotlin.text.plus
+import kotlin.text.split
+import kotlin.text.startsWith
+import kotlin.text.substring
+import kotlin.text.toByteArray
+import kotlin.text.toRegex
+import kotlin.text.trim
+import kotlin.use
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.DomainObjectContext;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.resource.local.FileResourceListener;
-import org.gradle.util.internal.GFileUtils;
-import org.jspecify.annotations.Nullable;
+class LockFileReaderWriter(fileResolver: FileResolver, private val context: DomainObjectContext, private val lockFile: RegularFileProperty, private val listener: FileResourceListener) {
+    private val lockFilesRoot: Path?
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-public class LockFileReaderWriter {
-
-    private static final Logger LOGGER = Logging.getLogger(LockFileReaderWriter.class);
-    private static final String LIMITATIONS_DOC_LINK = new DocumentationRegistry().getDocumentationRecommendationFor("information on limitations", "dependency_locking", "locking_limitations");
-    static final String FORMATTING_DOC_LINK = "Verify the lockfile content. " + new DocumentationRegistry().getDocumentationRecommendationFor("information on lock file format", "dependency_locking", "lock_state_location_and_format");
-
-    static final String UNIQUE_LOCKFILE_NAME = "gradle.lockfile";
-    static final String FILE_SUFFIX = ".lockfile";
-    static final String DEPENDENCY_LOCKING_FOLDER = "gradle/dependency-locks";
-    static final Charset CHARSET = StandardCharsets.UTF_8;
-    static final List<String> LOCKFILE_HEADER_LIST = ImmutableList.of("# This is a Gradle generated file for dependency locking.", "# Manual edits can break the build and are not advised.", "# This file is expected to be part of source control.");
-    static final String EMPTY_RESOLUTIONS_ENTRY = "empty=";
-    static final String BUILD_SCRIPT_PREFIX = "buildscript-";
-    static final String SETTINGS_SCRIPT_PREFIX = "settings-";
-
-    private final Path lockFilesRoot;
-    private final DomainObjectContext context;
-    private final RegularFileProperty lockFile;
-    private final FileResourceListener listener;
-
-    public LockFileReaderWriter(FileResolver fileResolver, DomainObjectContext context, RegularFileProperty lockFile, FileResourceListener listener) {
-        this.context = context;
-        this.lockFile = lockFile;
-        this.listener = listener;
-        Path resolve = null;
+    init {
+        var resolve: Path? = null
         if (fileResolver.canResolveRelativePath()) {
-            resolve = fileResolver.resolve(DEPENDENCY_LOCKING_FOLDER).toPath();
+            resolve = fileResolver.resolve(DEPENDENCY_LOCKING_FOLDER).toPath()
             // TODO: Can I find a way to use a convention here instead?
-            lockFile.set(fileResolver.resolve(decorate(UNIQUE_LOCKFILE_NAME)));
+            lockFile.set(fileResolver.resolve(decorate(UNIQUE_LOCKFILE_NAME)))
         }
-        this.lockFilesRoot = resolve;
-        LOGGER.debug("Lockfiles root: {}", lockFilesRoot);
+        this.lockFilesRoot = resolve
+        LOGGER.debug("Lockfiles root: {}", lockFilesRoot)
     }
 
-    @Nullable
-    public List<String> readLockFile(String lockId) {
-        checkValidRoot();
+    fun readLockFile(lockId: String): MutableList<String>? {
+        checkValidRoot()
 
-        Path lockFile = lockFilesRoot.resolve(decorate(lockId) + FILE_SUFFIX);
-        listener.fileObserved(lockFile.toFile());
+        val lockFile = lockFilesRoot!!.resolve(decorate(lockId) + FILE_SUFFIX)
+        listener.fileObserved(lockFile.toFile())
         if (Files.exists(lockFile)) {
-            List<String> result;
+            val result: MutableList<String>
             try {
-                result = Files.readAllLines(lockFile, CHARSET);
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to load lock file", e);
+                result = Files.readAllLines(lockFile, CHARSET)
+            } catch (e: IOException) {
+                throw RuntimeException("Unable to load lock file", e)
             }
-            List<String> lines = result;
-            filterNonModuleLines(lines);
-            return lines;
+            val lines = result
+            filterNonModuleLines(lines)
+            return lines
         } else {
-            return null;
+            return null
         }
     }
 
-    private String decorate(String lockId) {
+    private fun decorate(lockId: String): String {
         if (context.isScript()) {
             if (context.isRootScript()) {
-                return SETTINGS_SCRIPT_PREFIX + lockId;
+                return SETTINGS_SCRIPT_PREFIX + lockId
             }
-            return BUILD_SCRIPT_PREFIX + lockId;
+            return BUILD_SCRIPT_PREFIX + lockId
         } else {
-            return lockId;
+            return lockId
         }
     }
 
-    private void checkValidRoot() {
-        if (lockFilesRoot == null) {
-            throw new IllegalStateException("Dependency locking cannot be used for " + context.getDisplayName() + ". " + LIMITATIONS_DOC_LINK);
-        }
+    private fun checkValidRoot() {
+        checkNotNull(lockFilesRoot) { "Dependency locking cannot be used for " + context.getDisplayName() + ". " + LIMITATIONS_DOC_LINK }
     }
 
-    private static void filterNonModuleLines(List<String> lines) {
-        Iterator<String> iterator = lines.iterator();
-        while (iterator.hasNext()) {
-            String value = iterator.next().trim();
-            if (value.startsWith("#") || value.isEmpty()) {
-                iterator.remove();
-            }
-        }
-    }
-
-    public Map<String, List<String>> readUniqueLockFile() {
-        checkValidRoot();
-        Predicate<String> empty = String::isEmpty;
-        Predicate<String> comment = s -> s.startsWith("#");
-        Path uniqueLockFile = getUniqueLockfilePath();
-        List<String> emptyLockIds = new ArrayList<>();
-        Map<String, List<String>> uniqueLockState = new HashMap<>(10);
-        listener.fileObserved(uniqueLockFile.toFile());
+    fun readUniqueLockFile(): MutableMap<String, MutableList<String>> {
+        checkValidRoot()
+        val empty = Predicate { obj: String -> obj.isEmpty() }
+        val comment = Predicate { s: String -> s.startsWith("#") }
+        val uniqueLockFile = this.uniqueLockfilePath
+        val emptyLockIds: MutableList<String> = ArrayList<String>()
+        val uniqueLockState: MutableMap<String, MutableList<String>> = HashMap<String, MutableList<String>>(10)
+        listener.fileObserved(uniqueLockFile.toFile())
         if (Files.exists(uniqueLockFile)) {
-            try (Stream<String> lines = Files.lines(uniqueLockFile, CHARSET)) {
-                lines.filter(empty.or(comment).negate())
-                    .filter(line -> {
-                        if (line.startsWith(EMPTY_RESOLUTIONS_ENTRY)) {
-                            // This is a perf hack for handling the last line in the file in a special way
-                            collectEmptyLockIds(line, emptyLockIds);
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    }).forEach(line -> parseLine(line, uniqueLockState));
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to load unique lockfile", e);
-            }
-            for (String emptyLockId : emptyLockIds) {
-                uniqueLockState.computeIfAbsent(emptyLockId, k -> new ArrayList<>());
-            }
-            return uniqueLockState;
-        } else {
-            return new HashMap<>();
-        }
-    }
-
-    private static void collectEmptyLockIds(String line, List<String> emptyLockIds) {
-        if (line.length() > EMPTY_RESOLUTIONS_ENTRY.length()) {
-            String[] lockIds = line.substring(EMPTY_RESOLUTIONS_ENTRY.length()).split(",");
-            Collections.addAll(emptyLockIds, lockIds);
-        }
-    }
-
-    private Path getUniqueLockfilePath() {
-        return lockFile.get().getAsFile().toPath();
-    }
-
-    private void parseLine(String line, Map<String, List<String>> result) {
-        String[] split = line.split("=");
-        if (split.length != 2) {
-            throw new InvalidLockFileException("lock file specified in '" + getUniqueLockfilePath().toString() + "'. Line: '" + line + "'", FORMATTING_DOC_LINK);
-        }
-        String[] lockIds = split[1].split(",");
-        for (String lockId : lockIds) {
-            result.compute(lockId, (k, v) -> {
-                List<String> mapping;
-                if (v == null) {
-                    mapping = new ArrayList<>();
-                } else {
-                    mapping = v;
+            try {
+                Files.lines(uniqueLockFile, CHARSET).use { lines ->
+                    lines.filter(empty.or(comment).negate())
+                        .filter { line: String? ->
+                            if (line!!.startsWith(EMPTY_RESOLUTIONS_ENTRY)) {
+                                // This is a perf hack for handling the last line in the file in a special way
+                                Companion.collectEmptyLockIds(line, emptyLockIds)
+                                return@filter false
+                            } else {
+                                return@filter true
+                            }
+                        }.forEach { line: String? -> parseLine(line!!, uniqueLockState) }
                 }
-                mapping.add(split[0]);
-                return mapping;
-            });
+            } catch (e: IOException) {
+                throw RuntimeException("Unable to load unique lockfile", e)
+            }
+            for (emptyLockId in emptyLockIds) {
+                uniqueLockState.computeIfAbsent(emptyLockId) { k: String? -> ArrayList<String?>() }
+            }
+            return uniqueLockState
+        } else {
+            return HashMap<String, MutableList<String>>()
         }
     }
 
-    public boolean canWrite() {
-        return lockFilesRoot != null;
+    private val uniqueLockfilePath: Path
+        get() = lockFile.get().getAsFile().toPath()
+
+    private fun parseLine(line: String, result: MutableMap<String, MutableList<String>>) {
+        val split = line.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        if (split.size != 2) {
+            throw InvalidLockFileException("lock file specified in '" + this.uniqueLockfilePath.toString() + "'. Line: '" + line + "'", FORMATTING_DOC_LINK)
+        }
+        val lockIds = split[1].split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        for (lockId in lockIds) {
+            result.compute(lockId) { k: String?, v: MutableList<String>? ->
+                val mapping: MutableList<String>?
+                if (v == null) {
+                    mapping = ArrayList<String>()
+                } else {
+                    mapping = v
+                }
+                mapping.add(split[0])
+                mapping
+            }
+        }
     }
 
-    public void writeUniqueLockfile(Map<String, List<String>> lockState) {
-        checkValidRoot();
-        Path lockfilePath = getUniqueLockfilePath();
+    fun canWrite(): Boolean {
+        return lockFilesRoot != null
+    }
+
+    fun writeUniqueLockfile(lockState: MutableMap<String, MutableList<String>>) {
+        checkValidRoot()
+        val lockfilePath = this.uniqueLockfilePath
 
         if (lockState.isEmpty()) {
             // Remove the file when no lock state
-            GFileUtils.deleteQuietly(lockfilePath.toFile());
-            return;
+            GFileUtils.deleteQuietly(lockfilePath.toFile())
+            return
         }
 
         // Revert mapping
-        Map<String, List<String>> dependencyToLockIds = new TreeMap<>();
-        List<String> emptyLockIds = new ArrayList<>();
-        mapLockStateFromDependencyToLockId(lockState, dependencyToLockIds, emptyLockIds);
+        val dependencyToLockIds: MutableMap<String, MutableList<String>> = TreeMap<String, MutableList<String>>()
+        val emptyLockIds: MutableList<String> = ArrayList<String>()
+        mapLockStateFromDependencyToLockId(lockState, dependencyToLockIds, emptyLockIds)
 
-        writeUniqueLockfile(lockfilePath, dependencyToLockIds, emptyLockIds);
+        writeUniqueLockfile(lockfilePath, dependencyToLockIds, emptyLockIds)
 
-        cleanupLegacyLockFiles(lockState.keySet());
+        cleanupLegacyLockFiles(lockState.keys)
     }
 
     /**
      * In prior versions of Gradle, each lock ID had its own lock file.
      * This method removes those lock files if they are present.
      */
-    private void cleanupLegacyLockFiles(Set<String> lockIdsToDelete) {
+    private fun cleanupLegacyLockFiles(lockIdsToDelete: MutableSet<String>) {
         lockIdsToDelete.stream()
-            .map(f -> lockFilesRoot.resolve(decorate(f) + FILE_SUFFIX))
-            .map(Path::toFile)
-            .forEach(GFileUtils::deleteQuietly);
+            .map<Path> { f: String? -> lockFilesRoot!!.resolve(decorate(f!!) + FILE_SUFFIX) }
+            .map<File> { obj: Path? -> obj!!.toFile() }
+            .forEach { file: File? -> GFileUtils.deleteQuietly(file) }
     }
 
-    private String buildRegenerationComment() {
-        return "# To regenerate this file, run: ./gradlew " + context.projectPath("dependencies") + " --write-locks";
+    private fun buildRegenerationComment(): String {
+        return "# To regenerate this file, run: ./gradlew " + context.projectPath("dependencies") + " --write-locks"
     }
 
-    private void writeUniqueLockfile(Path lockfilePath, Map<String, List<String>> dependencyToLockId, List<String> emptyLockIds) {
+    private fun writeUniqueLockfile(lockfilePath: Path, dependencyToLockId: MutableMap<String, MutableList<String>>, emptyLockIds: MutableList<String>) {
         try {
-            Files.createDirectories(lockfilePath.getParent());
-            List<String> content = new ArrayList<>(50);
-            content.addAll(LOCKFILE_HEADER_LIST);
-            content.add(buildRegenerationComment());
-            for (Map.Entry<String, List<String>> entry : dependencyToLockId.entrySet()) {
-                String builder = entry.getKey() + "=" + entry.getValue().stream().sorted().collect(Collectors.joining(","));
-                content.add(builder);
+            Files.createDirectories(lockfilePath.getParent())
+            val content: MutableList<String> = ArrayList<String>(50)
+            content.addAll(LOCKFILE_HEADER_LIST)
+            content.add(buildRegenerationComment())
+            for (entry in dependencyToLockId.entries) {
+                val builder = entry.key + "=" + entry.value.stream().sorted().collect(Collectors.joining(","))
+                content.add(builder)
             }
-            content.add("empty=" + emptyLockIds.stream().sorted().collect(Collectors.joining(",")));
-            byte[] bytes = String.join("\n", content).concat("\n").getBytes(CHARSET);
-            Files.write(lockfilePath, bytes);
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to write unique lockfile", e);
+            content.add("empty=" + emptyLockIds.stream().sorted().collect(Collectors.joining(",")))
+            val bytes = (String.join("\n", content) + "\n").toByteArray(CHARSET)
+            Files.write(lockfilePath, bytes)
+        } catch (e: IOException) {
+            throw RuntimeException("Unable to write unique lockfile", e)
         }
     }
 
-    private static void mapLockStateFromDependencyToLockId(Map<String, List<String>> lockState, Map<String, List<String>> dependencyToLockIds, List<String> emptyLockIds) {
-        for (Map.Entry<String, List<String>> entry : lockState.entrySet()) {
-            List<String> dependencies = entry.getValue();
-            if (dependencies.isEmpty()) {
-                emptyLockIds.add(entry.getKey());
-            } else {
-                for (String dependency : dependencies) {
-                    dependencyToLockIds.compute(dependency, (k, v) -> {
-                        List<String> confs = v;
-                        if (v == null) {
-                            confs = new ArrayList<>();
+    companion object {
+        private val LOGGER: Logger = getLogger(LockFileReaderWriter::class.java)!!
+        private val LIMITATIONS_DOC_LINK = DocumentationRegistry().getDocumentationRecommendationFor("information on limitations", "dependency_locking", "locking_limitations")
+        val FORMATTING_DOC_LINK: kotlin.String =
+            "Verify the lockfile content. " + DocumentationRegistry().getDocumentationRecommendationFor("information on lock file format", "dependency_locking", "lock_state_location_and_format")
+
+        const val UNIQUE_LOCKFILE_NAME: kotlin.String = "gradle.lockfile"
+        const val FILE_SUFFIX: kotlin.String = ".lockfile"
+        const val DEPENDENCY_LOCKING_FOLDER: kotlin.String = "gradle/dependency-locks"
+        val CHARSET: Charset = StandardCharsets.UTF_8
+        val LOCKFILE_HEADER_LIST: MutableList<kotlin.String> = ImmutableList.of<kotlin.String>(
+            "# This is a Gradle generated file for dependency locking.",
+            "# Manual edits can break the build and are not advised.",
+            "# This file is expected to be part of source control."
+        )
+        const val EMPTY_RESOLUTIONS_ENTRY: kotlin.String = "empty="
+        const val BUILD_SCRIPT_PREFIX: kotlin.String = "buildscript-"
+        const val SETTINGS_SCRIPT_PREFIX: kotlin.String = "settings-"
+
+        private fun filterNonModuleLines(lines: MutableList<kotlin.String>) {
+            val iterator = lines.iterator()
+            while (iterator.hasNext()) {
+                val value = iterator.next().trim { it <= ' ' }
+                if (value.startsWith("#") || value.isEmpty()) {
+                    iterator.remove()
+                }
+            }
+        }
+
+        private fun collectEmptyLockIds(line: kotlin.String, emptyLockIds: MutableList<kotlin.String>) {
+            if (line.length > EMPTY_RESOLUTIONS_ENTRY.length) {
+                val lockIds = line.substring(EMPTY_RESOLUTIONS_ENTRY.length).split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                Collections.addAll<kotlin.String>(emptyLockIds, *lockIds)
+            }
+        }
+
+        private fun mapLockStateFromDependencyToLockId(
+            lockState: MutableMap<kotlin.String, MutableList<kotlin.String>>,
+            dependencyToLockIds: MutableMap<kotlin.String, MutableList<kotlin.String>>,
+            emptyLockIds: MutableList<kotlin.String>
+        ) {
+            for (entry in lockState.entries) {
+                val dependencies = entry.value
+                if (dependencies.isEmpty()) {
+                    emptyLockIds.add(entry.key)
+                } else {
+                    for (dependency in dependencies) {
+                        dependencyToLockIds.compute(dependency) { k: kotlin.String?, v: MutableList<kotlin.String>? ->
+                            var confs = v
+                            if (v == null) {
+                                confs = ArrayList<kotlin.String>()
+                            }
+                            confs.add(entry.key)
+                            confs
                         }
-                        confs.add(entry.getKey());
-                        return confs;
-                    });
+                    }
                 }
             }
         }

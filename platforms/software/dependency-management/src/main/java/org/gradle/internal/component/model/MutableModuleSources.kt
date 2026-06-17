@@ -13,97 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
-import org.gradle.internal.Cast;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.lazy.Lazy.Factory.of
+import java.util.Optional
+import java.util.function.Consumer
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Consumer;
+class MutableModuleSources : ModuleSources {
+    private var moduleSources: MutableList<ModuleSource>? = null
 
-public class MutableModuleSources implements ModuleSources {
-    private List<ModuleSource> moduleSources;
-
-    public static MutableModuleSources of(@Nullable ModuleSource source) {
-        MutableModuleSources sources = new MutableModuleSources();
-        if (source != null) {
-            sources.add(source);
-        }
-        return sources;
-    }
-
-    public static MutableModuleSources of(ModuleSources sources) {
-        if (sources instanceof MutableModuleSources) {
-            return (MutableModuleSources) sources;
-        }
-        MutableModuleSources mutableModuleSources = new MutableModuleSources();
-        if (sources == null) {
-            return mutableModuleSources;
-        }
-        sources.withSources(mutableModuleSources::add);
-        return mutableModuleSources;
-    }
-
-    @Override
-    public <T extends ModuleSource> Optional<T> getSource(Class<T> sourceType) {
+    override fun <T : ModuleSource?> getSource(sourceType: Class<T?>): Optional<T?> {
         if (moduleSources == null) {
-            return Optional.empty();
+            return Optional.empty<T?>()
         }
-        return Cast.uncheckedCast(moduleSources.stream()
-            .filter(src -> sourceType.isAssignableFrom(src.getClass()))
-            .findFirst());
+        return org.gradle.internal.Cast.uncheckedCast<Optional<T?>?>(
+            moduleSources.stream()
+                .filter { src: org.gradle.internal.component.model.ModuleSource? -> sourceType.isAssignableFrom(src.javaClass) }
+                .findFirst())!!
     }
 
-    @Override
-    public void withSources(Consumer<ModuleSource> consumer) {
+    override fun withSources(consumer: Consumer<ModuleSource>) {
         if (moduleSources != null) {
-            moduleSources.forEach(consumer);
+            moduleSources.forEach(consumer)
         }
     }
 
-    @Override
-    public int size() {
-        return moduleSources == null ? 0 : moduleSources.size();
+    override fun size(): Int {
+        return if (moduleSources == null) 0 else moduleSources!!.size
     }
 
-    public void add(ModuleSource source) {
-        assert source != null;
-        maybeCreateStore();
-        moduleSources.add(source);
+    fun add(source: ModuleSource) {
+        checkNotNull(source)
+        maybeCreateStore()
+        moduleSources!!.add(source)
     }
 
-    private void maybeCreateStore() {
+    private fun maybeCreateStore() {
         if (moduleSources == null) {
-            moduleSources = new ArrayList<>(2);
+            moduleSources = ArrayList<ModuleSource>(2)
         }
     }
 
-    ImmutableModuleSources asImmutable() {
+    fun asImmutable(): ImmutableModuleSources {
         if (moduleSources == null) {
-            return ImmutableModuleSources.of();
+            return ImmutableModuleSources.Companion.of()
         }
-        return ImmutableModuleSources.of(moduleSources.toArray(new ModuleSource[0]));
+        return ImmutableModuleSources.Companion.of(*moduleSources.toTypedArray<ModuleSource>())
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        MutableModuleSources that = (MutableModuleSources) o;
+        val that = o as MutableModuleSources
 
-        return Objects.equals(moduleSources, that.moduleSources);
+        return moduleSources == that.moduleSources
     }
 
-    @Override
-    public int hashCode() {
-        return moduleSources != null ? moduleSources.hashCode() : 0;
+    override fun hashCode(): Int {
+        return if (moduleSources != null) moduleSources.hashCode() else 0
+    }
+
+    companion object {
+        @JvmStatic
+        fun of(source: ModuleSource?): MutableModuleSources {
+            val sources = MutableModuleSources()
+            if (source != null) {
+                sources.add(source)
+            }
+            return sources
+        }
+
+        @JvmStatic
+        fun of(sources: ModuleSources): MutableModuleSources {
+            if (sources is MutableModuleSources) {
+                return sources
+            }
+            val mutableModuleSources = MutableModuleSources()
+            if (sources == null) {
+                return mutableModuleSources
+            }
+            sources.withSources(Consumer { source: ModuleSource? -> mutableModuleSources.add(source!!) })
+            return mutableModuleSources
+        }
     }
 }

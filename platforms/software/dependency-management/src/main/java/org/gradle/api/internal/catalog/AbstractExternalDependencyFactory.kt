@@ -13,96 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.Transformer;
-import org.gradle.api.artifacts.ExternalModuleDependencyBundle;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMinimalDependency;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.plugin.use.PluginDependency;
+import org.gradle.api.Action
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ExternalModuleDependencyBundle
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.dependencies.DefaultMinimalDependency
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint
+import org.gradle.api.internal.artifacts.dsl.CapabilityNotationParser
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.ValueSourceSpec
+import org.gradle.plugin.use.PluginDependency
+import java.util.concurrent.Callable
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.stream.Collectors;
-
-public abstract class AbstractExternalDependencyFactory implements ExternalModuleDependencyFactory {
-    protected final DefaultVersionCatalog config;
-    protected final ProviderFactory providers;
-    protected final ObjectFactory objects;
-    protected final AttributesFactory attributesFactory;
-    protected final CapabilityNotationParser capabilityNotationParser;
-
-    @SuppressWarnings("unused")
-    public static abstract class SubDependencyFactory implements ExternalModuleDependencyFactory {
-        protected final AbstractExternalDependencyFactory owner;
-
-        protected SubDependencyFactory(AbstractExternalDependencyFactory owner) {
-            this.owner = owner;
+abstract class AbstractExternalDependencyFactory @Inject protected constructor(
+    protected val config: DefaultVersionCatalog,
+    protected val providers: ProviderFactory,
+    protected val objects: ObjectFactory,
+    protected val attributesFactory: AttributesFactory,
+    protected val capabilityNotationParser: CapabilityNotationParser
+) : ExternalModuleDependencyFactory {
+    @Suppress("unused")
+    abstract class SubDependencyFactory protected constructor(protected val owner: AbstractExternalDependencyFactory) : ExternalModuleDependencyFactory {
+        override fun create(alias: String): Provider<MinimalExternalModuleDependency> {
+            return owner.create(alias)
         }
-
-        @Override
-        public Provider<MinimalExternalModuleDependency> create(String alias) {
-            return owner.create(alias);
-        }
-
     }
 
-    @Inject
-    protected AbstractExternalDependencyFactory(DefaultVersionCatalog config,
-                                                ProviderFactory providers,
-                                                ObjectFactory objects,
-                                                AttributesFactory attributesFactory,
-                                                CapabilityNotationParser capabilityNotationParser
-    ) {
-        this.config = config;
-        this.providers = providers;
-        this.objects = objects;
-        this.attributesFactory = attributesFactory;
-        this.capabilityNotationParser = capabilityNotationParser;
-    }
-
-    @Override
-    public Provider<MinimalExternalModuleDependency> create(String alias) {
-        //noinspection Convert2Lambda
-        return providers.of(
-            DependencyValueSource.class,
-            spec -> spec.getParameters().getDependencyData().set(config.getDependencyData(alias))
-        ).map(new Transformer<MinimalExternalModuleDependency, DependencyModel>() {
-            @Override
-            public MinimalExternalModuleDependency transform(DependencyModel x) {
-                return createMinimalDependency(x, attributesFactory, capabilityNotationParser, objects);
+    override fun create(alias: String): Provider<MinimalExternalModuleDependency> {
+        return providers.of<DependencyModel, DependencyValueSource.Params>(
+            DependencyValueSource::class.java,
+            Action { spec: ValueSourceSpec<DependencyValueSource.Params>? -> spec!!.getParameters().getDependencyData().set(config.getDependencyData(alias)) }
+        ).map<MinimalExternalModuleDependency>(object : Transformer<MinimalExternalModuleDependency, DependencyModel> {
+            override fun transform(x: DependencyModel): MinimalExternalModuleDependency {
+                return createMinimalDependency(x, attributesFactory, capabilityNotationParser, objects)
             }
-        });
+        })
     }
 
-    private static DefaultMinimalDependency createMinimalDependency(DependencyModel data, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser, ObjectFactory objectFactory) {
-        ImmutableVersionConstraint version = data.getVersion();
-        DefaultMinimalDependency result = new DefaultMinimalDependency(
-            DefaultModuleIdentifier.newId(data.getGroup(), data.getName()), new DefaultMutableVersionConstraint(version)
-        );
-        result.setAttributesFactory(attributesFactory);
-        result.setCapabilityNotationParser(capabilityNotationParser);
-        result.setObjectFactory(objectFactory);
-        return result;
-    }
-
-    public static class VersionFactory {
-        protected final ProviderFactory providers;
-        protected final DefaultVersionCatalog config;
-
-        public VersionFactory(ProviderFactory providers, DefaultVersionCatalog config) {
-            this.providers = providers;
-            this.config = config;
-        }
-
+    class VersionFactory(protected val providers: ProviderFactory, protected val config: DefaultVersionCatalog) {
         /**
          * Returns a single version string from a rich version
          * constraint, assuming the user knows what they are doing.
@@ -110,73 +68,84 @@ public abstract class AbstractExternalDependencyFactory implements ExternalModul
          * @param name the name of the version alias
          * @return a single version string or an empty string
          */
-        protected Provider<String> getVersion(String name) {
-            return providers.provider(() -> doGetVersion(name));
+        protected fun getVersion(name: String): Provider<String> {
+            return providers.provider<String>(Callable { doGetVersion(name) })
         }
 
-        private String doGetVersion(String name) {
-            ImmutableVersionConstraint version = findVersionConstraint(name);
-            String requiredVersion = version.getRequiredVersion();
+        private fun doGetVersion(name: String): String {
+            val version = findVersionConstraint(name)
+            val requiredVersion = version.getRequiredVersion()
             if (!requiredVersion.isEmpty()) {
-                return requiredVersion;
+                return requiredVersion
             }
-            String strictVersion = version.getStrictVersion();
+            val strictVersion = version.getStrictVersion()
             if (!strictVersion.isEmpty()) {
-                return strictVersion;
+                return strictVersion
             }
-            return version.getPreferredVersion();
+            return version.getPreferredVersion()
         }
 
-        protected ImmutableVersionConstraint findVersionConstraint(String name) {
-            return config.getVersion(name).getVersion();
+        fun findVersionConstraint(name: String): ImmutableVersionConstraint {
+            return config.getVersion(name).getVersion()
         }
     }
 
-    public static class BundleFactory {
-        protected final ProviderFactory providers;
-        protected final DefaultVersionCatalog config;
-        protected final ObjectFactory objects;
-        protected final AttributesFactory attributesFactory;
-        protected final CapabilityNotationParser capabilityNotationParser;
-
-        public BundleFactory(ObjectFactory objects, ProviderFactory providers, DefaultVersionCatalog config, AttributesFactory attributesFactory, CapabilityNotationParser capabilityNotationParser) {
-            this.objects = objects;
-            this.providers = providers;
-            this.config = config;
-            this.attributesFactory = attributesFactory;
-            this.capabilityNotationParser = capabilityNotationParser;
+    class BundleFactory(
+        protected val objects: ObjectFactory,
+        protected val providers: ProviderFactory,
+        protected val config: DefaultVersionCatalog,
+        protected val attributesFactory: AttributesFactory,
+        protected val capabilityNotationParser: CapabilityNotationParser
+    ) {
+        fun createBundle(name: String): Provider<ExternalModuleDependencyBundle> {
+            val property = objects.property<ExternalModuleDependencyBundle>(ExternalModuleDependencyBundle::class.java)
+            property.convention(
+                providers.of<MutableList<DependencyModel>, DependencyBundleValueSource.Params>(
+                    DependencyBundleValueSource::class.java,
+                    Action { spec: ValueSourceSpec<DependencyBundleValueSource.Params>? ->
+                        spec!!.parameters(Action { params: DependencyBundleValueSource.Params? ->
+                            params!!.getConfig().set(config)
+                            params.getBundleName().set(name)
+                        })
+                    }
+                ).map<DefaultExternalModuleDependencyBundle>(Transformer { dataList: MutableList<DependencyModel?>? ->
+                    dataList!!.stream()
+                        .map<DefaultMinimalDependency> { x: DependencyModel? -> Companion.createMinimalDependency(x!!, attributesFactory, capabilityNotationParser, objects) }
+                        .collect(Collectors.toCollection(Supplier { DefaultExternalModuleDependencyBundle() }))
+                })
+            )
+            return property
         }
+    }
 
-        protected Provider<ExternalModuleDependencyBundle> createBundle(String name) {
-            Property<ExternalModuleDependencyBundle> property = objects.property(ExternalModuleDependencyBundle.class);
-            property.convention(providers.of(
-                    DependencyBundleValueSource.class,
-                    spec -> spec.parameters(params -> {
-                        params.getConfig().set(config);
-                        params.getBundleName().set(name);
+    class PluginFactory(protected val providers: ProviderFactory, protected val config: DefaultVersionCatalog) {
+        fun createPlugin(name: String): Provider<PluginDependency> {
+            return providers.of<PluginDependency, PluginDependencyValueSource.Params>(
+                PluginDependencyValueSource::class.java,
+                Action { spec: ValueSourceSpec<PluginDependencyValueSource.Params>? ->
+                    spec!!.parameters(Action { params: PluginDependencyValueSource.Params? ->
+                        params!!.getConfig().set(config)
+                        params.getPluginName().set(name)
                     })
-            ).map(dataList -> dataList.stream()
-                    .map(x -> createMinimalDependency(x, attributesFactory, capabilityNotationParser, objects))
-                    .collect(Collectors.toCollection(DefaultExternalModuleDependencyBundle::new))));
-            return property;
+                })
         }
     }
 
-    public static class PluginFactory {
-        protected final ProviderFactory providers;
-        protected final DefaultVersionCatalog config;
-
-        public PluginFactory(ProviderFactory providers, DefaultVersionCatalog config) {
-            this.providers = providers;
-            this.config = config;
-        }
-
-        protected Provider<PluginDependency> createPlugin(String name) {
-            return providers.of(PluginDependencyValueSource.class,
-                spec -> spec.parameters(params -> {
-                    params.getConfig().set(config);
-                    params.getPluginName().set(name);
-                }));
+    companion object {
+        private fun createMinimalDependency(
+            data: DependencyModel,
+            attributesFactory: AttributesFactory,
+            capabilityNotationParser: CapabilityNotationParser,
+            objectFactory: ObjectFactory
+        ): DefaultMinimalDependency {
+            val version = data.getVersion()
+            val result = DefaultMinimalDependency(
+                DefaultModuleIdentifier.newId(data.getGroup(), data.getName()), DefaultMutableVersionConstraint(version)
+            )
+            result.setAttributesFactory(attributesFactory)
+            result.setCapabilityNotationParser(capabilityNotationParser)
+            result.setObjectFactory(objectFactory)
+            return result
         }
     }
 }

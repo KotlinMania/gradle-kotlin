@@ -13,61 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.descriptor
 
-package org.gradle.internal.component.external.descriptor;
+import com.google.common.base.Objects
+import org.gradle.util.internal.CollectionUtils.toList
 
-import com.google.common.base.Objects;
-import org.gradle.util.internal.CollectionUtils;
+class Configuration(@JvmField val name: String?, val isTransitive: Boolean, val isVisible: Boolean, extendsFrom: MutableCollection<String?>?) {
+    @JvmField
+    val extendsFrom: MutableList<String?>
 
-import java.util.Collection;
-import java.util.List;
-
-public class Configuration {
-    private final String name;
-    private final boolean transitive;
-    private final boolean visible;
-    private final List<String> extendsFrom;
-
-    public Configuration(String name, boolean transitive, boolean visible, Collection<String> extendsFrom) {
-        this.name = name;
-        this.transitive = transitive;
-        this.visible = visible;
-        this.extendsFrom = CollectionUtils.toList(extendsFrom);
+    init {
+        this.extendsFrom = toList<String?>(extendsFrom)
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public boolean isTransitive() {
-        return transitive;
-    }
-
-    public boolean isVisible() {
-        return visible;
-    }
-
-    public List<String> getExtendsFrom() {
-        return extendsFrom;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        Configuration that = (Configuration) o;
-        return transitive == that.transitive
-            && visible == that.visible
-            && Objects.equal(name, that.name)
-            && Objects.equal(extendsFrom, that.extendsFrom);
+        val that = o as Configuration
+        return this.isTransitive == that.isTransitive && this.isVisible == that.isVisible && Objects.equal(name, that.name)
+                && Objects.equal(extendsFrom, that.extendsFrom)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(name, transitive, visible, extendsFrom);
+    override fun hashCode(): Int {
+        return Objects.hashCode(name, this.isTransitive, this.isVisible, extendsFrom)
     }
 }

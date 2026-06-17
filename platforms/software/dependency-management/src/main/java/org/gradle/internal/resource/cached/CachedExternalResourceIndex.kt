@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.cached;
+package org.gradle.internal.resource.cached
 
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.File
 
 /**
  * Provides an indexed view into cached artifacts and a record of resolution attempts, successful or not.
@@ -26,45 +24,43 @@ import java.io.File;
  * Maintains references to the location of files in the persistent local. Does not deal with moving files into the local.
  *
  * @param <K> The type of the key to the index
- */
-public interface CachedExternalResourceIndex<K> {
-
+</K> */
+interface CachedExternalResourceIndex<K> {
     /**
      * Adds a resolution to the index.
-     * <p>
+     *
+     *
      * The incoming file is expected to be in the persistent local. This method will not move/copy the file there.
      *
      * @param key The key to cache this resolution under in the index. Cannot be null.
      * @param artifactFile The artifact file in the persistent file store. Cannot be null
      * @param metaData Information about this resource at its source
-     * @see #storeMissing(Object)
+     * @see .storeMissing
      */
-    void store(K key, File artifactFile, @Nullable ExternalResourceMetaData metaData);
+    fun store(key: K?, artifactFile: File?, metaData: ExternalResourceMetaData?)
 
     /**
      * Record that the artifact with the given key was missing.
      *
      * @param key The key to cache this resolution under in the index.
      */
-    void storeMissing(K key);
+    fun storeMissing(key: K?)
 
     /**
      * Lookup a cached resolution.
      *
-     * The {@link CachedExternalResource#getCachedFile()} is guaranteed
+     * The [CachedExternalResource.getCachedFile] is guaranteed
      * to exist at the time that the entry is returned from this method.
      *
      * @param key The key to search the index for
      * @return The cached artifact resolution if one exists, otherwise null.
      */
-    @Nullable
-    CachedExternalResource lookup(K key);
+    fun lookup(key: K?): CachedExternalResource?
 
     /**
      * Remove the entry for the given key if it exists.
      *
      * @param key The key of the item to remove.
      */
-    void clear(K key);
-
+    fun clear(key: K?)
 }

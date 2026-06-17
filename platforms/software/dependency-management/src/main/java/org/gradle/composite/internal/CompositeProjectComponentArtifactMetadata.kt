@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.composite.internal
 
-package org.gradle.composite.internal;
-
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata
 
 /**
  * Formerly used to represent an artifact that belongs to a different build than the current build.
- * <p>
+ *
+ *
  * This class is no longer used as of Gradle 9.0, but remains as it is still referenced by KGP.
  *
- * @see <a href="https://github.com/JetBrains/kotlin/blame/c42ea0396c9e9dbcd504dae4d308ce5ad7522771/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/targets/js/npm/resolver/KotlinCompilationNpmResolver.kt#L254">Link</a>
+ * @see [Link](https://github.com/JetBrains/kotlin/blame/c42ea0396c9e9dbcd504dae4d308ce5ad7522771/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/targets/js/npm/resolver/KotlinCompilationNpmResolver.kt.L254)
  *
- * @deprecated This class is no longer in use as of Gradle 9.0.
+ *
  */
-@Deprecated
-public abstract class CompositeProjectComponentArtifactMetadata implements LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
-
-    public CompositeProjectComponentArtifactMetadata() {
-        throw new UnsupportedOperationException("Do not instantiate this type.");
+@Deprecated("This class is no longer in use as of Gradle 9.0.")
+abstract class CompositeProjectComponentArtifactMetadata : LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
+    init {
+        throw UnsupportedOperationException("Do not instantiate this type.")
     }
 }

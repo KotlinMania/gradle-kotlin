@@ -133,7 +133,7 @@ public class AuthenticationSupporter {
     private void populateAuthenticationCredentials() {
         // TODO: This will have to be changed when we support setting credentials directly on the authentication
         for (Authentication authentication : authenticationContainer) {
-            ((AuthenticationInternal) authentication).setCredentials(credentials.getOrNull());
+            ((AuthenticationInternal) authentication).credentials = credentials.getOrNull();
         }
     }
 

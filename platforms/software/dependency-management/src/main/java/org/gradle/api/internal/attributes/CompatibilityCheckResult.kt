@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
+import org.gradle.api.attributes.CompatibilityCheckDetails
 
-import org.gradle.api.attributes.CompatibilityCheckDetails;
-
-public interface CompatibilityCheckResult<T> extends CompatibilityCheckDetails<T> {
-    boolean hasResult();
-    boolean isCompatible();
+interface CompatibilityCheckResult<T> : CompatibilityCheckDetails<T?> {
+    fun hasResult(): Boolean
+    val isCompatible: Boolean
 }

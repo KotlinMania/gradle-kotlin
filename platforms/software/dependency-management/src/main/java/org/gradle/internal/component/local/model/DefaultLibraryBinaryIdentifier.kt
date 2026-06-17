@@ -13,69 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.local.model;
+package org.gradle.internal.component.local.model
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.LibraryBinaryIdentifier;
+import com.google.common.base.Objects
+import org.gradle.api.artifacts.component.LibraryBinaryIdentifier
 
-public class DefaultLibraryBinaryIdentifier implements LibraryBinaryIdentifier {
+class DefaultLibraryBinaryIdentifier(projectPath: String, libraryName: String, variant: String) : LibraryBinaryIdentifier {
+    private val projectPath: String
+    private val libraryName: String
+    private val displayName: String
+    private val variant: String
 
-    private final String projectPath;
-    private final String libraryName;
-    private final String displayName;
-    private final String variant;
-
-    @Override
-    public String getDisplayName() {
-        return displayName;
+    override fun getDisplayName(): String {
+        return displayName
     }
 
-    public DefaultLibraryBinaryIdentifier(String projectPath, String libraryName, String variant) {
-        assert projectPath != null : "project path cannot be null";
-        assert libraryName != null : "library name cannot be null";
-        assert variant != null : "variant cannot be null";
-        this.projectPath = projectPath;
-        this.libraryName = libraryName;
-        this.variant = variant;
-        this.displayName = "project '" + projectPath + "' library '" + libraryName + "' variant '" + variant + "'";
+    init {
+        checkNotNull(projectPath) { "project path cannot be null" }
+        checkNotNull(libraryName) { "library name cannot be null" }
+        checkNotNull(variant) { "variant cannot be null" }
+        this.projectPath = projectPath
+        this.libraryName = libraryName
+        this.variant = variant
+        this.displayName = "project '" + projectPath + "' library '" + libraryName + "' variant '" + variant + "'"
     }
 
-    @Override
-    public String getProjectPath() {
-        return projectPath;
+    override fun getProjectPath(): String {
+        return projectPath
     }
 
-    @Override
-    public String getLibraryName() {
-        return libraryName;
+    override fun getLibraryName(): String {
+        return libraryName
     }
 
-    @Override
-    public String getVariant() {
-        return variant;
+    override fun getVariant(): String {
+        return variant
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultLibraryBinaryIdentifier that = (DefaultLibraryBinaryIdentifier) o;
+        val that = o as DefaultLibraryBinaryIdentifier
         return Objects.equal(projectPath, that.projectPath)
-            && Objects.equal(libraryName, that.libraryName)
-            && Objects.equal(variant, that.variant);
+                && Objects.equal(libraryName, that.libraryName)
+                && Objects.equal(variant, that.variant)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(projectPath, libraryName, variant);
+    override fun hashCode(): Int {
+        return Objects.hashCode(projectPath, libraryName, variant)
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 }

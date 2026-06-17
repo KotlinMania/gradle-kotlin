@@ -33,7 +33,7 @@ class ComponentRejectedMessageBuilder {
         for (SelectorState candidate : module.getSelectors()) {
             ResolvedVersionConstraint versionConstraint = candidate.getVersionConstraint();
             if (versionConstraint != null) {
-                hasRejectAll |= versionConstraint.isRejectAll();
+                hasRejectAll |= versionConstraint.isRejectAll;
             }
         }
         StringBuilder sb = new StringBuilder();
@@ -44,7 +44,7 @@ class ComponentRejectedMessageBuilder {
         }
 
         module.visitAllIncomingEdges(incomingEdge -> {
-            ComponentSelector selector = incomingEdge.getDependencyMetadata().getSelector();
+            ComponentSelector selector = incomingEdge.getDependencyMetadata().selector;
             for (String path : MessageBuilderHelper.formattedPathsTo(incomingEdge)) {
                 sb.append("   ").append(path);
                 sb.append(" --> ");

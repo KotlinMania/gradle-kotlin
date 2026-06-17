@@ -48,7 +48,7 @@ public abstract class AbstractJVMVersionTooNewFailureDescriber extends AbstractR
 
     protected final boolean isDueToJVMVersionTooNew(NoCompatibleVariantsFailure failure) {
         if (allLibraryCandidatesIncompatibleDueToJVMVersionTooLow(failure)) {
-            JavaVersion minJVMVersionSupported = findMinJVMSupported(failure.getCandidates()).orElseThrow(IllegalStateException::new);
+            JavaVersion minJVMVersionSupported = findMinJVMSupported(failure.candidates).orElseThrow(IllegalStateException::new);
             return minJVMVersionSupported.compareTo(getJVMVersion(failure)) > 0;
         } else {
             return false;
@@ -56,7 +56,7 @@ public abstract class AbstractJVMVersionTooNewFailureDescriber extends AbstractR
     }
 
     private boolean allLibraryCandidatesIncompatibleDueToJVMVersionTooLow(NoCompatibleVariantsFailure failure) {
-        List<ResolutionCandidateAssessor.AssessedCandidate> libraryCandidates = failure.getCandidates().stream()
+        List<ResolutionCandidateAssessor.AssessedCandidate> libraryCandidates = failure.candidates.stream()
             .filter(this::isLibraryCandidate)
             .collect(Collectors.toList());
         if (!libraryCandidates.isEmpty()) {
@@ -78,14 +78,14 @@ public abstract class AbstractJVMVersionTooNewFailureDescriber extends AbstractR
     }
 
     private Optional<JavaVersion> findMinJVMSupported(ResolutionCandidateAssessor.AssessedCandidate candidate) {
-        return candidate.getIncompatibleAttributes().stream()
+        return candidate.incompatibleAttributes.stream()
             .filter(this::isJVMVersionAttribute)
-            .map(jvmVersionAttribute -> JavaVersion.toVersion(Objects.requireNonNull(jvmVersionAttribute.getProvided())))
+            .map(jvmVersionAttribute -> JavaVersion.toVersion(Objects.requireNonNull(jvmVersionAttribute.provided)))
             .min(Comparator.comparing(JavaVersion::getMajorVersion));
     }
 
     private boolean isLibraryCandidate(ResolutionCandidateAssessor.AssessedCandidate candidate) {
-        AttributeContainer candidateAttributes = candidate.getAllCandidateAttributes().getAttributes();
+        AttributeContainer candidateAttributes = candidate.allCandidateAttributes.getAttributes();
         for (Attribute<?> attribute : candidateAttributes.keySet()) {
             if (Objects.equals(attribute.getName(), Category.CATEGORY_ATTRIBUTE.getName())) {
                 String category = String.valueOf(candidateAttributes.getAttribute(attribute));
@@ -96,10 +96,10 @@ public abstract class AbstractJVMVersionTooNewFailureDescriber extends AbstractR
     }
 
     private boolean isJVMVersionAttributeIncompatible(ResolutionCandidateAssessor.AssessedCandidate candidate) {
-        return candidate.getIncompatibleAttributes().stream().anyMatch(this::isJVMVersionAttribute);
+        return candidate.incompatibleAttributes.stream().anyMatch(this::isJVMVersionAttribute);
     }
 
     private boolean isJVMVersionAttribute(ResolutionCandidateAssessor.AssessedAttribute<?> attribute) {
-        return attribute.getAttribute().getName().equals(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE.getName());
+        return attribute.attribute.getName().equals(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE.getName());
     }
 }

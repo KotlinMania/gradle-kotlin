@@ -13,28 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
-
-import org.gradle.api.specs.Spec;
+import org.gradle.api.specs.Spec
 
 /**
  * Represents a tuple containing a Spec and a RuleAction
  */
-public class SpecRuleAction<T> {
-    final RuleAction<? super T> action;
-    final Spec<? super T> spec;
-
-    public SpecRuleAction(RuleAction<? super T> action, Spec<? super T> spec) {
-        this.action = action;
-        this.spec = spec;
-    }
-
-    public RuleAction<? super T> getAction() {
-        return action;
-    }
-
-    public Spec<? super T> getSpec() {
-        return spec;
-    }
-}
+class SpecRuleAction<T>(@JvmField val action: RuleAction<in T?>?, @JvmField val spec: Spec<in T?>?)

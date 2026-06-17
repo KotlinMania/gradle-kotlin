@@ -13,38 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.DefaultVariantMetadata;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.model.CalculatedValue;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.DefaultVariantMetadata
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.model.CalculatedValue
 
 /**
- * Implementation of {@link VariantResolveMetadata} which allows variant artifacts to be calculated lazily
+ * Implementation of [VariantResolveMetadata] which allows variant artifacts to be calculated lazily
  * while holding a project lock.
  */
-public final class LocalVariantMetadata extends DefaultVariantMetadata {
-    private final CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> artifacts;
+class LocalVariantMetadata(
+    name: String,
+    identifier: VariantResolveMetadata.Identifier?,
+    displayName: DisplayName,
+    attributes: ImmutableAttributes,
+    capabilities: ImmutableCapabilities,
+    artifacts: CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>>
+) : DefaultVariantMetadata(name, identifier, displayName, attributes, ImmutableList.of<ComponentArtifactMetadata>(), capabilities) {
+    private val artifacts: CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>>
 
-    public LocalVariantMetadata(String name, @Nullable Identifier identifier, DisplayName displayName, ImmutableAttributes attributes, ImmutableCapabilities capabilities, CalculatedValue<ImmutableList<LocalComponentArtifactMetadata>> artifacts) {
-        super(name, identifier, displayName, attributes, ImmutableList.of(), capabilities);
-        this.artifacts = artifacts;
+    init {
+        this.artifacts = artifacts
     }
 
-    @Override
-    public boolean isEligibleForCaching() {
-        return true;
+    override fun isEligibleForCaching(): Boolean {
+        return true
     }
 
-    @Override
-    public ImmutableList<LocalComponentArtifactMetadata> getArtifacts() {
-        artifacts.finalizeIfNotAlready();
-        return artifacts.get();
+    public override fun getArtifacts(): ImmutableList<LocalComponentArtifactMetadata> {
+        artifacts.finalizeIfNotAlready()
+        return artifacts.get()
     }
 }

@@ -13,13 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
+package org.gradle.internal.resolve.caching
 
-import org.jspecify.annotations.Nullable;
+interface ImplicitInputRecord<IN, OUT> {
+    val input: IN?
 
-public interface ImplicitInputRecord<IN, OUT> {
-    IN getInput();
-
-    @Nullable
-    OUT getOutput();
+    val output: OUT?
 }

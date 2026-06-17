@@ -13,108 +13,98 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.transform
 
-package org.gradle.internal.component.resolution.failure.transform;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-import java.util.Objects;
-import java.util.stream.Collectors;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import java.util.Objects
+import java.util.stream.Collectors
 
 /**
  * Represents a variant which is produced as the result of applying an artifact transform chain
  * to a root producer variant.
- * <p>
+ *
+ *
  * Immutable data class.  Meant to be easily serialized as part of build operation recording and tracing.
  */
-public final class TransformationChainData {
-    private final SourceVariantData startingVariant;
-    private final ImmutableList<TransformData> steps;
-    private final ImmutableAttributes finalAttributes;
-
-    public TransformationChainData(SourceVariantData startingVariant, ImmutableList<TransformData> steps, ImmutableAttributes finalAttributes) {
-        this.startingVariant = startingVariant;
-        this.steps = steps;
-        this.finalAttributes = finalAttributes;
-    }
-
+class TransformationChainData(private val startingVariant: SourceVariantData, private val steps: ImmutableList<TransformData>, private val finalAttributes: ImmutableAttributes) {
     /**
      * The variant that was used as the starting point for this chain of transformations.
      *
      * @return initial variant
      */
-    public SourceVariantData getInitialVariant() {
-        return startingVariant;
+    fun getInitialVariant(): SourceVariantData {
+        return startingVariant
     }
 
-    public String summarizeTransformations() {
+    fun summarizeTransformations(): String {
         return steps.stream()
-            .map(t -> "'" + t.getTransformName() + "'")
-            .collect(Collectors.joining(" -> "));
+            .map<String> { t: TransformData? -> "'" + t!!.getTransformName() + "'" }
+            .collect(Collectors.joining(" -> "))
     }
 
-    public ImmutableList<TransformData> getSteps() {
-        return steps;
+    fun getSteps(): ImmutableList<TransformData> {
+        return steps
     }
 
     /**
      * The complete resulting set of attributes on the "virtual variant" created by processing the source variant
      * completely through this transformation chain.
-     * <p>
+     *
+     *
      * This explicitly includes attributes of the source variant that were not modified by any transformations.
      *
      * @return attributes as described
      */
-    public ImmutableAttributes getFinalAttributes() {
-        return finalAttributes;
+    fun getFinalAttributes(): ImmutableAttributes {
+        return finalAttributes
     }
 
     /**
      * Obtain an object that represents this chain's distinct set of transformations such that it is equal to
-     * any other chain containing the same set (<strong>not sequence</strong> - the
+     * any other chain containing the same set (**not sequence** - the
      * transforms can be in any order) of transforms from the same source variant.
-     * <p>
+     *
+     *
      * Immutable data class.
      */
-    public TransformationChainFingerprint fingerprint() {
-        return new TransformationChainFingerprint(this);
+    fun fingerprint(): TransformationChainFingerprint {
+        return TransformationChainFingerprint(this)
     }
 
     /**
-     * Immutable data class representing a unique set (<strong>not sequence</strong> - the
+     * Immutable data class representing a unique set (**not sequence** - the
      * transforms can be in any order) of transforms from a given source variant in a transformation chain.
-     * <p>
-     * This type must properly implement {@link #equals(Object)} and {@link #hashCode()}.
+     *
+     *
+     * This type must properly implement [.equals] and [.hashCode].
      */
-    public static final class TransformationChainFingerprint {
-        private final SourceVariantData startingVariant;
-        private final ImmutableSet<TransformData> steps;
+    class TransformationChainFingerprint(chain: TransformationChainData) {
+        private val startingVariant: SourceVariantData
+        private val steps: ImmutableSet<TransformData>
 
-        public TransformationChainFingerprint(TransformationChainData chain) {
-            startingVariant = chain.startingVariant;
-            steps = ImmutableSet.copyOf(chain.steps);
+        init {
+            startingVariant = chain.startingVariant
+            steps = ImmutableSet.copyOf<TransformData>(chain.steps)
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
 
-            TransformationChainFingerprint that = (TransformationChainFingerprint) o;
-            return Objects.equals(startingVariant, that.startingVariant) && steps.equals(that.steps);
+            val that = o as TransformationChainFingerprint
+            return startingVariant == that.startingVariant && steps == that.steps
         }
 
-        @Override
-        public int hashCode() {
-            int result = Objects.hashCode(startingVariant);
-            result = 31 * result + steps.hashCode();
-            return result;
+        override fun hashCode(): Int {
+            var result = Objects.hashCode(startingVariant)
+            result = 31 * result + steps.hashCode()
+            return result
         }
     }
 }

@@ -13,261 +13,235 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.maven
 
-package org.gradle.internal.component.external.model.maven;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.model.NamedObjectInstantiator;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.descriptor.MavenScope;
-import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.DefaultConfigurationMetadata;
-import org.gradle.internal.component.external.model.ExternalModuleVariantGraphResolveMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.external.model.VariantDerivationStrategy;
-import org.gradle.internal.component.external.model.VariantMetadataRules;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.model.NamedObjectInstantiator
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.external.descriptor.MavenScope
+import org.gradle.internal.component.external.model.AbstractLazyModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.DefaultConfigurationMetadata
+import org.gradle.internal.component.external.model.ExternalModuleVariantGraphResolveMetadata
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.external.model.VariantDerivationStrategy
+import org.gradle.internal.component.external.model.VariantMetadataRules
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.component.model.VariantIdentifier
+import java.util.Optional
 
 /**
- * {@link AbstractLazyModuleComponentResolveMetadata Lazy version} of a {@link MavenModuleResolveMetadata}.
+ * [Lazy version][AbstractLazyModuleComponentResolveMetadata] of a [MavenModuleResolveMetadata].
  *
  * @see RealisedMavenModuleResolveMetadata
  */
-public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleComponentResolveMetadata implements MavenModuleResolveMetadata {
+class DefaultMavenModuleResolveMetadata : AbstractLazyModuleComponentResolveMetadata, MavenModuleResolveMetadata {
+    val objectInstantiator: NamedObjectInstantiator
+    private val attributesFactory: AttributesFactory
 
-    public static final String POM_PACKAGING = "pom";
-    static final Set<String> JAR_PACKAGINGS = ImmutableSet.of("jar", "ejb", "bundle", "maven-plugin", "eclipse-plugin");
+    private val dependencies: ImmutableList<MavenDependencyDescriptor>
+    private val packaging: String
+    private val relocated: Boolean
+    private val snapshotTimestamp: String
 
-    private final NamedObjectInstantiator objectInstantiator;
-    private final AttributesFactory attributesFactory;
-
-    private final ImmutableList<MavenDependencyDescriptor> dependencies;
-    private final String packaging;
-    private final boolean relocated;
-    private final String snapshotTimestamp;
-
-    private ImmutableList<? extends ModuleConfigurationMetadata> derivedVariants;
-
-    private boolean filterConstraints = true;
-    private MavenDependencyDescriptor[] dependenciesAsArray;
-
-    DefaultMavenModuleResolveMetadata(DefaultMutableMavenModuleResolveMetadata metadata) {
-        super(metadata);
-        this.objectInstantiator = metadata.getObjectInstantiator();
-        this.attributesFactory = metadata.getAttributesFactory();
-        packaging = metadata.getPackaging();
-        relocated = metadata.isRelocated();
-        snapshotTimestamp = metadata.getSnapshotTimestamp();
-        dependencies = metadata.getDependencies();
-    }
-
-    private DefaultMavenModuleResolveMetadata(DefaultMavenModuleResolveMetadata metadata, ModuleSources sources, VariantDerivationStrategy derivationStrategy) {
-        super(metadata, sources, derivationStrategy);
-        this.objectInstantiator = metadata.objectInstantiator;
-        this.attributesFactory = metadata.attributesFactory;
-        packaging = metadata.packaging;
-        relocated = metadata.relocated;
-        snapshotTimestamp = metadata.snapshotTimestamp;
-        dependencies = metadata.dependencies;
-
-        copyCachedState(metadata, metadata.getVariantDerivationStrategy() != derivationStrategy);
-    }
-
-    @Override
-    protected DefaultConfigurationMetadata createConfiguration(ModuleComponentIdentifier componentId, String name, boolean transitive, boolean visible, ImmutableSet<String> parents, VariantMetadataRules componentMetadataRules) {
-        ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts = getArtifactsForConfiguration();
-        VariantIdentifier id = new NamedVariantIdentifier(componentId, name);
-        final DefaultConfigurationMetadata configuration = new DefaultConfigurationMetadata(name, id, componentId, transitive, visible, parents, artifacts, componentMetadataRules, ImmutableList.of(), getAttributes(), false);
-        configuration.setConfigDependenciesFactory(() -> filterDependencies(configuration));
-        return configuration;
-    }
-
-    @Override
-    protected Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> maybeDeriveVariants() {
-        return Optional.ofNullable(getDerivedVariants());
-    }
-
-    protected Optional<List<? extends ModuleConfigurationMetadata>> deriveVariants() {
-        return Optional.ofNullable(getDerivedVariants());
-    }
-
-    private ImmutableList<? extends ModuleConfigurationMetadata> getDerivedVariants() {
-        VariantDerivationStrategy strategy = getVariantDerivationStrategy();
-        if (derivedVariants == null && strategy.derivesVariants()) {
-            filterConstraints = false;
-            derivedVariants = strategy.derive(this);
+    private var derivedVariants: ImmutableList<out ModuleConfigurationMetadata>? = null
+        get() {
+            val strategy = variantDerivationStrategy
+            if (field == null && strategy!!.derivesVariants()) {
+                filterConstraints = false
+                field = strategy.derive(this)
+            }
+            return field
         }
-        return derivedVariants;
+
+    private var filterConstraints = true
+    private var dependenciesAsArray: Array<MavenDependencyDescriptor>
+
+    internal constructor(metadata: DefaultMutableMavenModuleResolveMetadata) : super(metadata) {
+        this.objectInstantiator = metadata.getObjectInstantiator()
+        this.attributesFactory = metadata.attributesFactory
+        packaging = metadata.getPackaging()
+        relocated = metadata.isRelocated()
+        snapshotTimestamp = metadata.getSnapshotTimestamp()!!
+        dependencies = metadata.getDependencies()
     }
 
-    @Override
-    protected ModuleConfigurationMetadata populateConfigurationFromDescriptor(String name, Map<String, Configuration> configurationDefinitions) {
-        DefaultConfigurationMetadata md = (DefaultConfigurationMetadata) super.populateConfigurationFromDescriptor(name, configurationDefinitions);
+    private constructor(metadata: DefaultMavenModuleResolveMetadata, sources: ModuleSources, derivationStrategy: VariantDerivationStrategy) : super(metadata, sources, derivationStrategy) {
+        this.objectInstantiator = metadata.objectInstantiator
+        this.attributesFactory = metadata.attributesFactory
+        packaging = metadata.packaging
+        relocated = metadata.relocated
+        snapshotTimestamp = metadata.snapshotTimestamp
+        dependencies = metadata.dependencies
+
+        copyCachedState(metadata, metadata.variantDerivationStrategy !== derivationStrategy)
+    }
+
+    override fun createConfiguration(
+        componentId: ModuleComponentIdentifier,
+        name: String,
+        transitive: Boolean,
+        visible: Boolean,
+        parents: ImmutableSet<String>,
+        componentMetadataRules: VariantMetadataRules
+    ): DefaultConfigurationMetadata {
+        val artifacts = this.artifactsForConfiguration
+        val id: VariantIdentifier = NamedVariantIdentifier(componentId, name)
+        val configuration =
+            DefaultConfigurationMetadata(name, id, componentId, transitive, visible, parents, artifacts, componentMetadataRules, ImmutableList.of<ExcludeMetadata?>(), getAttributes(), false)
+        configuration.setConfigDependenciesFactory(org.gradle.internal.Factory { filterDependencies(configuration) })
+        return configuration
+    }
+
+    override fun maybeDeriveVariants(): Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata>> {
+        return Optional.ofNullable<MutableList<out ExternalModuleVariantGraphResolveMetadata>>(this.derivedVariants)
+    }
+
+    fun deriveVariants(): Optional<MutableList<out ModuleConfigurationMetadata>> {
+        return Optional.ofNullable<MutableList<out ModuleConfigurationMetadata>>(this.derivedVariants)
+    }
+
+    override fun populateConfigurationFromDescriptor(name: String, configurationDefinitions: MutableMap<String, Configuration>): ModuleConfigurationMetadata {
+        val md = super.populateConfigurationFromDescriptor(name, configurationDefinitions) as DefaultConfigurationMetadata?
         if (filterConstraints && md != null) {
             // if the first call to getConfiguration is done before getDerivedVariants() is called
             // then it means we're using the legacy matching, without attributes, and that the metadata
             // we construct should _not_ include the constraints. We keep the constraints in the descriptors
             // because if we actually use attribute matching, we can select the platform variant which
             // does use constraints.
-            return md.mutate().withoutConstraints().build();
+            return md.mutate().withoutConstraints().build()
         }
-        return md;
+        return md!!
     }
 
-    private ImmutableList<? extends ModuleComponentArtifactMetadata> getArtifactsForConfiguration() {
-        return RealisedMavenModuleResolveMetadata.getArtifactsForConfiguration(this);
-    }
+    private val artifactsForConfiguration: ImmutableList<out ModuleComponentArtifactMetadata>
+        get() = RealisedMavenModuleResolveMetadata.Companion.getArtifactsForConfiguration(this)
 
-    private ImmutableList<ModuleDependencyMetadata> filterDependencies(DefaultConfigurationMetadata config) {
+    private fun filterDependencies(config: DefaultConfigurationMetadata): ImmutableList<ModuleDependencyMetadata> {
         if (dependencies.isEmpty()) {
-            return ImmutableList.of();
+            return ImmutableList.of<ModuleDependencyMetadata>()
         }
-        int size = dependencies.size();
+        val size = dependencies.size
         // If we're reaching this point, we're very likely going to iterate on the dependencies
         // several times. It appears that iterating using `dependencies` is expensive because of
         // the creation of an iterator and checking bounds. Iterating an array is faster.
         if (dependenciesAsArray == null) {
-            dependenciesAsArray = dependencies.toArray(new MavenDependencyDescriptor[0]);
+            dependenciesAsArray = dependencies.toTypedArray<MavenDependencyDescriptor>()
         }
-        ImmutableList.Builder<ModuleDependencyMetadata> filteredDependencies = null;
-        boolean isOptionalConfiguration = "optional".equals(config.getName());
-        ImmutableSet<String> hierarchy = config.getHierarchy();
-        for (MavenDependencyDescriptor dependency : dependenciesAsArray) {
+        var filteredDependencies: ImmutableList.Builder<ModuleDependencyMetadata>? = null
+        val isOptionalConfiguration = "optional" == config.getName()
+        val hierarchy: ImmutableSet<String>? = config.getHierarchy()
+        for (dependency in dependenciesAsArray) {
             if (isOptionalConfiguration && includeInOptionalConfiguration(dependency)) {
-                ModuleDependencyMetadata element = new OptionalConfigurationMavenDependencyMetadata(dependency);
+                val element: ModuleDependencyMetadata = OptionalConfigurationMavenDependencyMetadata(dependency)
                 if (size == 1) {
-                    return ImmutableList.of(element);
+                    return ImmutableList.of<ModuleDependencyMetadata>(element)
                 }
                 if (filteredDependencies == null) {
-                    filteredDependencies = ImmutableList.builder();
+                    filteredDependencies = ImmutableList.builder<ModuleDependencyMetadata>()
                 }
-                filteredDependencies.add(element);
-            } else if (include(dependency, hierarchy)) {
-                ModuleDependencyMetadata element = new MavenDependencyMetadata(dependency);
+                filteredDependencies.add(element)
+            } else if (include(dependency, hierarchy!!)) {
+                val element: ModuleDependencyMetadata = MavenDependencyMetadata(dependency)
                 if (size == 1) {
-                    return ImmutableList.of(element);
+                    return ImmutableList.of<ModuleDependencyMetadata>(element)
                 }
                 if (filteredDependencies == null) {
-                    filteredDependencies = ImmutableList.builder();
+                    filteredDependencies = ImmutableList.builder<ModuleDependencyMetadata>()
                 }
-                filteredDependencies.add(element);
+                filteredDependencies.add(element)
             }
         }
-        return filteredDependencies == null ? ImmutableList.of() : filteredDependencies.build();
+        return if (filteredDependencies == null) ImmutableList.of<ModuleDependencyMetadata>() else filteredDependencies.build()
     }
 
-    private boolean includeInOptionalConfiguration(MavenDependencyDescriptor dependency) {
-        MavenScope dependencyScope = dependency.getScope();
+    private fun includeInOptionalConfiguration(dependency: MavenDependencyDescriptor): Boolean {
+        val dependencyScope = dependency.getScope()
         // Include all 'optional' dependencies in "optional" configuration
-        return dependency.isOptional()
-            && dependencyScope != MavenScope.Test
-            && dependencyScope != MavenScope.System;
+        return dependency.isOptional
+                && dependencyScope != MavenScope.Test && dependencyScope != MavenScope.System
     }
 
-    private boolean include(MavenDependencyDescriptor dependency, Collection<String> hierarchy) {
-        if (dependency.isOptional()) {
-            return false;
+    private fun include(dependency: MavenDependencyDescriptor, hierarchy: MutableCollection<String>): Boolean {
+        if (dependency.isOptional) {
+            return false
         }
-        return hierarchy.contains(dependency.getScope().getLowerName());
+        return hierarchy.contains(dependency.getScope().getLowerName())
     }
 
-    @Override
-    public MutableMavenModuleResolveMetadata asMutable() {
-        return new DefaultMutableMavenModuleResolveMetadata(this, objectInstantiator);
+    override fun asMutable(): MutableMavenModuleResolveMetadata {
+        return DefaultMutableMavenModuleResolveMetadata(this, objectInstantiator)
     }
 
-    @Override
-    public DefaultMavenModuleResolveMetadata withSources(ModuleSources sources) {
-        return new DefaultMavenModuleResolveMetadata(this, sources, getVariantDerivationStrategy());
+    override fun withSources(sources: ModuleSources): DefaultMavenModuleResolveMetadata {
+        return DefaultMavenModuleResolveMetadata(this, sources, variantDerivationStrategy!!)
     }
 
-    @Override
-    public ModuleComponentResolveMetadata withDerivationStrategy(VariantDerivationStrategy derivationStrategy) {
-        if (getVariantDerivationStrategy() == derivationStrategy) {
-            return this;
+    override fun withDerivationStrategy(derivationStrategy: VariantDerivationStrategy): ModuleComponentResolveMetadata {
+        if (variantDerivationStrategy === derivationStrategy) {
+            return this
         }
-        return new DefaultMavenModuleResolveMetadata(this, getSources(), derivationStrategy);
+        return DefaultMavenModuleResolveMetadata(this, getSources(), derivationStrategy)
     }
 
-    @Override
-    public @NonNull String getPackaging() {
-        return packaging;
+    override fun getPackaging(): String {
+        return packaging
     }
 
-    @Override
-    public boolean isRelocated() {
-        return relocated;
+    override fun isRelocated(): Boolean {
+        return relocated
     }
 
-    @Override
-    public boolean isPomPackaging() {
-        return POM_PACKAGING.equals(packaging);
+    override fun isPomPackaging(): Boolean {
+        return POM_PACKAGING == packaging
     }
 
-    @Override
-    public boolean isKnownJarPackaging() {
-        return JAR_PACKAGINGS.contains(packaging);
+    override fun isKnownJarPackaging(): Boolean {
+        return JAR_PACKAGINGS.contains(packaging)
     }
 
-    public NamedObjectInstantiator getObjectInstantiator() {
-        return objectInstantiator;
+    override fun getSnapshotTimestamp(): String? {
+        return snapshotTimestamp
     }
 
-    @Override
-    @Nullable
-    public String getSnapshotTimestamp() {
-        return snapshotTimestamp;
+    override fun getDependencies(): ImmutableList<MavenDependencyDescriptor> {
+        return dependencies
     }
 
-    @Override
-    public ImmutableList<MavenDependencyDescriptor> getDependencies() {
-        return dependencies;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
         if (!super.equals(o)) {
-            return false;
+            return false
         }
 
-        DefaultMavenModuleResolveMetadata that = (DefaultMavenModuleResolveMetadata) o;
-        return relocated == that.relocated
-            && Objects.equal(dependencies, that.dependencies)
-            && Objects.equal(packaging, that.packaging)
-            && Objects.equal(snapshotTimestamp, that.snapshotTimestamp);
+        val that = o as DefaultMavenModuleResolveMetadata
+        return relocated == that.relocated && Objects.equal(dependencies, that.dependencies)
+                && Objects.equal(packaging, that.packaging)
+                && Objects.equal(snapshotTimestamp, that.snapshotTimestamp)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(super.hashCode(),
+    override fun hashCode(): Int {
+        return Objects.hashCode(
+            super.hashCode(),
             dependencies,
             packaging,
             relocated,
-            snapshotTimestamp);
+            snapshotTimestamp
+        )
     }
 
     /**
@@ -278,26 +252,27 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
      * - Dependencies in the "optional" configuration can have dependency artifacts, even if the dependency is flagged as 'optional'.
      * (For a standard configuration, any dependency flagged as 'optional' will have no dependency artifacts).
      */
-    private static class OptionalConfigurationMavenDependencyMetadata extends MavenDependencyMetadata {
-        OptionalConfigurationMavenDependencyMetadata(MavenDependencyDescriptor delegate) {
-            super(delegate);
-        }
+    private class OptionalConfigurationMavenDependencyMetadata(delegate: MavenDependencyDescriptor) : MavenDependencyMetadata(delegate) {
+        val artifacts: ImmutableList<IvyArtifactName>
+            /**
+             * Dependencies marked as optional/pending in the "optional" configuration _can_ have dependency artifacts.
+             */
+            get() {
+                val dependencyArtifact = dependencyDescriptor.getDependencyArtifact()
+                return if (dependencyArtifact == null) ImmutableList.of<IvyArtifactName>() else ImmutableList.of<IvyArtifactName>(
+                    dependencyArtifact
+                )
+            }
 
-        /**
-         * Dependencies marked as optional/pending in the "optional" configuration _can_ have dependency artifacts.
-         */
-        @Override
-        public ImmutableList<IvyArtifactName> getArtifacts() {
-            IvyArtifactName dependencyArtifact = getDependencyDescriptor().getDependencyArtifact();
-            return dependencyArtifact == null ? ImmutableList.of() : ImmutableList.of(dependencyArtifact);
-        }
+        val isConstraint: Boolean
+            /**
+             * Dependencies in the "optional" configuration are never 'pending'.
+             */
+            get() = false
+    }
 
-        /**
-         * Dependencies in the "optional" configuration are never 'pending'.
-         */
-        @Override
-        public boolean isConstraint() {
-            return false;
-        }
+    companion object {
+        const val POM_PACKAGING: String = "pom"
+        val JAR_PACKAGINGS: MutableSet<String> = ImmutableSet.of<String>("jar", "ejb", "bundle", "maven-plugin", "eclipse-plugin")
     }
 }

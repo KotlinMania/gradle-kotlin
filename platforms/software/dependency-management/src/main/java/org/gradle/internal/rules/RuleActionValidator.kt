@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
-
-public interface RuleActionValidator {
-    <T> RuleAction<? super T> validate(RuleAction<? super T> ruleAction);
+interface RuleActionValidator {
+    fun <T> validate(ruleAction: RuleAction<in T?>?): RuleAction<in T?>?
 }

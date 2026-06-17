@@ -13,51 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.GraphSelectionCandidates;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.jspecify.annotations.Nullable;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.List;
+import org.gradle.internal.component.model.ComponentGraphResolveState
+import org.gradle.internal.component.model.GraphSelectionCandidates
+import org.gradle.internal.component.model.VariantGraphResolveState
+import javax.annotation.concurrent.ThreadSafe
 
 /**
- * A specialized {@link ComponentGraphResolveState} for local components (ie project dependencies).
+ * A specialized [ComponentGraphResolveState] for local components (ie project dependencies).
  *
- * <p>Instances of this type are cached and reused for multiple graph resolutions, possibly in parallel. This means that the implementation must be thread-safe.
+ *
+ * Instances of this type are cached and reused for multiple graph resolutions, possibly in parallel. This means that the implementation must be thread-safe.
  */
 @ThreadSafe
-public interface LocalComponentGraphResolveState extends ComponentGraphResolveState {
+interface LocalComponentGraphResolveState : ComponentGraphResolveState {
+    val moduleVersionId: ModuleVersionIdentifier?
 
-    ModuleVersionIdentifier getModuleVersionId();
+    override fun getMetadata(): LocalComponentGraphResolveMetadata?
 
-    @Override
-    LocalComponentGraphResolveMetadata getMetadata();
+    override fun getCandidatesForGraphVariantSelection(): LocalComponentGraphSelectionCandidates?
 
-    @Override
-    LocalComponentGraphSelectionCandidates getCandidatesForGraphVariantSelection();
-
-    interface LocalComponentGraphSelectionCandidates extends GraphSelectionCandidates {
-
+    interface LocalComponentGraphSelectionCandidates : GraphSelectionCandidates {
         /**
          * Get all variants that can be selected for this component. This includes both:
-         * <ul>
-         *     <li>Variant with attributes: those which can be selected through attribute matching</li>
-         *     <li>Variant without attributes: those which can be selected by configuration name</li>
-         * </ul>
+         *
+         *  * Variant with attributes: those which can be selected through attribute matching
+         *  * Variant without attributes: those which can be selected by configuration name
+         *
          */
-        List<LocalVariantGraphResolveState> getAllSelectableVariants();
+        val allSelectableVariants: MutableList<LocalVariantGraphResolveState>?
 
         /**
          * Returns the variant that is identified by the given configuration name.
          */
-        @Nullable
-        VariantGraphResolveState getVariantByConfigurationName(String name);
-
+        fun getVariantByConfigurationName(name: String): VariantGraphResolveState?
     }
-
 }

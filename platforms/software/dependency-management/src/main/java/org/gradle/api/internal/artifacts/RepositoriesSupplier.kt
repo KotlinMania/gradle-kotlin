@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts;
+package org.gradle.api.internal.artifacts
 
-import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.internal.artifacts.repositories.ResolutionAwareRepository
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.function.Supplier
 
-import java.util.List;
-import java.util.function.Supplier;
-
-@ServiceScope(Scope.Project.class)
-public interface RepositoriesSupplier extends Supplier<List<ResolutionAwareRepository>> {
-}
+@ServiceScope(Scope.Project::class)
+interface RepositoriesSupplier : Supplier<MutableList<ResolutionAwareRepository?>?>

@@ -13,34 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.api.artifacts.ComponentVariantIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
-import org.gradle.api.artifacts.ComponentVariantIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-
-public class DefaultComponentVariantIdentifier implements ComponentVariantIdentifier {
-
-    private final ComponentIdentifier id;
-    private final String variantName;
-
-    public DefaultComponentVariantIdentifier(ComponentIdentifier id, String variantName) {
-        this.id = id;
-        this.variantName = variantName;
+class DefaultComponentVariantIdentifier(private val id: ComponentIdentifier, private val variantName: String) : ComponentVariantIdentifier {
+    override fun getId(): ComponentIdentifier {
+        return id
     }
 
-    @Override
-    public ComponentIdentifier getId() {
-        return id;
+    override fun getVariantName(): String {
+        return variantName
     }
 
-    @Override
-    public String getVariantName() {
-        return variantName;
-    }
-
-    @Override
-    public String toString() {
-        return id + "(" + variantName + ")";
+    override fun toString(): String {
+        return id.toString() + "(" + variantName + ")"
     }
 }

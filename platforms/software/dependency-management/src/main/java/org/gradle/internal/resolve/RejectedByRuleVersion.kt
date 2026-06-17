@@ -13,38 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import com.google.common.base.Objects
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
-public class RejectedByRuleVersion extends RejectedVersion {
-    private final String reason;
-
-    public RejectedByRuleVersion(ModuleComponentIdentifier id, String reason) {
-        super(id);
-        this.reason = reason;
+class RejectedByRuleVersion(id: ModuleComponentIdentifier?, @JvmField val reason: String?) : RejectedVersion(id) {
+    override fun hashCode(): Int {
+        return Objects.hashCode(getId(), reason)
     }
 
-    public String getReason() {
-        return reason;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(getId(), reason);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        RejectedByRuleVersion that = (RejectedByRuleVersion) o;
-        return getId().equals(that.getId()) && Objects.equal(reason, that.reason);
+        val that = o as RejectedByRuleVersion
+        return getId() == that.getId() && Objects.equal(reason, that.reason)
     }
 }

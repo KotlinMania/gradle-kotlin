@@ -101,7 +101,7 @@ public class DependencyManagementGradleUserHomeScopeServices implements ServiceR
         FineGrainedCacheBuilder cacheBuilder = cacheBuilderFactory
             .createFineGrainedCacheBuilder(CacheLayout.TRANSFORMS.getName())
             .withDisplayName("Artifact transforms cache");
-        CrossBuildInMemoryCache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> identityCache = crossBuildInMemoryCacheFactory.newCacheRetainingDataFromPreviousBuild(result -> result.getResult().isSuccessful);
+        CrossBuildInMemoryCache<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>> identityCache = crossBuildInMemoryCacheFactory.<Identity, DeferredResult<TransformExecutionResult.TransformWorkspaceResult>>newCacheRetainingDataFromPreviousBuild(result -> result.getResult().isSuccessful);
         CacheBasedImmutableWorkspaceProvider workspaceProvider = CacheBasedImmutableWorkspaceProvider.createWorkspaceProvider(cacheBuilder, fileAccessTimeJournal, cacheConfigurations, cacheCleanupStrategyFactory);
         return new ImmutableTransformWorkspaceServices() {
             @Override

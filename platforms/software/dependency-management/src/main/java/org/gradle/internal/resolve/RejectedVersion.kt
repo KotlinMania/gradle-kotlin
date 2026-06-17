@@ -13,41 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.logging.text.TreeFormatter;
+import com.google.common.base.Objects
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.logging.text.TreeFormatter
 
-public abstract class RejectedVersion {
-    private final ModuleComponentIdentifier id;
-
-    public RejectedVersion(ModuleComponentIdentifier id) {
-        this.id = id;
+abstract class RejectedVersion(@JvmField val id: ModuleComponentIdentifier) {
+    open fun describeTo(builder: TreeFormatter) {
+        builder.node(id.getVersion())
     }
 
-    public ModuleComponentIdentifier getId() {
-        return id;
-    }
-
-    public void describeTo(TreeFormatter builder) {
-        builder.node(id.getVersion());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        RejectedVersion that = (RejectedVersion) o;
-        return Objects.equal(id, that.id);
+        val that = o as RejectedVersion
+        return Objects.equal(id, that.id)
     }
 
-    @Override
-    public int hashCode() {
-        return id.hashCode();
+    override fun hashCode(): Int {
+        return id.hashCode()
     }
 }

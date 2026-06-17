@@ -13,83 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.rules
 
-package org.gradle.internal.rules;
+import groovy.lang.Closure
+import java.util.Arrays
 
-import groovy.lang.Closure;
+class ClosureBackedRuleAction<T>(subjectType: Class<T?>, closure: Closure<*>) : RuleAction<T?> {
+    private val closure: Closure<*>
+    private val subjectType: Class<in T?>
+    private val inputTypes: MutableList<Class<*>?>
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-public class ClosureBackedRuleAction<T> implements RuleAction<T> {
-    private final Closure<?> closure;
-    private final Class<? super T> subjectType;
-    private final List<Class<?>> inputTypes;
-
-    public ClosureBackedRuleAction(Class<T> subjectType, Closure<?> closure) {
-        this.subjectType = subjectType;
-        this.closure = closure;
-        this.inputTypes = parseInputTypes(closure);
+    init {
+        this.subjectType = subjectType
+        this.closure = closure
+        this.inputTypes = parseInputTypes(closure)
     }
 
-    @Override
-    public List<Class<?>> getInputTypes() {
-        return inputTypes;
+    override fun getInputTypes(): MutableList<Class<*>?> {
+        return inputTypes
     }
 
-    @Override
-    public void execute(T subject, List<?> inputs) {
-        Closure<?> copy = (Closure<?>) closure.clone();
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST);
-        copy.setDelegate(subject);
+    override fun execute(subject: T?, inputs: MutableList<*>) {
+        val copy = closure.clone() as Closure<*>
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
+        copy.setDelegate(subject)
 
         if (closure.getMaximumNumberOfParameters() == 0) {
-            copy.call();
+            copy.call()
         } else {
-            Object[] argList = new Object[inputs.size() + 1];
-            argList[0] = subject;
-            int i = 1;
-            for (Object arg : inputs) {
-                argList[i++] = arg;
+            val argList = arrayOfNulls<Any>(inputs.size + 1)
+            argList[0] = subject
+            var i = 1
+            for (arg in inputs) {
+                argList[i++] = arg
             }
-            copy.call(argList);
+            copy.call(*argList)
         }
     }
 
-    private List<Class<?>> parseInputTypes(Closure<?> closure) {
-        Class<?>[] parameterTypes = closure.getParameterTypes();
-        List<Class<?>> inputTypes = new ArrayList<>();
+    private fun parseInputTypes(closure: Closure<*>): MutableList<Class<*>?> {
+        val parameterTypes = closure.getParameterTypes()
+        val inputTypes: MutableList<Class<*>?> = ArrayList<Class<*>?>()
 
-        if (parameterTypes.length != 0) {
-            if (parameterTypes[0].isAssignableFrom(subjectType)) {
-                inputTypes.addAll(Arrays.asList(parameterTypes).subList(1, parameterTypes.length));
+        if (parameterTypes.size != 0) {
+            if (parameterTypes[0]!!.isAssignableFrom(subjectType)) {
+                inputTypes.addAll(Arrays.asList<Class<*>?>(*parameterTypes).subList(1, parameterTypes.size))
             } else {
-                throw new RuleActionValidationException(String.format("First parameter of rule action closure must be of type '%s'.", subjectType.getSimpleName()));
+                throw RuleActionValidationException(String.format("First parameter of rule action closure must be of type '%s'.", subjectType.getSimpleName()))
             }
         }
 
-        return inputTypes;
+        return inputTypes
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        ClosureBackedRuleAction<?> that = (ClosureBackedRuleAction<?>) o;
-        return closure.equals(that.closure)
-                && subjectType.equals(that.subjectType);
+        val that = o as ClosureBackedRuleAction<*>
+        return closure == that.closure
+                && subjectType == that.subjectType
     }
 
-    @Override
-    public int hashCode() {
-        int result = closure.hashCode();
-        result = 31 * result + subjectType.hashCode();
-        return result;
+    override fun hashCode(): Int {
+        var result = closure.hashCode()
+        result = 31 * result + subjectType.hashCode()
+        return result
     }
 }

@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-
-import java.io.IOException;
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import java.io.IOException
 
 /**
  * Interface for module sources which need to be serialized with
@@ -27,9 +26,9 @@ import java.io.IOException;
  *
  * @see org.gradle.api.internal.artifacts.ivyservice.CacheLayout
  */
-public interface PersistentModuleSource extends ModuleSource {
+interface PersistentModuleSource : ModuleSource {
     /**
-     * A <b>unique</b> source identifier for this module source. The
+     * A **unique** source identifier for this module source. The
      * id must be &gt;=0 and represent the kind of module source.
      * For example, a module source may have different implementations,
      * but if they represent the same thing, they must return the same
@@ -40,7 +39,8 @@ public interface PersistentModuleSource extends ModuleSource {
      *
      * @return the source id
      */
-    int getCodecId();
+    @JvmField
+    val codecId: Int
 
     /**
      * A codec will be used by the metadata serializer to encode
@@ -49,8 +49,11 @@ public interface PersistentModuleSource extends ModuleSource {
      *
      * Codecs must implement equals/hashcode.
      */
-    interface Codec<T extends PersistentModuleSource> {
-        void encode(T moduleSource, Encoder encoder) throws IOException;
-        T decode(Decoder decoder) throws IOException;
+    interface Codec<T : PersistentModuleSource?> {
+        @Throws(IOException::class)
+        fun encode(moduleSource: T?, encoder: Encoder)
+
+        @Throws(IOException::class)
+        fun decode(decoder: Decoder): T?
     }
 }

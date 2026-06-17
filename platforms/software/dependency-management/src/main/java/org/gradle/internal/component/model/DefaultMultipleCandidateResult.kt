@@ -13,79 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import com.google.common.collect.Sets
+import org.gradle.api.internal.attributes.MultipleCandidatesResult
 
-import com.google.common.collect.Sets;
-import org.gradle.api.internal.attributes.MultipleCandidatesResult;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.Set;
-
-public class DefaultMultipleCandidateResult<T> implements MultipleCandidatesResult<T> {
-    private final Set<T> candidateValues;
-    private final T consumerValue;
+class DefaultMultipleCandidateResult<T>(consumerValue: T?, candidateValues: MutableSet<T?>) : MultipleCandidatesResult<T?> {
+    private val candidateValues: MutableSet<T?>
+    private val consumerValue: T?
 
     // Match recording is optimized for the general case of a single match
-    private T singleMatch;
-    private Set<T> multipleMatches;
+    private var singleMatch: T? = null
+    private var multipleMatches: MutableSet<T?>? = null
 
-    public DefaultMultipleCandidateResult(@Nullable T consumerValue, Set<T> candidateValues) {
-        if (candidateValues.isEmpty() || (consumerValue != null && candidateValues.size() == 1)) {
-            throw new IllegalArgumentException("Insufficient number of candidate values: " + candidateValues.size());
-        }
-        for (T candidateValue : candidateValues) {
-            if (candidateValue == null)  {
-                throw new IllegalArgumentException("candidateValues cannot contain null elements");
-            }
+    init {
+        require(!(candidateValues.isEmpty() || (consumerValue != null && candidateValues.size == 1))) { "Insufficient number of candidate values: " + candidateValues.size }
+        for (candidateValue in candidateValues) {
+            requireNotNull(candidateValue) { "candidateValues cannot contain null elements" }
         }
 
-        this.candidateValues = candidateValues;
-        this.consumerValue = consumerValue;
+        this.candidateValues = candidateValues
+        this.consumerValue = consumerValue
     }
 
-    @Override
-    public boolean hasResult() {
-        return singleMatch != null || multipleMatches!=null;
+    override fun hasResult(): Boolean {
+        return singleMatch != null || multipleMatches != null
     }
 
-    @Override
-    public Set<T> getMatches() {
-        assert hasResult();
+    override fun getMatches(): MutableSet<T?> {
+        assert(hasResult())
         if (singleMatch != null) {
-            return Collections.singleton(singleMatch);
+            return mutableSetOf<T?>(singleMatch)
         }
-        return multipleMatches;
+        return multipleMatches!!
     }
 
-    @Nullable
-    @Override
-    public T getConsumerValue() {
-        return consumerValue;
+    override fun getConsumerValue(): T? {
+        return consumerValue
     }
 
-    @Override
-    public Set<T> getCandidateValues() {
-        return candidateValues;
+    override fun getCandidateValues(): MutableSet<T?> {
+        return candidateValues
     }
 
-    @Override
-    public void closestMatch(T candidate) {
+    override fun closestMatch(candidate: T?) {
         if (singleMatch == null) {
             if (multipleMatches == null) {
-                singleMatch = candidate;
+                singleMatch = candidate
             } else {
-                multipleMatches.add(candidate);
+                multipleMatches!!.add(candidate)
             }
-            return;
+            return
         }
-        if (singleMatch.equals(candidate)) {
-            return;
+        if (singleMatch == candidate) {
+            return
         }
-        multipleMatches = Sets.newHashSetWithExpectedSize(candidateValues.size());
-        multipleMatches.add(singleMatch);
-        multipleMatches.add(candidate);
-        singleMatch = null;
+        multipleMatches = Sets.newHashSetWithExpectedSize<T?>(candidateValues.size)
+        multipleMatches!!.add(singleMatch)
+        multipleMatches!!.add(candidate)
+        singleMatch = null
     }
 }

@@ -98,7 +98,7 @@ public class SelectorStateResolver<T extends ComponentResolutionState> {
         if (selectors.size() == 1) {
             ResolvableSelectorState selectorState = selectors.first();
             // Short-circuit selector merging for single selector without 'prefer'
-            if (selectorState.getVersionConstraint() == null || selectorState.getVersionConstraint().getPreferredSelector() == null) {
+            if (selectorState.getVersionConstraint() == null || selectorState.getVersionConstraint().preferredSelector == null) {
                 return resolveSingleSelector(selectorState, allRejects);
             }
         }
@@ -112,7 +112,7 @@ public class SelectorStateResolver<T extends ComponentResolutionState> {
     }
 
     private List<T> resolveSingleSelector(ResolvableSelectorState selectorState, VersionSelector allRejects) {
-        assert selectorState.getVersionConstraint() == null || selectorState.getVersionConstraint().getPreferredSelector() == null;
+        assert selectorState.getVersionConstraint() == null || selectorState.getVersionConstraint().preferredSelector == null;
         ComponentIdResolveResult resolved = selectorState.resolve(allRejects);
         T selected = SelectorStateResolverResults.componentForIdResolveResult(componentFactory, resolved, selectorState);
         return Collections.singletonList(selected);
@@ -207,11 +207,11 @@ public class SelectorStateResolver<T extends ComponentResolutionState> {
         List<VersionSelector> rejectSelectors = null;
         for (ResolvableSelectorState selector : selectors) {
             ResolvedVersionConstraint versionConstraint = selector.getVersionConstraint();
-            if (versionConstraint != null && versionConstraint.getRejectedSelector() != null) {
+            if (versionConstraint != null && versionConstraint.rejectedSelector != null) {
                 if (rejectSelectors == null) {
                     rejectSelectors = new ArrayList<>(selectors.size());
                 }
-                rejectSelectors.add(versionConstraint.getRejectedSelector());
+                rejectSelectors.add(versionConstraint.rejectedSelector);
             }
         }
         if (rejectSelectors == null) {
@@ -248,7 +248,7 @@ public class SelectorStateResolver<T extends ComponentResolutionState> {
 
         @Override
         public int compare(ComponentIdResolveResult o1, ComponentIdResolveResult o2) {
-            return versionComparator.compare(versionParser.transform(o2.getModuleVersionId().getVersion()), versionParser.transform(o1.getModuleVersionId().getVersion()));
+            return versionComparator.compare(versionParser.transform(o2.moduleVersionId.getVersion()), versionParser.transform(o1.moduleVersionId.getVersion()));
         }
     }
 }

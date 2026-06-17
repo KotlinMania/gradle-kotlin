@@ -13,73 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.internal.Cast;
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector;
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
+import org.gradle.internal.component.local.model.DefaultProjectComponentSelector
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.IdentityHashMap
 
-import java.util.IdentityHashMap;
-import java.util.Set;
-
-@ServiceScope(Scope.BuildTree.class)
-public class AttributeDesugaring {
-    private final IdentityHashMap<ImmutableAttributes, ImmutableAttributes> desugared = new IdentityHashMap<>();
-    private final AttributesFactory attributesFactory;
-
-    public AttributeDesugaring(AttributesFactory attributesFactory) {
-        this.attributesFactory = attributesFactory;
-    }
+@ServiceScope(Scope.BuildTree::class)
+class AttributeDesugaring(private val attributesFactory: AttributesFactory) {
+    private val desugared = IdentityHashMap<ImmutableAttributes, ImmutableAttributes>()
 
     /**
      * Desugars attributes so that what we're going to serialize consists only of String or Boolean attributes,
      * and not their original types.
      * @return desugared attributes
      */
-    public ImmutableAttributes desugar(ImmutableAttributes attributes) {
+    fun desugar(attributes: ImmutableAttributes): ImmutableAttributes {
         if (attributes.isEmpty()) {
-            return attributes;
+            return attributes
         }
-        return desugared.computeIfAbsent(attributes,  key -> {
-            AttributeContainerInternal mutable = attributesFactory.mutable();
-            Set<Attribute<?>> keySet = key.keySet();
-            for (Attribute<?> attribute : keySet) {
-                Object value = key.getAttribute(attribute);
-                Attribute<Object> desugared = Cast.uncheckedCast(attribute);
-                if (attribute.getType() == Boolean.class || attribute.getType() == String.class) {
-                    mutable.attribute(desugared, value);
+        return desugared.computeIfAbsent(attributes) { key: ImmutableAttributes? ->
+            val mutable = attributesFactory.mutable()
+            val keySet: MutableSet<Attribute<*>> = key!!.keySet()
+            for (attribute in keySet) {
+                val value: Any? = key.getAttribute(attribute)
+                var desugared: Attribute<Any> = uncheckedCast<Attribute<Any>?>(attribute)!!
+                if (attribute.getType() == Boolean::class.java || attribute.getType() == String::class.java) {
+                    mutable.attribute<Any>(desugared, value!!)
                 } else {
-                    desugared = Cast.uncheckedCast(Attribute.of(attribute.getName(), String.class));
-                    mutable.attribute(desugared, value.toString());
+                    desugared = uncheckedCast<Attribute<Any>?>(Attribute.of<String>(attribute.getName(), String::class.java))!!
+                    mutable.attribute<Any>(desugared, value.toString())
                 }
             }
-            return mutable.asImmutable();
-        });
+            mutable.asImmutable()
+        }
     }
 
-    public ComponentSelector desugarSelector(ComponentSelector selector) {
-        if (selector instanceof ModuleComponentSelector) {
-            ModuleComponentSelector module = (ModuleComponentSelector) selector;
-            AttributeContainer moduleAttributes = module.getAttributes();
+    fun desugarSelector(selector: ComponentSelector): ComponentSelector {
+        if (selector is ModuleComponentSelector) {
+            val module = selector
+            val moduleAttributes = module.getAttributes()
             if (!moduleAttributes.isEmpty()) {
-                ImmutableAttributes attributes = ((AttributeContainerInternal) moduleAttributes).asImmutable();
-                return DefaultModuleComponentSelector.newSelector(module.getModuleIdentifier(), module.getVersionConstraint(), desugar(attributes), module.getCapabilitySelectors());
+                val attributes = (moduleAttributes as AttributeContainerInternal).asImmutable()
+                return DefaultModuleComponentSelector.newSelector(module.getModuleIdentifier(), module.getVersionConstraint(), desugar(attributes), module.getCapabilitySelectors())
             }
         }
-        if (selector instanceof DefaultProjectComponentSelector) {
-            DefaultProjectComponentSelector projectSelector = (DefaultProjectComponentSelector) selector;
-            AttributeContainer projectAttributes = projectSelector.getAttributes();
+        if (selector is DefaultProjectComponentSelector) {
+            val projectSelector = selector
+            val projectAttributes: AttributeContainer = projectSelector.getAttributes()
             if (!projectAttributes.isEmpty()) {
-                ImmutableAttributes attributes = ((AttributeContainerInternal) projectAttributes).asImmutable();
-                return DefaultProjectComponentSelector.withAttributes(projectSelector, desugar(attributes));
+                val attributes = (projectAttributes as AttributeContainerInternal).asImmutable()
+                return DefaultProjectComponentSelector.withAttributes(projectSelector, desugar(attributes))
             }
         }
-        return selector;
+        return selector
     }
 }

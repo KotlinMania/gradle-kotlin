@@ -193,7 +193,7 @@ public class MavenResolver extends ExternalResourceResolver {
         }
         if (isUniqueSnapshot(id)) {
             MavenUniqueSnapshotComponentIdentifier mus = (MavenUniqueSnapshotComponentIdentifier) id;
-            metaData.setSnapshotTimestamp(mus.getTimestamp());
+            metaData.snapshotTimestamp = mus.getTimestamp();
         }
         return metaData;
     }

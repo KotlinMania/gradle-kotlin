@@ -93,8 +93,8 @@ class EdgeState implements DependencyGraphEdge {
         this.from = from;
         this.dependencyMetadata = metadata;
         this.resolveState = resolveState;
-        this.isTransitive = from.isTransitive() && dependencyMetadata.isTransitive();
-        this.isConstraint = dependencyMetadata.isConstraint();
+        this.isTransitive = from.isTransitive() && dependencyMetadata.isTransitive;
+        this.isConstraint = dependencyMetadata.isConstraint;
 
         // TODO: DependencyState should eventually be merged into EdgeState
         this.dependencyState = new DependencyState(metadata, requested, ruleDescriptors, resolveFailure);
@@ -231,7 +231,7 @@ class EdgeState implements DependencyGraphEdge {
     @Override
     public ImmutableAttributes getAttributes() {
         ModuleResolveState module = selector.getTargetModule();
-        ComponentSelectorInternal componentSelector = (ComponentSelectorInternal) dependencyMetadata.getSelector();
+        ComponentSelectorInternal componentSelector = (ComponentSelectorInternal) dependencyMetadata.selector;
         return resolveState.getAttributesFactory().safeConcat(module.getMergedConstraintAttributes(), componentSelector.getAttributes());
     }
 
@@ -325,13 +325,13 @@ class EdgeState implements DependencyGraphEdge {
 
         // Use attribute matching if it is supported.
         if (!targetComponentState.getCandidatesForGraphVariantSelection().getVariantsForAttributeMatching().isEmpty()) {
-            Set<CapabilitySelector> capabilitySelectors = dependencyMetadata.getSelector().getCapabilitySelectors();
+            Set<CapabilitySelector> capabilitySelectors = dependencyMetadata.selector.getCapabilitySelectors();
             VariantGraphResolveState selected = variantSelector.selectByAttributeMatching(
                 attributes,
                 capabilitySelectors,
                 targetComponentState,
                 consumerSchema,
-                dependencyMetadata.getArtifacts()
+                dependencyMetadata.artifacts
             );
 
             return new GraphVariantSelectionResult(Collections.singletonList(selected), true);
@@ -382,7 +382,7 @@ class EdgeState implements DependencyGraphEdge {
     }
 
     private void computeExclusions() {
-        List<ExcludeMetadata> excludes = dependencyMetadata.getExcludes();
+        List<ExcludeMetadata> excludes = dependencyMetadata.excludes;
         if (excludes.isEmpty()) {
             cachedExclusions = transitiveExclusions;
         } else {
@@ -398,7 +398,7 @@ class EdgeState implements DependencyGraphEdge {
 
     ExcludeSpec getEdgeExclusions() {
         if (cachedEdgeExclusions == null) {
-            List<ExcludeMetadata> excludes = dependencyMetadata.getExcludes();
+            List<ExcludeMetadata> excludes = dependencyMetadata.excludes;
             ModuleExclusions moduleExclusions = resolveState.getModuleExclusions();
             if (excludes.isEmpty()) {
                 return moduleExclusions.nothing();
@@ -473,7 +473,7 @@ class EdgeState implements DependencyGraphEdge {
     private ComponentSelectionDescriptorInternal getMainReason() {
         if (selector != null && selector.isVersionProvidedByAncestor()) {
             return withDependencyReason(BY_ANCESTOR);
-        } else if (dependencyState.getDependency().isConstraint()) {
+        } else if (dependencyState.getDependency().isConstraint) {
             return withSelectorReason(withDependencyReason(CONSTRAINT));
         } else {
             return withSelectorReason(withDependencyReason(REQUESTED));
@@ -481,7 +481,7 @@ class EdgeState implements DependencyGraphEdge {
     }
 
     private ComponentSelectionDescriptorInternal withDependencyReason(ComponentSelectionDescriptorInternal dependencyDescriptor) {
-        String reason = dependencyState.getDependency().getReason();
+        String reason = dependencyState.getDependency().reason;
         if (reason != null) {
             dependencyDescriptor = dependencyDescriptor.withDescription(Describables.of(reason));
         }
@@ -556,6 +556,6 @@ class EdgeState implements DependencyGraphEdge {
     }
 
     public boolean isArtifactOnlyEdge() {
-        return !isTransitive && !dependencyMetadata.getArtifacts().isEmpty();
+        return !isTransitive && !dependencyMetadata.artifacts.isEmpty();
     }
 }

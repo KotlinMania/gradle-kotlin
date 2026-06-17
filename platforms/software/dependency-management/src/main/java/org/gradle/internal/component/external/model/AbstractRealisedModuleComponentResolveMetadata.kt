@@ -13,250 +13,177 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.component.model.VariantResolveMetadata
+import java.util.Optional
 
 /**
- * Common base class for the realised versions of {@link ModuleComponentResolveMetadata} implementations.
+ * Common base class for the realised versions of [ModuleComponentResolveMetadata] implementations.
  *
- * The realised part is about the application of {@link VariantMetadataRules} which are applied eagerly
+ * The realised part is about the application of [VariantMetadataRules] which are applied eagerly
  * to configuration or variant data.
  *
- * This type hierarchy is used whenever the {@code ModuleComponentResolveMetadata} needs to outlive
+ * This type hierarchy is used whenever the `ModuleComponentResolveMetadata` needs to outlive
  * the build execution.
  */
-public abstract class AbstractRealisedModuleComponentResolveMetadata extends AbstractModuleComponentResolveMetadata {
+abstract class AbstractRealisedModuleComponentResolveMetadata : AbstractModuleComponentResolveMetadata {
+    private var graphVariants: Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>? = null
+    private val configurations: ImmutableMap<String?, ModuleConfigurationMetadata?>
 
-    private Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> graphVariants;
-    private final ImmutableMap<String, ModuleConfigurationMetadata> configurations;
-
-    public AbstractRealisedModuleComponentResolveMetadata(AbstractRealisedModuleComponentResolveMetadata metadata, ModuleSources sources, VariantDerivationStrategy derivationStrategy) {
-        super(metadata, sources, derivationStrategy);
-        this.configurations = metadata.configurations;
+    constructor(metadata: AbstractRealisedModuleComponentResolveMetadata, sources: ModuleSources?, derivationStrategy: VariantDerivationStrategy?) : super(metadata, sources, derivationStrategy) {
+        this.configurations = metadata.configurations
     }
 
-    public AbstractRealisedModuleComponentResolveMetadata(
-        AbstractModuleComponentResolveMetadata mutableMetadata,
-        ImmutableList<? extends ComponentVariant> variants,
-        Map<String, ModuleConfigurationMetadata> configurations
-    ) {
-        super(mutableMetadata, variants);
-        this.configurations = ImmutableMap.<String, ModuleConfigurationMetadata>builder().putAll(configurations).build();
+    constructor(
+        mutableMetadata: AbstractModuleComponentResolveMetadata,
+        variants: ImmutableList<out ComponentVariant?>?,
+        configurations: MutableMap<String?, ModuleConfigurationMetadata?>
+    ) : super(mutableMetadata, variants) {
+        this.configurations = ImmutableMap.builder<String?, ModuleConfigurationMetadata?>().putAll(configurations).build()
     }
 
-    @Override
-    public VariantMetadataRules getVariantMetadataRules() {
-        return VariantMetadataRules.noOp();
+    val variantMetadataRules: VariantMetadataRules
+        get() = VariantMetadataRules.noOp()
+
+    override fun getConfigurationNames(): MutableSet<String?> {
+        return configurations.keys
     }
 
-    @Override
-    public Set<String> getConfigurationNames() {
-        return configurations.keySet();
+    override fun getConfiguration(name: String?): ModuleConfigurationMetadata? {
+        return configurations.get(name)
     }
 
-    @Nullable
-    @Override
-    public ModuleConfigurationMetadata getConfiguration(String name) {
-        return configurations.get(name);
-    }
-
-    @Override
-    public List<? extends ExternalModuleVariantGraphResolveMetadata> getVariantsForGraphTraversal() {
+    override fun getVariantsForGraphTraversal(): MutableList<out ExternalModuleVariantGraphResolveMetadata?> {
         if (graphVariants == null) {
-            graphVariants = buildVariantsForGraphTraversal(getVariants());
+            graphVariants = buildVariantsForGraphTraversal(variants!!)
         }
-        return graphVariants.orElse(Collections.emptyList());
+        return graphVariants!!.orElse(mutableListOf<ExternalModuleVariantGraphResolveMetadata?>())!!
     }
 
-    private Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> buildVariantsForGraphTraversal(List<? extends ComponentVariant> variants) {
+    private fun buildVariantsForGraphTraversal(variants: MutableList<out ComponentVariant>): Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>? {
         if (variants.isEmpty()) {
-            return maybeDeriveVariants();
+            return maybeDeriveVariants()
         }
-        ImmutableList.Builder<ModuleConfigurationMetadata> configurations = new ImmutableList.Builder<>();
-        for (ComponentVariant variant : variants) {
-            configurations.add(new RealisedVariantBackedConfigurationMetadata(getId(), variant, getAttributes(), getAttributesFactory()));
+        val configurations = ImmutableList.Builder<ModuleConfigurationMetadata?>()
+        for (variant in variants) {
+            configurations.add(RealisedVariantBackedConfigurationMetadata(getId()!!, variant, getAttributes(), attributesFactory!!))
         }
-        return Optional.of(configurations.build());
+        return Optional.of<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>(configurations.build())
     }
 
-    protected static class NameOnlyVariantResolveMetadata implements VariantResolveMetadata {
-        private final String name;
+    protected class NameOnlyVariantResolveMetadata(val name: String?) : VariantResolveMetadata {
+        val identifier: VariantResolveMetadata.Identifier?
+            get() = null
 
-        public NameOnlyVariantResolveMetadata(String name) {
-            this.name = name;
+        override fun asDescribable(): DisplayName? {
+            throw UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way")
         }
 
-        @Override
-        public String getName() {
-            return name;
-        }
+        val attributes: ImmutableAttributes?
+            get() {
+                throw UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way")
+            }
 
-        @Override
-        public Identifier getIdentifier() {
-            return null;
-        }
+        val artifacts: ImmutableList<out ComponentArtifactMetadata?>?
+            get() {
+                throw UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way")
+            }
 
-        @Override
-        public DisplayName asDescribable() {
-            throw new UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way");
-        }
+        val capabilities: ImmutableCapabilities
+            get() {
+                throw UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way")
+            }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            throw new UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way");
-        }
-
-        @Override
-        public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-            throw new UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way");
-        }
-
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            throw new UnsupportedOperationException("NameOnlyVariantResolveMetadata cannot be used that way");
-        }
-
-        @Override
-        public boolean isExternalVariant() {
-            return false;
+        override fun isExternalVariant(): Boolean {
+            return false
         }
     }
 
-    public static class ImmutableRealisedVariantImpl implements ComponentVariant, VariantResolveMetadata {
-        private final ModuleComponentIdentifier componentId;
-        private final String name;
-        private final ImmutableAttributes attributes;
-        private final ImmutableList<? extends Dependency> dependencies;
-        private final ImmutableList<? extends DependencyConstraint> dependencyConstraints;
-        private final ImmutableList<? extends File> files;
-        private final ImmutableCapabilities capabilities;
-        private final ImmutableList<? extends ModuleDependencyMetadata> dependencyMetadata;
-        private final boolean externalVariant;
+    class ImmutableRealisedVariantImpl(
+        private val componentId: ModuleComponentIdentifier, val name: String, val attributes: ImmutableAttributes?,
+        private val dependencies: ImmutableList<out ComponentVariant.Dependency?>?, private val dependencyConstraints: ImmutableList<out ComponentVariant.DependencyConstraint?>?,
+        private val files: ImmutableList<out ComponentVariant.File>, val capabilities: ImmutableCapabilities,
+        dependencyMetadata: MutableList<out ModuleDependencyMetadata?>,
+        private val externalVariant: Boolean
+    ) : ComponentVariant, VariantResolveMetadata {
+        val dependencyMetadata: ImmutableList<out ModuleDependencyMetadata?>
 
-        public ImmutableRealisedVariantImpl(
-            ModuleComponentIdentifier componentId, String name, ImmutableAttributes attributes,
-            ImmutableList<? extends Dependency> dependencies, ImmutableList<? extends DependencyConstraint> dependencyConstraints,
-            ImmutableList<? extends File> files, ImmutableCapabilities capabilities,
-            List<? extends ModuleDependencyMetadata> dependencyMetadata,
-            boolean externalVariant
-        ) {
-            this.componentId = componentId;
-            this.name = name;
-            this.attributes = attributes;
-            this.dependencies = dependencies;
-            this.dependencyConstraints = dependencyConstraints;
-            this.files = files;
-            this.capabilities = capabilities;
-            this.dependencyMetadata = ImmutableList.copyOf(dependencyMetadata);
-            this.externalVariant = externalVariant;
+        init {
+            this.dependencyMetadata = ImmutableList.copyOf(dependencyMetadata)
         }
 
-        @Override
-        public String getName() {
-            return name;
+        val identifier: VariantResolveMetadata.Identifier?
+            get() = null
+
+        override fun asDescribable(): DisplayName? {
+            return Describables.of(componentId, "variant", name)
         }
 
-        @Override
-        public Identifier getIdentifier() {
-            return null;
+        override fun getDependencies(): ImmutableList<out ComponentVariant.Dependency?>? {
+            return dependencies
         }
 
-        @Override
-        public DisplayName asDescribable() {
-            return Describables.of(componentId, "variant", name);
+        override fun getDependencyConstraints(): ImmutableList<out ComponentVariant.DependencyConstraint?>? {
+            return dependencyConstraints
         }
 
-        @Override
-        public ImmutableAttributes getAttributes() {
-            return attributes;
+        override fun getFiles(): ImmutableList<out ComponentVariant.File> {
+            return files
         }
 
-        @Override
-        public ImmutableList<? extends Dependency> getDependencies() {
-            return dependencies;
-        }
-
-        @Override
-        public ImmutableList<? extends DependencyConstraint> getDependencyConstraints() {
-            return dependencyConstraints;
-        }
-
-        public ImmutableList<? extends ModuleDependencyMetadata> getDependencyMetadata() {
-            return dependencyMetadata;
-        }
-
-        @Override
-        public ImmutableList<? extends File> getFiles() {
-            return files;
-        }
-
-        @Override
-        public ImmutableCapabilities getCapabilities() {
-            return capabilities;
-        }
-
-        @Override
-        public ImmutableList<? extends ComponentArtifactMetadata> getArtifacts() {
-            ImmutableList.Builder<ComponentArtifactMetadata> artifacts = new ImmutableList.Builder<>();
-            for (ComponentVariant.File file : files) {
-                artifacts.add(new UrlBackedArtifactMetadata(componentId, file.getName(), file.getUri()));
-            }
-            return artifacts.build();
-        }
-
-        @Override
-        public boolean isExternalVariant() {
-            return externalVariant;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+        val artifacts: ImmutableList<out ComponentArtifactMetadata?>
+            get() {
+                val artifacts =
+                    ImmutableList.Builder<ComponentArtifactMetadata?>()
+                for (file in files) {
+                    artifacts.add(UrlBackedArtifactMetadata(componentId, file.getName(), file.getUri()))
+                }
+                return artifacts.build()
             }
 
-            ImmutableRealisedVariantImpl that = (ImmutableRealisedVariantImpl) o;
+        override fun isExternalVariant(): Boolean {
+            return externalVariant
+        }
+
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+
+            val that = o as ImmutableRealisedVariantImpl
             return Objects.equal(componentId, that.componentId)
-                && Objects.equal(name, that.name)
-                && Objects.equal(attributes, that.attributes)
-                && Objects.equal(dependencies, that.dependencies)
-                && Objects.equal(dependencyConstraints, that.dependencyConstraints)
-                && Objects.equal(files, that.files)
-                && externalVariant == that.externalVariant;
+                    && Objects.equal(name, that.name)
+                    && Objects.equal(attributes, that.attributes)
+                    && Objects.equal(dependencies, that.dependencies)
+                    && Objects.equal(dependencyConstraints, that.dependencyConstraints)
+                    && Objects.equal(files, that.files)
+                    && externalVariant == that.externalVariant
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(componentId,
+        override fun hashCode(): Int {
+            return Objects.hashCode(
+                componentId,
                 name,
                 attributes,
                 dependencies,
                 dependencyConstraints,
                 files,
-                externalVariant);
+                externalVariant
+            )
         }
     }
-
 }

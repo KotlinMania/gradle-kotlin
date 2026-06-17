@@ -13,45 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.initialization.ProjectDescriptor;
-import org.gradle.internal.UncheckedException;
+import org.gradle.api.initialization.ProjectDescriptor
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import java.io.IOException
+import java.io.Writer
 
-import java.io.IOException;
-import java.io.Writer;
-
-public class ProjectAccessorsSourceGenerator extends AbstractProjectAccessorsSourceGenerator {
-
-    public ProjectAccessorsSourceGenerator(Writer writer) {
-        super(writer);
+class ProjectAccessorsSourceGenerator(writer: Writer) : AbstractProjectAccessorsSourceGenerator(writer) {
+    @Throws(IOException::class)
+    private fun generate(packageName: String, className: String, current: ProjectDescriptor) {
+        writeHeader(packageName)
+        writeLn("@NullMarked")
+        writeLn("public class " + className + " extends DelegatingProjectDependency {")
+        writeLn()
+        writeLn("    @Inject")
+        writeLn("    public " + className + "(TypeSafeProjectDependencyFactory factory, ProjectDependencyInternal delegate) {")
+        writeLn("        super(factory, delegate);")
+        writeLn("    }")
+        writeLn()
+        processChildren(current)
+        writeLn("}")
     }
 
-    public static String generateSource(Writer writer,
-                                        ProjectDescriptor current,
-                                        String packageName) {
-        ProjectAccessorsSourceGenerator generator = new ProjectAccessorsSourceGenerator(writer);
-        try {
-            String className = toClassName(current.getPath(), rootProjectName(current));
-            generator.generate(packageName, className, current);
-            return className;
-        } catch (IOException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+    companion object {
+        fun generateSource(
+            writer: Writer,
+            current: ProjectDescriptor,
+            packageName: String
+        ): String {
+            val generator = ProjectAccessorsSourceGenerator(writer)
+            try {
+                val className: String = AbstractProjectAccessorsSourceGenerator.Companion.toClassName(current.getPath(), AbstractProjectAccessorsSourceGenerator.Companion.rootProjectName(current))
+                generator.generate(packageName, className, current)
+                return className
+            } catch (e: IOException) {
+                throw throwAsUncheckedException(e)
+            }
         }
     }
-
-    private void generate(String packageName, String className, ProjectDescriptor current) throws IOException {
-        writeHeader(packageName);
-        writeLn("@NullMarked");
-        writeLn("public class " + className + " extends DelegatingProjectDependency {");
-        writeLn();
-        writeLn("    @Inject");
-        writeLn("    public " + className + "(TypeSafeProjectDependencyFactory factory, ProjectDependencyInternal delegate) {");
-        writeLn("        super(factory, delegate);");
-        writeLn("    }");
-        writeLn();
-        processChildren(current);
-        writeLn("}");
-    }
-
 }

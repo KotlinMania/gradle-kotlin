@@ -44,7 +44,7 @@ import java.util.TreeSet;
 public class DefaultResolvedDependency implements ResolvedDependency {
     private final Set<DefaultResolvedDependency> children = new LinkedHashSet<>();
     private final Set<ResolvedDependency> parents = new LinkedHashSet<>();
-    private final ListMultimap<ResolvedDependency, ResolvedArtifactSet> parentArtifacts = ArrayListMultimap.create();
+    private final ListMultimap<ResolvedDependency, ResolvedArtifactSet> parentArtifacts = ArrayListMultimap.<ResolvedDependency, ResolvedArtifactSet>create();
     private final String variantName;
     private final ModuleVersionIdentifier moduleVersionId;
     private final BuildOperationExecutor buildOperationExecutor;
@@ -98,7 +98,7 @@ public class DefaultResolvedDependency implements ResolvedDependency {
 
     @Override
     public ImmutableSet<ResolvedDependency> getChildren() {
-        return ImmutableSet.copyOf(children);
+        return ImmutableSet.<ResolvedDependency>copyOf(children);
     }
 
     @Override
@@ -208,11 +208,11 @@ public class DefaultResolvedDependency implements ResolvedDependency {
             if (diff != 0) {
                 return diff;
             }
-            diff = ObjectUtils.compare(artifact1.getClassifier(), artifact2.getClassifier());
+            diff = ObjectUtils.<@org.jspecify.annotations.Nullable String>compare(artifact1.getClassifier(), artifact2.getClassifier());
             if (diff != 0) {
                 return diff;
             }
-            diff = ObjectUtils.compare(artifact1.getExtension(), artifact2.getExtension());
+            diff = ObjectUtils.<@org.jspecify.annotations.Nullable String>compare(artifact1.getExtension(), artifact2.getExtension());
             if (diff != 0) {
                 return diff;
             }

@@ -13,26 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-public interface CompatibilityRule<T>  {
+interface CompatibilityRule<T> {
+    fun doesSomething(): Boolean
 
-    /* private */ CompatibilityRule<Object> DO_NOTHING = new CompatibilityRule<Object>() {
-        @Override
-        public boolean doesSomething() {
-            return false;
+    fun execute(tCompatibilityCheckResult: CompatibilityCheckResult<T?>)
+
+    companion object {
+        fun <E> doNothing(): CompatibilityRule<E?> {
+            return DO_NOTHING as CompatibilityRule<E?>
         }
 
-        @Override
-        public void execute(CompatibilityCheckResult<Object> t) { }
-    };
+        /* private */
+        val DO_NOTHING: CompatibilityRule<Any> = object : CompatibilityRule<Any> {
+            override fun doesSomething(): Boolean {
+                return false
+            }
 
-    @SuppressWarnings("unchecked")
-    static <E> CompatibilityRule<E> doNothing() {
-        return (CompatibilityRule<E>) DO_NOTHING;
+            override fun execute(t: CompatibilityCheckResult<Any>) {}
+        }
     }
-
-    boolean doesSomething();
-
-    void execute(CompatibilityCheckResult<T> tCompatibilityCheckResult);
 }

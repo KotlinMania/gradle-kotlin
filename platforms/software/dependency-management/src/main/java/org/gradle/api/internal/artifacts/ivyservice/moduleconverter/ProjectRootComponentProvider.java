@@ -90,9 +90,9 @@ public class ProjectRootComponentProvider implements RootComponentProvider {
     private LocalComponentGraphResolveState createProjectRootComponent() {
         Module module = componentIdentity.getModule();
 
-        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.getGroup(), module.getName(), module.getVersion());
+        ModuleVersionIdentifier moduleVersionId = moduleIdentifierFactory.moduleWithVersion(module.group, module.name, module.version);
         ComponentIdentifier componentIdentifier = owner.getComponentIdentifier();
-        String status = module.getStatus();
+        String status = module.status;
         ImmutableAttributesSchema immutableSchema = attributesSchemaFactory.create(schema);
 
         LocalComponentGraphResolveMetadata metadata = new LocalComponentGraphResolveMetadata(

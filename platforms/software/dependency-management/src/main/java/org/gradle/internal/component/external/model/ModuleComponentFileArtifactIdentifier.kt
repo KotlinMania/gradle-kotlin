@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.local.model.ComponentFileArtifactIdentifier;
-
-public class ModuleComponentFileArtifactIdentifier extends ComponentFileArtifactIdentifier implements ModuleComponentArtifactIdentifier {
-    public ModuleComponentFileArtifactIdentifier(ModuleComponentIdentifier componentId, String fileName) {
-        super(componentId, fileName);
-    }
-
-    @Override
-    public ModuleComponentIdentifier getComponentIdentifier() {
-        return (ModuleComponentIdentifier) super.getComponentIdentifier();
+class ModuleComponentFileArtifactIdentifier(componentId: ModuleComponentIdentifier, fileName: String) : ComponentFileArtifactIdentifier(componentId, fileName), ModuleComponentArtifactIdentifier {
+    override fun getComponentIdentifier(): ModuleComponentIdentifier {
+        return super.getComponentIdentifier() as ModuleComponentIdentifier
     }
 }

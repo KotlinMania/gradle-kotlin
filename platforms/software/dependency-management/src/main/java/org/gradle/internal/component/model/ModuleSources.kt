@@ -13,33 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.model;
+package org.gradle.internal.component.model
 
-import org.gradle.internal.Cast;
+import org.gradle.internal.Cast.uncheckedCast
+import java.util.Optional
+import java.util.function.Consumer
+import java.util.function.Function
 
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
+interface ModuleSources {
+    fun <T : ModuleSource?> getSource(sourceType: Class<T?>): Optional<T?>?
 
-public interface ModuleSources {
-    <T extends ModuleSource> Optional<T> getSource(Class<T> sourceType);
-
-    void withSources(Consumer<ModuleSource> consumer);
+    fun withSources(consumer: Consumer<ModuleSource>)
 
     /**
      * Executes an action on the first source found of the following type, if any.
      */
-    default <T extends ModuleSource, R> R withSource(Class<T> sourceType, Function<Optional<T>, R> action) {
-        return action.apply(getSource(sourceType));
+    fun <T : ModuleSource?, R> withSource(sourceType: Class<T?>, action: Function<Optional<T?>, R?>): R? {
+        return action.apply(getSource<T?>(sourceType)!!)
     }
 
-    default <T extends ModuleSource> void withSources(Class<T> sourceType, Consumer<T> consumer) {
-        withSources(src -> {
-            if (sourceType.isAssignableFrom(src.getClass())) {
-                consumer.accept(Cast.uncheckedCast(src));
+    fun <T : ModuleSource?> withSources(sourceType: Class<T?>, consumer: Consumer<T?>) {
+        withSources(Consumer { src: ModuleSource ->
+            if (sourceType.isAssignableFrom(src.javaClass)) {
+                consumer.accept(uncheckedCast<T?>(src))
             }
-        });
+        })
     }
 
-    int size();
+    fun size(): Int
 }

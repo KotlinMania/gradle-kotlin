@@ -13,26 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.authentication.Authentication
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import java.util.Collections
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.Cast;
+class DefaultAuthenticationSchemeRegistry : AuthenticationSchemeRegistry {
+    var registeredSchemes: MutableMap<Class<out Authentication?>?, Class<out Authentication?>?> = HashMap<Class<out Authentication?>?, Class<out Authentication?>?>()
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-public class DefaultAuthenticationSchemeRegistry implements AuthenticationSchemeRegistry {
-    Map<Class<? extends Authentication>, Class<? extends Authentication>> registeredSchemes = new HashMap<>();
-
-    @Override
-    public <T extends Authentication> void registerScheme(Class<T> type, final Class<? extends T> implementationType) {
-        registeredSchemes.put(type, implementationType);
+    override fun <T : Authentication?> registerScheme(type: Class<T?>?, implementationType: Class<out T?>?) {
+        registeredSchemes.put(type, implementationType)
     }
 
-    @Override
-    public <T extends Authentication> Map<Class<T>, Class<? extends T>> getRegisteredSchemes() {
-        return Collections.unmodifiableMap(Cast.uncheckedNonnullCast(registeredSchemes));
+    override fun <T : Authentication?> getRegisteredSchemes(): MutableMap<Class<T?>?, Class<out T?>?>? {
+        return Collections.unmodifiableMap<Class<T?>?, Class<out T?>?>(uncheckedNonnullCast<MutableMap<out Class<T?>?, out Class<out T?>?>?>(registeredSchemes))
     }
 }

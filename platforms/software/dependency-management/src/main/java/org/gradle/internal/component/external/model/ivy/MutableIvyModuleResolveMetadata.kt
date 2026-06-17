@@ -13,54 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
+import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.internal.artifacts.ivyservice.NamespaceId;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
-import org.gradle.internal.component.model.Exclude;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
-
-public interface MutableIvyModuleResolveMetadata extends MutableModuleComponentResolveMetadata {
+interface MutableIvyModuleResolveMetadata : MutableModuleComponentResolveMetadata {
     /**
      * {@inheritDoc}
      */
-    @Override
-    IvyModuleResolveMetadata asImmutable();
+    override fun asImmutable(): IvyModuleResolveMetadata?
 
     /**
      * Returns the Ivy definitions for the configurations of this module.
      */
-    ImmutableMap<String, Configuration> getConfigurationDefinitions();
+    val configurationDefinitions: ImmutableMap<String, Configuration>?
 
     /**
      * Returns the Ivy definitions for artifacts of this module.
      */
-    ImmutableList<Artifact> getArtifactDefinitions();
+    val artifactDefinitions: ImmutableList<Artifact>?
 
 
     /**
      * Returns the dependency declarations of this component.
      */
-    ImmutableList<IvyDependencyDescriptor> getDependencies();
+    val dependencies: ImmutableList<IvyDependencyDescriptor>?
 
     /**
      * Returns the Ivy excludes of this component.
      */
-    ImmutableList<Exclude> getExcludes();
+    val excludes: ImmutableList<Exclude>?
 
-    ImmutableMap<NamespaceId, String> getExtraAttributes();
+    var extraAttributes: ImmutableMap<NamespaceId, String>?
 
-    void setExtraAttributes(Map<NamespaceId, String> extraAttributes);
-
-    @Nullable
-    String getBranch();
-
-    void setBranch(@Nullable String branch);
+    @JvmField
+    var branch: String?
 }

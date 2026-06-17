@@ -13,56 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.notations;
+package org.gradle.api.internal.notations
 
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.DefaultProjectDependencyFactory
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
+import org.gradle.internal.typeconversion.NotationParserBuilder
 
-import java.util.Map;
-
-public class ProjectDependencyFactory {
-    private final DefaultProjectDependencyFactory factory;
-
-    public ProjectDependencyFactory(DefaultProjectDependencyFactory factory) {
-        this.factory = factory;
+class ProjectDependencyFactory(private val factory: DefaultProjectDependencyFactory) {
+    fun createFromMap(map: MutableMap<out String?, *>?): ProjectDependency? {
+        return NotationParserBuilder.toType<ProjectDependency?>(ProjectDependency::class.java)
+            .converter(ProjectDependencyMapNotationConverter(factory)).toComposite().parseNotation(map)
     }
 
-    public ProjectDependency createFromMap(Map<? extends String, ?> map) {
-        return NotationParserBuilder.toType(ProjectDependency.class)
-                .converter(new ProjectDependencyMapNotationConverter(factory)).toComposite().parseNotation(map);
+    fun create(projectPath: String): ProjectDependency {
+        return factory.create(projectPath)
     }
 
-    public ProjectDependency create(String projectPath) {
-        return factory.create(projectPath);
-    }
-
-    static class ProjectDependencyMapNotationConverter extends MapNotationConverter<ProjectDependency> {
-
-        private final DefaultProjectDependencyFactory factory;
-
-        public ProjectDependencyMapNotationConverter(DefaultProjectDependencyFactory factory) {
-            this.factory = factory;
-        }
-
-        protected ProjectDependency parseMap(
-            @MapKey("path") String path,
-            @MapKey("configuration") @Nullable String configuration
-        ) {
-            ProjectDependency defaultProjectDependency = factory.create(path);
+    internal class ProjectDependencyMapNotationConverter(private val factory: DefaultProjectDependencyFactory) : MapNotationConverter<ProjectDependency?>() {
+        protected fun parseMap(
+            @MapKey("path") path: String,
+            @MapKey("configuration") configuration: String?
+        ): ProjectDependency {
+            val defaultProjectDependency = factory.create(path)
             if (configuration != null) {
-                defaultProjectDependency.setTargetConfiguration(configuration);
+                defaultProjectDependency.setTargetConfiguration(configuration)
             }
-            return defaultProjectDependency;
+            return defaultProjectDependency
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Map with mandatory 'path' and optional 'configuration' key").example("[path: ':someProj', configuration: 'someConf']");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Map with mandatory 'path' and optional 'configuration' key").example("[path: ':someProj', configuration: 'someConf']")
         }
     }
 }

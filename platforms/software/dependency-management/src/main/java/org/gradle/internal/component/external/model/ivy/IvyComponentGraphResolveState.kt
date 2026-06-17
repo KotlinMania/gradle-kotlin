@@ -13,44 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
-
-import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState;
-import org.gradle.internal.component.model.ConfigurationGraphResolveState;
-import org.gradle.internal.component.model.GraphSelectionCandidates;
-import org.gradle.internal.component.model.VariantGraphResolveState;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+import org.gradle.internal.component.external.model.ExternalModuleComponentGraphResolveState
+import org.gradle.internal.component.model.ConfigurationGraphResolveState
+import org.gradle.internal.component.model.GraphSelectionCandidates
+import org.gradle.internal.component.model.VariantGraphResolveState
 
 /**
  * Resolution state for an ivy component. Exposes the configurations of the component.
  */
-public interface IvyComponentGraphResolveState extends ExternalModuleComponentGraphResolveState {
-
+interface IvyComponentGraphResolveState : ExternalModuleComponentGraphResolveState {
     /**
-     * Get all names such that {@link #getConfiguration(String)} return a non-null value.
+     * Get all names such that [.getConfiguration] return a non-null value.
      */
-    Set<String> getConfigurationNames();
+    val configurationNames: MutableSet<String>?
 
     /**
      * Returns the configuration with the given name.
      */
-    @Nullable
-    ConfigurationGraphResolveState getConfiguration(String configurationName);
+    fun getConfiguration(configurationName: String): ConfigurationGraphResolveState?
 
-    @Override
-    IvyGraphSelectionCandidates getCandidatesForGraphVariantSelection();
+    override fun getCandidatesForGraphVariantSelection(): IvyGraphSelectionCandidates?
 
-    interface IvyGraphSelectionCandidates extends GraphSelectionCandidates {
-
+    interface IvyGraphSelectionCandidates : GraphSelectionCandidates {
         /**
          * Returns the variant that is identified by the given configuration name.
          */
-        @Nullable
-        VariantGraphResolveState getVariantByConfigurationName(String name);
-
+        fun getVariantByConfigurationName(name: String): VariantGraphResolveState?
     }
-
 }

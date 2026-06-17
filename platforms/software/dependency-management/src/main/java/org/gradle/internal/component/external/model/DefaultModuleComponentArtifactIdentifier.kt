@@ -13,80 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
 
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+class DefaultModuleComponentArtifactIdentifier(private val componentIdentifier: ModuleComponentIdentifier, @JvmField val name: IvyArtifactName) : ModuleComponentArtifactIdentifier {
+    private val hashCode: Int
 
-public class DefaultModuleComponentArtifactIdentifier implements ModuleComponentArtifactIdentifier {
-    private final ModuleComponentIdentifier componentIdentifier;
-    private final IvyArtifactName name;
-    private final int hashCode;
+    constructor(componentIdentifier: ModuleComponentIdentifier, name: String, type: String, extension: String?) : this(componentIdentifier, DefaultIvyArtifactName(name, type, extension))
 
-    public DefaultModuleComponentArtifactIdentifier(ModuleComponentIdentifier componentIdentifier, String name, String type, @Nullable String extension) {
-        this(componentIdentifier, new DefaultIvyArtifactName(name, type, extension));
+    constructor(componentIdentifier: ModuleComponentIdentifier, name: String, type: String, extension: String?, classifier: String?) : this(
+        componentIdentifier,
+        DefaultIvyArtifactName(name, type, extension, classifier)
+    )
+
+    init {
+        this.hashCode = 31 * name.hashCode() + componentIdentifier.hashCode()
     }
 
-    public DefaultModuleComponentArtifactIdentifier(ModuleComponentIdentifier componentIdentifier, String name, String type, @Nullable String extension, @Nullable String classifier) {
-        this(componentIdentifier, new DefaultIvyArtifactName(name, type, extension, classifier));
+    override fun getFileName(): String {
+        val classifier = if (StringUtils.isNotEmpty(name.classifier)) "-" + name.classifier else ""
+        val extension = if (StringUtils.isNotEmpty(name.extension)) "." + name.extension else ""
+        return name.name + "-" + componentIdentifier.getVersion() + classifier + extension
     }
 
-    public DefaultModuleComponentArtifactIdentifier(ModuleComponentIdentifier componentIdentifier, IvyArtifactName artifact) {
-        this.componentIdentifier = componentIdentifier;
-        this.name = artifact;
-        this.hashCode = 31 * name.hashCode() + componentIdentifier.hashCode();
+    override fun getDisplayName(): String {
+        return getFileName() + " (" + getComponentIdentifier().getDisplayName() + ")"
     }
 
-    @Override
-    public String getFileName() {
-        String classifier = StringUtils.isNotEmpty(name.getClassifier()) ? "-" + name.getClassifier() : "";
-        String extension = StringUtils.isNotEmpty(name.getExtension()) ? "." + name.getExtension() : "";
-        return name.getName() + "-" + componentIdentifier.getVersion() + classifier + extension;
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return getFileName() + " (" + getComponentIdentifier().getDisplayName() + ")";
+    override fun getComponentIdentifier(): ModuleComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    public IvyArtifactName getName() {
-        return name;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    @Override
-    public ModuleComponentIdentifier getComponentIdentifier() {
-        return componentIdentifier;
-    }
-
-    @Override
-    public String toString() {
-        return getDisplayName();
-    }
-
-    @Override
-    public int hashCode() {
-        return hashCode;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any?): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        DefaultModuleComponentArtifactIdentifier other = (DefaultModuleComponentArtifactIdentifier) obj;
-        return other.componentIdentifier.equals(componentIdentifier)
-                && other.name.equals(name);
+        val other = obj as DefaultModuleComponentArtifactIdentifier
+        return other.componentIdentifier == componentIdentifier
+                && other.name == name
     }
 }

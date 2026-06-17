@@ -13,37 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.SelectionReasonAssessor.AssessedSelection;
-
-import java.util.List;
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.SelectionReasonAssessor
 
 /**
  * A failure that indicates that a requested module was rejected during graph construction.
  */
-public final class ModuleRejectedFailure extends AbstractComponentSelectionFailure {
-    private final List<String> resolutions;
-    private final String legacyErrorMsg;
-
-    public ModuleRejectedFailure(ResolutionFailureProblemId problemId, AssessedSelection assessedSelection, List<String> resolutions, String legacyErrorMsg) {
-        super(problemId, assessedSelection);
-        this.resolutions = resolutions;
-        this.legacyErrorMsg = legacyErrorMsg;
+class ModuleRejectedFailure(
+    problemId: ResolutionFailureProblemId,
+    assessedSelection: SelectionReasonAssessor.AssessedSelection,
+    private val resolutions: MutableList<String>,
+    private val legacyErrorMsg: String
+) : AbstractComponentSelectionFailure(problemId, assessedSelection) {
+    override fun describeRequestTarget(): String {
+        return getModuleIdentifier().toString()
     }
 
-    @Override
-    public String describeRequestTarget() {
-        return getModuleIdentifier().toString();
+    fun getResolutions(): MutableList<String> {
+        return resolutions
     }
 
-    public List<String> getResolutions() {
-        return resolutions;
-    }
-
-    public String getLegacyErrorMsg() {
-        return legacyErrorMsg;
+    fun getLegacyErrorMsg(): String {
+        return legacyErrorMsg
     }
 }

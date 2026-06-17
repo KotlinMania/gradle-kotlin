@@ -13,107 +13,109 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
 
 /**
  * A dependency that can participate in dependency resolution.
  * Note that various subtypes provide additional details, but these are not required by the core resolution engine.
  */
-public interface DependencyMetadata {
+interface DependencyMetadata {
     /**
      * Returns the component selector for this dependency.
      *
      * @return Component selector
      */
-    ComponentSelector getSelector();
+    @JvmField
+    val selector: ComponentSelector?
 
     /**
      * Optionally override standard variant selection if this type of dependency has a selection
      * mechanism that that is not variant-aware.
      */
-    default @Nullable List<? extends VariantGraphResolveState> overrideVariantSelection(
-        GraphVariantSelector variantSelector,
-        ImmutableAttributes consumerAttributes,
-        ComponentGraphResolveState targetComponentState,
-        ImmutableAttributesSchema consumerSchema
-    ) {
-        return null;
+    fun overrideVariantSelection(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState>? {
+        return null
     }
 
     /**
      * Select variants from a target component if that component does not support variant selection.
      */
-    default List<? extends VariantGraphResolveState> selectLegacyVariants(
-        GraphVariantSelector variantSelector,
-        ImmutableAttributes consumerAttributes,
-        ComponentGraphResolveState targetComponentState,
-        ImmutableAttributesSchema consumerSchema
-    ) {
-        VariantGraphResolveState selected = variantSelector.selectLegacyVariant(consumerAttributes, targetComponentState, consumerSchema, variantSelector.getFailureHandler());
-        return Collections.singletonList(selected);
+    fun selectLegacyVariants(
+        variantSelector: GraphVariantSelector,
+        consumerAttributes: ImmutableAttributes,
+        targetComponentState: ComponentGraphResolveState,
+        consumerSchema: ImmutableAttributesSchema
+    ): MutableList<out VariantGraphResolveState> {
+        val selected = variantSelector.selectLegacyVariant(consumerAttributes, targetComponentState, consumerSchema, variantSelector.getFailureHandler())
+        return mutableListOf<VariantGraphResolveState>(selected)
     }
 
     /**
      * Returns a view of the excludes filtered for this dependency in this configuration.
      */
-    ImmutableList<ExcludeMetadata> getExcludes();
+    @JvmField
+    val excludes: ImmutableList<ExcludeMetadata>?
 
     /**
      * Returns the artifacts referenced by this dependency, if any.
      * When a dependency references artifacts, those artifacts are used in place of the default artifacts of the target component.
      * In most cases, it makes sense for this set to be empty, and for all of the artifacts of the target component to be included.
      */
-    ImmutableList<IvyArtifactName> getArtifacts();
+    @JvmField
+    val artifacts: ImmutableList<IvyArtifactName>?
 
     /**
      * Returns a copy of this dependency with the given target.
      */
-    DependencyMetadata withTarget(ComponentSelector target);
+    fun withTarget(target: ComponentSelector): DependencyMetadata?
 
-    DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts);
+    fun withTargetAndArtifacts(target: ComponentSelector, artifacts: ImmutableList<IvyArtifactName>): DependencyMetadata?
 
     /**
      * Is the target component of this dependency considered 'changing'.
      */
-    boolean isChanging();
+    @JvmField
+    val isChanging: Boolean
 
     /**
      * Should the dependency be resolved transitively?
      * A false value is effectively equivalent to a wildcard exclusion.
      */
-    boolean isTransitive();
+    @JvmField
+    val isTransitive: Boolean
 
     /**
      * Is this a strong dependency, does it is merely a constraint on the module to select if brought in
      * by another dependency? ("Optional" dependencies are "constraints")
      */
-    boolean isConstraint();
+    @JvmField
+    val isConstraint: Boolean
 
     /**
      * Is this a dependency that "pulls up" strict version constraints from the target node?
      */
-    boolean isEndorsingStrictVersions();
+    @JvmField
+    val isEndorsingStrictVersions: Boolean
 
     /**
      * An optional human readable reason why this dependency is used.
      *
      * @return if not null, a description why this dependency is used.
      */
-    @Nullable
-    String getReason();
+    @JvmField
+    val reason: String?
 
     /**
      * Returns a copy of this dependency with the given selection reason.
      */
-    DependencyMetadata withReason(String reason);
+    fun withReason(reason: String): DependencyMetadata?
 }

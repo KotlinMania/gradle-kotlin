@@ -13,28 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
+import com.google.common.collect.ImmutableList
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
 
-public class NoOpDerivationStrategy extends AbstractStatelessDerivationStrategy {
-    private static final NoOpDerivationStrategy INSTANCE = new NoOpDerivationStrategy();
-
-    private NoOpDerivationStrategy() {
+class NoOpDerivationStrategy private constructor() : AbstractStatelessDerivationStrategy() {
+    override fun derivesVariants(): Boolean {
+        return false
     }
 
-    public static NoOpDerivationStrategy getInstance() {
-        return INSTANCE;
+    override fun derive(metadata: ModuleComponentResolveMetadata): ImmutableList<out ModuleConfigurationMetadata>? {
+        throw UnsupportedOperationException("This method should not have been called.")
     }
 
-    @Override
-    public boolean derivesVariants() {
-        return false;
-    }
-
-    @Override
-    public ImmutableList<? extends ModuleConfigurationMetadata> derive(ModuleComponentResolveMetadata metadata) {
-        throw new UnsupportedOperationException("This method should not have been called.");
+    companion object {
+        val instance: NoOpDerivationStrategy = NoOpDerivationStrategy()
     }
 }

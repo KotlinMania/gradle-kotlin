@@ -13,22 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.matching
 
-package org.gradle.api.internal.attributes.matching;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.ImmutableAttributesEntry
 
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-
-public interface AttributeMatcher {
-
+interface AttributeMatcher {
     /**
      * Determines whether the given candidate is compatible with the requested criteria.
      */
-    boolean isMatchingCandidate(ImmutableAttributes candidate, ImmutableAttributes requested);
+    fun isMatchingCandidate(candidate: ImmutableAttributes, requested: ImmutableAttributes): Boolean
 
     /**
      * Determines whether two candidates are mutually compatible.
@@ -36,50 +31,26 @@ public interface AttributeMatcher {
      * @return true if for each shared key in the provided attribute sets, the corresponding
      * attribute value in each set is compatible. false otherwise.
      */
-    boolean areMutuallyCompatible(ImmutableAttributes first, ImmutableAttributes second);
+    fun areMutuallyCompatible(first: ImmutableAttributes, second: ImmutableAttributes): Boolean
 
     /**
      * Determine if a candidate value compatible with the requested criteria
      * for a some attribute.
      */
-    <T> boolean isMatchingValue(Attribute<T> attribute, T candidate, T requested);
+    fun <T> isMatchingValue(attribute: Attribute<T?>, candidate: T?, requested: T?): Boolean
 
     /**
-     * Selects all matches from {@code candidates} that are compatible with the {@code requested}
+     * Selects all matches from `candidates` that are compatible with the `requested`
      * criteria attributes. Then, if there is more than one match, performs disambiguation to attempt
      * to reduce the set of matches to a more preferred subset.
      */
-    <T extends AttributeMatchingCandidate> List<T> matchMultipleCandidates(
-        List<? extends T> candidates,
-        ImmutableAttributes requested
-    );
+    fun <T : AttributeMatchingCandidate?> matchMultipleCandidates(
+        candidates: MutableList<out T>,
+        requested: ImmutableAttributes
+    ): MutableList<T?>?
 
     // TODO: Merge this with ResolutionCandidateAssessor
-    List<MatchingDescription<?>> describeMatching(ImmutableAttributes candidate, ImmutableAttributes requested);
+    fun describeMatching(candidate: ImmutableAttributes, requested: ImmutableAttributes): MutableList<MatchingDescription<*>>?
 
-    class MatchingDescription<T> {
-
-        private final ImmutableAttributesEntry<T> requested;
-        private final @Nullable ImmutableAttributesEntry<T> found;
-        private final boolean match;
-
-        public MatchingDescription(ImmutableAttributesEntry<T> requested, @Nullable ImmutableAttributesEntry<T> found, boolean match) {
-            this.requested = requested;
-            this.found = found;
-            this.match = match;
-        }
-
-        public ImmutableAttributesEntry<T> getRequested() {
-            return requested;
-        }
-
-        public @Nullable ImmutableAttributesEntry<T> getFound() {
-            return found;
-        }
-
-        public boolean isMatch() {
-            return match;
-        }
-
-    }
+    class MatchingDescription<T>(val requested: ImmutableAttributesEntry<T?>, val found: ImmutableAttributesEntry<T?>?, val isMatch: Boolean)
 }

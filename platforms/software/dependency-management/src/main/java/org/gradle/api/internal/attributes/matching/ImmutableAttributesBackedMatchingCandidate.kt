@@ -13,44 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.matching
 
-package org.gradle.api.internal.attributes.matching;
-
-import org.gradle.api.internal.attributes.ImmutableAttributes;
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
 /**
- * Wraps a standalone {@link ImmutableAttributes} so that it can participate in
+ * Wraps a standalone [ImmutableAttributes] so that it can participate in
  * attribute matching.
  */
-public class ImmutableAttributesBackedMatchingCandidate implements AttributeMatchingCandidate {
-
-    private final ImmutableAttributes attributes;
-
-    public ImmutableAttributesBackedMatchingCandidate(ImmutableAttributes attributes) {
-        this.attributes = attributes;
+class ImmutableAttributesBackedMatchingCandidate(private val attributes: ImmutableAttributes) : AttributeMatchingCandidate {
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
-    }
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (!(o instanceof ImmutableAttributesBackedMatchingCandidate)) {
-            return false;
+        if (o !is ImmutableAttributesBackedMatchingCandidate) {
+            return false
         }
 
-        ImmutableAttributesBackedMatchingCandidate that = (ImmutableAttributesBackedMatchingCandidate) o;
-        return attributes.equals(that.attributes);
+        val that = o
+        return attributes == that.attributes
     }
 
-    @Override
-    public int hashCode() {
-        return attributes.hashCode();
+    override fun hashCode(): Int {
+        return attributes.hashCode()
     }
-
 }

@@ -13,223 +13,224 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.NamedVariantIdentifier;
-import org.gradle.internal.component.external.descriptor.Configuration;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.gradle.internal.component.model.VariantGraphResolveMetadata;
-import org.gradle.internal.component.model.VariantIdentifier;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.NamedVariantIdentifier
+import org.gradle.internal.component.external.descriptor.Configuration
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.ModuleSources
+import org.gradle.internal.component.model.VariantGraphResolveMetadata
+import org.gradle.internal.component.model.VariantIdentifier
+import java.util.Optional
+import java.util.function.Function
+import java.util.stream.Collectors
 
 /**
- * Common base class for the lazy versions of {@link ModuleComponentResolveMetadata} implementations.
+ * Common base class for the lazy versions of [ModuleComponentResolveMetadata] implementations.
  *
- * The lazy part is about the application of {@link VariantMetadataRules} which are applied lazily
+ * The lazy part is about the application of [VariantMetadataRules] which are applied lazily
  * when configuration or variant data is required by consumers.
  *
- * This type hierarchy is used whenever the {@code ModuleComponentResolveMetadata} does not need to outlive
+ * This type hierarchy is used whenever the `ModuleComponentResolveMetadata` does not need to outlive
  * the build execution.
  */
-public abstract class AbstractLazyModuleComponentResolveMetadata extends AbstractModuleComponentResolveMetadata {
-    private final VariantMetadataRules variantMetadataRules;
-    private final ImmutableMap<String, Configuration> configurationDefinitions;
+abstract class AbstractLazyModuleComponentResolveMetadata : AbstractModuleComponentResolveMetadata {
+    @JvmField
+    val variantMetadataRules: VariantMetadataRules?
+    open val configurationDefinitions: ImmutableMap<String?, Configuration?>
 
     // Configurations are built on-demand, but only once.
-    private final Map<String, ModuleConfigurationMetadata> configurations = new HashMap<>();
+    private val configurations: MutableMap<String?, ModuleConfigurationMetadata?> = HashMap<String?, ModuleConfigurationMetadata?>()
 
-    private Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> graphVariants;
+    private var graphVariants: Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>? = null
 
-    protected AbstractLazyModuleComponentResolveMetadata(AbstractMutableModuleComponentResolveMetadata metadata) {
-        super(metadata);
-        this.configurationDefinitions = metadata.getConfigurationDefinitions();
-        this.variantMetadataRules = metadata.getVariantMetadataRules();
+    protected constructor(metadata: AbstractMutableModuleComponentResolveMetadata) : super(metadata) {
+        this.configurationDefinitions = metadata.getConfigurationDefinitions()
+        this.variantMetadataRules = metadata.variantMetadataRules
     }
 
     /**
      * Creates a copy of the given metadata
      */
-    protected AbstractLazyModuleComponentResolveMetadata(AbstractLazyModuleComponentResolveMetadata metadata, ModuleSources sources, VariantDerivationStrategy variantDerivationStrategy) {
-        super(metadata, sources, variantDerivationStrategy);
-        this.configurationDefinitions = metadata.configurationDefinitions;
-        this.variantMetadataRules = metadata.variantMetadataRules;
+    protected constructor(metadata: AbstractLazyModuleComponentResolveMetadata, sources: ModuleSources?, variantDerivationStrategy: VariantDerivationStrategy?) : super(
+        metadata,
+        sources,
+        variantDerivationStrategy
+    ) {
+        this.configurationDefinitions = metadata.configurationDefinitions
+        this.variantMetadataRules = metadata.variantMetadataRules
     }
 
     /**
      * Clear any cached state, for the case where the inputs are invalidated.
      * This only happens when constructing a copy
      */
-    protected void copyCachedState(AbstractLazyModuleComponentResolveMetadata metadata, boolean copyGraphVariants) {
+    protected fun copyCachedState(metadata: AbstractLazyModuleComponentResolveMetadata, copyGraphVariants: Boolean) {
         // Copy built-on-demand state
-        metadata.copyCachedConfigurations(this.configurations);
+        metadata.copyCachedConfigurations(this.configurations)
         if (copyGraphVariants) {
-            this.graphVariants = metadata.graphVariants;
+            this.graphVariants = metadata.graphVariants
         }
     }
 
-    private synchronized void copyCachedConfigurations(Map<String, ModuleConfigurationMetadata> target) {
-        target.putAll(configurations);
+    @Synchronized
+    private fun copyCachedConfigurations(target: MutableMap<String?, ModuleConfigurationMetadata?>) {
+        target.putAll(configurations)
     }
 
-    @Override
-    public VariantMetadataRules getVariantMetadataRules() {
-        return variantMetadataRules;
-    }
-
-    public ImmutableMap<String, Configuration> getConfigurationDefinitions() {
-        return configurationDefinitions;
-    }
-
-    private Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> buildVariantsForGraphTraversal() {
-        ImmutableList<? extends ComponentVariant> variants = getVariants();
+    private fun buildVariantsForGraphTraversal(): Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>? {
+        val variants: ImmutableList<out ComponentVariant?> = variants!!
         if (variants.isEmpty()) {
-            return addVariantsByRule(maybeDeriveVariants());
+            return addVariantsByRule(maybeDeriveVariants())
         }
-        ImmutableList.Builder<ExternalModuleVariantGraphResolveMetadata> configurations = new ImmutableList.Builder<>();
-        for (ComponentVariant variant : variants) {
-            configurations.add(new LazyVariantBackedConfigurationMetadata(getId(), variant, getAttributes(), getAttributesFactory(), variantMetadataRules));
+        val configurations = ImmutableList.Builder<ExternalModuleVariantGraphResolveMetadata?>()
+        for (variant in variants) {
+            configurations.add(LazyVariantBackedConfigurationMetadata(getId(), variant, getAttributes(), attributesFactory, variantMetadataRules))
         }
-        return addVariantsByRule(Optional.of(configurations.build()));
-
+        return addVariantsByRule(Optional.of<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>(configurations.build()))
     }
 
-    private Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> addVariantsByRule(Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> variants) {
-        if (variantMetadataRules.getAdditionalVariants().isEmpty()) {
-            return variants;
+    private fun addVariantsByRule(variants: Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>): Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>? {
+        if (variantMetadataRules!!.additionalVariants.isEmpty()) {
+            return variants
         }
-        Map<String, ExternalModuleVariantGraphResolveMetadata> variantsByName;
-        ImmutableList.Builder<ExternalModuleVariantGraphResolveMetadata> builder = new ImmutableList.Builder<>();
+        val variantsByName: MutableMap<String?, ExternalModuleVariantGraphResolveMetadata?>?
+        val builder = ImmutableList.Builder<ExternalModuleVariantGraphResolveMetadata?>()
         if (variants.isPresent()) {
-            variantsByName = variants.get().stream().collect(Collectors.toMap(VariantGraphResolveMetadata::getName, Function.identity()));
-            builder.addAll(variants.get());
+            variantsByName = variants.get().stream().collect(Collectors.toMap({ obj: VariantGraphResolveMetadata? -> obj!!.getName() }, Function.identity()))
+            builder.addAll(variants.get())
         } else {
-            variantsByName = Collections.emptyMap();
+            variantsByName = mutableMapOf<String?, ExternalModuleVariantGraphResolveMetadata?>()
         }
-        for (AdditionalVariant additionalVariant : variantMetadataRules.getAdditionalVariants()) {
-            String baseName = additionalVariant.getBase();
-            ExternalModuleVariantGraphResolveMetadata base = null;
+        for (additionalVariant in variantMetadataRules.additionalVariants) {
+            val baseName = additionalVariant.getBase()
+            var base: ExternalModuleVariantGraphResolveMetadata? = null
             if (baseName != null) {
                 if (variants.isPresent()) {
-                    base = variantsByName.get(baseName);
-                    if (!additionalVariant.isLenient() && !(base instanceof ModuleConfigurationMetadata)) {
-                        throw new InvalidUserDataException("Variant '" + baseName + "' not defined in module " + getId().getDisplayName());
+                    base = variantsByName.get(baseName)
+                    if (!additionalVariant.isLenient() && base !is ModuleConfigurationMetadata) {
+                        throw InvalidUserDataException("Variant '" + baseName + "' not defined in module " + getId()!!.getDisplayName())
                     }
                 } else {
-                    base = getConfiguration(baseName);
-                    if (!additionalVariant.isLenient() && !(base instanceof ModuleConfigurationMetadata)) {
-                        throw new InvalidUserDataException("Configuration '" + baseName + "' not defined in module " + getId().getDisplayName());
+                    base = getConfiguration(baseName)
+                    if (!additionalVariant.isLenient() && base !is ModuleConfigurationMetadata) {
+                        throw InvalidUserDataException("Configuration '" + baseName + "' not defined in module " + getId()!!.getDisplayName())
                     }
                 }
             }
-            if (baseName == null || base instanceof ModuleConfigurationMetadata) {
-                VariantIdentifier id = new NamedVariantIdentifier(getId(), additionalVariant.getName());
-                ModuleConfigurationMetadata configurationMetadata = new LazyRuleAwareWithBaseConfigurationMetadata(additionalVariant.getName(), id, getId(), (ModuleConfigurationMetadata) base, getAttributesFactory(), getAttributes(), variantMetadataRules, constructVariantExcludes(base), false);
-                builder.add(configurationMetadata);
+            if (baseName == null || base is ModuleConfigurationMetadata) {
+                val id: VariantIdentifier = NamedVariantIdentifier(getId()!!, additionalVariant.getName())
+                val configurationMetadata: ModuleConfigurationMetadata = LazyRuleAwareWithBaseConfigurationMetadata(
+                    additionalVariant.getName(),
+                    id,
+                    getId(),
+                    base as ModuleConfigurationMetadata?,
+                    attributesFactory,
+                    getAttributes(),
+                    variantMetadataRules,
+                    constructVariantExcludes(base),
+                    false
+                )
+                builder.add(configurationMetadata)
             }
         }
-        return Optional.of(builder.build());
+        return Optional.of<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>(builder.build())
     }
 
-    @Override
-    public synchronized List<? extends ExternalModuleVariantGraphResolveMetadata> getVariantsForGraphTraversal() {
+    @Synchronized
+    override fun getVariantsForGraphTraversal(): MutableList<out ExternalModuleVariantGraphResolveMetadata?> {
         if (graphVariants == null) {
-            graphVariants = buildVariantsForGraphTraversal();
+            graphVariants = buildVariantsForGraphTraversal()
         }
-        return graphVariants.orElse(Collections.emptyList());
+        return graphVariants!!.orElse(mutableListOf<ExternalModuleVariantGraphResolveMetadata?>())!!
     }
 
-    @Override
-    public Set<String> getConfigurationNames() {
-        return configurationDefinitions.keySet();
+    override fun getConfigurationNames(): MutableSet<String?> {
+        return configurationDefinitions.keys
     }
 
-    @Override
-    public synchronized ModuleConfigurationMetadata getConfiguration(final String name) {
-        ModuleConfigurationMetadata populated = configurations.get(name);
+    @Synchronized
+    override fun getConfiguration(name: String?): ModuleConfigurationMetadata? {
+        val populated = configurations.get(name)
         if (populated != null) {
-            return populated;
+            return populated
         }
-        ModuleConfigurationMetadata md = populateConfigurationFromDescriptor(name, configurationDefinitions);
-        configurations.put(name, md);
-        return md;
+        val md = populateConfigurationFromDescriptor(name, configurationDefinitions)
+        configurations.put(name, md)
+        return md
     }
 
-    protected ModuleConfigurationMetadata populateConfigurationFromDescriptor(String name, Map<String, Configuration> configurationDefinitions) {
-        Configuration descriptorConfiguration = configurationDefinitions.get(name);
+    protected open fun populateConfigurationFromDescriptor(name: String?, configurationDefinitions: MutableMap<String?, Configuration?>): ModuleConfigurationMetadata? {
+        val descriptorConfiguration = configurationDefinitions.get(name)
         if (descriptorConfiguration == null) {
-            return null;
+            return null
         }
 
-        ImmutableSet<String> hierarchy = constructHierarchy(descriptorConfiguration);
-        boolean transitive = descriptorConfiguration.isTransitive();
-        boolean visible = descriptorConfiguration.isVisible();
-        return createConfiguration(getId(), name, transitive, visible, hierarchy, variantMetadataRules);
+        val hierarchy: ImmutableSet<String?> = constructHierarchy(descriptorConfiguration)
+        val transitive = descriptorConfiguration.isTransitive()
+        val visible = descriptorConfiguration.isVisible()
+        return createConfiguration(getId(), name, transitive, visible, hierarchy, variantMetadataRules)
     }
 
-    private ImmutableSet<String> constructHierarchy(Configuration descriptorConfiguration) {
-        if (descriptorConfiguration.getExtendsFrom().isEmpty()) {
-            return ImmutableSet.of(descriptorConfiguration.getName());
+    private fun constructHierarchy(descriptorConfiguration: Configuration): ImmutableSet<String?> {
+        if (descriptorConfiguration.extendsFrom.isEmpty()) {
+            return ImmutableSet.of<String?>(descriptorConfiguration.name)
         }
-        ImmutableSet.Builder<String> accumulator = new ImmutableSet.Builder<>();
-        populateHierarchy(descriptorConfiguration, accumulator);
-        return accumulator.build();
+        val accumulator = ImmutableSet.Builder<String?>()
+        populateHierarchy(descriptorConfiguration, accumulator)
+        return accumulator.build()
     }
 
-    private void populateHierarchy(Configuration metadata, ImmutableSet.Builder<String> accumulator) {
-        accumulator.add(metadata.getName());
-        for (String parentName : metadata.getExtendsFrom()) {
-            Configuration parent = configurationDefinitions.get(parentName);
-            populateHierarchy(parent, accumulator);
+    private fun populateHierarchy(metadata: Configuration, accumulator: ImmutableSet.Builder<String?>) {
+        accumulator.add(metadata.name)
+        for (parentName in metadata.extendsFrom) {
+            val parent = configurationDefinitions.get(parentName)
+            populateHierarchy(parent!!, accumulator)
         }
     }
 
-    private ImmutableList<ExcludeMetadata> constructVariantExcludes(ExternalModuleVariantGraphResolveMetadata base) {
+    private fun constructVariantExcludes(base: ExternalModuleVariantGraphResolveMetadata?): ImmutableList<ExcludeMetadata?> {
         if (base == null) {
-            return ImmutableList.of();
+            return ImmutableList.of<ExcludeMetadata?>()
         }
-        return ImmutableList.copyOf(base.getExcludes());
+        return ImmutableList.copyOf<ExcludeMetadata?>(base.getExcludes())
     }
 
     /**
-     * Creates a {@link org.gradle.internal.component.model.ConfigurationMetadata} implementation for this component.
+     * Creates a [org.gradle.internal.component.model.ConfigurationMetadata] implementation for this component.
      */
-    protected abstract DefaultConfigurationMetadata createConfiguration(ModuleComponentIdentifier componentId, String name, boolean transitive, boolean visible, ImmutableSet<String> hierarchy, VariantMetadataRules componentMetadataRules);
+    protected abstract fun createConfiguration(
+        componentId: ModuleComponentIdentifier?,
+        name: String?,
+        transitive: Boolean,
+        visible: Boolean,
+        hierarchy: ImmutableSet<String?>?,
+        componentMetadataRules: VariantMetadataRules?
+    ): DefaultConfigurationMetadata?
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
         if (!super.equals(o)) {
-            return false;
+            return false
         }
 
-        AbstractLazyModuleComponentResolveMetadata that = (AbstractLazyModuleComponentResolveMetadata) o;
-        return Objects.equal(configurationDefinitions, that.configurationDefinitions);
+        val that = o as AbstractLazyModuleComponentResolveMetadata
+        return Objects.equal(configurationDefinitions, that.configurationDefinitions)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(super.hashCode(), configurationDefinitions);
+    override fun hashCode(): Int {
+        return Objects.hashCode(super.hashCode(), configurationDefinitions)
     }
 }

@@ -13,39 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.catalog;
+package org.gradle.api.internal.catalog
 
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
 
-public class VersionModel extends AbstractContextAwareModel {
-    private final ImmutableVersionConstraint version;
-
-    public VersionModel(ImmutableVersionConstraint version, @Nullable String context) {
-        super(context);
-        this.version = version;
-    }
-
-    public ImmutableVersionConstraint getVersion() {
-        return version;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+class VersionModel(val version: ImmutableVersionConstraint, context: String?) : AbstractContextAwareModel(context) {
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        VersionModel that = (VersionModel) o;
+        val that = o as VersionModel
 
-        return version.equals(that.version);
+        return version == that.version
     }
 
-    @Override
-    public int hashCode() {
-        return version.hashCode();
+    override fun hashCode(): Int {
+        return version.hashCode()
     }
 }

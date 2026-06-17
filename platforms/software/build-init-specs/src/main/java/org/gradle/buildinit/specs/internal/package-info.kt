@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * Internal classes used to load {@link org.gradle.buildinit.specs.BuildInitSpec BuildInitSpec}s contributed
+ * Internal classes used to load [BuildInitSpec][org.gradle.buildinit.specs.BuildInitSpec]s contributed
  * by plugins and use them to generate new builds.
  */
-@NullMarked
-package org.gradle.buildinit.specs.internal;
+package org.gradle.buildinit.specs.internal
 
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.api.logging.Logger.info
+

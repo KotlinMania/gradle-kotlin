@@ -50,8 +50,8 @@ public class DependencyManagementBuildSessionScopeServices implements ServiceReg
     void configure(ServiceRegistration registration) {
         registration.add(DependenciesAccessorsWorkspaceProvider.class);
         registration.add(AttributeValueIsolator.class);
-        registration.add(AttributesFactory.class, DefaultAttributesFactory.class);
-        registration.add(MavenVariantAttributesFactory.class, DefaultMavenVariantAttributesFactory.class);
+        registration.<DefaultAttributesFactory>add(AttributesFactory.class, DefaultAttributesFactory.class);
+        registration.<DefaultMavenVariantAttributesFactory>add(MavenVariantAttributesFactory.class, DefaultMavenVariantAttributesFactory.class);
         registration.add(DesugaredAttributeContainerSerializer.class);
         registration.add(MavenMutableModuleMetadataFactory.class);
         registration.add(IvyMutableModuleMetadataFactory.class);
@@ -59,7 +59,7 @@ public class DependencyManagementBuildSessionScopeServices implements ServiceReg
         registration.add(ImmutableAttributesSchemaFactory.class);
         registration.add(ImmutableArtifactTypeRegistryFactory.class);
         registration.add(AttributeSchemaServices.class);
-        registration.add(ComponentSelectionDescriptorFactory.class, CachingComponentSelectionDescriptorFactory.class);
+        registration.<CachingComponentSelectionDescriptorFactory>add(ComponentSelectionDescriptorFactory.class, CachingComponentSelectionDescriptorFactory.class);
     }
 
     @Provides
@@ -80,7 +80,7 @@ public class DependencyManagementBuildSessionScopeServices implements ServiceReg
     @Provides
     ComponentSelectorNotationConverter createComponentSelectorFactory(ImmutableModuleIdentifierFactory moduleIdentifierFactory, InMemoryCacheFactory cacheFactory) {
         NotationParser<Object, ComponentSelector> delegate = NotationParserBuilder
-            .toType(ComponentSelector.class)
+            .<ComponentSelector>toType(ComponentSelector.class)
             .converter(new CachingNotationConverter<>(new ModuleSelectorStringNotationConverter(moduleIdentifierFactory), cacheFactory))
             .toComposite();
 

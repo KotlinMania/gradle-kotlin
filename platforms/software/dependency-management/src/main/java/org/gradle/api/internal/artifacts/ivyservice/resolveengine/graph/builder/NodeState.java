@@ -409,7 +409,7 @@ public class NodeState implements DependencyGraphNode {
             // We may have registered this node as pending if it had constraints.
             // Let's clear that state since it is no longer part of selection
             for (EdgeState edge : cachedFilteredEdges) {
-                if (edge.getDependencyMetadata().isConstraint()) {
+                if (edge.getDependencyMetadata().isConstraint) {
                     ModuleResolveState targetModule = resolveState.getModule(edge.getDependencyState().getModuleIdentifier(resolveState.getComponentSelectorConverter()));
                     if (targetModule.isPending()) {
                         targetModule.unregisterConstraintProvider(this);
@@ -438,7 +438,7 @@ public class NodeState implements DependencyGraphNode {
         PersistentSet<ModuleIdentifier> strictVersionsSet = PersistentSet.of();
         for (EdgeState edge : edges(resolutionFilter)) {
             registerOutgoingEdge(resolutionFilter, ancestorsStrictVersions, discoveredEdges, edge);
-            strictVersionsSet = maybeCollectStrictVersions(strictVersionsSet, edge.getDependencyMetadata().getSelector());
+            strictVersionsSet = maybeCollectStrictVersions(strictVersionsSet, edge.getDependencyMetadata().selector);
         }
 
         // If there are 'pending' dependencies that share a target with any of these outgoing edges,
@@ -454,7 +454,7 @@ public class NodeState implements DependencyGraphNode {
         Collection<EdgeState> discoveredEdges,
         EdgeState dependencyEdge
     ) {
-        boolean constraint = dependencyEdge.getDependencyMetadata().isConstraint();
+        boolean constraint = dependencyEdge.getDependencyMetadata().isConstraint;
         ModuleIdentifier moduleId = dependencyEdge.getDependencyState().getModuleIdentifier(resolveState.getComponentSelectorConverter());
         ModuleResolveState module = resolveState.getModule(moduleId);
 
@@ -544,20 +544,20 @@ public class NodeState implements DependencyGraphNode {
 
     private EdgeState createEdge(DependencyMetadata dependency) {
         Try<SubstitutionResult> trySubstitution = resolveState.getDependencySubstitutionApplicator().applySubstitutions(
-            dependency.getSelector(),
-            dependency.getArtifacts()
+            dependency.selector,
+            dependency.artifacts
         );
 
         if (!trySubstitution.isSuccessful) {
             // Substitution failed
-            ModuleVersionResolveException resolveFailure = new ModuleVersionResolveException(dependency.getSelector(), trySubstitution.failure.get());
-            return new EdgeState(this, dependency, dependency.getSelector(), ImmutableList.of(), resolveFailure, resolveState);
+            ModuleVersionResolveException resolveFailure = new ModuleVersionResolveException(dependency.selector, trySubstitution.failure.get());
+            return new EdgeState(this, dependency, dependency.selector, ImmutableList.of(), resolveFailure, resolveState);
         }
 
         // We performed substitution
         SubstitutionResult substitution = trySubstitution.get();
         DependencyMetadata updatedMetadata = metadataWithSubstitution(dependency, substitution);
-        return new EdgeState(this, updatedMetadata, dependency.getSelector(), substitution.getRuleDescriptors(), null, resolveState);
+        return new EdgeState(this, updatedMetadata, dependency.selector, substitution.getRuleDescriptors(), null, resolveState);
     }
 
     private static DependencyMetadata metadataWithSubstitution(DependencyMetadata dependency, SubstitutionResult substitution) {
@@ -567,7 +567,7 @@ public class NodeState implements DependencyGraphNode {
             return dependency;
         }
 
-        ComponentSelector actualTarget = target != null ? target : dependency.getSelector();
+        ComponentSelector actualTarget = target != null ? target : dependency.selector;
         return artifacts == null
             ? dependency.withTarget(actualTarget)
             : dependency.withTargetAndArtifacts(actualTarget, artifacts);
@@ -655,7 +655,7 @@ public class NodeState implements DependencyGraphNode {
 
         // If we were substituted, apply the exclusion to the original selector as well.
         ComponentSelector requestedSelector = edgeState.getDependencyState().getRequested();
-        if (requestedSelector != edgeState.getDependencyState().getDependency().getSelector()) {
+        if (requestedSelector != edgeState.getDependencyState().getDependency().selector) {
             return excludeSpec.excludes(componentSelectorConverter.getModuleVersionId(requestedSelector).getModule());
         }
 
@@ -728,7 +728,7 @@ public class NodeState implements DependencyGraphNode {
      * endorsed strict versions from their parent.
      */
     private void requeueChildrenOfEndorsingParent(EdgeState incomingEdge) {
-        if (incomingEdge.getDependencyMetadata().isEndorsingStrictVersions()) {
+        if (incomingEdge.getDependencyMetadata().isEndorsingStrictVersions) {
             NodeState sourceNode = incomingEdge.getFrom();
             sourceNode.invalidateEndorsedStrictVersions();
             for (EdgeState edge : sourceNode.getOutgoingEdges()) {
@@ -990,7 +990,7 @@ public class NodeState implements DependencyGraphNode {
         List<EdgeState> edges = edges(moduleResolutionFilter);
         PersistentSet<ModuleIdentifier> constraintsSet = PersistentSet.of();
         for (EdgeState edge : edges) {
-            constraintsSet = maybeCollectStrictVersions(constraintsSet, edge.getDependencyMetadata().getSelector());
+            constraintsSet = maybeCollectStrictVersions(constraintsSet, edge.getDependencyMetadata().selector);
         }
         storeOwnStrictVersions(constraintsSet);
     }
@@ -1020,7 +1020,7 @@ public class NodeState implements DependencyGraphNode {
 
         if (!newStrictVersions.equals(existingOwnStrictVersions)) {
             for (EdgeState incomingEdge : incomingEdges) {
-                if (incomingEdge.getDependencyMetadata().isEndorsingStrictVersions()) {
+                if (incomingEdge.getDependencyMetadata().isEndorsingStrictVersions) {
                     // Our own strict versions contribute to the endorsed strict versions of
                     // ancestors that endorse us.
                     incomingEdge.getFrom().invalidateEndorsedStrictVersions();
@@ -1122,7 +1122,7 @@ public class NodeState implements DependencyGraphNode {
         // endorses. For this reason, we inherit a parent's endorsed strict versions only if we may
         // not be the source of that strict version.
         StrictVersionConstraints filteredEndorsedStrictVersions;
-        if (dependencyEdge.getDependencyMetadata().isEndorsingStrictVersions()) {
+        if (dependencyEdge.getDependencyMetadata().isEndorsingStrictVersions) {
             filteredEndorsedStrictVersions = parentEndorsedStrictVersions.minus(ownStrictVersions);
         } else {
             filteredEndorsedStrictVersions = parentEndorsedStrictVersions;
@@ -1175,7 +1175,7 @@ public class NodeState implements DependencyGraphNode {
     private StrictVersionConstraints computeEndorsedStrictVersions() {
         StrictVersionConstraints endorsedStrictVersions = StrictVersionConstraints.EMPTY;
         for (EdgeState edgeState : outgoingEdges) {
-            if (edgeState.getDependencyMetadata().isEndorsingStrictVersions()) {
+            if (edgeState.getDependencyMetadata().isEndorsingStrictVersions) {
                 for (NodeState endorsedNode : edgeState.getTargetNodes()) {
                     if (endorsedNode.ownStrictVersions == null) {
                         // The node's dependencies were not yet visited. Compute them now.

@@ -13,428 +13,390 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.runtimeshaded
 
-package org.gradle.api.internal.runtimeshaded;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
-import org.gradle.api.GradleException;
-import org.gradle.internal.classpath.ClasspathBuilder;
-import org.gradle.internal.classpath.ClasspathEntryVisitor;
-import org.gradle.internal.classpath.ClasspathWalker;
-import org.gradle.internal.concurrent.MultiProducerSingleConsumerProcessor;
-import org.gradle.internal.installation.GradleRuntimeShadedJarDetector;
-import org.gradle.internal.logging.progress.ProgressLogger;
-import org.gradle.internal.logging.progress.ProgressLoggerFactory;
-import org.gradle.internal.operations.BuildOperationContext;
-import org.gradle.internal.operations.BuildOperationDescriptor;
-import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.progress.PercentageProgressFormatter;
-import org.gradle.model.internal.asm.AsmConstants;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.ClassRemapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import static java.util.Arrays.asList;
+import com.google.common.base.Joiner
+import com.google.common.collect.Iterables
+import org.gradle.api.Action
+import org.gradle.api.GradleException
+import org.gradle.internal.classpath.ClasspathBuilder
+import org.gradle.internal.classpath.ClasspathEntryVisitor
+import org.gradle.internal.classpath.ClasspathWalker
+import org.gradle.internal.concurrent.MultiProducerSingleConsumerProcessor
+import org.gradle.internal.installation.GradleRuntimeShadedJarDetector
+import org.gradle.internal.logging.progress.ProgressLogger
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
+import org.gradle.internal.operations.BuildOperationContext
+import org.gradle.internal.operations.BuildOperationDescriptor
+import org.gradle.internal.operations.BuildOperationExecutor
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import org.gradle.internal.progress.PercentageProgressFormatter
+import org.gradle.model.internal.asm.AsmConstants
+import org.jspecify.annotations.NullMarked
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.commons.ClassRemapper
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.Arrays
+import java.util.Objects
+import java.util.PriorityQueue
+import java.util.function.Consumer
 
 @NullMarked
-class RuntimeShadedJarCreator {
-
-    private static final int ADDITIONAL_PROGRESS_STEPS = 2;
-    private static final String SERVICES_DIR_PREFIX = "META-INF/services/";
-    private static final String CLASS_DESC = "Ljava/lang/Class;";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeShadedJarCreator.class);
-
-    private final ProgressLoggerFactory progressLoggerFactory;
-    private final BuildOperationExecutor buildOperationExecutor;
-    private final ImplementationDependencyRelocator remapper;
-    private final ClasspathWalker classpathWalker;
-    private final ClasspathBuilder classpathBuilder;
-
-    public RuntimeShadedJarCreator(
-        ProgressLoggerFactory progressLoggerFactory,
-        BuildOperationExecutor buildOperationExecutor,
-        ImplementationDependencyRelocator remapper,
-        ClasspathWalker classpathWalker,
-        ClasspathBuilder classpathBuilder
-    ) {
-        this.progressLoggerFactory = progressLoggerFactory;
-        this.buildOperationExecutor = buildOperationExecutor;
-        this.remapper = remapper;
-        this.classpathWalker = classpathWalker;
-        this.classpathBuilder = classpathBuilder;
-    }
-
-    public void create(RuntimeShadedJarType type, final File outputJar, final Collection<? extends File> files) {
-        LOGGER.info("Generating " + type.getDisplayName() + ": " + outputJar.getAbsolutePath());
-        ProgressLogger progressLogger = progressLoggerFactory.newOperation(RuntimeShadedJarCreator.class);
-        progressLogger.setDescription("Generating " + type.getDisplayName());
-        progressLogger.started();
+internal class RuntimeShadedJarCreator(
+    private val progressLoggerFactory: ProgressLoggerFactory,
+    private val buildOperationExecutor: BuildOperationExecutor,
+    private val remapper: ImplementationDependencyRelocator,
+    private val classpathWalker: ClasspathWalker,
+    private val classpathBuilder: ClasspathBuilder
+) {
+    fun create(type: RuntimeShadedJarType, outputJar: File, files: MutableCollection<out File>) {
+        LOGGER.info("Generating " + type.getDisplayName() + ": " + outputJar.getAbsolutePath())
+        val progressLogger = progressLoggerFactory.newOperation(RuntimeShadedJarCreator::class.java)
+        progressLogger!!.setDescription("Generating " + type.getDisplayName())
+        progressLogger.started()
         try {
-            createFatJar(outputJar, files, progressLogger);
+            createFatJar(outputJar, files, progressLogger)
         } finally {
-            progressLogger.completed();
+            progressLogger.completed()
         }
     }
 
-    private void createFatJar(final File outputJar, final Collection<? extends File> files, final ProgressLogger progressLogger) {
-        classpathBuilder.jar(outputJar, builder -> processFiles(builder, files, progressLogger));
+    private fun createFatJar(outputJar: File, files: MutableCollection<out File>, progressLogger: ProgressLogger) {
+        classpathBuilder.jar(outputJar, ClasspathBuilder.Action { builder: ClasspathBuilder.EntryBuilder? -> processFiles(builder!!, files, progressLogger) })
     }
 
-    private void processFiles(ClasspathBuilder.EntryBuilder builder, Collection<? extends File> files, ProgressLogger progressLogger) throws IOException {
-        PercentageProgressFormatter progressFormatter = new PercentageProgressFormatter("Generating", Iterables.size(files) + ADDITIONAL_PROGRESS_STEPS);
+    @Throws(IOException::class)
+    private fun processFiles(builder: ClasspathBuilder.EntryBuilder, files: MutableCollection<out File>, progressLogger: ProgressLogger) {
+        val progressFormatter = PercentageProgressFormatter("Generating", Iterables.size(files) + ADDITIONAL_PROGRESS_STEPS)
 
-        Map<String, List<String>> services = new LinkedHashMap<>();
-        MultiProducerSingleConsumerProcessor<InputFile> writer = createShadedJarWriter(builder, progressLogger, progressFormatter, services);
+        val services: MutableMap<String, MutableList<String>> = LinkedHashMap<String, MutableList<String>>()
+        val writer: MultiProducerSingleConsumerProcessor<InputFile> = createShadedJarWriter(builder, progressLogger, progressFormatter, services)
 
-        writer.start();
+        writer.start()
         try {
-            buildOperationExecutor.runAll(queue -> {
-                int index = 0;
-                for (File file : files) {
-                    InputFile inputFile = new InputFile(file, index++);
-                    queue.add(new RunnableBuildOperation() {
-                        @Override
-                        public void run(BuildOperationContext context) throws Exception {
-                            classpathWalker.visit(inputFile.file, entry -> processEntry(inputFile, entry));
-                            writer.submit(inputFile);
+            buildOperationExecutor.runAll<RunnableBuildOperation>(Action { queue: BuildOperationQueue<RunnableBuildOperation>? ->
+                var index = 0
+                for (file in files) {
+                    val inputFile = InputFile(file, index++)
+                    queue!!.add(object : RunnableBuildOperation {
+                        @Throws(Exception::class)
+                        override fun run(context: BuildOperationContext) {
+                            classpathWalker.visit(inputFile.file, ClasspathEntryVisitor { entry: ClasspathEntryVisitor.Entry? -> processEntry(inputFile, entry!!) })
+                            writer.submit(inputFile)
                         }
 
-                        @Override
-                        public BuildOperationDescriptor.Builder description() {
-                            return BuildOperationDescriptor.displayName("Visiting " + file.getName());
+                        override fun description(): BuildOperationDescriptor.Builder {
+                            return@runAll BuildOperationDescriptor.displayName("Visiting " + file.getName())
                         }
-                    });
+                    })
                 }
-            });
+            })
         } finally {
-            writer.stop(Duration.ofMinutes(5));
+            writer.stop(Duration.ofMinutes(5))
         }
 
-        writeServiceFiles(builder, services);
-        progressLogger.progress(progressFormatter.incrementAndGetProgress());
+        writeServiceFiles(builder, services)
+        progressLogger.progress(progressFormatter.incrementAndGetProgress())
 
-        writeIdentifyingMarkerFile(builder);
-        progressLogger.progress(progressFormatter.incrementAndGetProgress());
+        writeIdentifyingMarkerFile(builder)
+        progressLogger.progress(progressFormatter.incrementAndGetProgress())
     }
 
     /**
      * The processed and remapped contents of a file that is to be included
      * in the relocated jar.
      */
-    private static final class InputFile implements Comparable<InputFile> {
+    private class InputFile(private val file: File, val index: Int) : Comparable<InputFile> {
+        private val names: MutableList<String>
+        private val contents: MutableList<ByteArray>
+        val services: MutableMap<String, MutableList<String>>
 
-        private final int index;
-        private final File file;
-        private final List<String> names;
-        private final List<byte[]> contents;
-        private final Map<String, List<String>> services;
-
-        public InputFile(File file, int index) {
-            this.file = file;
-            this.index = index;
-
-            this.names = new ArrayList<>();
-            this.contents = new ArrayList<>();
-            this.services = new LinkedHashMap<>();
+        init {
+            this.names = ArrayList<String>()
+            this.contents = ArrayList<ByteArray>()
+            this.services = LinkedHashMap<String, MutableList<String>>()
         }
 
-        public void addServiceProviders(String serviceType, List<String> providers) {
-            services.computeIfAbsent(serviceType, k -> new ArrayList<>()).addAll(providers);
-        }
-
-        public Map<String, List<String>> getServices() {
-            return services;
+        fun addServiceProviders(serviceType: String, providers: MutableList<String>) {
+            services.computeIfAbsent(serviceType) { k: String? -> ArrayList<String?>() }.addAll(providers)
         }
 
         /**
          * Put a new entry into the remapped result.
          */
-        public void put(String name, byte[] content) {
-            names.add(name);
-            contents.add(content);
+        fun put(name: String, content: ByteArray) {
+            names.add(name)
+            contents.add(content)
         }
 
-        public void forEachEntry(EntryConsumer consumer) throws IOException {
-            for (int i = 0; i < names.size(); i++) {
-                String name = names.get(i);
-                byte[] content = contents.get(i);
-                consumer.accept(name, content);
+        @Throws(IOException::class)
+        fun forEachEntry(consumer: EntryConsumer) {
+            for (i in names.indices) {
+                val name = names.get(i)
+                val content = contents.get(i)
+                consumer.accept(name, content)
             }
         }
 
-        public int getIndex() {
-            return index;
+        override fun compareTo(o: InputFile): Int {
+            return Integer.compare(index, o.index)
         }
 
-        @Override
-        public int compareTo(InputFile o) {
-            return Integer.compare(index, o.index);
-        }
-
-        interface EntryConsumer {
-            void accept(String name, byte[] content) throws IOException;
-        }
-
-    }
-
-    private static MultiProducerSingleConsumerProcessor<InputFile> createShadedJarWriter(
-        ClasspathBuilder.EntryBuilder builder,
-        ProgressLogger progressLogger,
-        PercentageProgressFormatter progressFormatter,
-        Map<String, List<String>> services
-    ) {
-        return new MultiProducerSingleConsumerProcessor<>("shaded jar writer", new Consumer<InputFile>() {
-            private int index = 0;
-            private final PriorityQueue<InputFile> allProcessedFiles = new PriorityQueue<>();
-            private final Set<String> seenPaths = new HashSet<>();
-
-            @Override
-            public void accept(InputFile processedFile) {
-                allProcessedFiles.add(processedFile);
-
-                InputFile toProcess;
-                while (!allProcessedFiles.isEmpty() && (toProcess = allProcessedFiles.peek()).getIndex() == index) {
-                    try {
-                        progressLogger.progress(progressFormatter.getProgress());
-                        toProcess.forEachEntry((name, content) -> {
-                            if (seenPaths.add(name)) {
-                                builder.put(name, content);
-                            }
-                        });
-                        for (Map.Entry<String, List<String>> entry : toProcess.getServices().entrySet()) {
-                            services.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).addAll(entry.getValue());
-                        }
-                        progressFormatter.increment();
-                        index++;
-                        allProcessedFiles.poll();
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to write shaded jar", e);
-                    }
-                }
-            }
-        });
-    }
-
-    private void writeServiceFiles(ClasspathBuilder.EntryBuilder builder, Map<String, List<String>> services) throws IOException {
-        for (Map.Entry<String, List<String>> service : services.entrySet()) {
-            String allProviders = Joiner.on("\n").join(service.getValue());
-            builder.put(SERVICES_DIR_PREFIX + service.getKey(), allProviders.getBytes(StandardCharsets.UTF_8));
+        internal interface EntryConsumer {
+            @Throws(IOException::class)
+            fun accept(name: String, content: ByteArray)
         }
     }
 
-    private void writeIdentifyingMarkerFile(ClasspathBuilder.EntryBuilder builder) throws IOException {
-        builder.put(GradleRuntimeShadedJarDetector.MARKER_FILENAME, new byte[0]);
+    @Throws(IOException::class)
+    private fun writeServiceFiles(builder: ClasspathBuilder.EntryBuilder, services: MutableMap<String, MutableList<String>>) {
+        for (service in services.entries) {
+            val allProviders = Joiner.on("\n").join(service.value)
+            builder.put(SERVICES_DIR_PREFIX + service.key, allProviders.toByteArray(StandardCharsets.UTF_8))
+        }
     }
 
-    private void processEntry(InputFile builder, ClasspathEntryVisitor.Entry entry) throws IOException {
-        String name = entry.getName();
-        if (name.equals("META-INF/MANIFEST.MF")) {
-            return;
+    @Throws(IOException::class)
+    private fun writeIdentifyingMarkerFile(builder: ClasspathBuilder.EntryBuilder) {
+        builder.put(GradleRuntimeShadedJarDetector.MARKER_FILENAME, ByteArray(0))
+    }
+
+    @Throws(IOException::class)
+    private fun processEntry(builder: InputFile, entry: ClasspathEntryVisitor.Entry) {
+        val name = entry.getName()
+        if (name == "META-INF/MANIFEST.MF") {
+            return
         }
         // Remove license files that cause collisions between a LICENSE file and a license/ directory.
         if (name.startsWith("LICENSE") || name.startsWith("license")) {
-            return;
+            return
         }
 
         if (name.endsWith(".class")) {
-            processClassFile(builder, entry);
+            processClassFile(builder, entry)
         } else if (name.startsWith(SERVICES_DIR_PREFIX)) {
-            processServiceDescriptor(builder, entry);
+            processServiceDescriptor(builder, entry)
         } else {
-            processResource(builder, entry);
+            processResource(builder, entry)
         }
     }
 
-    private static boolean isModuleInfoClass(String name) {
-        return "module-info".equals(name);
-    }
-
-    private void processServiceDescriptor(InputFile inputFile, ClasspathEntryVisitor.Entry entry) throws IOException {
-        String name = entry.getName();
-        String descriptorName = name.substring(SERVICES_DIR_PREFIX.length());
-        String descriptorApiClass = periodsToSlashes(descriptorName)[0];
-        String relocatedApiClassName = remapper.maybeRelocateResource(descriptorApiClass);
+    @Throws(IOException::class)
+    private fun processServiceDescriptor(inputFile: InputFile, entry: ClasspathEntryVisitor.Entry) {
+        val name = entry.getName()
+        val descriptorName: String = name.substring(SERVICES_DIR_PREFIX.length)
+        val descriptorApiClass: String? = periodsToSlashes(descriptorName)[0]
+        var relocatedApiClassName = remapper.maybeRelocateResource(descriptorApiClass)
         if (relocatedApiClassName == null) {
-            relocatedApiClassName = descriptorApiClass;
+            relocatedApiClassName = descriptorApiClass
         }
 
-        byte[] bytes = entry.getContent();
-        String content = new String(bytes, StandardCharsets.UTF_8).replaceAll("(?m)^#.*", "").trim(); // clean up comments and new lines
+        val bytes = entry.getContent()
+        val content = String(bytes, StandardCharsets.UTF_8).replace("(?m)^#.*".toRegex(), "").trim { it <= ' ' }  // clean up comments and new lines
 
-        String[] descriptorImplClasses = periodsToSlashes(separateLines(content));
-        String[] relocatedImplClassNames = maybeRelocateResources(descriptorImplClasses);
-        String serviceType = slashesToPeriods(relocatedApiClassName)[0];
-        String[] serviceProviders = slashesToPeriods(relocatedImplClassNames);
+        val descriptorImplClasses: Array<String?> = periodsToSlashes(*separateLines(content))
+        val relocatedImplClassNames: Array<String?> = maybeRelocateResources(*descriptorImplClasses)
+        val serviceType = slashesToPeriods(relocatedApiClassName)[0]
+        val serviceProviders = slashesToPeriods(*relocatedImplClassNames)
 
-        inputFile.addServiceProviders(serviceType, asList(serviceProviders));
+        inputFile.addServiceProviders(serviceType, Arrays.asList<String>(*serviceProviders))
     }
 
-    private String[] slashesToPeriods(@Nullable String... slashClassNames) {
-        return Arrays.stream(slashClassNames).filter(Objects::nonNull)
-            .map(clsName -> clsName.replace('/', '.')).map(String::trim)
-            .toArray(String[]::new);
+    private fun slashesToPeriods(vararg slashClassNames: String?): Array<String> {
+        return Arrays.stream<String?>(slashClassNames).filter { obj: String? -> Objects.nonNull(obj) }
+            .map<String> { clsName: String? -> clsName!!.replace('/', '.') }.map<String> { obj: String? -> obj!!.trim { it <= ' ' } }
+            .toArray<String> { _Dummy_.__Array__() }
     }
 
-    private String[] periodsToSlashes(@Nullable String... periodClassNames) {
-        return Arrays.stream(periodClassNames).filter(Objects::nonNull)
-            .map(clsName -> clsName.replace('.', '/'))
-            .toArray(String[]::new);
+    private fun periodsToSlashes(vararg periodClassNames: String?): Array<String?> {
+        return Arrays.stream<String?>(periodClassNames).filter { obj: String? -> Objects.nonNull(obj) }
+            .map<String> { clsName: String? -> clsName!!.replace('.', '/') }
+            .toArray<String> { _Dummy_.__Array__() }
     }
 
-    private void processResource(InputFile builder, ClasspathEntryVisitor.Entry entry) throws IOException {
-        String name = entry.getName();
-        byte[] resource = entry.getContent();
+    @Throws(IOException::class)
+    private fun processResource(builder: InputFile, entry: ClasspathEntryVisitor.Entry) {
+        val name = entry.getName()
+        val resource = entry.getContent()
 
-        int i = name.lastIndexOf("/");
-        String path = i == -1 ? null : name.substring(0, i);
+        val i = name.lastIndexOf("/")
+        val path = if (i == -1) null else name.substring(0, i)
 
         if (remapper.keepOriginalResource(path)) {
             // we're writing 2 copies of the resource: one relocated, the other not, in order to support `getResource/getResourceAsStream` with
             // both absolute and relative paths
-            builder.put(name, resource);
+            builder.put(name, resource)
         }
 
-        String remappedResourceName = path != null ? remapper.maybeRelocateResource(path) : null;
+        val remappedResourceName = if (path != null) remapper.maybeRelocateResource(path) else null
         if (remappedResourceName != null) {
-            String newFileName = remappedResourceName + name.substring(i);
-            builder.put(newFileName, resource);
+            val newFileName = remappedResourceName + name.substring(i)
+            builder.put(newFileName, resource)
         }
     }
 
-    private void processClassFile(InputFile builder, ClasspathEntryVisitor.Entry entry) throws IOException {
-        String name = entry.getName();
-        String className = name.substring(0, name.length() - ".class".length());
+    @Throws(IOException::class)
+    private fun processClassFile(builder: InputFile, entry: ClasspathEntryVisitor.Entry) {
+        val name = entry.getName()
+        val className = name.substring(0, name.length - ".class".length)
         if (isModuleInfoClass(className)) {
             // do not include module-info files, as they would represent a bundled dependency module, instead of Gradle itself
-            return;
+            return
         }
-        byte[] bytes = entry.getContent();
-        byte[] remappedClass = remapClass(className, bytes);
+        val bytes = entry.getContent()
+        val remappedClass = remapClass(className, bytes)
 
-        String remappedClassName = remapper.maybeRelocateResource(className);
-        String newFileName = (remappedClassName == null ? className : remappedClassName).concat(".class");
+        val remappedClassName = remapper.maybeRelocateResource(className)
+        val newFileName = (if (remappedClassName == null) className else remappedClassName) + ".class"
 
-        builder.put(newFileName, remappedClass);
+        builder.put(newFileName, remappedClass)
     }
 
-    private byte[] remapClass(String className, byte[] bytes) {
-        ClassReader classReader = new ClassReader(bytes);
-        ClassWriter classWriter = new ClassWriter(0);
-        ClassVisitor remappingVisitor = new ShadingClassRemapper(classWriter, remapper);
+    private fun remapClass(className: String, bytes: ByteArray): ByteArray {
+        val classReader = ClassReader(bytes)
+        val classWriter = ClassWriter(0)
+        val remappingVisitor: ClassVisitor = ShadingClassRemapper(classWriter, remapper)
 
         try {
-            classReader.accept(remappingVisitor, ClassReader.EXPAND_FRAMES);
-        } catch (Exception e) {
-            throw new GradleException("Error in ASM processing class: " + className, e);
+            classReader.accept(remappingVisitor, ClassReader.EXPAND_FRAMES)
+        } catch (e: Exception) {
+            throw GradleException("Error in ASM processing class: " + className, e)
         }
 
-        return classWriter.toByteArray();
+        return classWriter.toByteArray()
     }
 
-    private static class ShadingClassRemapper extends ClassRemapper {
-        final Map<String, String> remappedClassLiterals;
-        private final ImplementationDependencyRelocator dependencyRelocator;
+    private class ShadingClassRemapper(classWriter: ClassWriter, private val dependencyRelocator: ImplementationDependencyRelocator) : ClassRemapper(
+        classWriter,
+        dependencyRelocator
+    ) {
+        val remappedClassLiterals: MutableMap<String, String>
 
-        public ShadingClassRemapper(ClassWriter classWriter, ImplementationDependencyRelocator dependencyRelocator) {
-            super(classWriter, dependencyRelocator);
-            this.dependencyRelocator = dependencyRelocator;
-            remappedClassLiterals = new HashMap<>();
+        init {
+            remappedClassLiterals = HashMap<String, String>()
         }
 
-        @Override
-        public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-            ImplementationDependencyRelocator.ClassLiteralRemapping remapping = null;
-            if (CLASS_DESC.equals(desc)) {
-                remapping = dependencyRelocator.maybeRemap(name);
+        override fun visitField(access: Int, name: String, desc: String, signature: String, value: Any): FieldVisitor {
+            var remapping: ImplementationDependencyRelocator.ClassLiteralRemapping? = null
+            if (CLASS_DESC == desc) {
+                remapping = dependencyRelocator.maybeRemap(name)
                 if (remapping != null) {
-                    remappedClassLiterals.put(remapping.getLiteral(), remapping.getLiteralReplacement().replace("/", "."));
+                    remappedClassLiterals.put(remapping.getLiteral(), remapping.getLiteralReplacement().replace("/", "."))
                 }
             }
-            return super.visitField(access, remapping != null ? remapping.getFieldNameReplacement() : name, desc, signature, value);
+            return super.visitField(access, if (remapping != null) remapping.getFieldNameReplacement() else name, desc, signature, value)
         }
 
-        @Override
-        public MethodVisitor visitMethod(int access, final String name, final String desc, String signature, String[] exceptions) {
-            return new MethodVisitor(AsmConstants.ASM_LEVEL, super.visitMethod(access, name, desc, signature, exceptions)) {
-                @Override
-                public void visitLdcInsn(Object cst) {
-                    if (cst instanceof String) {
-                        String literal = remappedClassLiterals.get(cst);
+        override fun visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array<String>): MethodVisitor {
+            return object : MethodVisitor(AsmConstants.ASM_LEVEL, super.visitMethod(access, name, desc, signature, exceptions)) {
+                override fun visitLdcInsn(cst: Any) {
+                    if (cst is String) {
+                        var literal = remappedClassLiterals.get(cst)
                         if (literal == null) {
                             // tries to relocate literals in the form of foo/bar/Bar
-                            literal = dependencyRelocator.maybeRelocateResource((String) cst);
+                            literal = dependencyRelocator.maybeRelocateResource(cst)
                         }
                         if (literal == null) {
                             // tries to relocate literals in the form of foo.bar.Bar
-                            literal = dependencyRelocator.maybeRelocateResource(((String) cst).replace('.', '/'));
+                            literal = dependencyRelocator.maybeRelocateResource(cst.replace('.', '/'))
                             if (literal != null) {
-                                literal = literal.replace("/", ".");
+                                literal = literal.replace("/", ".")
                             }
                         }
-                        super.visitLdcInsn(literal != null ? literal : cst);
+                        super.visitLdcInsn(if (literal != null) literal else cst)
                     } else {
-                        super.visitLdcInsn(cst);
+                        super.visitLdcInsn(cst)
                     }
                 }
 
-                @Override
-                public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-                    if ((opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) && CLASS_DESC.equals(desc)) {
-                        ImplementationDependencyRelocator.ClassLiteralRemapping remapping = dependencyRelocator.maybeRemap(name);
+                override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
+                    if ((opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) && CLASS_DESC == desc) {
+                        val remapping = dependencyRelocator.maybeRemap(name)
                         if (remapping != null) {
-                            super.visitFieldInsn(opcode, owner, remapping.getFieldNameReplacement(), desc);
-                            return;
+                            super.visitFieldInsn(opcode, owner, remapping.getFieldNameReplacement(), desc)
+                            return
                         }
                     }
-                    super.visitFieldInsn(opcode, owner, name, desc);
+                    super.visitFieldInsn(opcode, owner, name, desc)
                 }
-            };
+            }
         }
     }
 
-    private String[] maybeRelocateResources(@Nullable String... resources) {
-        return Arrays.stream(resources)
-            .filter(Objects::nonNull)
-            .map(resource -> {
-                String remapped = remapper.maybeRelocateResource(resource);
+    private fun maybeRelocateResources(vararg resources: String?): Array<String?> {
+        return Arrays.stream<String?>(resources)
+            .filter { obj: String? -> Objects.nonNull(obj) }
+            .map<String?> { resource: String? ->
+                val remapped = remapper.maybeRelocateResource(resource)
                 if (remapped == null) {
-                    return resource; // This resource was not relocated. Use the original name.
+                    return@map resource // This resource was not relocated. Use the original name.
                 }
-                return remapped;
+                remapped
+            }
+            .toArray<String> { _Dummy_.__Array__() }
+    }
+
+    private fun separateLines(entry: String): Array<String?> {
+        return entry.split("\\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+    }
+
+    companion object {
+        private const val ADDITIONAL_PROGRESS_STEPS = 2
+        private const val SERVICES_DIR_PREFIX = "META-INF/services/"
+        private const val CLASS_DESC = "Ljava/lang/Class;"
+
+        private val LOGGER: Logger = LoggerFactory.getLogger(RuntimeShadedJarCreator::class.java)
+
+        private fun createShadedJarWriter(
+            builder: ClasspathBuilder.EntryBuilder,
+            progressLogger: ProgressLogger,
+            progressFormatter: PercentageProgressFormatter,
+            services: MutableMap<String, MutableList<String>>
+        ): MultiProducerSingleConsumerProcessor<InputFile> {
+            return MultiProducerSingleConsumerProcessor<InputFile>("shaded jar writer", object : Consumer<InputFile> {
+                private var index = 0
+                private val allProcessedFiles = PriorityQueue<InputFile>()
+                private val seenPaths: MutableSet<String> = HashSet<String>()
+
+                override fun accept(processedFile: InputFile) {
+                    allProcessedFiles.add(processedFile)
+
+                    var toProcess: InputFile?
+                    while (!allProcessedFiles.isEmpty() && (allProcessedFiles.peek().also { toProcess = it }).index == index) {
+                        try {
+                            progressLogger.progress(progressFormatter.getProgress())
+                            toProcess!!.forEachEntry(InputFile.EntryConsumer { name: String, content: ByteArray ->
+                                if (seenPaths.add(name)) {
+                                    builder.put(name, content)
+                                }
+                            })
+                            for (entry in toProcess.services.entries) {
+                                services.computeIfAbsent(entry.key) { k: String? -> ArrayList<String?>() }.addAll(entry.value)
+                            }
+                            progressFormatter.increment()
+                            index++
+                            allProcessedFiles.poll()
+                        } catch (e: IOException) {
+                            throw RuntimeException("Failed to write shaded jar", e)
+                        }
+                    }
+                }
             })
-            .toArray(String[]::new);
-    }
+        }
 
-    private String[] separateLines(String entry) {
-        return entry.split("\\n");
+        private fun isModuleInfoClass(name: String): Boolean {
+            return "module-info" == name
+        }
     }
-
 }

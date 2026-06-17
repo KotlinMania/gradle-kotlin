@@ -13,29 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-import org.gradle.internal.resolve.ModuleVersionResolveException;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.Set;
+import org.gradle.internal.resolve.ModuleVersionResolveException
 
 /**
  * The result of attempting to resolve the list of versions for a particular module.
  */
-public interface BuildableModuleVersionListingResolveResult extends ResourceAwareResolveResult, ErroringResolveResult<ModuleVersionResolveException> {
-
-    enum State {
+interface BuildableModuleVersionListingResolveResult : ResourceAwareResolveResult, ErroringResolveResult<ModuleVersionResolveException?> {
+    enum class State {
         /**
          * Listing has succeeded.
          */
         Listed,
+
         /**
          * Listing has failed.
          */
         Failed,
+
         /**
          * Listing hasn't been performed yet, or another attempt can be made.
          */
@@ -45,34 +41,28 @@ public interface BuildableModuleVersionListingResolveResult extends ResourceAwar
     /**
      * Returns the current state of this result.
      */
-    State getState();
+    @JvmField
+    val state: State?
 
-    /**
-     * Returns the versions that match the selector.
-     *
-     * @throws ModuleVersionResolveException If the resolution was not successful.
-     */
-    Set<String> getVersions() throws ModuleVersionResolveException;
+    @JvmField
+    @get:Throws(ModuleVersionResolveException::class)
+    val versions: MutableSet<String?>?
 
-    @Override
-    @Nullable
-    ModuleVersionResolveException getFailure();
+    override fun getFailure(): ModuleVersionResolveException?
 
     /**
      * Marks the module as having been listed to have the specified versions available.
      */
-    void listed(Collection<String> versions);
+    fun listed(versions: MutableCollection<String?>?)
 
     /**
      * Marks the list as failed with the given exception.
      */
-    @Override
-    void failed(ModuleVersionResolveException failure);
+    override fun failed(failure: ModuleVersionResolveException?)
 
     /**
      * Returns true if the result is from an authoritative source. Defaults to true.
      */
-    boolean isAuthoritative();
-
-    void setAuthoritative(boolean authoritative);
+    @JvmField
+    var isAuthoritative: Boolean
 }

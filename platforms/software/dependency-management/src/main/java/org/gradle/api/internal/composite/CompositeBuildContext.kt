@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.composite
 
-package org.gradle.api.internal.composite;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.DependencySubstitution
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionRules
+import org.gradle.internal.Pair
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencySubstitution;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution.DependencySubstitutionRules;
-import org.gradle.internal.Pair;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Set;
-
-@ServiceScope(Scope.BuildTree.class)
-public interface CompositeBuildContext extends DependencySubstitutionRules {
-    void addAvailableModules(Set<Pair<ModuleVersionIdentifier, ProjectComponentIdentifier>> availableModules);
-    void registerSubstitution(Action<DependencySubstitution> substitutions);
+@ServiceScope(Scope.BuildTree::class)
+interface CompositeBuildContext : DependencySubstitutionRules {
+    fun addAvailableModules(availableModules: MutableSet<Pair<ModuleVersionIdentifier?, ProjectComponentIdentifier?>?>?)
+    fun registerSubstitution(substitutions: Action<DependencySubstitution?>?)
 }

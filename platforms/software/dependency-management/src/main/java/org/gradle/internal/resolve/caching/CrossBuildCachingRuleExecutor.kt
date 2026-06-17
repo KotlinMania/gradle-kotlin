@@ -13,132 +13,129 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
+package org.gradle.internal.resolve.caching
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import org.gradle.api.Action;
-import org.gradle.api.Transformer;
-import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.cache.FileLockManager;
-import org.gradle.cache.IndexedCache;
-import org.gradle.cache.IndexedCacheParameters;
-import org.gradle.cache.PersistentCache;
-import org.gradle.cache.internal.InMemoryCacheDecoratorFactory;
-import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory;
-import org.gradle.internal.Cast;
-import org.gradle.internal.action.ConfigurableRule;
-import org.gradle.internal.action.ConfigurableRules;
-import org.gradle.internal.action.InstantiatingAction;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.isolation.Isolatable;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.serialize.AbstractSerializer;
-import org.gradle.internal.serialize.BaseSerializerFactory;
-import org.gradle.internal.serialize.Decoder;
-import org.gradle.internal.serialize.Encoder;
-import org.gradle.internal.serialize.HashCodeSerializer;
-import org.gradle.internal.serialize.Serializer;
-import org.gradle.internal.snapshot.ValueSnapshotter;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.HashMultimap
+import com.google.common.collect.Multimap
+import org.gradle.api.Transformer
+import org.gradle.api.internal.artifacts.ivyservice.CacheExpirationControl
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.cache.FileLockManager
+import org.gradle.cache.IndexedCache
+import org.gradle.cache.IndexedCacheParameters
+import org.gradle.cache.PersistentCache
+import org.gradle.cache.internal.InMemoryCacheDecoratorFactory
+import org.gradle.cache.scopes.GlobalScopedCacheBuilderFactory
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.action.ConfigurableRules
+import org.gradle.internal.action.InstantiatingAction
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.hash.Hashing
+import org.gradle.internal.isolation.Isolatable
+import org.gradle.internal.serialize.AbstractSerializer
+import org.gradle.internal.serialize.BaseSerializerFactory
+import org.gradle.internal.serialize.Decoder
+import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.HashCodeSerializer
+import org.gradle.internal.serialize.Serializer
+import org.gradle.internal.snapshot.ValueSnapshotter
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.Closeable
+import java.io.File
+import java.io.IOException
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+open class CrossBuildCachingRuleExecutor<KEY, DETAILS, RESULT>(
+    name: String,
+    cacheBuilderFactory: GlobalScopedCacheBuilderFactory,
+    cacheDecoratorFactory: InMemoryCacheDecoratorFactory,
+    private val snapshotter: ValueSnapshotter,
+    private val timeProvider: BuildCommencedTimeProvider,
+    private val validator: EntryValidator<RESULT?>,
+    private val keyToSnapshottable: Transformer<*, KEY?>,
+    resultSerializer: Serializer<RESULT?>
+) : CachingRuleExecutor<KEY?, DETAILS?, RESULT?>, Closeable {
+    private val cache: PersistentCache
+    private val store: IndexedCache<HashCode?, CachedEntry<RESULT?>?>
 
-public class CrossBuildCachingRuleExecutor<KEY, DETAILS, RESULT> implements CachingRuleExecutor<KEY, DETAILS, RESULT>, Closeable {
-    private final static Logger LOGGER = Logging.getLogger(CrossBuildCachingRuleExecutor.class);
-
-    private final ValueSnapshotter snapshotter;
-    private final Transformer<?, KEY> keyToSnapshottable;
-    private final PersistentCache cache;
-    private final IndexedCache<HashCode, CachedEntry<RESULT>> store;
-    private final BuildCommencedTimeProvider timeProvider;
-    private final EntryValidator<RESULT> validator;
-
-    public CrossBuildCachingRuleExecutor(
-        String name,
-        GlobalScopedCacheBuilderFactory cacheBuilderFactory,
-        InMemoryCacheDecoratorFactory cacheDecoratorFactory,
-        ValueSnapshotter snapshotter,
-        BuildCommencedTimeProvider timeProvider,
-        EntryValidator<RESULT> validator,
-        Transformer<?, KEY> keyToSnapshottable,
-        Serializer<RESULT> resultSerializer
-    ) {
-        this.snapshotter = snapshotter;
-        this.validator = validator;
-        this.keyToSnapshottable = keyToSnapshottable;
-        this.timeProvider = timeProvider;
+    init {
         this.cache = cacheBuilderFactory
             .createCacheBuilder(name)
             .withInitialLockMode(FileLockManager.LockMode.OnDemand)
-            .open();
-        IndexedCacheParameters<HashCode, CachedEntry<RESULT>> cacheParams = createCacheConfiguration(name, resultSerializer, cacheDecoratorFactory);
-        this.store = this.cache.createIndexedCache(cacheParams);
+            .open()
+        val cacheParams: IndexedCacheParameters<HashCode?, CachedEntry<RESULT?>?> = createCacheConfiguration(name, resultSerializer, cacheDecoratorFactory)
+        this.store = this.cache.createIndexedCache<HashCode?, CachedEntry<RESULT?>?>(cacheParams)
     }
 
-    private IndexedCacheParameters<HashCode, CachedEntry<RESULT>> createCacheConfiguration(String name, Serializer<RESULT> resultSerializer, InMemoryCacheDecoratorFactory cacheDecoratorFactory) {
-        return IndexedCacheParameters.of(
+    private fun createCacheConfiguration(
+        name: String,
+        resultSerializer: Serializer<RESULT?>,
+        cacheDecoratorFactory: InMemoryCacheDecoratorFactory
+    ): IndexedCacheParameters<HashCode?, CachedEntry<RESULT?>?> {
+        return IndexedCacheParameters.of<HashCode?, CachedEntry<RESULT?>?>(
             name,
-            new HashCodeSerializer(),
+            HashCodeSerializer(),
             createEntrySerializer(resultSerializer)
         ).withCacheDecorator(
             cacheDecoratorFactory.decorator(2000, true)
-        );
+        )
     }
 
-    private Serializer<CachedEntry<RESULT>> createEntrySerializer(final Serializer<RESULT> resultSerializer) {
-        return new CacheEntrySerializer<>(resultSerializer);
+    private fun createEntrySerializer(resultSerializer: Serializer<RESULT?>): Serializer<CachedEntry<RESULT?>?> {
+        return CacheEntrySerializer<RESULT?>(resultSerializer)
     }
 
-    @Override
-    public <D extends DETAILS> RESULT execute(KEY key, InstantiatingAction<DETAILS> action, Transformer<RESULT, D> detailsToResult, Transformer<D, KEY> onCacheMiss, CacheExpirationControl cacheExpirationControl) {
+    override fun <D : DETAILS?> execute(
+        key: KEY?,
+        action: InstantiatingAction<DETAILS?>?,
+        detailsToResult: Transformer<RESULT?, D?>,
+        onCacheMiss: Transformer<D?, KEY?>,
+        cacheExpirationControl: CacheExpirationControl?
+    ): RESULT? {
         if (action == null) {
-            return null;
+            return null
         }
-        final ConfigurableRules<DETAILS> rules = action.getRules();
+        val rules = action.getRules()
         if (rules.isCacheable()) {
-            return tryFromCache(key, action, detailsToResult, onCacheMiss, cacheExpirationControl, rules);
+            return tryFromCache<D?>(key, action, detailsToResult, onCacheMiss, cacheExpirationControl, rules)
         } else {
-            return executeRule(key, action, detailsToResult, onCacheMiss);
+            return executeRule<D?>(key, action, detailsToResult, onCacheMiss)
         }
     }
 
-    private <D extends DETAILS> RESULT tryFromCache(KEY key, InstantiatingAction<DETAILS> action, Transformer<RESULT, D> detailsToResult, Transformer<D, KEY> onCacheMiss, CacheExpirationControl cacheExpirationControl, ConfigurableRules<DETAILS> rules) {
-        final HashCode keyHash = computeExplicitInputsSnapshot(key, rules);
-        DefaultImplicitInputRegistrar registrar = new DefaultImplicitInputRegistrar();
-        ImplicitInputsCapturingInstantiator instantiator = findInputCapturingInstantiator(action);
+    private fun <D : DETAILS?> tryFromCache(
+        key: KEY?,
+        action: InstantiatingAction<DETAILS?>,
+        detailsToResult: Transformer<RESULT?, D?>,
+        onCacheMiss: Transformer<D?, KEY?>,
+        cacheExpirationControl: CacheExpirationControl?,
+        rules: ConfigurableRules<DETAILS?>
+    ): RESULT? {
+        var action = action
+        val keyHash = computeExplicitInputsSnapshot(key, rules)
+        val registrar = DefaultImplicitInputRegistrar()
+        val instantiator = findInputCapturingInstantiator(action)
         if (instantiator != null) {
-            action = action.withInstantiator(instantiator.capturing(registrar));
+            action = action.withInstantiator(instantiator.capturing(registrar))
         }
         // First step is to find an entry with the explicit inputs in the cache
-        CachedEntry<RESULT> entry = store.getIfPresent(keyHash);
+        val entry = store.getIfPresent(keyHash)
         if (entry != null) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Found result for rule {} and key {} in cache", rules, key);
+            if (LOGGER!!.isDebugEnabled()) {
+                LOGGER.debug("Found result for rule {} and key {} in cache", rules, key)
             }
-            if (validator.isValid(cacheExpirationControl, entry) && areImplicitInputsUpToDate(instantiator, key, rules, entry)) {
+            if (validator.isValid(cacheExpirationControl, entry) && areImplicitInputsUpToDate(instantiator!!, key, rules, entry)) {
                 // Here it means that we have validated that the entry is still up-to-date, and that means a couple of things:
                 // 1. the cache policy said that the entry is still valid (for example, `--refresh-dependencies` wasn't called)
                 // 2. if the rule is cacheable, we have validated that its discovered inputs are still the same
-                return entry.getResult();
+                return entry.result
             } else if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Invalidating result for rule {} and key {} in cache", rules, key);
+                LOGGER.debug("Invalidating result for rule {} and key {} in cache", rules, key)
             }
         }
 
-        RESULT result = executeRule(key, action, detailsToResult, onCacheMiss);
-        store.put(keyHash, new CachedEntry<>(timeProvider.getCurrentTime(), registrar.implicits, result));
-        return result;
+        val result = executeRule<D?>(key, action, detailsToResult, onCacheMiss)
+        store.put(keyHash, CrossBuildCachingRuleExecutor.CachedEntry<RESULT?>(timeProvider.getCurrentTime(), registrar.implicits, result))
+        return result
     }
 
     /**
@@ -149,77 +146,55 @@ public class CrossBuildCachingRuleExecutor<KEY, DETAILS, RESULT> implements Cach
      * @param rules the rules to be snapshotted
      * @return a snapshot of the inputs
      */
-    private HashCode computeExplicitInputsSnapshot(KEY key, ConfigurableRules<DETAILS> rules) {
-        List<Object> toBeSnapshotted = new ArrayList<>(2 + 2 * rules.getConfigurableRules().size());
-        toBeSnapshotted.add(keyToSnapshottable.transform(key));
-        for (ConfigurableRule<DETAILS> rule : rules.getConfigurableRules()) {
-            Class<? extends Action<DETAILS>> ruleClass = rule.getRuleClass();
-            Isolatable<Object[]> ruleParams = rule.getRuleParams();
-            toBeSnapshotted.add(ruleClass);
-            toBeSnapshotted.add(ruleParams);
+    private fun computeExplicitInputsSnapshot(key: KEY?, rules: ConfigurableRules<DETAILS?>): HashCode {
+        val toBeSnapshotted: MutableList<Any?> = ArrayList<Any?>(2 + 2 * rules.getConfigurableRules().size)
+        toBeSnapshotted.add(keyToSnapshottable.transform(key))
+        for (rule in rules.getConfigurableRules()) {
+            val ruleClass = rule.getRuleClass()
+            val ruleParams: Isolatable<Array<Any?>?>? = rule.getRuleParams()
+            toBeSnapshotted.add(ruleClass)
+            toBeSnapshotted.add(ruleParams)
         }
 
-        return Hashing.hashHashable(snapshotter.snapshot(toBeSnapshotted));
+        return Hashing.hashHashable(snapshotter.snapshot(toBeSnapshotted))
     }
 
-    private ImplicitInputsCapturingInstantiator findInputCapturingInstantiator(InstantiatingAction<DETAILS> action) {
-        Instantiator instantiator = action.getInstantiator();
-        if (instantiator instanceof ImplicitInputsCapturingInstantiator) {
-            return (ImplicitInputsCapturingInstantiator) instantiator;
+    private fun findInputCapturingInstantiator(action: InstantiatingAction<DETAILS?>): ImplicitInputsCapturingInstantiator? {
+        val instantiator = action.getInstantiator()
+        if (instantiator is ImplicitInputsCapturingInstantiator) {
+            return instantiator
         }
-        return null;
+        return null
     }
 
-    private boolean areImplicitInputsUpToDate(ImplicitInputsCapturingInstantiator serviceRegistry, KEY key, ConfigurableRules<DETAILS> rules, CachedEntry<RESULT> entry) {
-        for (Map.Entry<String, Collection<ImplicitInputRecord<?, ?>>> implicitEntry : entry.getImplicits().asMap().entrySet()) {
-            String serviceName = implicitEntry.getKey();
-            ImplicitInputsProvidingService<Object, Object, ?> provider = Cast.uncheckedCast(serviceRegistry.findInputCapturingServiceByName(serviceName));
-            for (ImplicitInputRecord<?, ?> list : implicitEntry.getValue()) {
-                if (!provider.isUpToDate(list.getInput(), list.getOutput())) {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Invalidating result for rule {} and key {} in cache because implicit input provided by service {} changed", rules, key, provider.getClass());
+    private fun areImplicitInputsUpToDate(serviceRegistry: ImplicitInputsCapturingInstantiator, key: KEY?, rules: ConfigurableRules<DETAILS?>?, entry: CachedEntry<RESULT?>): Boolean {
+        for (implicitEntry in entry.implicits.asMap().entries) {
+            val serviceName: String = implicitEntry.key!!
+            val provider = uncheckedCast<ImplicitInputsProvidingService<Any?, Any?, *>?>(serviceRegistry.findInputCapturingServiceByName<Any?, Any?, Any?>(serviceName))
+            for (list in implicitEntry.value) {
+                if (!provider!!.isUpToDate(list!!.getInput(), list.getOutput())) {
+                    if (LOGGER!!.isDebugEnabled()) {
+                        LOGGER.debug("Invalidating result for rule {} and key {} in cache because implicit input provided by service {} changed", rules, key, provider.javaClass)
                     }
-                    return false;
+                    return false
                 }
             }
         }
-        return true;
+        return true
     }
 
-    private <D extends DETAILS> RESULT executeRule(KEY key, InstantiatingAction<DETAILS> action, Transformer<RESULT, D> detailsToResult, Transformer<D, KEY> onCacheMiss) {
-        D details = onCacheMiss.transform(key);
-        action.execute(details);
-        return detailsToResult.transform(details);
+    private fun <D : DETAILS?> executeRule(key: KEY?, action: InstantiatingAction<DETAILS?>, detailsToResult: Transformer<RESULT?, D?>, onCacheMiss: Transformer<D?, KEY?>): RESULT? {
+        val details = onCacheMiss.transform(key)
+        action.execute(details)
+        return detailsToResult.transform(details)
     }
 
-    @Override
-    public void close() throws IOException {
-        cache.close();
+    @Throws(IOException::class)
+    override fun close() {
+        cache.close()
     }
 
-    public static class CachedEntry<RESULT> {
-        private final long timestamp;
-        private final Multimap<String, ImplicitInputRecord<?, ?>> implicits;
-        private final RESULT result;
-
-        private CachedEntry(long timestamp, Multimap<String, ImplicitInputRecord<?, ?>> implicits, RESULT result) {
-            this.timestamp = timestamp;
-            this.implicits = implicits;
-            this.result = result;
-        }
-
-        public Multimap<String, ImplicitInputRecord<?, ?>> getImplicits() {
-            return implicits;
-        }
-
-        public long getTimestamp() {
-            return timestamp;
-        }
-
-        public RESULT getResult() {
-            return result;
-        }
-    }
+    class CachedEntry<RESULT> private constructor(val timestamp: Long, val implicits: Multimap<String?, ImplicitInputRecord<*, *>?>, val result: RESULT?)
 
     /**
      * When getting a result from the cache, we need to check whether the
@@ -228,147 +203,153 @@ public class CrossBuildCachingRuleExecutor<KEY, DETAILS, RESULT> implements Cach
      * pluggable strategy when creating the executor.
      *
      * @param <RESULT> the type of entry stored in the cache.
-     */
-    public interface EntryValidator<RESULT> {
-        boolean isValid(CacheExpirationControl policy, CachedEntry<RESULT> entry);
+    </RESULT> */
+    interface EntryValidator<RESULT> {
+        fun isValid(policy: CacheExpirationControl?, entry: CachedEntry<RESULT?>?): Boolean
     }
 
-    private static class CacheEntrySerializer<RESULT> extends AbstractSerializer<CachedEntry<RESULT>> {
-        private final Serializer<RESULT> resultSerializer;
-        private final AnySerializer anySerializer = new AnySerializer();
+    private class CacheEntrySerializer<RESULT>(private val resultSerializer: Serializer<RESULT?>) : AbstractSerializer<CachedEntry<RESULT?>?>() {
+        private val anySerializer = AnySerializer()
 
-        public CacheEntrySerializer(Serializer<RESULT> resultSerializer) {
-            this.resultSerializer = resultSerializer;
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): CachedEntry<RESULT?> {
+            return CrossBuildCachingRuleExecutor.CachedEntry<RESULT?>(decoder.readLong(), readImplicits(decoder), resultSerializer.read(decoder))
         }
 
-        @Override
-        public CachedEntry<RESULT> read(Decoder decoder) throws Exception {
-            return new CachedEntry<>(decoder.readLong(), readImplicits(decoder), resultSerializer.read(decoder));
-        }
-
-        private Multimap<String, ImplicitInputRecord<?, ?>> readImplicits(Decoder decoder) throws Exception {
-            int cpt = decoder.readSmallInt();
-            Multimap<String, ImplicitInputRecord<?, ?>> result = HashMultimap.create();
-            for (int i = 0; i < cpt; i++) {
-                String impl = decoder.readString();
-                List<ImplicitInputRecord<?, ?>> implicitInputOutputs = readImplicitList(decoder);
-                result.putAll(impl, implicitInputOutputs);
+        @Throws(Exception::class)
+        fun readImplicits(decoder: Decoder): Multimap<String?, ImplicitInputRecord<*, *>?> {
+            val cpt = decoder.readSmallInt()
+            val result: Multimap<String?, ImplicitInputRecord<*, *>?> = HashMultimap.create<String?, ImplicitInputRecord<*, *>?>()
+            for (i in 0..<cpt) {
+                val impl = decoder.readString()
+                val implicitInputOutputs = readImplicitList(decoder)
+                result.putAll(impl, implicitInputOutputs)
             }
-            return result;
+            return result
         }
 
-        List<ImplicitInputRecord<?, ?>> readImplicitList(Decoder decoder) throws Exception {
-            int cpt = decoder.readSmallInt();
-            List<ImplicitInputRecord<?, ?>> implicits = new ArrayList<>(cpt);
-            for (int i = 0; i < cpt; i++) {
-                final Object in = readAny(decoder);
-                final Object out = readAny(decoder);
-                implicits.add(new ImplicitInputRecord<Object, Object>() {
-                    @Override
-                    public Object getInput() {
-                        return in;
+        @Throws(Exception::class)
+        fun readImplicitList(decoder: Decoder): MutableList<ImplicitInputRecord<*, *>?> {
+            val cpt = decoder.readSmallInt()
+            val implicits: MutableList<ImplicitInputRecord<*, *>?> = ArrayList<ImplicitInputRecord<*, *>?>(cpt)
+            for (i in 0..<cpt) {
+                val `in` = readAny(decoder)
+                val out = readAny(decoder)
+                implicits.add(object : ImplicitInputRecord<Any?, Any?> {
+                    override fun getInput(): Any? {
+                        return `in`
                     }
 
-                    @Nullable
-                    @Override
-                    public Object getOutput() {
-                        return out;
+                    override fun getOutput(): Any? {
+                        return out
                     }
-                });
+                })
             }
-            return implicits;
+            return implicits
         }
 
-        @Nullable
-        private Object readAny(Decoder decoder) throws Exception {
-            return anySerializer.read(decoder);
+        @Throws(Exception::class)
+        fun readAny(decoder: Decoder): Any? {
+            return anySerializer.read(decoder)
         }
 
-        @Override
-        public void write(Encoder encoder, CachedEntry<RESULT> value) throws Exception {
-            encoder.writeLong(value.timestamp);
-            writeImplicits(encoder, value.implicits);
-            resultSerializer.write(encoder, value.result);
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: CachedEntry<RESULT?>) {
+            encoder.writeLong(value.timestamp)
+            writeImplicits(encoder, value.implicits)
+            resultSerializer.write(encoder, value.result)
         }
 
-        private void writeImplicits(Encoder encoder, Multimap<String, ImplicitInputRecord<?, ?>> implicits) throws Exception {
-            encoder.writeSmallInt(implicits.size());
-            for (Map.Entry<String, Collection<ImplicitInputRecord<?, ?>>> entry : implicits.asMap().entrySet()) {
-                encoder.writeString(entry.getKey());
-                writeImplicitList(encoder, entry.getValue());
-            }
-        }
-
-        private void writeImplicitList(Encoder encoder, Collection<ImplicitInputRecord<?, ?>> implicits) throws Exception {
-            encoder.writeSmallInt(implicits.size());
-            for (ImplicitInputRecord<?, ?> implicit : implicits) {
-                writeAny(encoder, implicit.getInput());
-                writeAny(encoder, implicit.getOutput());
+        @Throws(Exception::class)
+        fun writeImplicits(encoder: Encoder, implicits: Multimap<String?, ImplicitInputRecord<*, *>?>) {
+            encoder.writeSmallInt(implicits.size())
+            for (entry in implicits.asMap().entries) {
+                encoder.writeString(entry.key)
+                writeImplicitList(encoder, entry.value)
             }
         }
 
-        private void writeAny(Encoder encoder, Object any) throws Exception {
-            anySerializer.write(encoder, any);
+        @Throws(Exception::class)
+        fun writeImplicitList(encoder: Encoder, implicits: MutableCollection<ImplicitInputRecord<*, *>>) {
+            encoder.writeSmallInt(implicits.size)
+            for (implicit in implicits) {
+                writeAny(encoder, implicit.getInput())
+                writeAny(encoder, implicit.getOutput())
+            }
+        }
+
+        @Throws(Exception::class)
+        fun writeAny(encoder: Encoder, any: Any?) {
+            anySerializer.write(encoder, any)
         }
     }
 
-    private static class DefaultImplicitInputRegistrar implements ImplicitInputRecorder {
-        final Multimap<String, ImplicitInputRecord<?, ?>> implicits = HashMultimap.create();
+    private class DefaultImplicitInputRegistrar : ImplicitInputRecorder {
+        val implicits: Multimap<String?, ImplicitInputRecord<*, *>?> = HashMultimap.create<String?, ImplicitInputRecord<*, *>?>()
 
-        @Override
-        public <IN, OUT> void register(String serviceName, ImplicitInputRecord<IN, OUT> input) {
-            implicits.put(serviceName, input);
+        override fun <IN, OUT> register(serviceName: String?, input: ImplicitInputRecord<IN?, OUT?>?) {
+            implicits.put(serviceName, input)
         }
     }
 
-    private static class AnySerializer implements Serializer<Object> {
-        private static final BaseSerializerFactory SERIALIZER_FACTORY = new BaseSerializerFactory();
-
-        private static final Class<?>[] USUAL_TYPES = new Class<?>[]{
-            String.class,
-            Boolean.class,
-            Long.class,
-            File.class,
-            byte[].class,
-            HashCode.class,
-            Throwable.class
-        };
-
-        @Override
-        public Object read(Decoder decoder) throws Exception {
-            int index = decoder.readSmallInt();
+    private class AnySerializer : Serializer<Any?> {
+        @Throws(Exception::class)
+        override fun read(decoder: Decoder): Any? {
+            val index = decoder.readSmallInt()
             if (index == -1) {
-                return null;
+                return null
             }
-            Class<?> clazz;
+            val clazz: Class<*>?
             if (index == -2) {
-                String typeName = decoder.readString();
-                clazz = Class.forName(typeName);
+                val typeName = decoder.readString()
+                clazz = Class.forName(typeName)
             } else {
-                clazz = USUAL_TYPES[index];
+                clazz = USUAL_TYPES[index]
             }
 
-            return SERIALIZER_FACTORY.getSerializerFor(clazz).read(decoder);
+            return SERIALIZER_FACTORY.getSerializerFor(clazz).read(decoder)
         }
 
-        @Override
-        public void write(Encoder encoder, Object value) throws Exception {
+        @Throws(Exception::class)
+        override fun write(encoder: Encoder, value: Any?) {
             if (value == null) {
-                encoder.writeSmallInt(-1);
-                return;
+                encoder.writeSmallInt(-1)
+                return
             }
-            Class<?> anyType = value.getClass();
-            Serializer<Object> serializer = Cast.uncheckedCast(SERIALIZER_FACTORY.getSerializerFor(anyType));
-            for (int i = 0; i < USUAL_TYPES.length; i++) {
-                if (USUAL_TYPES[i].equals(anyType)) {
-                    encoder.writeSmallInt(i);
-                    serializer.write(encoder, value);
-                    return;
+            val anyType: Class<*> = value.javaClass
+            val serializer: Serializer<Any?> = org.gradle.internal.Cast.uncheckedCast<Serializer<Any?>?>(
+                org.gradle.internal.resolve.caching.CrossBuildCachingRuleExecutor.AnySerializer.Companion.SERIALIZER_FACTORY.getSerializerFor(
+                    anyType
+                )
+            )!!
+            for (i in USUAL_TYPES.indices) {
+                if (USUAL_TYPES[i] == anyType) {
+                    encoder.writeSmallInt(i)
+                    serializer.write(encoder, value)
+                    return
                 }
             }
-            encoder.writeSmallInt(-2);
-            encoder.writeString(anyType.getName());
-            serializer.write(encoder, value);
+            encoder.writeSmallInt(-2)
+            encoder.writeString(anyType.getName())
+            serializer.write(encoder, value)
         }
+
+        companion object {
+            private val SERIALIZER_FACTORY = BaseSerializerFactory()
+
+            private val USUAL_TYPES: Array<Class<*>?> = arrayOf<Class<*>>(
+                String::class.java,
+                Boolean::class.java,
+                Long::class.java,
+                File::class.java,
+                ByteArray::class.java,
+                HashCode::class.java,
+                Throwable::class.java
+            )
+        }
+    }
+
+    companion object {
+        private val LOGGER = getLogger(CrossBuildCachingRuleExecutor::class.java)
     }
 }

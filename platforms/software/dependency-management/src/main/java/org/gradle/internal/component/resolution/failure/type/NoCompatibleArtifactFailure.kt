@@ -13,29 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-
-import java.util.List;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
 
 /**
- * An {@link ArtifactSelectionFailure} that represents the situation when an artifact variant cannot
+ * An [ArtifactSelectionFailure] that represents the situation when an artifact variant cannot
  * be selected because no artifact variants were found that are compatible with the requested attributes.
  */
-public final class NoCompatibleArtifactFailure extends AbstractArtifactSelectionFailure {
-    private final List<ResolutionCandidateAssessor.AssessedCandidate> candidates;
-
-    public NoCompatibleArtifactFailure(ComponentIdentifier targetComponent, String targetVariant, AttributeContainerInternal requestedAttributes, List<ResolutionCandidateAssessor.AssessedCandidate> candidates) {
-        super(ResolutionFailureProblemId.NO_COMPATIBLE_ARTIFACT, targetComponent, targetVariant, requestedAttributes);
-        this.candidates = candidates;
-    }
-
-    public List<ResolutionCandidateAssessor.AssessedCandidate> getCandidates() {
-        return candidates;
+class NoCompatibleArtifactFailure(
+    targetComponent: ComponentIdentifier,
+    targetVariant: String,
+    requestedAttributes: AttributeContainerInternal,
+    private val candidates: MutableList<ResolutionCandidateAssessor.AssessedCandidate>
+) : AbstractArtifactSelectionFailure(
+    ResolutionFailureProblemId.NO_COMPATIBLE_ARTIFACT, targetComponent, targetVariant, requestedAttributes
+) {
+    fun getCandidates(): MutableList<ResolutionCandidateAssessor.AssessedCandidate> {
+        return candidates
     }
 }

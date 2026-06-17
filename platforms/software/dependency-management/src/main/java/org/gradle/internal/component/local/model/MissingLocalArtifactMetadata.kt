@@ -13,88 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.component.model.IvyArtifactName;
-
-import java.io.File;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.component.model.IvyArtifactName
+import java.io.File
 
 /**
  * Represents an unknown local artifact, referenced from a dependency definition.
  */
-public class MissingLocalArtifactMetadata implements LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
-    private final ComponentIdentifier componentIdentifier;
-    private final IvyArtifactName name;
+class MissingLocalArtifactMetadata(componentIdentifier: ComponentIdentifier, artifactName: IvyArtifactName) : LocalComponentArtifactMetadata, ComponentArtifactIdentifier {
+    private val componentIdentifier: ComponentIdentifier
+    private val name: IvyArtifactName
 
-    public MissingLocalArtifactMetadata(ComponentIdentifier componentIdentifier, IvyArtifactName artifactName) {
-        this.componentIdentifier = componentIdentifier;
-        this.name = artifactName;
+    init {
+        this.componentIdentifier = componentIdentifier
+        this.name = artifactName
     }
 
-    @Override
-    public String getDisplayName() {
-        return name.getDisplayName() + " (" + componentIdentifier.getDisplayName() + ")";
+    override fun getDisplayName(): String {
+        return name.displayName + " (" + componentIdentifier.getDisplayName() + ")"
     }
 
-    @Override
-    public String getCapitalizedDisplayName() {
-        return getDisplayName();
+    override fun getCapitalizedDisplayName(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public File getFile() {
-        return null;
+    override fun getFile(): File {
+        return null
     }
 
-    @Override
-    public IvyArtifactName getName() {
-        return name;
+    override fun getName(): IvyArtifactName {
+        return name
     }
 
-    @Override
-    public ComponentIdentifier getComponentIdentifier() {
-        return componentIdentifier;
+    override fun getComponentIdentifier(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public ComponentArtifactIdentifier getId() {
-        return this;
+    override fun getId(): ComponentArtifactIdentifier {
+        return this
     }
 
-    @Override
-    public ComponentIdentifier getComponentId() {
-        return componentIdentifier;
+    override fun getComponentId(): ComponentIdentifier {
+        return componentIdentifier
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public TaskDependency getBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
+    override fun getBuildDependencies(): TaskDependency {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    public int hashCode() {
-        return componentIdentifier.hashCode() ^ name.hashCode();
+    override fun hashCode(): Int {
+        return componentIdentifier.hashCode() xor name.hashCode()
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || obj.getClass() != getClass()) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        MissingLocalArtifactMetadata other = (MissingLocalArtifactMetadata) obj;
-        return other.componentIdentifier.equals(componentIdentifier) && other.name.equals(name);
+        val other = obj as MissingLocalArtifactMetadata
+        return other.componentIdentifier == componentIdentifier && other.name == name
     }
 }

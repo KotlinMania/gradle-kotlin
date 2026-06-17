@@ -13,109 +13,104 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.AttributeDescriber;
-import org.gradle.api.internal.attributes.AttributeDescriberRegistry;
-import org.gradle.internal.component.model.AttributeDescriberSelector;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.type.AmbiguousVariantsFailure;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.AttributeDescriber
+import org.gradle.api.internal.attributes.AttributeDescriberRegistry
+import org.gradle.internal.component.model.AttributeDescriberSelector
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
+import org.gradle.internal.component.resolution.failure.type.AmbiguousVariantsFailure
+import org.gradle.internal.logging.text.TreeFormatter
+import java.util.IdentityHashMap
+import java.util.Objects
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import javax.inject.Inject
 
 /**
- * A {@link ResolutionFailureDescriber} that describes an {@link AmbiguousVariantsFailure} where
+ * A [ResolutionFailureDescriber] that describes an [AmbiguousVariantsFailure] where
  * there is a single differing attribute between all available variants that is missing from the request.
- * <p>
+ *
+ *
  * In this situation, we can provide a very brief message pointing to the exact solution needed.
  */
-public abstract class MissingAttributeAmbiguousVariantsFailureDescriber extends AmbiguousVariantsFailureDescriber {
+abstract class MissingAttributeAmbiguousVariantsFailureDescriber @Inject constructor(
+    attributeDescribers: AttributeDescriberRegistry
+) : AmbiguousVariantsFailureDescriber(attributeDescribers) {
     /**
      * Map from failure to name of attribute that would distinguish each candidate.
      * This map exists to avoid re-discovering the unrequested attributes between the calls to `canDescribeFailure` and `describeFailure`.
      * Each failure will be added once (by identity), then removed during failure description.
      */
-    private final IdentityHashMap<AmbiguousVariantsFailure, String> suggestableDistinctAttributes = new IdentityHashMap<>();
+    private val suggestableDistinctAttributes = IdentityHashMap<AmbiguousVariantsFailure, String>()
 
-    @Inject
-    public MissingAttributeAmbiguousVariantsFailureDescriber(
-        AttributeDescriberRegistry attributeDescribers
-    ) {
-        super(attributeDescribers);
-    }
-
-    @Override
-    public boolean canDescribeFailure(AmbiguousVariantsFailure failure) {
+    override fun canDescribeFailure(failure: AmbiguousVariantsFailure): Boolean {
         // Map from name of attribute -> set of attribute names for each candidate
-        Map<String, Set<String>> unrequestedAttributesWithValues = new HashMap<>();
+        val unrequestedAttributesWithValues: MutableMap<String, MutableSet<String>> = HashMap<String, MutableSet<String>>()
 
-        failure.getCandidates().forEach(candidate -> {
-            candidate.getOnlyOnCandidateAttributes().forEach(candidateAttribute -> {
-                Attribute<?> attribute = candidateAttribute.getAttribute();
-                Set<String> unrequestedValuesForAttribute = unrequestedAttributesWithValues.computeIfAbsent(attribute.getName(), name -> new HashSet<>());
-                unrequestedValuesForAttribute.add(Objects.requireNonNull(candidateAttribute.getProvided()).toString());
-            });
-        });
+        failure.getCandidates().forEach(Consumer { candidate: ResolutionCandidateAssessor.AssessedCandidate? ->
+            candidate!!.getOnlyOnCandidateAttributes().forEach(Consumer { candidateAttribute: ResolutionCandidateAssessor.AssessedAttribute<*>? ->
+                val attribute: Attribute<*> = candidateAttribute!!.getAttribute()
+                val unrequestedValuesForAttribute = unrequestedAttributesWithValues.computeIfAbsent(attribute.getName()) { name: String? -> HashSet<String?>() }
+                unrequestedValuesForAttribute.add(Objects.requireNonNull<String?>(candidateAttribute.getProvided()).toString())
+            })
+        })
 
         // List of map entries where there is a distinct attribute value for every available candidate
-        List<Map.Entry<String, Set<String>>> attributesDistinctlyIdentifyingCandidates = unrequestedAttributesWithValues.entrySet().stream()
-            .filter(entry -> entry.getValue().size() == failure.getCandidates().size())
-            .collect(Collectors.toList());
+        val attributesDistinctlyIdentifyingCandidates = unrequestedAttributesWithValues.entries.stream()
+            .filter { entry: MutableMap.MutableEntry<String?, MutableSet<String?>?>? -> entry!!.value!!.size == failure.getCandidates().size }
+            .collect(Collectors.toList())
 
-        if (attributesDistinctlyIdentifyingCandidates.size() == 1) {
-            suggestableDistinctAttributes.put(failure, attributesDistinctlyIdentifyingCandidates.get(0).getKey());
-            return true;
+        if (attributesDistinctlyIdentifyingCandidates.size == 1) {
+            suggestableDistinctAttributes.put(failure, attributesDistinctlyIdentifyingCandidates.get(0).key)
+            return true
         } else {
-            return false;
+            return false
         }
     }
 
-    @Override
-    protected String buildFailureMsg(AmbiguousVariantsFailure failure, List<AttributeDescriber> attributeDescribers) {
-        String distinguishingAttribute = suggestableDistinctAttributes.remove(failure);
-        assert distinguishingAttribute != null;
-
-        AttributeDescriber describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers);
-        TreeFormatter formatter = new TreeFormatter();
-        summarizeAmbiguousVariants(failure, describer, formatter, false);
-        buildSpecificAttributeSuggestionMsg(failure, distinguishingAttribute, formatter);
-        return formatter.toString();
+    override fun buildFailureMsg(failure: AmbiguousVariantsFailure, attributeDescribers: MutableList<AttributeDescriber>): String {
+        val distinguishingAttribute = checkNotNull(suggestableDistinctAttributes.remove(failure))
+        val describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers)
+        val formatter = TreeFormatter()
+        summarizeAmbiguousVariants(failure, describer, formatter, false)
+        buildSpecificAttributeSuggestionMsg(failure, distinguishingAttribute, formatter)
+        return formatter.toString()
     }
 
-    @Override
-    protected List<String> buildResolutions(String... resolutions) {
-        List<String> result = new ArrayList<>(super.buildResolutions(resolutions));
-        result.add(suggestDependencyInsight());
-        return result;
+    override fun buildResolutions(vararg resolutions: String): MutableList<String> {
+        val result: MutableList<String> = ArrayList<String>(super.buildResolutions(*resolutions))
+        result.add(suggestDependencyInsight())
+        return result
     }
 
-    private void buildSpecificAttributeSuggestionMsg(AmbiguousVariantsFailure failure, String distinguishingAttribute, TreeFormatter formatter) {
-        formatter.node("The only attribute distinguishing these variants is '" + distinguishingAttribute + "'. Add this attribute to the consumer's configuration to resolve the ambiguity:");
-        formatter.startChildren();
-        failure.getCandidates().forEach(candidate -> formatter.node("Value: '" + attributeValueForCandidate(candidate, distinguishingAttribute) + "' selects variant: '" + candidate.getDisplayName() + "'"));
-        formatter.endChildren();
+    private fun buildSpecificAttributeSuggestionMsg(failure: AmbiguousVariantsFailure, distinguishingAttribute: String, formatter: TreeFormatter) {
+        formatter.node("The only attribute distinguishing these variants is '" + distinguishingAttribute + "'. Add this attribute to the consumer's configuration to resolve the ambiguity:")
+        formatter.startChildren()
+        failure.getCandidates().forEach(Consumer { candidate: ResolutionCandidateAssessor.AssessedCandidate? ->
+            formatter.node(
+                "Value: '" + attributeValueForCandidate(
+                    candidate!!,
+                    distinguishingAttribute
+                ) + "' selects variant: '" + candidate.getDisplayName() + "'"
+            )
+        })
+        formatter.endChildren()
     }
 
-    private String attributeValueForCandidate(ResolutionCandidateAssessor.AssessedCandidate candidate, String distinguishingAttribute) {
+    private fun attributeValueForCandidate(candidate: ResolutionCandidateAssessor.AssessedCandidate, distinguishingAttribute: String): String {
         return candidate.getOnlyOnCandidateAttributes().stream()
-            .filter(attribute -> Objects.equals(attribute.getAttribute().getName(), distinguishingAttribute))
-            .map(assessedAttribute -> Objects.requireNonNull(assessedAttribute.getProvided()).toString())
-            .findFirst().orElseThrow(IllegalStateException::new);
+            .filter { attribute: ResolutionCandidateAssessor.AssessedAttribute<*>? -> attribute!!.getAttribute().getName() == distinguishingAttribute }
+            .map<String> { assessedAttribute: ResolutionCandidateAssessor.AssessedAttribute<*>? -> Objects.requireNonNull<String?>(assessedAttribute!!.getProvided()).toString() }
+            .findFirst().orElseThrow<java.lang.IllegalStateException>(Supplier { IllegalStateException() })
     }
 
-    private String suggestDependencyInsight() {
-        return "Use the dependencyInsight report with the --all-variants option to view all variants of the ambiguous dependency.  This report is described at " + getDocumentationRegistry().getDocumentationFor("viewing_debugging_dependencies", "sec:identifying_reason_dependency_selection") + ".";
+    private fun suggestDependencyInsight(): String {
+        return "Use the dependencyInsight report with the --all-variants option to view all variants of the ambiguous dependency.  This report is described at " + getDocumentationRegistry().getDocumentationFor(
+            "viewing_debugging_dependencies",
+            "sec:identifying_reason_dependency_selection"
+        ) + "."
     }
 }

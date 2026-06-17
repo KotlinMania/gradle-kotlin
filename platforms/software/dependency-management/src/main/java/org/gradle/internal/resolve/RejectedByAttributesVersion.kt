@@ -13,73 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve;
+package org.gradle.internal.resolve
 
-import com.google.common.base.Objects;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributesEntry;
-import org.gradle.api.internal.attributes.matching.AttributeMatcher;
-import org.gradle.internal.logging.text.TreeFormatter;
-import org.jspecify.annotations.Nullable;
+import com.google.common.base.Objects
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributesEntry
+import org.gradle.api.internal.attributes.matching.AttributeMatcher
+import org.gradle.internal.logging.text.TreeFormatter
+import java.util.function.Function
 
-import java.util.Comparator;
-import java.util.List;
-
-public class RejectedByAttributesVersion extends RejectedVersion {
-    private static final Comparator<AttributeMatcher.MatchingDescription<?>> DESCRIPTION_COMPARATOR = Comparator.comparing(o -> o.getRequested().getKey().getName());
-    private final List<AttributeMatcher.MatchingDescription<?>> matchingDescription;
-
-    public RejectedByAttributesVersion(ModuleComponentIdentifier id, List<AttributeMatcher.MatchingDescription<?>> matchingDescription) {
-        super(id);
-        this.matchingDescription = matchingDescription;
-    }
-
-    @Override
-    public void describeTo(TreeFormatter builder) {
-        matchingDescription.sort(DESCRIPTION_COMPARATOR);
-        builder.node(getId().getVersion());
-        builder.startChildren();
-        for (AttributeMatcher.MatchingDescription<?> description : matchingDescription) {
-            builder.node("Attribute '" + description.getRequested().getKey().getName() + "'");
+class RejectedByAttributesVersion(id: ModuleComponentIdentifier?, val matchingDescription: MutableList<AttributeMatcher.MatchingDescription<*>>) : RejectedVersion(id) {
+    override fun describeTo(builder: TreeFormatter) {
+        matchingDescription.sort(DESCRIPTION_COMPARATOR)
+        builder.node(getId().getVersion())
+        builder.startChildren()
+        for (description in matchingDescription) {
+            builder.node("Attribute '" + description.getRequested().getKey().getName() + "'")
             if (description.isMatch()) {
-                builder.append(" matched. ");
+                builder.append(" matched. ")
             } else {
-                builder.append(" didn't match. ");
+                builder.append(" didn't match. ")
             }
-            builder.append("Requested " + prettify(description.getRequested()) + ", was: " + prettify(description.getFound()));
+            builder.append("Requested " + prettify(description.getRequested()) + ", was: " + prettify(description.getFound()))
         }
-        builder.endChildren();
+        builder.endChildren()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
         if (!super.equals(o)) {
-            return false;
+            return false
         }
-        RejectedByAttributesVersion that = (RejectedByAttributesVersion) o;
-        return Objects.equal(getId(), that.getId());
+        val that = o as RejectedByAttributesVersion
+        return Objects.equal(getId(), that.getId())
     }
 
-    @Override
-    public int hashCode() {
-        return getId().hashCode();
+    override fun hashCode(): Int {
+        return getId().hashCode()
     }
 
-    private static String prettify(@Nullable ImmutableAttributesEntry<?> entry) {
-        if (entry != null) {
-            return "'" + entry.getIsolatedValue() + "'";
-        } else {
-            return "not found";
+    companion object {
+        private val DESCRIPTION_COMPARATOR: Comparator<AttributeMatcher.MatchingDescription<*>?> =
+            Comparator.comparing<AttributeMatcher.MatchingDescription<*>?, String?>(Function { o: AttributeMatcher.MatchingDescription<*>? -> o!!.getRequested().getKey().getName() })
+
+        private fun prettify(entry: ImmutableAttributesEntry<*>?): String {
+            if (entry != null) {
+                return "'" + entry.getIsolatedValue() + "'"
+            } else {
+                return "not found"
+            }
         }
-    }
-
-    public List<AttributeMatcher.MatchingDescription<?>> getMatchingDescription() {
-        return matchingDescription;
     }
 }

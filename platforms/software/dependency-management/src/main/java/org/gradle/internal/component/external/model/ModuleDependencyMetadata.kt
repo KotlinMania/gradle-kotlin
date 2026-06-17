@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.internal.component.model.DependencyMetadata;
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.internal.component.model.DependencyMetadata
 
-public interface ModuleDependencyMetadata extends DependencyMetadata {
-    @Override
-    ModuleComponentSelector getSelector();
+interface ModuleDependencyMetadata : DependencyMetadata {
+    val selector: ModuleComponentSelector?
 
     /**
      * Returns a copy of this dependency with the given requested version.
      */
-    ModuleDependencyMetadata withRequestedVersion(VersionConstraint requestedVersion);
+    fun withRequestedVersion(requestedVersion: VersionConstraint): ModuleDependencyMetadata?
 
-    @Override
-    ModuleDependencyMetadata withReason(String reason);
+    override fun withReason(reason: String): ModuleDependencyMetadata?
 
-    ModuleDependencyMetadata withEndorseStrictVersions(boolean endorse);
+    fun withEndorseStrictVersions(endorse: Boolean): ModuleDependencyMetadata?
 }

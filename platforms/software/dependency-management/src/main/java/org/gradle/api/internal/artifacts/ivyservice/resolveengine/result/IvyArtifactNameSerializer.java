@@ -46,10 +46,10 @@ public class IvyArtifactNameSerializer extends AbstractSerializer<IvyArtifactNam
 
     @Override
     public void write(Encoder encoder, IvyArtifactName value) throws IOException {
-        encoder.writeString(value.getName());
-        encoder.writeString(value.getType());
-        encoder.writeNullableString(value.getExtension());
-        encoder.writeNullableString(value.getClassifier());
+        encoder.writeString(value.name);
+        encoder.writeString(value.type);
+        encoder.writeNullableString(value.extension);
+        encoder.writeNullableString(value.classifier);
     }
 
     public void writeNullable(Encoder encoder, @Nullable IvyArtifactName value) throws IOException {

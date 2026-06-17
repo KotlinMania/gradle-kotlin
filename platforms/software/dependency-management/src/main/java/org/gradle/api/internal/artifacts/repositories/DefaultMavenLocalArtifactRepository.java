@@ -111,16 +111,16 @@ public abstract class DefaultMavenLocalArtifactRepository extends DefaultMavenAr
         @Override
         public boolean isUsableModule(String repoName, MutableMavenModuleResolveMetadata metaData, ExternalResourceArtifactResolver artifactResolver) {
 
-            if (metaData.isPomPackaging()) {
+            if (metaData.isPomPackaging) {
                 return true;
             }
 
             // check custom packaging
             ModuleComponentArtifactMetadata artifact;
-            if (metaData.isKnownJarPackaging()) {
+            if (metaData.isKnownJarPackaging) {
                 artifact = metaData.artifact("jar", "jar", null);
             } else {
-                artifact = metaData.artifact(metaData.getPackaging(), metaData.getPackaging(), null);
+                artifact = metaData.artifact(metaData.packaging, metaData.packaging, null);
             }
 
             if (artifactResolver.artifactExists(artifact, new DefaultResourceAwareResolveResult())) {

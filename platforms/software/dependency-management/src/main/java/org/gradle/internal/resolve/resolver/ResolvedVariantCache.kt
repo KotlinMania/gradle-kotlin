@@ -13,38 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant;
-import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistry;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedVariant
+import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistry
+import org.gradle.internal.component.model.VariantResolveMetadata
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Function
 
 /**
- * Cache for {@link ResolvedVariant} instances.
+ * Cache for [ResolvedVariant] instances.
  *
  * This cache contains ResolvedVariants for the entire build tree.
  */
-@ServiceScope(Scope.BuildTree.class)
-public class ResolvedVariantCache  {
-
-    private final Map<CacheKey, ResolvedVariant> cache = new ConcurrentHashMap<>();
+@ServiceScope(Scope.BuildTree::class)
+class ResolvedVariantCache {
+    private val cache: MutableMap<CacheKey, ResolvedVariant> = ConcurrentHashMap<CacheKey, ResolvedVariant>()
 
     /**
      * Get the resolved variant associated with the key, if present.
      *
      * @return null if the corresponding value is not present in the cache
      */
-    @Nullable
-    public ResolvedVariant get(CacheKey key) {
-        return cache.get(key);
+    fun get(key: CacheKey): ResolvedVariant? {
+        return cache.get(key)
     }
 
     /**
@@ -52,8 +46,8 @@ public class ResolvedVariantCache  {
      *
      * @return the resolved variant created by the function or a cached instance, if available
      */
-    public ResolvedVariant computeIfAbsent(CacheKey key, Function<CacheKey, ResolvedVariant> mappingFunction) {
-        return cache.computeIfAbsent(key, mappingFunction);
+    fun computeIfAbsent(key: CacheKey, mappingFunction: Function<CacheKey, ResolvedVariant>): ResolvedVariant {
+        return cache.computeIfAbsent(key, mappingFunction)
     }
 
     /**
@@ -61,48 +55,43 @@ public class ResolvedVariantCache  {
      * transforms the attributes of the variant based on its artifacts. The registry is necessary here,
      * as the artifact type registry in each consuming project may be different, resulting in a
      * different computed attributes set for any given producer variant.
-     * <p>
+     *
+     *
      * We key on the registry since the attribute transformation process is expensive. A registry
      * will always produce the same attributes for a given variant, so we are able to use the
      * variant and the registry as a composite key.
      */
-    public static class CacheKey {
-        final VariantResolveMetadata.Identifier variantIdentifier;
-        final ImmutableArtifactTypeRegistry artifactTypeRegistry;
-        private final int hashCode;
+    class CacheKey(val variantIdentifier: VariantResolveMetadata.Identifier, val artifactTypeRegistry: ImmutableArtifactTypeRegistry) {
+        private val hashCode: Int
 
-        public CacheKey(VariantResolveMetadata.Identifier variantIdentifier, ImmutableArtifactTypeRegistry artifactTypeRegistry) {
-            this.variantIdentifier = variantIdentifier;
-            this.artifactTypeRegistry = artifactTypeRegistry;
-            this.hashCode = computeHashCode(variantIdentifier, artifactTypeRegistry);
+        init {
+            this.hashCode = computeHashCode(variantIdentifier, artifactTypeRegistry)
         }
 
-        private static int computeHashCode(
-            VariantResolveMetadata.Identifier variantIdentifier,
-            ImmutableArtifactTypeRegistry artifactTypeRegistry
-        ) {
-            return 31 * variantIdentifier.hashCode() + artifactTypeRegistry.hashCode();
+        override fun hashCode(): Int {
+            return hashCode
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        @Override
-        @SuppressWarnings("ReferenceEquality") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-        public boolean equals(Object obj) {
-            if (obj == this) {
-                return true;
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        override fun equals(obj: Any): Boolean {
+            if (obj === this) {
+                return true
             }
-            if (obj == null || obj.getClass() != getClass()) {
-                return false;
+            if (obj == null || obj.javaClass != javaClass) {
+                return false
             }
-            CacheKey other = (CacheKey) obj;
-            return variantIdentifier.equals(other.variantIdentifier) &&
-                // Artifact type registries are interned
-                artifactTypeRegistry == other.artifactTypeRegistry;
+            val other = obj as CacheKey
+            return variantIdentifier == other.variantIdentifier &&  // Artifact type registries are interned
+                    artifactTypeRegistry === other.artifactTypeRegistry
+        }
+
+        companion object {
+            private fun computeHashCode(
+                variantIdentifier: VariantResolveMetadata.Identifier,
+                artifactTypeRegistry: ImmutableArtifactTypeRegistry
+            ): Int {
+                return 31 * variantIdentifier.hashCode() + artifactTypeRegistry.hashCode()
+            }
         }
     }
-
 }

@@ -13,126 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.internal.component.local.model.DefaultProjectDependencyMetadata;
-import org.gradle.internal.component.model.DependencyMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.jspecify.annotations.Nullable;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.internal.component.local.model.DefaultProjectDependencyMetadata
+import org.gradle.internal.component.model.DependencyMetadata
+import org.gradle.internal.component.model.IvyArtifactName
 
 /**
- * A {@link ModuleDependencyMetadata} implementation that is backed by an {@link ExternalDependencyDescriptor}.
+ * A [ModuleDependencyMetadata] implementation that is backed by an [ExternalDependencyDescriptor].
  */
-public abstract class ExternalModuleDependencyMetadata implements ModuleDependencyMetadata {
-    private final String reason;
-    private final boolean isEndorsing;
-    private final ImmutableList<IvyArtifactName> artifacts;
+abstract class ExternalModuleDependencyMetadata(@JvmField val reason: String?, val isEndorsingStrictVersions: Boolean, @JvmField val artifacts: ImmutableList<IvyArtifactName?>?) : ModuleDependencyMetadata {
+    abstract val dependencyDescriptor: ExternalDependencyDescriptor?
 
-    public ExternalModuleDependencyMetadata(@Nullable String reason, boolean endorsing, ImmutableList<IvyArtifactName> artifacts) {
-        this.reason = reason;
-        this.isEndorsing = endorsing;
-        this.artifacts = artifacts;
-    }
+    abstract val excludes: ImmutableList<ExcludeMetadata?>?
 
-    public abstract ExternalDependencyDescriptor getDependencyDescriptor();
-
-    @Override
-    public ImmutableList<IvyArtifactName> getArtifacts() {
-        return artifacts;
-    }
-
-    @Override
-    public abstract ImmutableList<ExcludeMetadata> getExcludes();
-
-    @Override
-    public DependencyMetadata withTarget(ComponentSelector target) {
-        if (target instanceof ModuleComponentSelector) {
-            ModuleComponentSelector moduleTarget = (ModuleComponentSelector) target;
-            ModuleComponentSelector newSelector = DefaultModuleComponentSelector.newSelector(moduleTarget.getModuleIdentifier(), moduleTarget.getVersionConstraint(), moduleTarget.getAttributes(), moduleTarget.getCapabilitySelectors());
-            if (newSelector.equals(getSelector())) {
-                return this;
+    override fun withTarget(target: ComponentSelector?): DependencyMetadata? {
+        if (target is ModuleComponentSelector) {
+            val moduleTarget = target
+            val newSelector: ModuleComponentSelector = DefaultModuleComponentSelector.Companion.newSelector(
+                moduleTarget.getModuleIdentifier(),
+                moduleTarget.getVersionConstraint(),
+                moduleTarget.getAttributes(),
+                moduleTarget.getCapabilitySelectors()
+            )
+            if (newSelector == selector) {
+                return this
             }
-            return withRequested(newSelector);
-        } else if (target instanceof ProjectComponentSelector) {
-            ProjectComponentSelector projectTarget = (ProjectComponentSelector) target;
-            return new DefaultProjectDependencyMetadata(projectTarget, this);
+            return withRequested(newSelector)
+        } else if (target is ProjectComponentSelector) {
+            val projectTarget = target
+            return DefaultProjectDependencyMetadata(projectTarget, this)
         } else {
-            throw new IllegalArgumentException("Unexpected selector provided: " + target);
+            throw IllegalArgumentException("Unexpected selector provided: " + target)
         }
     }
 
-    @Override
-    public DependencyMetadata withTargetAndArtifacts(ComponentSelector target, ImmutableList<IvyArtifactName> artifacts) {
-        if (target instanceof ModuleComponentSelector) {
-            ModuleComponentSelector moduleTarget = (ModuleComponentSelector) target;
-            ModuleComponentSelector newSelector = DefaultModuleComponentSelector.newSelector(moduleTarget.getModuleIdentifier(), moduleTarget.getVersionConstraint(), moduleTarget.getAttributes(), moduleTarget.getCapabilitySelectors());
-            if (newSelector.equals(getSelector()) && getArtifacts().equals(artifacts)) {
-                return this;
+    override fun withTargetAndArtifacts(target: ComponentSelector?, artifacts: ImmutableList<IvyArtifactName?>?): DependencyMetadata? {
+        if (target is ModuleComponentSelector) {
+            val moduleTarget = target
+            val newSelector: ModuleComponentSelector = DefaultModuleComponentSelector.Companion.newSelector(
+                moduleTarget.getModuleIdentifier(),
+                moduleTarget.getVersionConstraint(),
+                moduleTarget.getAttributes(),
+                moduleTarget.getCapabilitySelectors()
+            )
+            if (newSelector == selector && this.artifacts == artifacts) {
+                return this
             }
-            return withRequestedAndArtifacts(newSelector, artifacts);
-        } else if (target instanceof ProjectComponentSelector) {
-            ProjectComponentSelector projectTarget = (ProjectComponentSelector) target;
-            return new DefaultProjectDependencyMetadata(projectTarget, this.withArtifacts(artifacts));
+            return withRequestedAndArtifacts(newSelector, artifacts)
+        } else if (target is ProjectComponentSelector) {
+            val projectTarget = target
+            return DefaultProjectDependencyMetadata(projectTarget, this.withArtifacts(artifacts)!!)
         } else {
-            throw new IllegalArgumentException("Unexpected selector provided: " + target);
+            throw IllegalArgumentException("Unexpected selector provided: " + target)
         }
     }
 
-    @Override
-    public ModuleDependencyMetadata withRequestedVersion(VersionConstraint requestedVersion) {
-        ModuleComponentSelector selector = getSelector();
-        if (requestedVersion.equals(selector.getVersionConstraint())) {
-            return this;
+    override fun withRequestedVersion(requestedVersion: VersionConstraint): ModuleDependencyMetadata? {
+        val selector: ModuleComponentSelector = selector
+        if (requestedVersion == selector.getVersionConstraint()) {
+            return this
         }
-        ModuleComponentSelector newSelector = DefaultModuleComponentSelector.newSelector(selector.getModuleIdentifier(), requestedVersion, selector.getAttributes(), selector.getCapabilitySelectors());
-        return withRequested(newSelector);
+        val newSelector: ModuleComponentSelector =
+            DefaultModuleComponentSelector.Companion.newSelector(selector.getModuleIdentifier(), requestedVersion, selector.getAttributes(), selector.getCapabilitySelectors())
+        return withRequested(newSelector)
     }
 
-    protected abstract ModuleDependencyMetadata withRequested(ModuleComponentSelector newSelector);
+    protected abstract fun withRequested(newSelector: ModuleComponentSelector?): ModuleDependencyMetadata?
 
-    protected abstract ModuleDependencyMetadata withArtifacts(ImmutableList<IvyArtifactName> newArtifacts);
+    protected abstract fun withArtifacts(newArtifacts: ImmutableList<IvyArtifactName?>?): ModuleDependencyMetadata?
 
-    protected abstract ModuleDependencyMetadata withRequestedAndArtifacts(ModuleComponentSelector newSelector, ImmutableList<IvyArtifactName> newArtifacts);
+    protected abstract fun withRequestedAndArtifacts(newSelector: ModuleComponentSelector?, newArtifacts: ImmutableList<IvyArtifactName?>?): ModuleDependencyMetadata?
 
-    @Override
-    public ModuleComponentSelector getSelector() {
-        return getDependencyDescriptor().getSelector();
-    }
+    val selector: ModuleComponentSelector
+        get() = this.dependencyDescriptor!!.getSelector()
 
-    @Override
-    public boolean isChanging() {
-        return getDependencyDescriptor().isChanging();
-    }
+    val isChanging: Boolean
+        get() = this.dependencyDescriptor!!.isChanging()
 
-    @Override
-    public boolean isTransitive() {
-        return getDependencyDescriptor().isTransitive();
-    }
+    val isTransitive: Boolean
+        get() = this.dependencyDescriptor!!.isTransitive()
 
-    @Override
-    public boolean isConstraint() {
-        return getDependencyDescriptor().isConstraint();
-    }
+    val isConstraint: Boolean
+        get() = this.dependencyDescriptor!!.isConstraint()
 
-    @Override
-    public boolean isEndorsingStrictVersions() {
-        return isEndorsing;
-    }
-
-    @Nullable
-    @Override
-    public String getReason() {
-        return reason;
-    }
-
-    @Override
-    public String toString() {
-        return getDependencyDescriptor().toString();
+    override fun toString(): String {
+        return this.dependencyDescriptor.toString()
     }
 }

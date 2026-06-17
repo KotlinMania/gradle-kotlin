@@ -13,57 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
+import org.gradle.api.internal.attributes.CompatibilityCheckResult
 
-import org.gradle.api.internal.attributes.CompatibilityCheckResult;
-import org.jspecify.annotations.Nullable;
+class DefaultCompatibilityCheckResult<T>(consumerValue: T?, producerValue: T?) : CompatibilityCheckResult<T?> {
+    private val consumerValue: T?
+    private val producerValue: T?
+    private var compatible = false
+    private var done = false
 
-import java.util.Objects;
-
-public class DefaultCompatibilityCheckResult<T> implements CompatibilityCheckResult<T> {
-    private final T consumerValue;
-    private final T producerValue;
-    private boolean compatible;
-    private boolean done;
-
-    public DefaultCompatibilityCheckResult(@Nullable T consumerValue, T producerValue) {
-        assert producerValue != null : "Internal contract of the current implementation, can be changed with a motivation";
-        assert !Objects.equals(consumerValue, producerValue);
-        this.consumerValue = consumerValue;
-        this.producerValue = producerValue;
+    init {
+        checkNotNull(producerValue) { "Internal contract of the current implementation, can be changed with a motivation" }
+        assert(consumerValue != producerValue)
+        this.consumerValue = consumerValue
+        this.producerValue = producerValue
     }
 
-    @Override
-    public boolean isCompatible() {
-        assert done;
-        return compatible;
+    override fun isCompatible(): Boolean {
+        assert(done)
+        return compatible
     }
 
-    @Override
-    public boolean hasResult() {
-        return done;
+    override fun hasResult(): Boolean {
+        return done
     }
 
-    @Override
-    public T getConsumerValue() {
-        return consumerValue;
+    override fun getConsumerValue(): T? {
+        return consumerValue
     }
 
-    @Override
-    public T getProducerValue() {
-        return producerValue;
+    override fun getProducerValue(): T? {
+        return producerValue
     }
 
-    @Override
-    public void compatible() {
-        done = true;
-        compatible = true;
+    override fun compatible() {
+        done = true
+        compatible = true
     }
 
-    @Override
-    public void incompatible() {
-        done = true;
-        compatible = false;
+    override fun incompatible() {
+        done = true
+        compatible = false
     }
 }

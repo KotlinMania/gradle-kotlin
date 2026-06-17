@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-public abstract class TestFixturesSupport {
-    public final static String TEST_FIXTURE_SOURCESET_NAME = "testFixtures";
-    public final static String TEST_FIXTURES_FEATURE_NAME = "testFixtures";
-    public final static String TEST_FIXTURES_CAPABILITY_FEATURE_NAME = "test-fixtures";
+object TestFixturesSupport {
+    const val TEST_FIXTURE_SOURCESET_NAME: String = "testFixtures"
+    const val TEST_FIXTURES_FEATURE_NAME: String = "testFixtures"
+    const val TEST_FIXTURES_CAPABILITY_FEATURE_NAME: String = "test-fixtures"
 }

@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.rules;
-
-import java.util.List;
+package org.gradle.internal.rules
 
 /**
  * An action representing a rule, taking declared inputs and performing an action on a subject.
  *
  * @param <T> The subject type
- */
-public interface RuleAction<T> {
-    List<Class<?>> getInputTypes();
-    void execute(T subject, List<?> inputs);
+</T> */
+interface RuleAction<T> {
+    @JvmField
+    val inputTypes: MutableList<Class<*>?>?
+    fun execute(subject: T?, inputs: MutableList<*>?)
 }

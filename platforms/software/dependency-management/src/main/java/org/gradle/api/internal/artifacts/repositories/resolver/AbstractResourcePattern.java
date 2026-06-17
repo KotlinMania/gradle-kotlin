@@ -85,10 +85,10 @@ abstract class AbstractResourcePattern implements ResourcePattern {
 
     protected Map<String, String> toAttributes(IvyArtifactName ivyArtifact) {
         HashMap<String, String> attributes = new HashMap<>();
-        attributes.put(PatternHelper.ARTIFACT_KEY, ivyArtifact.getName());
-        attributes.put(PatternHelper.TYPE_KEY, ivyArtifact.getType());
-        attributes.put(PatternHelper.EXT_KEY, ivyArtifact.getExtension());
-        attributes.put(CLASSIFIER_KEY, ivyArtifact.getClassifier());
+        attributes.put(PatternHelper.ARTIFACT_KEY, ivyArtifact.name);
+        attributes.put(PatternHelper.TYPE_KEY, ivyArtifact.type);
+        attributes.put(PatternHelper.EXT_KEY, ivyArtifact.extension);
+        attributes.put(CLASSIFIER_KEY, ivyArtifact.classifier);
         return attributes;
     }
 
@@ -127,10 +127,10 @@ abstract class AbstractResourcePattern implements ResourcePattern {
         return isValidSubstitute(componentIdentifier.getModule(), false)
             && isValidSubstitute(componentIdentifier.getGroup(), organisationIsOptional)
             && isValidSubstitute(componentIdentifier.getVersion(), revisionIsOptional)
-            && isValidSubstitute(artifactName.getName(), artifactIsOptional)
-            && isValidSubstitute(artifactName.getClassifier(), classifierIsOptional)
-            && isValidSubstitute(artifactName.getExtension(), extensionIsOptional)
-            && isValidSubstitute(artifactName.getType(), typeIsOptional);
+            && isValidSubstitute(artifactName.name, artifactIsOptional)
+            && isValidSubstitute(artifactName.classifier, classifierIsOptional)
+            && isValidSubstitute(artifactName.extension, extensionIsOptional)
+            && isValidSubstitute(artifactName.type, typeIsOptional);
     }
 
     private boolean isValidSubstitute(@Nullable String candidate, boolean optional) {

@@ -13,25 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphValidationException
 
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.GraphValidationException;
+class LockOutOfDateException(message: String) : GraphValidationException(message) {
+    val errors: MutableList<String>
 
-import java.util.List;
-
-import static java.util.Collections.emptyList;
-
-public class LockOutOfDateException extends GraphValidationException {
-
-    private final List<String> errors;
-
-    public LockOutOfDateException(String message) {
-        super(message);
-        this.errors = emptyList();
-    }
-
-    public List<String> getErrors() {
-        return errors;
+    init {
+        this.errors = mutableListOf<String>()
     }
 }

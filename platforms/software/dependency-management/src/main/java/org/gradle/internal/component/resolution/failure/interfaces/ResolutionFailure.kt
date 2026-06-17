@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.interfaces
 
-package org.gradle.internal.component.resolution.failure.interfaces;
-
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
 
 /**
  * Represents any failure that can occur during variant selection and
@@ -26,20 +25,21 @@ import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
  * be implemented directly.  Concrete types implementing this interface should be immutable data classes
  * without nullable fields.  They must also be serializable by the configuration cache.
  */
-public interface ResolutionFailure {
+interface ResolutionFailure {
     /**
      * Returns a human-readable description of the requested target component, for use
      * primarily in error messages.
-     * <p>
-     * If this is a {@link org.gradle.internal.component.resolution.failure.interfaces Component Selection} failure,
+     *
+     *
+     * If this is a [Component Selection][org.gradle.internal.component.resolution.failure.interfaces] failure,
      * this should describe the requested component selector.  If this is
-     * a {@link org.gradle.internal.component.resolution.failure.interfaces Variant Selection} failure,
+     * a [Variant Selection][org.gradle.internal.component.resolution.failure.interfaces] failure,
      * this should describe the component identifier of the selected component.
      *
      * @return description of the requested target
-     * {@link org.gradle.internal.component.resolution.failure.interfaces}
+     * [org.gradle.internal.component.resolution.failure.interfaces]
      */
-    String describeRequestTarget();
+    fun describeRequestTarget(): String?
 
     /**
      * Returns the problem id associated with this failure, for use in identifying the failure and
@@ -47,5 +47,5 @@ public interface ResolutionFailure {
      *
      * @return the problem id
      */
-    ResolutionFailureProblemId getProblemId();
+    fun getProblemId(): ResolutionFailureProblemId?
 }

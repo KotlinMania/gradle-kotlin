@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.model;
-
-import java.util.Set;
+package org.gradle.internal.component.model
 
 /**
  * Immutable metadata for a configuration of a component instance that is used to perform dependency graph resolution.
  */
-public interface ConfigurationGraphResolveMetadata extends VariantGraphResolveMetadata {
-    Set<String> getHierarchy();
+interface ConfigurationGraphResolveMetadata : VariantGraphResolveMetadata {
+    fun getHierarchy(): MutableSet<String>?
 
-    boolean isVisible();
+    fun isVisible(): Boolean
 }

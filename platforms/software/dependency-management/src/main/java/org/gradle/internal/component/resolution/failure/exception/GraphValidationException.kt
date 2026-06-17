@@ -13,23 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import org.gradle.internal.component.resolution.failure.interfaces.GraphValidationFailure;
-
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.interfaces.GraphValidationFailure
 
 /**
  * Exception that occurs while validating a graph after the graph has been constructed.
  */
-public class GraphValidationException extends AbstractResolutionFailureException {
-    public GraphValidationException(String message, GraphValidationFailure failure, List<String> resolutions) {
-        super(message, failure, resolutions);
-    }
-
-    @Override
-    public GraphValidationFailure getFailure() {
-        return (GraphValidationFailure) failure;
+class GraphValidationException(message: String, failure: GraphValidationFailure, resolutions: MutableList<String>) : AbstractResolutionFailureException(message, failure, resolutions) {
+    override fun getFailure(): GraphValidationFailure {
+        return failure as GraphValidationFailure
     }
 }

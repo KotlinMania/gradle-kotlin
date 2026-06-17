@@ -13,106 +13,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model.ivy
 
-package org.gradle.internal.component.external.model.ivy;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.external.descriptor.Artifact
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.ModuleDependencyMetadata
+import org.gradle.internal.component.model.ConfigurationMetadata
+import org.gradle.internal.component.model.Exclude
+import org.gradle.internal.component.model.ExcludeMetadata
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.internal.component.external.descriptor.Artifact;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
-import org.gradle.internal.component.model.ConfigurationMetadata;
-import org.gradle.internal.component.model.Exclude;
-import org.gradle.internal.component.model.ExcludeMetadata;
-
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
-class IvyConfigurationHelper {
-
-    private final ImmutableList<Artifact> artifactDefinitions;
-    private final Map<Artifact, ModuleComponentArtifactMetadata> artifacts;
-    private final ImmutableList<Exclude> excludes;
-    private final ImmutableList<IvyDependencyDescriptor> dependencies;
-    private final ModuleComponentIdentifier componentId;
-
-    IvyConfigurationHelper(ImmutableList<Artifact> artifactDefinitions, Map<Artifact, ModuleComponentArtifactMetadata> artifacts, ImmutableList<Exclude> excludes, ImmutableList<IvyDependencyDescriptor> dependencies, ModuleComponentIdentifier componentId) {
-
-        this.artifactDefinitions = artifactDefinitions;
-        this.artifacts = artifacts;
-        this.excludes = excludes;
-        this.dependencies = dependencies;
-        this.componentId = componentId;
-    }
-
-    ImmutableList<ModuleComponentArtifactMetadata> filterArtifacts(String name, Collection<String> hierarchy) {
-        Set<ModuleComponentArtifactMetadata> artifacts = new LinkedHashSet<>();
-        collectArtifactsFor(name, artifacts);
-        for (String parent : hierarchy) {
-            collectArtifactsFor(parent, artifacts);
+internal class IvyConfigurationHelper(
+    private val artifactDefinitions: ImmutableList<Artifact>,
+    private val artifacts: MutableMap<Artifact, ModuleComponentArtifactMetadata>,
+    private val excludes: ImmutableList<Exclude>,
+    private val dependencies: ImmutableList<IvyDependencyDescriptor>,
+    private val componentId: ModuleComponentIdentifier
+) {
+    fun filterArtifacts(name: String, hierarchy: MutableCollection<String>): ImmutableList<ModuleComponentArtifactMetadata> {
+        val artifacts: MutableSet<ModuleComponentArtifactMetadata> = LinkedHashSet<ModuleComponentArtifactMetadata>()
+        collectArtifactsFor(name, artifacts)
+        for (parent in hierarchy) {
+            collectArtifactsFor(parent, artifacts)
         }
-        return ImmutableList.copyOf(artifacts);
+        return ImmutableList.copyOf<ModuleComponentArtifactMetadata>(artifacts)
     }
 
-    private void collectArtifactsFor(String name, Collection<ModuleComponentArtifactMetadata> dest) {
-        for (Artifact artifact : artifactDefinitions) {
-            if (artifact.getConfigurations().contains(name)) {
-                ModuleComponentArtifactMetadata artifactMetadata = artifacts.get(artifact);
+    private fun collectArtifactsFor(name: String, dest: MutableCollection<ModuleComponentArtifactMetadata>) {
+        for (artifact in artifactDefinitions) {
+            if (artifact.configurations.contains(name)) {
+                var artifactMetadata = artifacts.get(artifact)
                 if (artifactMetadata == null) {
-                    artifactMetadata = new DefaultModuleComponentArtifactMetadata(componentId, artifact.getArtifactName());
-                    artifacts.put(artifact, artifactMetadata);
+                    artifactMetadata = DefaultModuleComponentArtifactMetadata(componentId, artifact.artifactName)
+                    artifacts.put(artifact, artifactMetadata)
                 }
-                dest.add(artifactMetadata);
+                dest.add(artifactMetadata)
             }
         }
     }
 
-    ImmutableList<ExcludeMetadata> filterExcludes(ImmutableSet<String> hierarchy) {
-        ImmutableList.Builder<ExcludeMetadata> filtered = ImmutableList.builder();
-        for (Exclude exclude : excludes) {
-            for (String config : exclude.getConfigurations()) {
+    fun filterExcludes(hierarchy: ImmutableSet<String>): ImmutableList<ExcludeMetadata> {
+        val filtered = ImmutableList.builder<ExcludeMetadata>()
+        for (exclude in excludes) {
+            for (config in exclude.configurations!!) {
                 if (hierarchy.contains(config)) {
-                    filtered.add(exclude);
-                    break;
+                    filtered.add(exclude)
+                    break
                 }
             }
         }
-        return filtered.build();
+        return filtered.build()
     }
 
-    ImmutableList<ModuleDependencyMetadata> filterDependencies(ConfigurationMetadata config) {
-        ImmutableList.Builder<ModuleDependencyMetadata> filteredDependencies = ImmutableList.builder();
-        for (IvyDependencyDescriptor dependency : dependencies) {
-            if (include(dependency, config.getName(), config.getHierarchy())) {
-                filteredDependencies.add(new IvyDependencyMetadata(config, dependency));
+    fun filterDependencies(config: ConfigurationMetadata): ImmutableList<ModuleDependencyMetadata> {
+        val filteredDependencies = ImmutableList.builder<ModuleDependencyMetadata>()
+        for (dependency in dependencies) {
+            if (include(dependency, config.name!!, config.hierarchy)) {
+                filteredDependencies.add(IvyDependencyMetadata(config, dependency))
             }
         }
-        return filteredDependencies.build();
+        return filteredDependencies.build()
     }
 
-    private boolean include(IvyDependencyDescriptor dependency, String configName, Collection<String> hierarchy) {
-        Set<String> dependencyConfigurations = dependency.getConfMappings().keySet();
-        for (String moduleConfiguration : dependencyConfigurations) {
-            if (moduleConfiguration.equals("%") || hierarchy.contains(moduleConfiguration)) {
-                return true;
+    private fun include(dependency: IvyDependencyDescriptor, configName: String, hierarchy: MutableCollection<String>): Boolean {
+        val dependencyConfigurations = dependency.getConfMappings().keySet()
+        for (moduleConfiguration in dependencyConfigurations) {
+            if (moduleConfiguration == "%" || hierarchy.contains(moduleConfiguration)) {
+                return true
             }
-            if (moduleConfiguration.equals("*")) {
-                boolean include = true;
-                for (String conf2 : dependencyConfigurations) {
-                    if (conf2.startsWith("!") && conf2.substring(1).equals(configName)) {
-                        include = false;
-                        break;
+            if (moduleConfiguration == "*") {
+                var include = true
+                for (conf2 in dependencyConfigurations) {
+                    if (conf2.startsWith("!") && conf2.substring(1) == configName) {
+                        include = false
+                        break
                     }
                 }
                 if (include) {
-                    return true;
+                    return true
                 }
             }
         }
-        return false;
+        return false
     }
 }

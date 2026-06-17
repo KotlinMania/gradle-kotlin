@@ -13,114 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.api.credentials.Credentials
+import org.gradle.authentication.Authentication
+import java.util.Objects
 
-import org.gradle.api.credentials.Credentials;
-import org.gradle.authentication.Authentication;
+abstract class AbstractAuthentication @JvmOverloads constructor(
+    private val name: String?,
+    private val type: Class<out Authentication?>?,
+    private val supportedCredentialType: Class<out Credentials?> = null
+) : AuthenticationInternal {
+    private var credentials: Credentials? = null
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+    private val hosts: MutableSet<AuthenticationInternal.HostAndPort?>
 
-public abstract class AbstractAuthentication implements AuthenticationInternal {
-    private final String name;
-    private final Class<? extends Credentials> supportedCredentialType;
-    private final Class<? extends Authentication> type;
-
-    private Credentials credentials;
-
-    private final Set<HostAndPort> hosts;
-
-    public AbstractAuthentication(String name, Class<? extends Authentication> type) {
-        this(name, type, null);
+    init {
+        this.hosts = HashSet<AuthenticationInternal.HostAndPort?>()
     }
 
-    public AbstractAuthentication(String name, Class<? extends Authentication> type, Class<? extends Credentials> supportedCredential) {
-        this.name = name;
-        this.supportedCredentialType = supportedCredential;
-        this.type = type;
-        this.hosts = new HashSet<>();
+    override fun getCredentials(): Credentials? {
+        return credentials
     }
 
-    @Override
-    public Credentials getCredentials() {
-        return credentials;
+    override fun setCredentials(credentials: Credentials?) {
+        this.credentials = credentials
     }
 
-    @Override
-    public void setCredentials(Credentials credentials) {
-        this.credentials = credentials;
+    override fun getName(): String? {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun supports(credentials: Credentials): Boolean {
+        return supportedCredentialType.isAssignableFrom(credentials.javaClass)
     }
 
-    @Override
-    public boolean supports(final Credentials credentials) {
-        return supportedCredentialType.isAssignableFrom(credentials.getClass());
+    override fun getType(): Class<out Authentication?>? {
+        return type
     }
 
-    @Override
-    public Class<? extends Authentication> getType() {
-        return type;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("'%s'(%s)", getName(), getType().getSimpleName());
+    override fun toString(): String {
+        return String.format("'%s'(%s)", getName(), getType()!!.getSimpleName())
     }
 
 
-    @Override
-    public Collection<HostAndPort> getHostsForAuthentication() {
-        return hosts;
+    override fun getHostsForAuthentication(): MutableCollection<AuthenticationInternal.HostAndPort?> {
+        return hosts
     }
 
 
-    @Override
-    public void addHost(String host, int port) {
-        hosts.add(new DefaultHostAndPort(host, port));
+    override fun addHost(host: String?, port: Int) {
+        hosts.add(DefaultHostAndPort(host, port))
     }
 
-    private static class DefaultHostAndPort implements HostAndPort {
-        private final String host;
-        private final int port;
-
-        DefaultHostAndPort(String host, int port) {
-            this.host = host;
-            this.port = port;
+    private class DefaultHostAndPort(private val host: String?, private val port: Int) : AuthenticationInternal.HostAndPort {
+        override fun getHost(): String? {
+            return host
         }
 
-        @Override
-        public String getHost() {
-            return host;
+        override fun getPort(): Int {
+            return port
         }
 
-        @Override
-        public int getPort() {
-            return port;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        override fun equals(o: Any?): Boolean {
+            if (this === o) {
+                return true
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            if (o == null || javaClass != o.javaClass) {
+                return false
             }
-            DefaultHostAndPort that = (DefaultHostAndPort) o;
+            val that = o as DefaultHostAndPort
             return getPort() == that.getPort() &&
-                    Objects.equals(getHost(), that.getHost());
+                    getHost() == that.getHost()
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(getHost(), getPort());
+        override fun hashCode(): Int {
+            return Objects.hash(getHost(), getPort())
         }
     }
 }

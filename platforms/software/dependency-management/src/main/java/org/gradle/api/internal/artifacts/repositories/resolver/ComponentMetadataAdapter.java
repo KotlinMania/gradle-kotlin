@@ -31,26 +31,26 @@ public class ComponentMetadataAdapter implements ComponentMetadata {
 
     @Override
     public ModuleVersionIdentifier getId() {
-        return metadata.getModuleVersionId();
+        return metadata.moduleVersionId;
     }
 
     @Override
     public boolean isChanging() {
-        return metadata.isChanging();
+        return metadata.isChanging;
     }
 
     @Override
     public String getStatus() {
-        return metadata.getStatus();
+        return metadata.status;
     }
 
     @Override
     public List<String> getStatusScheme() {
-        return metadata.getStatusScheme();
+        return metadata.statusScheme;
     }
 
     @Override
     public AttributeContainer getAttributes() {
-        return metadata.getAttributes();
+        return metadata.attributes;
     }
 }

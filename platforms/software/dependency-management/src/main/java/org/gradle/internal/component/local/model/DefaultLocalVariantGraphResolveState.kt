@@ -13,163 +13,120 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-import org.gradle.internal.component.model.ExcludeMetadata;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.LocalOriginDependencyMetadata;
-import org.gradle.internal.component.model.VariantArtifactResolveState;
-import org.gradle.internal.component.model.VariantResolveMetadata;
-import org.gradle.internal.model.CalculatedValue;
-
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.ComponentArtifactMetadata
+import org.gradle.internal.component.model.ExcludeMetadata
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.LocalOriginDependencyMetadata
+import org.gradle.internal.component.model.VariantArtifactResolveState
+import org.gradle.internal.model.CalculatedValue
 
 /**
- * Default implementation of {@link LocalVariantGraphResolveState}.
+ * Default implementation of [LocalVariantGraphResolveState].
  */
-public class DefaultLocalVariantGraphResolveState implements LocalVariantGraphResolveState {
-
-    // Metadata
-    private final long instanceId;
-    private final LocalVariantGraphResolveMetadata metadata;
-
+class DefaultLocalVariantGraphResolveState(// Metadata
+    private val instanceId: Long,
+    private val metadata: LocalVariantGraphResolveMetadata,
     // State
-    private final CalculatedValue<VariantDependencyMetadata> dependencies;
-    private final DefaultLocalVariantArtifactResolveState artifactState;
+    private val dependencies: CalculatedValue<VariantDependencyMetadata>,
+    artifactSets: MutableSet<LocalVariantMetadata>
+) : LocalVariantGraphResolveState {
+    private val artifactState: DefaultLocalVariantArtifactResolveState
 
-    public DefaultLocalVariantGraphResolveState(
-        long instanceId,
-        LocalVariantGraphResolveMetadata metadata,
-        CalculatedValue<VariantDependencyMetadata> dependencies,
-        Set<LocalVariantMetadata> artifactSets
-    ) {
-        this.instanceId = instanceId;
-        this.metadata = metadata;
-
-        this.dependencies = dependencies;
-        this.artifactState = new DefaultLocalVariantArtifactResolveState(metadata.getId().getComponentId(), artifactSets);
+    init {
+        this.dependencies = dependencies
+        this.artifactState = DefaultLocalVariantArtifactResolveState(metadata.getId()!!.componentId, artifactSets)
     }
 
-    @Override
-    public long getInstanceId() {
-        return instanceId;
+    override fun getInstanceId(): Long {
+        return instanceId
     }
 
-    @Override
-    public String getName() {
-        return metadata.getName();
+    override fun getName(): String {
+        return metadata.getName()
     }
 
-    @Override
-    public String toString() {
-        return metadata.toString();
+    override fun toString(): String {
+        return metadata.toString()
     }
 
-    @Override
-    public LocalVariantGraphResolveMetadata getMetadata() {
-        return metadata;
+    override fun getMetadata(): LocalVariantGraphResolveMetadata {
+        return metadata
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return metadata.getAttributes();
+    override fun getAttributes(): ImmutableAttributes {
+        return metadata.getAttributes()!!
     }
 
-    @Override
-    public ImmutableCapabilities getCapabilities() {
-        return metadata.getCapabilities();
+    override fun getCapabilities(): ImmutableCapabilities {
+        return metadata.getCapabilities()!!
     }
 
-    @Override
-    public Set<LocalFileDependencyMetadata> getFiles() {
-        dependencies.finalizeIfNotAlready();
-        return dependencies.get().files;
+    override fun getFiles(): MutableSet<LocalFileDependencyMetadata> {
+        dependencies.finalizeIfNotAlready()
+        return dependencies.get().files
     }
 
-    @Override
-    public List<LocalOriginDependencyMetadata> getDependencies() {
-        dependencies.finalizeIfNotAlready();
-        return dependencies.get().dependencies;
+    override fun getDependencies(): MutableList<LocalOriginDependencyMetadata> {
+        dependencies.finalizeIfNotAlready()
+        return dependencies.get().dependencies
     }
 
-    @Override
-    public List<? extends ExcludeMetadata> getExcludes() {
-        dependencies.finalizeIfNotAlready();
-        return dependencies.get().excludes;
+    override fun getExcludes(): MutableList<out ExcludeMetadata> {
+        dependencies.finalizeIfNotAlready()
+        return dependencies.get().excludes
     }
 
-    @Override
-    public VariantArtifactResolveState prepareForArtifactResolution() {
-        return artifactState;
+    override fun prepareForArtifactResolution(): VariantArtifactResolveState {
+        return artifactState
     }
 
     /**
      * The dependencies, dependency constraints, and excludes for this variant.
      */
-    public static class VariantDependencyMetadata {
+    class VariantDependencyMetadata(
+        val dependencies: MutableList<LocalOriginDependencyMetadata>,
+        val files: MutableSet<LocalFileDependencyMetadata>,
+        excludes: MutableList<ExcludeMetadata>
+    ) {
+        val excludes: ImmutableList<ExcludeMetadata>
 
-        public final List<LocalOriginDependencyMetadata> dependencies;
-        public final Set<LocalFileDependencyMetadata> files;
-        public final ImmutableList<ExcludeMetadata> excludes;
-
-        public VariantDependencyMetadata(
-            List<LocalOriginDependencyMetadata> dependencies,
-            Set<LocalFileDependencyMetadata> files,
-            List<ExcludeMetadata> excludes
-        ) {
-            this.dependencies = dependencies;
-            this.files = files;
-            this.excludes = ImmutableList.copyOf(excludes);
+        init {
+            this.excludes = ImmutableList.copyOf<ExcludeMetadata>(excludes)
         }
-
     }
 
-    private static class DefaultLocalVariantArtifactResolveState implements VariantArtifactResolveState {
-
-        private final ComponentIdentifier componentId;
-        private final Set<LocalVariantMetadata> artifactSets;
-
-        public DefaultLocalVariantArtifactResolveState(
-            ComponentIdentifier componentId,
-            Set<LocalVariantMetadata> artifactSets
-        ) {
-            this.componentId = componentId;
-            this.artifactSets = artifactSets;
-        }
-
-        @Override
-        public ImmutableList<ComponentArtifactMetadata> getAdhocArtifacts(List<IvyArtifactName> dependencyArtifacts) {
-            ImmutableList.Builder<ComponentArtifactMetadata> artifacts = ImmutableList.builderWithExpectedSize(dependencyArtifacts.size());
-            for (IvyArtifactName dependencyArtifact : dependencyArtifacts) {
-                artifacts.add(getArtifactWithName(dependencyArtifact));
+    private class DefaultLocalVariantArtifactResolveState(
+        private val componentId: ComponentIdentifier,
+        private val artifactSets: MutableSet<LocalVariantMetadata>
+    ) : VariantArtifactResolveState {
+        override fun getAdhocArtifacts(dependencyArtifacts: MutableList<IvyArtifactName>): ImmutableList<ComponentArtifactMetadata> {
+            val artifacts = ImmutableList.builderWithExpectedSize<ComponentArtifactMetadata>(dependencyArtifacts.size)
+            for (dependencyArtifact in dependencyArtifacts) {
+                artifacts.add(getArtifactWithName(dependencyArtifact))
             }
-            return artifacts.build();
+            return artifacts.build()
         }
 
-        private ComponentArtifactMetadata getArtifactWithName(IvyArtifactName ivyArtifactName) {
-            for (VariantResolveMetadata artifactSet : getArtifactVariants()) {
-                for (ComponentArtifactMetadata candidate : artifactSet.getArtifacts()) {
-                    if (candidate.getName().equals(ivyArtifactName)) {
-                        return candidate;
+        fun getArtifactWithName(ivyArtifactName: IvyArtifactName): ComponentArtifactMetadata {
+            for (artifactSet in getArtifactVariants()) {
+                for (candidate in artifactSet.artifacts) {
+                    if (candidate.getName() == ivyArtifactName) {
+                        return candidate
                     }
                 }
             }
 
-            return new MissingLocalArtifactMetadata(componentId, ivyArtifactName);
+            return MissingLocalArtifactMetadata(componentId, ivyArtifactName)
         }
 
-        @Override
-        public Set<LocalVariantMetadata> getArtifactVariants() {
-            return artifactSets;
+        override fun getArtifactVariants(): MutableSet<LocalVariantMetadata> {
+            return artifactSets
         }
-
     }
-
 }

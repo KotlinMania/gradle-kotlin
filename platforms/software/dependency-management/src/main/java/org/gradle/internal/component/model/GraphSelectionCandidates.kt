@@ -13,25 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
-
-public interface GraphSelectionCandidates {
-
+interface GraphSelectionCandidates {
     /**
      * Returns the set of variants to select from during attribute matching, or an empty list of this
      * component does not support attribute matching.
      */
-    List<? extends VariantGraphResolveState> getVariantsForAttributeMatching();
+    fun getVariantsForAttributeMatching(): MutableList<out VariantGraphResolveState>?
 
     /**
      * Returns the variant to use when attribute-based variant selection is not enabled.
      */
-    @Nullable
-    VariantGraphResolveState getLegacyVariant();
-
+    fun getLegacyVariant(): VariantGraphResolveState?
 }

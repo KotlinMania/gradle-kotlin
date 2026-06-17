@@ -13,28 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.internal.resource.ExternalResourceName
 
-import org.gradle.internal.resource.ExternalResourceName;
-
-import java.util.List;
-
-public interface ResourceAwareResolveResult {
-    List<String> getAttempted();
+interface ResourceAwareResolveResult {
+    @JvmField
+    val attempted: MutableList<String?>?
 
     /**
      * Adds a location that was used to build this result. This is used for diagnostic messages and logging.
      */
-    void attempted(String locationDescription);
+    fun attempted(locationDescription: String?)
 
     /**
      * Adds a location that was used to build this result. This is used for diagnostic messages and logging.
      */
-    void attempted(ExternalResourceName location);
+    fun attempted(location: ExternalResourceName?)
 
     /**
      * Copies the locations for this result to the given target.
      */
-    void applyTo(ResourceAwareResolveResult target);
+    fun applyTo(target: ResourceAwareResolveResult?)
 }

@@ -116,7 +116,7 @@ public class ShortCircuitingResolutionExecutor {
         }
 
         for (DependencyMetadata dependency : rootVariant.getDependencies()) {
-            if (!dependency.isConstraint()) {
+            if (!dependency.isConstraint) {
                 return true;
             }
         }

@@ -13,75 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.gradle.internal.component.model.ModuleConfigurationMetadata;
-import org.gradle.internal.component.model.ModuleSources;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.internal.component.model.ModuleConfigurationMetadata
+import org.gradle.internal.component.model.ModuleSources
 
 /**
  * The meta-data for a component that is resolved from a module in a binary repository.
  *
- * <p>Implementations of this type should be immutable and thread safe.</p>
+ *
+ * Implementations of this type should be immutable and thread safe.
  *
  * This type is being replaced by several other interfaces. Try to avoid this interface.
  * @see ComponentGraphResolveMetadata
+ *
  * @see ExternalModuleComponentGraphResolveMetadata
+ *
  * @see ComponentArtifactResolveMetadata
  */
-public interface ModuleComponentResolveMetadata extends ExternalComponentResolveMetadata, ExternalModuleComponentGraphResolveMetadata {
+interface ModuleComponentResolveMetadata : ExternalComponentResolveMetadata, ExternalModuleComponentGraphResolveMetadata {
     /**
      * {@inheritDoc}
      */
-    @Override
-    ModuleComponentIdentifier getId();
+    override fun getId(): ModuleComponentIdentifier?
 
     /**
      * Creates a mutable copy of this metadata.
      *
-     * Note that this method can be expensive. Often it is more efficient to use a more specialised mutation method such as {@link #withSources(ModuleSources)} rather than this method.
+     * Note that this method can be expensive. Often it is more efficient to use a more specialised mutation method such as [.withSources] rather than this method.
      */
-    MutableModuleComponentResolveMetadata asMutable();
+    fun asMutable(): MutableModuleComponentResolveMetadata?
 
     /**
      * Creates a copy of this meta-data with the given sources.
      */
-    ModuleComponentResolveMetadata withSources(ModuleSources sources);
+    fun withSources(sources: ModuleSources): ModuleComponentResolveMetadata?
 
     /**
      * Creates a copy of this meta-data with the given derivation strategy.
      */
-    ModuleComponentResolveMetadata withDerivationStrategy(VariantDerivationStrategy derivationStrategy);
+    fun withDerivationStrategy(derivationStrategy: VariantDerivationStrategy): ModuleComponentResolveMetadata?
 
-    @Nullable
-    @Override
-    ModuleConfigurationMetadata getConfiguration(String name);
+    override fun getConfiguration(name: String): ModuleConfigurationMetadata?
 
     /**
      * Creates an artifact for this module. Does not mutate this metadata.
      */
-    ModuleComponentArtifactMetadata artifact(String type, @Nullable String extension, @Nullable String classifier);
+    fun artifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata?
 
-    ModuleComponentArtifactMetadata optionalArtifact(String type, @Nullable String extension, @Nullable String classifier);
+    fun optionalArtifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata?
 
     /**
      * Returns the variants of this component
      */
-    ImmutableList<? extends ComponentVariant> getVariants();
+    val variants: ImmutableList<out ComponentVariant>?
 
-    @Nullable
-    AttributesFactory getAttributesFactory();
+    val attributesFactory: AttributesFactory?
 
-    VariantMetadataRules getVariantMetadataRules();
+    val variantMetadataRules: VariantMetadataRules?
 
-    VariantDerivationStrategy getVariantDerivationStrategy();
+    val variantDerivationStrategy: VariantDerivationStrategy?
 
-    boolean isExternalVariant();
+    val isExternalVariant: Boolean
 
     /*
      * When set to false component metadata rules are not cached.
@@ -89,6 +83,5 @@ public interface ModuleComponentResolveMetadata extends ExternalComponentResolve
      *
      * Default value is true.
      */
-    boolean isComponentMetadataRuleCachingEnabled();
-
+    val isComponentMetadataRuleCachingEnabled: Boolean
 }

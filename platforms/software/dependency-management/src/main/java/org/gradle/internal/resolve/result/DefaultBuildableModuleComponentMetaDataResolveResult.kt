@@ -13,132 +13,115 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.result;
+package org.gradle.internal.resolve.result
 
-import org.gradle.internal.resolve.ModuleVersionResolveException;
+import org.gradle.internal.resolve.ModuleVersionResolveException
+import java.util.function.Function
 
-import java.util.function.Function;
+class DefaultBuildableModuleComponentMetaDataResolveResult<T> : DefaultResourceAwareResolveResult(), BuildableModuleComponentMetaDataResolveResult<T?> {
+    private var state: BuildableModuleComponentMetaDataResolveResult.State? = BuildableModuleComponentMetaDataResolveResult.State.Unknown
+    private var failure: ModuleVersionResolveException? = null
+    private var metaData: T? = null
+    private var authoritative = false
 
-public class DefaultBuildableModuleComponentMetaDataResolveResult<T> extends DefaultResourceAwareResolveResult implements BuildableModuleComponentMetaDataResolveResult<T> {
-
-    private State state = State.Unknown;
-    private ModuleVersionResolveException failure;
-    private T metaData;
-    private boolean authoritative;
-
-    private void reset(State state) {
-        this.state = state;
-        metaData = null;
-        failure = null;
-        authoritative = false;
+    private fun reset(state: BuildableModuleComponentMetaDataResolveResult.State?) {
+        this.state = state
+        metaData = null
+        failure = null
+        authoritative = false
     }
 
-    public void reset() {
-        reset(State.Unknown);
+    fun reset() {
+        reset(BuildableModuleComponentMetaDataResolveResult.State.Unknown)
     }
 
-    @Override
-    public void resolved(T metaData) {
-        reset(State.Resolved);
-        this.failure = null;
-        this.metaData = metaData;
-        authoritative = true;
+    override fun resolved(metaData: T?) {
+        reset(BuildableModuleComponentMetaDataResolveResult.State.Resolved)
+        this.failure = null
+        this.metaData = metaData
+        authoritative = true
     }
 
-    @Override
-    public void setMetadata(T metaData) {
-        assertResolved();
-        this.metaData = metaData;
+    override fun setMetadata(metaData: T?) {
+        assertResolved()
+        this.metaData = metaData
     }
 
-    @Override
-    public void missing() {
-        reset(State.Missing);
-        this.metaData = null;
-        this.failure = null;
-        authoritative = true;
+    override fun missing() {
+        reset(BuildableModuleComponentMetaDataResolveResult.State.Missing)
+        this.metaData = null
+        this.failure = null
+        authoritative = true
     }
 
-    @Override
-    public void failed(ModuleVersionResolveException failure) {
-        reset(State.Failed);
-        this.metaData = null;
-        this.failure = failure;
-        authoritative = true;
+    override fun failed(failure: ModuleVersionResolveException?) {
+        reset(BuildableModuleComponentMetaDataResolveResult.State.Failed)
+        this.metaData = null
+        this.failure = failure
+        authoritative = true
     }
 
-    @Override
-    public State getState() {
-        return state;
+    override fun getState(): BuildableModuleComponentMetaDataResolveResult.State? {
+        return state
     }
 
-    @Override
-    public boolean hasResult() {
-        return state != State.Unknown;
+    override fun hasResult(): Boolean {
+        return state != BuildableModuleComponentMetaDataResolveResult.State.Unknown
     }
 
-    @Override
-    public ModuleVersionResolveException getFailure() {
-        assertHasResult();
-        return failure;
+    override fun getFailure(): ModuleVersionResolveException? {
+        assertHasResult()
+        return failure
     }
 
-    @Override
-    public T getMetaData() throws ModuleVersionResolveException {
-        assertResolved();
-        return metaData;
+    @Throws(ModuleVersionResolveException::class)
+    override fun getMetaData(): T? {
+        assertResolved()
+        return metaData
     }
 
-    @Override
-    public boolean isAuthoritative() {
-        assertHasResult();
-        return authoritative;
+    override fun isAuthoritative(): Boolean {
+        assertHasResult()
+        return authoritative
     }
 
-    @Override
-    public void setAuthoritative(boolean authoritative) {
-        assertHasResult();
-        this.authoritative = authoritative;
+    override fun setAuthoritative(authoritative: Boolean) {
+        assertHasResult()
+        this.authoritative = authoritative
     }
 
-    @Override
-    public void redirectToGradleMetadata() {
-        reset(State.Redirect);
+    override fun redirectToGradleMetadata() {
+        reset(BuildableModuleComponentMetaDataResolveResult.State.Redirect)
     }
 
-    @Override
-    public boolean shouldUseGradleMetatada() {
-        return state == State.Redirect;
+    override fun shouldUseGradleMetatada(): Boolean {
+        return state == BuildableModuleComponentMetaDataResolveResult.State.Redirect
     }
 
-    public <S> void applyTo(BuildableModuleComponentMetaDataResolveResult<S> target, Function<T, S> resultMapper) {
-        if (state == State.Resolved) {
-            target.resolved(resultMapper.apply(metaData));
-        } else if (state == State.Failed) {
-            target.failed(failure);
-        } else if (state == State.Redirect) {
-            target.redirectToGradleMetadata();
-        } else if (state == State.Missing) {
-            target.missing();
+    fun <S> applyTo(target: BuildableModuleComponentMetaDataResolveResult<S?>, resultMapper: Function<T?, S?>) {
+        if (state == BuildableModuleComponentMetaDataResolveResult.State.Resolved) {
+            target.resolved(resultMapper.apply(metaData))
+        } else if (state == BuildableModuleComponentMetaDataResolveResult.State.Failed) {
+            target.failed(failure)
+        } else if (state == BuildableModuleComponentMetaDataResolveResult.State.Redirect) {
+            target.redirectToGradleMetadata()
+        } else if (state == BuildableModuleComponentMetaDataResolveResult.State.Missing) {
+            target.missing()
         } else {
-            throw new IllegalStateException();
+            throw IllegalStateException()
         }
-        target.setAuthoritative(authoritative);
-        applyTo(target);
+        target.setAuthoritative(authoritative)
+        applyTo(target)
     }
 
-    private void assertHasResult() {
-        if (!hasResult()) {
-            throw new IllegalStateException("No result has been specified.");
-        }
+    private fun assertHasResult() {
+        check(hasResult()) { "No result has been specified." }
     }
 
-    private void assertResolved() {
-        if (state == State.Failed) {
-            throw failure;
+    private fun assertResolved() {
+        if (state == BuildableModuleComponentMetaDataResolveResult.State.Failed) {
+            throw failure
         }
-        if (state != State.Resolved) {
-            throw new IllegalStateException("This module has not been resolved.");
-        }
+        check(state == BuildableModuleComponentMetaDataResolveResult.State.Resolved) { "This module has not been resolved." }
     }
 }

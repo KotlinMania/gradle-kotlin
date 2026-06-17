@@ -29,8 +29,8 @@ public class SftpHost {
     public SftpHost(URI uri, PasswordCredentials credentials) {
         hostname = uri.getHost();
         port = uri.getPort();
-        username = credentials.getUsername();
-        password = credentials.getPassword();
+        username = credentials.username;
+        password = credentials.password;
     }
 
     public String getHostname() {

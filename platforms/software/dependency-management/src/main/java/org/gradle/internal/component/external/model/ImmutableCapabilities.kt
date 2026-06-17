@@ -13,106 +13,97 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.external.model;
+package org.gradle.internal.component.external.model
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.capabilities.CapabilitiesMetadata;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.capabilities.ImmutableCapability;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.capabilities.ImmutableCapability
+import org.gradle.internal.component.model.ImmutableModuleSources.Companion.of
+import org.gradle.internal.component.model.MutableModuleSources.Companion.of
+import java.util.Collections
 
 /**
- * A deeply immutable implementation of {@link CapabilitiesMetadata}.
+ * A deeply immutable implementation of [CapabilitiesMetadata].
  *
  * This type will ensure that all contents are immutable upon construction,
  * in order to allow instances of this type to be safely reused whenever possible
  * to avoid unnecessary memory allocations.
  *
- * Note that while this class is not itself {@code final}, all fields are private, so
+ * Note that while this class is not itself `final`, all fields are private, so
  * subclassing should not break the immutability contract.
  */
-public class ImmutableCapabilities implements Iterable<ImmutableCapability> {
-    public static final ImmutableCapabilities EMPTY = new ImmutableCapabilities(ImmutableSet.of());
-
-    private final ImmutableSet<ImmutableCapability> capabilities;
-
-    public ImmutableCapabilities(ImmutableSet<ImmutableCapability> capabilities) {
-        this.capabilities = capabilities;
+class ImmutableCapabilities(private val capabilities: ImmutableSet<ImmutableCapability?>) : Iterable<ImmutableCapability?> {
+    fun asSet(): ImmutableSet<ImmutableCapability?> {
+        return capabilities
     }
 
-    public static ImmutableCapabilities of(@Nullable Capability capability) {
-        if (capability == null) {
-            return EMPTY;
-        }
-        return new ImmutableCapabilities(ImmutableSet.of(DefaultImmutableCapability.of(capability)));
-    }
-
-    public static ImmutableCapabilities of(@Nullable Collection<? extends Capability> capabilities) {
-        if (capabilities == null || capabilities.isEmpty()) {
-            return EMPTY;
-        }
-        if (capabilities.size() == 1) {
-            Capability single = capabilities.iterator().next();
-            return of(single);
-        }
-
-        ImmutableSet.Builder<ImmutableCapability> builder = ImmutableSet.builderWithExpectedSize(capabilities.size());
-        for (Capability capability : capabilities) {
-            builder.add(DefaultImmutableCapability.of(capability));
-        }
-        return new ImmutableCapabilities(builder.build());
-    }
-
-    public ImmutableSet<ImmutableCapability> asSet() {
-        return capabilities;
-    }
-
-    @Override
-    public Iterator<ImmutableCapability> iterator() {
+    override fun iterator(): MutableIterator<ImmutableCapability?> {
         if (capabilities.isEmpty()) {
             // Avoid allocating an iterator object for the empty set
-            return Collections.emptyIterator();
+            return Collections.emptyIterator<ImmutableCapability?>()
         }
-        return capabilities.iterator();
+        return capabilities.iterator()
     }
 
-    public boolean isEmpty() {
-        return capabilities.isEmpty();
-    }
+    val isEmpty: Boolean
+        get() = capabilities.isEmpty()
 
     /**
      * Returns this instance if it contains any capabilities, or returns a new instance containing the default capability
      * if this is empty.
      *
      * @param defaultCapability the default capability to include in the result if the given capabilities set is empty
-     * @return {@code this} if it contains any capabilities; otherwise a new instance containing the given capability
+     * @return `this` if it contains any capabilities; otherwise a new instance containing the given capability
      */
-    public ImmutableCapabilities orElse(ImmutableCapability defaultCapability) {
+    fun orElse(defaultCapability: ImmutableCapability?): ImmutableCapabilities? {
         if (capabilities.isEmpty()) {
-            return ImmutableCapabilities.of(defaultCapability);
+            return of(defaultCapability)
         } else {
-            return this;
+            return this
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        ImmutableCapabilities that = (ImmutableCapabilities) o;
-        return capabilities.equals(that.capabilities);
+        val that = o as ImmutableCapabilities
+        return capabilities == that.capabilities
     }
 
-    @Override
-    public int hashCode() {
-        return capabilities.hashCode();
+    override fun hashCode(): Int {
+        return capabilities.hashCode()
+    }
+
+    companion object {
+        @JvmField
+        val EMPTY: ImmutableCapabilities = ImmutableCapabilities(ImmutableSet.of<ImmutableCapability?>())
+
+        @JvmStatic
+        fun of(capability: Capability?): ImmutableCapabilities? {
+            if (capability == null) {
+                return EMPTY
+            }
+            return ImmutableCapabilities(ImmutableSet.of<ImmutableCapability?>(DefaultImmutableCapability.Companion.of(capability)))
+        }
+
+        fun of(capabilities: MutableCollection<out Capability?>?): ImmutableCapabilities? {
+            if (capabilities == null || capabilities.isEmpty()) {
+                return EMPTY
+            }
+            if (capabilities.size == 1) {
+                val single: Capability? = capabilities.iterator().next()
+                return of(single)
+            }
+
+            val builder = ImmutableSet.builderWithExpectedSize<ImmutableCapability?>(capabilities.size)
+            for (capability in capabilities) {
+                builder.add(DefaultImmutableCapability.Companion.of(capability))
+            }
+            return ImmutableCapabilities(builder.build())
+        }
     }
 }

@@ -13,29 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.buildinit.specs
 
-package org.gradle.buildinit.specs;
-
-import org.gradle.api.Incubating;
-
-import java.util.Map;
+import org.gradle.api.Incubating
 
 /**
- * Represents a {@link BuildInitSpec} that has been configured by the user, and can provide arguments
- * for all of its {@link BuildInitParameter}s.
+ * Represents a [BuildInitSpec] that has been configured by the user, and can provide arguments
+ * for all of its [BuildInitParameter]s.
  *
  * @implSpec Implementations must be immutable.
  * @since 8.12
  */
 @Incubating
-public interface BuildInitConfig {
+interface BuildInitConfig {
     /**
      * Returns the build specification this configuration is meant to generate.
      *
      * @return the build specification
      * @since 8.12
      */
-    BuildInitSpec getBuildSpec();
+    val buildSpec: BuildInitSpec?
 
     /**
      * Returns the configured parameters for the build specification this instance configures.
@@ -43,5 +40,5 @@ public interface BuildInitConfig {
      * @return the parameters that have been configured for the spec
      * @since 8.12
      */
-    Map<BuildInitParameter<?>, Object> getArguments();
+    val arguments: MutableMap<BuildInitParameter<*>, Any>?
 }

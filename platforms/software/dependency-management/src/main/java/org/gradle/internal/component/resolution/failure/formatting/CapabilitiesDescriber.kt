@@ -13,43 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.component.resolution.failure.formatting;
+package org.gradle.internal.component.resolution.failure.formatting
 
-import org.gradle.api.capabilities.Capability;
-
-import java.util.Collection;
-import java.util.stream.Collectors;
+import org.gradle.api.capabilities.Capability
+import java.util.stream.Collectors
 
 /**
  * Static utility methods for describing capabilities.
  */
-public final class CapabilitiesDescriber {
-    private CapabilitiesDescriber() {}
-
-    public static String describeCapabilitiesWithTitle(Collection<? extends Capability> capabilities) {
-        StringBuilder sb = new StringBuilder("capabilit");
-        if (capabilities.size() > 1) {
-            sb.append("ies ");
+object CapabilitiesDescriber {
+    fun describeCapabilitiesWithTitle(capabilities: MutableCollection<out Capability>): String {
+        val sb = StringBuilder("capabilit")
+        if (capabilities.size > 1) {
+            sb.append("ies ")
         } else {
-            sb.append("y ");
+            sb.append("y ")
         }
-        sb.append(describeCapabilities(capabilities));
-        return sb.toString();
+        sb.append(describeCapabilities(capabilities))
+        return sb.toString()
     }
 
-    public static String describeCapabilities(Collection<? extends Capability> capabilities) {
+    fun describeCapabilities(capabilities: MutableCollection<out Capability>): String {
         return capabilities.stream()
-            .map(CapabilitiesDescriber::describeCapability)
+            .map<String> { obj: CapabilitiesDescriber?, c: Capability -> describeCapability(c) }
             .sorted()
-            .collect(Collectors.joining(" and "));
+            .collect(Collectors.joining(" and "))
     }
 
-    private static String describeCapability(Capability c) {
-        String version = c.getVersion();
+    private fun describeCapability(c: Capability): String {
+        val version = c.getVersion()
         if (version != null) {
-            return '\'' + c.getGroup() + ":" + c.getName() + ":" + c.getVersion() + '\'';
+            return '\''.toString() + c.getGroup() + ":" + c.getName() + ":" + c.getVersion() + '\''
         }
-        return '\'' + c.getGroup() + ":" + c.getName() + '\'';
+        return '\''.toString() + c.getGroup() + ":" + c.getName() + '\''
     }
-
 }

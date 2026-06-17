@@ -13,62 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.artifacts
 
-package org.gradle.api.internal.artifacts;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.internal.component.model.VariantIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.internal.component.model.VariantIdentifier
 
 /**
  * Identifier for a variant of a component, identified by its name.
  */
-public class NamedVariantIdentifier implements VariantIdentifier {
+class NamedVariantIdentifier(
+    val componentId: ComponentIdentifier,
+    val name: String
+) : VariantIdentifier {
+    private val hashCode: Int
 
-    private final ComponentIdentifier componentIdentifier;
-    private final String name;
-    private final int hashCode;
-
-    public NamedVariantIdentifier(
-        ComponentIdentifier componentIdentifier,
-        String name
-    ) {
-        this.componentIdentifier = componentIdentifier;
-        this.name = name;
-        this.hashCode = computeHashCode(componentIdentifier, name);
+    init {
+        this.hashCode = computeHashCode(componentId, name)
     }
 
-    @Override
-    public ComponentIdentifier getComponentId() {
-        return componentIdentifier;
-    }
+    val displayName: String
+        get() = name + "(" + componentId.getDisplayName() + ")"
 
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getDisplayName() {
-        return name + "(" + componentIdentifier.getDisplayName() + ")";
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+    override fun equals(o: Any): Boolean {
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        NamedVariantIdentifier that = (NamedVariantIdentifier) o;
-        return componentIdentifier.equals(that.componentIdentifier) && name.equals(that.name);
+        val that = o as NamedVariantIdentifier
+        return this.componentId == that.componentId && name == that.name
     }
 
-    @Override
-    public int hashCode() {
-        return hashCode;
+    override fun hashCode(): Int {
+        return hashCode
     }
 
-    private static int computeHashCode(ComponentIdentifier componentIdentifier, String name) {
-        int result = componentIdentifier.hashCode();
-        result = 31 * result + name.hashCode();
-        return result;
+    companion object {
+        private fun computeHashCode(componentIdentifier: ComponentIdentifier, name: String): Int {
+            var result = componentIdentifier.hashCode()
+            result = 31 * result + name.hashCode()
+            return result
+        }
     }
 }

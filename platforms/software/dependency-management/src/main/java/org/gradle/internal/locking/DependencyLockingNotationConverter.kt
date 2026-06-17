@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-
-class DependencyLockingNotationConverter {
-
-    ModuleComponentIdentifier convertFromLockNotation(String notation) {
-        String[] parts = notation.split(":");
-        if (parts.length != 3) {
-            throw new IllegalArgumentException("The module notation does not respect the lock file format of 'group:name:version' - received '" + notation + "'");
-        }
-        return DefaultModuleComponentIdentifier.newId(DefaultModuleIdentifier.newId(parts[0], parts[1]), parts[2]);
+internal class DependencyLockingNotationConverter {
+    fun convertFromLockNotation(notation: String): ModuleComponentIdentifier {
+        val parts = notation.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        require(parts.size == 3) { "The module notation does not respect the lock file format of 'group:name:version' - received '" + notation + "'" }
+        return DefaultModuleComponentIdentifier.newId(DefaultModuleIdentifier.newId(parts[0], parts[1]), parts[2])
     }
 
-    String convertToLockNotation(ModuleComponentIdentifier id) {
-        return id.getGroup() + ":" + id.getModule() + ":" + id.getVersion();
+    fun convertToLockNotation(id: ModuleComponentIdentifier): String {
+        return id.getGroup() + ":" + id.getModule() + ":" + id.getVersion()
     }
 }

@@ -13,78 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.external.model;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
-import org.gradle.internal.component.model.ComponentArtifactResolveState;
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata;
-import org.gradle.internal.component.model.ComponentGraphResolveState;
-import org.gradle.internal.component.model.ModuleSources;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Arrays;
-import java.util.List;
+package org.gradle.internal.component.external.model
 
 /**
  * The meta-data for an external component instance that is required during dependency resolution.
  *
- * <p>Note that this type is being replaced by several other interfaces that separate out the data and state required at various stages of dependency resolution.
+ *
+ * Note that this type is being replaced by several other interfaces that separate out the data and state required at various stages of dependency resolution.
  * You should try to use those interfaces instead of using this interface or introduce a new interface that provides a view over this type but exposes only the
  * data required.
- * </p>
+ *
  *
  * @see ComponentGraphResolveState
+ *
  * @see ComponentGraphResolveMetadata
+ *
  * @see ComponentArtifactResolveState
+ *
  * @see ComponentArtifactResolveMetadata
  */
-public interface ExternalComponentResolveMetadata {
-    List<String> DEFAULT_STATUS_SCHEME = Arrays.asList("integration", "milestone", "release");
-
+interface ExternalComponentResolveMetadata {
     /**
      * Returns the identifier for this component.
      */
-    ComponentIdentifier getId();
+    val id: ComponentIdentifier?
 
     /**
      * Returns the module version identifier for this component. Currently, this reflects the (group, module, version) that was used to request this component.
      *
-     * <p>This is a legacy identifier and is here while we transition the meta-data away from ivy-like
+     *
+     * This is a legacy identifier and is here while we transition the meta-data away from ivy-like
      * module versions to the more general component instances. Currently, the module version and component identifiers are used interchangeably. However, over
      * time more things will use the component identifier. At some point, the module version identifier will become optional for a component.
      */
-    ModuleVersionIdentifier getModuleVersionId();
+    @JvmField
+    val moduleVersionId: ModuleVersionIdentifier?
 
     /**
      * @return the sources information for this component.
      */
-    ModuleSources getSources();
+    @JvmField
+    val sources: ModuleSources?
 
     /**
      * Returns the schema used by this component.
      */
-    ImmutableAttributesSchema getAttributesSchema();
+    val attributesSchema: ImmutableAttributesSchema?
 
     /**
      * Returns true when this metadata represents the default metadata provided for components with missing metadata files.
      */
-    boolean isMissing();
+    @JvmField
+    val isMissing: Boolean
 
-    boolean isChanging();
+    @JvmField
+    val isChanging: Boolean
 
-    @Nullable
-    String getStatus();
+    @JvmField
+    val status: String?
 
-    @Nullable
-    List<String> getStatusScheme();
+    @JvmField
+    val statusScheme: MutableList<String?>?
 
-    ImmutableList<? extends VirtualComponentIdentifier> getPlatformOwners();
+    @JvmField
+    val platformOwners: ImmutableList<out VirtualComponentIdentifier?>?
 
-    ImmutableAttributes getAttributes();
+    @JvmField
+    val attributes: ImmutableAttributes?
+
+    companion object {
+        @JvmField
+        val DEFAULT_STATUS_SCHEME: MutableList<String?> = mutableListOf<String?>("integration", "milestone", "release")
+    }
 }

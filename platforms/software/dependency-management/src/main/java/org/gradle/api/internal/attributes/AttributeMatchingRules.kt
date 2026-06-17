@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
+import org.gradle.api.Action
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.MultipleCandidatesDetails
 
-import org.gradle.api.Action;
-import org.gradle.api.attributes.CompatibilityCheckDetails;
-import org.gradle.api.attributes.MultipleCandidatesDetails;
-
-import java.util.Comparator;
-
-public abstract class AttributeMatchingRules {
-    public static <T> Action<? super CompatibilityCheckDetails<T>> orderedCompatibility(Comparator<? super T> comparator, boolean reverse) {
-        return new DefaultOrderedCompatibilityRule<>(comparator, reverse);
+object AttributeMatchingRules {
+    fun <T> orderedCompatibility(comparator: Comparator<in T?>, reverse: Boolean): Action<in CompatibilityCheckDetails<T?>> {
+        return DefaultOrderedCompatibilityRule<T?>(comparator, reverse)
     }
 
-    public static <T> Action<? super MultipleCandidatesDetails<T>> orderedDisambiguation(Comparator<? super T> comparator, boolean pickFirst) {
-        return new DefaultOrderedDisambiguationRule<>(comparator, pickFirst);
+    fun <T> orderedDisambiguation(comparator: Comparator<in T?>, pickFirst: Boolean): Action<in MultipleCandidatesDetails<T?>> {
+        return DefaultOrderedDisambiguationRule<T?>(comparator, pickFirst)
     }
 }

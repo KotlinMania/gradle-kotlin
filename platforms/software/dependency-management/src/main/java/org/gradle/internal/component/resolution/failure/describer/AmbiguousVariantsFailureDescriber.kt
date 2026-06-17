@@ -13,103 +13,97 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import org.gradle.api.internal.attributes.AttributeDescriber;
-import org.gradle.api.internal.attributes.AttributeDescriberRegistry;
-import org.gradle.internal.component.model.AttributeDescriberSelector;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor;
-import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException;
-import org.gradle.internal.component.resolution.failure.formatting.CapabilitiesDescriber;
-import org.gradle.internal.component.resolution.failure.type.AmbiguousVariantsFailure;
-import org.gradle.internal.logging.text.StyledTextOutput;
-import org.gradle.internal.logging.text.TreeFormatter;
-
-import javax.inject.Inject;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static org.gradle.internal.exceptions.StyledException.style;
+import org.gradle.api.internal.attributes.AttributeDescriber
+import org.gradle.api.internal.attributes.AttributeDescriberRegistry
+import org.gradle.internal.component.model.AttributeDescriberSelector
+import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor
+import org.gradle.internal.component.resolution.failure.exception.VariantSelectionByAttributesException
+import org.gradle.internal.component.resolution.failure.formatting.CapabilitiesDescriber
+import org.gradle.internal.component.resolution.failure.type.AmbiguousVariantsFailure
+import org.gradle.internal.exceptions.StyledException
+import org.gradle.internal.logging.text.StyledTextOutput
+import org.gradle.internal.logging.text.TreeFormatter
+import java.util.TreeMap
+import javax.inject.Inject
 
 /**
- * A {@link ResolutionFailureDescriber} that describes a generic {@link AmbiguousVariantsFailure}.
+ * A [ResolutionFailureDescriber] that describes a generic [AmbiguousVariantsFailure].
  */
-public abstract class AmbiguousVariantsFailureDescriber extends AbstractResolutionFailureDescriber<AmbiguousVariantsFailure> {
-    private static final String AMBIGUOUS_VARIANTS_PREFIX = "Ambiguity errors are explained in more detail at ";
-    private static final String AMBIGUOUS_VARIANTS_SECTION = "sub:variant-ambiguity";
-
-    private final AttributeDescriberRegistry attributeDescribers;
-
-    @Inject
-    public AmbiguousVariantsFailureDescriber(
-        AttributeDescriberRegistry attributeDescribers
-    ) {
-        this.attributeDescribers = attributeDescribers;
+abstract class AmbiguousVariantsFailureDescriber @Inject constructor(
+    private val attributeDescribers: AttributeDescriberRegistry
+) : AbstractResolutionFailureDescriber<AmbiguousVariantsFailure>() {
+    override fun describeFailure(failure: AmbiguousVariantsFailure): VariantSelectionByAttributesException {
+        val message = buildFailureMsg(failure, attributeDescribers.getDescribers())
+        val resolutions = buildResolutions(suggestSpecificDocumentation(AMBIGUOUS_VARIANTS_PREFIX, AMBIGUOUS_VARIANTS_SECTION), suggestReviewAlgorithm())
+        return VariantSelectionByAttributesException(message, failure, resolutions)
     }
 
-    @Override
-    public VariantSelectionByAttributesException describeFailure(AmbiguousVariantsFailure failure) {
-        String message = buildFailureMsg(failure, attributeDescribers.getDescribers());
-        List<String> resolutions = buildResolutions(suggestSpecificDocumentation(AMBIGUOUS_VARIANTS_PREFIX, AMBIGUOUS_VARIANTS_SECTION), suggestReviewAlgorithm());
-        return new VariantSelectionByAttributesException(message, failure, resolutions);
-    }
-
-    protected String buildFailureMsg(AmbiguousVariantsFailure failure, List<AttributeDescriber> attributeDescribers) {
-        AttributeDescriber describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers);
-        TreeFormatter formatter = new TreeFormatter();
-        Map<String, ResolutionCandidateAssessor.AssessedCandidate> ambiguousVariants = summarizeAmbiguousVariants(failure, describer, formatter, true);
+    protected open fun buildFailureMsg(failure: AmbiguousVariantsFailure, attributeDescribers: MutableList<AttributeDescriber>): String {
+        val describer = AttributeDescriberSelector.selectDescriber(failure.getRequestedAttributes(), attributeDescribers)
+        val formatter = TreeFormatter()
+        val ambiguousVariants = summarizeAmbiguousVariants(failure, describer, formatter, true)
 
         // We're sorting the names of the variants and later attributes
         // to make sure the output is consistently the same between invocations
-        formatter.startChildren();
-        for (ResolutionCandidateAssessor.AssessedCandidate assessedCandidate : ambiguousVariants.values()) {
-            formatUnselectable(assessedCandidate, formatter, describer);
+        formatter.startChildren()
+        for (assessedCandidate in ambiguousVariants.values) {
+            formatUnselectable(assessedCandidate, formatter, describer)
         }
-        formatter.endChildren();
+        formatter.endChildren()
 
-        return formatter.toString();
+        return formatter.toString()
     }
 
-    protected Map<String, ResolutionCandidateAssessor.AssessedCandidate> summarizeAmbiguousVariants(AmbiguousVariantsFailure failure, AttributeDescriber describer, TreeFormatter formatter, boolean listAvailableVariants) {
-        Map<String, ResolutionCandidateAssessor.AssessedCandidate> ambiguousVariants = new TreeMap<>();
-        for (ResolutionCandidateAssessor.AssessedCandidate candidate : failure.getCandidates()) {
-            ambiguousVariants.put(candidate.getDisplayName(), candidate);
+    protected fun summarizeAmbiguousVariants(
+        failure: AmbiguousVariantsFailure,
+        describer: AttributeDescriber,
+        formatter: TreeFormatter,
+        listAvailableVariants: Boolean
+    ): MutableMap<String, ResolutionCandidateAssessor.AssessedCandidate> {
+        val ambiguousVariants: MutableMap<String, ResolutionCandidateAssessor.AssessedCandidate> = TreeMap<String, ResolutionCandidateAssessor.AssessedCandidate>()
+        for (candidate in failure.getCandidates()) {
+            ambiguousVariants.put(candidate.getDisplayName(), candidate)
         }
         if (failure.getRequestedAttributes().isEmpty()) {
-            formatter.node("Cannot choose between the available variants of ");
+            formatter.node("Cannot choose between the available variants of ")
         } else {
-            String node = "The consumer was configured to find " + describer.describeAttributeSet(failure.getRequestedAttributes().asMap());
+            var node = "The consumer was configured to find " + describer.describeAttributeSet(failure.getRequestedAttributes().asMap())
             if (listAvailableVariants) {
-                node = node + ". However we cannot choose between the following variants of ";
+                node = node + ". However we cannot choose between the following variants of "
             } else {
-                node = node + ". There are several available matching variants of ";
+                node = node + ". There are several available matching variants of "
             }
-            formatter.node(node);
+            formatter.node(node)
         }
-        formatter.append(style(StyledTextOutput.Style.Info, failure.describeRequestTarget()));
+        formatter.append(StyledException.style(StyledTextOutput.Style.Info, failure.describeRequestTarget()))
         if (listAvailableVariants) {
-            formatter.startChildren();
-            for (String configuration : ambiguousVariants.keySet()) {
-                formatter.node(configuration);
+            formatter.startChildren()
+            for (configuration in ambiguousVariants.keys) {
+                formatter.node(configuration)
             }
-            formatter.endChildren();
-            formatter.node("All of them match the consumer attributes");
+            formatter.endChildren()
+            formatter.node("All of them match the consumer attributes")
         }
-        return ambiguousVariants;
+        return ambiguousVariants
     }
 
-    private void formatUnselectable(
-        ResolutionCandidateAssessor.AssessedCandidate assessedCandidate,
-        TreeFormatter formatter,
-        AttributeDescriber describer
+    private fun formatUnselectable(
+        assessedCandidate: ResolutionCandidateAssessor.AssessedCandidate,
+        formatter: TreeFormatter,
+        describer: AttributeDescriber
     ) {
-        formatter.node("Variant '");
-        formatter.append(assessedCandidate.getDisplayName());
-        formatter.append("'");
-        formatter.append(" " + CapabilitiesDescriber.describeCapabilitiesWithTitle(assessedCandidate.getCandidateCapabilities().asSet()));
+        formatter.node("Variant '")
+        formatter.append(assessedCandidate.getDisplayName())
+        formatter.append("'")
+        formatter.append(" " + CapabilitiesDescriber.describeCapabilitiesWithTitle(assessedCandidate.getCandidateCapabilities().asSet()))
 
-        formatAttributeMatchesForAmbiguity(assessedCandidate, formatter, describer);
+        formatAttributeMatchesForAmbiguity(assessedCandidate, formatter, describer)
+    }
+
+    companion object {
+        private const val AMBIGUOUS_VARIANTS_PREFIX = "Ambiguity errors are explained in more detail at "
+        private const val AMBIGUOUS_VARIANTS_SECTION = "sub:variant-ambiguity"
     }
 }

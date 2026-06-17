@@ -58,7 +58,7 @@ public class DefaultProjectDependencyFactory {
     }
 
     public ProjectDependency create(ProjectState projectState) {
-        DefaultProjectDependency projectDependency = instantiator.newInstance(DefaultProjectDependency.class, projectState);
+        DefaultProjectDependency projectDependency = instantiator.<DefaultProjectDependency>newInstance(DefaultProjectDependency.class, projectState);
         injectServices(projectDependency);
         return projectDependency;
     }

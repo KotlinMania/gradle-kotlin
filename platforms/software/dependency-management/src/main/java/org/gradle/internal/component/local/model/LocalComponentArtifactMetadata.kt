@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.model.ComponentArtifactMetadata
 
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-
-import java.io.File;
-
-public interface LocalComponentArtifactMetadata extends ComponentArtifactMetadata, DisplayName {
-    File getFile();
+interface LocalComponentArtifactMetadata : ComponentArtifactMetadata, DisplayName {
+    val file: File?
 }

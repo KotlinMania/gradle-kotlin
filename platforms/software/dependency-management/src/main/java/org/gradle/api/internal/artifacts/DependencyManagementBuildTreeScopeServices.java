@@ -111,8 +111,8 @@ class DependencyManagementBuildTreeScopeServices implements ServiceRegistrationP
         registration.add(CapabilitySelectorSerializer.class);
         registration.add(ThisBuildTreeOnlyGraphElementStore.class);
         registration.add(ConnectionFailureRepositoryDisabler.class);
-        registration.add(ProjectPublicationRegistry.class, HoldsProjectState.class, DefaultProjectPublicationRegistry.class);
-        registration.add(LocalVariantGraphResolveStateBuilder.class, DefaultLocalVariantGraphResolveStateBuilder.class);
+        registration.<DefaultProjectPublicationRegistry>add(ProjectPublicationRegistry.class, HoldsProjectState.class, DefaultProjectPublicationRegistry.class);
+        registration.<DefaultLocalVariantGraphResolveStateBuilder>add(LocalVariantGraphResolveStateBuilder.class, DefaultLocalVariantGraphResolveStateBuilder.class);
         registration.add(ResolvedVariantCache.class);
         registration.add(VariantArtifactSetCache.class);
     }
@@ -137,7 +137,7 @@ class DependencyManagementBuildTreeScopeServices implements ServiceRegistrationP
             "resource-at-url",
             timeProvider,
             cacheAccessCoordinator,
-            externalResourceFileStore.getFileAccessTracker(),
+            externalResourceFileStore.fileAccessTracker,
             artifactCacheMetadata.getCacheDir().toPath()
         );
     }
@@ -150,22 +150,22 @@ class DependencyManagementBuildTreeScopeServices implements ServiceRegistrationP
         DefaultArtifactIdentifierFileStore.Factory defaultArtifactIdentifierFileStoreFactory
     ) {
         ExternalResourceFileStore writableFileStore = defaultExternalResourceFileStoreFactory.create(artifactCaches.getWritableCacheMetadata());
-        ExternalResourceFileStore externalResourceFileStore = artifactCaches.withReadOnlyCache((md, manager) ->
+        ExternalResourceFileStore externalResourceFileStore = artifactCaches.<ExternalResourceFileStore>withReadOnlyCache((md, manager) ->
             (ExternalResourceFileStore) new TwoStageExternalResourceFileStore(defaultExternalResourceFileStoreFactory.create(md), writableFileStore)).orElse(writableFileStore);
         CachedExternalResourceIndex<String> writableByUrlCachedExternalResourceIndex = prepareArtifactUrlCachedResolutionIndex(timeProvider, artifactCaches.getWritableCacheAccessCoordinator(), externalResourceFileStore, artifactCaches.getWritableCacheMetadata());
-        ArtifactIdentifierFileStore writableArtifactIdentifierFileStore = artifactCaches.withWritableCache((md, manager) -> defaultArtifactIdentifierFileStoreFactory.create(md));
-        ArtifactIdentifierFileStore artifactIdentifierFileStore = artifactCaches.withReadOnlyCache((md, manager) -> (ArtifactIdentifierFileStore) new TwoStageArtifactIdentifierFileStore(
+        ArtifactIdentifierFileStore writableArtifactIdentifierFileStore = artifactCaches.<@org.jetbrains.annotations.NotNull DefaultArtifactIdentifierFileStore>withWritableCache((md, manager) -> defaultArtifactIdentifierFileStoreFactory.create(md));
+        ArtifactIdentifierFileStore artifactIdentifierFileStore = artifactCaches.<ArtifactIdentifierFileStore>withReadOnlyCache((md, manager) -> (ArtifactIdentifierFileStore) new TwoStageArtifactIdentifierFileStore(
             defaultArtifactIdentifierFileStoreFactory.create(md),
             writableArtifactIdentifierFileStore
         )).orElse(writableArtifactIdentifierFileStore);
         return new FileStoreAndIndexProvider(
-            artifactCaches.withReadOnlyCache((md, manager) -> (CachedExternalResourceIndex<String>) new TwoStageByUrlCachedExternalResourceIndex(md.getCacheDir().toPath(), prepareArtifactUrlCachedResolutionIndex(timeProvider, manager, externalResourceFileStore, md), writableByUrlCachedExternalResourceIndex)).orElse(writableByUrlCachedExternalResourceIndex),
+            artifactCaches.<CachedExternalResourceIndex<String>>withReadOnlyCache((md, manager) -> (CachedExternalResourceIndex<String>) new TwoStageByUrlCachedExternalResourceIndex(md.getCacheDir().toPath(), prepareArtifactUrlCachedResolutionIndex(timeProvider, manager, externalResourceFileStore, md), writableByUrlCachedExternalResourceIndex)).orElse(writableByUrlCachedExternalResourceIndex),
             externalResourceFileStore, artifactIdentifierFileStore);
     }
 
     @Provides
     ModuleSourcesSerializer createModuleSourcesSerializer(ImmutableModuleIdentifierFactory moduleIdentifierFactory, FileStoreAndIndexProvider fileStoreAndIndexProvider) {
-        Map<Integer, PersistentModuleSource.Codec<? extends PersistentModuleSource>> codecs = ImmutableMap.of(
+        Map<Integer, PersistentModuleSource.Codec<? extends PersistentModuleSource>> codecs = ImmutableMap.<Integer, PersistentModuleSource.Codec<? extends PersistentModuleSource>>of(
             MetadataFileSource.CODEC_ID, new DefaultMetadataFileSourceCodec(moduleIdentifierFactory, fileStoreAndIndexProvider.getArtifactIdentifierFileStore()),
             ModuleDescriptorHashModuleSource.CODEC_ID, new ModuleDescriptorHashCodec()
         );
@@ -193,16 +193,16 @@ class DependencyManagementBuildTreeScopeServices implements ServiceRegistrationP
         ChecksumService checksumService
     ) {
         ArtifactIdentifierFileStore artifactIdentifierFileStore = fileStoreAndIndexProvider.getArtifactIdentifierFileStore();
-        ModuleRepositoryCaches writableCaches = artifactCaches.withWritableCache((md, manager) -> prepareModuleRepositoryCaches(md, manager, timeProvider, moduleIdentifierFactory, attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, stringInterner, artifactIdentifierFileStore, moduleSourcesSerializer, checksumService));
+        ModuleRepositoryCaches writableCaches = artifactCaches.<ModuleRepositoryCaches>withWritableCache((md, manager) -> prepareModuleRepositoryCaches(md, manager, timeProvider, moduleIdentifierFactory, attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, stringInterner, artifactIdentifierFileStore, moduleSourcesSerializer, checksumService));
         AtomicReference<Path> roCachePath = new AtomicReference<>();
-        Optional<ModuleRepositoryCaches> readOnlyCaches = artifactCaches.withReadOnlyCache((ro, manager) -> {
+        Optional<ModuleRepositoryCaches> readOnlyCaches = artifactCaches.<ModuleRepositoryCaches>withReadOnlyCache((ro, manager) -> {
             roCachePath.set(ro.getCacheDir().toPath());
             return prepareReadOnlyModuleRepositoryCaches(ro, manager, timeProvider, moduleIdentifierFactory, attributeContainerSerializer, capabilitySelectorSerializer, mavenMetadataFactory, ivyMetadataFactory, stringInterner, artifactIdentifierFileStore, moduleSourcesSerializer, checksumService);
         });
-        AbstractModuleVersionsCache moduleVersionsCache = readOnlyCaches.map(mrc -> (AbstractModuleVersionsCache) new TwoStageModuleVersionsCache(timeProvider, mrc.moduleVersionsCache, writableCaches.moduleVersionsCache)).orElse(writableCaches.moduleVersionsCache);
-        AbstractModuleMetadataCache persistentModuleMetadataCache = readOnlyCaches.map(mrc -> (AbstractModuleMetadataCache) new TwoStageModuleMetadataCache(timeProvider, mrc.moduleMetadataCache, writableCaches.moduleMetadataCache)).orElse(writableCaches.moduleMetadataCache);
-        AbstractArtifactsCache moduleArtifactsCache = readOnlyCaches.map(mrc -> (AbstractArtifactsCache) new TwoStageArtifactsCache(timeProvider, mrc.moduleArtifactsCache, writableCaches.moduleArtifactsCache)).orElse(writableCaches.moduleArtifactsCache);
-        ModuleArtifactCache moduleArtifactCache = readOnlyCaches.map(mrc -> (ModuleArtifactCache) new TwoStageModuleArtifactCache(roCachePath.get(), mrc.moduleArtifactCache, writableCaches.moduleArtifactCache)).orElse(writableCaches.moduleArtifactCache);
+        AbstractModuleVersionsCache moduleVersionsCache = readOnlyCaches.<AbstractModuleVersionsCache>map(mrc -> (AbstractModuleVersionsCache) new TwoStageModuleVersionsCache(timeProvider, mrc.moduleVersionsCache, writableCaches.moduleVersionsCache)).orElse(writableCaches.moduleVersionsCache);
+        AbstractModuleMetadataCache persistentModuleMetadataCache = readOnlyCaches.<AbstractModuleMetadataCache>map(mrc -> (AbstractModuleMetadataCache) new TwoStageModuleMetadataCache(timeProvider, mrc.moduleMetadataCache, writableCaches.moduleMetadataCache)).orElse(writableCaches.moduleMetadataCache);
+        AbstractArtifactsCache moduleArtifactsCache = readOnlyCaches.<AbstractArtifactsCache>map(mrc -> (AbstractArtifactsCache) new TwoStageArtifactsCache(timeProvider, mrc.moduleArtifactsCache, writableCaches.moduleArtifactsCache)).orElse(writableCaches.moduleArtifactsCache);
+        ModuleArtifactCache moduleArtifactCache = readOnlyCaches.<ModuleArtifactCache>map(mrc -> (ModuleArtifactCache) new TwoStageModuleArtifactCache(roCachePath.get(), mrc.moduleArtifactCache, writableCaches.moduleArtifactCache)).orElse(writableCaches.moduleArtifactCache);
         ModuleRepositoryCaches persistentCaches = new ModuleRepositoryCaches(
             new InMemoryModuleVersionsCache(timeProvider, moduleVersionsCache),
             new InMemoryModuleMetadataCache(timeProvider, persistentModuleMetadataCache),

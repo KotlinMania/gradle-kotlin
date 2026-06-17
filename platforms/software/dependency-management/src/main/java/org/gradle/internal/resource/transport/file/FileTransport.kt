@@ -13,74 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.file;
+package org.gradle.internal.resource.transport.file
 
-import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultExternalResourceCachePolicy;
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.cached.CachedExternalResourceIndex;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
-import org.gradle.internal.resource.local.LocallyAvailableResourceCandidates;
-import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.DefaultCacheAwareExternalResourceAccessor;
-import org.gradle.internal.resource.transport.AbstractRepositoryTransport;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.internal.artifacts.ivyservice.ArtifactCacheLockingAccessCoordinator
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultExternalResourceCachePolicy
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.ExternalResourceCachePolicy
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.cache.internal.ProducerGuard
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.cached.CachedExternalResourceIndex
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.resource.local.LocallyAvailableExternalResource
+import org.gradle.internal.resource.local.LocallyAvailableResourceCandidates
+import org.gradle.internal.resource.transfer.CacheAwareExternalResourceAccessor
+import org.gradle.internal.resource.transfer.DefaultCacheAwareExternalResourceAccessor
+import org.gradle.internal.resource.transport.AbstractRepositoryTransport
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.IOException
 
-import java.io.IOException;
+class FileTransport(
+    name: String?,
+    private val repository: FileResourceRepository,
+    cachedExternalResourceIndex: CachedExternalResourceIndex<String?>,
+    temporaryFileProvider: TemporaryFileProvider,
+    timeProvider: BuildCommencedTimeProvider,
+    cacheAccessCoordinator: ArtifactCacheLockingAccessCoordinator,
+    producerGuard: ProducerGuard<ExternalResourceName?>,
+    checksumService: ChecksumService
+) : AbstractRepositoryTransport(name) {
+    private val resourceAccessor: FileCacheAwareExternalResourceAccessor
 
-public class FileTransport extends AbstractRepositoryTransport {
-    private final FileResourceRepository repository;
-    private final FileCacheAwareExternalResourceAccessor resourceAccessor;
-
-    public FileTransport(String name, FileResourceRepository repository, CachedExternalResourceIndex<String> cachedExternalResourceIndex, TemporaryFileProvider temporaryFileProvider, BuildCommencedTimeProvider timeProvider, ArtifactCacheLockingAccessCoordinator cacheAccessCoordinator, ProducerGuard<ExternalResourceName> producerGuard, ChecksumService checksumService) {
-        super(name);
-        this.repository = repository;
-        ExternalResourceCachePolicy cachePolicy = new DefaultExternalResourceCachePolicy();
-        resourceAccessor = new FileCacheAwareExternalResourceAccessor(new DefaultCacheAwareExternalResourceAccessor(repository, cachedExternalResourceIndex, timeProvider, temporaryFileProvider, cacheAccessCoordinator, cachePolicy, producerGuard, repository, checksumService));
+    init {
+        val cachePolicy: ExternalResourceCachePolicy = DefaultExternalResourceCachePolicy()
+        resourceAccessor = FileTransport.FileCacheAwareExternalResourceAccessor(
+            DefaultCacheAwareExternalResourceAccessor(
+                repository, cachedExternalResourceIndex, timeProvider, temporaryFileProvider, cacheAccessCoordinator, cachePolicy, producerGuard,
+                repository, checksumService
+            )
+        )
     }
 
-    @Override
-    public boolean isLocal() {
-        return true;
+    override fun isLocal(): Boolean {
+        return true
     }
 
-    @Override
-    public ExternalResourceRepository getRepository() {
-        return repository;
+    override fun getRepository(): ExternalResourceRepository {
+        return repository
     }
 
-    @Override
-    public CacheAwareExternalResourceAccessor getResourceAccessor() {
-        return resourceAccessor;
+    override fun getResourceAccessor(): CacheAwareExternalResourceAccessor {
+        return resourceAccessor
     }
 
-    private class FileCacheAwareExternalResourceAccessor implements CacheAwareExternalResourceAccessor {
-        private final CacheAwareExternalResourceAccessor delegate;
-
-        FileCacheAwareExternalResourceAccessor(CacheAwareExternalResourceAccessor delegate) {
-            this.delegate = delegate;
-        }
-
-        @Nullable
-        @Override
-        public LocallyAvailableExternalResource getResource(ExternalResourceName source, @Nullable String baseName, ResourceFileStore fileStore, @Nullable LocallyAvailableResourceCandidates additionalCandidates) throws IOException {
-            LocallyAvailableExternalResource resource = repository.resource(source);
+    private inner class FileCacheAwareExternalResourceAccessor(private val delegate: CacheAwareExternalResourceAccessor) : CacheAwareExternalResourceAccessor {
+        @Throws(IOException::class)
+        override fun getResource(
+            source: ExternalResourceName,
+            baseName: String?,
+            fileStore: CacheAwareExternalResourceAccessor.ResourceFileStore,
+            additionalCandidates: LocallyAvailableResourceCandidates?
+        ): LocallyAvailableExternalResource? {
+            val resource: LocallyAvailableExternalResource = repository.resource(source)
             if (!resource.exists()) {
-                return null;
+                return null
             }
-            if (baseName == null || resource.getFile().getName().equals(baseName)) {
+            if (baseName == null || resource.getFile().getName() == baseName) {
                 // Use the origin file when it can satisfy the basename requirements
-                return resource;
+                return resource
             } else {
                 // Use the file from the cache when it does not
-                return delegate.getResource(source, baseName, fileStore, additionalCandidates);
+                return delegate.getResource(source, baseName, fileStore, additionalCandidates)
             }
         }
     }

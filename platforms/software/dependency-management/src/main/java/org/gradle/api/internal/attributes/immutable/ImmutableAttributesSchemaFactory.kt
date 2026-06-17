@@ -13,41 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes.immutable
 
-package org.gradle.api.internal.attributes.immutable;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import org.gradle.api.Action;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.CompatibilityCheckDetails;
-import org.gradle.api.attributes.MultipleCandidatesDetails;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.api.internal.attributes.DefaultAttributeMatchingStrategy;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryInterner;
-import org.gradle.internal.model.InMemoryLoadingCache;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.util.Map;
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Sets
+import org.gradle.api.Action
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.MultipleCandidatesDetails
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.api.internal.attributes.DefaultAttributeMatchingStrategy
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryInterner
+import org.gradle.internal.model.InMemoryLoadingCache
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.function.Function
 
 /**
  * Factory for creating and interning immutable attribute schemas.
  */
-@ServiceScope(Scope.BuildSession.class)
-public class ImmutableAttributesSchemaFactory {
+@ServiceScope(Scope.BuildSession::class)
+class ImmutableAttributesSchemaFactory(cacheFactory: InMemoryCacheFactory) {
+    private val schemas: InMemoryInterner<ImmutableAttributesSchema>
+    private val mergedSchemas: InMemoryLoadingCache<SchemaPair, ImmutableAttributesSchema>
 
-    private final InMemoryInterner<ImmutableAttributesSchema> schemas;
-    private final InMemoryLoadingCache<SchemaPair, ImmutableAttributesSchema> mergedSchemas;
-
-    @SuppressWarnings("CheckReturnValue")
-    public ImmutableAttributesSchemaFactory(InMemoryCacheFactory cacheFactory) {
-        this.schemas = cacheFactory.createInterner();
-        this.schemas.intern(ImmutableAttributesSchema.EMPTY);
-        this.mergedSchemas = cacheFactory.create(this::doConcatSchemas);
+    init {
+        this.schemas = cacheFactory.createInterner<ImmutableAttributesSchema>()
+        this.schemas.intern(ImmutableAttributesSchema.Companion.EMPTY)
+        this.mergedSchemas = cacheFactory.create<SchemaPair, ImmutableAttributesSchema>(Function { pair: SchemaPair -> this.doConcatSchemas(pair) })
     }
 
     /**
@@ -58,14 +54,16 @@ public class ImmutableAttributesSchemaFactory {
      *
      * @return The new immutable schema.
      */
-    public ImmutableAttributesSchema create(
-        ImmutableMap<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> strategies,
-        ImmutableList<Attribute<?>> precedence
-    ) {
-        return schemas.intern(new ImmutableAttributesSchema(
-            strategies,
-            precedence
-        ));
+    fun create(
+        strategies: ImmutableMap<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>>,
+        precedence: ImmutableList<Attribute<*>>
+    ): ImmutableAttributesSchema {
+        return schemas.intern(
+            ImmutableAttributesSchema(
+                strategies,
+                precedence
+            )
+        )
     }
 
     /**
@@ -75,30 +73,13 @@ public class ImmutableAttributesSchemaFactory {
      *
      * @return The new immutable schema.
      */
-    public ImmutableAttributesSchema create(AttributesSchemaInternal mutable) {
+    fun create(mutable: AttributesSchemaInternal): ImmutableAttributesSchema {
         // TODO: "Lock in" the mutable schema once we create an immutable copy of it,
         // as to prevent further mutations that will be ignored.
         return create(
             convertStrategies(mutable),
-            ImmutableList.copyOf(mutable.getAttributePrecedence())
-        );
-    }
-
-    private static ImmutableMap<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> convertStrategies(AttributesSchemaInternal mutable) {
-        ImmutableMap.Builder<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> strategies = ImmutableMap.builder();
-        for (Map.Entry<Attribute<?>, DefaultAttributeMatchingStrategy<?>> entry : mutable.getStrategies().entrySet()) {
-            strategies.put(entry.getKey(), convertStrategy(entry.getValue()));
-        }
-        return strategies.build();
-    }
-
-    private static <T> ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> convertStrategy(
-        DefaultAttributeMatchingStrategy<T> mutableStrategy
-    ) {
-        return new ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<>(
-            ImmutableList.copyOf(mutableStrategy.getCompatibilityRules().getRules()),
-            ImmutableList.copyOf(mutableStrategy.getDisambiguationRules().getRules())
-        );
+            ImmutableList.copyOf<Attribute<*>>(mutable.getAttributePrecedence())
+        )
     }
 
     /**
@@ -109,118 +90,131 @@ public class ImmutableAttributesSchemaFactory {
      *
      * @return The merged schema.
      */
-    public ImmutableAttributesSchema concat(ImmutableAttributesSchema consumer, ImmutableAttributesSchema producer) {
-        return mergedSchemas.get(new SchemaPair(consumer, producer));
+    fun concat(consumer: ImmutableAttributesSchema, producer: ImmutableAttributesSchema): ImmutableAttributesSchema {
+        return mergedSchemas.get(SchemaPair(consumer, producer))
     }
 
-    private ImmutableAttributesSchema doConcatSchemas(SchemaPair pair) {
+    private fun doConcatSchemas(pair: SchemaPair): ImmutableAttributesSchema {
         return create(
             mergeStrategies(pair.consumer, pair.producer),
-            mergePrecedence(pair.consumer.precedence, pair.producer.precedence)
-        );
+            Companion.mergePrecedence<Attribute<*>>(pair.consumer.precedence, pair.producer.precedence)
+        )
     }
 
-    private static class SchemaPair {
-        private final ImmutableAttributesSchema consumer;
-        private final ImmutableAttributesSchema producer;
-        private final int hashCode;
+    private class SchemaPair(private val consumer: ImmutableAttributesSchema, private val producer: ImmutableAttributesSchema) {
+        private val hashCode: Int
 
-        SchemaPair(ImmutableAttributesSchema consumer, ImmutableAttributesSchema producer) {
-            this.consumer = consumer;
-            this.producer = producer;
-            this.hashCode = computeHashCode(consumer, producer);
+        init {
+            this.hashCode = computeHashCode(consumer, producer)
         }
 
-        private static int computeHashCode(ImmutableAttributesSchema consumer, ImmutableAttributesSchema producer) {
-            int result = consumer.hashCode();
-            result = 31 * result + producer.hashCode();
-            return result;
-        }
-
-
-        @Override
-        @SuppressWarnings("ReferenceEquality") //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
+        //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
+        override fun equals(obj: Any): Boolean {
+            if (this === obj) {
+                return true
             }
-            if (obj == null || getClass() != obj.getClass()) {
-                return false;
+            if (obj == null || javaClass != obj.javaClass) {
+                return false
             }
-            SchemaPair other = (SchemaPair) obj;
+            val other = obj as SchemaPair
             // We expect the consumer and producer to be interned
-            return consumer == other.consumer && producer == other.producer;
+            return consumer === other.consumer && producer === other.producer
         }
 
-        @Override
-        public int hashCode() {
-            return hashCode;
+        override fun hashCode(): Int {
+            return hashCode
         }
-    }
 
-    /**
-     * Merge the attributes matching strategies of a consumer and producer schema, with the entries from the
-     * consumer taking precedence over the producer.
-     */
-    private static ImmutableMap<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> mergeStrategies(
-        ImmutableAttributesSchema consumer,
-        ImmutableAttributesSchema producer
-    ) {
-        ImmutableMap.Builder<Attribute<?>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<?>> builder = ImmutableMap.builder();
-        for (Attribute<?> attribute : Sets.union(producer.strategies.keySet(), consumer.strategies.keySet())) {
-            builder.put(attribute, mergeStrategyFor(attribute, consumer, producer));
-        }
-        return builder.build();
-    }
-
-    private static <T> ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> mergeStrategyFor(
-        Attribute<T> attribute,
-        ImmutableAttributesSchema consumer,
-        ImmutableAttributesSchema producer
-    ) {
-        ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> consumerStrategy = consumer.getStrategy(attribute);
-        ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> producerStrategy = producer.getStrategy(attribute);
-
-        assert consumerStrategy != null || producerStrategy != null;
-
-        if (consumerStrategy == null) {
-            return producerStrategy;
-        } else if (producerStrategy == null) {
-            return consumerStrategy;
-        } else {
-            return doMergeStrategies(consumerStrategy, producerStrategy);
+        companion object {
+            private fun computeHashCode(consumer: ImmutableAttributesSchema, producer: ImmutableAttributesSchema): Int {
+                var result = consumer.hashCode()
+                result = 31 * result + producer.hashCode()
+                return result
+            }
         }
     }
 
-    /**
-     * Merge the consumer strategy with another producer strategy, giving priority to rules
-     * configured in the consumer strategy.
-     */
-    public static <T> ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> doMergeStrategies(
-        ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> consumer,
-        ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T> producer
-    ) {
-        return new ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<>(
-            ImmutableList.<Action<? super CompatibilityCheckDetails<T>>>builder()
-                .addAll(consumer.compatibilityRules)
-                .addAll(producer.compatibilityRules)
-                .build(),
-            ImmutableList.<Action<? super MultipleCandidatesDetails<T>>>builder()
-                .addAll(consumer.disambiguationRules)
-                .addAll(producer.disambiguationRules)
+    companion object {
+        private fun convertStrategies(mutable: AttributesSchemaInternal): ImmutableMap<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>> {
+            val strategies = ImmutableMap.builder<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>>()
+            for (entry in mutable.getStrategies().entries) {
+                strategies.put(entry.key, Companion.convertStrategy(entry.value))
+            }
+            return strategies.build()
+        }
+
+        private fun <T> convertStrategy(
+            mutableStrategy: DefaultAttributeMatchingStrategy<T?>
+        ): ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?> {
+            return ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?>(
+                ImmutableList.copyOf<Action<in CompatibilityCheckDetails<T?>>>(mutableStrategy.getCompatibilityRules().getRules()),
+                ImmutableList.copyOf<Action<in MultipleCandidatesDetails<T?>>>(mutableStrategy.getDisambiguationRules().getRules())
+            )
+        }
+
+        /**
+         * Merge the attributes matching strategies of a consumer and producer schema, with the entries from the
+         * consumer taking precedence over the producer.
+         */
+        private fun mergeStrategies(
+            consumer: ImmutableAttributesSchema,
+            producer: ImmutableAttributesSchema
+        ): ImmutableMap<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>> {
+            val builder = ImmutableMap.builder<Attribute<*>, ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<*>>()
+            for (attribute in Sets.union<Attribute<*>>(producer.strategies.keys, consumer.strategies.keys)) {
+                builder.put(attribute, Companion.mergeStrategyFor(attribute, consumer, producer))
+            }
+            return builder.build()
+        }
+
+        private fun <T> mergeStrategyFor(
+            attribute: Attribute<T?>,
+            consumer: ImmutableAttributesSchema,
+            producer: ImmutableAttributesSchema
+        ): ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?> {
+            val consumerStrategy = consumer.getStrategy<T?>(attribute)
+            val producerStrategy = producer.getStrategy<T?>(attribute)
+
+            assert(consumerStrategy != null || producerStrategy != null)
+
+            if (consumerStrategy == null) {
+                return producerStrategy!!
+            } else if (producerStrategy == null) {
+                return consumerStrategy
+            } else {
+                return doMergeStrategies<T?>(consumerStrategy, producerStrategy)
+            }
+        }
+
+        /**
+         * Merge the consumer strategy with another producer strategy, giving priority to rules
+         * configured in the consumer strategy.
+         */
+        fun <T> doMergeStrategies(
+            consumer: ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?>,
+            producer: ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?>
+        ): ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?> {
+            return ImmutableAttributesSchema.ImmutableAttributeMatchingStrategy<T?>(
+                ImmutableList.builder<Action<in CompatibilityCheckDetails<T?>>>()
+                    .addAll(consumer.compatibilityRules)
+                    .addAll(producer.compatibilityRules)
+                    .build(),
+                ImmutableList.builder<Action<in MultipleCandidatesDetails<T?>>>()
+                    .addAll(consumer.disambiguationRules)
+                    .addAll(producer.disambiguationRules)
+                    .build()
+            )
+        }
+
+        /**
+         * Merge two ordered sets, with the elements from the consumer taking precedence over the producer.
+         */
+        private fun <T> mergePrecedence(consumer: ImmutableList<T?>, producer: ImmutableList<T?>): ImmutableList<T?> {
+            return ImmutableSet.builder<T?>()
+                .addAll(consumer)
+                .addAll(producer) // "Elements appear in the resulting set in the same order they were first added to the builder"
                 .build()
-        );
+                .asList()
+        }
     }
-
-    /**
-     * Merge two ordered sets, with the elements from the consumer taking precedence over the producer.
-     */
-    private static <T> ImmutableList<T> mergePrecedence(ImmutableList<T> consumer, ImmutableList<T> producer) {
-        return ImmutableSet.<T>builder()
-            .addAll(consumer)
-            .addAll(producer) // "Elements appear in the resulting set in the same order they were first added to the builder"
-            .build()
-            .asList();
-    }
-
 }

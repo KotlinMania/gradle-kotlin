@@ -208,20 +208,20 @@ public class HttpClientConfigurer {
             AuthenticationInternal authenticationInternal = (AuthenticationInternal) authentication;
 
             String scheme = getAuthScheme(authentication);
-            org.gradle.api.credentials.Credentials credentials = authenticationInternal.getCredentials();
+            org.gradle.api.credentials.Credentials credentials = authenticationInternal.credentials;
 
-            Collection<AuthenticationInternal.HostAndPort> hostsForAuthentication = authenticationInternal.getHostsForAuthentication();
+            Collection<AuthenticationInternal.HostAndPort> hostsForAuthentication = authenticationInternal.hostsForAuthentication;
             assert !hostsForAuthentication.isEmpty() : "Credentials and authentication required for a HTTP repository, but no hosts were defined for the authentication?";
 
             for (AuthenticationInternal.HostAndPort hostAndPort : hostsForAuthentication) {
-                String host = hostAndPort.getHost();
-                int port = hostAndPort.getPort();
+                String host = hostAndPort.host;
+                int port = hostAndPort.port;
 
                 assert host != null : "HTTP credentials and authentication require a host scope to be defined as well";
 
                 if (credentials instanceof HttpHeaderCredentials) {
                     HttpHeaderCredentials httpHeaderCredentials = (HttpHeaderCredentials) credentials;
-                    Credentials httpCredentials = new HttpClientHttpHeaderCredentials(httpHeaderCredentials.getName(), httpHeaderCredentials.getValue());
+                    Credentials httpCredentials = new HttpClientHttpHeaderCredentials(httpHeaderCredentials.name, httpHeaderCredentials.value);
                     credentialsProvider.setCredentials(new AuthScope(host, port, AuthScope.ANY_REALM, scheme), httpCredentials);
 
                     LOGGER.debug("Using {} for authenticating against '{}:{}' using {}", httpHeaderCredentials, host, port, scheme);
@@ -230,8 +230,8 @@ public class HttpClientConfigurer {
                     String password;
                     if (credentials instanceof PasswordCredentials) {
                         PasswordCredentials passwordCredentials = (PasswordCredentials) credentials;
-                        username = passwordCredentials.getUsername();
-                        password = passwordCredentials.getPassword();
+                        username = passwordCredentials.username;
+                        password = passwordCredentials.password;
                     } else {
                         HttpProxySettings.HttpProxyCredentials proxyCredentials = (HttpProxySettings.HttpProxyCredentials) credentials;
                         username = proxyCredentials.getUsername();

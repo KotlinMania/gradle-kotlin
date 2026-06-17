@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.management;
+package org.gradle.internal.management
 
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.api.internal.catalog.DefaultVersionCatalog;
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+import org.gradle.api.internal.catalog.DefaultVersionCatalog
 
-public interface VersionCatalogBuilderInternal extends VersionCatalogBuilder {
-    DefaultVersionCatalog build();
-    void withContext(String context, Runnable action);
+interface VersionCatalogBuilderInternal : VersionCatalogBuilder {
+    fun build(): DefaultVersionCatalog?
+    fun withContext(context: String?, action: Runnable?)
 }

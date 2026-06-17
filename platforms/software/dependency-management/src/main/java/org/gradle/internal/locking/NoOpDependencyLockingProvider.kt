@@ -13,64 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.locking
 
-package org.gradle.internal.locking;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.dsl.LockMode
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider
+import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingState
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.internal.DisplayName
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.dsl.LockMode;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingProvider;
-import org.gradle.api.internal.artifacts.dsl.dependencies.DependencyLockingState;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.DisplayName;
-
-import java.util.Set;
-
-public class NoOpDependencyLockingProvider implements DependencyLockingProvider {
-
-    private static final NoOpDependencyLockingProvider INSTANCE = new NoOpDependencyLockingProvider();
-
-    public static DependencyLockingProvider getInstance() {
-        return INSTANCE;
+class NoOpDependencyLockingProvider private constructor() : DependencyLockingProvider {
+    override fun loadLockState(lockId: String, lockOwner: DisplayName): DependencyLockingState {
+        return DefaultDependencyLockingState.Companion.EMPTY_LOCK_CONSTRAINT
     }
 
-    private NoOpDependencyLockingProvider() {
-        // Prevent construction
-    }
-
-    @Override
-    public DependencyLockingState loadLockState(String lockId, DisplayName lockOwner) {
-        return DefaultDependencyLockingState.EMPTY_LOCK_CONSTRAINT;
-    }
-
-    @Override
-    public void persistResolvedDependencies(String lockId, DisplayName lockOwner, Set<ModuleComponentIdentifier> resolutionResult, Set<ModuleComponentIdentifier> changingResolvedModules) {
+    override fun persistResolvedDependencies(
+        lockId: String,
+        lockOwner: DisplayName,
+        resolutionResult: MutableSet<ModuleComponentIdentifier>,
+        changingResolvedModules: MutableSet<ModuleComponentIdentifier>
+    ) {
         // No-op
     }
 
-    @Override
-    public Property<LockMode> getLockMode() {
-        throw new IllegalStateException("Should not be invoked on the no-op instance");
+    override fun getLockMode(): Property<LockMode>? {
+        throw IllegalStateException("Should not be invoked on the no-op instance")
     }
 
-    @Override
-    public RegularFileProperty getLockFile() {
-        throw new IllegalStateException("Should not be invoked on the no-op instance");
+    override fun getLockFile(): RegularFileProperty? {
+        throw IllegalStateException("Should not be invoked on the no-op instance")
     }
 
-    @Override
-    public void buildFinished() {
+    override fun buildFinished() {
         // No-op
     }
 
-    @Override
-    public ListProperty<String> getIgnoredDependencies() {
-        throw new IllegalStateException("Should not be invoked on the no-op instance");
+    override fun getIgnoredDependencies(): ListProperty<String>? {
+        throw IllegalStateException("Should not be invoked on the no-op instance")
     }
 
-    @Override
-    public void confirmNotLocked(String lockId) {
+    override fun confirmNotLocked(lockId: String) {
         // No-op
+    }
+
+    companion object {
+        private val INSTANCE = NoOpDependencyLockingProvider()
+
+        @JvmStatic
+        val instance: DependencyLockingProvider
+            get() = INSTANCE
     }
 }

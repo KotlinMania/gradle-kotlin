@@ -13,33 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
+import org.gradle.api.artifacts.component.ComponentArtifactIdentifier
+import org.gradle.internal.resolve.ArtifactResolveException
+import java.io.File
 
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.internal.resolve.ArtifactResolveException;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-
-public interface BuildableArtifactFileResolveResult extends ResolveResult, BuildableTypedResolveResult<File, ArtifactResolveException>, ResourceAwareResolveResult {
-    boolean isSuccessful();
+interface BuildableArtifactFileResolveResult : ResolveResult, BuildableTypedResolveResult<File?, ArtifactResolveException?>, ResourceAwareResolveResult {
+    @JvmField
+    val isSuccessful: Boolean
 
     /**
      * Returns the resolve failure, if any.
      */
-    @Override
-    @Nullable
-    ArtifactResolveException getFailure();
+    override fun getFailure(): ArtifactResolveException?
 
     /**
      * @throws ArtifactResolveException If the resolution was unsuccessful.
      */
-    @Override
-    File getResult() throws ArtifactResolveException;
+    @Throws(ArtifactResolveException::class)
+    override fun getResult(): File?
 
     /**
      * Marks the artifact as not found.
      */
-    void notFound(ComponentArtifactIdentifier artifact);
+    fun notFound(artifact: ComponentArtifactIdentifier?)
 }

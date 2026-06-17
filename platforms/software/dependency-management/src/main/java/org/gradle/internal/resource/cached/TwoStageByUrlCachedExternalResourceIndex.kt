@@ -13,51 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.cached;
+package org.gradle.internal.resource.cached
 
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.File
+import java.nio.file.Path
 
-import java.io.File;
-import java.nio.file.Path;
-
-public class TwoStageByUrlCachedExternalResourceIndex implements CachedExternalResourceIndex<String> {
-    private final Path readOnlyCachePath;
-    private final CachedExternalResourceIndex<String> readOnlyCache;
-    private final CachedExternalResourceIndex<String> writableCache;
-
-    public TwoStageByUrlCachedExternalResourceIndex(Path readOnlyCachePath, CachedExternalResourceIndex<String> readOnlyCache, CachedExternalResourceIndex<String> writableCache) {
-        this.readOnlyCachePath = readOnlyCachePath;
-        this.readOnlyCache = readOnlyCache;
-        this.writableCache = writableCache;
-    }
-
-    @Override
-    public void store(String key, File artifactFile, @Nullable ExternalResourceMetaData metaData) {
+class TwoStageByUrlCachedExternalResourceIndex(
+    private val readOnlyCachePath: Path,
+    private val readOnlyCache: CachedExternalResourceIndex<String?>,
+    private val writableCache: CachedExternalResourceIndex<String?>
+) : CachedExternalResourceIndex<String?> {
+    override fun store(key: String?, artifactFile: File, metaData: ExternalResourceMetaData?) {
         if (artifactFile.toPath().startsWith(readOnlyCachePath)) {
             // skip writing because the file comes from the RO cache
-            return;
+            return
         }
-        writableCache.store(key, artifactFile, metaData);
+        writableCache.store(key, artifactFile, metaData)
     }
 
-    @Override
-    public void storeMissing(String key) {
-        writableCache.storeMissing(key);
+    override fun storeMissing(key: String?) {
+        writableCache.storeMissing(key)
     }
 
-    @Nullable
-    @Override
-    public CachedExternalResource lookup(String key) {
-        CachedExternalResource lookup = writableCache.lookup(key);
+    override fun lookup(key: String?): CachedExternalResource? {
+        val lookup = writableCache.lookup(key)
         if (lookup != null) {
-            return lookup;
+            return lookup
         }
-        return readOnlyCache.lookup(key);
+        return readOnlyCache.lookup(key)
     }
 
-    @Override
-    public void clear(String key) {
-        writableCache.clear(key);
+    override fun clear(key: String?) {
+        writableCache.clear(key)
     }
 }

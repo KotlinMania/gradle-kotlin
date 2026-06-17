@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.result
 
-package org.gradle.internal.resolve.result;
-
-import org.jspecify.annotations.Nullable;
-
-public interface ResolveResult {
+interface ResolveResult {
     /**
      * Returns the resolve failure, if any.
      */
-    @Nullable
-    Throwable getFailure();
+    val failure: Throwable?
 
     /**
      * Returns true if the result either has some value, or a failure.
      */
-    boolean hasResult();
+    fun hasResult(): Boolean
 }

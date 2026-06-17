@@ -13,26 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.attributes;
+package org.gradle.api.internal.attributes
 
-public interface DisambiguationRule<T> {
+interface DisambiguationRule<T> {
+    fun doesSomething(): Boolean
 
-    /* private */ DisambiguationRule<Object> DO_NOTHING = new DisambiguationRule<Object>() {
-        @Override
-        public boolean doesSomething() {
-            return false;
+    fun execute(t: MultipleCandidatesResult<T?>)
+
+    companion object {
+        fun <E> doNothing(): DisambiguationRule<E?> {
+            return DO_NOTHING as DisambiguationRule<E?>
         }
 
-        @Override
-        public void execute(MultipleCandidatesResult<Object> t) { }
-    };
+        /* private */
+        val DO_NOTHING: DisambiguationRule<Any> = object : DisambiguationRule<Any> {
+            override fun doesSomething(): Boolean {
+                return false
+            }
 
-    @SuppressWarnings("unchecked")
-    static <E> DisambiguationRule<E> doNothing() {
-        return (DisambiguationRule<E>) DO_NOTHING;
+            override fun execute(t: MultipleCandidatesResult<Any>) {}
+        }
     }
-
-    boolean doesSomething();
-
-    void execute(MultipleCandidatesResult<T> t);
 }

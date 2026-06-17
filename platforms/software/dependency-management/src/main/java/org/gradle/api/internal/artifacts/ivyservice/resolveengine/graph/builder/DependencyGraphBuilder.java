@@ -310,7 +310,7 @@ public class DependencyGraphBuilder {
         for (ModuleResolveState module : resolveState.getModules()) {
             ComponentState selected = module.getSelected();
             if (selected != null) {
-                ResolutionFailureHandler resolutionFailureHandler = resolveState.getVariantSelector().getFailureHandler();
+                ResolutionFailureHandler resolutionFailureHandler = resolveState.getVariantSelector().failureHandler;
                 if (selected.isRejected()) {
                     List<String> conflictResolutions = buildConflictResolutions(selected, failureResolutions).getRight();
                     GradleException error = resolutionFailureHandler.componentRejected(selected, conflictResolutions);
@@ -412,7 +412,7 @@ public class DependencyGraphBuilder {
     private static boolean isDynamic(SelectorState selector) {
         ResolvedVersionConstraint versionConstraint = selector.getVersionConstraint();
         if (versionConstraint != null) {
-            return versionConstraint.isDynamic();
+            return versionConstraint.isDynamic;
         }
         return false;
     }
@@ -439,7 +439,7 @@ public class DependencyGraphBuilder {
         boolean accept = false;
         for (SelectorState selector : selectors) {
             ResolvedVersionConstraint versionConstraint = selector.getVersionConstraint();
-            if (!versionConstraint.isDynamic()) {
+            if (!versionConstraint.isDynamic) {
                 // this selector is not dynamic, let's see if it agrees with the selection
                 if (versionConstraint.accepts(version)) {
                     accept = true;
@@ -471,7 +471,7 @@ public class DependencyGraphBuilder {
         for (NodeState node : selected.getNodes()) {
             List<EdgeState> incomingEdges = node.getIncomingEdges();
             for (EdgeState incomingEdge : incomingEdges) {
-                if (moduleIsChanging || incomingEdge.getDependencyMetadata().isChanging()) {
+                if (moduleIsChanging || incomingEdge.getDependencyMetadata().isChanging) {
                     ComponentSelector selector = incomingEdge.getSelector().getSelector();
                     incomingEdge.failWith(new ModuleVersionResolveException(selector, () ->
                         String.format("Could not resolve %s: Resolution strategy disallows usage of changing versions", selector)));

@@ -13,81 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.internal.attributes
 
-package org.gradle.api.internal.attributes;
-
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory;
-import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistryFactory;
-import org.gradle.api.internal.attributes.matching.AttributeMatcher;
-import org.gradle.api.internal.attributes.matching.CachingAttributeSelectionSchema;
-import org.gradle.api.internal.attributes.matching.DefaultAttributeMatcher;
-import org.gradle.api.internal.attributes.matching.DefaultAttributeSelectionSchema;
-import org.gradle.internal.model.InMemoryCacheFactory;
-import org.gradle.internal.model.InMemoryLoadingCache;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import javax.inject.Inject;
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory
+import org.gradle.api.internal.attributes.immutable.artifact.ImmutableArtifactTypeRegistryFactory
+import org.gradle.api.internal.attributes.matching.AttributeMatcher
+import org.gradle.api.internal.attributes.matching.CachingAttributeSelectionSchema
+import org.gradle.api.internal.attributes.matching.DefaultAttributeMatcher
+import org.gradle.api.internal.attributes.matching.DefaultAttributeSelectionSchema
+import org.gradle.internal.model.InMemoryCacheFactory
+import org.gradle.internal.model.InMemoryLoadingCache
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.util.function.Function
+import javax.inject.Inject
 
 /**
  * A collection of services for creating and working with immutable attribute schemas.
  */
-@ServiceScope(Scope.BuildSession.class)
-public class AttributeSchemaServices {
-
-    private final ImmutableAttributesSchemaFactory attributesSchemaFactory;
-    private final ImmutableArtifactTypeRegistryFactory artifactTypeRegistryFactory;
-    private final InMemoryCacheFactory cacheFactory;
-
-    private final InMemoryLoadingCache<ImmutableAttributesSchema, AttributeMatcher> matchers;
-
-    @Inject
-    public AttributeSchemaServices(
-        ImmutableAttributesSchemaFactory attributesSchemaFactory,
-        ImmutableArtifactTypeRegistryFactory artifactTypeRegistryFactory,
-        InMemoryCacheFactory cacheFactory
-    ) {
-        this.attributesSchemaFactory = attributesSchemaFactory;
-        this.artifactTypeRegistryFactory = artifactTypeRegistryFactory;
-        this.cacheFactory = cacheFactory;
-
-        this.matchers = cacheFactory.createIdentityCache(this::createMatcher);
-    }
-
+@ServiceScope(Scope.BuildSession::class)
+class AttributeSchemaServices @Inject constructor(
     /**
      * Get a factory that can produce immutable attribute schemas from mutable ones.
      */
-    public ImmutableAttributesSchemaFactory getSchemaFactory() {
-        return attributesSchemaFactory;
-    }
-
+    val schemaFactory: ImmutableAttributesSchemaFactory,
     /**
      * Get a factory that can produce immutable artifact type registries from mutable ones.
      */
-    public ImmutableArtifactTypeRegistryFactory getArtifactTypeRegistryFactory() {
-        return artifactTypeRegistryFactory;
+    val artifactTypeRegistryFactory: ImmutableArtifactTypeRegistryFactory,
+    private val cacheFactory: InMemoryCacheFactory
+) {
+    private val matchers: InMemoryLoadingCache<ImmutableAttributesSchema, AttributeMatcher>
+
+    init {
+        this.matchers = cacheFactory.createIdentityCache<ImmutableAttributesSchema, AttributeMatcher>(Function { schema: ImmutableAttributesSchema -> this.createMatcher(schema) })
     }
 
     /**
      * Given a consumer and producer attribute schema, returns a matcher that can
      * be used to match attributes from the two schemas.
-     * <p>
+     *
+     *
      * Returned matchers are cached and reused for the same input schemas.
      */
-    public AttributeMatcher getMatcher(ImmutableAttributesSchema consumer, ImmutableAttributesSchema producer) {
-        ImmutableAttributesSchema merged = attributesSchemaFactory.concat(consumer, producer);
-        return matchers.get(merged);
+    fun getMatcher(consumer: ImmutableAttributesSchema, producer: ImmutableAttributesSchema): AttributeMatcher {
+        val merged = schemaFactory.concat(consumer, producer)
+        return matchers.get(merged)
     }
 
-    private DefaultAttributeMatcher createMatcher(ImmutableAttributesSchema schema) {
-        return new DefaultAttributeMatcher(
-            new CachingAttributeSelectionSchema(
-                new DefaultAttributeSelectionSchema(schema),
+    private fun createMatcher(schema: ImmutableAttributesSchema): DefaultAttributeMatcher {
+        return DefaultAttributeMatcher(
+            CachingAttributeSelectionSchema(
+                DefaultAttributeSelectionSchema(schema),
                 cacheFactory
             ),
             cacheFactory
-        );
+        )
     }
-
 }

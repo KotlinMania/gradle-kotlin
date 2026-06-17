@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.interfaces
 
-package org.gradle.internal.component.resolution.failure.interfaces;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ComponentIdentifier
 
 /**
  * Represents a failure selecting a variant of a component in the graph
- * during {@link org.gradle.internal.component.resolution.failure.interfaces Variant Selection}.
- * <p>
+ * during [Variant Selection][org.gradle.internal.component.resolution.failure.interfaces].
+ *
+ *
  * When this failure occurs, we have always selected a component.
  *
  * @implSpec This interface is meant only to be extended by other interfaces, it should not
  * be implemented directly.
  */
-/* package */ interface VariantSelectionFailure extends ResolutionFailure {
+/* package */
+internal interface VariantSelectionFailure : ResolutionFailure {
     /**
      * Gets the identifier of the component for which a variant could not be selected.
      *
      * @return identifier for the component for which a variant could not be selected
      */
-    ComponentIdentifier getTargetComponent();
+    fun getTargetComponent(): ComponentIdentifier?
 }

@@ -13,192 +13,126 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resolve.resolver
 
-package org.gradle.internal.resolve.resolver;
-
-import org.gradle.api.Action;
-import org.gradle.internal.component.model.VariantIdentifier;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
-import org.gradle.api.internal.artifacts.transform.TransformStepNode;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.FileCollectionStructureVisitor;
-import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.component.external.model.ImmutableCapabilities;
-import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.RunnableBuildOperation;
-
-import java.util.function.Predicate;
+import org.gradle.api.Action
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact
+import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet
+import org.gradle.api.internal.artifacts.transform.TransformStepNode
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.FileCollectionStructureVisitor
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.internal.DisplayName
+import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.component.model.VariantIdentifier
+import org.gradle.internal.operations.BuildOperationQueue
+import org.gradle.internal.operations.RunnableBuildOperation
+import java.util.function.Predicate
 
 /**
- * A {@link ResolvedArtifactSet} that applies a filter to the artifacts of a delegate {@link ResolvedArtifactSet}.
- * <p>
- * The filter is applied <strong>after</strong> build dependencies are calculated, meaning the filter is not
+ * A [ResolvedArtifactSet] that applies a filter to the artifacts of a delegate [ResolvedArtifactSet].
+ *
+ *
+ * The filter is applied **after** build dependencies are calculated, meaning the filter is not
  * applied to build dependencies. This is because the filter may be a function of the resolved artifact files,
  * which are not known until after build dependencies are executed.
  */
-public final class FilteringResolvedArtifactSet implements ResolvedArtifactSet {
-
-    private final ResolvedArtifactSet artifacts;
-    private final Predicate<ResolvableArtifact> filter;
-
-    public FilteringResolvedArtifactSet(ResolvedArtifactSet artifacts, Predicate<ResolvableArtifact> filter) {
-        this.artifacts = artifacts;
-        this.filter = filter;
+class FilteringResolvedArtifactSet(private val artifacts: ResolvedArtifactSet, private val filter: Predicate<ResolvableArtifact>) : ResolvedArtifactSet {
+    override fun visit(visitor: ResolvedArtifactSet.Visitor) {
+        artifacts.visit(FilteringVisitor(filter, visitor))
     }
 
-    @Override
-    public void visit(Visitor visitor) {
-        artifacts.visit(new FilteringVisitor(filter, visitor));
+    override fun visitTransformSources(visitor: ResolvedArtifactSet.TransformSourceVisitor) {
+        artifacts.visitTransformSources(FilteringTransformSourceVisitor(filter, visitor))
     }
 
-    @Override
-    public void visitTransformSources(TransformSourceVisitor visitor) {
-        artifacts.visitTransformSources(new FilteringTransformSourceVisitor(filter, visitor));
+    override fun visitExternalArtifacts(visitor: Action<ResolvableArtifact>) {
+        artifacts.visitExternalArtifacts(FilteringArtifactAction(filter, visitor))
     }
 
-    @Override
-    public void visitExternalArtifacts(Action<ResolvableArtifact> visitor) {
-        artifacts.visitExternalArtifacts(new FilteringArtifactAction(filter, visitor));
-    }
-
-    @Override
-    public void visitDependencies(TaskDependencyResolveContext context) {
+    override fun visitDependencies(context: TaskDependencyResolveContext) {
         // Do not apply exclusions to build dependencies, in order to permit filters that are
         // a function of the artifact files.
         // This means that we might build some filtered artifacts, but we filter those later.
-        artifacts.visitDependencies(context);
+        artifacts.visitDependencies(context)
     }
 
-    private static class FilteringArtifactVisitor implements ArtifactVisitor {
-
-        private final ArtifactVisitor visitor;
-        private final Predicate<ResolvableArtifact> filter;
-
-        public FilteringArtifactVisitor(Predicate<ResolvableArtifact> filter, ArtifactVisitor visitor) {
-            this.visitor = visitor;
-            this.filter = filter;
+    private class FilteringArtifactVisitor(private val filter: Predicate<ResolvableArtifact>, private val visitor: ArtifactVisitor) : ArtifactVisitor {
+        override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+            return visitor.prepareForVisit(source)
         }
 
-        @Override
-        public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-            return visitor.prepareForVisit(source);
-        }
-
-        @Override
-        public void visitArtifact(DisplayName artifactSetName, VariantIdentifier sourceVariantId, ImmutableAttributes attributes, ImmutableCapabilities capabilities, ResolvableArtifact artifact) {
+        override fun visitArtifact(
+            artifactSetName: DisplayName,
+            sourceVariantId: VariantIdentifier,
+            attributes: ImmutableAttributes,
+            capabilities: ImmutableCapabilities,
+            artifact: ResolvableArtifact
+        ) {
             if (filter.test(artifact)) {
-                visitor.visitArtifact(artifactSetName, sourceVariantId, attributes, capabilities, artifact);
+                visitor.visitArtifact(artifactSetName, sourceVariantId, attributes, capabilities, artifact)
             }
         }
 
-        @Override
-        public boolean requireArtifactFiles() {
-            return visitor.requireArtifactFiles();
+        override fun requireArtifactFiles(): Boolean {
+            return visitor.requireArtifactFiles()
         }
 
-        @Override
-        public void visitFailure(Throwable failure) {
-            visitor.visitFailure(failure);
+        override fun visitFailure(failure: Throwable) {
+            visitor.visitFailure(failure)
         }
 
-        @Override
-        public void endVisitCollection(FileCollectionInternal.Source source) {
-            visitor.endVisitCollection(source);
+        override fun endVisitCollection(source: FileCollectionInternal.Source) {
+            visitor.endVisitCollection(source)
         }
     }
 
-    private static class FilteringArtifacts implements Artifacts {
-
-        private final Artifacts artifacts;
-        private final Predicate<ResolvableArtifact> filter;
-
-        public FilteringArtifacts(Predicate<ResolvableArtifact> filter, Artifacts artifacts) {
-            this.artifacts = artifacts;
-            this.filter = filter;
+    private class FilteringArtifacts(private val filter: Predicate<ResolvableArtifact>, private val artifacts: ResolvedArtifactSet.Artifacts) : ResolvedArtifactSet.Artifacts {
+        override fun prepareForVisitingIfNotAlready() {
+            artifacts.prepareForVisitingIfNotAlready()
         }
 
-        @Override
-        public void prepareForVisitingIfNotAlready() {
-            artifacts.prepareForVisitingIfNotAlready();
+        override fun startFinalization(actions: BuildOperationQueue<RunnableBuildOperation>, requireFiles: Boolean) {
+            artifacts.startFinalization(actions, requireFiles)
         }
 
-        @Override
-        public void startFinalization(BuildOperationQueue<RunnableBuildOperation> actions, boolean requireFiles) {
-            artifacts.startFinalization(actions, requireFiles);
-        }
-
-        @Override
-        public void visit(ArtifactVisitor visitor) {
-            artifacts.visit(new FilteringArtifactVisitor(filter, visitor));
+        override fun visit(visitor: ArtifactVisitor) {
+            artifacts.visit(FilteringArtifactVisitor(filter, visitor))
         }
     }
 
-    private static class FilteringVisitor implements Visitor {
-
-        private final Visitor visitor;
-        private final Predicate<ResolvableArtifact> filter;
-
-        public FilteringVisitor(Predicate<ResolvableArtifact> filter, Visitor visitor) {
-            this.visitor = visitor;
-            this.filter = filter;
+    private class FilteringVisitor(private val filter: Predicate<ResolvableArtifact>, private val visitor: ResolvedArtifactSet.Visitor) : ResolvedArtifactSet.Visitor {
+        override fun prepareForVisit(source: FileCollectionInternal.Source): FileCollectionStructureVisitor.VisitType {
+            return visitor.prepareForVisit(source)
         }
 
-        @Override
-        public FileCollectionStructureVisitor.VisitType prepareForVisit(FileCollectionInternal.Source source) {
-            return visitor.prepareForVisit(source);
-        }
-
-        @Override
-        public void visitArtifacts(Artifacts artifacts) {
-            visitor.visitArtifacts(new FilteringArtifacts(filter, artifacts));
+        override fun visitArtifacts(artifacts: ResolvedArtifactSet.Artifacts) {
+            visitor.visitArtifacts(FilteringArtifacts(filter, artifacts))
         }
     }
 
-    private static class FilteringTransformSourceVisitor implements TransformSourceVisitor {
-
-        private final TransformSourceVisitor visitor;
-        private final Predicate<ResolvableArtifact> filter;
-
-        public FilteringTransformSourceVisitor(Predicate<ResolvableArtifact> filter, TransformSourceVisitor visitor) {
-            this.visitor = visitor;
-            this.filter = filter;
-        }
-
-        @Override
-        public void visitArtifact(ResolvableArtifact artifact) {
+    private class FilteringTransformSourceVisitor(private val filter: Predicate<ResolvableArtifact>, private val visitor: ResolvedArtifactSet.TransformSourceVisitor) :
+        ResolvedArtifactSet.TransformSourceVisitor {
+        override fun visitArtifact(artifact: ResolvableArtifact) {
             if (filter.test(artifact)) {
-                visitor.visitArtifact(artifact);
+                visitor.visitArtifact(artifact)
             }
         }
 
-        @Override
-        public void visitTransform(TransformStepNode source) {
+        override fun visitTransform(source: TransformStepNode) {
             if (filter.test(source.getInputArtifact())) {
-                visitor.visitTransform(source);
+                visitor.visitTransform(source)
             }
         }
     }
 
-    private static class FilteringArtifactAction implements Action<ResolvableArtifact> {
-
-        private final Action<ResolvableArtifact> visitor;
-        private final Predicate<ResolvableArtifact> filter;
-
-        public FilteringArtifactAction(Predicate<ResolvableArtifact> filter, Action<ResolvableArtifact> visitor) {
-            this.visitor = visitor;
-            this.filter = filter;
-        }
-
-        @Override
-        public void execute(ResolvableArtifact artifact) {
+    private class FilteringArtifactAction(private val filter: Predicate<ResolvableArtifact>, private val visitor: Action<ResolvableArtifact>) : Action<ResolvableArtifact> {
+        override fun execute(artifact: ResolvableArtifact) {
             if (filter.test(artifact)) {
-                visitor.execute(artifact);
+                visitor.execute(artifact)
             }
         }
-
     }
 }

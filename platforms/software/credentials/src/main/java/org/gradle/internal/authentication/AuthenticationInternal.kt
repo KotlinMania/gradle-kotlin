@@ -13,45 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
-
-import org.gradle.api.NonExtensible;
-import org.gradle.api.credentials.Credentials;
-import org.gradle.authentication.Authentication;
-
-import java.util.Collection;
+import org.gradle.api.NonExtensible
+import org.gradle.api.credentials.Credentials
+import org.gradle.authentication.Authentication
 
 @NonExtensible
-public interface AuthenticationInternal extends Authentication {
-    boolean supports(Credentials credentials);
+interface AuthenticationInternal : Authentication {
+    fun supports(credentials: Credentials?): Boolean
 
-    Credentials getCredentials();
+    @JvmField
+    var credentials: Credentials?
 
-    void setCredentials(Credentials credentials);
+    @JvmField
+    val type: Class<out Authentication?>?
 
-    Class<? extends Authentication> getType();
+    fun requiresCredentials(): Boolean
 
-    boolean requiresCredentials();
+    fun addHost(host: String?, port: Int)
 
-    void addHost(String host, int port);
-
-    Collection<HostAndPort> getHostsForAuthentication();
+    @JvmField
+    val hostsForAuthentication: MutableCollection<HostAndPort?>?
 
     interface HostAndPort {
-
         /**
          * The hostname that the credentials are required for.
          *
          * null means "any host"
          */
-        String getHost();
+        @JvmField
+        val host: String?
 
         /**
          * The port that the credentials are required for
          *
          * -1 means "any port"
          */
-        int getPort();
+        @JvmField
+        val port: Int
     }
 }

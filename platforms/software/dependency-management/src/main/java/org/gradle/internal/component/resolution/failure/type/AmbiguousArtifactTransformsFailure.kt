@@ -13,29 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure;
-import org.gradle.internal.component.resolution.failure.transform.TransformationChainData;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
+import org.gradle.internal.component.resolution.failure.transform.TransformationChainData
 
 /**
- * An {@link ArtifactSelectionFailure} that represents the situation when multiple artifact transforms are
+ * An [ArtifactSelectionFailure] that represents the situation when multiple artifact transforms are
  * available that would satisfy an artifact selection request.
  */
-public final class AmbiguousArtifactTransformsFailure extends AbstractArtifactSelectionFailure {
-    private final ImmutableList<TransformationChainData> potentialVariants;
-
-    public AmbiguousArtifactTransformsFailure(ComponentIdentifier targetComponent, String targetVariant, AttributeContainerInternal requestedAttributes, ImmutableList<TransformationChainData> potentialVariants) {
-        super(ResolutionFailureProblemId.AMBIGUOUS_ARTIFACT_TRANSFORM, targetComponent, targetVariant, requestedAttributes);
-        this.potentialVariants = potentialVariants;
-    }
-
-    public ImmutableList<TransformationChainData> getPotentialVariants() {
-        return potentialVariants;
+class AmbiguousArtifactTransformsFailure(
+    targetComponent: ComponentIdentifier,
+    targetVariant: String,
+    requestedAttributes: AttributeContainerInternal,
+    private val potentialVariants: ImmutableList<TransformationChainData>
+) : AbstractArtifactSelectionFailure(
+    ResolutionFailureProblemId.AMBIGUOUS_ARTIFACT_TRANSFORM, targetComponent, targetVariant, requestedAttributes
+) {
+    fun getPotentialVariants(): ImmutableList<TransformationChainData> {
+        return potentialVariants
     }
 }

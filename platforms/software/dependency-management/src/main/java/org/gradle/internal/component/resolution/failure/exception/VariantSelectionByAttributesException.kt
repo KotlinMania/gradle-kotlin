@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.exception
 
-package org.gradle.internal.component.resolution.failure.exception;
-
-import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure;
-
-import java.util.List;
+import org.gradle.internal.component.resolution.failure.interfaces.VariantSelectionByAttributesFailure
 
 /**
  * Represents a failure during variant selection when a variant of a component cannot be selected
- * by the {@link org.gradle.internal.component.model.GraphVariantSelector GraphVariantSelector}.
+ * by the [GraphVariantSelector][org.gradle.internal.component.model.GraphVariantSelector].
  */
-public final class VariantSelectionByAttributesException extends AbstractResolutionFailureException {
-    public VariantSelectionByAttributesException(String message, VariantSelectionByAttributesFailure failure, List<String> resolutions) {
-        super(message, failure, resolutions);
-    }
-
-    @Override
-    public VariantSelectionByAttributesFailure getFailure() {
-        return (VariantSelectionByAttributesFailure) failure;
+class VariantSelectionByAttributesException(message: String, failure: VariantSelectionByAttributesFailure, resolutions: MutableList<String>) :
+    AbstractResolutionFailureException(message, failure, resolutions) {
+    override fun getFailure(): VariantSelectionByAttributesFailure {
+        return failure as VariantSelectionByAttributesFailure
     }
 }

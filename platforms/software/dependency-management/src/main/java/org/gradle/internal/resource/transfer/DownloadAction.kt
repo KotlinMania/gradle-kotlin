@@ -13,61 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.apache.commons.io.IOUtils
+import org.gradle.api.internal.file.temp.TemporaryFileProvider
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.util.internal.GFileUtils
+import org.slf4j.Logger
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 
-import org.apache.commons.io.IOUtils;
-import org.gradle.api.internal.file.temp.TemporaryFileProvider;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.util.internal.GFileUtils;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
+class DownloadAction(private val source: ExternalResourceName, private val temporaryFileProvider: TemporaryFileProvider, private val logger: Logger?) :
+    ExternalResource.ContentAndMetadataAction<Any?> {
+    private var destination: File? = null
+    var metaData: ExternalResourceMetaData? = null
+        private set
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
-public class DownloadAction implements ExternalResource.ContentAndMetadataAction<Object> {
-    private File destination;
-    private ExternalResourceMetaData metaData;
-    private final ExternalResourceName source;
-    private final TemporaryFileProvider temporaryFileProvider;
-    @Nullable
-    private final Logger logger;
-
-    public DownloadAction(ExternalResourceName source, TemporaryFileProvider temporaryFileProvider, @Nullable Logger logger) {
-        this.source = source;
-        this.temporaryFileProvider = temporaryFileProvider;
-        this.logger = logger;
-    }
-
-    @Override
-    public Object execute(InputStream inputStream, ExternalResourceMetaData metaData) throws IOException {
-        destination = temporaryFileProvider.createTemporaryFile("gradle_download", "bin");
-        this.metaData = metaData;
+    @Throws(IOException::class)
+    override fun execute(inputStream: InputStream, metaData: ExternalResourceMetaData): Any {
+        destination = temporaryFileProvider.createTemporaryFile("gradle_download", "bin")
+        this.metaData = metaData
         if (logger != null) {
-            logger.info("Downloading {} to {}", source, destination);
+            logger.info("Downloading {} to {}", source, destination)
         }
-        if (destination.getParentFile() != null) {
-            GFileUtils.mkdirs(destination.getParentFile());
+        if (destination!!.getParentFile() != null) {
+            GFileUtils.mkdirs(destination!!.getParentFile())
         }
-        try (FileOutputStream outputStream = new FileOutputStream(destination)) {
-            IOUtils.copyLarge(inputStream, outputStream);
+        FileOutputStream(destination).use { outputStream ->
+            IOUtils.copyLarge(inputStream, outputStream)
         }
-        return null;
+        return null
     }
 
-    @NonNull
-    public File getDestination() {
-        return destination;
-    }
-
-    @Nullable
-    public ExternalResourceMetaData getMetaData() {
-        return metaData;
+    fun getDestination(): File {
+        return destination!!
     }
 }

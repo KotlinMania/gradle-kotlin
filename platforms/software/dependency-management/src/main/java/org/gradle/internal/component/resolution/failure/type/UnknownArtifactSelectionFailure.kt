@@ -13,26 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.type
 
-package org.gradle.internal.component.resolution.failure.type;
-
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId;
-import org.gradle.internal.component.resolution.failure.interfaces.ArtifactSelectionFailure;
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.catalog.problems.ResolutionFailureProblemId
 
 /**
- * An {@link ArtifactSelectionFailure} that represents an unknown, catch-all failure that occurred during artifact selection.
+ * An [ArtifactSelectionFailure] that represents an unknown, catch-all failure that occurred during artifact selection.
  */
-public final class UnknownArtifactSelectionFailure extends AbstractArtifactSelectionFailure {
-    private final Exception cause;
-
-    public UnknownArtifactSelectionFailure(ComponentIdentifier targetComponent, String targetVariant, AttributeContainerInternal requestedAttributes, Exception cause) {
-        super(ResolutionFailureProblemId.UNKNOWN_ARTIFACT_SELECTION_FAILURE, targetComponent, targetVariant, requestedAttributes);
-        this.cause = cause;
-    }
-
-    public Exception getCause() {
-        return cause;
+class UnknownArtifactSelectionFailure(targetComponent: ComponentIdentifier, targetVariant: String, requestedAttributes: AttributeContainerInternal, private val cause: Exception) :
+    AbstractArtifactSelectionFailure(
+        ResolutionFailureProblemId.UNKNOWN_ARTIFACT_SELECTION_FAILURE, targetComponent, targetVariant, requestedAttributes
+    ) {
+    fun getCause(): Exception {
+        return cause
     }
 }

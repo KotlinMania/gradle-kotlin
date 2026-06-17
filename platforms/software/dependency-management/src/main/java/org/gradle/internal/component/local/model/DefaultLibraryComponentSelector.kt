@@ -13,121 +13,98 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.local.model
 
-package org.gradle.internal.component.local.model;
+import com.google.common.base.Objects
+import com.google.common.base.Strings
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.LibraryBinaryIdentifier
+import org.gradle.api.artifacts.component.LibraryComponentSelector
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
-import com.google.common.base.Objects;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.LibraryBinaryIdentifier;
-import org.gradle.api.artifacts.component.LibraryComponentSelector;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.internal.artifacts.component.ComponentSelectorInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.jspecify.annotations.Nullable;
+class DefaultLibraryComponentSelector @JvmOverloads constructor(projectPath: String, libraryName: String, variant: String = null) : LibraryComponentSelector, ComponentSelectorInternal {
+    private val projectPath: String
+    private val libraryName: String
+    private val variant: String
 
-import java.util.Collections;
-import java.util.List;
-
-public class DefaultLibraryComponentSelector implements LibraryComponentSelector, ComponentSelectorInternal {
-
-    private final String projectPath;
-    private final String libraryName;
-    private final String variant;
-
-    public DefaultLibraryComponentSelector(String projectPath, String libraryName) {
-        this(projectPath, libraryName, null);
+    init {
+        assert(!Strings.isNullOrEmpty(projectPath)) { "project path cannot be null or empty" }
+        this.projectPath = projectPath
+        this.libraryName = Strings.emptyToNull(libraryName)!!
+        this.variant = variant
     }
 
-    public DefaultLibraryComponentSelector(String projectPath, String libraryName, String variant) {
-        assert !Strings.isNullOrEmpty(projectPath) : "project path cannot be null or empty";
-        this.projectPath = projectPath;
-        this.libraryName = Strings.emptyToNull(libraryName);
-        this.variant = variant;
-    }
-
-    @Override
-    public String getDisplayName() {
-        String txt;
+    override fun getDisplayName(): String {
+        val txt: String
         if (Strings.isNullOrEmpty(libraryName)) {
-            txt = "project '" + projectPath + "'";
+            txt = "project '" + projectPath + "'"
         } else if (Strings.isNullOrEmpty(variant)) {
-            txt = "project '" + projectPath + "' library '" + libraryName + "'";
+            txt = "project '" + projectPath + "' library '" + libraryName + "'"
         } else {
-            txt = "project '" + projectPath + "' library '" + libraryName + "' binary '" + variant + "'";
+            txt = "project '" + projectPath + "' library '" + libraryName + "' binary '" + variant + "'"
         }
-        return txt;
+        return txt
     }
 
-    @Override
-    public String getProjectPath() {
-        return projectPath;
+    override fun getProjectPath(): String {
+        return projectPath
     }
 
-    @Override
-    public String getLibraryName() {
-        return libraryName;
+    override fun getLibraryName(): String {
+        return libraryName
     }
 
-    @Nullable
-    @Override
-    public String getVariant() {
-        return variant;
+    override fun getVariant(): String? {
+        return variant
     }
 
-    @Override
-    public boolean matchesStrictly(ComponentIdentifier identifier) {
-        assert identifier != null : "identifier cannot be null";
+    override fun matchesStrictly(identifier: ComponentIdentifier): Boolean {
+        checkNotNull(identifier) { "identifier cannot be null" }
 
-        if (identifier instanceof LibraryBinaryIdentifier) {
-            LibraryBinaryIdentifier projectComponentIdentifier = (LibraryBinaryIdentifier) identifier;
+        if (identifier is LibraryBinaryIdentifier) {
+            val projectComponentIdentifier = identifier
             return Objects.equal(projectComponentIdentifier.getProjectPath(), projectPath)
-                && Objects.equal(projectComponentIdentifier.getLibraryName(), libraryName)
-                && Objects.equal(projectComponentIdentifier.getVariant(), variant);
+                    && Objects.equal(projectComponentIdentifier.getLibraryName(), libraryName)
+                    && Objects.equal(projectComponentIdentifier.getVariant(), variant)
         }
 
-        return false;
+        return false
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return ImmutableAttributes.EMPTY;
+    override fun getAttributes(): ImmutableAttributes {
+        return ImmutableAttributes.EMPTY
     }
 
-    @Override
-    public List<Capability> getRequestedCapabilities() {
-        return Collections.emptyList();
+    override fun getRequestedCapabilities(): MutableList<Capability> {
+        return mutableListOf<Capability>()
     }
 
-    @Override
-    public ImmutableSet<CapabilitySelector> getCapabilitySelectors() {
-        return ImmutableSet.of();
+    override fun getCapabilitySelectors(): ImmutableSet<CapabilitySelector> {
+        return ImmutableSet.of<CapabilitySelector>()
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        DefaultLibraryComponentSelector that = (DefaultLibraryComponentSelector) o;
+        val that = o as DefaultLibraryComponentSelector
         return Objects.equal(projectPath, that.projectPath)
-            && Objects.equal(libraryName, that.libraryName)
-            && Objects.equal(variant, that.variant);
+                && Objects.equal(libraryName, that.libraryName)
+                && Objects.equal(variant, that.variant)
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(projectPath, libraryName, variant);
+    override fun hashCode(): Int {
+        return Objects.hashCode(projectPath, libraryName, variant)
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
-
 }

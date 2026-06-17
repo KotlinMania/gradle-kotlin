@@ -13,232 +13,192 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.external.model
 
-package org.gradle.internal.component.external.model;
+import com.google.common.base.Objects
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.ImmutableModuleSources
+import org.gradle.internal.component.model.IvyArtifactName
+import org.gradle.internal.component.model.ModuleSources
+import java.util.Optional
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.ImmutableModuleSources;
-import org.gradle.internal.component.model.IvyArtifactName;
-import org.gradle.internal.component.model.ModuleSources;
-import org.jspecify.annotations.Nullable;
+internal abstract class AbstractModuleComponentResolveMetadata : ModuleComponentResolveMetadata {
+    val attributesFactory: AttributesFactory
+    private val moduleVersionIdentifier: ModuleVersionIdentifier?
+    private val componentIdentifier: ModuleComponentIdentifier?
+    private val changing: Boolean
+    private val missing: Boolean
+    private val statusScheme: MutableList<String?>?
+    private val moduleSources: ImmutableModuleSources
+    @JvmField
+    val variants: ImmutableList<out ComponentVariant?>
+    private val attributes: ImmutableAttributes
+    private val platformOwners: ImmutableList<out VirtualComponentIdentifier?>?
+    private val schema: ImmutableAttributesSchema?
+    @JvmField
+    val variantDerivationStrategy: VariantDerivationStrategy?
+    val isExternalVariant: Boolean
+    val isComponentMetadataRuleCachingEnabled: Boolean
 
-import java.util.List;
-import java.util.Optional;
-
-abstract class AbstractModuleComponentResolveMetadata implements ModuleComponentResolveMetadata {
-    private final AttributesFactory attributesFactory;
-    private final ModuleVersionIdentifier moduleVersionIdentifier;
-    private final ModuleComponentIdentifier componentIdentifier;
-    private final boolean changing;
-    private final boolean missing;
-    private final List<String> statusScheme;
-    private final ImmutableModuleSources moduleSources;
-    private final ImmutableList<? extends ComponentVariant> variants;
-    private final ImmutableAttributes attributes;
-    private final ImmutableList<? extends VirtualComponentIdentifier> platformOwners;
-    private final ImmutableAttributesSchema schema;
-    private final VariantDerivationStrategy variantDerivationStrategy;
-    private final boolean externalVariant;
-    private final boolean isComponentMetadataRuleCachingEnabled;
-
-    public AbstractModuleComponentResolveMetadata(AbstractMutableModuleComponentResolveMetadata metadata) {
-        this.componentIdentifier = metadata.getId();
-        this.moduleVersionIdentifier = metadata.getModuleVersionId();
-        this.changing = metadata.isChanging();
-        this.missing = metadata.isMissing();
-        this.statusScheme = metadata.getStatusScheme();
-        this.moduleSources = ImmutableModuleSources.of(metadata.getSources());
-        this.attributesFactory = metadata.getAttributesFactory();
-        this.schema = metadata.getAttributesSchema();
-        this.attributes = extractAttributes(metadata);
-        this.variants = metadata.getVariants();
-        this.platformOwners = metadata.getPlatformOwners() == null ? ImmutableList.of() : ImmutableList.copyOf(metadata.getPlatformOwners());
-        this.variantDerivationStrategy = metadata.getVariantDerivationStrategy();
-        this.externalVariant = metadata.isExternalVariant();
-        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled();
+    constructor(metadata: AbstractMutableModuleComponentResolveMetadata) {
+        this.componentIdentifier = metadata.id
+        this.moduleVersionIdentifier = metadata.moduleVersionId
+        this.changing = metadata.isChanging
+        this.missing = metadata.isMissing
+        this.statusScheme = metadata.statusScheme
+        this.moduleSources = ImmutableModuleSources.of(metadata.sources)
+        this.attributesFactory = metadata.attributesFactory!!
+        this.schema = metadata.getAttributesSchema()
+        this.attributes = extractAttributes(metadata)
+        this.variants = metadata.getVariants()
+        this.platformOwners = if (metadata.platformOwners == null) ImmutableList.of<VirtualComponentIdentifier?>() else ImmutableList.copyOf(metadata.platformOwners)
+        this.variantDerivationStrategy = metadata.getVariantDerivationStrategy()
+        this.isExternalVariant = metadata.isExternalVariant
+        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled
     }
 
-    public AbstractModuleComponentResolveMetadata(AbstractModuleComponentResolveMetadata metadata, ImmutableList<? extends ComponentVariant> variants) {
-        this.componentIdentifier = metadata.getId();
-        this.moduleVersionIdentifier = metadata.getModuleVersionId();
-        this.changing = metadata.isChanging();
-        this.missing = metadata.isMissing();
-        this.statusScheme = metadata.getStatusScheme();
-        this.moduleSources = ImmutableModuleSources.of(metadata.getSources());
-        this.attributesFactory = metadata.getAttributesFactory();
-        this.schema = metadata.getAttributesSchema();
-        this.attributes = metadata.getAttributes();
-        this.variants = variants;
-        this.platformOwners = metadata.getPlatformOwners();
-        this.variantDerivationStrategy = metadata.getVariantDerivationStrategy();
-        this.externalVariant = metadata.isExternalVariant();
-        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled();
+    constructor(metadata: AbstractModuleComponentResolveMetadata, variants: ImmutableList<out ComponentVariant?>) {
+        this.componentIdentifier = metadata.getId()
+        this.moduleVersionIdentifier = metadata.getModuleVersionId()
+        this.changing = metadata.isChanging()
+        this.missing = metadata.isMissing()
+        this.statusScheme = metadata.getStatusScheme()
+        this.moduleSources = ImmutableModuleSources.of(metadata.getSources())
+        this.attributesFactory = metadata.attributesFactory
+        this.schema = metadata.getAttributesSchema()
+        this.attributes = metadata.getAttributes()
+        this.variants = variants
+        this.platformOwners = metadata.getPlatformOwners()
+        this.variantDerivationStrategy = metadata.variantDerivationStrategy
+        this.isExternalVariant = metadata.isExternalVariant
+        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled
     }
 
-    public AbstractModuleComponentResolveMetadata(AbstractModuleComponentResolveMetadata metadata, ModuleSources sources, VariantDerivationStrategy derivationStrategy) {
-        this.componentIdentifier = metadata.componentIdentifier;
-        this.moduleVersionIdentifier = metadata.moduleVersionIdentifier;
-        this.changing = metadata.changing;
-        this.missing = metadata.missing;
-        this.statusScheme = metadata.statusScheme;
-        this.attributesFactory = metadata.attributesFactory;
-        this.schema = metadata.schema;
-        this.attributes = metadata.attributes;
-        this.variants = metadata.variants;
-        this.platformOwners = metadata.platformOwners;
-        this.moduleSources = ImmutableModuleSources.of(sources);
-        this.variantDerivationStrategy = derivationStrategy;
-        this.externalVariant = metadata.externalVariant;
-        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled();
+    constructor(metadata: AbstractModuleComponentResolveMetadata, sources: ModuleSources, derivationStrategy: VariantDerivationStrategy?) {
+        this.componentIdentifier = metadata.componentIdentifier
+        this.moduleVersionIdentifier = metadata.moduleVersionIdentifier
+        this.changing = metadata.changing
+        this.missing = metadata.missing
+        this.statusScheme = metadata.statusScheme
+        this.attributesFactory = metadata.attributesFactory
+        this.schema = metadata.schema
+        this.attributes = metadata.attributes
+        this.variants = metadata.variants
+        this.platformOwners = metadata.platformOwners
+        this.moduleSources = ImmutableModuleSources.of(sources)
+        this.variantDerivationStrategy = derivationStrategy
+        this.isExternalVariant = metadata.isExternalVariant
+        this.isComponentMetadataRuleCachingEnabled = metadata.isComponentMetadataRuleCachingEnabled
     }
 
-    private static ImmutableAttributes extractAttributes(AbstractMutableModuleComponentResolveMetadata metadata) {
-        return ((AttributeContainerInternal) metadata.getAttributes()).asImmutable();
+    override fun isChanging(): Boolean {
+        return changing
     }
 
-    @Override
-    public AttributesFactory getAttributesFactory() {
-        return attributesFactory;
+    override fun isMissing(): Boolean {
+        return missing
     }
 
-    @Override
-    public boolean isChanging() {
-        return changing;
+    override fun getStatusScheme(): MutableList<String?>? {
+        return statusScheme
     }
 
-    @Override
-    public boolean isMissing() {
-        return missing;
+    override fun getId(): ModuleComponentIdentifier? {
+        return componentIdentifier
     }
 
-    @Override
-    public List<String> getStatusScheme() {
-        return statusScheme;
+    override fun getModuleVersionId(): ModuleVersionIdentifier? {
+        return moduleVersionIdentifier
     }
 
-    @Override
-    public ModuleComponentIdentifier getId() {
-        return componentIdentifier;
+    override fun getSources(): ModuleSources {
+        return moduleSources
     }
 
-    @Override
-    public ModuleVersionIdentifier getModuleVersionId() {
-        return moduleVersionIdentifier;
+    override fun toString(): String {
+        return componentIdentifier!!.getDisplayName()
     }
 
-    @Override
-    public ModuleSources getSources() {
-        return moduleSources;
+    override fun getAttributesSchema(): ImmutableAttributesSchema? {
+        return schema
     }
 
-    @Override
-    public String toString() {
-        return componentIdentifier.getDisplayName();
+    override fun getAttributes(): ImmutableAttributes {
+        return attributes
     }
 
-    @Override
-    public ImmutableAttributesSchema getAttributesSchema() {
-        return schema;
+    override fun getStatus(): String? {
+        return attributes.getAttribute<String?>(ProjectInternal.STATUS_ATTRIBUTE)
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributes;
+    override fun artifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata? {
+        val ivyArtifactName: IvyArtifactName = DefaultIvyArtifactName(getModuleVersionId()!!.getName(), type, extension, classifier)
+        return DefaultModuleComponentArtifactMetadata(getId(), ivyArtifactName)
     }
 
-    @Override
-    public String getStatus() {
-        return attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE);
-    }
-
-    @Override
-    public ImmutableList<? extends ComponentVariant> getVariants() {
-        return variants;
-    }
-
-    @Override
-    public ModuleComponentArtifactMetadata artifact(String type, @Nullable String extension, @Nullable String classifier) {
-        IvyArtifactName ivyArtifactName = new DefaultIvyArtifactName(getModuleVersionId().getName(), type, extension, classifier);
-        return new DefaultModuleComponentArtifactMetadata(getId(), ivyArtifactName);
-    }
-
-    @Override
-    public ModuleComponentArtifactMetadata optionalArtifact(String type, @Nullable String extension, @Nullable String classifier) {
-        IvyArtifactName ivyArtifactName = new DefaultIvyArtifactName(getModuleVersionId().getName(), type, extension, classifier);
-        return new ModuleComponentOptionalArtifactMetadata(getId(), ivyArtifactName);
+    override fun optionalArtifact(type: String, extension: String?, classifier: String?): ModuleComponentArtifactMetadata? {
+        val ivyArtifactName: IvyArtifactName = DefaultIvyArtifactName(getModuleVersionId()!!.getName(), type, extension, classifier)
+        return ModuleComponentOptionalArtifactMetadata(getId()!!, ivyArtifactName)
     }
 
     /**
      * If there are no variants defined in the metadata, but the implementation knows how to provide variants it can do that here.
      * If it can not provide variants, absent must be returned to fall back to traditional configuration selection.
      */
-    protected Optional<List<? extends ExternalModuleVariantGraphResolveMetadata>> maybeDeriveVariants() {
-        return Optional.empty();
+    protected open fun maybeDeriveVariants(): Optional<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?> {
+        return Optional.empty<MutableList<out ExternalModuleVariantGraphResolveMetadata?>?>()
     }
 
-    @Override
-    public ImmutableList<? extends VirtualComponentIdentifier> getPlatformOwners() {
-        return platformOwners;
+    override fun getPlatformOwners(): ImmutableList<out VirtualComponentIdentifier?>? {
+        return platformOwners
     }
 
-    @Override
-    public VariantDerivationStrategy getVariantDerivationStrategy() {
-        return variantDerivationStrategy;
-    }
-
-    @Override
-    public boolean isExternalVariant() {
-        return externalVariant;
-    }
-
-    @Override
-    public boolean isComponentMetadataRuleCachingEnabled() {
-        return isComponentMetadataRuleCachingEnabled;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        AbstractModuleComponentResolveMetadata that = (AbstractModuleComponentResolveMetadata) o;
-        return changing == that.changing
-            && missing == that.missing
-            && externalVariant == that.externalVariant
-            && isComponentMetadataRuleCachingEnabled == that.isComponentMetadataRuleCachingEnabled
-            && Objects.equal(moduleVersionIdentifier, that.moduleVersionIdentifier)
-            && Objects.equal(componentIdentifier, that.componentIdentifier)
-            && Objects.equal(statusScheme, that.statusScheme)
-            && Objects.equal(moduleSources, that.moduleSources)
-            && Objects.equal(attributes, that.attributes)
-            && Objects.equal(variants, that.variants);
+        val that = o as AbstractModuleComponentResolveMetadata
+        return changing == that.changing && missing == that.missing && this.isExternalVariant == that.isExternalVariant && isComponentMetadataRuleCachingEnabled == that.isComponentMetadataRuleCachingEnabled && Objects.equal(
+            moduleVersionIdentifier,
+            that.moduleVersionIdentifier
+        )
+                && Objects.equal(componentIdentifier, that.componentIdentifier)
+                && Objects.equal(statusScheme, that.statusScheme)
+                && Objects.equal(moduleSources, that.moduleSources)
+                && Objects.equal(attributes, that.attributes)
+                && Objects.equal(variants, that.variants)
     }
 
-    @Override
-    public int hashCode() {
+    override fun hashCode(): Int {
         return Objects.hashCode(
             moduleVersionIdentifier,
             componentIdentifier,
             changing,
             missing,
-            externalVariant,
+            this.isExternalVariant,
             isComponentMetadataRuleCachingEnabled,
             statusScheme,
             moduleSources,
             attributes,
-            variants);
+            variants
+        )
+    }
+
+    companion object {
+        private fun extractAttributes(metadata: AbstractMutableModuleComponentResolveMetadata): ImmutableAttributes {
+            return (metadata.attributes as AttributeContainerInternal).asImmutable()
+        }
     }
 }

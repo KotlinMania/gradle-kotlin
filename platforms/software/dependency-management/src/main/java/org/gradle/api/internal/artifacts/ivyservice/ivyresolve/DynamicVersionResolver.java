@@ -140,12 +140,12 @@ public class DynamicVersionResolver {
         for (RepositoryResolveState resolveState : resolveStates) {
             resolveState.applyTo(result);
         }
-        if (result.isRejected()) {
+        if (result.isRejected) {
             // We have a matching component id that was rejected. These are handled later in the resolution process
             // (after conflict resolution), so it is not a failure at this stage.
             return;
         }
-        result.failed(new ModuleVersionNotFoundException(requested, result.getAttempted(), result.getUnmatchedVersions(), result.getRejectedVersions()));
+        result.failed(new ModuleVersionNotFoundException(requested, result.attempted, result.unmatchedVersions, result.rejectedVersions));
     }
 
     @Nullable
@@ -181,7 +181,7 @@ public class DynamicVersionResolver {
                 handleFailure(queue, request, failures, t);
                 continue;
             }
-            switch (request.resolvedVersionMetadata.getState()) {
+            switch (request.resolvedVersionMetadata.state) {
                 case Failed:
                     ModuleVersionResolveException failure = request.resolvedVersionMetadata.getFailure();
                     assert failure != null; // Failure cannot be null in Failed state
@@ -197,11 +197,11 @@ public class DynamicVersionResolver {
                     }
                     break;
                 case Resolved:
-                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, request.resolvedVersionMetadata.getMetaData());
+                    RepositoryChainModuleResolution moduleResolution = new RepositoryChainModuleResolution(request.repository, request.resolvedVersionMetadata.metaData);
                     best = chooseBest(best, moduleResolution);
                     break;
                 default:
-                    throw new IllegalStateException("Unexpected state for resolution: " + request.resolvedVersionMetadata.getState());
+                    throw new IllegalStateException("Unexpected state for resolution: " + request.resolvedVersionMetadata.state);
             }
         }
 
@@ -230,7 +230,7 @@ public class DynamicVersionResolver {
 
         @Override
         public void execute(ResourceAwareResolveResult resourceAwareResolveResult) {
-            attempts.addAll(resourceAwareResolveResult.getAttempted());
+            attempts.addAll(resourceAwareResolveResult.attempted);
         }
 
         public void applyTo(ResourceAwareResolveResult result) {
@@ -507,9 +507,9 @@ public class DynamicVersionResolver {
          */
         private void tryResolveMetadata(BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> target) {
             BuildableModuleComponentMetaDataResolveResult<ExternalModuleComponentGraphResolveState> result = resolve();
-            switch (result.getState()) {
+            switch (result.state) {
                 case Resolved:
-                    target.resolved(result.getMetaData());
+                    target.resolved(result.metaData);
                     return;
                 case Missing:
                     result.applyTo(target);

@@ -13,59 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.resolution.failure.describer
 
-package org.gradle.internal.component.resolution.failure.describer;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.internal.component.resolution.failure.ResolutionCandidateAssessor.AssessedCandidate;
-import org.gradle.internal.component.resolution.failure.exception.GraphValidationException;
-import org.gradle.internal.component.resolution.failure.type.IncompatibleMultipleNodesValidationFailure;
-
-import java.util.Comparator;
-import java.util.List;
+import com.google.common.collect.Lists
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.internal.component.resolution.failure.exception.GraphValidationException
+import org.gradle.internal.component.resolution.failure.type.IncompatibleMultipleNodesValidationFailure
+import java.util.function.Function
 
 /**
- * A {@link ResolutionFailureDescriber} that describes an {@link IncompatibleMultipleNodesValidationFailure}.
+ * A [ResolutionFailureDescriber] that describes an [IncompatibleMultipleNodesValidationFailure].
  */
-public abstract class IncompatibleMultipleNodesValidationFailureDescriber extends AbstractResolutionFailureDescriber<IncompatibleMultipleNodesValidationFailure> {
-    private static final String INCOMPATIBLE_VARIANTS_PREFIX = "Incompatible variant errors are explained in more detail at ";
-    private static final String INCOMPATIBLE_VARIANTS_SECTION = "sub:variant-incompatible";
-
-    @Override
-    public GraphValidationException describeFailure(IncompatibleMultipleNodesValidationFailure failure) {
-        String msg = buildIncompatibleArtifactVariantsFailureMsg(failure);
-        List<String> resolutions = buildResolutions(suggestSpecificDocumentation(INCOMPATIBLE_VARIANTS_PREFIX, INCOMPATIBLE_VARIANTS_SECTION), suggestReviewAlgorithm());
-        return new GraphValidationException(msg, failure, resolutions);
+abstract class IncompatibleMultipleNodesValidationFailureDescriber : AbstractResolutionFailureDescriber<IncompatibleMultipleNodesValidationFailure>() {
+    override fun describeFailure(failure: IncompatibleMultipleNodesValidationFailure): GraphValidationException {
+        val msg = buildIncompatibleArtifactVariantsFailureMsg(failure)
+        val resolutions = buildResolutions(suggestSpecificDocumentation(INCOMPATIBLE_VARIANTS_PREFIX, INCOMPATIBLE_VARIANTS_SECTION), suggestReviewAlgorithm())
+        return GraphValidationException(msg, failure, resolutions)
     }
 
-    private String buildIncompatibleArtifactVariantsFailureMsg(IncompatibleMultipleNodesValidationFailure failure) {
-        StringBuilder sb = new StringBuilder("Multiple incompatible variants of ")
+    private fun buildIncompatibleArtifactVariantsFailureMsg(failure: IncompatibleMultipleNodesValidationFailure): String {
+        val sb = StringBuilder("Multiple incompatible variants of ")
             .append(failure.describeRequestTarget())
-            .append(" were selected:\n");
-        for (AssessedCandidate assessedCandidate : failure.getAssessedCandidates()) {
-            sb.append("   - Variant ").append(assessedCandidate.getDisplayName()).append(" has attributes ");
-            formatAttributes(sb, assessedCandidate.getAllCandidateAttributes());
-            sb.append("\n");
+            .append(" were selected:\n")
+        for (assessedCandidate in failure.getAssessedCandidates()) {
+            sb.append("   - Variant ").append(assessedCandidate.getDisplayName()).append(" has attributes ")
+            formatAttributes(sb, assessedCandidate.getAllCandidateAttributes())
+            sb.append("\n")
         }
-        return sb.toString();
+        return sb.toString()
     }
 
-    private void formatAttributes(StringBuilder sb, ImmutableAttributes attributes) {
-        ImmutableSet<Attribute<?>> keySet = attributes.keySet();
-        List<Attribute<?>> sorted = Lists.newArrayList(keySet);
-        sorted.sort(Comparator.comparing(Attribute::getName));
-        boolean space = false;
-        sb.append("{");
-        for (Attribute<?> attribute : sorted) {
+    private fun formatAttributes(sb: StringBuilder, attributes: ImmutableAttributes) {
+        val keySet = attributes.keySet()
+        val sorted: MutableList<Attribute<*>> = Lists.newArrayList<Attribute<*>>(keySet)
+        sorted.sort(Comparator.comparing<Attribute<*>, String>(Function { obj: Attribute<*> -> obj.getName() }))
+        var space = false
+        sb.append("{")
+        for (attribute in sorted) {
             if (space) {
-                sb.append(", ");
+                sb.append(", ")
             }
-            sb.append(attribute.getName()).append("=").append(attributes.getAttribute(attribute));
-            space = true;
+            sb.append(attribute.getName()).append("=").append(attributes.getAttribute(attribute))
+            space = true
         }
-        sb.append("}");
+        sb.append("}")
+    }
+
+    companion object {
+        private const val INCOMPATIBLE_VARIANTS_PREFIX = "Incompatible variant errors are explained in more detail at "
+        private const val INCOMPATIBLE_VARIANTS_SECTION = "sub:variant-incompatible"
     }
 }

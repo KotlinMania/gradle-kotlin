@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resolve.caching;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.resolve.caching
 
 /**
  * Interface for services which support recording the "implicit inputs" they generate.
@@ -30,13 +28,13 @@ import org.jspecify.annotations.Nullable;
  *
  * In the external resource example, a record may consist of the external resource URI and
  * the external resource text. Then when we need to check if the resource is up-to-date,
- * we can ask the service by calling {@code isUpToDate(IN, OUT)} with
+ * we can ask the service by calling `isUpToDate(IN, OUT)` with
  * the URI as an input.
  *
  * It's up to the service implementation to determine:
  *
- * - the type of the input which allows requesting its up-to-date ness ({@link IN}
- * - the type of the output which allows checking if the result of calling the service is the same ({@link OUT}
+ * - the type of the input which allows requesting its up-to-date ness ([IN]
+ * - the type of the output which allows checking if the result of calling the service is the same ([OUT]
  *
  * Both have to be serializable, and it's encouraged to use the minimal footprint which allows
  * determining up-to-date status. For example, a SHA1 of a resource might be enough, rather than storing
@@ -45,11 +43,9 @@ import org.jspecify.annotations.Nullable;
  * @param <IN> a service specific type, representing a query of the service, which can be replayed later
  * @param <OUT> the fingerprint result of a service query, suitable for checking up-to-date status
  * @param <SERVICE> the type of the service
- */
-public interface ImplicitInputsProvidingService<IN, OUT, SERVICE> {
+</SERVICE></OUT></IN> */
+interface ImplicitInputsProvidingService<IN, OUT, SERVICE> {
+    fun withImplicitInputRecorder(registrar: ImplicitInputRecorder?): SERVICE?
 
-    SERVICE withImplicitInputRecorder(ImplicitInputRecorder registrar);
-
-    boolean isUpToDate(IN in, @Nullable OUT oldValue);
-
+    fun isUpToDate(`in`: IN?, oldValue: OUT?): Boolean
 }

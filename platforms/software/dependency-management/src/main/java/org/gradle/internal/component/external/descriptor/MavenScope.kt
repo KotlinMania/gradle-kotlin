@@ -13,26 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.component.external.descriptor;
+package org.gradle.internal.component.external.descriptor
 
 /**
  * A "scope" taken from a Maven POM. Note that the order of this enum is important for the module metadata cache.
  */
-public enum MavenScope {
+enum class MavenScope(lowerName: String) {
     Compile("compile"),
     Runtime("runtime"),
     Provided("provided"),
     Test("test"),
     System("system");
 
-    private final String lowerName;
+    val lowerName: String?
 
-    MavenScope(String lowerName) {
-        this.lowerName = lowerName;
-    }
-
-    public String getLowerName() {
-        return lowerName;
+    init {
+        this.lowerName = lowerName
     }
 }

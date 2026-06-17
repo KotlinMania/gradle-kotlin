@@ -13,35 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.component.model
 
-package org.gradle.internal.component.model;
-
-import com.google.common.collect.ImmutableList;
-
-import java.util.List;
-import java.util.Set;
+import com.google.common.collect.ImmutableList
 
 /**
  * State that is used for artifact resolution based on a variant that is selected during graph resolution.
  *
- * <p>Instances of this type are located using {@link VariantGraphResolveState}.</p>
+ *
+ * Instances of this type are located using [VariantGraphResolveState].
  */
-public interface VariantArtifactResolveState {
-
+interface VariantArtifactResolveState {
     /**
-     * Get the set of artifacts from this variant matching the provided {@link IvyArtifactName}s.
+     * Get the set of artifacts from this variant matching the provided [IvyArtifactName]s.
      *
      * This is used to resolve artifacts declared as part of a dependency.
      */
-    ImmutableList<ComponentArtifactMetadata> getAdhocArtifacts(List<IvyArtifactName> dependencyArtifacts);
+    fun getAdhocArtifacts(dependencyArtifacts: MutableList<IvyArtifactName>): ImmutableList<ComponentArtifactMetadata>?
 
     /**
      * The artifact sets provided by this variant.
-     * <p>
+     *
+     *
      * Each variant in a graph can expose a number of different artifact sets. Each
      * artifact set should contain the same content, but may be transformed in some way.
      * For example, zipped and unzipped versions of the same content.
      */
-    Set<? extends VariantResolveMetadata> getArtifactVariants();
-
+    fun getArtifactVariants(): MutableSet<out VariantResolveMetadata>?
 }
