@@ -50,7 +50,7 @@ public abstract class AbstractWindowsKitComponentLocator<T extends WindowsKitIns
 
     private static final String USER_PROVIDED = "User-provided";
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWindowsKitComponentLocator.class);
-    private final SetMultimap<File, T> foundComponents = HashMultimap.create();
+    private final SetMultimap<File, T> foundComponents = HashMultimap.<File, T>create();
     private final Set<File> brokenComponents = new LinkedHashSet<File>();
     private final WindowsRegistry windowsRegistry;
     private boolean initialised;
@@ -92,7 +92,7 @@ public abstract class AbstractWindowsKitComponentLocator<T extends WindowsKitIns
     public List<T> locateAllComponents() {
         initializeComponents();
 
-        return Lists.newArrayList(foundComponents.values());
+        return Lists.<T>newArrayList(foundComponents.values());
     }
 
     private void initializeComponents() {
@@ -111,7 +111,7 @@ public abstract class AbstractWindowsKitComponentLocator<T extends WindowsKitIns
             return new ComponentNotFound<T>("Could not locate a " + getDisplayName() + " installation using the Windows registry.");
         }
         return new ComponentNotFound<T>("Could not locate a " + getDisplayName() + " installation. None of the following locations contain a valid installation",
-            CollectionUtils.collect(brokenComponents, File::getAbsolutePath));
+            CollectionUtils.<String, File>collect(brokenComponents, File::getAbsolutePath));
     }
 
     private T getBestComponent() {
@@ -209,7 +209,7 @@ public abstract class AbstractWindowsKitComponentLocator<T extends WindowsKitIns
                 }
             }
         }
-        return result.toArray(new String[result.size()]);
+        return result.<String>toArray(new String[result.size()]);
     }
 
     protected String getVersionedDisplayName(VersionNumber version, DiscoveryType discoveryType) {

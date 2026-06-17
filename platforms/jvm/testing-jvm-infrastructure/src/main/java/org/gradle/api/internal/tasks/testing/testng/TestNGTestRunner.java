@@ -123,7 +123,7 @@ public class TestNGTestRunner {
         if (!suiteFiles.isEmpty()) {
             testNg.setTestSuites(GFileUtils.toPaths(suiteFiles));
         } else {
-            testNg.setTestClasses(testClasses.toArray(new Class<?>[0]));
+            testNg.setTestClasses(testClasses.<Class<?>>toArray(new Class<?>[0]));
         }
         ITestListener listener = new TestNGTestResultProcessorAdapter(resultProcessor, idGenerator, clock);
         TestNGListenerAdapterFactory factory = new TestNGListenerAdapterFactory(applicationClassLoader);

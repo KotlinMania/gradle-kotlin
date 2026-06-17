@@ -30,7 +30,7 @@ public class OptionLessStringsJavadocOptionFileOption implements OptionLessJavad
 
     @Override
     public OptionLessStringsJavadocOptionFileOption duplicate() {
-        return new OptionLessStringsJavadocOptionFileOption(Lists.newArrayList(value));
+        return new OptionLessStringsJavadocOptionFileOption(Lists.<String>newArrayList(value));
     }
 
     @Override

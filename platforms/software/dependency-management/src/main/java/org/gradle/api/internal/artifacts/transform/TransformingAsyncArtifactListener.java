@@ -174,10 +174,10 @@ public class TransformingAsyncArtifactListener implements ResolvedArtifactSet.Vi
                 // No input artifact yet, should execute
                 return true;
             }
-            if (!artifact.getFileSource().getValue().isSuccessful()) {
+            if (!artifact.getFileSource().getValue().isSuccessful) {
                 synchronized (this) {
                     // Failed to resolve input artifact, no need to execute
-                    transformedSubject = Try.failure(artifact.getFileSource().getValue().getFailure().get());
+                    transformedSubject = Try.failure(artifact.getFileSource().getValue().failure.get());
                     return false;
                 }
             }
@@ -185,9 +185,9 @@ public class TransformingAsyncArtifactListener implements ResolvedArtifactSet.Vi
             Deferrable<Try<TransformStepSubject>> invocation = createInvocation();
             synchronized (this) {
                 this.invocation = invocation;
-                if (invocation.getCompleted().isPresent()) {
+                if (invocation.completed.isPresent()) {
                     // Have already executed the transform, no need to execute
-                    transformedSubject = invocation.getCompleted().get();
+                    transformedSubject = invocation.completed.get();
                     return false;
                 } else {
                     // Have not executed the transform, should execute
@@ -204,9 +204,9 @@ public class TransformingAsyncArtifactListener implements ResolvedArtifactSet.Vi
             }
 
             artifact.getFileSource().finalizeIfNotAlready();
-            if (!artifact.getFileSource().getValue().isSuccessful()) {
+            if (!artifact.getFileSource().getValue().isSuccessful) {
                 synchronized (this) {
-                    transformedSubject = Try.failure(artifact.getFileSource().getValue().getFailure().get());
+                    transformedSubject = Try.failure(artifact.getFileSource().getValue().failure.get());
                     return transformedSubject;
                 }
             }

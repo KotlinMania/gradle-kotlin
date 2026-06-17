@@ -58,8 +58,8 @@ public class AssembleTaskConfig implements SourceTransformTaskConfig {
     private void configureAssembleTask(Assemble task, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal sourceSet) {
         task.setDescription("Assembles the " + sourceSet + " of " + binary);
 
-        task.getToolChain().set(binary.getToolChain());
-        task.getTargetPlatform().set(binary.getTargetPlatform());
+        task.toolChain.set(binary.getToolChain());
+        task.targetPlatform.set(binary.getTargetPlatform());
 
         task.source(sourceSet.getSource());
 
@@ -78,7 +78,7 @@ public class AssembleTaskConfig implements SourceTransformTaskConfig {
         }));
 
         final Project project = task.getProject();
-        task.setObjectFileDir(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())).get());
+        task.objectFileDir = project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())).get();
 
         Tool assemblerTool = binary.getToolByName("assembler");
         task.setAssemblerArgs(assemblerTool.getArgs());

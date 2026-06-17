@@ -85,12 +85,12 @@ public class ArchitectureSpecificVisualCpp implements VisualCpp {
 
     @Override
     public List<File> getLibDirs() {
-        return Collections.singletonList(libDir);
+        return Collections.<File>singletonList(libDir);
     }
 
     @Override
     public List<File> getIncludeDirs() {
-        return Collections.singletonList(includeDir);
+        return Collections.<File>singletonList(includeDir);
     }
 
     @Override

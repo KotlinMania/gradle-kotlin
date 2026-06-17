@@ -48,7 +48,7 @@ public class ToolingModelBuilderResultInternal {
         if (failures.isEmpty()) {
             return;
         }
-        Throwable firstOriginalException = failures.get(0).getOriginal();
+        Throwable firstOriginalException = failures.get(0).original;
         if (firstOriginalException instanceof RuntimeException) {
             throw (RuntimeException) firstOriginalException;
         }

@@ -39,7 +39,7 @@ class WindowsResourceCompiler extends VisualCppNativeCompiler<WindowsResourceCom
             throw new UnsupportedOperationException("Precompiled header arguments cannot be specified for a Windows Resource compiler.");
         }
         // RC has position sensitive arguments, the output args need to appear before the source file
-        return Iterables.concat(genericArgs, outputArgs, sourceArgs);
+        return Iterables.<String>concat(genericArgs, outputArgs, sourceArgs);
     }
 
     private static class RcCompilerArgsTransformer extends VisualCppCompilerArgsTransformer<WindowsResourceCompileSpec> {
@@ -50,7 +50,7 @@ class WindowsResourceCompiler extends VisualCppNativeCompiler<WindowsResourceCom
         }
         @Override
         protected Optional<String> getLanguageOption() {
-            return Optional.of("/r");
+            return Optional.<String>of("/r");
         }
     }
 }

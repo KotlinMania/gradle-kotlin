@@ -83,7 +83,7 @@ public class CaptureOutputsAfterExecutionStep<C extends WorkspaceContext & Cachi
                 ImmutableSortedMap<String, FileSystemSnapshot> outputsProducedByWork = outputFilter.filterOutputs(context, unfilteredOutputSnapshotsAfterExecution);
                 OriginMetadata originMetadata = createOriginMetadata(cacheKeyCalculatedState, result, timer);
                 operationContext.setResult(Operation.Result.INSTANCE);
-                return new DefaultExecutionOutputState(result.getExecution().isSuccessful(), outputsProducedByWork, originMetadata, false);
+                return new DefaultExecutionOutputState(result.getExecution().isSuccessful, outputsProducedByWork, originMetadata, false);
             },
             BuildOperationDescriptor
                 .displayName("Snapshot outputs after executing " + work.getDisplayName())
@@ -92,7 +92,7 @@ public class CaptureOutputsAfterExecutionStep<C extends WorkspaceContext & Cachi
     }
 
     private OriginMetadata createOriginMetadata(CachingState.CacheKeyCalculatedState cacheKeyCalculatedState, Result result, Timer timer) {
-        long snapshotOutputDuration = timer.getElapsedMillis();
+        long snapshotOutputDuration = timer.elapsedMillis;
 
         // The origin execution time is recorded as "work duration" + "output snapshotting duration",
         // As this is _roughly_ the amount of time that is avoided by reusing the outputs,

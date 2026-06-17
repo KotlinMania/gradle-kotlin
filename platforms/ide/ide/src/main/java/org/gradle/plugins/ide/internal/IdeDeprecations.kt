@@ -1,0 +1,35 @@
+/*
+ * Copyright 2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.plugins.ide.internal
+
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateBehaviour
+
+object IdeDeprecations {
+    fun nagDeprecatedType(type: Class<*>) {
+        nag(type.getName())
+    }
+
+    fun nagDeprecatedProperty(type: Class<*>, property: String?) {
+        nag(type.getName() + "." + property)
+    }
+
+    private fun nag(designator: String?) {
+        deprecateBehaviour("Using types related to file generation tasks of IDE plugins (" + designator + ").")
+            .willBeRemovedInGradle10()
+            .withUpgradeGuideSection(9, "ide_task_deprecation")!!
+            .nagUser()
+    }
+}

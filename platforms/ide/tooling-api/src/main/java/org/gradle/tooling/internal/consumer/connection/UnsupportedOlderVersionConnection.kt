@@ -1,0 +1,92 @@
+/*
+ * Copyright 2011 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.tooling.internal.consumer.connection
+
+import org.gradle.tooling.BuildAction
+import org.gradle.tooling.UnsupportedVersionException
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import org.gradle.tooling.internal.build.VersionOnlyBuildEnvironment
+import org.gradle.tooling.internal.consumer.PhasedBuildAction
+import org.gradle.tooling.internal.consumer.TestExecutionRequest
+import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
+import org.gradle.tooling.internal.protocol.ConnectionMetaDataVersion1
+import org.gradle.tooling.internal.protocol.ConnectionVersion4
+import org.gradle.tooling.model.build.BuildEnvironment
+
+/**
+ * An adapter for unsupported connection using a `ConnectionVersion4` based provider.
+ *
+ *
+ * Used for providers &gt;= 1.0-milestone-3 and &lt;= 2.5.
+ */
+class UnsupportedOlderVersionConnection(delegate: ConnectionVersion4, private val adapter: ProtocolToModelAdapter) : ConsumerConnection {
+    private val version: String
+    private val metaData: ConnectionMetaDataVersion1
+
+    init {
+        this.version = delegate.metaData.version
+        this.metaData = delegate.metaData
+    }
+
+    override fun stop() {
+    }
+
+    override fun getDisplayName(): String {
+        return metaData.displayName
+    }
+
+    @Throws(UnsupportedOperationException::class, IllegalStateException::class)
+    override fun <T> run(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
+        if (type == BuildEnvironment::class.java) {
+            return adapter.adapt<T?>(type, doGetBuildEnvironment())
+        }
+        throw unsupported()
+    }
+
+    private fun doGetBuildEnvironment(): Any {
+        return VersionOnlyBuildEnvironment(version)
+    }
+
+    @Throws(UnsupportedOperationException::class, IllegalStateException::class)
+    override fun <T> run(action: BuildAction<T?>, operationParameters: ConsumerOperationParameters): T? {
+        throw unsupported()
+    }
+
+    override fun run(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
+        throw unsupported()
+    }
+
+    override fun runTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
+        throw unsupported()
+    }
+
+    override fun notifyDaemonsAboutChangedPaths(changedPaths: MutableList<String>, operationParameters: ConsumerOperationParameters) {
+        throw unsupported()
+    }
+
+    override fun stopWhenIdle(operationParameters: ConsumerOperationParameters) {
+        throw unsupported()
+    }
+
+    private fun unsupported(): UnsupportedVersionException {
+        return UnsupportedVersionException(
+            String.format(
+                "Support for builds using Gradle versions older than 2.6 was removed in tooling API version 5.0. You are currently using Gradle version %s. You should upgrade your Gradle build to use Gradle 2.6 or later.",
+                version
+            )
+        )
+    }
+}

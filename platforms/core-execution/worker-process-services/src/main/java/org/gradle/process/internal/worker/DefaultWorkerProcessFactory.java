@@ -84,7 +84,7 @@ public class DefaultWorkerProcessFactory implements WorkerProcessFactory {
 
     private DefaultWorkerProcessBuilder newWorkerProcessBuilder() {
         DefaultWorkerProcessBuilder builder = new DefaultWorkerProcessBuilder(execHandleFactory, server, idGenerator, workerImplementationFactory, outputEventListener, memoryManager, jvmVersionDetector);
-        builder.setLogLevel(loggingManager.getLevel());
+        builder.setLogLevel(loggingManager.level);
         builder.setConnectTimeoutSeconds(connectTimeoutSeconds);
         return builder;
     }

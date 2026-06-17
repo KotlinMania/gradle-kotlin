@@ -136,7 +136,7 @@ public class PersistentDaemonRegistry implements DaemonRegistry {
                     if (oldValue == null) {
                         return oldValue;
                     }
-                    oldValue.removeInfo(((InetEndpoint)address).getPort());
+                    oldValue.removeInfo(((InetEndpoint)address).port);
                     return oldValue;
                 }
             });
@@ -237,7 +237,7 @@ public class PersistentDaemonRegistry implements DaemonRegistry {
                         oldValue = new DaemonRegistryContent();
                     }
                     DaemonInfo daemonInfo = new DaemonInfo(address, daemonContext, token, state);
-                    oldValue.removeInfo(((InetEndpoint) address).getPort());
+                    oldValue.removeInfo(((InetEndpoint) address).port);
                     oldValue.setStatus(address, daemonInfo);
                     return oldValue;
                 }

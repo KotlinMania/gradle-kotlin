@@ -53,7 +53,7 @@ public class WorkerDaemonStarter {
         Timer clock = Time.startTimer();
         MultiRequestWorkerProcessBuilder<TransportableActionExecutionSpec, DefaultWorkResult> builder = workerDaemonProcessFactory.multiRequestWorker(WorkerDaemonServer.class);
         builder.setBaseName("Gradle Worker Daemon");
-        builder.setLogLevel(loggingManager.getLevel()); // NOTE: might make sense to respect per-compile-task log level
+        builder.setLogLevel(loggingManager.level); // NOTE: might make sense to respect per-compile-task log level
         builder.sharedPackages("org.gradle", "javax.inject");
 
         // We know the exact minimal classpath for the WorkerDaemonServer.
@@ -82,9 +82,9 @@ public class WorkerDaemonStarter {
         MultiRequestClient<TransportableActionExecutionSpec, DefaultWorkResult> workerDaemonProcess = builder.build();
         WorkerProcess workerProcess = workerDaemonProcess.start();
 
-        WorkerDaemonClient client = new WorkerDaemonClient(forkOptions, workerDaemonProcess, workerProcess, loggingManager.getLevel(), actionExecutionSpecFactory);
+        WorkerDaemonClient client = new WorkerDaemonClient(forkOptions, workerDaemonProcess, workerProcess, loggingManager.level, actionExecutionSpecFactory);
 
-        LOG.info("Started Gradle worker daemon ({}) with fork options {}.", clock.getElapsed(), forkOptions);
+        LOG.info("Started Gradle worker daemon ({}) with fork options {}.", clock.elapsed, forkOptions);
 
         return client;
     }

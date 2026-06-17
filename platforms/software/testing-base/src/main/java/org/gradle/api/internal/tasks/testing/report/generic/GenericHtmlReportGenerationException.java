@@ -35,7 +35,7 @@ public class GenericHtmlReportGenerationException extends GradleException implem
     @Override
     public List<String> getResolutions() {
         if (getCause() instanceof ResolutionProvider) {
-            return ((ResolutionProvider) getCause()).getResolutions();
+            return ((ResolutionProvider) getCause()).resolutions;
         } else {
             return Collections.emptyList();
         }

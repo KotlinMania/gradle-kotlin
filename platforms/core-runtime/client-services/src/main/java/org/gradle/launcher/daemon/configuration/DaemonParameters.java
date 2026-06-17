@@ -139,22 +139,22 @@ public class DaemonParameters {
 
     public Map<String, String> getSystemProperties() {
         Map<String, String> systemProperties = new HashMap<>();
-        GUtil.addToMap(systemProperties, jvmOptions.getMutableSystemProperties());
+        GUtil.addToMap(systemProperties, jvmOptions.mutableSystemProperties);
         return systemProperties;
     }
 
     public Map<String, String> getEffectiveSystemProperties() {
         Map<String, String> systemProperties = new HashMap<>();
         GUtil.addToMap(systemProperties, System.getProperties());
-        GUtil.addToMap(systemProperties, jvmOptions.getMutableSystemProperties());
-        GUtil.addToMap(systemProperties, jvmOptions.getImmutableSystemProperties());
+        GUtil.addToMap(systemProperties, jvmOptions.mutableSystemProperties);
+        GUtil.addToMap(systemProperties, jvmOptions.immutableSystemProperties);
         return systemProperties;
     }
 
     public Map<String, String> getMutableAndImmutableSystemProperties() {
         Map<String, String> systemProperties = new HashMap<>();
-        GUtil.addToMap(systemProperties, jvmOptions.getMutableSystemProperties());
-        GUtil.addToMap(systemProperties, jvmOptions.getImmutableSystemProperties());
+        GUtil.addToMap(systemProperties, jvmOptions.mutableSystemProperties);
+        GUtil.addToMap(systemProperties, jvmOptions.immutableSystemProperties);
         return systemProperties;
     }
 
@@ -171,19 +171,19 @@ public class DaemonParameters {
     }
 
     public void setDebugPort(int debug) {
-        jvmOptions.getDebugSpec().setPort(debug);
+        jvmOptions.debugSpec.port = debug;
     }
 
     public void setDebugHost(String host) {
-        jvmOptions.getDebugSpec().setHost(host);
+        jvmOptions.debugSpec.host = host;
     }
 
     public void setDebugSuspend(boolean suspend) {
-        jvmOptions.getDebugSpec().setSuspend(suspend);
+        jvmOptions.debugSpec.isSuspend = suspend;
     }
 
     public void setDebugServer(boolean server) {
-        jvmOptions.getDebugSpec().setServer(server);
+        jvmOptions.debugSpec.isServer = server;
     }
 
     public DaemonParameters setBaseDir(File baseDir) {

@@ -99,7 +99,7 @@ public class CachedStoreFactory<T> implements Closeable {
             }
             Timer timer = Time.startTimer();
             T value = createIfNotPresent.get();
-            stats.readFromDisk(timer.getElapsedMillis());
+            stats.readFromDisk(timer.elapsedMillis);
             cache.put(id, value);
             return value;
         }

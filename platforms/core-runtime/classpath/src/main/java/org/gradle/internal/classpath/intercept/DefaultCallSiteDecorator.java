@@ -78,7 +78,7 @@ public class DefaultCallSiteDecorator implements CallSiteDecorator, CallIntercep
         @Override
         @Nullable
         public Object intercept(Invocation invocation, String consumer) throws Throwable {
-            Object receiver = invocation.getReceiver();
+            Object receiver = invocation.receiver;
             if (receiver instanceof Class) {
                 CallInterceptor realConstructorInterceptor = interceptors.get(InterceptScope.constructorsOf((Class<?>) receiver));
                 if (realConstructorInterceptor != null) {
@@ -97,9 +97,9 @@ public class DefaultCallSiteDecorator implements CallSiteDecorator, CallIntercep
     }
 
     private void addInterceptor(CallInterceptor interceptor) {
-        for (InterceptScope scope : interceptor.getInterceptScopes()) {
+        for (InterceptScope scope : interceptor.interceptScopes) {
             interceptors.compute(scope, (__, previous) -> previous == null ? interceptor : new CompositeCallInterceptor(previous, interceptor));
-            interceptedCallSiteNames.add(scope.getCallSiteName());
+            interceptedCallSiteNames.add(scope.callSiteName);
         }
     }
 

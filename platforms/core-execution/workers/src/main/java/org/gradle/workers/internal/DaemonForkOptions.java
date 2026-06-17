@@ -45,19 +45,19 @@ public class DaemonForkOptions {
     }
 
     public ReadOnlyJvmOptions getJvmOptions() {
-        return forkOptions.getJvmOptions();
+        return forkOptions.jvmOptions;
     }
 
     public String getExecutable() {
-        return forkOptions.getExecutable();
+        return forkOptions.executable;
     }
 
     public File getWorkingDir() {
-        return forkOptions.getWorkingDir();
+        return forkOptions.workingDir;
     }
 
     public Map<String, Object> getEnvironment() {
-        return forkOptions.getEnvironment();
+        return forkOptions.environment;
     }
 
     public ClassLoaderStructure getClassLoaderStructure() {

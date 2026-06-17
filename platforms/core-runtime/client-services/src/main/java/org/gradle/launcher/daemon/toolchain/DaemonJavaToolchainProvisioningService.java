@@ -114,10 +114,10 @@ public class DaemonJavaToolchainProvisioningService implements JavaToolchainProv
         try {
             return new URI(stringUri);
         } catch (NullPointerException e) {
-            String cause = String.format("No defined toolchain download url for %s on %s architecture.", buildPlatform.getOperatingSystem(), buildPlatform.getArchitecture().toString().toLowerCase(Locale.ROOT));
+            String cause = String.format("No defined toolchain download url for %s on %s architecture.", buildPlatform.operatingSystem, buildPlatform.getArchitecture().toString().toLowerCase(Locale.ROOT));
             throw new ToolchainDownloadException(spec, stringUri, cause);
         } catch (URISyntaxException e) {
-            String cause =  String.format("Invalid toolchain download url %s for %s on %s architecture.", stringUri, buildPlatform.getOperatingSystem(), buildPlatform.getArchitecture().toString().toLowerCase(Locale.ROOT));
+            String cause =  String.format("Invalid toolchain download url %s for %s on %s architecture.", stringUri, buildPlatform.operatingSystem, buildPlatform.getArchitecture().toString().toLowerCase(Locale.ROOT));
             throw new ToolchainDownloadException(spec, stringUri, cause);
         }
     }

@@ -35,7 +35,7 @@ public class PathJavadocOptionFileOption extends AbstractListJavadocOptionFileOp
 
     @Override
     public PathJavadocOptionFileOption duplicate() {
-        List<File> duplicateValue = Lists.newArrayList(value);
+        List<File> duplicateValue = Lists.<File>newArrayList(value);
         return new PathJavadocOptionFileOption(option, duplicateValue, joinBy);
     }
 }

@@ -40,7 +40,7 @@ public class DefaultTestFileAttachmentMetadataEvent extends AbstractProgressEven
 
     @Override
     public String getDisplayName() {
-        return getDescriptor().getDisplayName();
+        return getDescriptor().displayName;
     }
 
     @Override

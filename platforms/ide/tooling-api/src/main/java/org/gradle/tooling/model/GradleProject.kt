@@ -1,0 +1,74 @@
+/*
+ * Copyright 2011 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.tooling.model
+
+import org.gradle.api.Incubating
+
+/**
+ * Represents a Gradle project.
+ *
+ * @since 1.0-milestone-5
+ */
+interface GradleProject : HierarchicalElement, BuildableElement, ProjectModel {
+    /**
+     * Returns the identifier for this Gradle project.
+     *
+     * @since 2.13
+     */
+    override fun getProjectIdentifier(): ProjectIdentifier?
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun getTasks(): DomainObjectSet<out GradleTask?>?
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun getParent(): GradleProject?
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun getChildren(): DomainObjectSet<out GradleProject?>?
+
+    /**
+     * Returns the path of this project. This is a unique identifier for this project within the build.
+     *
+     * @return The path.
+     */
+    val path: String?
+
+    /**
+     * Searches all descendants (children, grand-children, etc.), including self, by given path.
+     *
+     * @return Gradle project with matching path or `null` if not found.
+     */
+    fun findByPath(path: String?): GradleProject?
+
+    @get:Throws(UnsupportedMethodException::class)
+    val buildScript: GradleScript?
+
+    @get:Throws(UnsupportedMethodException::class)
+    val buildDirectory: File?
+
+    @get:Throws(UnsupportedMethodException::class)
+    val projectDirectory: File?
+
+    @get:Throws(UnsupportedMethodException::class)
+    @get:Incubating
+    val buildTreePath: String?
+}

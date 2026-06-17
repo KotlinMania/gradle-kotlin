@@ -59,7 +59,7 @@ public class CommandLineToolVersionLocator extends AbstractVisualStudioVersionLo
 
         File vswhereBinary = vswhereLocator.getVswhereInstall();
         if (vswhereBinary != null) {
-            List<String> args = ImmutableList.of("-all", "-legacy", "-format", "json", "-utf8");
+            List<String> args = ImmutableList.<String>of("-all", "-legacy", "-format", "json", "-utf8");
             String json = getVswhereOutput(vswhereBinary, args);
             installs.addAll(parseJson(json));
         }
@@ -84,11 +84,11 @@ public class CommandLineToolVersionLocator extends AbstractVisualStudioVersionLo
         exec.setIgnoreExitValue(true);
         ExecResult result = exec.execute();
 
-        int exitValue = result.getExitValue();
+        int exitValue = result.exitValue;
         if (exitValue == 0) {
             return buffer.readAsString("UTF-8");
         } else {
-            LOGGER.debug("vswhere.exe returned a non-zero exit value ({}) - ignoring", result.getExitValue());
+            LOGGER.debug("vswhere.exe returned a non-zero exit value ({}) - ignoring", result.exitValue);
             return null;
         }
     }

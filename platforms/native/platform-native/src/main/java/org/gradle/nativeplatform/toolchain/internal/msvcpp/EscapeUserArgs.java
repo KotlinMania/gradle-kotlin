@@ -36,6 +36,6 @@ class EscapeUserArgs implements Function<String, String> {
     }
 
     private List<String> applyToAll(List<String> args) {
-        return CollectionUtils.collect(args, this);
+        return CollectionUtils.<String, String>collect(args, this);
     }
 }

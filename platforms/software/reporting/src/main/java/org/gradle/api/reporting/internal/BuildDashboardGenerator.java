@@ -60,7 +60,7 @@ public class BuildDashboardGenerator extends ReportRenderer<Collection<Report>, 
     private void generate(final HtmlPageBuilder<Writer> builder) {
         final String baseCssLink = builder.requireResource(getClass().getResource("/org/gradle/reporting/base-style.css"));
         final String cssLink = builder.requireResource(getClass().getResource("style.css"));
-        new Html(builder.getOutput()) {{
+        new Html(builder.output) {{
             html();
                 head();
                     meta().httpEquiv("Content-Type").content("text/html; charset=utf-8");

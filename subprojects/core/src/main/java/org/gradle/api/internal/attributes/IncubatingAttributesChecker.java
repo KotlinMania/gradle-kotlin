@@ -61,7 +61,7 @@ public abstract class IncubatingAttributesChecker {
     }
 
     private static <T> boolean isIncubating(Pair<Attribute<T>, T> attributePair) {
-        return isIncubating(Objects.requireNonNull(attributePair.getLeft()), attributePair.getRight());
+        return isIncubating(Objects.requireNonNull(attributePair.left), attributePair.right);
     }
 
     private static <T> boolean isIncubatingAttributeInterface(Attribute<T> key) {

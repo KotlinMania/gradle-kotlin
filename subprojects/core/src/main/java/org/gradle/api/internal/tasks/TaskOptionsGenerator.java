@@ -127,7 +127,7 @@ public class TaskOptionsGenerator {
         }
 
         public void addMutualExclusions(CommandLineParser parser) {
-            mutuallyExclusiveOptions.forEach(pair -> parser.allowOneOf(pair.getLeft().getName(), pair.getRight().getName()));
+            mutuallyExclusiveOptions.forEach(pair -> parser.allowOneOf(pair.left.getName(), pair.right.getName()));
         }
     }
 }

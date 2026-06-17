@@ -74,7 +74,7 @@ public class TestNGTestResultProcessorAdapter implements ISuiteListener, ITestLi
             testInternal = new DefaultTestSuiteDescriptor(id, suite.getName());
             suiteId.put(suite, testInternal.getId());
         }
-        resultProcessor.started(testInternal, new TestStartEvent(clock.getCurrentTime()));
+        resultProcessor.started(testInternal, new TestStartEvent(clock.currentTime));
     }
 
     @Override
@@ -88,7 +88,7 @@ public class TestNGTestResultProcessorAdapter implements ISuiteListener, ITestLi
             }
         }
 
-        resultProcessor.completed(id, new TestCompleteEvent(clock.getCurrentTime()));
+        resultProcessor.completed(id, new TestCompleteEvent(clock.currentTime));
     }
 
     @Override
@@ -109,7 +109,7 @@ public class TestNGTestResultProcessorAdapter implements ISuiteListener, ITestLi
             }
         }
         if (testInternal != null) {
-            resultProcessor.started(testInternal, new TestStartEvent(clock.getCurrentTime(), parentId));
+            resultProcessor.started(testInternal, new TestStartEvent(clock.currentTime, parentId));
         }
     }
 
@@ -133,7 +133,7 @@ public class TestNGTestResultProcessorAdapter implements ISuiteListener, ITestLi
         // Guard against TestNG calling this hook more than once with the same testClass.
         // See https://github.com/cbeust/testng/issues/1618 for details.
         if (id != null) {
-            resultProcessor.completed(id, new TestCompleteEvent(clock.getCurrentTime()));
+            resultProcessor.completed(id, new TestCompleteEvent(clock.currentTime));
         }
     }
 

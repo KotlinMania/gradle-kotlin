@@ -231,8 +231,8 @@ public abstract class AvailableJavaHomes {
     @Nullable
     public static Jvm getJdkInRange(Range<Integer> range) {
         return getAvailableJvmMetadatas().stream()
-            .filter(input -> input.getCapabilities().containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
-            .filter(element -> range.contains(element.getJavaMajorVersion()))
+            .filter(input -> input.capabilities.containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
+            .filter(element -> range.contains(element.javaMajorVersion))
             .map(AvailableJavaHomes::jvmFromMetadata)
             .findFirst()
             .orElse(null);
@@ -245,10 +245,10 @@ public abstract class AvailableJavaHomes {
     public static List<Jvm> getJdksInRange(Range<Integer> range) {
         Set<Integer> found = new HashSet<>();
         return getAvailableJvmMetadatas().stream()
-            .filter(input -> input.getCapabilities().containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
+            .filter(input -> input.capabilities.containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
             .filter(element ->
-                range.contains(element.getJavaMajorVersion()) &&
-                    found.add(element.getJavaMajorVersion())
+                range.contains(element.javaMajorVersion) &&
+                    found.add(element.javaMajorVersion)
             )
             .sorted(Comparator.comparingInt(JvmInstallationMetadata::getJavaMajorVersion))
             .map(AvailableJavaHomes::jvmFromMetadata)
@@ -259,12 +259,12 @@ public abstract class AvailableJavaHomes {
      * Returns all JDKs for the given java version.
      */
     public static List<Jvm> getAvailableJdks(final JavaVersion version) {
-        return getAvailableJdks(element -> version.equals(element.getLanguageVersion()));
+        return getAvailableJdks(element -> version.equals(element.languageVersion));
     }
 
     public static List<Jvm> getAvailableJdks(final Spec<? super JvmInstallationMetadata> filter) {
         return getAvailableJvmMetadatas().stream()
-            .filter(input -> input.getCapabilities().containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
+            .filter(input -> input.capabilities.containsAll(JavaInstallationCapability.JDK_CAPABILITIES))
             .filter(filter::isSatisfiedBy)
             .map(AvailableJavaHomes::jvmFromMetadata)
             .collect(Collectors.toList());
@@ -377,7 +377,7 @@ public abstract class AvailableJavaHomes {
      */
     @Nullable
     public static Jvm getDifferentVersionOrNull() {
-        return getSupportedJdk(element -> !element.getLanguageVersion().equals(Jvm.current().getJavaVersion()));
+        return getSupportedJdk(element -> !element.languageVersion.equals(Jvm.current().getJavaVersion()));
     }
 
     /**
@@ -393,7 +393,7 @@ public abstract class AvailableJavaHomes {
      */
     @Nullable
     public static Jvm getDifferentVersion(final Spec<? super JvmInstallationMetadata> filter) {
-        return getSupportedJdk(element -> !element.getLanguageVersion().equals(Jvm.current().getJavaVersion()) && filter.isSatisfiedBy(element));
+        return getSupportedJdk(element -> !element.languageVersion.equals(Jvm.current().getJavaVersion()) && filter.isSatisfiedBy(element));
     }
 
     /**
@@ -403,7 +403,7 @@ public abstract class AvailableJavaHomes {
     @Nullable
     public static Jvm getDifferentDaemonVersionFor(GradleDistribution distribution) {
         return getDifferentVersion(
-            metadata -> distribution.daemonWorksWith(metadata.getJavaMajorVersion())
+            metadata -> distribution.daemonWorksWith(metadata.javaMajorVersion)
         );
     }
 
@@ -413,7 +413,7 @@ public abstract class AvailableJavaHomes {
      */
     @Nullable
     public static Jvm getDifferentVersion(JavaVersion excludeVersion) {
-        return getSupportedJdk(element -> !element.getLanguageVersion().equals(Jvm.current().getJavaVersion()) && !element.getLanguageVersion().equals(excludeVersion));
+        return getSupportedJdk(element -> !element.languageVersion.equals(Jvm.current().getJavaVersion()) && !element.languageVersion.equals(excludeVersion));
     }
 
     /**
@@ -421,7 +421,7 @@ public abstract class AvailableJavaHomes {
      */
     @Nullable
     public static Jvm getDifferentVersionJreOnly() {
-        return getSupportedJvm(element -> !element.getLanguageVersion().equals(Jvm.current().getJavaVersion()) && Collections.disjoint(element.getCapabilities(), JavaInstallationCapability.JDK_CAPABILITIES));
+        return getSupportedJvm(element -> !element.languageVersion.equals(Jvm.current().getJavaVersion()) && Collections.disjoint(element.capabilities, JavaInstallationCapability.JDK_CAPABILITIES));
     }
 
     /**
@@ -429,11 +429,11 @@ public abstract class AvailableJavaHomes {
      */
     public static Jvm getDifferentJdkWithValidJre() {
         return getSupportedJdk(jvm -> !isCurrentJavaHome(jvm)
-            && Jvm.discovered(jvm.getJavaHome().toFile(), null, Integer.parseInt(jvm.getLanguageVersion().getMajorVersion())).getJre() != null);
+            && Jvm.discovered(jvm.javaHome.toFile(), null, Integer.parseInt(jvm.languageVersion.getMajorVersion())).getJre() != null);
     }
 
     public static boolean isCurrentJavaHome(JvmInstallationMetadata metadata) {
-        return metadata.getJavaHome().toFile().equals(Jvm.current().getJavaHome());
+        return metadata.javaHome.toFile().equals(Jvm.current().getJavaHome());
     }
 
     /**
@@ -449,13 +449,13 @@ public abstract class AvailableJavaHomes {
     public static JvmInstallationMetadata getJvmInstallationMetadata(Jvm jvm) {
         Path targetJavaHome = jvm.getJavaHome().toPath();
         return INSTALLATIONS.get().stream()
-            .filter(it -> it.getJavaHome().equals(targetJavaHome))
+            .filter(it -> it.javaHome.equals(targetJavaHome))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("No JVM installation found for " + jvm));
     }
 
     private static Jvm jvmFromMetadata(JvmInstallationMetadata metadata) {
-        return Jvm.discovered(metadata.getJavaHome().toFile(), metadata.getJavaVersion(), Integer.parseInt(metadata.getLanguageVersion().getMajorVersion()));
+        return Jvm.discovered(metadata.javaHome.toFile(), metadata.javaVersion, Integer.parseInt(metadata.languageVersion.getMajorVersion()));
     }
 
     public static List<JvmInstallationMetadata> getAvailableJvmMetadatas() {
@@ -486,7 +486,7 @@ public abstract class AvailableJavaHomes {
 
         System.out.println("Found the following JVMs:");
         for (JvmInstallationMetadata jvm : jvms) {
-            System.out.println("    " + jvm.getDisplayName() + " - " + jvm.getJavaHome());
+            System.out.println("    " + jvm.displayName + " - " + jvm.javaHome);
         }
         return jvms;
     }

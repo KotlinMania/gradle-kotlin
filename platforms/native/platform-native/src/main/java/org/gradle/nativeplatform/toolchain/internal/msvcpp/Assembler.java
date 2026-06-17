@@ -41,7 +41,7 @@ class Assembler extends VisualCppNativeCompiler<AssembleSpec> {
         // ml/ml64 have position sensitive arguments,
         // e.g., /Fo must appear before /c and /c must appear before the source file.
 
-        return Iterables.concat(outputArgs, genericArgs, sourceArgs);
+        return Iterables.<String>concat(outputArgs, genericArgs, sourceArgs);
     }
 
     private static class AssemblerArgsTransformer extends VisualCppCompilerArgsTransformer<AssembleSpec> {

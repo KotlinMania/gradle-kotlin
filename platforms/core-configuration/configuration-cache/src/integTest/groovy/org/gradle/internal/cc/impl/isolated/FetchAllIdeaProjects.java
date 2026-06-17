@@ -32,7 +32,7 @@ public class FetchAllIdeaProjects implements BuildAction<FetchAllIdeaProjects.Re
     public Result execute(BuildController controller) {
         Result result = new Result();
 
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         result.rootBuild = buildModel;
         result.rootIdeaProject = controller.getModel(IdeaProject.class);
 
@@ -64,7 +64,7 @@ public class FetchAllIdeaProjects implements BuildAction<FetchAllIdeaProjects.Re
 
         public IdeaProject getIdeaProject(String name) {
             for (IdeaProject ideaProject : allIdeaProjects) {
-                if (ideaProject.getName().equals(name)) {
+                if (ideaProject.name.equals(name)) {
                     return ideaProject;
                 }
             }

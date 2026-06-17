@@ -46,7 +46,7 @@ public class LinksOfflineJavadocOptionFileOption extends AbstractJavadocOptionFi
 
     @Override
     public LinksOfflineJavadocOptionFileOption duplicate() {
-        List<JavadocOfflineLink> duplicateValue = Lists.newArrayList(value);
+        List<JavadocOfflineLink> duplicateValue = Lists.<JavadocOfflineLink>newArrayList(value);
         return new LinksOfflineJavadocOptionFileOption(option, duplicateValue);
     }
 }

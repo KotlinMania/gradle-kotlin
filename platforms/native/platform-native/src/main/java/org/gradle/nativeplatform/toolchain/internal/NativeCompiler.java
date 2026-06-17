@@ -72,7 +72,7 @@ public abstract class NativeCompiler<T extends NativeCompileSpec> extends Abstra
     }
 
     protected List<String> getSourceArgs(File sourceFile) {
-        return Collections.singletonList(sourceFile.getAbsolutePath());
+        return Collections.<String>singletonList(sourceFile.getAbsolutePath());
     }
 
     protected abstract List<String> getOutputArgs(T spec, File outputFile);
@@ -113,6 +113,6 @@ public abstract class NativeCompiler<T extends NativeCompileSpec> extends Abstra
     }
 
     protected Iterable<String> buildPerFileArgs(List<String> genericArgs, List<String> sourceArgs, List<String> outputArgs, List<String> pchArgs) {
-        return Iterables.concat(genericArgs, pchArgs, sourceArgs, outputArgs);
+        return Iterables.<String>concat(genericArgs, pchArgs, sourceArgs, outputArgs);
     }
 }

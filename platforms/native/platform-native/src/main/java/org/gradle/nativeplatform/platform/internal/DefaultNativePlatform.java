@@ -43,7 +43,7 @@ public class DefaultNativePlatform implements NativePlatformInternal {
     public static ArchitectureInternal getCurrentArchitecture() {
         String architectureName;
         try {
-            architectureName = NativeServices.getInstance().get(SystemInfo.class).getArchitectureName();
+            architectureName = NativeServices.getInstance().<SystemInfo>get(SystemInfo.class).getArchitectureName();
         } catch (NativeIntegrationUnavailableException e) {
             architectureName = System.getProperty("os.arch");
         }

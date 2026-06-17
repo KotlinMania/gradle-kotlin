@@ -454,7 +454,7 @@ public class StreamingResolutionResultBuilder implements DependencyGraphVisitor 
                     }
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Problems loading the resolution results (" + clock.getElapsed() + "). "
+                throw new RuntimeException("Problems loading the resolution results (" + clock.elapsed + "). "
                     + "Read " + valuesRead + " values, last was: " + type, e);
             }
         }

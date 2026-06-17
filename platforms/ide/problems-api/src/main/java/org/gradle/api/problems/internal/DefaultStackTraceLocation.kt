@@ -1,0 +1,43 @@
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.api.problems.internal
+
+import org.gradle.api.problems.FileLocation
+
+class DefaultStackTraceLocation(private val location: FileLocation?, private val stackTrace: MutableList<StackTraceElement>) : StackTraceLocation {
+    override fun getFileLocation(): FileLocation? {
+        return location
+    }
+
+    override fun getStackTrace(): MutableList<StackTraceElement> {
+        return stackTrace
+    }
+
+    override fun equals(o: Any): Boolean {
+        if (o == null || javaClass != o.javaClass) {
+            return false
+        }
+
+        val that = o as DefaultStackTraceLocation
+        return (if (location == null) that.location == null else (location == that.location)) && stackTrace == that.stackTrace
+    }
+
+    override fun hashCode(): Int {
+        var result = if (location != null) location.hashCode() else 0
+        result = 31 * result + stackTrace.hashCode()
+        return result
+    }
+}

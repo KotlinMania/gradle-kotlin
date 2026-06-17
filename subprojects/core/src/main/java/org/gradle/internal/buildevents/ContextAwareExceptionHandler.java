@@ -36,7 +36,7 @@ import java.util.Optional;
 public class ContextAwareExceptionHandler {
 
     static void visit(Failure contextAwareException, ExceptionContextVisitor visitor) {
-        List<Failure> causes = contextAwareException.getCauses();
+        List<Failure> causes = contextAwareException.causes;
         if (!causes.isEmpty()) {
             for (Failure cause : causes) {
                 visitor.visitCause(cause);
@@ -45,8 +45,8 @@ public class ContextAwareExceptionHandler {
             }
         }
         visitor.endVisiting();
-        if (contextAwareException.getOriginal() instanceof LocationAwareException) {
-            String location = ((LocationAwareException) contextAwareException.getOriginal()).getLocation();
+        if (contextAwareException.original instanceof LocationAwareException) {
+            String location = ((LocationAwareException) contextAwareException.original).getLocation();
             if (location != null) {
                 visitor.visitLocation(location);
             }
@@ -60,7 +60,7 @@ public class ContextAwareExceptionHandler {
      */
     public static List<Failure> getReportableCauses(Failure failure) {
         final List<Failure> causes = new ArrayList<>();
-        for (Failure cause : failure.getCauses()) {
+        for (Failure cause : failure.causes) {
             visitCauses(cause, new TreeVisitor<Failure>() {
                 @Override
                 public void node(Failure node) {
@@ -73,7 +73,7 @@ public class ContextAwareExceptionHandler {
     }
 
     private static void visitCauses(Failure t, TreeVisitor<? super Failure> visitor) {
-        List<Failure> causes = t.getCauses();
+        List<Failure> causes = t.causes;
         if (!causes.isEmpty()) {
             visitor.startChildren();
             for (Failure cause : causes) {
@@ -100,11 +100,11 @@ public class ContextAwareExceptionHandler {
         if (t == null) {
             return null;
         }
-        if (t.getOriginal().getClass().getAnnotation(Contextual.class) != null || MultiCauseException.class.isAssignableFrom(t.getExceptionType())) {
+        if (t.original.getClass().getAnnotation(Contextual.class) != null || MultiCauseException.class.isAssignableFrom(t.exceptionType)) {
             return t;
         }
         // Not multicause, so at most one cause.
-        Optional<Failure> cause = t.getCauses().stream().findAny();
+        Optional<Failure> cause = t.causes.stream().findAny();
         return findNearestContextual(cause.orElse(null));
     }
 }

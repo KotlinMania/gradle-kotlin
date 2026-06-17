@@ -51,7 +51,7 @@ public class PCHUtils {
         }
 
         try {
-            FileUtils.writeLines(headerFile, CollectionUtils.collect(headers, header -> {
+            FileUtils.writeLines(headerFile, CollectionUtils.<String, String>collect(headers, header -> {
                 if (header.startsWith("<")) {
                     return "#include ".concat(header);
                 } else {
@@ -83,7 +83,7 @@ public class PCHUtils {
             public T transform(T original) {
                 List<File> newSourceFiles = new ArrayList<>();
                 for (File sourceFile : original.getSourceFiles()) {
-                    newSourceFiles.add(generatePCHSourceFile(original, sourceFile));
+                    newSourceFiles.add(<T>generatePCHSourceFile(original, sourceFile));
                 }
                 original.setSourceFiles(newSourceFiles);
                 return original;

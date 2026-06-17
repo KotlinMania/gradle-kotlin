@@ -70,18 +70,18 @@ public class DefaultTypeAwareProblemBuilder extends DelegatingProblemBuilder imp
     @Override
     public ProblemInternal build() {
         ProblemInternal problem = super.build();
-        Optional<TypeValidationData> additionalData = Optional.ofNullable((TypeValidationData) problem.getAdditionalData());
-        String prefix = introductionFor(additionalData, isTypeIrrelevantInErrorMessage(problem.getDefinition().getId()));
-        String text = Optional.ofNullable(problem.getContextualLabel()).orElseGet(() -> problem.getDefinition().getId().getDisplayName());
+        Optional<TypeValidationData> additionalData = Optional.ofNullable((TypeValidationData) problem.additionalData);
+        String prefix = introductionFor(additionalData, isTypeIrrelevantInErrorMessage(problem.definition.getId()));
+        String text = Optional.ofNullable(problem.contextualLabel).orElseGet(() -> problem.definition.getId().getDisplayName());
         return problem.toBuilder(getInfrastructure()).contextualLabel(prefix + text).build();
     }
 
     private static boolean isTypeIrrelevantInErrorMessage(ProblemId problemId) {
-        if (!problemId.getGroup().equals(GradleCoreProblemGroup.validation().property())) {
+        if (!problemId.group.equals(GradleCoreProblemGroup.validation().property())) {
             return false;
         } else {
             List<String> candidates = Arrays.asList("unknown-implementation", "unknown-implementation-nested", "implicit-dependency");
-            return candidates.contains(problemId.getName());
+            return candidates.contains(problemId.name);
         }
     }
 

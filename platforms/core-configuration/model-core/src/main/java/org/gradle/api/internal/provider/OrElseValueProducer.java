@@ -42,7 +42,7 @@ class OrElseValueProducer implements ValueSupplier.ValueProducer {
     }
 
     private OrElseValueProducer(EvaluationScopeContext context, ProviderInternal<?> left, @Nullable ProviderInternal<?> right, ValueSupplier.ValueProducer rightProducer) {
-        this.owner = Objects.requireNonNull(context.getOwner());
+        this.owner = Objects.requireNonNull(context.owner);
         this.left = left;
         this.right = right;
         this.leftProducer = left.getProducer();

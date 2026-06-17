@@ -51,9 +51,9 @@ public class ClasspathWalker {
      */
     public void visit(File root, ClasspathEntryVisitor visitor) throws IOException, FileException {
         FileMetadata fileMetadata = stat.stat(root);
-        if (fileMetadata.getType() == FileType.RegularFile) {
+        if (fileMetadata.type == FileType.RegularFile) {
             visitJarContents(root, visitor);
-        } else if (fileMetadata.getType() == FileType.Directory) {
+        } else if (fileMetadata.type == FileType.Directory) {
             visitDirectoryContents(root, visitor);
         }
     }
@@ -70,9 +70,9 @@ public class ClasspathWalker {
 
         for (File file : files) {
             FileMetadata fileMetadata = stat.stat(file);
-            if (fileMetadata.getType() == FileType.RegularFile) {
+            if (fileMetadata.type == FileType.RegularFile) {
                 visitFile(file, prefix + file.getName(), visitor);
-            } else if (fileMetadata.getType() == FileType.Directory) {
+            } else if (fileMetadata.type == FileType.Directory) {
                 visitDir(file, prefix + file.getName() + "/", visitor);
             }
         }
@@ -85,7 +85,7 @@ public class ClasspathWalker {
     private void visitJarContents(File jarFile, ClasspathEntryVisitor visitor) throws IOException {
         try (ZipInput entries = FileZipInput.create(jarFile)) {
             for (ZipEntry entry : entries) {
-                if (entry.isDirectory()) {
+                if (entry.isDirectory) {
                     continue;
                 }
                 visitor.visit(new ZipClasspathEntry(entry));
@@ -102,7 +102,7 @@ public class ClasspathWalker {
 
         @Override
         public String getName() {
-            return entry.getName();
+            return entry.name;
         }
 
         @Override
@@ -112,12 +112,12 @@ public class ClasspathWalker {
 
         @Override
         public byte[] getContent() throws IOException {
-            return entry.getContent();
+            return entry.content;
         }
 
         @Override
         public CompressionMethod getCompressionMethod() {
-            switch (entry.getCompressionMethod()) {
+            switch (entry.compressionMethod) {
                 case STORED:
                     return CompressionMethod.STORED;
                 case DEFLATED:

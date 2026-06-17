@@ -49,7 +49,7 @@ public class SwiftcMetadataProvider extends AbstractMetadataProvider<SwiftcMetad
 
     @Override
     protected List<String> compilerArgs() {
-        return ImmutableList.of("--version");
+        return ImmutableList.<String>of("--version");
     }
 
     @Override

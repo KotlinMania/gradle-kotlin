@@ -42,7 +42,7 @@ public class ProjectsPageRenderer extends ReportRenderer<Set<ProjectDetails.Proj
         final String baseCssLink = builder.requireResource(getClass().getResource("/org/gradle/reporting/base-style.css"));
         final String cssLink = builder.requireResource(getClass().getResource("/org/gradle/api/tasks/diagnostics/htmldependencyreport/style.css"));
 
-        new Html(builder.getOutput()) {{
+        new Html(builder.output) {{
             html();
                 head();
                     meta().httpEquiv("Content-Type").content("text/html; charset=utf-8");

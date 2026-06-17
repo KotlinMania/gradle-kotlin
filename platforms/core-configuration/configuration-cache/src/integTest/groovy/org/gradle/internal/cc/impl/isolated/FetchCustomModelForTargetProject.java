@@ -32,7 +32,7 @@ public class FetchCustomModelForTargetProject implements BuildAction<SomeTooling
 
     @Override
     public SomeToolingModel execute(BuildController controller) {
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         for (BasicGradleProject project : buildModel.getProjects()) {
             if (targetProject.equals(project.getBuildTreePath())) {
                 return controller.getModel(project, SomeToolingModel.class);

@@ -96,7 +96,7 @@ public class RulesVisitor extends RestrictiveCodeVisitor {
         Pair<ClassExpression, ClosureExpression> args = AstUtils.getClassAndClosureArgs(call);
         if (args != null) {
             // path(Type) { ... }
-            rewriteCreator(call, extractModelPathFromMethodTarget(call), args.getRight(), args.getLeft(), RuleVisitor.displayName(call));
+            rewriteCreator(call, extractModelPathFromMethodTarget(call), args.right, args.left, RuleVisitor.displayName(call));
             return;
         }
 

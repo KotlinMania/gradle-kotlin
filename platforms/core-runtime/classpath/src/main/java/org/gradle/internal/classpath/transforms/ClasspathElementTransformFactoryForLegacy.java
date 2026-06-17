@@ -58,7 +58,7 @@ public class ClasspathElementTransformFactoryForLegacy implements ClasspathEleme
             // Walk a file to figure out if it is signed and if it is a multi-release JAR.
             try (ZipInput entries = FileZipInput.create(source)) {
                 for (ZipEntry entry : entries) {
-                    String entryName = entry.getName();
+                    String entryName = entry.name;
                     if (isJarSignatureFile(entryName)) {
                         // TODO(mlopatkin) Manifest of the signed JAR contains signature information and must be the first entry in the JAR.
                         //  Looking into the manifest here should be more effective.
@@ -66,7 +66,7 @@ public class ClasspathElementTransformFactoryForLegacy implements ClasspathEleme
                         return new SkipClasspathElementTransform(source);
                     }
                     if (isMultiReleaseJar == null && JarUtil.isManifestName(entryName)) {
-                        isMultiReleaseJar = JarUtil.isMultiReleaseJarManifest(JarUtil.readManifest(entry.getContent()));
+                        isMultiReleaseJar = JarUtil.isMultiReleaseJarManifest(JarUtil.readManifest(entry.content));
                     }
                 }
             } catch (FileException e) {

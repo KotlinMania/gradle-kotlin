@@ -49,7 +49,7 @@ public class TestMainAction implements Runnable {
     @Override
     public void run() {
         TestDescriptorInternal suite = new RootTestSuiteDescriptor(rootTestSuiteId, displayName);
-        resultProcessor.started(suite, new TestStartEvent(clock.getCurrentTime()));
+        resultProcessor.started(suite, new TestStartEvent(clock.currentTime));
 
         try {
             processor.startProcessing(resultProcessor);
@@ -68,7 +68,7 @@ public class TestMainAction implements Runnable {
         } catch (Throwable ex) {
             resultProcessor.failure(suite.getId(), DefaultTestFailure.fromTestFrameworkStartupFailure(ex));
         } finally {
-            resultProcessor.completed(suite.getId(), new TestCompleteEvent(clock.getCurrentTime()));
+            resultProcessor.completed(suite.getId(), new TestCompleteEvent(clock.currentTime));
         }
     }
 }

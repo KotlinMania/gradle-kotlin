@@ -350,7 +350,7 @@ public class BuildScopeServices implements ServiceRegistrationProvider {
 
     @Provides
     ExecutionNodeAccessHierarchies createExecutionNodeAccessHierarchies(FileSystem fileSystem, Stat stat) {
-        return new ExecutionNodeAccessHierarchies(fileSystem.isCaseSensitive() ? CaseSensitivity.CASE_SENSITIVE : CaseSensitivity.CASE_INSENSITIVE, stat);
+        return new ExecutionNodeAccessHierarchies(fileSystem.isCaseSensitive ? CaseSensitivity.CASE_SENSITIVE : CaseSensitivity.CASE_INSENSITIVE, stat);
     }
 
     @Provides

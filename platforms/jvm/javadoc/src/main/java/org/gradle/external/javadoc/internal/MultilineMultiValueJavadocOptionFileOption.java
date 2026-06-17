@@ -31,7 +31,7 @@ public class MultilineMultiValueJavadocOptionFileOption extends AbstractListJava
     public JavadocOptionFileOptionInternal<List<List<String>>> duplicate() {
         List<List<String>> copyValues = new ArrayList<>();
         for (List<String> occurrence : getValue()) {
-            copyValues.add(Lists.newArrayList(occurrence));
+            copyValues.add(Lists.<String>newArrayList(occurrence));
         }
         return new MultilineMultiValueJavadocOptionFileOption(option, copyValues, joinBy);
     }

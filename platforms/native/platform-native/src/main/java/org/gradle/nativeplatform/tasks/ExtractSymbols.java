@@ -82,7 +82,7 @@ public abstract class ExtractSymbols extends DefaultTask {
 
     @TaskAction
     protected void extractSymbols() {
-        BuildOperationLogger operationLogger = getServices().get(BuildOperationLoggerFactory.class).newOperationLogger(getName(), getTemporaryDir());
+        BuildOperationLogger operationLogger = getServices().<BuildOperationLoggerFactory>get(BuildOperationLoggerFactory.class).newOperationLogger(getName(), getTemporaryDir());
 
         SymbolExtractorSpec spec = new DefaultSymbolExtractorSpec();
         spec.setBinaryFile(getBinaryFile().get().getAsFile());
@@ -90,15 +90,15 @@ public abstract class ExtractSymbols extends DefaultTask {
         spec.setOperationLogger(operationLogger);
 
         Compiler<SymbolExtractorSpec> symbolExtractor = createCompiler();
-        symbolExtractor = BuildOperationLoggingCompilerDecorator.wrap(symbolExtractor);
+        symbolExtractor = BuildOperationLoggingCompilerDecorator.<SymbolExtractorSpec>wrap(symbolExtractor);
         WorkResult result = symbolExtractor.execute(spec);
         setDidWork(result.getDidWork());
     }
 
     private Compiler<SymbolExtractorSpec> createCompiler() {
-        NativePlatformInternal targetPlatform = Cast.cast(NativePlatformInternal.class, this.getTargetPlatform().get());
-        NativeToolChainInternal toolChain = Cast.cast(NativeToolChainInternal.class, getToolChain().get());
+        NativePlatformInternal targetPlatform = Cast.<NativePlatformInternal, NativePlatform>cast(NativePlatformInternal.class, this.getTargetPlatform().get());
+        NativeToolChainInternal toolChain = Cast.<NativeToolChainInternal, NativeToolChain>cast(NativeToolChainInternal.class, getToolChain().get());
         PlatformToolProvider toolProvider = toolChain.select(targetPlatform);
-        return toolProvider.newCompiler(SymbolExtractorSpec.class);
+        return toolProvider.<SymbolExtractorSpec>newCompiler(SymbolExtractorSpec.class);
     }
 }

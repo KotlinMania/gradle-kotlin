@@ -33,7 +33,7 @@ public class StringsJavadocOptionFileOption extends AbstractListJavadocOptionFil
 
     @Override
     public StringsJavadocOptionFileOption duplicate() {
-        List<String> duplicateValue = Lists.newArrayList(value);
+        List<String> duplicateValue = Lists.<String>newArrayList(value);
         return new StringsJavadocOptionFileOption(option, duplicateValue, joinBy);
     }
 }

@@ -1,0 +1,72 @@
+/*
+ * Copyright 2023 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.operations.dependencies.transforms
+
+/**
+ * Fired each time a transform execution is identified by the execution engine.
+ *
+ *
+ * The resulting invocation may be executed at a later point.
+ * Most of the time, the execution happens directly after the identification, either as
+ * part of a planned transform step or when resolving an artifact view.
+ *
+ * @since 8.3
+ */
+interface IdentifyTransformExecutionProgressDetails {
+    /**
+     * The opaque identity of the transform execution.
+     *
+     *
+     * Unique within the current build tree.
+     *
+     * @see ExecuteWorkBuildOperationType.Details.getIdentity
+     */
+    val identity: String?
+
+    /**
+     * The component identifier of the input artifact.
+     */
+    val componentId: ComponentIdentifier?
+
+    /**
+     * The from attributes of the registered transform.
+     */
+    val fromAttributes: MutableMap<String, String>?
+
+    /**
+     * The to attributes of the registered transform.
+     */
+    val toAttributes: MutableMap<String, String>?
+
+    /**
+     * The file name of the input artifact that is about to be transformed.
+     */
+    val artifactName: String?
+
+    /**
+     * The class of the transform action.
+     */
+    val transformActionClass: Class<*>?
+
+    /**
+     * The combined input hash of the secondary inputs.
+     *
+     *
+     * The secondary inputs are the implementation of the transform action and
+     * the combined input hash of the parameters of the transform action.
+     */
+    val secondaryInputValueHashBytes: ByteArray?
+}

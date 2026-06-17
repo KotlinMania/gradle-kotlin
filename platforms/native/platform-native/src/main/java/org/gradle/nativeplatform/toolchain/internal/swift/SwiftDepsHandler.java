@@ -58,12 +58,12 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 class SwiftDepsHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(SwiftDepsHandler.class);
-    static final List RESET_TIMESTAMP = Arrays.asList(0L, 0L);
+    static final List RESET_TIMESTAMP = Arrays.<Long>asList(0L, 0L);
 
     SwiftDeps parse(File moduleSwiftDeps) throws FileNotFoundException {
-        return IoActions.withResource(new FileInputStream(moduleSwiftDeps), fileInputStream -> {
+        return IoActions.<FileInputStream, SwiftDeps>withResource(new FileInputStream(moduleSwiftDeps), fileInputStream -> {
             Yaml yaml = new Yaml(new Constructor(SwiftDeps.class, new LoaderOptions()));
-            return yaml.loadAs(fileInputStream, SwiftDeps.class);
+            return yaml.<SwiftDeps>loadAs(fileInputStream, SwiftDeps.class);
         });
     }
 

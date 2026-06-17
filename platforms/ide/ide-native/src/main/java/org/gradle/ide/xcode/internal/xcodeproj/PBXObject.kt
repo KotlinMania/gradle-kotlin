@@ -1,0 +1,50 @@
+/*
+ * Copyright 2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.ide.xcode.internal.xcodeproj
+
+abstract class PBXObject {
+    var globalID: String? = null
+
+    /**
+     * @return Type name of the serialized object.
+     */
+    abstract fun isa(): String?
+
+    /**
+     * Populates the serializer with the fields of this object.
+     */
+    open fun serializeInto(ignored: XcodeprojSerializer?) {
+    }
+
+    /**
+     * This method is used to generate stable GIDs and must be stable for identical contents.
+     * Returning a constant value is ok but will make the generated project order-dependent.
+     */
+    open fun stableHash(): Int {
+        return 0
+    }
+
+    override fun toString(): String {
+        return String.format("%s isa=%s gid=%s", super.toString(), isa(), this.globalID)
+    }
+
+    /**
+     * Generate a stable GID.
+     */
+    fun generateGid(generator: GidGenerator): String? {
+        return generator.generateGid(isa(), stableHash())
+    }
+}

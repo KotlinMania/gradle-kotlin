@@ -52,8 +52,8 @@ public abstract class AbstractMetadataProvider<T extends CompilerMetadata> imple
         if (transform == null) {
             return new ComponentNotFound<T>(String.format("Could not determine %s metadata: failed to execute %s %s.", getCompilerType().getDescription(), execSpec.executable.getName(), Joiner.on(' ').join(allArgs)));
         }
-        String output = transform.getLeft();
-        String error = transform.getRight();
+        String output = transform.left;
+        String error = transform.right;
         try {
             return new ComponentFound<T>(parseCompilerOutput(output, error, execSpec.executable, path));
         } catch (BrokenResultException e) {
@@ -80,7 +80,7 @@ public abstract class AbstractMetadataProvider<T extends CompilerMetadata> imple
         exec.setIgnoreExitValue(true);
         ExecResult result = exec.execute();
 
-        int exitValue = result.getExitValue();
+        int exitValue = result.exitValue;
         if (exitValue == 0) {
             return Pair.of(buffer.readAsString(), errorBuffer.readAsString());
         } else if (exitValue == 69) {
@@ -121,7 +121,7 @@ public abstract class AbstractMetadataProvider<T extends CompilerMetadata> imple
 
         @Override
         public CompilerExecSpec args(Iterable<String> args) {
-            this.args.addAll(ImmutableList.copyOf(args));
+            this.args.addAll(ImmutableList.<String>copyOf(args));
             return this;
         }
     }

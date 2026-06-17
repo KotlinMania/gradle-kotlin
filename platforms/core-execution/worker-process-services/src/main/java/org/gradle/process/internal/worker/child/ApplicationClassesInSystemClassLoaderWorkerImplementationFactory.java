@@ -106,12 +106,12 @@ public class ApplicationClassesInSystemClassLoaderWorkerImplementationFactory {
         Object requestedSecurityManager = execSpec.getSystemProperties().get("java.security.manager");
         List<File> workerMainClassPath = classPathRegistry.getClassPath("WORKER_MAIN").getAsFiles();
 
-        boolean runAsModule = !applicationModulePath.isEmpty() && execSpec.getModularity().getInferModulePath().get();
+        boolean runAsModule = !applicationModulePath.isEmpty() && execSpec.modularity.getInferModulePath().get();
 
         if (runAsModule) {
-            execSpec.getMainModule().set("gradle.worker");
+            execSpec.mainModule.set("gradle.worker");
         }
-        execSpec.getMainClass().set(WORKER_GRADLE_REMAPPING_PREFIX + "." + GradleWorkerMain.class.getName());
+        execSpec.mainClass.set(WORKER_GRADLE_REMAPPING_PREFIX + "." + GradleWorkerMain.class.getName());
         if (useOptionsFile) {
             // Use an options file to pass across application classpath
             File optionsFile = temporaryFileProvider.createTemporaryFile("gradle-worker-classpath", "txt");

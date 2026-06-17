@@ -54,7 +54,7 @@ public abstract class AbstractCompiler<T extends BinaryToolSpec> implements Comp
         workerLeaseService.runAsIsolatedTask(new Runnable() {
             @Override
             public void run() {
-                buildOperationExecutor.runAll(commandLineToolInvocationWorker, invocationAction);
+                buildOperationExecutor.<CommandLineToolInvocation>runAll(commandLineToolInvocationWorker, invocationAction);
             }
         });
 

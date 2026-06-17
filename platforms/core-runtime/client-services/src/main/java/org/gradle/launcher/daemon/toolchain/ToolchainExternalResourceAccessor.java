@@ -49,7 +49,7 @@ public class ToolchainExternalResourceAccessor extends HttpResourceAccessor {
             return null;
         }
 
-        long startTime = clock.getCurrentTime();
+        long startTime = clock.currentTime;
         AtomicLong downloadedBytes = new AtomicLong(0);
         try (InputStream inputStream = response.openStream(); ExternalResourceReadResponse responseCloser = response) {
             ProgressLoggingInputStream progressLoggingInputStream = new ProgressLoggingInputStream(inputStream, processedBytes -> {
@@ -57,15 +57,15 @@ public class ToolchainExternalResourceAccessor extends HttpResourceAccessor {
                     downloadProgressListener.downloadStarted(location.getUri(), response.getMetaData().getContentLength(), startTime);
                 }
                 downloadedBytes.addAndGet(processedBytes);
-                downloadProgressListener.downloadStatusChanged(location.getUri(), downloadedBytes.get(), response.getMetaData().getContentLength(), clock.getCurrentTime());
+                downloadProgressListener.downloadStatusChanged(location.getUri(), downloadedBytes.get(), response.getMetaData().getContentLength(), clock.currentTime);
 
                 if (downloadedBytes.get() == response.getMetaData().getContentLength()) {
-                    downloadProgressListener.downloadFinished(location.getUri(), downloadedBytes.get(), startTime, clock.getCurrentTime());
+                    downloadProgressListener.downloadFinished(location.getUri(), downloadedBytes.get(), startTime, clock.currentTime);
                 }
             });
             return action.execute(progressLoggingInputStream, responseCloser.getMetaData());
         } catch (Exception e) {
-            downloadProgressListener.downloadFailed(location.getUri(), e, downloadedBytes.get(), startTime, clock.getCurrentTime());
+            downloadProgressListener.downloadFailed(location.getUri(), e, downloadedBytes.get(), startTime, clock.currentTime);
             throw ResourceExceptions.getFailed(location.getUri(), e);
         }
     }

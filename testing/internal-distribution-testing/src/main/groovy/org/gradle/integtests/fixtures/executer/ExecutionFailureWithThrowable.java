@@ -96,7 +96,7 @@ public class ExecutionFailureWithThrowable implements DelegatingExecutionFailure
         } else if (failure instanceof LocationAwareException) {
             org.gradle.internal.problems.failure.Failure richFailure = DefaultFailureFactory.withDefaultClassifier().create(failure);
             for (org.gradle.internal.problems.failure.Failure cause : ContextAwareExceptionHandler.getReportableCauses(richFailure)) {
-                causes.add(cause.getMessage());
+                causes.add(cause.message);
             }
         } else {
             causes.add(failure.getMessage());

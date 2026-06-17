@@ -73,7 +73,7 @@ class TestNGListenerAdapterFactory {
             interfaces.add(iClassListenerClass);
         }
 
-        return (ITestListener) Proxy.newProxyInstance(classLoader, interfaces.toArray(new Class<?>[interfaces.size()]), new AdaptedListener(listener));
+        return (ITestListener) Proxy.newProxyInstance(classLoader, interfaces.<Class<?>>toArray(new Class<?>[interfaces.size()]), new AdaptedListener(listener));
     }
 
     private static class AdaptedListener implements InvocationHandler {

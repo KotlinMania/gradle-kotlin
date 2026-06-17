@@ -37,8 +37,8 @@ public abstract class GccCompilerPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         project.getPluginManager().apply(NativeComponentPlugin.class);
-        NativeToolChainRegistryInternal toolChainRegistry = Cast.uncheckedCast(project.getExtensions().getByType(NativeToolChainRegistry.class));
-        toolChainRegistry.registerBinding(Gcc.class, GccToolChain.class);
+        NativeToolChainRegistryInternal toolChainRegistry = Cast.<NativeToolChainRegistryInternal>uncheckedCast(project.getExtensions().<NativeToolChainRegistry>getByType(NativeToolChainRegistry.class));
+        toolChainRegistry.<Gcc>registerBinding(Gcc.class, GccToolChain.class);
         toolChainRegistry.registerDefaultToolChain(GccToolChain.DEFAULT_NAME, Gcc.class);
     }
 }

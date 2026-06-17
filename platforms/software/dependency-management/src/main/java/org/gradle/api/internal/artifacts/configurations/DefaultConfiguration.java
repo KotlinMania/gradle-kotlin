@@ -1311,7 +1311,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
             );
 
             ProblemId id = ProblemId.create("method-not-allowed", "Method call not allowed", GradleCoreProblemGroup.configurationUsage());
-            throw configurationServices.getProblems().getInternalReporter().throwing(ex, id, spec -> {
+            throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
                 spec.contextualLabel(
                     String.format(
                         prefixTemplate,
@@ -1504,7 +1504,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
     private void failDueToChangingUsage(String methodName, boolean newValue) {
         GradleException ex = new GradleException(String.format("Calling %s(%b) on %s is not allowed.  This configuration's role was set upon creation and its usage should not be changed.", methodName, newValue, this));
         ProblemId id = ProblemId.create("method-not-allowed", "Method call not allowed", GradleCoreProblemGroup.configurationUsage());
-        throw configurationServices.getProblems().getInternalReporter().throwing(ex, id, spec -> {
+        throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
             spec.contextualLabel(ex.getMessage());
         });
     }
@@ -1663,7 +1663,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
             .collect(Collectors.joining(", "));
         GradleException ex = new GradleException(getDisplayName() + " cannot extend " + summarizedExtensionTargets);
         ProblemId id = ProblemId.create("extend-detached-not-allowed", "Extending a detachedConfiguration is not allowed", GradleCoreProblemGroup.configurationUsage());
-        throw configurationServices.getProblems().getInternalReporter().throwing(ex, id, spec -> {
+        throw configurationServices.getProblems().internalReporter.throwing(ex, id, spec -> {
             spec.contextualLabel(ex.getMessage());
         });
     }
@@ -1878,7 +1878,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
         public IllegalResolutionException(String message) {
             super(message);
             Documentation userGuideLink = Documentation.userManual("viewing_debugging_dependencies", "sub:resolving-unsafe-configuration-resolution-errors");
-            resolution = "For more information, please refer to " + userGuideLink.getUrl() + " in the Gradle documentation.";
+            resolution = "For more information, please refer to " + userGuideLink.url + " in the Gradle documentation.";
         }
 
         @Override

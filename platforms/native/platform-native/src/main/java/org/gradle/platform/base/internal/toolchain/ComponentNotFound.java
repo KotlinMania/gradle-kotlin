@@ -27,7 +27,7 @@ public class ComponentNotFound<T> implements SearchResult<T> {
 
     public ComponentNotFound(String message) {
         this.message = message;
-        this.locations = Collections.emptyList();
+        this.locations = Collections.<String>emptyList();
     }
 
     public ComponentNotFound(String message, Collection<String> locations) {

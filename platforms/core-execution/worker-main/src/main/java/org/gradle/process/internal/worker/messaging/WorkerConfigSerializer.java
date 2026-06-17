@@ -97,7 +97,7 @@ public class WorkerConfigSerializer implements Serializer<WorkerConfig> {
                 UnsupportedClassVersionErrorWithJavaVersion e2 = (UnsupportedClassVersionErrorWithJavaVersion) e;
                 message = String.format(
                     "Unsupported worker JDK version. Required: %s. Current: %s",
-                    e2.getVersion().getMajorVersion(), JavaVersion.current().getMajorVersion()
+                    e2.version.getMajorVersion(), JavaVersion.current().getMajorVersion()
                 );
             } else {
                 message = "Unsupported worker JDK version: " + JavaVersion.current().getMajorVersion();

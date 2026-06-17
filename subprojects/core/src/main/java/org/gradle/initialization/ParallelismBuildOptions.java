@@ -49,7 +49,7 @@ public class ParallelismBuildOptions extends BuildOptionSet<ParallelismConfigura
 
         @Override
         public void applyTo(boolean value, ParallelismConfiguration settings, Origin origin) {
-            settings.setParallelProjectExecutionEnabled(value);
+            settings.isParallelProjectExecutionEnabled = value;
         }
 
         @Override
@@ -74,7 +74,7 @@ public class ParallelismBuildOptions extends BuildOptionSet<ParallelismConfigura
                 if (workerCount < 1) {
                     origin.handleInvalidValue(value, HINT);
                 }
-                settings.setMaxWorkerCount(workerCount);
+                settings.maxWorkerCount = workerCount;
             } catch (NumberFormatException e) {
                 origin.handleInvalidValue(value, HINT);
             }

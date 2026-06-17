@@ -219,7 +219,7 @@ class ForkingGradleHandle extends OutputScrapingGradleHandle {
 
         // Exit value is unreliable for determination of process failure.
         // On rare occasions, exitValue == 0 when the process is expected to fail, and the error output indicates failure.
-        boolean buildFailed = execResult.getExitValue() != 0 || OutputScrapingExecutionFailure.hasFailure(output);
+        boolean buildFailed = execResult.exitValue != 0 || OutputScrapingExecutionFailure.hasFailure(output);
         ExecutionResult executionResult = buildFailed ? toExecutionFailure(output, error) : toExecutionResult(output, error);
 
         if (expectFailure && !buildFailed) {

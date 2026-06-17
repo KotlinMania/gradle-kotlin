@@ -55,7 +55,7 @@ public class CompositeBuildDependencySubstitutions implements Action<DependencyS
 
     public CompositeBuildDependencySubstitutions(Collection<Pair<ModuleVersionIdentifier, ProjectComponentIdentifier>> replacements) {
         for (Pair<ModuleVersionIdentifier, ProjectComponentIdentifier> replacement : replacements) {
-            replacementMap.put(replacement.getLeft().getModule(), replacement.getRight());
+            replacementMap.put(replacement.left.getModule(), replacement.right);
         }
     }
 

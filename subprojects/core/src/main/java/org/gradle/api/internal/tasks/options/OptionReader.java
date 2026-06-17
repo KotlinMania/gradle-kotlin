@@ -100,7 +100,7 @@ public class OptionReader {
                     throw new OptionValidationException(
                             String.format("@OptionValues for '%s' cannot be attached to multiple methods in class '%s'.",
                                     optionElement.getOptionName(),
-                                    optionValueMethod.getMethod().getDeclaringClass().getName()));
+                                    optionValueMethod.method.getDeclaringClass().getName()));
                 }
             }
         }
@@ -108,7 +108,7 @@ public class OptionReader {
     }
 
     private static String[] getOptionNames(JavaMethod<Object, ?> optionValueMethod) {
-        OptionValues optionValues = optionValueMethod.getMethod().getAnnotation(OptionValues.class);
+        OptionValues optionValues = optionValueMethod.method.getAnnotation(OptionValues.class);
         return optionValues.value();
     }
 

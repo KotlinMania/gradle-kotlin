@@ -48,11 +48,11 @@ public class StrictVersionParser {
                 screamingSnakeToKebabCase(INVALID_VERSION_NOTATION.name()),
                 INVALID_VERSION_NOTATION.getDisplayName(),
                 GradleCoreProblemGroup.versionCatalog());
-            throw problems.getReporter().throwing(new InvalidUserDataException(), problemId, spec -> spec
+            throw problems.reporter.throwing(new InvalidUserDataException(), problemId, spec -> spec
                 .contextualLabel("The strict version modifier (!!) must be appended to a valid version number")
                 .details("The strict version modifier syntax expects a base version before '!!'")
                 .solution("Place a valid version number before '!!', e.g. '1.0!!'")
-                .documentedAt(userManual(VERSION_CATALOG_PROBLEMS, INVALID_VERSION_NOTATION.name().toLowerCase(Locale.ROOT)).getUrl()));
+                .documentedAt(userManual(VERSION_CATALOG_PROBLEMS, INVALID_VERSION_NOTATION.name().toLowerCase(Locale.ROOT)).url));
         }
         if (idx > 0) {
             String strictly = stringInterner.intern(version.substring(0, idx));

@@ -84,7 +84,7 @@ public class DefaultProblemLocationAnalyzer implements ProblemLocationAnalyzer, 
     @Override
     @Nullable
     public Location locationForUsage(Failure failure, boolean fromException) {
-        List<StackTraceElement> stack = failure.getStackTrace();
+        List<StackTraceElement> stack = failure.stackTrace;
         int startPos;
         int endPos;
         if (fromException) {
@@ -119,7 +119,7 @@ public class DefaultProblemLocationAnalyzer implements ProblemLocationAnalyzer, 
 
     private static int getStartPosWithLocation(Failure failure) {
         int startPos = -1;
-        List<StackTraceElement> stackTrace = failure.getStackTrace();
+        List<StackTraceElement> stackTrace = failure.stackTrace;
         do {
             startPos = failure.indexOfStackFrame(startPos + 1, StackFramePredicate.USER_CODE);
         } while (startPos >= 0 && stackTrace.get(startPos).getLineNumber() < 0);

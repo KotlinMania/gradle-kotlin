@@ -48,9 +48,9 @@ public abstract class DefaultSwiftXCTestSuite extends DefaultSwiftComponent<Swif
     @Inject
     public DefaultSwiftXCTestSuite(String name) {
         super(name, SwiftXCTestBinary.class);
-        this.testedComponent = getObjectFactory().property(SwiftComponent.class);
-        this.testBinary = getObjectFactory().property(SwiftXCTestBinary.class);
-        this.dependencies = getObjectFactory().newInstance(DefaultComponentDependencies.class, getNames().withSuffix("implementation"));
+        this.testedComponent = objectFactory.property(SwiftComponent.class);
+        this.testBinary = objectFactory.property(SwiftXCTestBinary.class);
+        this.dependencies = objectFactory.newInstance(DefaultComponentDependencies.class, getNames().withSuffix("implementation"));
     }
 
     @Override
@@ -59,13 +59,13 @@ public abstract class DefaultSwiftXCTestSuite extends DefaultSwiftComponent<Swif
     }
 
     public SwiftXCTestExecutable addExecutable(NativeVariantIdentity identity, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider) {
-        SwiftXCTestExecutable result = getObjectFactory().newInstance(DefaultSwiftXCTestExecutable.class, Names.of(getName() + "Executable", getName()), getModule(), false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
+        SwiftXCTestExecutable result = objectFactory.newInstance(DefaultSwiftXCTestExecutable.class, Names.of(getName() + "Executable", getName()), module, false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
         getBinaries().add(result);
         return result;
     }
 
     public SwiftXCTestBundle addBundle(NativeVariantIdentity identity, SwiftPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider) {
-        SwiftXCTestBundle result = getObjectFactory().newInstance(DefaultSwiftXCTestBundle.class, Names.of(getName() + "Executable", getName()), getModule(), false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
+        SwiftXCTestBundle result = objectFactory.newInstance(DefaultSwiftXCTestBundle.class, Names.of(getName() + "Executable", getName()), module, false, getSwiftSource(), getImplementationDependencies(), targetPlatform, toolChain, platformToolProvider, identity);
         getBinaries().add(result);
         return result;
     }

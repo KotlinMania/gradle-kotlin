@@ -273,7 +273,7 @@ public class TaskExecution implements MutableUnitOfWork {
                         }
 
                         if (t instanceof MultiCauseException) {
-                            failures.addAll(((MultiCauseException) t).getCauses());
+                            failures.addAll(((MultiCauseException) t).causes);
                         } else {
                             failures.add(t);
                         }

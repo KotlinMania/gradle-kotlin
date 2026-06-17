@@ -70,7 +70,7 @@ public class WorkerDaemonClientsManager implements Stoppable {
         listenerManager.addListener(stopSessionScopeWorkers);
         this.logLevelChangeEventListener = new LogLevelChangeEventListener();
         loggingManager.addOutputEventListener(logLevelChangeEventListener);
-        this.currentLogLevel = loggingManager.getLevel();
+        this.currentLogLevel = loggingManager.level;
         this.memoryManager = memoryManager;
         this.workerDaemonExpiration = new WorkerDaemonExpiration(this, getTotalPhysicalMemory());
         memoryManager.addMemoryHolder(workerDaemonExpiration);
@@ -147,7 +147,7 @@ public class WorkerDaemonClientsManager implements Stoppable {
 
     private long getTotalPhysicalMemory() {
         try {
-            return memoryInfo.getOsSnapshot().getPhysicalMemory().getTotal();
+            return memoryInfo.osSnapshot.physicalMemory.total;
         } catch (UnsupportedOperationException e) {
             return -1;
         }
@@ -221,7 +221,7 @@ public class WorkerDaemonClientsManager implements Stoppable {
         public void onOutput(OutputEvent event) {
             if (event instanceof LogLevelChangeEvent) {
                 LogLevelChangeEvent logLevelChangeEvent = (LogLevelChangeEvent) event;
-                currentLogLevel = logLevelChangeEvent.getNewLogLevel();
+                currentLogLevel = logLevelChangeEvent.newLogLevel;
             }
         }
     }

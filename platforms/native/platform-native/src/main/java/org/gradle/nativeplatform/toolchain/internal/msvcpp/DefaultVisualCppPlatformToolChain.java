@@ -34,12 +34,12 @@ public class DefaultVisualCppPlatformToolChain implements VisualCppPlatformToolC
     public DefaultVisualCppPlatformToolChain(NativePlatform platform, Instantiator instantiator) {
         this.platform = platform;
         tools = new HashMap<ToolType, CommandLineToolConfigurationInternal>();
-        tools.put(ToolType.C_COMPILER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.C_COMPILER));
-        tools.put(ToolType.CPP_COMPILER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.CPP_COMPILER));
-        tools.put(ToolType.LINKER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.LINKER));
-        tools.put(ToolType.STATIC_LIB_ARCHIVER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER));
-        tools.put(ToolType.ASSEMBLER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.ASSEMBLER));
-        tools.put(ToolType.WINDOW_RESOURCES_COMPILER, instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.WINDOW_RESOURCES_COMPILER));
+        tools.put(ToolType.C_COMPILER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.C_COMPILER));
+        tools.put(ToolType.CPP_COMPILER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.CPP_COMPILER));
+        tools.put(ToolType.LINKER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.LINKER));
+        tools.put(ToolType.STATIC_LIB_ARCHIVER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER));
+        tools.put(ToolType.ASSEMBLER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.ASSEMBLER));
+        tools.put(ToolType.WINDOW_RESOURCES_COMPILER, instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.WINDOW_RESOURCES_COMPILER));
     }
 
     @Override

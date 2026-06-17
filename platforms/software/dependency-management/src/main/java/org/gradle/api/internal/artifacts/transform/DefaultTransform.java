@@ -384,7 +384,7 @@ public class DefaultTransform implements Transform {
         if (!validationMessages.isEmpty()) {
             WorkValidationException exception = WorkValidationException.withSummaryForTransformParameter(
                 getParameterObjectDisplayName(parameterObject), validationMessages.size());
-            throw problems.getReporter().throwing(exception, validationMessages);
+            throw problems.reporter.throwing(exception, validationMessages);
         }
 
         for (Map.Entry<String, ValueSnapshot> entry : result.getValueSnapshots().entrySet()) {

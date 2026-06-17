@@ -32,7 +32,7 @@ internal class ConfigurationCacheInjectedClasspathInstrumentationStrategy intern
 ) : InjectedClasspathInstrumentationStrategy {
 
     override fun getTransform(): TransformMode {
-        if (!agentStatus.isAgentInstrumentationEnabled() && isThirdPartyAgentPresent()) {
+        if (!agentStatus.isAgentInstrumentationEnabled && isThirdPartyAgentPresent()) {
             // Without Gradle's instrumentation agent, the buildscript classpath is rewritten ahead of time;
             // the third-party transformer would observe Gradle's bytecode, not the user's. Refuse the build
             // rather than produce wrong output like miscredited coverage.

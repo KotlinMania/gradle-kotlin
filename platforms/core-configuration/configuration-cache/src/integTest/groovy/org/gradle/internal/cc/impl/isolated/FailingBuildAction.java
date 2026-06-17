@@ -23,7 +23,7 @@ import org.gradle.tooling.BuildController;
 public class FailingBuildAction implements BuildAction<SomeToolingModel> {
     @Override
     public SomeToolingModel execute(BuildController controller) {
-        controller.getBuildModel();
+        controller.buildModel;
         throw new RuntimeException("Build action expectedly failed");
     }
 }

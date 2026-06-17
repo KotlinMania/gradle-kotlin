@@ -75,7 +75,7 @@ import java.util.stream.Collectors;
 @NullMarked
 public class JUnitTestEventAdapter extends RunListener {
 
-    private static final List<TestFailureMapper> MAPPERS = Arrays.asList(
+    private static final List<TestFailureMapper> MAPPERS = Arrays.<TestFailureMapper>asList(
         new JUnitComparisonTestFailureMapper(),
         new OpenTestAssertionFailedMapper(),
         new OpenTestMultipleFailuresErrorMapper(),
@@ -247,7 +247,7 @@ public class JUnitTestEventAdapter extends RunListener {
         if (parent == null) {
             return null;
         }
-        startParentByNodeIfNeeded(parent, clock.getCurrentTime());
+        startParentByNodeIfNeeded(parent, clock.currentTime);
         return parent.descriptor.getId();
     }
 
@@ -290,7 +290,7 @@ public class JUnitTestEventAdapter extends RunListener {
             }
             // Complete any children that were not completed yet
             if (node.equals(current.parent)) {
-                completeNode(current, new TestCompleteEvent(clock.getCurrentTime()));
+                completeNode(current, new TestCompleteEvent(clock.currentTime));
                 // Re-initialize the iterator as the stack has changed
                 // This is expensive, but these cases should be rare, usually all children will have been completed already
                 descendingIter = executingStack.descendingIterator();
@@ -308,7 +308,7 @@ public class JUnitTestEventAdapter extends RunListener {
     @Override
     public void testSuiteStarted(Description description) {
         TestNode node = getOrRegisterNextNode(description, RegistrationMode.SUITE);
-        startParentByNodeIfNeeded(node, clock.getCurrentTime());
+        startParentByNodeIfNeeded(node, clock.currentTime);
     }
 
     // Note: This is JUnit 4.13+ only, so it may not be called
@@ -320,7 +320,7 @@ public class JUnitTestEventAdapter extends RunListener {
         if (node == null || !executing.contains(node)) {
             return;
         }
-        completeNode(node, new TestCompleteEvent(clock.getCurrentTime()));
+        completeNode(node, new TestCompleteEvent(clock.currentTime));
     }
 
     @Override
@@ -362,11 +362,11 @@ public class JUnitTestEventAdapter extends RunListener {
         } else {
             // This can happen when, for example, a @BeforeClass or @AfterClass method fails
             // We generate an artificial start/failure/completed sequence of events
-            withPotentiallyMissingParent(className(failure.getDescription()), clock.getCurrentTime(), parentNode -> {
+            withPotentiallyMissingParent(className(failure.getDescription()), clock.currentTime, parentNode -> {
                 TestNode newNode = registerNode(failure.getDescription(), RegistrationMode.TEST);
                 startNode(newNode, startEvent(parentNode.descriptor.getId()));
                 reportFailureMethod.accept(newNode.descriptor.getId(), failure.getException());
-                completeNode(newNode, new TestCompleteEvent(clock.getCurrentTime(), resultType));
+                completeNode(newNode, new TestCompleteEvent(clock.currentTime, resultType));
             });
         }
     }
@@ -386,7 +386,7 @@ public class JUnitTestEventAdapter extends RunListener {
         action.accept(parent);
 
         if (synthetic) {
-            completeNode(parent, new TestCompleteEvent(clock.getCurrentTime()));
+            completeNode(parent, new TestCompleteEvent(clock.currentTime));
         }
     }
 
@@ -437,7 +437,7 @@ public class JUnitTestEventAdapter extends RunListener {
                 TestNode newNode = registerNode(failureDescription, RegistrationMode.TEST);
                 startNode(newNode, startEvent(likelyCulprit.descriptor.getId()));
                 resultProcessor.failure(newNode.descriptor.getId(), failure);
-                completeNode(newNode, new TestCompleteEvent(clock.getCurrentTime()));
+                completeNode(newNode, new TestCompleteEvent(clock.currentTime));
             } else {
                 // Mark all currently executing tests as failed
                 executingTests.forEach(node -> resultProcessor.failure(node.descriptor.getId(), failure));
@@ -458,24 +458,24 @@ public class JUnitTestEventAdapter extends RunListener {
             TestNode node = getOrRegisterNextNode(description, RegistrationMode.DETECTED);
             Object parentId = startRequiredParentIfNeeded(node);
             startNode(node, startEvent(parentId));
-            completeNode(node, new TestCompleteEvent(clock.getCurrentTime(), TestResult.ResultType.SKIPPED));
+            completeNode(node, new TestCompleteEvent(clock.currentTime, TestResult.ResultType.SKIPPED));
         }
     }
 
     private void processIgnoredClass(Description description) {
         TestNode classNode = getOrRegisterNextNode(description, RegistrationMode.SUITE);
-        startParentByNodeIfNeeded(classNode, clock.getCurrentTime());
+        startParentByNodeIfNeeded(classNode, clock.currentTime);
         String className = className(description);
         for (Description childDescription : IgnoredTestDescriptorProvider.getAllDescriptions(description, className)) {
             TestNode childNode = getOrRegisterNextNode(childDescription, RegistrationMode.DETECTED);
             startNode(childNode, startEvent(classNode.descriptor.getId()));
-            completeNode(childNode, new TestCompleteEvent(clock.getCurrentTime(), TestResult.ResultType.SKIPPED));
+            completeNode(childNode, new TestCompleteEvent(clock.currentTime, TestResult.ResultType.SKIPPED));
         }
     }
 
     @Override
     public void testFinished(Description description) {
-        long endTime = clock.getCurrentTime();
+        long endTime = clock.currentTime;
         TestNode node = getNodeOrCurrent(description);
         if (node == null || !executing.contains(node)) {
             return;
@@ -498,7 +498,7 @@ public class JUnitTestEventAdapter extends RunListener {
         addDescriptorAndChildren(description, rootNode);
 
         // Start root immediately so output is captured for it
-        startParentByNodeIfNeeded(rootNode, clock.getCurrentTime());
+        startParentByNodeIfNeeded(rootNode, clock.currentTime);
     }
 
     @Override
@@ -508,7 +508,7 @@ public class JUnitTestEventAdapter extends RunListener {
 
     private void handleRunFinished() {
         // Complete any active nodes, in reverse order
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         TestNode node;
         while ((node = executingStack.pollLast()) != null) {
             resultProcessor.completed(node.descriptor.getId(), new TestCompleteEvent(now));
@@ -607,7 +607,7 @@ public class JUnitTestEventAdapter extends RunListener {
     }
 
     private TestStartEvent startEvent(@Nullable Object parentId) {
-        return new TestStartEvent(clock.getCurrentTime(), parentId);
+        return new TestStartEvent(clock.currentTime, parentId);
     }
 
     private TestNode createNode(TestNode parent, Description description, RegistrationMode registrationMode) {

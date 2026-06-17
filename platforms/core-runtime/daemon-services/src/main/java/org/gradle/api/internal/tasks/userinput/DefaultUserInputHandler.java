@@ -63,13 +63,13 @@ public class DefaultUserInputHandler extends AbstractUserInputHandler {
         @Nullable
         @Override
         public Boolean askYesNoQuestion(String question) {
-            YesNoQuestionPromptEvent prompt = new YesNoQuestionPromptEvent(clock.getCurrentTime(), question);
+            YesNoQuestionPromptEvent prompt = new YesNoQuestionPromptEvent(clock.currentTime, question);
             return prompt(prompt, BooleanUtils::toBoolean);
         }
 
         @Override
         public boolean askBooleanQuestion(String question, final boolean defaultValue) {
-            BooleanQuestionPromptEvent prompt = new BooleanQuestionPromptEvent(clock.getCurrentTime(), question, defaultValue);
+            BooleanQuestionPromptEvent prompt = new BooleanQuestionPromptEvent(clock.currentTime, question, defaultValue);
             return prompt(prompt, defaultValue, BooleanUtils::toBoolean);
         }
 
@@ -88,13 +88,13 @@ public class DefaultUserInputHandler extends AbstractUserInputHandler {
 
         @Override
         public int askIntQuestion(String question, int minValue, int defaultValue) {
-            IntQuestionPromptEvent prompt = new IntQuestionPromptEvent(clock.getCurrentTime(), question, minValue, defaultValue);
+            IntQuestionPromptEvent prompt = new IntQuestionPromptEvent(clock.currentTime, question, minValue, defaultValue);
             return prompt(prompt, defaultValue, Integer::parseInt);
         }
 
         @Override
         public String askQuestion(String question, final String defaultValue) {
-            TextQuestionPromptEvent prompt = new TextQuestionPromptEvent(clock.getCurrentTime(), question, defaultValue);
+            TextQuestionPromptEvent prompt = new TextQuestionPromptEvent(clock.currentTime, question, defaultValue);
             return prompt(prompt, defaultValue, sanitizedValue -> sanitizedValue);
         }
 
@@ -154,7 +154,7 @@ public class DefaultUserInputHandler extends AbstractUserInputHandler {
                 T option = values.get(i);
                 displayValues.add(renderer.apply(option));
             }
-            SelectOptionPromptEvent prompt = new SelectOptionPromptEvent(clock.getCurrentTime(), question, displayValues, values.indexOf(defaultOption));
+            SelectOptionPromptEvent prompt = new SelectOptionPromptEvent(clock.currentTime, question, displayValues, values.indexOf(defaultOption));
             return prompt(prompt, defaultOption, sanitizedInput -> {
                 int value = Integer.parseInt(sanitizedInput);
                 return values.get(value);
@@ -164,7 +164,7 @@ public class DefaultUserInputHandler extends AbstractUserInputHandler {
         @Override
         public void finish() {
             if (hasPrompted) {
-                eventDispatch.onOutput(new UserInputResumeEvent(clock.getCurrentTime()));
+                eventDispatch.onOutput(new UserInputResumeEvent(clock.currentTime));
             }
         }
     }

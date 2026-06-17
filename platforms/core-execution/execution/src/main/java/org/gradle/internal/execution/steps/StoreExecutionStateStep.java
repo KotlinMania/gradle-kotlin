@@ -47,7 +47,7 @@ public class StoreExecutionStateStep<C extends PreviousExecutionContext & Cachin
         work.getHistory()
             .ifPresent(history -> context.getCachingState().getCacheKeyCalculatedState()
                 .flatMap(cacheKeyCalculatedState -> result.getAfterExecutionOutputState()
-                    .filter(afterExecutionState -> result.getExecution().isSuccessful() || shouldPreserveFailedState(context, afterExecutionState))
+                    .filter(afterExecutionState -> result.getExecution().isSuccessful || shouldPreserveFailedState(context, afterExecutionState))
                     .map(executionOutputState -> new DefaultAfterExecutionState(
                         ((BuildCacheKeyInternal) cacheKeyCalculatedState.getKey()).getHashCodeInternal(),
                         cacheKeyCalculatedState.getBeforeExecutionState(),

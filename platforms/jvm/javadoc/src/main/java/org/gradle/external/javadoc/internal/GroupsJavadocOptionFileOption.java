@@ -53,7 +53,7 @@ public class GroupsJavadocOptionFileOption extends AbstractJavadocOptionFileOpti
     public GroupsJavadocOptionFileOption duplicate() {
         Map<String, List<String>> duplicateValue = new LinkedHashMap<>();
         for (Map.Entry<String, List<String>> entry : value.entrySet()) {
-            duplicateValue.put(entry.getKey(), Lists.newArrayList(entry.getValue()));
+            duplicateValue.put(entry.getKey(), Lists.<String>newArrayList(entry.getValue()));
         }
         return new GroupsJavadocOptionFileOption(option, duplicateValue);
     }

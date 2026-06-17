@@ -33,7 +33,7 @@ public class RegularFileSnapshot extends AbstractFileSystemLocationSnapshot impl
     private final FileMetadata metadata;
 
     public RegularFileSnapshot(String absolutePath, String name, HashCode contentHash, FileMetadata metadata) {
-        super(absolutePath, name, metadata.getAccessType());
+        super(absolutePath, name, metadata.accessType);
         this.contentHash = contentHash;
         this.metadata = metadata;
     }

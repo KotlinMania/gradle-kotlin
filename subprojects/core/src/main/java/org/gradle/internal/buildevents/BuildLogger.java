@@ -135,7 +135,7 @@ public class BuildLogger implements InternalBuildListener, TaskExecutionGraphLis
             // This logger has been replaced (for example using `Gradle.useLogger()`), so don't log anything
             return;
         }
-        BuildResult buildResult = new BuildResult(action, null, buildFailure == null ? null : buildFailure.getOriginal());
+        BuildResult buildResult = new BuildResult(action, null, buildFailure == null ? null : buildFailure.original);
         exceptionReporter.buildFinished(buildFailure);
         resultLogger.buildFinished(buildResult);
     }

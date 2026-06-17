@@ -32,7 +32,7 @@ import java.util.List;
 public class JUnitComparisonTestFailureMapper extends TestFailureMapper {
     @Override
     protected List<String> getSupportedClassNames() {
-        return Arrays.asList(
+        return Arrays.<String>asList(
             "junit.framework.ComparisonFailure",
             "org.junit.ComparisonFailure"
         );
@@ -40,8 +40,8 @@ public class JUnitComparisonTestFailureMapper extends TestFailureMapper {
 
     @Override
     public TestFailure map(Throwable throwable, ThrowableToTestFailureMapper rootMapper) throws Exception {
-        String expectedValue = invokeMethod(throwable, "getExpected", String.class);
-        String actualValue = invokeMethod(throwable, "getActual", String.class);
+        String expectedValue = <String>invokeMethod(throwable, "getExpected", String.class);
+        String actualValue = <String>invokeMethod(throwable, "getActual", String.class);
 
         return TestFailure.fromTestAssertionFailure(throwable, expectedValue, actualValue);
     }

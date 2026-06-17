@@ -204,11 +204,11 @@ public class DependencyInsightReporter {
             //  Multi-cause exceptions by default aggregate the resolutions of their causes.
             // If a cause has resolutions, ensure we do not emit them for the parent exception.
             MultiCauseException multiCause = (MultiCauseException) throwable;
-            Set<String> parentResolutions = new LinkedHashSet<>(multiCause.getResolutions());
-            for (Throwable cause : multiCause.getCauses()) {
+            Set<String> parentResolutions = new LinkedHashSet<>(multiCause.resolutions);
+            for (Throwable cause : multiCause.causes) {
                 if (cause instanceof ResolutionProvider) {
                     ResolutionProvider childResolutionProvider = (ResolutionProvider) cause;
-                    childResolutionProvider.getResolutions().forEach(parentResolutions::remove);
+                    childResolutionProvider.resolutions.forEach(parentResolutions::remove);
                 }
             }
 
@@ -216,7 +216,7 @@ public class DependencyInsightReporter {
         }
 
         if (throwable instanceof ResolutionProvider) {
-            return ImmutableSet.copyOf(((ResolutionProvider) throwable).getResolutions());
+            return ImmutableSet.copyOf(((ResolutionProvider) throwable).resolutions);
         }
 
         return Collections.emptySet();

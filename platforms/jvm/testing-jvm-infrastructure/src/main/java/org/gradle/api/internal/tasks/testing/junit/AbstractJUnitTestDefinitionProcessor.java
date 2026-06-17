@@ -62,7 +62,7 @@ public abstract class AbstractJUnitTestDefinitionProcessor<D extends TestDefinit
     public final void processTestDefinition(D testDefinition) {
         if (startedProcessing) {
             LOGGER.debug("Executing {}", testDefinition.getDisplayName());
-            Objects.requireNonNull(executor).accept(testDefinition);
+            Objects.<@Nullable TestDefinitionConsumer<D>>requireNonNull(executor).accept(testDefinition);
         }
     }
 

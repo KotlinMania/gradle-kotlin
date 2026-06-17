@@ -121,13 +121,13 @@ public class LegacyWindowsSdkInstall implements WindowsSdkInstall {
 
         @Override
         public List<File> getIncludeDirs() {
-            List<File> includesSdk8 = Arrays.asList(
+            List<File> includesSdk8 = Arrays.<File>asList(
                 new File(baseDir, "Include/shared"),
                 new File(baseDir, "Include/um")
             );
             for (File file : includesSdk8) {
                 if (!file.isDirectory()) {
-                    return Collections.singletonList(new File(baseDir, "Include"));
+                    return Collections.<File>singletonList(new File(baseDir, "Include"));
                 }
             }
             return includesSdk8;
@@ -135,12 +135,12 @@ public class LegacyWindowsSdkInstall implements WindowsSdkInstall {
 
         @Override
         public List<File> getLibDirs() {
-            return Collections.singletonList(getAvailableFile(libPaths));
+            return Collections.<File>singletonList(getAvailableFile(libPaths));
         }
 
         @Override
         public Map<String, String> getPreprocessorMacros() {
-            return Collections.emptyMap();
+            return Collections.<String, String>emptyMap();
         }
 
         @Override
@@ -150,7 +150,7 @@ public class LegacyWindowsSdkInstall implements WindowsSdkInstall {
 
         @Override
         public List<File> getPath() {
-            return Collections.singletonList(getBinDir());
+            return Collections.<File>singletonList(getBinDir());
         }
 
         private File getBinDir() {

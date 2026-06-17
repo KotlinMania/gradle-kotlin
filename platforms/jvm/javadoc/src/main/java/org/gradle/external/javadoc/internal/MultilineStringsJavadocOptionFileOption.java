@@ -39,7 +39,7 @@ public class MultilineStringsJavadocOptionFileOption extends AbstractListJavadoc
 
     @Override
     public MultilineStringsJavadocOptionFileOption duplicate() {
-        List<String> duplicateValue = Lists.newArrayList(value);
+        List<String> duplicateValue = Lists.<String>newArrayList(value);
         return new MultilineStringsJavadocOptionFileOption(option, duplicateValue);
     }
 }

@@ -155,7 +155,7 @@ public abstract class BaseFilePropertyVisitState implements FilePropertyVisitor.
     private static long getFileSnapshotLength(FileSystemLocationSnapshot snapshot) {
         switch (snapshot.getType()) {
             case RegularFile:
-                return ((RegularFileSnapshot) snapshot).getMetadata().getLength();
+                return ((RegularFileSnapshot) snapshot).getMetadata().length;
 
             case Missing:
                 return 0;

@@ -43,7 +43,7 @@ public class DaemonSidePayloadClassLoaderFactory implements PayloadClassLoaderFa
     public ClassLoader getClassLoaderFor(ClassLoaderSpec spec, List<? extends ClassLoader> parents) {
         if (spec instanceof ClientOwnedClassLoaderSpec) {
             ClientOwnedClassLoaderSpec clientSpec = (ClientOwnedClassLoaderSpec) spec;
-            return createClassLoaderForClassPath("client-owned-daemon-payload-loader", parents, urls(clientSpec.getClasspath()));
+            return createClassLoaderForClassPath("client-owned-daemon-payload-loader", parents, urls(clientSpec.classpath));
         }
         if (spec instanceof VisitableURLClassLoader.Spec) {
             VisitableURLClassLoader.Spec urlSpec = (VisitableURLClassLoader.Spec) spec;

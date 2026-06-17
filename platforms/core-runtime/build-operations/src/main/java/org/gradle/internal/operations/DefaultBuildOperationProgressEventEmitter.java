@@ -42,12 +42,12 @@ public class DefaultBuildOperationProgressEventEmitter implements BuildOperation
 
     @Override
     public void emitNow(@Nullable OperationIdentifier operationIdentifier, @Nullable Object details) {
-        emit(operationIdentifier, clock.getCurrentTime(), details);
+        emit(operationIdentifier, clock.currentTime, details);
     }
 
     @Override
     public void emitNowIfCurrent(Object details) {
-        emitIfCurrent(clock.getCurrentTime(), details);
+        emitIfCurrent(clock.currentTime, details);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class DefaultBuildOperationProgressEventEmitter implements BuildOperation
 
     @Override
     public void emitNowForCurrent(Object details) {
-        emitForCurrent(clock.getCurrentTime(), details);
+        emitForCurrent(clock.currentTime, details);
     }
 
     private void emitForCurrent(long time, Object details) {

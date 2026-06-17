@@ -65,7 +65,7 @@ public class TestListenerBuildOperationAdapter implements TestListenerInternal {
 
     @Override
     public void started(final TestDescriptorInternal testDescriptor, TestStartEvent startEvent) {
-        long currentTime = clock.getCurrentTime();
+        long currentTime = clock.currentTime;
 
         BuildOperationDescriptor testBuildOperationDescriptor = createTestBuildOperationDescriptor(testDescriptor, startEvent);
         runningTests.put(testDescriptor, new InProgressExecuteTestBuildOperation(testBuildOperationDescriptor, currentTime));
@@ -75,7 +75,7 @@ public class TestListenerBuildOperationAdapter implements TestListenerInternal {
     @Override
     public void completed(TestDescriptorInternal testDescriptor, TestResult testResult, TestCompleteEvent completeEvent) {
         InProgressExecuteTestBuildOperation runningOp = runningTests.remove(testDescriptor);
-        listener.finished(runningOp.descriptor, new OperationFinishEvent(runningOp.startTime, clock.getCurrentTime(), testResult.getException(), new Result(testResult)));
+        listener.finished(runningOp.descriptor, new OperationFinishEvent(runningOp.startTime, clock.currentTime, testResult.getException(), new Result(testResult)));
     }
 
     @Override
@@ -84,7 +84,7 @@ public class TestListenerBuildOperationAdapter implements TestListenerInternal {
         if (runningOp == null) {
             throw new IllegalStateException("Received output for test that is not running: " + testDescriptor);
         }
-        listener.progress(runningOp.descriptor.getId(), new OperationProgressEvent(clock.getCurrentTime(), new OutputProgress(event)));
+        listener.progress(runningOp.descriptor.getId(), new OperationProgressEvent(clock.currentTime, new OutputProgress(event)));
     }
 
     @Override
@@ -93,7 +93,7 @@ public class TestListenerBuildOperationAdapter implements TestListenerInternal {
         if (runningOp == null) {
             throw new IllegalStateException("Received metadata for test that is not running: " + testDescriptor);
         }
-        listener.progress(runningOp.descriptor.getId(), new OperationProgressEvent(clock.getCurrentTime(), new Metadata(event)));
+        listener.progress(runningOp.descriptor.getId(), new OperationProgressEvent(clock.currentTime, new Metadata(event)));
     }
 
     private BuildOperationDescriptor createTestBuildOperationDescriptor(TestDescriptor testDescriptor, TestStartEvent testStartEvent) {

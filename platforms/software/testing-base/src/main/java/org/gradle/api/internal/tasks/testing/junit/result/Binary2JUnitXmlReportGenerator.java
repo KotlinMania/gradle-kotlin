@@ -64,7 +64,7 @@ public class Binary2JUnitXmlReportGenerator {
     ) {
         this.testResultsDir = testResultsDir;
         this.testResultsProvider = testResultsProvider;
-        this.xmlWriter = new JUnitXmlResultWriter(testResultsDir.toPath(), hostnameLookup.getHostname(), testResultsProvider, options);
+        this.xmlWriter = new JUnitXmlResultWriter(testResultsDir.toPath(), hostnameLookup.hostname, testResultsProvider, options);
         this.buildOperationRunner = buildOperationRunner;
         this.buildOperationExecutor = buildOperationExecutor;
     }
@@ -123,7 +123,7 @@ public class Binary2JUnitXmlReportGenerator {
             }
         });
 
-        LOG.info("Finished generating test XML results ({}) into: {}", clock.getElapsed(), testResultsDir);
+        LOG.info("Finished generating test XML results ({}) into: {}", clock.elapsed, testResultsDir);
     }
 
     private static String getReportFileName(String className, int index) {

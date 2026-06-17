@@ -160,7 +160,7 @@ public class SkipEmptyMutableWorkStep extends MutableStep<PreviousExecutionConte
                 skipOutcome = Execution.ExecutionOutcome.SHORT_CIRCUITED;
             }
         }
-        Duration duration = skipOutcome == Execution.ExecutionOutcome.SHORT_CIRCUITED ? Duration.ZERO : Duration.ofMillis(timer.getElapsedMillis());
+        Duration duration = skipOutcome == Execution.ExecutionOutcome.SHORT_CIRCUITED ? Duration.ZERO : Duration.ofMillis(timer.elapsedMillis);
         return CachingResult.shortcutResult(duration, Execution.skipped(skipOutcome, work), null, executionReason, null);
     }
 

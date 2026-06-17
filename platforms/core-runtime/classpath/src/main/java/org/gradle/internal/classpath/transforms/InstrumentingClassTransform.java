@@ -310,7 +310,7 @@ public class InstrumentingClassTransform implements ClassTransform {
                     if (!targetOwner.equals(interceptedHandle.getOwner())) {
                         methodBuilder = methodBuilder.withReceiverType(targetOwner);
                     }
-                    return new BridgeMethod(makeBridgeMethodHandle(makeBridgeMethodName(interceptedHandle), methodBuilder.getBridgeMethodDescriptor()), methodBuilder);
+                    return new BridgeMethod(makeBridgeMethodHandle(makeBridgeMethodName(interceptedHandle), methodBuilder.bridgeMethodDescriptor), methodBuilder);
                 }
             }
             return null;
@@ -384,7 +384,7 @@ public class InstrumentingClassTransform implements ClassTransform {
             for (JvmBytecodeCallInterceptor interceptor : interceptors) {
                 if (interceptor.visitMethodInsn(this, className, opcode, owner, name, descriptor, isInterface, asNode)) {
                     methodInterceptionListener.onInterceptedMethodInstruction(
-                        interceptor.getType(),
+                        interceptor.type,
                         sourceFileName,
                         className,
                         owner,

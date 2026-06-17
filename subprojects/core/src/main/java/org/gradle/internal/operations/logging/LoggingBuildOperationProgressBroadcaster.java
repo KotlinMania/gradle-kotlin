@@ -78,7 +78,7 @@ public class LoggingBuildOperationProgressBroadcaster implements Stoppable, Outp
     public void onOutput(OutputEvent event) {
         if (event instanceof RenderableOutputEvent) {
             RenderableOutputEvent renderableOutputEvent = (RenderableOutputEvent) event;
-            OperationIdentifier operationIdentifier = renderableOutputEvent.getBuildOperationId();
+            OperationIdentifier operationIdentifier = renderableOutputEvent.buildOperationId;
             if (operationIdentifier == null) {
                 if (rootBuildOperation == null) {
                     return;
@@ -94,7 +94,7 @@ public class LoggingBuildOperationProgressBroadcaster implements Stoppable, Outp
             if (progressStartEvent.getLoggingHeader() == null) {
                 return; // If the event has no logging header, it doesn't manifest as console output.
             }
-            OperationIdentifier operationIdentifier = progressStartEvent.getBuildOperationId();
+            OperationIdentifier operationIdentifier = progressStartEvent.buildOperationId;
             if (operationIdentifier == null && rootBuildOperation != null) {
                 operationIdentifier = rootBuildOperation;
             }
@@ -105,7 +105,7 @@ public class LoggingBuildOperationProgressBroadcaster implements Stoppable, Outp
     private void emit(CategorisedOutputEvent event, OperationIdentifier buildOperationId) {
         progressEventEmitter.emit(
             buildOperationId,
-            event.getTimestamp(),
+            event.timestamp,
             event
         );
     }

@@ -39,7 +39,7 @@ public class SuiteTestDefinitionProcessor<D extends TestDefinition> implements T
     public void startProcessing(TestResultProcessor testResultProcessor) {
         try {
             resultProcessor = new AttachParentTestResultProcessor(new CaptureTestOutputTestResultProcessor(clock, testResultProcessor, new JULRedirector()));
-            resultProcessor.started(suiteDescriptor, new TestStartEvent(clock.getCurrentTime()));
+            resultProcessor.started(suiteDescriptor, new TestStartEvent(clock.currentTime));
             processor.startProcessing(resultProcessor);
         } catch (Throwable t) {
             Throwable rawFailure = new TestSuiteExecutionException("Could not start " + suiteDescriptor + ".", t);
@@ -65,7 +65,7 @@ public class SuiteTestDefinitionProcessor<D extends TestDefinition> implements T
             Throwable rawFailure = new TestSuiteExecutionException("Could not complete execution for " + suiteDescriptor + ".", t);
             resultProcessor.failure(suiteDescriptor.getId(), TestFailure.fromTestFrameworkFailure(rawFailure));
         } finally {
-            resultProcessor.completed(suiteDescriptor.getId(), new TestCompleteEvent(clock.getCurrentTime()));
+            resultProcessor.completed(suiteDescriptor.getId(), new TestCompleteEvent(clock.currentTime));
         }
     }
 

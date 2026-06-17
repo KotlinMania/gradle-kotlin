@@ -93,7 +93,7 @@ public class DaemonMessageSerializer {
                     if (result.getException() != null || result.getFailure() != null || result.wasCancelled()) {
                         throw new IllegalArgumentException("Result should not have both a result object and a failure associated with it.");
                     }
-                    if (result.getResult().getHeader() == null && result.getResult().getSerializedModel().isEmpty()) {
+                    if (result.getResult().header == null && result.getResult().serializedModel.isEmpty()) {
                         // Special case "build successful" when there is no result object to send
                         encoder.writeByte((byte) 1);
                     } else {

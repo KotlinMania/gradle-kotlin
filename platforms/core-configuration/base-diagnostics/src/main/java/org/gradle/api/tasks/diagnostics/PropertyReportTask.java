@@ -105,7 +105,7 @@ public abstract class PropertyReportTask extends AbstractProjectBasedReportTask<
             );
         }
         for (Pair<String, String> entry : model.properties) {
-            renderer.addProperty(entry.getLeft(), entry.getRight());
+            renderer.addProperty(entry.left, entry.right);
         }
     }
 

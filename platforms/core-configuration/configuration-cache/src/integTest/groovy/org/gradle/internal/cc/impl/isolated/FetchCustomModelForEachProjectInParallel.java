@@ -29,7 +29,7 @@ public class FetchCustomModelForEachProjectInParallel implements BuildAction<Lis
     @Override
     public List<SomeToolingModel> execute(BuildController controller) {
         List<FetchModelForProject> actions = new ArrayList<>();
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         for (BasicGradleProject project : buildModel.getProjects()) {
             actions.add(new FetchModelForProject(project));
         }

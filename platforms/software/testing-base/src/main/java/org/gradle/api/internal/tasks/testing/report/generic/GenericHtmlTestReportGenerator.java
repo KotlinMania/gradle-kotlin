@@ -126,7 +126,7 @@ public abstract class GenericHtmlTestReportGenerator implements TestReportGenera
 
         Timer clock = Time.startTimer();
         generateFiles(root, outputReaders);
-        LOG.info("Finished generating test html results ({}) into: {}", clock.getElapsed(), reportsDirectory);
+        LOG.info("Finished generating test html results ({}) into: {}", clock.elapsed, reportsDirectory);
     }
 
     private void generateFiles(TestTreeModel model, final List<TestOutputReader> outputReaders) {

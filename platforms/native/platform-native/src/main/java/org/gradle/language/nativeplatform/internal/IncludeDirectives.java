@@ -46,47 +46,47 @@ public interface IncludeDirectives {
     IncludeDirectives EMPTY = new IncludeDirectives() {
         @Override
         public List<Include> getQuotedIncludes() {
-            return Collections.emptyList();
+            return Collections.<Include>emptyList();
         }
 
         @Override
         public List<Include> getSystemIncludes() {
-            return Collections.emptyList();
+            return Collections.<Include>emptyList();
         }
 
         @Override
         public List<Include> getMacroIncludes() {
-            return Collections.emptyList();
+            return Collections.<Include>emptyList();
         }
 
         @Override
         public List<Include> getAll() {
-            return Collections.emptyList();
+            return Collections.<Include>emptyList();
         }
 
         @Override
         public List<Include> getIncludesOnly() {
-            return Collections.emptyList();
+            return Collections.<Include>emptyList();
         }
 
         @Override
         public Iterable<Macro> getMacros(String name) {
-            return Collections.emptyList();
+            return Collections.<Macro>emptyList();
         }
 
         @Override
         public Iterable<MacroFunction> getMacroFunctions(String name) {
-            return Collections.emptyList();
+            return Collections.<MacroFunction>emptyList();
         }
 
         @Override
         public Collection<Macro> getAllMacros() {
-            return Collections.emptyList();
+            return Collections.<Macro>emptyList();
         }
 
         @Override
         public Collection<MacroFunction> getAllMacroFunctions() {
-            return Collections.emptyList();
+            return Collections.<MacroFunction>emptyList();
         }
 
         @Override

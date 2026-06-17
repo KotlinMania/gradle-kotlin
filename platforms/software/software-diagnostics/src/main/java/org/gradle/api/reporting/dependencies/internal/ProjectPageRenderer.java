@@ -48,7 +48,7 @@ public class ProjectPageRenderer extends ReportRenderer<ProjectNameAndPath, Html
         requireReportResource("d.png", builder);
         requireReportResource("throbber.gif", builder);
 
-        new Html(builder.getOutput()) {{
+        new Html(builder.output) {{
             html();
                 head();
                     meta().httpEquiv("Content-Type").content("text/html; charset=utf-8");

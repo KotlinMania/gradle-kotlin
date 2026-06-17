@@ -136,7 +136,7 @@ public class BuildExceptionReporter implements Action<Throwable> {
     }
 
     private void renderFailure(Failure failure) {
-        List<Failure> causes = failure.getCauses();
+        List<Failure> causes = failure.causes;
         if (causes.size() > 1) {
             renderMultipleBuildExceptions(failure);
         } else {
@@ -145,8 +145,8 @@ public class BuildExceptionReporter implements Action<Throwable> {
     }
 
     private void renderMultipleBuildExceptions(Failure failure) {
-        String message = failure.getMessage();
-        List<Failure> flattenedFailures = failure.getCauses();
+        String message = failure.message;
+        List<Failure> flattenedFailures = failure.causes;
         StyledTextOutput output = textOutputFactory.create(BuildExceptionReporter.class, LogLevel.ERROR);
         output.println();
         output.withStyle(Failure).format("FAILURE: %s", message);
@@ -170,7 +170,7 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
     private static String extractWorkType(Failure failure) {
         int depth = 0;
-        Throwable cause = failure.getOriginal();
+        Throwable cause = failure.original;
         String workType = null;
         while (cause != null && depth++ < MAX_WORK_TYPE_SEARCH_DEPTH) {
             if (cause instanceof WorkTypeAware) {
@@ -195,26 +195,26 @@ public class BuildExceptionReporter implements Action<Throwable> {
     }
 
     private static boolean hasCauseAncestry(Failure failure, Class<?> type) {
-        Deque<Failure> causes = new ArrayDeque<>(failure.getCauses());
+        Deque<Failure> causes = new ArrayDeque<>(failure.causes);
         while (!causes.isEmpty()) {
             Failure cause = causes.pop();
             if (hasCause(cause, type)) {
                 return true;
             }
-            causes.addAll(cause.getCauses());
+            causes.addAll(cause.causes);
         }
         return false;
     }
 
     private static boolean hasCause(Failure cause, Class<?> type) {
-        if (NonGradleCauseExceptionsHolder.class.isAssignableFrom(cause.getExceptionType())) {
-            return ((NonGradleCauseExceptionsHolder) cause.getOriginal()).hasCause(type);
+        if (NonGradleCauseExceptionsHolder.class.isAssignableFrom(cause.exceptionType)) {
+            return ((NonGradleCauseExceptionsHolder) cause.original).hasCause(type);
         }
         return false;
     }
 
     private ExceptionStyle getShowStackTraceOption() {
-        if (loggingConfiguration.getShowStacktrace() != ShowStacktrace.INTERNAL_EXCEPTIONS) {
+        if (loggingConfiguration.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS) {
             return ExceptionStyle.FULL;
         } else {
             return ExceptionStyle.NONE;
@@ -227,7 +227,7 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
         fillInFailureResolution(details);
 
-        if (failure.getOriginal() instanceof ContextAwareException) {
+        if (failure.original instanceof ContextAwareException) {
             ExceptionFormattingVisitor exceptionFormattingVisitor = new ExceptionFormattingVisitor(details);
             ContextAwareExceptionHandler.visit(failure, exceptionFormattingVisitor);
         } else {
@@ -266,14 +266,14 @@ public class BuildExceptionReporter implements Action<Throwable> {
                 // And we still want to report branches even if the most deep exception is the same as the one on another branch.
                 // For example, if you run into timeouts when resolving two different dependencies, we still want to report both.
                 // And the dependency that is being resolved is only part of the context, not part of the root cause.
-                printedNodes.add(node.getOriginal());
-                if (node.getCauses().isEmpty() || isUsefulMessage(getMessage(node))) {
+                printedNodes.add(node.original);
+                if (node.causes.isEmpty() || isUsefulMessage(getMessage(node))) {
                     LinePrefixingStyledTextOutput output = getLinePrefixingStyledTextOutput(failureDetails);
                     renderStyledError(node, output);
                 }
             } else {
                 // Only increment the suppressed branch count for the ultimate cause of the failure, which has no cause itself
-                if (node.getCauses().isEmpty()) {
+                if (node.causes.isEmpty()) {
                     suppressedDuplicateBranchCount++;
                 }
             }
@@ -299,13 +299,13 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
             while (!next.isEmpty()) {
                 Failure curr = next.poll();
-                if (printedNodes.contains(curr.getOriginal())) {
+                if (printedNodes.contains(curr.original)) {
                     return false;
                 } else {
-                    if (!curr.getCauses().isEmpty()) {
-                        next.add(curr.getCauses().get(0));
+                    if (!curr.causes.isEmpty()) {
+                        next.add(curr.causes.get(0));
                     }
-                    if (curr.getOriginal() instanceof ContextAwareException) {
+                    if (curr.original instanceof ContextAwareException) {
                         next.addAll(ContextAwareExceptionHandler.getReportableCauses(curr));
                     }
                 }
@@ -354,8 +354,8 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
     private void fillInFailureResolution(FailureDetails details) {
         ContextImpl context = new ContextImpl(details.resolution);
-        if (details.failure.getOriginal() instanceof FailureResolutionAware) {
-            ((FailureResolutionAware) details.failure.getOriginal()).appendResolutions(context);
+        if (details.failure.original instanceof FailureResolutionAware) {
+            ((FailureResolutionAware) details.failure.original).appendResolutions(context);
         }
         getResolutions(details.failure).stream()
             .distinct()
@@ -370,7 +370,7 @@ public class BuildExceptionReporter implements Action<Throwable> {
             );
         }
 
-        LogLevel logLevel = loggingConfiguration.getLogLevel();
+        LogLevel logLevel = loggingConfiguration.logLevel;
         boolean isLessThanInfo = logLevel.ordinal() > INFO.ordinal();
         if (logLevel != DEBUG && shouldDisplayGenericResolutions) {
             context.appendResolution(output -> {
@@ -394,13 +394,13 @@ public class BuildExceptionReporter implements Action<Throwable> {
     }
 
     private static boolean hasProblemReportsWithSolutions(Failure failure) {
-        Optional<String> solution = failure.getProblems().stream()
-            .flatMap(p -> p.getSolutions().stream())
+        Optional<String> solution = failure.problems.stream()
+            .flatMap(p -> p.solutions.stream())
             .findFirst();
         if (solution.isPresent()) {
             return true;
         } else {
-            return hasProblemReportsWithSolutions(failure.getCauses());
+            return hasProblemReportsWithSolutions(failure.causes);
         }
     }
 
@@ -417,22 +417,22 @@ public class BuildExceptionReporter implements Action<Throwable> {
     private static List<String> getResolutions(Failure failure) {
         ImmutableList.Builder<String> resolutions = ImmutableList.builder();
 
-        if (ResolutionProvider.class.isAssignableFrom(failure.getExceptionType())) {
-            resolutions.addAll(((ResolutionProvider) failure.getOriginal()).getResolutions());
+        if (ResolutionProvider.class.isAssignableFrom(failure.exceptionType)) {
+            resolutions.addAll(((ResolutionProvider) failure.original).resolutions);
         }
 
-        Collection<ProblemInternal> all = failure.getProblems();
+        Collection<ProblemInternal> all = failure.problems;
         for (ProblemInternal problem : all) {
             // Java compilation problems are rendered by JavaCompilationWriter which emits only the details,
             // so their solutions still need to reach the user via the resolution section.
             // All other problem writers render solutions and doc links inline.
-            ProblemGroup group = problem.getDefinition().getId().getGroup();
+            ProblemGroup group = problem.definition.getId().getGroup();
             if (GradleCoreProblemGroup.compilation().java().equals(group)) {
-                resolutions.addAll(problem.getSolutions());
+                resolutions.addAll(problem.solutions);
             }
         }
 
-        for (Failure cause : failure.getCauses()) {
+        for (Failure cause : failure.causes) {
             resolutions.addAll(getResolutions(cause));
         }
 
@@ -455,14 +455,14 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
     private static boolean duplicatesAnyProblemText(String msg, Collection<ProblemInternal> problems) {
         for (ProblemInternal problem : problems) {
-            if (msg.equals(problem.getContextualLabel()) || msg.equals(problem.getDetails())) {
+            if (msg.equals(problem.contextualLabel) || msg.equals(problem.details)) {
                 return true;
             }
             // ProblemBodyWriter falls back to the exception's localized message when contextualLabel is null,
             // so the same text would render twice if we don't skip msg here.
-            if (problem.getContextualLabel() == null
-                && problem.getException() != null
-                && msg.equals(problem.getException().getLocalizedMessage())) {
+            if (problem.contextualLabel == null
+                && problem.exception != null
+                && msg.equals(problem.exception.getLocalizedMessage())) {
                 return true;
             }
         }
@@ -471,9 +471,9 @@ public class BuildExceptionReporter implements Action<Throwable> {
 
     private static String getMessage(Failure failure) {
         try {
-            String msg = failure.getMessage();
+            String msg = failure.message;
             StringBuilder builder = new StringBuilder();
-            Collection<ProblemInternal> problems = failure.getProblems();
+            Collection<ProblemInternal> problems = failure.problems;
             if (!problems.isEmpty()) {
                 if (msg != null && !msg.isEmpty() && !duplicatesAnyProblemText(msg, problems)) {
                     builder.append(msg);
@@ -484,8 +484,8 @@ public class BuildExceptionReporter implements Action<Throwable> {
                 builder.append(problemWriter);
 
                 // Workaround to keep the original behavior for Java compilation. We should render counters for all problems in the future.
-                if (failure.getOriginal() instanceof CompilationFailedIndicator) {
-                    String diagnosticCounts = ((CompilationFailedIndicator) failure.getOriginal()).getDiagnosticCounts();
+                if (failure.original instanceof CompilationFailedIndicator) {
+                    String diagnosticCounts = ((CompilationFailedIndicator) failure.original).getDiagnosticCounts();
                     if (diagnosticCounts != null) {
                         builder.append(System.lineSeparator());
                         builder.append(diagnosticCounts);
@@ -499,9 +499,9 @@ public class BuildExceptionReporter implements Action<Throwable> {
             if (GUtil.isTrue(message)) {
                 return message;
             }
-            return String.format("%s %s", failure.getExceptionType().getName(), NO_ERROR_MESSAGE_INDICATOR);
+            return String.format("%s %s", failure.exceptionType.getName(), NO_ERROR_MESSAGE_INDICATOR);
         } catch (Throwable t) {
-            return String.format("Unable to get message for failure of type %s due to %s", failure.getExceptionType().getSimpleName(), t.getMessage());
+            return String.format("Unable to get message for failure of type %s due to %s", failure.exceptionType.getSimpleName(), t.getMessage());
         }
     }
 
@@ -552,8 +552,8 @@ public class BuildExceptionReporter implements Action<Throwable> {
     }
 
     static void renderStyledError(Failure failure, StyledTextOutput details) {
-        if (failure.getOriginal() instanceof StyledException) {
-            ((StyledException) failure.getOriginal()).render(details);
+        if (failure.original instanceof StyledException) {
+            ((StyledException) failure.original).render(details);
         } else {
             details.text(getMessage(failure));
         }

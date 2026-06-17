@@ -59,17 +59,17 @@ public class UcrtInstall extends WindowsKitInstall {
 
         @Override
         public List<File> getIncludeDirs() {
-            return Collections.singletonList(new File(getBaseDir(), "Include/" + getVersion() + "/ucrt"));
+            return Collections.<File>singletonList(new File(getBaseDir(), "Include/" + getVersion() + "/ucrt"));
         }
 
         @Override
         public List<File> getLibDirs() {
-            return Collections.singletonList(new File(getBaseDir(), "Lib/" + getVersion() + "/ucrt/" + platformDirName));
+            return Collections.<File>singletonList(new File(getBaseDir(), "Lib/" + getVersion() + "/ucrt/" + platformDirName));
         }
 
         @Override
         public Map<String, String> getPreprocessorMacros() {
-            return Collections.emptyMap();
+            return Collections.<String, String>emptyMap();
         }
     }
 }

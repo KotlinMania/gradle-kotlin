@@ -31,7 +31,7 @@ public class VisualStudioInstall implements Named {
     public VisualStudioInstall(String name, File baseDir, VersionNumber version, VisualCppInstall visualCppInstall) {
         this.name = name;
         this.baseDir = baseDir;
-        this.visualCppInstall = Preconditions.checkNotNull(visualCppInstall);
+        this.visualCppInstall = Preconditions.<VisualCppInstall>checkNotNull(visualCppInstall);
         this.version = version;
     }
 

@@ -128,7 +128,7 @@ public class DaemonStopClient {
         }
 
         if (connection != null) {
-            throw new GradleException(String.format("Timeout waiting for all daemons to stop. Waited %s.", timer.getElapsed()));
+            throw new GradleException(String.format("Timeout waiting for all daemons to stop. Waited %s.", timer.elapsed));
         }
     }
 }

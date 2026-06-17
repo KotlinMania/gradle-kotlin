@@ -162,8 +162,8 @@ public class ArtifactBackedResolvedVariant implements ResolvedVariant {
 
         @Override
         public void visit(ArtifactVisitor visitor) {
-            if (visitor.requireArtifactFiles() && !artifact.getFileSource().getValue().isSuccessful()) {
-                visitor.visitFailure(artifact.getFileSource().getValue().getFailure().get());
+            if (visitor.requireArtifactFiles() && !artifact.getFileSource().getValue().isSuccessful) {
+                visitor.visitFailure(artifact.getFileSource().getValue().failure.get());
             } else {
                 visitor.visitArtifact(artifactSetName, sourceVariantId, variantAttributes, capabilities, artifact);
                 visitor.endVisitCollection(FileCollectionInternal.OTHER);

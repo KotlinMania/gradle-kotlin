@@ -75,7 +75,7 @@ public class ScriptEvaluatingSettingsProcessor implements SettingsProcessor {
             buildIncludeListener.settingsScriptFailed(settings);
             throw e;
         }
-        LOGGER.debug("Timing: Processing settings took: {}", settingsProcessingClock.getElapsed());
+        LOGGER.debug("Timing: Processing settings took: {}", settingsProcessingClock.elapsed);
         return state;
     }
 

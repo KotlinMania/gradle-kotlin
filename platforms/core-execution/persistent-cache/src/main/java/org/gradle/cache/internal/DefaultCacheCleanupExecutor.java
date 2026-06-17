@@ -65,7 +65,7 @@ public class DefaultCacheCleanupExecutor implements CacheCleanupExecutor {
             Timer timer = Time.startTimer();
             cacheCleanupStrategy.clean(cleanableStore, lastCleanupTime);
             FileUtils.touch(gcFile);
-            LOGGER.info("{} cleaned up in {}.", cleanableStore.getDisplayName(), timer.getElapsed());
+            LOGGER.info("{} cleaned up in {}.", cleanableStore.getDisplayName(), timer.elapsed);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

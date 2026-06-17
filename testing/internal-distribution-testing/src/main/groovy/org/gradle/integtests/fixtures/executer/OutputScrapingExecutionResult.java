@@ -118,8 +118,8 @@ public class OutputScrapingExecutionResult implements ExecutionResult {
             this.mainContent = filteredOutput;
             this.postBuild = LogContent.empty();
         } else {
-            this.mainContent = match.getLeft();
-            this.postBuild = match.getRight().drop(1);
+            this.mainContent = match.left;
+            this.postBuild = match.right.drop(1);
         }
         this.errorContent = error.ansiCharsToPlainText();
     }

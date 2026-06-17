@@ -61,7 +61,7 @@ public class InternalOptionsFactory {
         File rootBuildDir
     ) {
         Map<String, String> properties = new HashMap<>();
-        putAllProperties(properties, startParameter.getGradleHomeDir());
+        putAllProperties(properties, startParameter.gradleHomeDir);
         putAllProperties(properties, rootBuildDir);
         putAllProperties(properties, startParameter.getGradleUserHomeDir());
         properties.putAll(startParameter.getSystemPropertiesArgs());

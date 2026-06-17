@@ -153,7 +153,7 @@ public class InProcessGradleExecuter extends DaemonGradleExecuter {
 
     private static ServiceRegistry newCommandLineProcessLogging() {
         ServiceRegistry loggingServices = LoggingServiceRegistry.newEmbeddableLogging();
-        LoggingManagerInternal rootLoggingManager = loggingServices.get(LoggingManagerFactory.class).getRoot();
+        LoggingManagerInternal rootLoggingManager = loggingServices.get(LoggingManagerFactory.class).root;
         rootLoggingManager.attachSystemOutAndErr();
         return loggingServices;
     }

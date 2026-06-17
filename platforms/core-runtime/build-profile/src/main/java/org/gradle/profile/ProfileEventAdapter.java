@@ -53,19 +53,19 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
     // BuildListener
     @Override
     public void beforeSettings(Settings settings) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         buildProfile.setBuildStarted(now);
         buildProfile.setProfilingStarted(buildStartedTime.getStartTime());
     }
 
     @Override
     public void settingsEvaluated(Settings settings) {
-        buildProfile.setSettingsEvaluated(clock.getCurrentTime());
+        buildProfile.setSettingsEvaluated(clock.currentTime);
     }
 
     @Override
     public void projectsLoaded(Gradle gradle) {
-        buildProfile.setProjectsLoaded(clock.getCurrentTime());
+        buildProfile.setProjectsLoaded(clock.currentTime);
     }
 
     @Override
@@ -82,13 +82,13 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
     // ProjectEvaluationListener
     @Override
     public void beforeEvaluate(Project project) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         buildProfile.getProjectProfile(project.getPath()).getConfigurationOperation().setStart(now);
     }
 
     @Override
     public void afterEvaluate(Project project, ProjectState state) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         ProjectProfile projectProfile = buildProfile.getProjectProfile(project.getPath());
         projectProfile.getConfigurationOperation().setFinish(now);
     }
@@ -96,7 +96,7 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
     // TaskListenerInternal
     @Override
     public void beforeExecute(TaskIdentity<?> taskIdentity) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         String projectPath = taskIdentity.getProjectIdentity().getProjectPath().asString();
         ProjectProfile projectProfile = buildProfile.getProjectProfile(projectPath);
         projectProfile.getTaskProfile(taskIdentity.getPath().asString()).setStart(now);
@@ -104,7 +104,7 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
 
     @Override
     public void afterExecute(TaskIdentity<?> taskIdentity, TaskState state) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         String projectPath = taskIdentity.getProjectIdentity().getProjectPath().asString();
         ProjectProfile projectProfile = buildProfile.getProjectProfile(projectPath);
         TaskExecution taskExecution = projectProfile.getTaskProfile(taskIdentity.getPath().asString());
@@ -115,20 +115,20 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
     // DependencyResolutionListener
     @Override
     public void beforeResolve(ResolvableDependencies dependencies) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         buildProfile.getDependencySetProfile(dependencies.getPath()).setStart(now);
     }
 
     @Override
     public void afterResolve(ResolvableDependencies dependencies) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         buildProfile.getDependencySetProfile(dependencies.getPath()).setFinish(now);
     }
 
     // TransformExecutionListener
     @Override
     public void beforeTransformExecution(Describable transform, Describable subject) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         String transformDescription = subject.getDisplayName() + " with " + transform.getDisplayName();
         FragmentedOperation transformProfile = buildProfile.getTransformProfile(transformDescription);
         currentTransform.set(transformProfile.start(now));
@@ -136,7 +136,7 @@ public class ProfileEventAdapter implements ProfileService, InternalBuildListene
 
     @Override
     public void afterTransformExecution(Describable transform, Describable subject) {
-        long now = clock.getCurrentTime();
+        long now = clock.currentTime;
         currentTransform.get().setFinish(now);
         currentTransform.remove();
     }

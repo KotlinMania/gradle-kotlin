@@ -146,13 +146,13 @@ class SwiftCompiler extends AbstractCompiler<SwiftCompileSpec> {
                     genericArgs.add("-O");
                 }
 
-                genericArgs.addAll(CollectionUtils.collect(spec.getMacros().keySet(), macro -> "-D" + macro));
+                genericArgs.addAll(CollectionUtils.<String, String>collect(spec.getMacros().keySet(), macro -> "-D" + macro));
 
                 genericArgs.add("-swift-version");
                 genericArgs.add(String.valueOf(spec.getSourceCompatibility().getVersion()));
 
                 CommandLineToolInvocation perFileInvocation =
-                    newInvocation("compiling swift file(s)", objectDir, Iterables.concat(genericArgs, outputArgs, importRootArgs), spec.getOperationLogger());
+                    newInvocation("compiling swift file(s)", objectDir, Iterables.<String>concat(genericArgs, outputArgs, importRootArgs), spec.getOperationLogger());
                 perFileInvocation.getEnvironment().put("TMPDIR", spec.getTempDir().getAbsolutePath());
                 buildQueue.add(perFileInvocation);
             }

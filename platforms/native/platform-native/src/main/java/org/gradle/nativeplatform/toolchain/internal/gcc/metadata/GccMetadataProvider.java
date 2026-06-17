@@ -78,7 +78,7 @@ public class GccMetadataProvider extends AbstractMetadataProvider<GccMetadata> {
 
     @Override
     protected List<String> compilerArgs() {
-        return ImmutableList.of("-dM", "-E", "-v", "-");
+        return ImmutableList.<String>of("-dM", "-E", "-v", "-");
     }
 
     @Override
@@ -122,7 +122,7 @@ public class GccMetadataProvider extends AbstractMetadataProvider<GccMetadata> {
 
         BufferedReader reader = new BufferedReader(new StringReader(error));
         String line;
-        ImmutableList.Builder<File> builder = ImmutableList.builder();
+        ImmutableList.Builder<File> builder = ImmutableList.<File>builder();
         boolean systemIncludesStarted = false;
         try {
             while ((line = reader.readLine()) != null) {
@@ -292,12 +292,12 @@ public class GccMetadataProvider extends AbstractMetadataProvider<GccMetadata> {
 
         @Override
         public List<File> getLibDirs() {
-            return Collections.emptyList();
+            return Collections.<File>emptyList();
         }
 
         @Override
         public Map<String, String> getPreprocessorMacros() {
-            return Collections.emptyMap();
+            return Collections.<String, String>emptyMap();
         }
 
         @Override

@@ -102,7 +102,7 @@ public class DaemonMain extends EntryPoint {
         ProcessEnvironment processEnvironment = daemonServices.get(ProcessEnvironment.class);
         processEnvironment.maybeDetachProcess();
 
-        LOGGER.debug("Assuming the daemon was started with following jvm opts: {}", parameters.getJvmOptions());
+        LOGGER.debug("Assuming the daemon was started with following jvm opts: {}", parameters.jvmOptions);
 
         daemonServices.get(AgentInitializer.class).maybeConfigureInstrumentationAgent();
 
@@ -114,7 +114,7 @@ public class DaemonMain extends EntryPoint {
             Long pid = daemonContext.getPid();
             daemonStarted(pid, daemon.getUid(), daemon.getAddress(), daemonLog);
             DaemonExpirationStrategy expirationStrategy = daemonServices.get(MasterExpirationStrategy.class);
-            DaemonStopState stopState = daemon.stopOnExpiration(expirationStrategy, parameters.getPeriodicCheckIntervalMs());
+            DaemonStopState stopState = daemon.stopOnExpiration(expirationStrategy, parameters.periodicCheckIntervalMs);
             daemonProcessState.stopped(stopState);
         } finally {
             CompositeStoppable.stoppable(daemon, daemonProcessState).stop();

@@ -31,7 +31,7 @@ public class OptionsFileArgsWriter implements Action<List<String>> {
 
     @Override
     public void execute(List<String> args) {
-        List<String> originalArgs = Lists.newArrayList(args);
+        List<String> originalArgs = Lists.<String>newArrayList(args);
         args.clear();
         args.addAll(transformArgs(originalArgs, tempDir));
     }

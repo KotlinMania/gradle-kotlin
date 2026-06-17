@@ -49,7 +49,7 @@ public class JUnitTestDefinitionProcessor extends AbstractJUnitTestDefinitionPro
 
     @Override
     protected TestDefinitionConsumer<ClassTestDefinition> createTestExecutor(Actor resultProcessorActor) {
-        TestResultProcessor threadSafeResultProcessor = resultProcessorActor.getProxy(TestResultProcessor.class);
+        TestResultProcessor threadSafeResultProcessor = resultProcessorActor.<TestResultProcessor>getProxy(TestResultProcessor.class);
 
         return new JUnitTestExecutor(
             Thread.currentThread().getContextClassLoader(),

@@ -44,12 +44,12 @@ public class RequestArgumentSerializers {
 
         @Override
         public Object read(Decoder decoder) throws Exception {
-            return Message.receive(decoder.getInputStream(), classLoader);
+            return Message.receive(decoder.inputStream, classLoader);
         }
 
         @Override
         public void write(Encoder encoder, Object value) throws Exception {
-            Message.send(value, encoder.getOutputStream());
+            Message.send(value, encoder.outputStream);
         }
     }
 }

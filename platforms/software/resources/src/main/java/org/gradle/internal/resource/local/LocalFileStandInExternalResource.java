@@ -106,10 +106,10 @@ public class LocalFileStandInExternalResource extends AbstractExternalResource i
     @Nullable
     public ExternalResourceMetaData getMetaData() {
         FileMetadata fileMetadata = fileSystem.stat(localFile);
-        if (fileMetadata.getType() == FileType.Missing) {
+        if (fileMetadata.type == FileType.Missing) {
             return null;
         }
-        return new DefaultExternalResourceMetaData(localFile.toURI(), fileMetadata.getLastModified(), fileMetadata.getLength());
+        return new DefaultExternalResourceMetaData(localFile.toURI(), fileMetadata.lastModified, fileMetadata.length);
     }
 
     @Override

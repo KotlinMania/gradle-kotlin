@@ -112,17 +112,17 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
         project.getComponents().add(testSuite);
 
         // Setup component
-        testSuite.getModule().set(TextUtil.toCamelCase(project.getName() + "Test"));
+        testSuite.module.set(TextUtil.toCamelCase(project.getName() + "Test"));
 
         final DefaultSwiftXCTestSuite testComponent = testSuite;
 
-        testComponent.getTargetMachines().convention(useHostAsDefaultTargetMachine(targetMachineFactory));
-        testComponent.getSourceCompatibility().convention(testComponent.getTestedComponent().flatMap(it -> it.getSourceCompatibility()));
+        testComponent.targetMachines.convention(useHostAsDefaultTargetMachine(targetMachineFactory));
+        testComponent.sourceCompatibility.convention(testComponent.getTestedComponent().flatMap(it -> it.sourceCompatibility));
         final String mainComponentName = "main";
 
         project.getComponents().withType(ProductionSwiftComponent.class, component -> {
             if (mainComponentName.equals(component.getName())) {
-                testComponent.getTargetMachines().convention(component.getTargetMachines());
+                testComponent.targetMachines.convention(component.targetMachines);
                 testComponent.getTestedComponent().convention(component);
             }
         });
@@ -152,20 +152,20 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
 
         project.afterEvaluate(p -> {
             final SwiftComponent mainComponent = testComponent.getTestedComponent().getOrNull();
-            final SetProperty<TargetMachine> mainTargetMachines = mainComponent != null ? mainComponent.getTargetMachines() : null;
-            Dimensions.unitTestVariants(testComponent.getModule(), testComponent.getTargetMachines(), mainTargetMachines,
+            final SetProperty<TargetMachine> mainTargetMachines = mainComponent != null ? mainComponent.targetMachines : null;
+            Dimensions.unitTestVariants(testComponent.module, testComponent.targetMachines, mainTargetMachines,
                     attributesFactory,
                     providers.provider(() -> project.getGroup().toString()), providers.provider(() -> project.getVersion().toString()),
                     variantIdentity -> {
                         if (tryToBuildOnHost(variantIdentity)) {
-                            testComponent.getSourceCompatibility().finalizeValue();
-                            ToolChainSelector.Result<SwiftPlatform> result = toolChainSelector.select(SwiftPlatform.class, new DefaultSwiftPlatform(variantIdentity.getTargetMachine(), testComponent.getSourceCompatibility().getOrNull()));
+                            testComponent.sourceCompatibility.finalizeValue();
+                            ToolChainSelector.Result<SwiftPlatform> result = toolChainSelector.select(SwiftPlatform.class, new DefaultSwiftPlatform(variantIdentity.targetMachine, testComponent.sourceCompatibility.getOrNull()));
 
                             // Create test suite executable
-                            if (result.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isMacOs()) {
-                                testComponent.addBundle(variantIdentity, result.getTargetPlatform(), result.getToolChain(), result.getPlatformToolProvider());
+                            if (result.targetPlatform.targetMachine.getOperatingSystemFamily().isMacOs()) {
+                                testComponent.addBundle(variantIdentity, result.targetPlatform, result.toolChain, result.platformToolProvider);
                             } else {
-                                testComponent.addExecutable(variantIdentity, result.getTargetPlatform(), result.getToolChain(), result.getPlatformToolProvider());
+                                testComponent.addExecutable(variantIdentity, result.targetPlatform, result.toolChain, result.platformToolProvider);
                             }
                         }
                     });
@@ -177,7 +177,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
     private void configureTestSuiteBuildingTasks(final Project project, final DefaultSwiftXCTestBinary binary) {
         // Overwrite the source to exclude `LinuxMain.swift`
         SwiftCompile compile = binary.getCompileTask().get();
-        compile.getSource().setFrom(binary.getSwiftSource().getAsFileTree().matching(patterns -> patterns.include("**/*").exclude("**/LinuxMain.swift")));
+        compile.source.setFrom(binary.getSwiftSource().getAsFileTree().matching(patterns -> patterns.include("**/*").exclude("**/LinuxMain.swift")));
 
         if (binary instanceof SwiftXCTestBundle) {
             TaskContainer tasks = project.getTasks();
@@ -193,7 +193,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
             // Platform specific arguments
             // TODO: Need to lazily configure compile task
             // TODO: Ultimately, this should be some kind of 3rd party dependency that's visible to dependency management.
-            compile.getCompilerArgs().addAll(project.provider(() -> {
+            compile.compilerArgs.addAll(project.provider(() -> {
                 File platformSdkPath = sdkPlatformPathLocator.find();
                 File frameworkDir = new File(platformSdkPath, "Developer/Library/Frameworks");
                 // Since Xcode 11/12, the XCTest framework is being replaced by a different library that's available in the sdk root
@@ -221,7 +221,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
                 task.lib(binary.getLinkLibraries());
                 final PlatformToolProvider toolProvider = ((NativeToolChainInternal) toolChain).select(currentPlatform);
 
-                Provider<RegularFile> exeLocation = project.getLayout().getBuildDirectory().file(binary.getBaseName().map(baseName -> toolProvider.getExecutableName("exe/" + names.getDirName() + baseName)));
+                Provider<RegularFile> exeLocation = project.getLayout().getBuildDirectory().file(binary.getBaseName().map(baseName -> toolProvider.getExecutableName("exe/" + names.dirName + baseName)));
                 task.getLinkedFile().set(exeLocation);
                 task.getTargetPlatform().set(currentPlatform);
                 task.getToolChain().set(toolChain);
@@ -231,7 +231,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
 
             final TaskProvider<InstallXCTestBundle> install = tasks.register(names.getTaskName("install"), InstallXCTestBundle.class, task -> {
                 task.getBundleBinaryFile().set(link.get().getLinkedFile());
-                task.getInstallDirectory().set(project.getLayout().getBuildDirectory().dir("install/" + names.getDirName()));
+                task.getInstallDirectory().set(project.getLayout().getBuildDirectory().dir("install/" + names.dirName));
             });
             binary.getInstallDirectory().set(install.flatMap(task -> task.getInstallDirectory()));
             binary.getExecutableFile().set(link.flatMap(task -> task.getLinkedFile()));
@@ -251,7 +251,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
                     task.include("LinuxMain.swift");
                     task.rename(".*", "main.swift");
                 });
-                compile.getSource().from(project.files(renameLinuxMainTask.map(Sync::getDestinationDir)).getAsFileTree().matching(patterns -> patterns.include("**/*.swift")));
+                compile.source.from(project.files(renameLinuxMainTask.map(Sync::getDestinationDir)).getAsFileTree().matching(patterns -> patterns.include("**/*.swift")));
             }
         }
     }
@@ -276,20 +276,20 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
             testExecutable.getImplementationDependencies().extendsFrom(((DefaultSwiftBinary) testedBinary).getImplementationDependencies());
 
             // Configure test binary to compile against binary under test
-            Dependency compileDependency = project.getDependencies().create(project.files(testedBinary.getModuleFile()));
-            testExecutable.getImportPathConfiguration().getDependencies().add(compileDependency);
+            Dependency compileDependency = project.getDependencies().create(project.files(testedBinary.moduleFile));
+            testExecutable.importPathConfiguration.getDependencies().add(compileDependency);
 
             // Configure test binary to link against tested component compiled objects
             ConfigurableFileCollection testableObjects = project.files();
             if (testedComponent instanceof SwiftApplication) {
                 TaskProvider<UnexportMainSymbol> unexportMainSymbol = tasks.register("relocateMainForTest", UnexportMainSymbol.class, task -> {
-                    String dirName = ((DefaultSwiftBinary) testedBinary).getNames().getDirName();
-                    task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
-                    task.getObjects().from(testedBinary.getObjects());
+                    String dirName = ((DefaultSwiftBinary) testedBinary).getNames().dirName;
+                    task.outputDirectory.set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
+                    task.objects.from(testedBinary.objects);
                 });
                 testableObjects.from(unexportMainSymbol.map(task -> task.getRelocatedObjects()));
             } else {
-                testableObjects.from(testedBinary.getObjects());
+                testableObjects.from(testedBinary.objects);
             }
             Dependency linkDependency = project.getDependencies().create(testableObjects);
             testExecutable.getLinkConfiguration().getDependencies().add(linkDependency);

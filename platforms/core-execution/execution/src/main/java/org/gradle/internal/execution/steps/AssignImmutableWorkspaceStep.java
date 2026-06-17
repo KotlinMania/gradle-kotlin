@@ -121,7 +121,7 @@ public class AssignImmutableWorkspaceStep<C extends IdentityContext> implements 
     }
 
     private static WorkspaceResult mapConcurrentResultToUpToDate(WorkspaceResult result, UnitOfWork work, ImmutableWorkspace workspace) {
-        if (result.getExecution().isSuccessful()) {
+        if (result.getExecution().isSuccessful) {
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             ExecutionOutputState executionOutputState = result.getAfterExecutionOutputState().get();
             return getUpToDate(work, workspace.getImmutableLocation(), executionOutputState.getOutputFilesProducedByWork(), executionOutputState.getOriginMetadata());
@@ -232,7 +232,7 @@ public class AssignImmutableWorkspaceStep<C extends IdentityContext> implements 
         ensureEmptyDirectory(workspaceDir);
         CachingResult delegateResult = delegate.execute(work, previousExecutionContext);
 
-        if (delegateResult.getExecution().isSuccessful()) {
+        if (delegateResult.getExecution().isSuccessful) {
             // Store workspace metadata
             // TODO Capture in the type system the fact that we always have an after-execution output state here
             @SuppressWarnings("OptionalGetWithoutIsPresent")

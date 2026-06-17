@@ -773,7 +773,7 @@ public class BuildScriptBuilder {
                     exclusionConfig.put("group", exclusion.getGroup());
                     exclusionConfig.put("module", exclusion.getModule());
 
-                    String comment = "TODO: This exclude was sourced from a POM exclusion and is NOT exactly equivalent, see: " + Documentation.userManual("build_init_plugin", "sec:pom_maven_conversion").getUrl();
+                    String comment = "TODO: This exclude was sourced from a POM exclusion and is NOT exactly equivalent, see: " + Documentation.userManual("build_init_plugin", "sec:pom_maven_conversion").url;
                     dependencyBlock.add(new MethodInvocation(comment, new MethodInvocationExpression(null, "exclude", expressionValues(exclusionConfig))));
                 }
                 printer.printBlock(printer.syntax.complexDependencySpec(configuration, notation), dependencyBlock);

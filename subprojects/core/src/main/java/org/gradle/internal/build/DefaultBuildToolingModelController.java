@@ -69,7 +69,7 @@ public class DefaultBuildToolingModelController implements BuildToolingModelCont
         Try<ToolingModelScope> toolingModelScope = defaultProject
             // If getting the default project failed, we won't be able to locate a builder
             // and we will fail, but let's prefer to report a build configuration failure
-            .mapFailure(failure -> buildConfiguration.getFailure().orElse(failure))
+            .mapFailure(failure -> buildConfiguration.failure.orElse(failure))
             // If getting the default project succeeded, let's try to locate a builder
             .flatMap(project -> doLocate(checkNotNull(project), toolingModelContext, buildConfiguration));
         return checkNotNull(toolingModelScope.get());

@@ -69,7 +69,7 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
 
     @Override
     public String getDisplayName() {
-        return "Deleting unused version-specific caches in " + versionSpecificCacheDirectoryScanner.getBaseDir();
+        return "Deleting unused version-specific caches in " + versionSpecificCacheDirectoryScanner.baseDir;
     }
 
     @Override
@@ -77,7 +77,7 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
         if (requiresCleanup()) {
             Timer timer = Time.startTimer();
             performCleanup(progressMonitor);
-            LOGGER.debug("Processed version-specific caches at {} for cleanup in {}", versionSpecificCacheDirectoryScanner.getBaseDir(), timer.getElapsed());
+            LOGGER.debug("Processed version-specific caches at {} for cleanup in {}", versionSpecificCacheDirectoryScanner.baseDir, timer.elapsed);
             return true;
         }
         return false;
@@ -120,7 +120,7 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
     private SortedSetMultimap<GradleVersion, VersionSpecificCacheDirectory> scanForVersionSpecificCacheDirs() {
         SortedSetMultimap<GradleVersion, VersionSpecificCacheDirectory> cacheDirsByBaseVersion = TreeMultimap.create();
         for (VersionSpecificCacheDirectory cacheDir : versionSpecificCacheDirectoryScanner.getExistingDirectories()) {
-            cacheDirsByBaseVersion.put(cacheDir.getVersion().getBaseVersion(), cacheDir);
+            cacheDirsByBaseVersion.put(cacheDir.version.getBaseVersion(), cacheDir);
         }
         return cacheDirsByBaseVersion;
     }
@@ -131,9 +131,9 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
             if (cleanupCondition.isSatisfiedBy(cacheDir)) {
                 progressMonitor.incrementDeleted();
                 try {
-                    deleteCacheDir(cacheDir.getDir());
+                    deleteCacheDir(cacheDir.dir);
                 } catch (Exception e) {
-                    LOGGER.error("Failed to process/clean up version-specific cache directory: {}", cacheDir.getDir(), e);
+                    LOGGER.error("Failed to process/clean up version-specific cache directory: {}", cacheDir.dir, e);
                 }
             } else {
                 progressMonitor.incrementSkipped();
@@ -159,10 +159,10 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
 
         @Override
         public boolean isSatisfiedBy(VersionSpecificCacheDirectory cacheDir) {
-            if (cacheDir.getVersion().compareTo(GradleVersion.current()) >= 0) {
+            if (cacheDir.version.compareTo(GradleVersion.current()) >= 0) {
                 return false;
             }
-            File markerFile = new File(cacheDir.getDir(), MARKER_FILE_PATH);
+            File markerFile = new File(cacheDir.dir, MARKER_FILE_PATH);
             return markerFile.exists() && markerFileHasNotBeenTouchedRecently(cacheDir, markerFile);
         }
 
@@ -170,7 +170,7 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
             if (markerFile.lastModified() < releaseTimestampSupplier.get()) {
                 return true;
             }
-            if (cacheDir.getVersion().isSnapshot() && markerFile.lastModified() < snapshotTimestampSupplier.get()) {
+            if (cacheDir.version.isSnapshot() && markerFile.lastModified() < snapshotTimestampSupplier.get()) {
                 // Keep at least one snapshot version for this base version
                 return cacheDirsWithSameBaseVersion.tailSet(cacheDir).size() > 1;
             }

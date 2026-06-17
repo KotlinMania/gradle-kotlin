@@ -135,7 +135,7 @@ public class DefaultTransformRegistrationFactory implements TransformRegistratio
         ImmutableList<ProblemInternal> errors = validationContext.getErrors();
         if (!errors.isEmpty()) {
             WorkValidationException exception = WorkValidationException.withSummaryForType(implementation, errors.size());
-            throw problems.getReporter().throwing(exception, errors);
+            throw problems.reporter.throwing(exception, errors);
         }
         Transform transform = new DefaultTransform(
             implementation,

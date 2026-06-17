@@ -1,0 +1,39 @@
+/*
+ * Copyright 2024 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Packages with injected classpath plugin resolver, used to inject plugins classpath when using TestKit.
+ */
+package org.gradle.plugin.use.resolve.service.internal
+
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.service.ServiceLookup.find
+import org.gradle.internal.logging.text.TreeFormatter.node
+import org.gradle.internal.logging.text.TreeFormatter.startChildren
+import org.gradle.internal.logging.text.TreeFormatter.appendType
+import org.gradle.internal.logging.text.TreeFormatter.endChildren
+import org.gradle.internal.logging.text.TreeFormatter.toString
+import org.gradle.features.internal.binding.TargetTypeInformationChecks.isOverlappingBindingType
+import org.gradle.internal.lazy.Lazy.Companion.locking
+import org.gradle.internal.lazy.Lazy.Factory.of
+import org.gradle.internal.Factory.create
+import org.gradle.api.internal.DocumentationRegistry.getDocumentationRecommendationFor
+import org.gradle.internal.event.ListenerManager.getBroadcaster
+import org.gradle.internal.service.ServiceRegistration.addProvider
+import org.gradle.internal.service.ServiceRegistration.add
+import org.gradle.api.internal.StartParameterInternal.isUseEmptySettings
+import org.gradle.internal.event.ListenerManager.addListener
+

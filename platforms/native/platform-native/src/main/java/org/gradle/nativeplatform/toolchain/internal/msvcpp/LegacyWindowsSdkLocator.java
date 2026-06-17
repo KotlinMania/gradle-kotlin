@@ -94,7 +94,7 @@ public class LegacyWindowsSdkLocator implements WindowsSdkLocator {
     @Override
     public List<? extends WindowsSdkInstall> locateAllComponents() {
         initializeWindowsSdks();
-        return Lists.newArrayList(foundSdks.values());
+        return Lists.<WindowsSdkInstall>newArrayList(foundSdks.values());
     }
 
     private void initializeWindowsSdks() {

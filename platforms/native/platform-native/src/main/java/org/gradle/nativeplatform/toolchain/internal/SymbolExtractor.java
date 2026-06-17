@@ -53,7 +53,7 @@ public class SymbolExtractor extends AbstractCompiler<SymbolExtractorSpec> {
         @Override
         public List<String> transform(SymbolExtractorSpec spec) {
             SymbolExtractorOsConfig symbolExtractorOsConfig = SymbolExtractorOsConfig.current();
-            List<String> args = Lists.newArrayList(symbolExtractorOsConfig.getArguments());
+            List<String> args = Lists.<String>newArrayList(symbolExtractorOsConfig.getArguments());
             args.addAll(spec.getArgs());
             args.addAll(symbolExtractorOsConfig.getInputOutputFileArguments(spec.getBinaryFile().getAbsolutePath(), spec.getSymbolFile().getAbsolutePath()));
             return args;

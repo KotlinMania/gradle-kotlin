@@ -159,7 +159,7 @@ public class DaemonClientToolchainServices implements ServiceRegistrationProvide
             buildProgressListener
         );
         SecureFileDownloader secureFileDownloader = new SecureFileDownloader(externalResourceFactory);
-        DaemonJavaToolchainProvisioningService javaToolchainProvisioningService = new DaemonJavaToolchainProvisioningService(secureFileDownloader, jdkCacheDirectory, currentBuildPlatform, toolchainDownloadUrlProvider, toolchainConfiguration.isDownloadEnabled(), progressLoggerFactory);
+        DaemonJavaToolchainProvisioningService javaToolchainProvisioningService = new DaemonJavaToolchainProvisioningService(secureFileDownloader, jdkCacheDirectory, currentBuildPlatform, toolchainDownloadUrlProvider, toolchainConfiguration.isDownloadEnabled, progressLoggerFactory);
         return new JavaToolchainQueryService(jvmMetadataDetector, filePropertyFactory, javaToolchainProvisioningService, javaInstallationRegistry, null);
     }
 }

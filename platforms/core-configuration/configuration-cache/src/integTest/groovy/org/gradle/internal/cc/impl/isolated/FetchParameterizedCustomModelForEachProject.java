@@ -39,7 +39,7 @@ public class FetchParameterizedCustomModelForEachProject implements BuildAction<
 
     @Override
     public Map<String, List<SomeToolingModel>> execute(BuildController controller) {
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         Map<String, List<SomeToolingModel>> result = new LinkedHashMap<>();
         for (String parameter : parameters) {
             Map<String, SomeToolingModel> model = fetchSomeModelForAllProjects(controller, buildModel, parameter);

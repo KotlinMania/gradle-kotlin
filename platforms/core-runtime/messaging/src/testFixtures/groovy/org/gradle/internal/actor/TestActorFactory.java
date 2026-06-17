@@ -33,7 +33,7 @@ public class TestActorFactory implements ActorFactory {
         return new Actor() {
             @Override
             public <T> T getProxy(Class<T> type) {
-                return new ProxyDispatchAdapter<T>(new ReflectionDispatch(target), type, ThreadSafe.class).getSource();
+                return new ProxyDispatchAdapter<T>(new ReflectionDispatch(target), type, ThreadSafe.class).source;
             }
 
             @Override

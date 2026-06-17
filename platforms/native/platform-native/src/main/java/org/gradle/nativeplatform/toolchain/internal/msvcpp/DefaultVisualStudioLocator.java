@@ -84,7 +84,7 @@ public class DefaultVisualStudioLocator implements VisualStudioLocator {
     public List<? extends VisualStudioInstall> locateAllComponents() {
         initializeVisualStudioInstalls();
 
-        return CollectionUtils.sort(foundInstalls.values(), new Comparator<VisualStudioInstall>() {
+        return CollectionUtils.<VisualStudioInstall>sort(foundInstalls.values(), new Comparator<VisualStudioInstall>() {
             @Override
             public int compare(VisualStudioInstall o1, VisualStudioInstall o2) {
                 return o2.getVersion().compareTo(o1.getVersion());
@@ -247,7 +247,7 @@ public class DefaultVisualStudioLocator implements VisualStudioLocator {
             return new ComponentNotFound<VisualStudioInstall>("Could not locate a Visual Studio installation, using the command line tool, Windows registry or system path.");
         }
         return new ComponentNotFound<VisualStudioInstall>("Could not locate a Visual Studio installation. None of the following locations contain a valid installation",
-            CollectionUtils.collect(brokenInstalls, new ArrayList<String>(), File::getAbsolutePath)
+            CollectionUtils.<String, File, ArrayList<String>>collect(brokenInstalls, new ArrayList<String>(), File::getAbsolutePath)
         );
     }
 

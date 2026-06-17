@@ -115,7 +115,7 @@ public abstract class AbstractInputFilePropertyAnnotationHandler extends Abstrac
                 String propertyName = propertyMetadata.getPropertyName();
                 problem
                     .forProperty(propertyName)
-                    .id(MISSING_NORMALIZATION_ID.getName(), MISSING_NORMALIZATION_ID.getDisplayName(), MISSING_NORMALIZATION_ID.getGroup()) // TODO (donat) missing test coverage
+                    .id(MISSING_NORMALIZATION_ID.name, MISSING_NORMALIZATION_ID.displayName, MISSING_NORMALIZATION_ID.group) // TODO (donat) missing test coverage
                     .contextualLabel(String.format("is annotated with @%s but missing a normalization strategy", getAnnotationType().getSimpleName()))
                     .documentedAt(userManual("validation_problems", MISSING_NORMALIZATION_ANNOTATION.toLowerCase(Locale.ROOT)))
                     .details("If you don't declare the normalization, outputs can't be re-used between machines or locations on the same machine, therefore caching efficiency drops significantly")

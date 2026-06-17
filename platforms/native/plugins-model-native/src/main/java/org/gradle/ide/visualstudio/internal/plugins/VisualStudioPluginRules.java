@@ -61,7 +61,7 @@ public class VisualStudioPluginRules {
         public static void createVisualStudioModelForBinaries(VisualStudioExtensionInternal visualStudioExtension, BinaryContainer binaries) {
             for (NativeBinarySpec binary : binaries.withType(NativeBinarySpec.class)) {
                 if (binary.isBuildable()) {
-                    visualStudioExtension.getProjectRegistry().addProjectConfiguration(new NativeSpecVisualStudioTargetBinary(binary));
+                    visualStudioExtension.projectRegistry.addProjectConfiguration(new NativeSpecVisualStudioTargetBinary(binary));
                 }
             }
         }

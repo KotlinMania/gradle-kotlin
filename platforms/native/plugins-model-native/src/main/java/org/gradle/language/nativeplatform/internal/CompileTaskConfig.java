@@ -74,8 +74,8 @@ public abstract class CompileTaskConfig implements SourceTransformTaskConfig {
     }
 
     private void configureCompileTaskCommon(final AbstractNativeCompileTask task, final NativeBinarySpecInternal binary, final LanguageSourceSetInternal sourceSet) {
-        task.getToolChain().set(binary.getToolChain());
-        task.getTargetPlatform().set(binary.getTargetPlatform());
+        task.toolChain.set(binary.getToolChain());
+        task.targetPlatform.set(binary.getTargetPlatform());
         task.setPositionIndependentCode(binary instanceof SharedLibraryBinarySpec);
 
         task.includes(((HeaderExportingSourceSet) sourceSet).getExportedHeaders().getSourceDirectories());
@@ -87,7 +87,7 @@ public abstract class CompileTaskConfig implements SourceTransformTaskConfig {
             }
         });
         FileCollectionFactory fileCollectionFactory = ((ProjectInternal) task.getProject()).getServices().get(FileCollectionFactory.class);
-        task.getSystemIncludes().from(fileCollectionFactory.create(new MinimalFileSet() {
+        task.systemIncludes.from(fileCollectionFactory.create(new MinimalFileSet() {
             @Override
             public Set<File> getFiles() {
                 PlatformToolProvider platformToolProvider = ((NativeToolChainInternal) binary.getToolChain()).select((NativePlatformInternal) binary.getTargetPlatform());
@@ -107,7 +107,7 @@ public abstract class CompileTaskConfig implements SourceTransformTaskConfig {
                 task.setMacros(((PreprocessingTool) tool).getMacros());
             }
 
-            task.getCompilerArgs().set(tool.getArgs());
+            task.compilerArgs.set(tool.getArgs());
         }
     }
 

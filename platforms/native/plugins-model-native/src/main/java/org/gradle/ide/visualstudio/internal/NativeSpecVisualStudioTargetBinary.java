@@ -67,7 +67,7 @@ public class NativeSpecVisualStudioTargetBinary implements VisualStudioTargetBin
 
     @Override
     public String getVisualStudioProjectName() {
-        return projectPrefix(getProjectPath()) + getComponentName() + getProjectType().getSuffix();
+        return projectPrefix(getProjectPath()) + getComponentName() + getProjectType().suffix;
     }
 
     @Override

@@ -76,19 +76,19 @@ public class OutputScrapingExecutionFailure extends OutputScrapingExecutionResul
             // Not present in output, check error output.
             match = LogContent.of(error).ansiCharsToPlainText().removeDebugPrefix().splitOnFirstMatchingLine(FAILURE_PATTERN);
             if (match != null) {
-                match = Pair.of(withoutDebug, match.getRight());
+                match = Pair.of(withoutDebug, match.right);
             } else {
                 // Not present, assume no failure details
                 match = Pair.of(withoutDebug, LogContent.empty());
             }
         } else {
-            if (match.getRight().countMatches(FAILURE_PATTERN) != 1) {
+            if (match.right.countMatches(FAILURE_PATTERN) != 1) {
                 throw new IllegalArgumentException("Found multiple failure sections in log output: " + output);
             }
         }
 
-        LogContent failureContent = match.getRight();
-        this.mainContent = match.getLeft();
+        LogContent failureContent = match.right;
+        this.mainContent = match.left;
 
         String failureText = failureContent.withNormalizedEol();
 

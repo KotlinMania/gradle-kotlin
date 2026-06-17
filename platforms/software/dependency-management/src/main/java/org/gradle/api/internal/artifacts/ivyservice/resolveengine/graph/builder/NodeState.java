@@ -548,9 +548,9 @@ public class NodeState implements DependencyGraphNode {
             dependency.getArtifacts()
         );
 
-        if (!trySubstitution.isSuccessful()) {
+        if (!trySubstitution.isSuccessful) {
             // Substitution failed
-            ModuleVersionResolveException resolveFailure = new ModuleVersionResolveException(dependency.getSelector(), trySubstitution.getFailure().get());
+            ModuleVersionResolveException resolveFailure = new ModuleVersionResolveException(dependency.getSelector(), trySubstitution.failure.get());
             return new EdgeState(this, dependency, dependency.getSelector(), ImmutableList.of(), resolveFailure, resolveState);
         }
 
@@ -817,8 +817,8 @@ public class NodeState implements DependencyGraphNode {
 
     private void mergeCapabilityRejects(Capability capability, Collection<NodeState> conflictedNodes) {
         // Only merge if about the same capability, otherwise last wins
-        if (this.capabilityReject.getLeft().equals(capability)) {
-            this.capabilityReject.getRight().addAll(conflictedNodes);
+        if (this.capabilityReject.left.equals(capability)) {
+            this.capabilityReject.right.addAll(conflictedNodes);
         } else {
             this.capabilityReject = Pair.of(capability, new HashSet<>(conflictedNodes));
         }
@@ -832,7 +832,7 @@ public class NodeState implements DependencyGraphNode {
     private static String formatCapabilityRejectMessage(ModuleIdentifier id, Pair<Capability, Collection<NodeState>> capabilityConflict) {
         return "Module '" + id + "' has been rejected:\n" +
             "   Cannot select module with conflict on capability '" + formatCapability(capabilityConflict.left) + "' also provided by " +
-            capabilityConflict.getRight().stream().map(NodeState::getDisplayName).sorted().collect(Collectors.toList());
+            capabilityConflict.right.stream().map(NodeState::getDisplayName).sorted().collect(Collectors.toList());
     }
 
     private static String formatCapability(Capability capability) {

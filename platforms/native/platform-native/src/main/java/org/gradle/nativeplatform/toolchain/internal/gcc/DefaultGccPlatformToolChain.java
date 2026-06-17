@@ -55,7 +55,7 @@ public class DefaultGccPlatformToolChain implements GccPlatformToolChain, ToolRe
     }
 
     public void compilerProbeArgs(String... args) {
-        this.compilerProbeArgs.addAll(Arrays.asList(args));
+        this.compilerProbeArgs.addAll(Arrays.<String>asList(args));
     }
 
     @Nullable
@@ -69,7 +69,7 @@ public class DefaultGccPlatformToolChain implements GccPlatformToolChain, ToolRe
     }
 
     public Collection<GccCommandLineToolConfigurationInternal> getCompilers() {
-        return Arrays.asList(tools.get(ToolType.C_COMPILER), tools.get(ToolType.CPP_COMPILER), tools.get(ToolType.OBJECTIVEC_COMPILER), tools.get(ToolType.OBJECTIVECPP_COMPILER));
+        return Arrays.<GccCommandLineToolConfigurationInternal>asList(tools.get(ToolType.C_COMPILER), tools.get(ToolType.CPP_COMPILER), tools.get(ToolType.OBJECTIVEC_COMPILER), tools.get(ToolType.OBJECTIVECPP_COMPILER));
     }
 
     public void add(DefaultGccCommandLineToolConfiguration tool) {

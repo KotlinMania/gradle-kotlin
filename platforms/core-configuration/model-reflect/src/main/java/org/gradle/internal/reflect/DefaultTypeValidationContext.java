@@ -53,7 +53,7 @@ public class DefaultTypeValidationContext extends ProblemRecordingTypeValidation
 
     @Override
     protected void recordError(ProblemInternal problem) {
-        if (onlyAffectsCacheableWork(problem.getDefinition().getId()) && !reportCacheabilityProblems) {
+        if (onlyAffectsCacheableWork(problem.definition.getId()) && !reportCacheabilityProblems) {
             return;
         }
         errors.add(problem);

@@ -86,12 +86,12 @@ public class TransformedProjectArtifactSet implements TransformedArtifactSet, Fi
         for (TransformStepNode node : transformedArtifacts) {
             node.executeIfNotAlready();
             Try<TransformStepSubject> transformedSubject = node.getTransformedSubject();
-            if (transformedSubject.isSuccessful()) {
+            if (transformedSubject.isSuccessful) {
                 for (File file : transformedSubject.get().getFiles()) {
                     visitor.visitArtifact(artifactSetName, sourceVariantId, targetVariant.getAttributes(), targetVariant.getCapabilities(), node.getInputArtifact().transformedTo(file));
                 }
             } else {
-                Throwable failure = transformedSubject.getFailure().get();
+                Throwable failure = transformedSubject.failure.get();
                 visitor.visitFailure(new TransformException(String.format("Failed to transform %s to match attributes %s.", node.getInputArtifact().getId().getDisplayName(), targetVariant.getAttributes()), failure));
             }
         }

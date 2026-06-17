@@ -98,10 +98,10 @@ public class DefaultFileSystemAccess implements FileSystemAccess, FileSystemDefa
             .orElseGet(() -> virtualFileSystem.storeWithAction(location, vfsStorer -> {
                 File file = new File(location);
                 FileMetadata fileMetadata = this.stat.stat(file);
-                switch (fileMetadata.getType()) {
+                switch (fileMetadata.type) {
                     case Missing:
                         // For performance reasons, we cache the information about the missing file snapshot.
-                        vfsStorer.store(new MissingFileSnapshot(location, fileMetadata.getAccessType()));
+                        vfsStorer.store(new MissingFileSnapshot(location, fileMetadata.accessType));
                         return Optional.empty();
                     case Directory:
                         return Optional.empty();
@@ -111,11 +111,11 @@ public class DefaultFileSystemAccess implements FileSystemAccess, FileSystemDefa
                         return Optional.of(producingSnapshots.guardByKey(location,
                             () -> virtualFileSystem.findSnapshot(location)
                                 .orElseGet(() -> {
-                                    HashCode hashCode = hasher.hash(file, fileMetadata.getLength(), fileMetadata.getLastModified());
+                                    HashCode hashCode = hasher.hash(file, fileMetadata.length, fileMetadata.lastModified);
                                     return vfsStorer.store(new RegularFileSnapshot(location, file.getName(), hashCode, fileMetadata));
                                 })));
                     default:
-                        throw new IllegalArgumentException("Unknown file type: " + fileMetadata.getType());
+                        throw new IllegalArgumentException("Unknown file type: " + fileMetadata.type);
                 }
             }))
             .map(FileSystemLocationSnapshot::getHash);
@@ -182,13 +182,13 @@ public class DefaultFileSystemAccess implements FileSystemAccess, FileSystemDefa
             File file = new File(location);
             FileMetadata fileMetadata = this.stat.stat(file);
             FileSystemLocationSnapshot unfilteredSnapshot;
-            switch (fileMetadata.getType()) {
+            switch (fileMetadata.type) {
                 case RegularFile:
-                    HashCode hash = hasher.hash(file, fileMetadata.getLength(), fileMetadata.getLastModified());
+                    HashCode hash = hasher.hash(file, fileMetadata.length, fileMetadata.lastModified);
                     unfilteredSnapshot = vfsStorer.store(new RegularFileSnapshot(location, file.getName(), hash, fileMetadata));
                     break;
                 case Missing:
-                    unfilteredSnapshot = vfsStorer.store(new MissingFileSnapshot(location, fileMetadata.getAccessType()));
+                    unfilteredSnapshot = vfsStorer.store(new MissingFileSnapshot(location, fileMetadata.accessType));
                     break;
                 case Directory:
                     // This will capture a filtered snapshot, and only store the captured snapshot in the VFS

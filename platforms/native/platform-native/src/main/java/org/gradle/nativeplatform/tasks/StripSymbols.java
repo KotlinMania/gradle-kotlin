@@ -82,7 +82,7 @@ public abstract class StripSymbols extends DefaultTask {
 
     @TaskAction
     protected void stripSymbols() {
-        BuildOperationLogger operationLogger = getServices().get(BuildOperationLoggerFactory.class).newOperationLogger(getName(), getTemporaryDir());
+        BuildOperationLogger operationLogger = getServices().<BuildOperationLoggerFactory>get(BuildOperationLoggerFactory.class).newOperationLogger(getName(), getTemporaryDir());
 
         StripperSpec spec = new DefaultStripperSpec();
         spec.setBinaryFile(getBinaryFile().get().getAsFile());
@@ -90,15 +90,15 @@ public abstract class StripSymbols extends DefaultTask {
         spec.setOperationLogger(operationLogger);
 
         Compiler<StripperSpec> symbolStripper = createCompiler();
-        symbolStripper = BuildOperationLoggingCompilerDecorator.wrap(symbolStripper);
+        symbolStripper = BuildOperationLoggingCompilerDecorator.<StripperSpec>wrap(symbolStripper);
         WorkResult result = symbolStripper.execute(spec);
         setDidWork(result.getDidWork());
     }
 
     private Compiler<StripperSpec> createCompiler() {
-        NativePlatformInternal targetPlatform = Cast.cast(NativePlatformInternal.class, this.getTargetPlatform().get());
-        NativeToolChainInternal toolChain = Cast.cast(NativeToolChainInternal.class, getToolChain().get());
+        NativePlatformInternal targetPlatform = Cast.<NativePlatformInternal, NativePlatform>cast(NativePlatformInternal.class, this.getTargetPlatform().get());
+        NativeToolChainInternal toolChain = Cast.<NativeToolChainInternal, NativeToolChain>cast(NativeToolChainInternal.class, getToolChain().get());
         PlatformToolProvider toolProvider = toolChain.select(targetPlatform);
-        return toolProvider.newCompiler(StripperSpec.class);
+        return toolProvider.<StripperSpec>newCompiler(StripperSpec.class);
     }
 }

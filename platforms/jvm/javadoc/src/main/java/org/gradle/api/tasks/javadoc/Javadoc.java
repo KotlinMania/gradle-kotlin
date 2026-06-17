@@ -129,11 +129,11 @@ public abstract class Javadoc extends SourceTask {
     public Javadoc() {
         ObjectFactory objectFactory = getObjectFactory();
         PropertyFactory propertyFactory = getPropertyFactory();
-        this.modularity = objectFactory.newInstance(DefaultModularitySpec.class);
+        this.modularity = objectFactory.<DefaultModularitySpec>newInstance(DefaultModularitySpec.class);
         JavaToolchainService javaToolchainService = getJavaToolchainService();
         Provider<JavadocTool> javadocToolConvention = getProviderFactory()
-            .provider(() -> JavadocExecutableUtils.getExecutableOverrideToolchainSpec(this, propertyFactory))
-            .flatMap(javaToolchainService::javadocToolFor)
+            .<org.gradle.jvm.toolchain.@Nullable JavaToolchainSpec>provider(() -> JavadocExecutableUtils.getExecutableOverrideToolchainSpec(this, propertyFactory))
+            .<JavadocTool>flatMap(javaToolchainService::javadocToolFor)
             .orElse(javaToolchainService.javadocToolFor(it -> {}));
         getJavadocTool().convention(javadocToolConvention);
         getJavadocTool().finalizeValueOnRead();
@@ -182,7 +182,7 @@ public abstract class Javadoc extends SourceTask {
     }
 
     private void validateExecutableMatchesToolchain() {
-        File toolchainExecutable = getJavadocTool().get().getExecutablePath().getAsFile();
+        File toolchainExecutable = getJavadocTool().get().executablePath.getAsFile();
         String customExecutable = getExecutable();
         JavaExecutableUtils.validateExecutable(
             customExecutable, "Toolchain from `executable` property",
@@ -352,7 +352,7 @@ public abstract class Javadoc extends SourceTask {
      * @param block The configuration block for Javadoc generation options.
      */
     public void options(@DelegatesTo(MinimalJavadocOptions.class) Closure<?> block) {
-        ConfigureUtil.configure(block, getOptions());
+        ConfigureUtil.<MinimalJavadocOptions>configure(block, getOptions());
     }
 
     /**

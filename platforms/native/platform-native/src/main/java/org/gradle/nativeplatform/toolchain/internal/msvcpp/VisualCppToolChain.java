@@ -129,7 +129,7 @@ public class VisualCppToolChain extends ExtendableToolChain<VisualCppPlatformToo
         WindowsSdk platformSdk = windowsSdk.forPlatform(targetPlatform);
         SystemLibraries cRuntime = ucrt == null ? new EmptySystemLibraries() : ucrt.getCRuntime(targetPlatform);
 
-        DefaultVisualCppPlatformToolChain configurableToolChain = instantiator.newInstance(DefaultVisualCppPlatformToolChain.class, targetPlatform, instantiator);
+        DefaultVisualCppPlatformToolChain configurableToolChain = instantiator.<DefaultVisualCppPlatformToolChain>newInstance(DefaultVisualCppPlatformToolChain.class, targetPlatform, instantiator);
         configureActions.execute(configurableToolChain);
 
         return new VisualCppPlatformToolProvider(buildOperationExecutor, targetPlatform.getOperatingSystem(), configurableToolChain.tools, visualStudio, platformVisualCpp, platformSdk, cRuntime, execActionFactory, compilerOutputFileNamingSchemeFactory, workerLeaseService);

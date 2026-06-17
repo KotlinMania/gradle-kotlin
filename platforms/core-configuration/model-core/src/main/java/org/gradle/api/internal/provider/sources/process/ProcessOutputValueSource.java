@@ -175,7 +175,7 @@ public abstract class ProcessOutputValueSource implements ValueSource<ProcessOut
                 return false;
             }
             ExecOutputData that = (ExecOutputData) o;
-            return result.getExitValue() == that.result.getExitValue() && Arrays.equals(output, that.output) && Arrays.equals(error, that.error);
+            return result.exitValue == that.result.exitValue && Arrays.equals(output, that.output) && Arrays.equals(error, that.error);
         }
 
         @Override

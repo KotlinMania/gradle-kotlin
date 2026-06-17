@@ -93,13 +93,13 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
         project.getExtensions().add(CppTestSuite.class, "unitTest", testComponent);
         project.getComponents().add(testComponent);
 
-        testComponent.getBaseName().convention(project.getName() + "Test");
-        testComponent.getTargetMachines().convention(Dimensions.useHostAsDefaultTargetMachine(targetMachineFactory));
+        testComponent.baseName.convention(project.getName() + "Test");
+        testComponent.targetMachines.convention(Dimensions.useHostAsDefaultTargetMachine(targetMachineFactory));
 
         final String mainComponentName = "main";
         project.getComponents().withType(ProductionCppComponent.class, component -> {
             if (mainComponentName.equals(component.getName())) {
-                testComponent.getTargetMachines().convention(component.getTargetMachines());
+                testComponent.targetMachines.convention(component.targetMachines);
                 testComponent.getTestedComponent().convention(component);
             }
         });
@@ -120,7 +120,7 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
             }
 
             private Stream<DefaultCppTestExecutable> getAllBuildableTestExecutable() {
-                return getAllTestExecutable().filter(it -> it.getPlatformToolProvider().isAvailable());
+                return getAllTestExecutable().filter(it -> it.platformToolProvider.isAvailable());
             }
 
             private Stream<DefaultCppTestExecutable> getAllTestExecutable() {
@@ -145,7 +145,7 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
                 task.setExecutable(installTask.getRunScriptFile().get().getAsFile());
                 task.dependsOn(installDirectory);
                 // TODO: Honor changes to build directory
-                task.setOutputDir(project.getLayout().getBuildDirectory().dir("test-results/" + binary.getNames().getDirName()).get().getAsFile());
+                task.setOutputDir(project.getLayout().getBuildDirectory().dir("test-results/" + binary.getNames().dirName).get().getAsFile());
             });
             binary.getRunTask().set(testTask);
 
@@ -154,15 +154,15 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
 
         project.afterEvaluate(p -> {
             final CppComponent mainComponent = testComponent.getTestedComponent().getOrNull();
-            final SetProperty<TargetMachine> mainTargetMachines = mainComponent != null ? mainComponent.getTargetMachines() : null;
-            Dimensions.unitTestVariants(testComponent.getBaseName(), testComponent.getTargetMachines(), mainTargetMachines,
+            final SetProperty<TargetMachine> mainTargetMachines = mainComponent != null ? mainComponent.targetMachines : null;
+            Dimensions.unitTestVariants(testComponent.baseName, testComponent.targetMachines, mainTargetMachines,
                 attributesFactory,
                     providers.provider(() -> project.getGroup().toString()), providers.provider(() -> project.getVersion().toString()),
                     variantIdentity -> {
                         if (tryToBuildOnHost(variantIdentity)) {
-                            ToolChainSelector.Result<CppPlatform> result = toolChainSelector.select(CppPlatform.class, new DefaultCppPlatform(variantIdentity.getTargetMachine()));
+                            ToolChainSelector.Result<CppPlatform> result = toolChainSelector.select(CppPlatform.class, new DefaultCppPlatform(variantIdentity.targetMachine));
                             // TODO: Removing `debug` from variant name to keep parity with previous Gradle version in tooling models
-                            testComponent.addExecutable(variantIdentity.getName().replace("debug", ""), variantIdentity, result.getTargetPlatform(), result.getToolChain(), result.getPlatformToolProvider());
+                            testComponent.addExecutable(variantIdentity.getName().replace("debug", ""), variantIdentity, result.targetPlatform, result.toolChain, result.platformToolProvider);
                         }
                     });
             // TODO: Publishing for test executable?
@@ -194,13 +194,13 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
             if (target instanceof CppApplication) {
                 // TODO - this should be an outgoing variant of the component under test
                 TaskProvider<UnexportMainSymbol> unexportMainSymbol = tasks.register(testExecutable.getNames().getTaskName("relocateMainFor"), UnexportMainSymbol.class, task -> {
-                    String dirName = ((DefaultCppBinary) testedBinary).getNames().getDirName();
-                    task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
-                    task.getObjects().from(testedBinary.getObjects());
+                    String dirName = ((DefaultCppBinary) testedBinary).getNames().dirName;
+                    task.outputDirectory.set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
+                    task.objects.from(testedBinary.objects);
                 });
                 testableObjects.from(unexportMainSymbol.map(task -> task.getRelocatedObjects()));
             } else {
-                testableObjects.from(testedBinary.getObjects());
+                testableObjects.from(testedBinary.objects);
             }
             Dependency linkDependency = project.getDependencies().create(testableObjects);
             testExecutable.getLinkConfiguration().getDependencies().add(linkDependency);
@@ -209,9 +209,9 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
 
     private boolean isTestedBinary(DefaultCppTestExecutable testExecutable, ProductionCppComponent mainComponent, CppBinary testedBinary) {
         // TODO: Make this more intelligent by matching the attributes of the runtime usage on the variant identities
-        return testedBinary.getTargetMachine().getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine().getOperatingSystemFamily().getName())
-                && testedBinary.getTargetMachine().getArchitecture().getName().equals(testExecutable.getTargetMachine().getArchitecture().getName())
-                && !testedBinary.isOptimized()
+        return testedBinary.targetMachine.getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine().getOperatingSystemFamily().getName())
+                && testedBinary.targetMachine.getArchitecture().getName().equals(testExecutable.getTargetMachine().getArchitecture().getName())
+                && !testedBinary.isOptimized
                 && hasDevelopmentBinaryLinkage(mainComponent, testedBinary);
     }
 
@@ -221,6 +221,6 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
         }
         ConfigurableComponentWithLinkUsage developmentBinaryWithUsage = (ConfigurableComponentWithLinkUsage) mainComponent.getDevelopmentBinary().get();
         ConfigurableComponentWithLinkUsage testedBinaryWithUsage = (ConfigurableComponentWithLinkUsage)testedBinary;
-        return testedBinaryWithUsage.getLinkage() == developmentBinaryWithUsage.getLinkage();
+        return testedBinaryWithUsage.linkage == developmentBinaryWithUsage.linkage;
     }
 }

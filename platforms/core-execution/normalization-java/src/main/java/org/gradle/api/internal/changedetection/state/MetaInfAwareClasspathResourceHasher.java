@@ -64,7 +64,7 @@ public class MetaInfAwareClasspathResourceHasher extends FallbackHandlingResourc
 
     @Override
     boolean filter(ZipEntryContext context) {
-        return !context.getEntry().isDirectory() && isManifestFile(context.getEntry().getName());
+        return !context.getEntry().isDirectory && isManifestFile(context.getEntry().name);
     }
 
     @Override

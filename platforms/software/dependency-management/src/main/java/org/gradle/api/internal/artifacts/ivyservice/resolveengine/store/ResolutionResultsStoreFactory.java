@@ -114,7 +114,7 @@ public class ResolutionResultsStoreFactory implements Closeable {
         try {
             Timer clock = Time.startTimer();
             cleanUpLater.stop();
-            LOG.debug("Deleted {} resolution results binary files in {}", stores.size(), clock.getElapsed());
+            LOG.debug("Deleted {} resolution results binary files in {}", stores.size(), clock.elapsed);
         } finally {
             graphStructureCache = null;
             stores.clear();

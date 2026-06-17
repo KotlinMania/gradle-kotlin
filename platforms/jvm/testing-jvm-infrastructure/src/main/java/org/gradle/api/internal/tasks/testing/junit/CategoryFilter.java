@@ -83,15 +83,15 @@ class CategoryFilter extends Filter {
 
     private boolean hasCorrectCategoryAnnotation(Description description, Description parent) {
         final Set<Class<?>> categories = new HashSet<Class<?>>();
-        Category annotation = description.getAnnotation(Category.class);
+        Category annotation = description.<Category>getAnnotation(Category.class);
         if (annotation != null) {
-            categories.addAll(Arrays.asList(annotation.value()));
+            categories.addAll(Arrays.<Class<?>>asList(annotation.value()));
         }
 
         if (parent != null) {
-            annotation = parent.getAnnotation(Category.class);
+            annotation = parent.<Category>getAnnotation(Category.class);
             if (annotation != null) {
-                categories.addAll(Arrays.asList(annotation.value()));
+                categories.addAll(Arrays.<Class<?>>asList(annotation.value()));
             }
         }
 

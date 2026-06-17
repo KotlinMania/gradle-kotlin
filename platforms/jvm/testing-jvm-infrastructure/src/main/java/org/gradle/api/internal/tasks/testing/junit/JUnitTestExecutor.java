@@ -209,7 +209,7 @@ public class JUnitTestExecutor implements TestDefinitionConsumer<ClassTestDefini
             outermostClass = outermostClass.getEnclosingClass();
         }
 
-        RunWith runWith = outermostClass.getAnnotation(RunWith.class);
+        RunWith runWith = outermostClass.<RunWith>getAnnotation(RunWith.class);
         return runWith != null && Enclosed.class.equals(runWith.value());
     }
 

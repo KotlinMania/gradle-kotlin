@@ -1,0 +1,96 @@
+/*
+ * Copyright 2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.internal.remote.internal.hub.queue
+
+import org.gradle.internal.dispatch.Dispatch
+import org.gradle.internal.remote.internal.hub.protocol.EndOfStream
+import org.gradle.internal.remote.internal.hub.protocol.InterHubMessage
+import java.util.ArrayDeque
+import java.util.Deque
+import java.util.concurrent.locks.Lock
+
+// TODO - use circular buffers to avoid copying
+// TODO - share a single initializer with MultiChannelQueue
+open class MultiEndPointQueue(private val lock: Lock) : Dispatch<InterHubMessage?> {
+    private val endpoints: MutableSet<EndPointQueue> = HashSet<EndPointQueue>()
+    private val queue: Deque<InterHubMessage> = ArrayDeque<InterHubMessage>()
+    private val waiting: MutableList<EndPointQueue?> = ArrayList<EndPointQueue?>()
+    private val initializer = QueueInitializer()
+
+    override fun dispatch(message: InterHubMessage?) {
+        queue.add(message)
+        flush()
+    }
+
+    fun empty(endPointQueue: EndPointQueue?) {
+        waiting.add(endPointQueue)
+        flush()
+    }
+
+    fun stopped(queue: EndPointQueue) {
+        waiting.remove(queue)
+        endpoints.remove(queue)
+        queue.dispatch(EndOfStream())
+    }
+
+    fun drain(drainTo: MutableCollection<InterHubMessage?>) {
+        drainTo.addAll(queue)
+        queue.clear()
+    }
+
+    private fun flush() {
+        // TODO - need to do a better job of routing messages when there are multiple endpoints. This is just going to forward all queued messages to the first
+        // waiting endpoint, even if there are multiple waiting to do work
+        val selected = if (waiting.isEmpty()) null else waiting.get(0)
+        while (!queue.isEmpty()) {
+            val message = queue.peekFirst()
+            when (message.delivery) {
+                Stateful, AllHandlers -> {
+                    if (endpoints.isEmpty()) {
+                        return
+                    }
+                    if (message.delivery === InterHubMessage.Delivery.Stateful) {
+                        initializer.onStatefulMessage(message)
+                    }
+                    for (endpoint in endpoints) {
+                        endpoint.dispatch(message)
+                    }
+                    queue.removeFirst()
+                    waiting.clear()
+                    continue
+                }
+
+                SingleHandler -> {
+                    if (selected == null) {
+                        return
+                    }
+                    queue.removeFirst()
+                    waiting.remove(selected)
+                    selected.dispatch(message)
+                }
+
+                else -> throw IllegalArgumentException("Unknown delivery type: " + message.delivery)
+            }
+        }
+    }
+
+    fun newEndpoint(): EndPointQueue {
+        val endPointQueue = EndPointQueue(this, lock.newCondition())
+        endpoints.add(endPointQueue)
+        initializer.onQueueAdded(endPointQueue)
+        return endPointQueue
+    }
+}

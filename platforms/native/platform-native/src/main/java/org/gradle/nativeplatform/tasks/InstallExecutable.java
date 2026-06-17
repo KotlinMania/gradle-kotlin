@@ -68,7 +68,7 @@ public abstract class InstallExecutable extends DefaultTask {
     public InstallExecutable(WorkerLeaseService workerLeaseService) {
         this.workerLeaseService = workerLeaseService;
         this.libs = getProject().files();
-        this.getInstalledExecutable().convention(getLibDirectory().map(directory -> directory.file(getExecutableFile().getAsFile().get().getName())));
+        this.getInstalledExecutable().convention(getLibDirectory().<RegularFile>map(directory -> directory.file(getExecutableFile().getAsFile().get().getName())));
         // A further work around for missing ability to skip task when input file is missing (see #getInputFileIfExists below)
         getInputs().file(getExecutableFile());
     }
@@ -160,7 +160,7 @@ public abstract class InstallExecutable extends DefaultTask {
      */
     @Internal("covered by getInstallDirectory")
     public Provider<RegularFile> getRunScriptFile() {
-        return getInstallDirectory().file(getExecutableFile().getLocationOnly().map(executableFile -> OperatingSystem.forName(getTargetPlatform().get().getOperatingSystem().getName()).getScriptName(executableFile.getAsFile().getName())));
+        return getInstallDirectory().file(getExecutableFile().getLocationOnly().<@org.jetbrains.annotations.Nullable String>map(executableFile -> OperatingSystem.forName(getTargetPlatform().get().getOperatingSystem().getName()).getScriptName(executableFile.getAsFile().getName())));
     }
 
     @Inject
@@ -189,7 +189,7 @@ public abstract class InstallExecutable extends DefaultTask {
     }
 
     private Provider<Directory> getLibDirectory() {
-        return getInstallDirectory().getLocationOnly().map(dir -> dir.dir("lib"));
+        return getInstallDirectory().getLocationOnly().<Directory>map(dir -> dir.dir("lib"));
     }
 
     private void installWindows(File executable, File runScript) {

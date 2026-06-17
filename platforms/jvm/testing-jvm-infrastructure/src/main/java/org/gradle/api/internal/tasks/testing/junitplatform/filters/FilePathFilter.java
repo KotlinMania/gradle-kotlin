@@ -50,7 +50,7 @@ public final class FilePathFilter implements PostDiscoveryFilter {
     }
 
     private boolean shouldRun(TestDescriptor descriptor) {
-        TestSource testSource = descriptor.getSource().orElseThrow(() -> new IllegalArgumentException("No test source found for " + descriptor));
+        TestSource testSource = descriptor.getSource().<IllegalArgumentException>orElseThrow(() -> new IllegalArgumentException("No test source found for " + descriptor));
         if (testSource instanceof FileSource || testSource instanceof DirectorySource) {
             return matcher.matchesFile(((FileSystemSource) testSource).getFile());
         }

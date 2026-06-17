@@ -88,7 +88,7 @@ public class SwiftcToolChain extends ExtendableToolChain<SwiftcPlatformToolChain
     }
 
     private PlatformToolProvider createPlatformToolProvider(NativePlatformInternal targetPlatform) {
-        DefaultSwiftcPlatformToolChain configurableToolChain = instantiator.newInstance(DefaultSwiftcPlatformToolChain.class, targetPlatform);
+        DefaultSwiftcPlatformToolChain configurableToolChain = instantiator.<DefaultSwiftcPlatformToolChain>newInstance(DefaultSwiftcPlatformToolChain.class, targetPlatform);
         addDefaultTools(configurableToolChain);
         configureActions.execute(configurableToolChain);
 
@@ -138,11 +138,11 @@ public class SwiftcToolChain extends ExtendableToolChain<SwiftcPlatformToolChain
     }
 
     private void addDefaultTools(DefaultSwiftcPlatformToolChain toolChain) {
-        toolChain.add(instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.SWIFT_COMPILER));
-        toolChain.add(instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.LINKER));
-        toolChain.add(instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER));
-        toolChain.add(instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.SYMBOL_EXTRACTOR));
-        toolChain.add(instantiator.newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STRIPPER));
+        toolChain.add(instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.SWIFT_COMPILER));
+        toolChain.add(instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.LINKER));
+        toolChain.add(instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER));
+        toolChain.add(instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.SYMBOL_EXTRACTOR));
+        toolChain.add(instantiator.<DefaultCommandLineToolConfiguration>newInstance(DefaultCommandLineToolConfiguration.class, ToolType.STRIPPER));
     }
 
     @Override

@@ -25,8 +25,8 @@ import org.gradle.platform.OperatingSystem;
 public class DaemonJvmPropertiesUtils {
 
     public static String getToolchainUrlPropertyForPlatform(BuildPlatform buildPlatform) {
-        String operatingSystemName = buildPlatform.getOperatingSystem().name();
-        String architectureName = buildPlatform.getArchitecture().name();
+        String operatingSystemName = buildPlatform.operatingSystem.name();
+        String architectureName = buildPlatform.architecture.name();
         return String.format(DaemonJvmPropertiesDefaults.TOOLCHAIN_URL_PROPERTY_FORMAT, operatingSystemName, architectureName);
     }
 

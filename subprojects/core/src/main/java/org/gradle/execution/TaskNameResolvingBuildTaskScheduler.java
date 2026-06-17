@@ -90,7 +90,7 @@ public class TaskNameResolvingBuildTaskScheduler implements BuildTaskScheduler {
                             "Executing other tasks along with the '" + builtInCommand.getDisplayName() + "' task is not allowed. " +
                             "The '" + builtInCommand.getDisplayName() + "' task must be run by itself.");
                     ProblemId id = ProblemId.create("init invocation problem", "Init invocation problem", GradleCoreProblemGroup.taskSelection());
-                    throw problemsService.getInternalReporter().throwing(ex, id, spec -> {
+                    throw problemsService.internalReporter.throwing(ex, id, spec -> {
                         spec.contextualLabel(ex.getMessage());
                     });
                 });

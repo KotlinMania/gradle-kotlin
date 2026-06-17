@@ -68,7 +68,7 @@ public abstract class AbstractLinkTask extends DefaultTask implements ObjectFile
         final ObjectFactory objectFactory = getProject().getObjects();
         this.libs = getProject().files();
         this.source = getProject().files();
-        getDestinationDirectory().convention(getLinkedFile().getLocationOnly().map(regularFile -> {
+        getDestinationDirectory().convention(getLinkedFile().getLocationOnly().<org.gradle.api.file.Directory>map(regularFile -> {
             // TODO: Get rid of destinationDirectory entirely and replace it with a
             // collection of link outputs
             DirectoryProperty dirProp = objectFactory.directoryProperty();
@@ -77,7 +77,7 @@ public abstract class AbstractLinkTask extends DefaultTask implements ObjectFile
         }));
         // TODO: There is something wrong in the ASM class generator that does not allow us to create
         // this as a managed property as long as we have isDebuggable.
-        this.debuggable = objectFactory.property(Boolean.class).value(false);
+        this.debuggable = objectFactory.<Boolean>property(Boolean.class).value(false);
     }
 
     /**
@@ -226,18 +226,18 @@ public abstract class AbstractLinkTask extends DefaultTask implements ObjectFile
         spec.setOperationLogger(operationLogger);
 
         Compiler<LinkerSpec> compiler = createCompiler();
-        compiler = BuildOperationLoggingCompilerDecorator.wrap(compiler);
+        compiler = BuildOperationLoggingCompilerDecorator.<LinkerSpec>wrap(compiler);
         WorkResult result = compiler.execute(spec);
         setDidWork(result.getDidWork() || cleanedOutputs);
     }
 
     @SuppressWarnings("unchecked")
     private Compiler<LinkerSpec> createCompiler() {
-        NativePlatformInternal targetPlatform = Cast.cast(NativePlatformInternal.class, this.getTargetPlatform().get());
-        NativeToolChainInternal toolChain = Cast.cast(NativeToolChainInternal.class, getToolChain().get());
+        NativePlatformInternal targetPlatform = Cast.<NativePlatformInternal, NativePlatform>cast(NativePlatformInternal.class, this.getTargetPlatform().get());
+        NativeToolChainInternal toolChain = Cast.<NativeToolChainInternal, NativeToolChain>cast(NativeToolChainInternal.class, getToolChain().get());
         PlatformToolProvider toolProvider = toolChain.select(targetPlatform);
         Class<LinkerSpec> linkerSpecType = (Class<LinkerSpec>) createLinkerSpec().getClass();
-        return toolProvider.newCompiler(linkerSpecType);
+        return toolProvider.<LinkerSpec>newCompiler(linkerSpecType);
     }
 
     protected abstract LinkerSpec createLinkerSpec();

@@ -22,11 +22,11 @@ import org.gradle.internal.os.OperatingSystem;
 import java.util.List;
 
 public enum SymbolExtractorOsConfig {
-    OBJCOPY("objcopy", ImmutableList.of("--only-keep-debug"), ".debug"),
-    DSYMUTIL("dsymutil", ImmutableList.of("-f"), ".dwarf") {
+    OBJCOPY("objcopy", ImmutableList.<String>of("--only-keep-debug"), ".debug"),
+    DSYMUTIL("dsymutil", ImmutableList.<String>of("-f"), ".dwarf") {
         @Override
         public List<String> getInputOutputFileArguments(String inputFilePath, String outputFilePath) {
-            return ImmutableList.of("-o", outputFilePath, inputFilePath);
+            return ImmutableList.<String>of("-o", outputFilePath, inputFilePath);
         }
     };
 
@@ -59,7 +59,7 @@ public enum SymbolExtractorOsConfig {
     }
 
     public List<String> getInputOutputFileArguments(String inputFilePath, String outputFilePath) {
-        return ImmutableList.of(inputFilePath, outputFilePath);
+        return ImmutableList.<String>of(inputFilePath, outputFilePath);
     }
 
     public String getExtension() {

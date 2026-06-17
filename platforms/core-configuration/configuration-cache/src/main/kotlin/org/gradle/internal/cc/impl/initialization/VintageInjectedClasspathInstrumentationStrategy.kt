@@ -27,7 +27,7 @@ internal class VintageInjectedClasspathInstrumentationStrategy internal construc
 ) : InjectedClasspathInstrumentationStrategy {
 
     override fun getTransform(): TransformMode =
-        if (!agentStatus.isAgentInstrumentationEnabled() && isThirdPartyAgentPresent()) {
+        if (!agentStatus.isAgentInstrumentationEnabled && isThirdPartyAgentPresent()) {
             // Without Gradle's instrumentation agent, the buildscript classpath is rewritten ahead of time;
             // disable instrumentation so the third-party transformer observes the user's bytecode, not Gradle's.
             // Loses Gradle's bytecode upgrades and CC-promo detection on this classpath in exchange.

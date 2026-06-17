@@ -91,7 +91,7 @@ public class WindowsKitSdkInstall extends WindowsKitInstall implements WindowsSd
 
         @Override
         public List<File> getIncludeDirs() {
-            return Arrays.asList(
+            return Arrays.<File>asList(
                 new File(getBaseDir(), "Include/" + getImplementationVersion().toString() + "/um"),
                 new File(getBaseDir(), "Include/" + getImplementationVersion().toString() + "/shared")
             );
@@ -99,7 +99,7 @@ public class WindowsKitSdkInstall extends WindowsKitInstall implements WindowsSd
 
         @Override
         public List<File> getLibDirs() {
-            return Collections.singletonList(new File(getBaseDir(), "Lib/" + getImplementationVersion().toString() + "/um/" + platformDirName));
+            return Collections.<File>singletonList(new File(getBaseDir(), "Lib/" + getImplementationVersion().toString() + "/um/" + platformDirName));
         }
 
         @Override
@@ -109,12 +109,12 @@ public class WindowsKitSdkInstall extends WindowsKitInstall implements WindowsSd
 
         @Override
         public Map<String, String> getPreprocessorMacros() {
-            return Collections.emptyMap();
+            return Collections.<String, String>emptyMap();
         }
 
         @Override
         public List<File> getPath() {
-            return Collections.singletonList(getBinDir());
+            return Collections.<File>singletonList(getBinDir());
         }
 
         private File getBinDir() {

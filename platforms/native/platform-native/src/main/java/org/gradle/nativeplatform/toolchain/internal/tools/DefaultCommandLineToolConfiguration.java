@@ -42,6 +42,6 @@ public class DefaultCommandLineToolConfiguration implements CommandLineToolConfi
 
     @Override
     public Action<List<String>> getArgAction() {
-        return Actions.composite(argActions);
+        return Actions.<List<String>>composite(argActions);
     }
 }

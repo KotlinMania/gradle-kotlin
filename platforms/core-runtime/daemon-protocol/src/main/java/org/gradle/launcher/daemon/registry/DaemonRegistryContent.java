@@ -71,7 +71,7 @@ public class DaemonRegistryContent implements Serializable {
      * Removes the status
      */
     public void removeInfo(int port) {
-        infosMap.keySet().removeIf(address -> ((InetEndpoint) address).getPort() == port);
+        infosMap.keySet().removeIf(address -> ((InetEndpoint) address).port == port);
     }
 
     /**
@@ -189,7 +189,7 @@ public class DaemonRegistryContent implements Serializable {
                         MULTI_CHOICE_ADDRESS_SERIALIZER.write(encoder, (MultiChoiceAddress) address);
                         break;
                     default:
-                        ObjectOutputStream oos = new ObjectOutputStream(encoder.getOutputStream());
+                        ObjectOutputStream oos = new ObjectOutputStream(encoder.outputStream);
                         oos.writeObject(address);
                 }
             }
@@ -208,7 +208,7 @@ public class DaemonRegistryContent implements Serializable {
                         out.add(MULTI_CHOICE_ADDRESS_SERIALIZER.read(decoder));
                         break;
                     default:
-                        ObjectInputStream ois = new ObjectInputStream(decoder.getInputStream());
+                        ObjectInputStream ois = new ObjectInputStream(decoder.inputStream);
                         out.add((Address) ois.readObject());
                 }
             }

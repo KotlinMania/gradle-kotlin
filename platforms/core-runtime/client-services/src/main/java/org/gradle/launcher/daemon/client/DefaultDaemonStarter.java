@@ -139,7 +139,7 @@ public class DefaultDaemonStarter implements DaemonStarter {
         daemonArgs.addAll(getPriorityArgs(daemonRequestContext.getPriority()));
         daemonArgs.add(resolvedJava.getAbsolutePath());
         Collection<String> daemonOpts = daemonRequestContext.getDaemonOpts();
-        daemonArgs.addAll(JpmsConfiguration.forDaemonProcesses(majorJavaVersion, daemonRequestContext.getNativeServicesMode().isPotentiallyEnabled()));
+        daemonArgs.addAll(JpmsConfiguration.forDaemonProcesses(majorJavaVersion, daemonRequestContext.getNativeServicesMode().isPotentiallyEnabled));
         daemonArgs.addAll(daemonOpts);
         daemonArgs.add("-cp");
         daemonArgs.add(CollectionUtils.join(File.pathSeparator, classpath.getAsFiles()));
@@ -259,7 +259,7 @@ public class DefaultDaemonStarter implements DaemonStarter {
         } catch (Exception e) {
             throw new GradleException("Could not start Gradle daemon.", e);
         } finally {
-            LOGGER.info("An attempt to start the daemon took {}.", clock.getElapsed());
+            LOGGER.info("An attempt to start the daemon took {}.", clock.elapsed);
         }
     }
 

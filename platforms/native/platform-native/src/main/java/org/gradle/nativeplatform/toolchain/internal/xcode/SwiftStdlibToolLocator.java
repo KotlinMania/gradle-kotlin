@@ -33,6 +33,6 @@ public class SwiftStdlibToolLocator extends AbstractLocator {
 
     @Override
     protected List<String> getXcrunFlags() {
-        return ImmutableList.of("--find", "swift-stdlib-tool");
+        return ImmutableList.<String>of("--find", "swift-stdlib-tool");
     }
 }

@@ -74,7 +74,7 @@ public class PropertiesFileAwareClasspathResourceHasher extends FallbackHandling
 
     @Override
     boolean filter(ZipEntryContext context) {
-        return !context.getEntry().isDirectory() && matchesAnyFilters(context.getRelativePathSegments());
+        return !context.getEntry().isDirectory && matchesAnyFilters(context.getRelativePathSegments());
     }
 
     @Override

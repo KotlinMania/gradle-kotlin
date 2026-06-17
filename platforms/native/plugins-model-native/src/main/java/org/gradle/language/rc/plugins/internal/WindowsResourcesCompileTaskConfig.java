@@ -61,8 +61,8 @@ public class WindowsResourcesCompileTaskConfig implements SourceTransformTaskCon
     private void configureResourceCompileTask(WindowsResourceCompile task, final NativeBinarySpecInternal binary, final WindowsResourceSet sourceSet) {
         task.setDescription("Compiles resources of the " + sourceSet + " of " + binary);
 
-        task.getToolChain().set(binary.getToolChain());
-        task.getTargetPlatform().set(binary.getTargetPlatform());
+        task.toolChain.set(binary.getToolChain());
+        task.targetPlatform.set(binary.getTargetPlatform());
 
         task.includes(sourceSet.getExportedHeaders().getSourceDirectories());
 
@@ -84,11 +84,11 @@ public class WindowsResourcesCompileTaskConfig implements SourceTransformTaskCon
 
         final Project project = task.getProject();
 
-        task.setOutputDir(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), ((LanguageSourceSetInternal) sourceSet).getProjectScopedName())).get());
+        task.outputDir = project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), ((LanguageSourceSetInternal) sourceSet).getProjectScopedName())).get();
 
         PreprocessingTool rcCompiler = (PreprocessingTool) binary.getToolByName("rcCompiler");
         task.setMacros(rcCompiler.getMacros());
-        task.getCompilerArgs().set(rcCompiler.getArgs());
+        task.compilerArgs.set(rcCompiler.getArgs());
 
         FileTree resourceOutputs = task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.res"));
         binary.binaryInputs(resourceOutputs);

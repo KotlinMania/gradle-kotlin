@@ -120,8 +120,8 @@ public class DefaultDaemonConnector implements DaemonConnector {
     @Override
     public DaemonClientConnection connect(ExplainingSpec<DaemonContext> constraint) {
         final Pair<Collection<DaemonInfo>, Collection<DaemonInfo>> idleBusy = partitionByState(daemonRegistry.getAll(), Idle);
-        final Collection<DaemonInfo> idleDaemons = idleBusy.getLeft();
-        final Collection<DaemonInfo> busyDaemons = idleBusy.getRight();
+        final Collection<DaemonInfo> idleDaemons = idleBusy.left;
+        final Collection<DaemonInfo> busyDaemons = idleBusy.right;
 
         // Check to see if there are any compatible idle daemons
         DaemonClientConnection connection = connectToIdleDaemon(idleDaemons, constraint);
@@ -163,7 +163,7 @@ public class DefaultDaemonConnector implements DaemonConnector {
     private DaemonClientConnection connectToCanceledDaemon(Collection<DaemonInfo> busyDaemons, ExplainingSpec<DaemonContext> constraint) {
         DaemonClientConnection connection = null;
         final Pair<Collection<DaemonInfo>, Collection<DaemonInfo>> canceledBusy = partitionByState(busyDaemons, Canceled);
-        final Collection<DaemonInfo> compatibleCanceledDaemons = getCompatibleDaemons(canceledBusy.getLeft(), constraint);
+        final Collection<DaemonInfo> compatibleCanceledDaemons = getCompatibleDaemons(canceledBusy.left, constraint);
         if (!compatibleCanceledDaemons.isEmpty()) {
             LOGGER.info(DaemonMessages.WAITING_ON_CANCELED);
             CountdownTimer timer = Time.startCountdownTimer(CANCELED_WAIT_TIMEOUT);

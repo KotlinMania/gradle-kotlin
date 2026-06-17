@@ -51,7 +51,7 @@ public class DefaultResourceLockStatistics implements ResourceLockStatistics {
         measure("Blocked on", locks, (Factory<@Nullable Void>) () -> {
             Timer timer = Time.startTimer();
             runnable.run();
-            totalBlockedTime.addAndGet(timer.getElapsedMillis());
+            totalBlockedTime.addAndGet(timer.elapsedMillis);
             return null;
         });
     }

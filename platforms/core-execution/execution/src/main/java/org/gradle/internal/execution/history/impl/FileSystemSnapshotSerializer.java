@@ -133,8 +133,8 @@ public class FileSystemSnapshotSerializer implements Serializer<FileSystemSnapsh
                             writeAccessType(encoder, fileSnapshot.getAccessType());
                             writeHashCode(encoder, fileSnapshot.getHash());
                             FileMetadata metadata = fileSnapshot.getMetadata();
-                            encoder.writeSmallLong(metadata.getLastModified());
-                            encoder.writeSmallLong(metadata.getLength());
+                            encoder.writeSmallLong(metadata.lastModified);
+                            encoder.writeSmallLong(metadata.length);
                         } catch (IOException e) {
                             throw UncheckedException.throwAsUncheckedException(e);
                         }

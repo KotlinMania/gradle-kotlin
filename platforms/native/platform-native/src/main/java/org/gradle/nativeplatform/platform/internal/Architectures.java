@@ -29,7 +29,7 @@ public class Architectures {
     public static final KnownArchitecture ARM_V7 = new KnownArchitecture("arm-v7", "armv7", "arm", "arm32");
     public static final KnownArchitecture AARCH64 = new KnownArchitecture("aarch64", "arm-v8", "arm64");
 
-    private static final List<KnownArchitecture> KNOWN_ARCHITECTURES = asList(
+    private static final List<KnownArchitecture> KNOWN_ARCHITECTURES = <KnownArchitecture>asList(
             X86,
             X86_64,
             IA_64,
@@ -61,7 +61,7 @@ public class Architectures {
 
         public KnownArchitecture(String canonicalName, String... aliases) {
             this.canonicalName = canonicalName;
-            this.aliases = Arrays.asList(aliases);
+            this.aliases = Arrays.<String>asList(aliases);
         }
 
         public String getCanonicalName() {

@@ -202,7 +202,7 @@ public class TestFiles {
     }
 
     public static VirtualFileSystem virtualFileSystem() {
-        CaseSensitivity caseSensitivity = fileSystem().isCaseSensitive() ? CASE_SENSITIVE : CASE_INSENSITIVE;
+        CaseSensitivity caseSensitivity = fileSystem().isCaseSensitive ? CASE_SENSITIVE : CASE_INSENSITIVE;
         return new TestVirtualFileSystem(DefaultSnapshotHierarchy.empty(caseSensitivity));
     }
 

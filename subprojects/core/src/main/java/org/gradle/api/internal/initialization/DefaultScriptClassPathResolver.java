@@ -163,7 +163,7 @@ public class DefaultScriptClassPathResolver implements ScriptClassPathResolver {
                 instrumentedProjectDependencies
             );
 
-            MethodInterceptionReportCollector reportCollector = propertyUpgradeReportConfig.getReportCollector();
+            MethodInterceptionReportCollector reportCollector = propertyUpgradeReportConfig.reportCollector;
             instrumentedClasspath.getOrDefault(INTERCEPTED_METHODS_REPORT, Collections.emptyList()).forEach(reportCollector::collect);
             ClassPath classPath = TransformedClassPath.handleInstrumentingArtifactTransform(instrumentedClasspath.getOrDefault(ARTIFACT, Collections.emptyList()));
             return composeWithThirdPartyAgentIfPresent(classPath, contextId, buildService, instrumentedProjectDependencies);
@@ -176,7 +176,7 @@ public class DefaultScriptClassPathResolver implements ScriptClassPathResolver {
         CacheInstrumentationDataBuildService buildService,
         ArtifactCollection instrumentedProjectDependencies
     ) {
-        boolean composeWithThirdPartyAgent = agentStatus.isAgentInstrumentationEnabled() && ThirdPartyAgentDetection.isThirdPartyAgentPresent();
+        boolean composeWithThirdPartyAgent = agentStatus.isAgentInstrumentationEnabled && ThirdPartyAgentDetection.isThirdPartyAgentPresent();
         if (!composeWithThirdPartyAgent || !(classPath instanceof TransformedClassPath)) {
             return classPath;
         }

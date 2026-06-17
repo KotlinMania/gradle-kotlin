@@ -29,7 +29,7 @@ public class FetchCustomModelForEachProject implements BuildAction<List<SomeTool
     @Override
     public List<SomeToolingModel> execute(BuildController controller) {
         List<SomeToolingModel> result = new ArrayList<>();
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         for (BasicGradleProject project : buildModel.getProjects()) {
             SomeToolingModel model = controller.findModel(project, SomeToolingModel.class);
             if (model != null) {

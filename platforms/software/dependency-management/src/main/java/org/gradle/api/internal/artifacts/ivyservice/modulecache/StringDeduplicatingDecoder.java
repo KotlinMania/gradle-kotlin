@@ -35,7 +35,7 @@ class StringDeduplicatingDecoder implements Decoder, Closeable {
 
     @Override
     public InputStream getInputStream() {
-        return delegate.getInputStream();
+        return delegate.inputStream;
     }
 
     @Override

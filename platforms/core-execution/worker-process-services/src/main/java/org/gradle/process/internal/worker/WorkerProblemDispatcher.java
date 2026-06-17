@@ -60,6 +60,6 @@ public class WorkerProblemDispatcher implements WorkerProblemProtocol, WorkerPro
         if (p == null) {
             throw new IllegalStateException("Received a problem from the worker, but no problems service is currently bound to the protocol");
         }
-        p.getInternalReporter().report(problem, id);
+        p.internalReporter.report(problem, id);
     }
 }

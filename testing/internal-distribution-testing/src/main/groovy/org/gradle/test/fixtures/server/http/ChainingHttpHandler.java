@@ -119,9 +119,9 @@ class ChainingHttpHandler implements HttpHandler, ResettableExpectations {
     }
 
     private void waitForRequestsToFinish() {
-        long completionTimeout = clock.getCurrentTime() + timeoutMs;
+        long completionTimeout = clock.currentTime + timeoutMs;
         for (RequestOutcome outcome : outcomes) {
-            long waitTime = completionTimeout - clock.getCurrentTime();
+            long waitTime = completionTimeout - clock.currentTime;
             outcome.awaitCompletion(waitTime);
         }
     }

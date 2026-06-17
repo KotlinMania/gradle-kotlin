@@ -116,46 +116,46 @@ public abstract class AbstractPlatformToolProvider implements PlatformToolProvid
     @Override
     public <T extends CompileSpec> org.gradle.language.base.internal.compile.Compiler<T> newCompiler(Class<T> spec) {
         if (CppCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createCppCompiler());
+            return CompilerUtil.<T>castCompiler(createCppCompiler());
         }
         if (CppPCHCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createCppPCHCompiler());
+            return CompilerUtil.<T>castCompiler(createCppPCHCompiler());
         }
         if (CCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createCCompiler());
+            return CompilerUtil.<T>castCompiler(createCCompiler());
         }
         if (CPCHCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createCPCHCompiler());
+            return CompilerUtil.<T>castCompiler(createCPCHCompiler());
         }
         if (ObjectiveCppCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createObjectiveCppCompiler());
+            return CompilerUtil.<T>castCompiler(createObjectiveCppCompiler());
         }
         if (ObjectiveCppPCHCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createObjectiveCppPCHCompiler());
+            return CompilerUtil.<T>castCompiler(createObjectiveCppPCHCompiler());
         }
         if (ObjectiveCCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createObjectiveCCompiler());
+            return CompilerUtil.<T>castCompiler(createObjectiveCCompiler());
         }
         if (ObjectiveCPCHCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createObjectiveCPCHCompiler());
+            return CompilerUtil.<T>castCompiler(createObjectiveCPCHCompiler());
         }
         if (WindowsResourceCompileSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createWindowsResourceCompiler());
+            return CompilerUtil.<T>castCompiler(createWindowsResourceCompiler());
         }
         if (AssembleSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createAssembler());
+            return CompilerUtil.<T>castCompiler(createAssembler());
         }
         if (LinkerSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createLinker());
+            return CompilerUtil.<T>castCompiler(createLinker());
         }
         if (StaticLibraryArchiverSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createStaticLibraryArchiver());
+            return CompilerUtil.<T>castCompiler(createStaticLibraryArchiver());
         }
         if (SymbolExtractorSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createSymbolExtractor());
+            return CompilerUtil.<T>castCompiler(createSymbolExtractor());
         }
         if (StripperSpec.class.isAssignableFrom(spec)) {
-            return CompilerUtil.castCompiler(createStripper());
+            return CompilerUtil.<T>castCompiler(createStripper());
         }
         throw new IllegalArgumentException(String.format("Don't know how to compile from a spec of type %s.", spec.getSimpleName()));
     }

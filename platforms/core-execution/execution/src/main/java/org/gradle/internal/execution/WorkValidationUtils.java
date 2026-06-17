@@ -54,10 +54,10 @@ public class WorkValidationUtils {
     }
 
     private static String singleLineWarning(ProblemInternal problem) {
-        String label = problem.getContextualLabel() != null
-            ? problem.getContextualLabel()
-            : problem.getDefinition().getId().getDisplayName();
-        String details = problem.getDetails();
+        String label = problem.contextualLabel != null
+            ? problem.contextualLabel
+            : problem.definition.getId().getDisplayName();
+        String details = problem.details;
         return details != null ? label + ". Reason: " + details.replaceAll("\\s+", " ") : label;
     }
 
@@ -71,11 +71,11 @@ public class WorkValidationUtils {
         LinkedHashMap<List<Object>, ProblemInternal> unique = new LinkedHashMap<>();
         for (ProblemInternal problem : problems) {
             List<Object> key = Arrays.asList(
-                problem.getDefinition().getId(),
-                problem.getContextualLabel(),
-                problem.getDetails(),
-                problem.getSolutions(),
-                problem.getOriginLocations()
+                problem.definition.getId(),
+                problem.contextualLabel,
+                problem.details,
+                problem.solutions,
+                problem.originLocations
             );
             unique.putIfAbsent(key, problem);
         }

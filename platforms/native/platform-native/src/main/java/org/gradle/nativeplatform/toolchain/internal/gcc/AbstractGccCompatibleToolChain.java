@@ -127,7 +127,7 @@ public abstract class AbstractGccCompatibleToolChain extends ExtendableToolChain
 
     @Override
     public void target(String platformName, Action<? super GccPlatformToolChain> action) {
-        target(new DefaultTargetPlatformConfiguration(asList(platformName), action));
+        target(new DefaultTargetPlatformConfiguration(<String>asList(platformName), action));
     }
 
     public void target(List<String> platformNames, Action<? super GccPlatformToolChain> action) {
@@ -209,7 +209,7 @@ public abstract class AbstractGccCompatibleToolChain extends ExtendableToolChain
             return new UnsupportedPlatformToolProvider(targetPlatform.getOperatingSystem(), String.format("Don't know how to build for %s.", targetPlatform.getDisplayName()));
         }
 
-        DefaultGccPlatformToolChain configurableToolChain = instantiator.newInstance(DefaultGccPlatformToolChain.class, targetPlatform);
+        DefaultGccPlatformToolChain configurableToolChain = instantiator.<DefaultGccPlatformToolChain>newInstance(DefaultGccPlatformToolChain.class, targetPlatform);
         addDefaultTools(configurableToolChain);
         configureDefaultTools(configurableToolChain);
         targetPlatformConfigurationConfiguration.apply(configurableToolChain);
@@ -247,15 +247,15 @@ public abstract class AbstractGccCompatibleToolChain extends ExtendableToolChain
     }
 
     private void addDefaultTools(DefaultGccPlatformToolChain toolChain) {
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.C_COMPILER, "gcc"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.CPP_COMPILER, "g++"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.LINKER, "g++"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER, "ar"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.OBJECTIVECPP_COMPILER, "g++"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.OBJECTIVEC_COMPILER, "gcc"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.ASSEMBLER, "gcc"));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.SYMBOL_EXTRACTOR, SymbolExtractorOsConfig.current().getExecutableName()));
-        toolChain.add(instantiator.newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.STRIPPER, "strip"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.C_COMPILER, "gcc"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.CPP_COMPILER, "g++"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.LINKER, "g++"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.STATIC_LIB_ARCHIVER, "ar"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.OBJECTIVECPP_COMPILER, "g++"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.OBJECTIVEC_COMPILER, "gcc"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.ASSEMBLER, "gcc"));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.SYMBOL_EXTRACTOR, SymbolExtractorOsConfig.current().getExecutableName()));
+        toolChain.add(instantiator.<DefaultGccCommandLineToolConfiguration>newInstance(DefaultGccCommandLineToolConfiguration.class, ToolType.STRIPPER, "strip"));
     }
 
     protected void configureDefaultTools(DefaultGccPlatformToolChain toolChain) {
@@ -318,7 +318,7 @@ public abstract class AbstractGccCompatibleToolChain extends ExtendableToolChain
             Action<List<String>> m64args = new Action<List<String>>() {
                 @Override
                 public void execute(List<String> args) {
-                    args.addAll(Arrays.asList(compilerArgs));
+                    args.addAll(Arrays.<String>asList(compilerArgs));
                 }
             };
             gccToolChain.getCppCompiler().withArguments(m64args);
@@ -351,7 +351,7 @@ public abstract class AbstractGccCompatibleToolChain extends ExtendableToolChain
             Action<List<String>> architectureArgs = new Action<List<String>>() {
                 @Override
                 public void execute(List<String> args) {
-                    args.addAll(Arrays.asList(compilerArgs));
+                    args.addAll(Arrays.<String>asList(compilerArgs));
                 }
             };
             gccToolChain.getCppCompiler().withArguments(architectureArgs);

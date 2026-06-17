@@ -111,7 +111,7 @@ public final class ClassMethodNameFilter implements PostDiscoveryFilter {
 
     private boolean matchesParentMethod(TestDescriptor descriptor, String methodName) {
         return descriptor.getParent()
-            .flatMap(this::className)
+            .<String>flatMap(this::className)
             .filter(className -> matcher.matchesTest(className, methodName))
             .isPresent();
     }
@@ -178,7 +178,7 @@ public final class ClassMethodNameFilter implements PostDiscoveryFilter {
     private Optional<String> className(TestDescriptor descriptor) {
         return descriptor.getSource()
             .filter(ClassSource.class::isInstance)
-            .map(ClassSource.class::cast)
-            .map(ClassSource::getClassName);
+            .<ClassSource>map(ClassSource.class::cast)
+            .<String>map(ClassSource::getClassName);
     }
 }

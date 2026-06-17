@@ -61,7 +61,7 @@ public class JavadocOptionFile {
     }
 
     public Map<String, JavadocOptionFileOptionInternal<?>> getOptions() {
-        return Collections.unmodifiableMap(options);
+        return Collections.<String, JavadocOptionFileOptionInternal<?>>unmodifiableMap(options);
     }
 
     public <T> JavadocOptionFileOption<T> addOption(JavadocOptionFileOptionInternal<T> option) {
@@ -79,15 +79,15 @@ public class JavadocOptionFile {
     }
 
     public JavadocOptionFileOption<String> addStringOption(String option, String value) {
-        return addOption(new StringJavadocOptionFileOption(option, value));
+        return <String>addOption(new StringJavadocOptionFileOption(option, value));
     }
 
     public <T> JavadocOptionFileOption<T> addEnumOption(String option) {
-        return addEnumOption(option, null);
+        return <T>addEnumOption(option, null);
     }
 
     public <T> JavadocOptionFileOption<T> addEnumOption(String option, T value) {
-        return addOption(new EnumJavadocOptionFileOption<T>(option, value));
+        return <T>addOption(new EnumJavadocOptionFileOption<T>(option, value));
     }
 
     public JavadocOptionFileOption<List<File>> addPathOption(String option) {
@@ -95,7 +95,7 @@ public class JavadocOptionFile {
     }
 
     public JavadocOptionFileOption<List<File>> addPathOption(String option, String joinBy) {
-        return addOption(new PathJavadocOptionFileOption(option, new ArrayList<>(), joinBy));
+        return <List<File>>addOption(new PathJavadocOptionFileOption(option, new ArrayList<>(), joinBy));
     }
 
     public JavadocOptionFileOption<List<String>> addStringsOption(String option) {
@@ -103,11 +103,11 @@ public class JavadocOptionFile {
     }
 
     public JavadocOptionFileOption<List<String>> addStringsOption(String option, String joinBy) {
-        return addOption(new StringsJavadocOptionFileOption(option, new ArrayList<>(), joinBy));
+        return <List<String>>addOption(new StringsJavadocOptionFileOption(option, new ArrayList<>(), joinBy));
     }
 
     public JavadocOptionFileOption<List<String>> addMultilineStringsOption(String option) {
-        return addOption(new MultilineStringsJavadocOptionFileOption(option, new ArrayList<>()));
+        return <List<String>>addOption(new MultilineStringsJavadocOptionFileOption(option, new ArrayList<>()));
     }
 
     public JavadocOptionFileOption<Boolean> addBooleanOption(String option) {
@@ -115,7 +115,7 @@ public class JavadocOptionFile {
     }
 
     public JavadocOptionFileOption<Boolean> addBooleanOption(String option, boolean value) {
-        return addOption(new BooleanJavadocOptionFileOption(option, value));
+        return <Boolean>addOption(new BooleanJavadocOptionFileOption(option, value));
     }
 
     public JavadocOptionFileOption<File> addFileOption(String option) {
@@ -123,7 +123,7 @@ public class JavadocOptionFile {
     }
 
     public JavadocOptionFileOption<File> addFileOption(String option, File value) {
-        return addOption(new FileJavadocOptionFileOption(option, value));
+        return <File>addOption(new FileJavadocOptionFileOption(option, value));
     }
 
     public void write(File optionFile) throws IOException {
@@ -141,11 +141,11 @@ public class JavadocOptionFile {
         if (foundOption == null) {
             throw new IllegalArgumentException("Cannot find option " + option);
         }
-        return Cast.uncheckedCast(foundOption);
+        return Cast.<JavadocOptionFileOption<T>>uncheckedCast(foundOption);
     }
 
     public JavadocOptionFileOption<List<List<String>>> addMultilineMultiValueOption(String option) {
-        return addOption(new MultilineMultiValueJavadocOptionFileOption(option, new ArrayList<>(), " "));
+        return <List<List<String>>>addOption(new MultilineMultiValueJavadocOptionFileOption(option, new ArrayList<>(), " "));
     }
 
     public Map<String, String> stringifyExtraOptionsToMap(Set<String> optionsToExclude) {

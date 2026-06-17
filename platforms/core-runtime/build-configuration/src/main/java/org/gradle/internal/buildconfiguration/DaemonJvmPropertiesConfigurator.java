@@ -54,7 +54,7 @@ public class DaemonJvmPropertiesConfigurator implements ProjectConfigureAction {
     public void execute(ProjectInternal project) {
         // Only useful for the root project
         if (project.getParent() == null) {
-            ProblemReporter reporter = project.getServices().get(Problems.class).getReporter();
+            ProblemReporter reporter = project.getServices().get(Problems.class).reporter;
             project.getTasks().register(TASK_NAME, UpdateDaemonJvm.class, task -> {
                 task.setGroup("Build Setup");
                 task.setDescription("Generates or updates the Gradle Daemon JVM criteria.");
@@ -70,14 +70,14 @@ public class DaemonJvmPropertiesConfigurator implements ProjectConfigureAction {
                             .zip(task.getVendor().orElse(DefaultJvmVendorSpec.any()), Pair::of)
                             .zip(task.getNativeImageCapable(), Pair::of),
                         (platforms, versionVendorNative) -> {
-                            JvmVendorSpec vendor = versionVendorNative.getLeft().getRight();
+                            JvmVendorSpec vendor = versionVendorNative.left.right;
                             JavaToolchainSpec toolchainSpec = project.getObjects().newInstance(DefaultToolchainSpec.class);
-                            toolchainSpec.getLanguageVersion().set(versionVendorNative.getLeft().getLeft());
+                            toolchainSpec.languageVersion.set(versionVendorNative.left.left);
                             if (!vendor.equals(DefaultJvmVendorSpec.any())) {
-                                toolchainSpec.getVendor().set(vendor);
+                                toolchainSpec.vendor.set(vendor);
                             }
-                            if (versionVendorNative.getRight()) {
-                                toolchainSpec.getNativeImageCapable().set(true);
+                            if (versionVendorNative.right) {
+                                toolchainSpec.nativeImageCapable.set(true);
                             }
                             if (platforms.isEmpty()) {
                                 return emptyMap();
@@ -88,7 +88,7 @@ public class DaemonJvmPropertiesConfigurator implements ProjectConfigureAction {
                                 UnconfiguredToolchainRepositoriesResolver exception = new UnconfiguredToolchainRepositoriesResolver();
                                 throw reporter.throwing(exception, reporter.create(UpdateDaemonJvm.TASK_CONFIGURATION_PROBLEM_ID, problemSpec -> {
                                     problemSpec.solution("Configure toolchain download repositories in your build settings.");
-                                    problemSpec.documentedAt(Documentation.userManual("toolchains", "sub:download_repositories").getUrl());
+                                    problemSpec.documentedAt(Documentation.userManual("toolchains", "sub:download_repositories").url);
                                 }));
                             }
                             Map<BuildPlatform, Optional<URI>> buildPlatformOptionalUriMap = platforms.stream()
@@ -101,7 +101,7 @@ public class DaemonJvmPropertiesConfigurator implements ProjectConfigureAction {
                                 IllegalStateException exception = new IllegalStateException("Toolchain resolvers did not return download URLs providing a JDK matching " + toolchainSpec + " for any of the requested platforms " + platforms);
                                 throw reporter.throwing(exception, reporter.create(UpdateDaemonJvm.TASK_CONFIGURATION_PROBLEM_ID, problemSpec -> {
                                     problemSpec.solution("Use a toolchain download repository capable of resolving the toolchain spec for the given platforms.");
-                                    problemSpec.documentedAt(Documentation.userManual("gradle_daemon", "sec:daemon_jvm_provisioning").getUrl());
+                                    problemSpec.documentedAt(Documentation.userManual("gradle_daemon", "sec:daemon_jvm_provisioning").url);
                                 }));
                             }
                             return platformToDownloadUri;

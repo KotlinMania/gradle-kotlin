@@ -388,7 +388,7 @@ public class PatternMatcherFactoryTest {
     }
 
     private static PathMatcher pathMatcher(PatternMatcher matcher) {
-        return ((PatternMatcherFactory.DefaultPatternMatcher) matcher).getPathMatcher();
+        return ((PatternMatcherFactory.DefaultPatternMatcher) matcher).pathMatcher;
     }
 
     private static Matcher<PatternMatcher> matchesFile(String... segments) {

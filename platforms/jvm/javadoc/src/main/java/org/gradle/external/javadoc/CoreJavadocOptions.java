@@ -90,7 +90,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
         this.optionFile = optionFile;
 
         overview = addStringOption(OPTION_OVERVIEW);
-        memberLevel = addEnumOption(OPTION_MEMBERLEVEL);
+        memberLevel = <JavadocMemberLevel>addEnumOption(OPTION_MEMBERLEVEL);
         doclet = addStringOption(OPTION_DOCLET);
         docletpath = addPathOption(OPTION_DOCLETPATH);
         source = addStringOption(OPTION_SOURCE);
@@ -98,32 +98,32 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
         modulePath = addPathOption(OPTION_MODULE_PATH);
         bootClasspath = addPathOption(OPTION_BOOTCLASSPATH);
         extDirs = addPathOption(OPTION_EXTDIRS);
-        outputLevel = addEnumOption(OPTION_OUTPUTLEVEL, JavadocOutputLevel.QUIET);
+        outputLevel = <JavadocOutputLevel>addEnumOption(OPTION_OUTPUTLEVEL, JavadocOutputLevel.QUIET);
         breakIterator = addBooleanOption(OPTION_BREAKITERATOR);
         locale = addStringOption(OPTION_LOCALE);
         encoding = addStringOption(OPTION_ENCODING);
 
         sourceNames = optionFile.getSourceNames();
 
-        knownCoreOptionNames = Collections.unmodifiableSet(new HashSet<>(optionFile.getOptions().keySet()));
+        knownCoreOptionNames = Collections.<String>unmodifiableSet(new HashSet<>(optionFile.getOptions().keySet()));
     }
 
     protected CoreJavadocOptions(CoreJavadocOptions original, JavadocOptionFile optionFile) {
         this.optionFile = optionFile;
 
-        overview = optionFile.getOption(OPTION_OVERVIEW);
-        memberLevel = optionFile.getOption(OPTION_MEMBERLEVEL);
-        doclet = optionFile.getOption(OPTION_DOCLET);
-        docletpath = optionFile.getOption(OPTION_DOCLETPATH);
-        source = optionFile.getOption(OPTION_SOURCE);
-        classpath = optionFile.getOption(OPTION_CLASSPATH);
-        modulePath = optionFile.getOption(OPTION_MODULE_PATH);
-        bootClasspath = optionFile.getOption(OPTION_BOOTCLASSPATH);
-        extDirs = optionFile.getOption(OPTION_EXTDIRS);
-        outputLevel = optionFile.getOption(OPTION_OUTPUTLEVEL);
-        breakIterator = optionFile.getOption(OPTION_BREAKITERATOR);
-        locale = optionFile.getOption(OPTION_LOCALE);
-        encoding = optionFile.getOption(OPTION_ENCODING);
+        overview = optionFile.<String>getOption(OPTION_OVERVIEW);
+        memberLevel = optionFile.<JavadocMemberLevel>getOption(OPTION_MEMBERLEVEL);
+        doclet = optionFile.<String>getOption(OPTION_DOCLET);
+        docletpath = optionFile.<List<File>>getOption(OPTION_DOCLETPATH);
+        source = optionFile.<String>getOption(OPTION_SOURCE);
+        classpath = optionFile.<List<File>>getOption(OPTION_CLASSPATH);
+        modulePath = optionFile.<List<File>>getOption(OPTION_MODULE_PATH);
+        bootClasspath = optionFile.<List<File>>getOption(OPTION_BOOTCLASSPATH);
+        extDirs = optionFile.<List<File>>getOption(OPTION_EXTDIRS);
+        outputLevel = optionFile.<JavadocOutputLevel>getOption(OPTION_OUTPUTLEVEL);
+        breakIterator = optionFile.<Boolean>getOption(OPTION_BREAKITERATOR);
+        locale = optionFile.<String>getOption(OPTION_LOCALE);
+        encoding = optionFile.<String>getOption(OPTION_ENCODING);
 
         sourceNames = optionFile.getSourceNames();
         jFlags = original.jFlags;
@@ -292,7 +292,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions docletpath(File... docletpath) {
-        this.docletpath.getValue().addAll(Arrays.asList(docletpath));
+        this.docletpath.getValue().addAll(Arrays.<File>asList(docletpath));
         return this;
     }
 
@@ -385,7 +385,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions classpath(File... classpath) {
-        this.classpath.getValue().addAll(Arrays.asList(classpath));
+        this.classpath.getValue().addAll(Arrays.<File>asList(classpath));
         return this;
     }
 
@@ -408,7 +408,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions bootClasspath(File... bootClasspath) {
-        this.bootClasspath.getValue().addAll(Arrays.asList(bootClasspath));
+        this.bootClasspath.getValue().addAll(Arrays.<File>asList(bootClasspath));
         return this;
     }
 
@@ -433,7 +433,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions extDirs(File... extDirs) {
-        this.extDirs.getValue().addAll(Arrays.asList(extDirs));
+        this.extDirs.getValue().addAll(Arrays.<File>asList(extDirs));
         return this;
     }
 
@@ -593,7 +593,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions sourceNames(String... sourceNames) {
-        this.sourceNames.getValue().addAll(Arrays.asList(sourceNames));
+        this.sourceNames.getValue().addAll(Arrays.<String>asList(sourceNames));
         return this;
     }
 
@@ -629,7 +629,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions jFlags(String... jFlags) {
-        this.jFlags.addAll(Arrays.asList(jFlags));
+        this.jFlags.addAll(Arrays.<String>asList(jFlags));
         return this;
     }
 
@@ -653,7 +653,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     @Override
     public MinimalJavadocOptions optionFiles(File... argumentFiles) {
-        this.optionFiles.addAll(Arrays.asList(argumentFiles));
+        this.optionFiles.addAll(Arrays.<File>asList(argumentFiles));
         return this;
     }
 
@@ -664,9 +664,9 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
 
     public <T> JavadocOptionFileOption<T> addOption(final JavadocOptionFileOption<T> option) {
         if (option instanceof JavadocOptionFileOptionInternal) {
-            return optionFile.addOption(Cast.<JavadocOptionFileOptionInternal<T>>uncheckedCast(option));
+            return optionFile.<T>addOption(Cast.<JavadocOptionFileOptionInternal<T>>uncheckedCast(option));
         }
-        return optionFile.addOption(new JavadocOptionFileOptionInternalAdapter<T>(option));
+        return optionFile.<T>addOption(new JavadocOptionFileOptionInternalAdapter<T>(option));
     }
 
     /**
@@ -738,7 +738,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
      * @return an option object to further configure the value
      */
     public <T extends Enum<T>> JavadocOptionFileOption<T> addEnumOption(String option) {
-        return optionFile.addEnumOption(option);
+        return optionFile.<T>addEnumOption(option);
     }
 
     /**
@@ -773,7 +773,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
      * @return an option object to further configure the value
      */
     public <T extends Enum<T>> JavadocOptionFileOption<T> addEnumOption(String option, T value) {
-        return optionFile.addEnumOption(option, value);
+        return optionFile.<T>addEnumOption(option, value);
     }
 
     /**
@@ -1010,7 +1010,7 @@ public abstract class CoreJavadocOptions implements MinimalJavadocOptions {
     @Input
     protected String getExtraOptions() {
         return optionFile.stringifyExtraOptionsToMap(knownOptionNames()).entrySet().stream()
-                .map(e -> e.getKey() + ":" + e.getValue())
+                .<String>map(e -> e.getKey() + ":" + e.getValue())
                 .collect(Collectors.joining(", "));
     }
 }

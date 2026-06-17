@@ -94,7 +94,7 @@ class XCTestScraper implements TextStream {
                     if (started) {
                         TestDescriptorInternal testDescriptor = new DefaultTestClassDescriptor(idGenerator.generateId(), testSuite);  // Using DefaultTestClassDescriptor to fake JUnit test
                         testSuiteIds.put(testSuite, testDescriptor.getId());
-                        processor.started(testDescriptor, new TestStartEvent(clock.getCurrentTime()));
+                        processor.started(testDescriptor, new TestStartEvent(clock.currentTime));
                         testDescriptors.push(new XCTestDescriptor(testDescriptor));
                     } else {
                         XCTestDescriptor xcTestDescriptor = testDescriptors.pop();
@@ -106,7 +106,7 @@ class XCTestScraper implements TextStream {
                             resultType = TestResult.ResultType.FAILURE;
                         }
 
-                        processor.completed(testDescriptor.getId(), new TestCompleteEvent(clock.getCurrentTime(), resultType));
+                        processor.completed(testDescriptor.getId(), new TestCompleteEvent(clock.currentTime, resultType));
                         // No longer should get any events needing this test suite id, clean up
                         testSuiteIds.remove(testSuite);
                     }
@@ -134,7 +134,7 @@ class XCTestScraper implements TextStream {
                     if (started) {
                         TestDescriptorInternal testDescriptor = new DefaultTestMethodDescriptor(idGenerator.generateId(), testSuite, testCase);
                         Object parentId = testSuiteIds.get(testSuite);
-                        processor.started(testDescriptor, new TestStartEvent(clock.getCurrentTime(), parentId));
+                        processor.started(testDescriptor, new TestStartEvent(clock.currentTime, parentId));
                         testDescriptors.push(new XCTestDescriptor(testDescriptor));
                     } else {
                         XCTestDescriptor xcTestDescriptor = testDescriptors.pop();
@@ -148,14 +148,14 @@ class XCTestScraper implements TextStream {
                             processor.failure(testDescriptor.getId(), TestFailure.fromTestFrameworkFailure(failure));
                         }
 
-                        processor.completed(testDescriptor.getId(), new TestCompleteEvent(clock.getCurrentTime(), resultType));
+                        processor.completed(testDescriptor.getId(), new TestCompleteEvent(clock.currentTime, resultType));
                     }
                 } else {
                     XCTestDescriptor xcTestDescriptor = testDescriptors.peek();
                     if (xcTestDescriptor != null) {
                         TestDescriptorInternal testDescriptor = xcTestDescriptor.getDescriptorInternal();
 
-                        processor.output(testDescriptor.getId(), new DefaultTestOutputEvent(clock.getCurrentTime(), destination, text));
+                        processor.output(testDescriptor.getId(), new DefaultTestOutputEvent(clock.currentTime, destination, text));
 
                         Matcher failureMessageMatcher = TEST_FAILURE_PATTERN.matcher(text);
                         if (failureMessageMatcher.find()) {
@@ -171,10 +171,10 @@ class XCTestScraper implements TextStream {
                         // If no current test can be associated to the output, the last known descriptor is used.
                         // See https://bugs.swift.org/browse/SR-1127 for more information.
                     } else if (lastDescriptor != null) {
-                        processor.output(lastDescriptor.getId(), new DefaultTestOutputEvent(clock.getCurrentTime(), destination, text));
+                        processor.output(lastDescriptor.getId(), new DefaultTestOutputEvent(clock.currentTime, destination, text));
                     } else {
                         // If there is no known last descriptor, associate it with the root test suite
-                        processor.output(rootTestSuiteId, new DefaultTestOutputEvent(clock.getCurrentTime(), destination, text));
+                        processor.output(rootTestSuiteId, new DefaultTestOutputEvent(clock.currentTime, destination, text));
                     }
                 }
             }

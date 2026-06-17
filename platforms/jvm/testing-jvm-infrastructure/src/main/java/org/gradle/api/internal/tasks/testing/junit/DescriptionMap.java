@@ -92,7 +92,7 @@ public final class DescriptionMap<V, DV> {
 
         public static <V> DescriptionWitness<V, SimpleValueWrapper<V>> witness() {
             // Safe due to invariant nature of witness
-            return Cast.uncheckedNonnullCast(WITNESS);
+            return Cast.<DescriptionWitness<V,SimpleValueWrapper<V>>>uncheckedNonnullCast(WITNESS);
         }
 
         private final Description description;
@@ -115,7 +115,7 @@ public final class DescriptionMap<V, DV> {
     public static <V> DescriptionMap<V, SimpleValueWrapper<V>> createSimple() {
         return new DescriptionMap<>(
             SimpleValueWrapper<V>::new,
-            SimpleValueWrapper.witness()
+            SimpleValueWrapper.<V>witness()
         );
     }
 
@@ -158,11 +158,11 @@ public final class DescriptionMap<V, DV> {
             DV descriptionAndValue = descriptionAndValueFactory.apply(description, value);
             if (list == null) {
                 // Use a singleton list for the common case of no collisions
-                return Collections.singletonList(descriptionAndValue);
+                return Collections.<DV>singletonList(descriptionAndValue);
             } else if (list.size() == 1) {
                 if (isSameDescriptionByIdentity(list.get(0), description)) {
                     // Replace the only entry that matches by identity
-                    return Collections.singletonList(descriptionAndValue);
+                    return Collections.<DV>singletonList(descriptionAndValue);
                 }
                 // Collision with existing entry, add to a new list
                 List<DV> newList = new ArrayList<>(list.size() + 1);
@@ -221,13 +221,13 @@ public final class DescriptionMap<V, DV> {
     public List<V> getByEquality(Description description) {
         List<DV> list = delegate.get(description);
         if (list == null) {
-            return Collections.emptyList();
+            return Collections.<V>emptyList();
         } else {
             List<V> values = new ArrayList<>(list.size());
             for (DV descriptionAndValue : list) {
                 values.add(witness.getValue(descriptionAndValue));
             }
-            return Collections.unmodifiableList(values);
+            return Collections.<V>unmodifiableList(values);
         }
     }
 

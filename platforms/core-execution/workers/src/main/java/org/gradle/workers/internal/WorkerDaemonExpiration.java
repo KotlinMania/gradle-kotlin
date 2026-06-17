@@ -97,7 +97,7 @@ public class WorkerDaemonExpiration implements MemoryHolder {
         private long getMemoryUsage(WorkerDaemonClient idleClient) {
             // prefer to use the actual memory usage reported by the worker
             try {
-                return idleClient.getJvmMemoryStatus().getCommittedMemory();
+                return idleClient.getJvmMemoryStatus().committedMemory;
             } catch (UnsupportedOperationException e) {
                 // This means the client does not support reporting jvm memory info
             } catch (IllegalStateException e) {

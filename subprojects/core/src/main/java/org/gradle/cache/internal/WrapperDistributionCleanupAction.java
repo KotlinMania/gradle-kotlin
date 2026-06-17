@@ -94,7 +94,7 @@ public class WrapperDistributionCleanupAction implements MonitoredCleanupAction 
     @Override
     public boolean execute(CleanupProgressMonitor progressMonitor) {
         long maximumTimestamp = Math.max(0, System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1));
-        Set<GradleVersion> usedVersions = this.usedGradleVersions.getUsedGradleVersions();
+        Set<GradleVersion> usedVersions = this.usedGradleVersions.usedGradleVersions;
         Multimap<GradleVersion, File> checksumDirsByVersion = determineChecksumDirsByVersion();
         for (GradleVersion version : checksumDirsByVersion.keySet()) {
             if (!usedVersions.contains(version) && version.compareTo(GradleVersion.current()) < 0) {

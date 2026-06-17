@@ -121,7 +121,7 @@ public interface ResolutionHost {
             }
 
             if (current instanceof MultiCauseException) {
-                exceptionQueue.addAll(((MultiCauseException) current).getCauses());
+                exceptionQueue.addAll(((MultiCauseException) current).causes);
             } else {
                 if (current.getCause() != null) {
                     exceptionQueue.add(current.getCause());

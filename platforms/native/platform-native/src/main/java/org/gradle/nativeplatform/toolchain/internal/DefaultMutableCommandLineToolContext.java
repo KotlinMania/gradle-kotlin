@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DefaultMutableCommandLineToolContext implements MutableCommandLineToolContext {
-    private Action<List<String>> postArgsAction = Actions.doNothing();
+    private Action<List<String>> postArgsAction = Actions.<List<String>>doNothing();
     private final Map<String, String> environment = new HashMap<String, String>();
     private final List<File> path = new ArrayList<File>();
 

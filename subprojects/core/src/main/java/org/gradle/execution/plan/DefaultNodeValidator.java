@@ -60,7 +60,7 @@ public class DefaultNodeValidator implements NodeValidator {
     }
 
     private void reportErrors(List<? extends ProblemInternal> warnings, List<? extends ProblemInternal> errors, TaskInternal task, WorkValidationContext validationContext) {
-        ProblemReporter reporter = problemsService.getReporter();
+        ProblemReporter reporter = problemsService.reporter;
         reporter.report(warnings);
         if (errors.isEmpty()) {
             return;

@@ -23,6 +23,6 @@ import java.util.Optional;
 public class VisualCppPCHCompilerArgsTransformer<T extends NativeCompileSpec> extends VisualCppCompilerArgsTransformer<T> {
     @Override
     protected Optional<String> getLanguageOption() {
-        return Optional.of("/Yc");
+        return Optional.<String>of("/Yc");
     }
 }

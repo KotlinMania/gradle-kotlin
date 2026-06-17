@@ -104,7 +104,7 @@ public final class JUnitPlatformTestDefinitionProcessor extends AbstractJUnitTes
 
     @Override
     protected TestDefinitionConsumer<TestDefinition> createTestExecutor(Actor resultProcessorActor) {
-        TestResultProcessor threadSafeResultProcessor = resultProcessorActor.getProxy(TestResultProcessor.class);
+        TestResultProcessor threadSafeResultProcessor = resultProcessorActor.<TestResultProcessor>getProxy(TestResultProcessor.class);
         launcherSession = BackwardsCompatibleLauncherSession.open();
         ClassLoader junitClassLoader = Thread.currentThread().getContextClassLoader();
         testClassExecutor = new CollectThenExecuteTestDefinitionConsumer(threadSafeResultProcessor, launcherSession, junitClassLoader, spec, idGenerator, clock);
@@ -114,8 +114,8 @@ public final class JUnitPlatformTestDefinitionProcessor extends AbstractJUnitTes
     @Override
     public void stop() {
         if (startedProcessing) {
-            Objects.requireNonNull(testClassExecutor).processAllTestDefinitions();
-            Objects.requireNonNull(launcherSession).close();
+            Objects.<@Nullable CollectThenExecuteTestDefinitionConsumer>requireNonNull(testClassExecutor).processAllTestDefinitions();
+            Objects.<@Nullable BackwardsCompatibleLauncherSession>requireNonNull(launcherSession).close();
             super.stop();
         }
     }
@@ -198,7 +198,7 @@ public final class JUnitPlatformTestDefinitionProcessor extends AbstractJUnitTes
         private void processAllTestDefinitions() {
             LauncherDiscoveryRequest discoveryRequest = createLauncherDiscoveryRequest();
             JUnitPlatformTestExecutionListener executionListener = new JUnitPlatformTestExecutionListener(resultProcessor, clock, idGenerator, testDefinitionDirs);
-            Launcher launcher = Objects.requireNonNull(launcherSession).getLauncher();
+            Launcher launcher = Objects.<BackwardsCompatibleLauncherSession>requireNonNull(launcherSession).getLauncher();
             if (spec.isDryRun()) {
                 TestPlan testPlan = launcher.discover(discoveryRequest);
                 executeDryRun(testPlan, executionListener);

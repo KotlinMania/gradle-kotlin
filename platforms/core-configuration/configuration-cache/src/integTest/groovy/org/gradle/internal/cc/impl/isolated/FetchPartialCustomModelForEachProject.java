@@ -29,7 +29,7 @@ public class FetchPartialCustomModelForEachProject implements BuildAction<List<S
     @Override
     public List<String> execute(BuildController controller) {
         List<String> result = new ArrayList<>();
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         for (BasicGradleProject project : buildModel.getProjects()) {
             SomeToolingModel model = controller.findModel(project, SomeToolingModel.class);
             if (model != null) {

@@ -43,14 +43,14 @@ public abstract class DefaultCppTestSuite extends DefaultCppComponent implements
     @Inject
     public DefaultCppTestSuite(String name) {
         super(name);
-        this.testedComponent = getObjectFactory().property(CppComponent.class);
-        this.testBinary = getObjectFactory().property(CppTestExecutable.class);
-        this.dependencies = getObjectFactory().newInstance(DefaultComponentDependencies.class, getNames().withSuffix("implementation"));
+        this.testedComponent = objectFactory.property(CppComponent.class);
+        this.testBinary = objectFactory.property(CppTestExecutable.class);
+        this.dependencies = objectFactory.newInstance(DefaultComponentDependencies.class, getNames().withSuffix("implementation"));
     }
 
     public CppTestExecutable addExecutable(String variantName, NativeVariantIdentity identity, CppPlatform targetPlatform, NativeToolChainInternal toolChain, PlatformToolProvider platformToolProvider) {
         Names executableNames = Names.of(getName() + variantName + "Executable", getName() + variantName);
-        CppTestExecutable testBinary = getObjectFactory().newInstance(DefaultCppTestExecutable.class, executableNames, getBaseName(), getCppSource(), getPrivateHeaderDirs(), getImplementationDependencies(), getTestedComponent(), targetPlatform, toolChain, platformToolProvider, identity);
+        CppTestExecutable testBinary = objectFactory.newInstance(DefaultCppTestExecutable.class, executableNames, baseName, getCppSource(), getPrivateHeaderDirs(), getImplementationDependencies(), getTestedComponent(), targetPlatform, toolChain, platformToolProvider, identity);
         getBinaries().add(testBinary);
         return testBinary;
     }

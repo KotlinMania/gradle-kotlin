@@ -104,7 +104,7 @@ public class DefaultTestFailure extends TestFailure {
 
     private static String classNameOf(Throwable failure) {
         return failure instanceof PlaceholderExceptionSupport
-            ? ((PlaceholderExceptionSupport) failure).getExceptionClassName()
+            ? ((PlaceholderExceptionSupport) failure).exceptionClassName
             : failure.getClass().getName();
     }
 

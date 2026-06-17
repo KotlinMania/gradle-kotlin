@@ -29,7 +29,7 @@ public class FetchCustomModelForEachProjectInTree implements BuildAction<List<So
     @Override
     public List<SomeToolingModel> execute(BuildController controller) {
         List<SomeToolingModel> result = new ArrayList<>();
-        GradleBuild buildModel = controller.getBuildModel();
+        GradleBuild buildModel = controller.buildModel;
         collectModelsForProjects(controller, result, buildModel);
         for (GradleBuild build : buildModel.getEditableBuilds()) {
             collectModelsForProjects(controller, result, build);

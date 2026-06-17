@@ -24,16 +24,16 @@ import java.util.Map;
 public class EmptySystemLibraries implements SystemLibraries {
     @Override
     public List<File> getIncludeDirs() {
-        return Collections.emptyList();
+        return Collections.<File>emptyList();
     }
 
     @Override
     public List<File> getLibDirs() {
-        return Collections.emptyList();
+        return Collections.<File>emptyList();
     }
 
     @Override
     public Map<String, String> getPreprocessorMacros() {
-        return Collections.emptyMap();
+        return Collections.<String, String>emptyMap();
     }
 }

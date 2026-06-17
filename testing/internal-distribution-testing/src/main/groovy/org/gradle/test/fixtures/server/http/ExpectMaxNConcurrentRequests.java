@@ -112,7 +112,7 @@ class ExpectMaxNConcurrentRequests implements TrackingHttpHandler, WaitPrecondit
                 return null;
             }
 
-            long now = clock.getCurrentTime();
+            long now = clock.currentTime;
             if (mostRecentEvent < now) {
                 mostRecentEvent = now;
             }
@@ -146,7 +146,7 @@ class ExpectMaxNConcurrentRequests implements TrackingHttpHandler, WaitPrecondit
             }
 
             while (!handler.isReleased() && !state.isFailed() && !cancelled) {
-                long waitMs = mostRecentEvent + timeoutMs - clock.getCurrentTime();
+                long waitMs = mostRecentEvent + timeoutMs - clock.currentTime;
                 if (waitMs < 0) {
                     ResponseProducer failure;
                     if (waitingFor > 0) {
@@ -321,13 +321,13 @@ class ExpectMaxNConcurrentRequests implements TrackingHttpHandler, WaitPrecondit
         try {
             previous.assertCanWait();
 
-            long now = clock.getCurrentTime();
+            long now = clock.currentTime;
             if (mostRecentEvent < now) {
                 mostRecentEvent = now;
             }
 
             while (waitingFor > 0 && !state.isFailed() && failureTracker.getFailure() == null) {
-                long waitMs = mostRecentEvent + timeoutMs - clock.getCurrentTime();
+                long waitMs = mostRecentEvent + timeoutMs - clock.currentTime;
                 if (waitMs < 0) {
                     System.out.printf("[%s][%d] timeout waiting for expected requests.%n", getCurrentTimestamp(), testId);
                     timeoutWaitingForRequests();

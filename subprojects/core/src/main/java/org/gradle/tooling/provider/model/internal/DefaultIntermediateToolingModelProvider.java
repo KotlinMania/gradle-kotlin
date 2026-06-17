@@ -80,7 +80,7 @@ public class DefaultIntermediateToolingModelProvider implements IntermediateTool
         if (result.getModel() == null) {
             failures.add(new IllegalStateException(String.format("Expected model of type %s but found null", modelType.getName())));
         }
-        result.getFailures().forEach(f -> failures.add(f.getOriginal()));
+        result.getFailures().forEach(f -> failures.add(f.original));
         return failures;
     }
 

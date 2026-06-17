@@ -33,7 +33,7 @@ import java.util.List;
 public class AssertErrorMapper extends TestFailureMapper {
     @Override
     protected List<String> getSupportedClassNames() {
-        return Collections.singletonList(
+        return Collections.<String>singletonList(
             AssertionError.class.getName()
         );
     }
@@ -43,7 +43,7 @@ public class AssertErrorMapper extends TestFailureMapper {
         Throwable cause = throwable.getCause();
         List<TestFailure> causeFailure = null;
         if (cause != null) {
-            causeFailure = Collections.singletonList(rootMapper.createFailure(cause));
+            causeFailure = Collections.<TestFailure>singletonList(rootMapper.createFailure(cause));
         }
 
         return TestFailure.fromTestAssertionFailure(throwable, null, null, causeFailure);

@@ -128,18 +128,18 @@ abstract class FallbackHandlingResourceHasher implements ResourceHasher {
 
         @Override
         public boolean isDirectory() {
-            return delegate.isDirectory();
+            return delegate.isDirectory;
         }
 
         @Override
         public String getName() {
-            return delegate.getName();
+            return delegate.name;
         }
 
         @Override
         public byte[] getContent() throws IOException {
             if (content == null) {
-                content = delegate.getContent();
+                content = delegate.content;
             }
             return content;
         }
@@ -161,7 +161,7 @@ abstract class FallbackHandlingResourceHasher implements ResourceHasher {
 
         @Override
         public ZipCompressionMethod getCompressionMethod() {
-            return delegate.getCompressionMethod();
+            return delegate.compressionMethod;
         }
     }
 }

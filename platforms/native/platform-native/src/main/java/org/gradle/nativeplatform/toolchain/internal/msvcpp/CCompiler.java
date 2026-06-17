@@ -35,7 +35,7 @@ class CCompiler extends VisualCppNativeCompiler<CCompileSpec> {
     private static class CCompilerArgsTransformer extends VisualCppCompilerArgsTransformer<CCompileSpec> {
         @Override
         protected Optional<String> getLanguageOption() {
-            return Optional.of("/TC");
+            return Optional.<String>of("/TC");
         }
     }
 }

@@ -56,7 +56,7 @@ class SendPartialResponseThenBlock implements BlockingHttpServer.BlockingRequest
         exchange.getResponseBody().flush();
         lock.lock();
         try {
-            long now = clock.getCurrentTime();
+            long now = clock.currentTime;
             if (mostRecentEvent < now) {
                 mostRecentEvent = now;
             }
@@ -64,7 +64,7 @@ class SendPartialResponseThenBlock implements BlockingHttpServer.BlockingRequest
             requestStarted = true;
             condition.signalAll();
             while (!released && failure == null) {
-                long waitMs = mostRecentEvent + timeout.toMillis() - clock.getCurrentTime();
+                long waitMs = mostRecentEvent + timeout.toMillis() - clock.currentTime;
                 if (waitMs < 0) {
                     System.out.printf("[%s][%d] timeout waiting to be released after sending some content%n", getCurrentTimestamp(), requestId);
                     failure = new AssertionError("Timeout waiting to be released after sending some content.");
@@ -95,13 +95,13 @@ class SendPartialResponseThenBlock implements BlockingHttpServer.BlockingRequest
                 throw new IllegalStateException("Response has already been released.");
             }
 
-            long now = clock.getCurrentTime();
+            long now = clock.currentTime;
             if (mostRecentEvent < now) {
                 mostRecentEvent = now;
             }
 
             while (!requestStarted && failure == null) {
-                long waitMs = mostRecentEvent + timeout.toMillis() - clock.getCurrentTime();
+                long waitMs = mostRecentEvent + timeout.toMillis() - clock.currentTime;
                 if (waitMs < 0) {
                     failure = new AssertionError("Timeout waiting request to block.");
                     condition.signalAll();

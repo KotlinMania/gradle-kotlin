@@ -29,7 +29,7 @@ import java.util.List;
  * Certain GCC options do not function correctly when included in an option file, so include these directly on the command line as well.
  */
 class GccOptionsFileArgsWriter extends OptionsFileArgsWriter {
-    private static final List<String> CLI_ONLY_ARGS = Arrays.asList("-m32", "-m64");
+    private static final List<String> CLI_ONLY_ARGS = Arrays.<String>asList("-m32", "-m64");
 
     public GccOptionsFileArgsWriter(File tempDir) {
         super(tempDir);

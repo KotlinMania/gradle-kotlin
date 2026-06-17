@@ -38,7 +38,7 @@ import java.util.concurrent.Callable;
 @DisableCachingByDefault(because = "Not made cacheable, yet")
 public abstract class LinkSharedLibrary extends AbstractLinkTask {
     public LinkSharedLibrary() {
-        getImportLibrary().convention(getProject().getLayout().getProjectDirectory().file(getProject().getProviders().provider(new Callable<String>() {
+        getImportLibrary().convention(getProject().getLayout().getProjectDirectory().file(getProject().getProviders().<String>provider(new Callable<String>() {
             @Override
             public String call() throws Exception {
                 RegularFile binaryFile = getLinkedFile().getOrNull();

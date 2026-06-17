@@ -134,7 +134,7 @@ public class NativeBinaryServices extends AbstractGradleModuleServices {
         NativeToolChainRegistry createNativeToolChainRegistry(ObjectFactory objectFactory,
                                                               InstantiatorFactory instantiatorFactory,
                                                               ServiceRegistry projectScopeServiceRegistry) {
-            return objectFactory.newInstance(DefaultNativeToolChainRegistry.class, instantiatorFactory.decorateLenient(projectScopeServiceRegistry));
+            return objectFactory.<DefaultNativeToolChainRegistry>newInstance(DefaultNativeToolChainRegistry.class, instantiatorFactory.decorateLenient(projectScopeServiceRegistry));
         }
     }
 

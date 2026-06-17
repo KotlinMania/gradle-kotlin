@@ -1,0 +1,32 @@
+/*
+ * Copyright 2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.integtests.tooling.r940
+
+import org.gradle.tooling.BuildAction
+import java.io.File
+import java.io.Serializable
+import kotlin.collections.HashMap
+import kotlin.collections.MutableMap
+
+internal class KotlinModelOnNullTargetAction : BuildAction<KotlinModel?>, Serializable {
+    public override fun execute(controller: BuildController): KotlinModel {
+        val build: GradleBuild = checkNotNull(controller.fetch(GradleBuild::class.java).getModel())
+        val scriptModels: MutableMap<File?, KotlinDslScriptModel?> = HashMap<File?, KotlinDslScriptModel?>()
+        val failures: MutableMap<File?, Failure?> = HashMap<File?, Failure?>()
+        KotlinModelAction.Companion.queryResilientKotlinDslScriptsModel(controller, build, null, scriptModels, failures)
+        return KotlinModel(scriptModels, failures)
+    }
+}

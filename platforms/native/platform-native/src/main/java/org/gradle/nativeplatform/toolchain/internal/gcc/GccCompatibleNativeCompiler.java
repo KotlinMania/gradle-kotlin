@@ -40,7 +40,7 @@ class GccCompatibleNativeCompiler<T extends NativeCompileSpec> extends NativeCom
 
     @Override
     protected List<String> getOutputArgs(T spec, File outputFile) {
-        return Arrays.asList("-o", outputFile.getAbsolutePath());
+        return Arrays.<String>asList("-o", outputFile.getAbsolutePath());
     }
 
     @Override

@@ -1,0 +1,103 @@
+/*
+ * Copyright 2010 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gradle.api.tasks.compile
+
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.SourceTask
+import org.gradle.internal.instrumentation.api.annotations.ReplacedAccessor
+import org.gradle.internal.instrumentation.api.annotations.ReplacedDeprecation
+import org.gradle.internal.instrumentation.api.annotations.ReplacesEagerProperty
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.work.DisableCachingByDefault
+
+/**
+ * The base class for all JVM-based language compilation tasks.
+ */
+@DisableCachingByDefault(because = "Abstract super-class, not to be instantiated directly")
+abstract class AbstractCompile : SourceTask() {
+    /**
+     * Returns the directory property that represents the directory to generate the `.class` files into.
+     *
+     * @return The destination directory property.
+     * @since 6.1
+     */
+    @JvmField
+    @get:ReplacesEagerProperty(
+        replacedAccessors = [ReplacedAccessor(
+            value = ReplacedAccessor.AccessorType.GETTER,
+            name = "getDestinationDir"
+        ), ReplacedAccessor(
+            value = ReplacedAccessor.AccessorType.SETTER,
+            name = "setDestinationDir"
+        )],
+        deprecation = ReplacedDeprecation(
+            removedIn = ReplacedDeprecation.RemovedIn.GRADLE9,
+            withUpgradeGuideMajorVersion = 7,
+            withUpgradeGuideSection = "compile_task_wiring"
+        )
+    )
+    @get:OutputDirectory
+    val destinationDirectory: DirectoryProperty
+    /**
+     * Returns the classpath to use to compile the source files.
+     *
+     * @return The classpath.
+     */
+    /**
+     * Sets the classpath to use to compile the source files.
+     *
+     * @param configuration The classpath. Must not be null, but may be empty.
+     */
+    @get:ToBeReplacedByLazyProperty
+    @get:Classpath
+    open var classpath: FileCollection? = null
+    /**
+     * Returns the Java language level to use to compile the source files.
+     *
+     * @return The source language level.
+     */
+    /**
+     * Sets the Java language level to use to compile the source files.
+     *
+     * @param sourceCompatibility The source language level. Must not be null.
+     */
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    @get:Input
+    var sourceCompatibility: String? = null
+    /**
+     * Returns the target JVM to generate the `.class` files for.
+     *
+     * @return The target JVM.
+     */
+    /**
+     * Sets the target JVM to generate the `.class` files for.
+     *
+     * @param targetCompatibility The target JVM. Must not be null.
+     */
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    @get:Input
+    var targetCompatibility: String? = null
+
+    init {
+        this.destinationDirectory = getProject().getObjects().directoryProperty()
+    }
+}

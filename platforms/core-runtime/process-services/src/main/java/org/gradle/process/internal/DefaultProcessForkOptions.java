@@ -104,7 +104,7 @@ public class DefaultProcessForkOptions implements ProcessForkOptions {
 
     @Override
     public void setEnvironment(Map<String, ?> environmentVariables) {
-        environment = Maps.newHashMap(environmentVariables);
+        environment = Maps.<String, Object>newHashMap(environmentVariables);
     }
 
     @Override

@@ -118,7 +118,7 @@ public class BuildActionSerializer {
             nullableFileSerializer.write(encoder, startParameter.getProjectDir());
             FILE_SERIALIZER.write(encoder, startParameter.getCurrentDir());
             FILE_SERIALIZER.write(encoder, startParameter.getGradleUserHomeDir());
-            nullableFileSerializer.write(encoder, startParameter.getGradleHomeDir());
+            nullableFileSerializer.write(encoder, startParameter.gradleHomeDir);
             nullableFileSerializer.write(encoder, startParameter.getProjectCacheDir());
             fileListSerializer.write(encoder, startParameter.getIncludedBuilds());
 
@@ -160,7 +160,7 @@ public class BuildActionSerializer {
             encoder.writeBoolean(startParameter.isIsolatedProjectsDangerouslyIgnoreProblems());
             encoder.writeBoolean(startParameter.isConfigureOnDemand());
             encoder.writeBoolean(startParameter.isContinuous());
-            encoder.writeLong(startParameter.getContinuousBuildQuietPeriod().toMillis());
+            encoder.writeLong(startParameter.continuousBuildQuietPeriod.toMillis());
             encoder.writeBoolean(startParameter.isBuildScan());
             encoder.writeBoolean(startParameter.isNoBuildScan());
             encoder.writeBoolean(startParameter.isWriteDependencyLocks());
@@ -168,14 +168,14 @@ public class BuildActionSerializer {
             encoder.writeString(startParameter.getDependencyVerificationMode().name());
             encoder.writeBoolean(startParameter.isRefreshKeys());
             encoder.writeBoolean(startParameter.isExportKeys());
-            encoder.writeString(startParameter.getWelcomeMessageConfiguration().getWelcomeMessageDisplayMode().name());
+            encoder.writeString(startParameter.getWelcomeMessageConfiguration().welcomeMessageDisplayMode.name());
             encoder.writeBoolean(startParameter.isPropertyUpgradeReportEnabled());
             encoder.writeBoolean(startParameter.isProblemReportGenerationEnabled());
             encoder.writeBoolean(startParameter.isTaskGraph());
             encoder.writeBoolean(startParameter.isDaemonJvmCriteriaConfigured());
             valueSerializer.write(encoder, startParameter.getParallelToolingModelBuilding());
-            encoder.writeNullableString(startParameter.getDevelocityUrl());
-            encoder.writeNullableString(startParameter.getDevelocityPluginVersion());
+            encoder.writeNullableString(startParameter.develocityUrl);
+            encoder.writeNullableString(startParameter.develocityPluginVersion);
             encoder.writeBoolean(startParameter.isNonInteractive());
         }
 
@@ -220,7 +220,7 @@ public class BuildActionSerializer {
             startParameter.setProjectDir(nullableFileSerializer.read(decoder));
             startParameter.setCurrentDir(FILE_SERIALIZER.read(decoder));
             startParameter.setGradleUserHomeDir(FILE_SERIALIZER.read(decoder));
-            startParameter.setGradleHomeDir(nullableFileSerializer.read(decoder));
+            startParameter.gradleHomeDir = nullableFileSerializer.read(decoder);
             startParameter.setProjectCacheDir(nullableFileSerializer.read(decoder));
             startParameter.setIncludedBuilds(fileListSerializer.read(decoder));
 
@@ -262,7 +262,7 @@ public class BuildActionSerializer {
             startParameter.setIsolatedProjectsDangerouslyIgnoreProblems(decoder.readBoolean());
             startParameter.setConfigureOnDemand(decoder.readBoolean());
             startParameter.setContinuous(decoder.readBoolean());
-            startParameter.setContinuousBuildQuietPeriod(Duration.ofMillis(decoder.readLong()));
+            startParameter.continuousBuildQuietPeriod = Duration.ofMillis(decoder.readLong());
             startParameter.setBuildScan(decoder.readBoolean());
             startParameter.setNoBuildScan(decoder.readBoolean());
             startParameter.setWriteDependencyLocks(decoder.readBoolean());
@@ -279,8 +279,8 @@ public class BuildActionSerializer {
             startParameter.setTaskGraph(decoder.readBoolean());
             startParameter.setDaemonJvmCriteriaConfigured(decoder.readBoolean());
             startParameter.setParallelToolingModelBuilding(valueSerializer.read(decoder));
-            startParameter.setDevelocityUrl(decoder.readNullableString());
-            startParameter.setDevelocityPluginVersion(decoder.readNullableString());
+            startParameter.develocityUrl = decoder.readNullableString();
+            startParameter.develocityPluginVersion = decoder.readNullableString();
             startParameter.setNonInteractive(decoder.readBoolean());
 
             return startParameter;

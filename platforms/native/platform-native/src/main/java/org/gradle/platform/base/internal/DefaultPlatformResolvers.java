@@ -48,14 +48,14 @@ public class DefaultPlatformResolvers implements PlatformResolvers {
                 }
             }
         }
-        return resolveFromContainer(type, platformRequirement);
+        return <T>resolveFromContainer(type, platformRequirement);
     }
 
     private <T extends Platform> T resolveFromContainer(Class<T> type, PlatformRequirement platformRequirement) {
         final String target = platformRequirement.getPlatformName();
 
-        NamedDomainObjectSet<T> allWithType = platforms.withType(type);
-        T matching = CollectionUtils.findFirst(allWithType, element -> element.getName().equals(target));
+        NamedDomainObjectSet<T> allWithType = platforms.<T>withType(type);
+        T matching = CollectionUtils.<T>findFirst(allWithType, element -> element.getName().equals(target));
 
         if (matching == null) {
             throw new InvalidUserDataException(String.format("Invalid %s: %s", type.getSimpleName(), target));

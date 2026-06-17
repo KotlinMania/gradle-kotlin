@@ -90,7 +90,7 @@ public class TransformStep implements TaskDependencyContainer, Describable {
                 .createInvocation(transform, inputArtifact, dependencies, subjectToTransform, inputFingerprinter)
                 .completeAndGet();
 
-            if (result.getFailure().isPresent()) {
+            if (result.failure.isPresent()) {
                 return Cast.uncheckedCast(result);
             }
             builder.addAll(result.get());

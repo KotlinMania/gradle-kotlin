@@ -35,8 +35,8 @@ public abstract class MicrosoftVisualCppCompilerPlugin implements Plugin<Project
     @Override
     public void apply(Project project) {
         project.getPluginManager().apply(NativeComponentPlugin.class);
-        NativeToolChainRegistryInternal toolChainRegistry = Cast.uncheckedCast(project.getExtensions().getByType(NativeToolChainRegistry.class));
-        toolChainRegistry.registerBinding(VisualCpp.class, VisualCppToolChain.class);
+        NativeToolChainRegistryInternal toolChainRegistry = Cast.<NativeToolChainRegistryInternal>uncheckedCast(project.getExtensions().<NativeToolChainRegistry>getByType(NativeToolChainRegistry.class));
+        toolChainRegistry.<VisualCpp>registerBinding(VisualCpp.class, VisualCppToolChain.class);
         toolChainRegistry.registerDefaultToolChain(VisualCppToolChain.DEFAULT_NAME, VisualCpp.class);
     }
 }

@@ -500,7 +500,7 @@ public class LibrariesSourceGenerator extends AbstractSourceGenerator {
         assertUnique(plugins, "plugins", "Plugin");
         int size = libraries.size() + bundles.size() + versions.size() + plugins.size();
         if (size > MAX_ENTRIES) {
-            throw throwVersionCatalogProblemException(problemsService.getInternalReporter().internalCreate(builder ->
+            throw throwVersionCatalogProblemException(problemsService.internalReporter.internalCreate(builder ->
                 configureVersionCatalogError(builder, getProblemPrefix() + "version catalog model contains too many entries (" + size + ")", TOO_MANY_ENTRIES)
                     .details("The maximum number of aliases in a catalog is " + MAX_ENTRIES)
                     .solution("Reduce the number of aliases defined in this catalog")
@@ -509,7 +509,7 @@ public class LibrariesSourceGenerator extends AbstractSourceGenerator {
     }
 
     private RuntimeException throwVersionCatalogProblemException(ProblemInternal problem) {
-        throw problemsService.getReporter().throwing(new InvalidUserDataException(), problem);
+        throw problemsService.reporter.throwing(new InvalidUserDataException(), problem);
     }
 
     private static ProblemSpecInternal configureVersionCatalogError(ProblemSpecInternal spec, String message, VersionCatalogProblemId catalogProblemId) {
@@ -527,14 +527,14 @@ public class LibrariesSourceGenerator extends AbstractSourceGenerator {
             .filter(e -> e.getValue().size() > 1)
             .map(e -> {
                 String errorValues = e.getValue().stream().sorted().collect(oxfordJoin("and"));
-                return this.problemsService.getInternalReporter().internalCreate(builder ->
+                return this.problemsService.internalReporter.internalCreate(builder ->
                     configureVersionCatalogError(builder, getProblemPrefix() + prefix + " " + errorValues + " are mapped to the same accessor name get" + e.getKey() + suffix + "()", ACCESSOR_NAME_CLASH)
                         .details("A name clash was detected")
                         .solution("Use a different alias for " + errorValues));
             })
             .collect(toList());
         if (!errors.isEmpty()) {
-            throw this.problemsService.getReporter().throwing(new InvalidUserDataException(), errors);
+            throw this.problemsService.reporter.throwing(new InvalidUserDataException(), errors);
         }
     }
 

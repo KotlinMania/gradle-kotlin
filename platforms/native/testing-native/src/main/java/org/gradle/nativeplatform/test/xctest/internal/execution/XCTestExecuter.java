@@ -153,7 +153,7 @@ public abstract class XCTestExecuter implements TestExecuter<XCTestTestExecution
                 // Exit code 0 = success
                 // Exit code 1 = failed test(s)
                 // anything else is considered an execution failure
-                if (result.getExitValue() != 0 && result.getExitValue() != 1) {
+                if (result.exitValue != 0 && result.exitValue != 1) {
                     result.rethrowFailure().assertNormalExitValue();
                 }
             } catch (ProcessExecutionException e) {

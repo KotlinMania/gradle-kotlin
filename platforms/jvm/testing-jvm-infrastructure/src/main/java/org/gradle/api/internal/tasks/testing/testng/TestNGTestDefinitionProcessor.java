@@ -73,7 +73,7 @@ public class TestNGTestDefinitionProcessor implements RequiresTestFrameworkTestD
 
         // Wrap the processor in an actor, to make it thread-safe
         resultProcessorActor = actorFactory.createBlockingActor(resultProcessor);
-        this.resultProcessor = resultProcessorActor.getProxy(TestResultProcessor.class);
+        this.resultProcessor = resultProcessorActor.<TestResultProcessor>getProxy(TestResultProcessor.class);
         applicationClassLoader = Thread.currentThread().getContextClassLoader();
         if (spec.isDryRun()) {
             System.setProperty("testng.mode.dryrun", "true");
@@ -87,7 +87,7 @@ public class TestNGTestDefinitionProcessor implements RequiresTestFrameworkTestD
         if (startedProcessing) {
             // TODO - do this inside some 'testng' suite, so that failures and logging are attached to 'testng' rather than some 'test worker'
             try {
-                testClasses.add(Objects.requireNonNull(applicationClassLoader).loadClass(testDefinition.getTestClassName()));
+                testClasses.add(Objects.<@Nullable ClassLoader>requireNonNull(applicationClassLoader).loadClass(testDefinition.getTestClassName()));
             } catch (Throwable e) {
                 throw new GradleException(String.format("Could not load %s.", testDefinition.getDisplayName()), e);
             }

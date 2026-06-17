@@ -95,7 +95,7 @@ public class GradleBackedArtifactBuilder implements ArtifactBuilder {
         }
 
         if (!executer.getDistribution().daemonWorksWith(Jvm.current().getJavaVersionMajor())) {
-            executer.withJavaHome(AvailableJavaHomes.getAvailableJdk(jdk -> executer.getDistribution().daemonWorksWith(jdk.getJavaMajorVersion())).getJavaHome().getAbsolutePath());
+            executer.withJavaHome(AvailableJavaHomes.getAvailableJdk(jdk -> executer.getDistribution().daemonWorksWith(jdk.javaMajorVersion)).getJavaHome().getAbsolutePath());
         }
 
         executer.inDirectory(rootDir).withTasks("clean", "jar", "--stacktrace").run();

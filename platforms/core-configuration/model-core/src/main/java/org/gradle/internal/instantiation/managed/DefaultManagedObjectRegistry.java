@@ -79,9 +79,9 @@ public class DefaultManagedObjectRegistry implements ManagedObjectRegistry {
     public void whenRegistered(Class<? extends Annotation> annotation, Registration registration) {
         assert annotation == ManagedObjectProvider.class;
 
-        Object instance = registration.getInstance();
+        Object instance = registration.instance;
 
-        for (Class<?> declaredType : registration.getDeclaredTypes()) {
+        for (Class<?> declaredType : registration.declaredTypes) {
             if (declaredType.isAnnotationPresent(ManagedObjectProvider.class)) {
                 boolean registeredCreator = false;
                 for (Method declaredMethod : declaredType.getMethods()) {

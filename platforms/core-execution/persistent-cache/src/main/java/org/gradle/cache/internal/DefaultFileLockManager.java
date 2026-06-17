@@ -492,8 +492,8 @@ public class DefaultFileLockManager implements FileLockManager {
                                 lastLockHolderPort = lockInfo.port;
                                 lastPingTime = 0;
                             }
-                            if (fileLockContentionHandler.maybePingOwner(lockInfo.port, lockInfo.lockId, displayName, backoff.getTimer().getElapsedMillis() - lastPingTime, backoff.getSignal())) {
-                                lastPingTime = backoff.getTimer().getElapsedMillis();
+                            if (fileLockContentionHandler.maybePingOwner(lockInfo.port, lockInfo.lockId, displayName, backoff.getTimer().elapsedMillis - lastPingTime, backoff.signal)) {
+                                lastPingTime = backoff.getTimer().elapsedMillis;
                                 LOGGER.debug("The file lock for {} is held by a different process (pid: {}, lockId: {}). Pinged owner at port {}", displayName, lockInfo.pid, lockInfo.lockId, lockInfo.port);
                             }
                         } else {

@@ -44,7 +44,7 @@ public class DefaultGradlePropertiesLoader implements GradlePropertiesLoader {
 
     @Override
     public Map<String, String> loadFromGradleHome() {
-        return loadFrom(startParameter.getGradleHomeDir());
+        return loadFrom(startParameter.gradleHomeDir);
     }
 
     @Override

@@ -62,7 +62,7 @@ public class IgnoredTestDescriptorProvider {
      */
     @SuppressWarnings("deprecation")
     static Runner getRunnerLegacy(Class<?> testClass) throws Throwable {
-        RunWith annotation = testClass.getAnnotation(RunWith.class);
+        RunWith annotation = testClass.<RunWith>getAnnotation(RunWith.class);
         if (annotation != null) {
             Class<? extends Runner> runnerClass = annotation.value();
             try {

@@ -91,7 +91,7 @@ public abstract class BuildScriptCompilationAndInstrumentation implements Immuta
     public Optional<CachingDisabledReason> shouldDisableCaching(@Nullable OverlappingOutputs detectedOverlappingOutputs) {
         // Disable caching always for property upgrade report,
         // since there is not much use to cache report remotely, also report can contain absolute paths
-        return propertyUpgradeReportConfig.isEnabled() ? Optional.of(CACHING_DISABLED_FOR_PROPERTY_REPORT) : Optional.empty();
+        return propertyUpgradeReportConfig.isEnabled ? Optional.of(CACHING_DISABLED_FOR_PROPERTY_REPORT) : Optional.empty();
     }
 
     @Override
@@ -153,7 +153,7 @@ public abstract class BuildScriptCompilationAndInstrumentation implements Immuta
     }
 
     private void instrument(File sourceDir, File destination, File propertyUpgradeReport) {
-        if (propertyUpgradeReportConfig.isEnabled()) {
+        if (propertyUpgradeReportConfig.isEnabled) {
             File source = this.source.getResource().getFile();
             try (BytecodeUpgradeReportMethodInterceptionListener methodInterceptionListener = new BytecodeUpgradeReportMethodInterceptionListener(source, propertyUpgradeReport)) {
                 // TODO: Using gradleCoreTypeRegistry means we won't detect user types that extend from Gradle types, fix that

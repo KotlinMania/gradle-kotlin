@@ -34,7 +34,7 @@ public abstract class NativeComponentPlugin implements Plugin<Project> {
         project.getPluginManager().apply(LifecycleBasePlugin.class);
 
         NativeToolChainRegistryInternal toolChains = (NativeToolChainRegistryInternal) getToolChains();
-        project.getExtensions().add(NativeToolChainRegistry.class, "toolChains", toolChains);
+        project.getExtensions().<NativeToolChainRegistry>add(NativeToolChainRegistry.class, "toolChains", toolChains);
 
         project.afterEvaluate(p -> {
             // add defaults

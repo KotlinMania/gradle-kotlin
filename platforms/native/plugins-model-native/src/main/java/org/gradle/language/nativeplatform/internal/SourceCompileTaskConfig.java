@@ -42,7 +42,7 @@ public class SourceCompileTaskConfig extends CompileTaskConfig {
 
         final Project project = task.getProject();
 
-        task.getObjectFileDir().fileProvider(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())));
+        task.objectFileDir.fileProvider(project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())));
 
         // If this task uses a pre-compiled header
         if (sourceSet instanceof DependentSourceSetInternal && ((DependentSourceSetInternal) sourceSet).getPreCompiledHeader() != null) {
@@ -50,7 +50,7 @@ public class SourceCompileTaskConfig extends CompileTaskConfig {
             PreCompiledHeader pch = binary.getPrefixFileToPCH().get(dependentSourceSet.getPrefixHeaderFile());
             pch.setPrefixHeaderFile(dependentSourceSet.getPrefixHeaderFile());
             pch.setIncludeString(dependentSourceSet.getPreCompiledHeader());
-            task.setPreCompiledHeader(pch);
+            task.preCompiledHeader = pch;
         }
 
         binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.obj", "**/*.o")));

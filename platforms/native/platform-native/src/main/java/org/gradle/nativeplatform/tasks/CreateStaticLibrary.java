@@ -98,15 +98,15 @@ public abstract class CreateStaticLibrary extends DefaultTask implements ObjectF
         spec.setOperationLogger(operationLogger);
 
         Compiler<StaticLibraryArchiverSpec> compiler = createCompiler();
-        WorkResult result = BuildOperationLoggingCompilerDecorator.wrap(compiler).execute(spec);
+        WorkResult result = BuildOperationLoggingCompilerDecorator.<StaticLibraryArchiverSpec>wrap(compiler).execute(spec);
         setDidWork(result.getDidWork());
     }
 
     private Compiler<StaticLibraryArchiverSpec> createCompiler() {
-        NativePlatformInternal targetPlatform = Cast.cast(NativePlatformInternal.class, this.getTargetPlatform().get());
-        NativeToolChainInternal toolChain = Cast.cast(NativeToolChainInternal.class, getToolChain().get());
+        NativePlatformInternal targetPlatform = Cast.<NativePlatformInternal, NativePlatform>cast(NativePlatformInternal.class, this.getTargetPlatform().get());
+        NativeToolChainInternal toolChain = Cast.<NativeToolChainInternal, NativeToolChain>cast(NativeToolChainInternal.class, getToolChain().get());
         PlatformToolProvider toolProvider = toolChain.select(targetPlatform);
-        return toolProvider.newCompiler(StaticLibraryArchiverSpec.class);
+        return toolProvider.<StaticLibraryArchiverSpec>newCompiler(StaticLibraryArchiverSpec.class);
     }
 
     /**

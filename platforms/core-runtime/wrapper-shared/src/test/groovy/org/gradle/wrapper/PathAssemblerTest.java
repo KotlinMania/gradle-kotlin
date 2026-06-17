@@ -34,15 +34,15 @@ public class PathAssemblerTest {
 
     @Before
     public void setup() {
-        configuration.setDistributionBase(PathAssembler.GRADLE_USER_HOME_STRING);
-        configuration.setDistributionPath("somePath");
-        configuration.setZipBase(PathAssembler.GRADLE_USER_HOME_STRING);
-        configuration.setZipPath("somePath");
+        configuration.distributionBase = PathAssembler.GRADLE_USER_HOME_STRING;
+        configuration.distributionPath = "somePath";
+        configuration.zipBase = PathAssembler.GRADLE_USER_HOME_STRING;
+        configuration.zipPath = "somePath";
     }
 
     @Test
     public void distributionDirWithGradleUserHomeBase() throws Exception {
-        configuration.setDistribution(new URI("http://server/dist/gradle-0.9-bin.zip"));
+        configuration.distribution = new URI("http://server/dist/gradle-0.9-bin.zip");
 
         File distributionDir = pathAssembler.getDistribution(configuration).getDistributionDir();
         assertThat(distributionDir.getName(), equalTo("emn8ua2x0re2y4jlewhnxhasz"));
@@ -51,8 +51,8 @@ public class PathAssemblerTest {
 
     @Test
     public void distributionDirWithProjectBase() throws Exception {
-        configuration.setDistributionBase(PathAssembler.PROJECT_STRING);
-        configuration.setDistribution(new URI("http://server/dist/gradle-0.9-bin.zip"));
+        configuration.distributionBase = PathAssembler.PROJECT_STRING;
+        configuration.distribution = new URI("http://server/dist/gradle-0.9-bin.zip");
 
         File distributionDir = pathAssembler.getDistribution(configuration).getDistributionDir();
         assertThat(distributionDir.getName(), equalTo("emn8ua2x0re2y4jlewhnxhasz"));
@@ -61,8 +61,8 @@ public class PathAssemblerTest {
 
     @Test
     public void distributionDirWithUnknownBase() throws Exception {
-        configuration.setDistribution(new URI("http://server/dist/gradle-1.0.zip"));
-        configuration.setDistributionBase("unknownBase");
+        configuration.distribution = new URI("http://server/dist/gradle-1.0.zip");
+        configuration.distributionBase = "unknownBase";
 
         try {
             pathAssembler.getDistribution(configuration);
@@ -74,12 +74,12 @@ public class PathAssemblerTest {
 
     @Test
     public void distributionDirWithUserInfo() throws Exception {
-        configuration.setDistributionBase(PathAssembler.PROJECT_STRING);
+        configuration.distributionBase = PathAssembler.PROJECT_STRING;
 
-        configuration.setDistribution(new URI("http://username1:password1@server/dist/gradle-0.9-bin.zip"));
+        configuration.distribution = new URI("http://username1:password1@server/dist/gradle-0.9-bin.zip");
         File distributionDir1 = pathAssembler.getDistribution(configuration).getDistributionDir();
 
-        configuration.setDistribution(new URI("http://username2:password2@server/dist/gradle-0.9-bin.zip"));
+        configuration.distribution = new URI("http://username2:password2@server/dist/gradle-0.9-bin.zip");
         File distributionDir2 = pathAssembler.getDistribution(configuration).getDistributionDir();
 
         assertThat(distributionDir1.getName(), equalTo(distributionDir2.getName()));
@@ -87,7 +87,7 @@ public class PathAssemblerTest {
 
     @Test
     public void distZipWithGradleUserHomeBase() throws Exception {
-        configuration.setDistribution(new URI("http://server/dist/gradle-1.0.zip"));
+        configuration.distribution = new URI("http://server/dist/gradle-1.0.zip");
 
         File dist = pathAssembler.getDistribution(configuration).getZipFile();
         assertThat(dist.getName(), equalTo("gradle-1.0.zip"));
@@ -97,8 +97,8 @@ public class PathAssemblerTest {
 
     @Test
     public void distZipWithProjectBase() throws Exception {
-        configuration.setZipBase(PathAssembler.PROJECT_STRING);
-        configuration.setDistribution(new URI("http://server/dist/gradle-1.0.zip"));
+        configuration.zipBase = PathAssembler.PROJECT_STRING;
+        configuration.distribution = new URI("http://server/dist/gradle-1.0.zip");
 
         File dist = pathAssembler.getDistribution(configuration).getZipFile();
         assertThat(dist.getName(), equalTo("gradle-1.0.zip"));

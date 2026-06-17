@@ -210,7 +210,7 @@ public class VirtualFileSystemServices extends AbstractGradleModuleServices {
             FileSystem fileSystem,
             WatchableFileSystemDetector watchableFileSystemDetector
         ) {
-            CaseSensitivity caseSensitivity = fileSystem.isCaseSensitive() ? CASE_SENSITIVE : CASE_INSENSITIVE;
+            CaseSensitivity caseSensitivity = fileSystem.isCaseSensitive ? CASE_SENSITIVE : CASE_INSENSITIVE;
             SnapshotHierarchy root = DefaultSnapshotHierarchy.empty(caseSensitivity);
 
             BuildLifecycleAwareVirtualFileSystem virtualFileSystem = determineWatcherRegistryFactory(
