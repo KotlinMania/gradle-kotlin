@@ -28,28 +28,21 @@ import org.gradle.internal.instrumentation.model.RequestExtra
 import org.gradle.internal.instrumentation.model.RequestExtrasContainer
 import org.gradle.internal.instrumentation.processor.extensibility.RequestPostProcessorExtension
 import org.gradle.internal.instrumentation.processor.features.withstaticreference.WithExtensionReferencesExtra.ProducedSynthetically
-import java.util.Arrays
 import java.util.Optional
-import java.util.function.Function
-import java.util.function.Supplier
-import java.util.stream.Collectors
-import java.util.stream.Stream
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableCollection
 import kotlin.collections.MutableList
 import kotlin.collections.mutableListOf
 
 class WithExtensionReferencesPostProcessor : RequestPostProcessorExtension {
-    override fun postProcessRequest(originalRequest: CallInterceptionRequest): MutableCollection<CallInterceptionRequest?>? {
-        val extra: Optional<WithExtensionReferencesExtra?> = originalRequest.requestExtras!!.getByType(WithExtensionReferencesExtra::class.java)
+    override fun postProcessRequest(originalRequest: CallInterceptionRequest?): MutableCollection<CallInterceptionRequest?>? {
+        val request = checkNotNull(originalRequest)
+        val extra: Optional<WithExtensionReferencesExtra> = checkNotNull(request.requestExtras).getByType(WithExtensionReferencesExtra::class.java)
         return extra
-            .map<MutableList<CallInterceptionRequest?>?>(Function { withExtensionReferencesExtra: WithExtensionReferencesExtra? ->
-                Arrays.asList<CallInterceptionRequest?>(
-                    originalRequest,
-                    Companion.modifiedRequest(originalRequest, withExtensionReferencesExtra!!)
-                )
-            })
-            .orElseGet(Supplier { mutableListOf<CallInterceptionRequest?>(originalRequest) })
+            .map { withExtensionReferencesExtra: WithExtensionReferencesExtra ->
+                mutableListOf<CallInterceptionRequest?>(request, Companion.modifiedRequest(request, withExtensionReferencesExtra))
+            }
+            .orElse(mutableListOf(request))
     }
 
     companion object {
@@ -64,24 +57,33 @@ class WithExtensionReferencesPostProcessor : RequestPostProcessorExtension {
         private fun modifiedCallableInfo(originalInfo: CallableInfo, extra: WithExtensionReferencesExtra): CallableInfo {
             val owner = CallableOwnerInfo(extra.ownerType, false)
             val methodName = extra.methodName
-            return CallableInfoImpl(CallableKindInfo.STATIC_METHOD, owner, methodName, originalInfo.returnType, Companion.modifiedParameters(originalInfo.parameters!!))
+            return CallableInfoImpl(
+                CallableKindInfo.STATIC_METHOD,
+                owner,
+                methodName,
+                originalInfo.returnType,
+                Companion.modifiedParameters(checkNotNull(originalInfo.parameters))
+            )
         }
 
-        private fun modifiedParameters(originalParameters: MutableList<ParameterInfo?>): MutableList<ParameterInfo> {
+        private fun modifiedParameters(originalParameters: MutableList<ParameterInfo>): MutableList<ParameterInfo> {
             val result = ArrayList<ParameterInfo>(originalParameters)
-            if (result.size == 0 || result.get(0).kind !== ParameterKindInfo.RECEIVER) {
+            if (result.size == 0) {
                 throw UnsupportedOperationException("extensions with static references that do not have a receiver parameter are not supported")
             }
-            val originalReceiver = result.removeAt(0)
+            val originalReceiver = result[0]
+            if (originalReceiver.kind !== ParameterKindInfo.RECEIVER) {
+                throw UnsupportedOperationException("extensions with static references that do not have a receiver parameter are not supported")
+            }
+            result.removeAt(0)
             result.add(0, ParameterInfoImpl("receiverArg", originalReceiver.parameterType, ParameterKindInfo.METHOD_PARAMETER))
             return result
         }
 
         private fun modifiedExtras(originalExtras: RequestExtrasContainer): MutableList<RequestExtra?> {
-            return Stream.of<Stream<RequestExtra?>?>(
-                originalExtras.all.stream().filter { it: RequestExtra? -> it !is WithExtensionReferencesExtra },
-                Stream.of<RequestExtra?>(ProducedSynthetically())
-            ).flatMap<RequestExtra?>(Function.identity<Stream<RequestExtra?>?>()).collect(Collectors.toList())
+            val result: MutableList<RequestExtra?> = originalExtras.all.filter { it !is WithExtensionReferencesExtra }.toMutableList()
+            result.add(ProducedSynthetically())
+            return result
         }
     }
 }

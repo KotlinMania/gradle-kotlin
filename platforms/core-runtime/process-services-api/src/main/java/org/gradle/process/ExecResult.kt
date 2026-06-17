@@ -22,7 +22,6 @@ interface ExecResult {
     /**
      * Returns the exit value of the process.
      */
-    @JvmField
     val exitValue: Int
 
     /**

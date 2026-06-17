@@ -19,30 +19,26 @@ package org.gradle.internal.instrumentation.api.types
  * A base interface for all bytecode interceptors, that can be filtered by [BytecodeInterceptorFilter].
  */
 interface FilterableBytecodeInterceptor {
-    @JvmField
-    val type: BytecodeInterceptorType?
+    val type: BytecodeInterceptorType
 
     /**
      * A marker interface that indicates that a class is used for bytecode upgrades.
      */
     interface BytecodeUpgradeInterceptor : FilterableBytecodeInterceptor {
-        override fun getType(): BytecodeInterceptorType {
-            return BytecodeInterceptorType.BYTECODE_UPGRADE
-        }
+        override val type: BytecodeInterceptorType
+            get() = BytecodeInterceptorType.BYTECODE_UPGRADE
     }
 
     /**
      * A marker interface that indicates that a class is used for configuration cache instrumentation.
      */
     interface InstrumentationInterceptor : FilterableBytecodeInterceptor {
-        override fun getType(): BytecodeInterceptorType {
-            return BytecodeInterceptorType.INSTRUMENTATION
-        }
+        override val type: BytecodeInterceptorType
+            get() = BytecodeInterceptorType.INSTRUMENTATION
     }
 
     interface BytecodeUpgradeReportInterceptor : FilterableBytecodeInterceptor {
-        override fun getType(): BytecodeInterceptorType {
-            return BytecodeInterceptorType.BYTECODE_UPGRADE_REPORT
-        }
+        override val type: BytecodeInterceptorType
+            get() = BytecodeInterceptorType.BYTECODE_UPGRADE_REPORT
     }
 }

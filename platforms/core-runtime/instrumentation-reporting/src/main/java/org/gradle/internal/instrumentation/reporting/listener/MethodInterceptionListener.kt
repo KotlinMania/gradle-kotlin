@@ -29,8 +29,18 @@ interface MethodInterceptionListener {
     )
 
     companion object {
-        @JvmField
         val NO_OP: MethodInterceptionListener =
-            org.gradle.internal.instrumentation.reporting.listener.MethodInterceptionListener { type: BytecodeInterceptorType, sourceFileName: String, relativePath: String, owner: String, name: String, descriptor: String, lineNumber: Int -> }
+            object : MethodInterceptionListener {
+                override fun onInterceptedMethodInstruction(
+                    type: BytecodeInterceptorType,
+                    sourceFileName: String,
+                    relativePath: String,
+                    owner: String,
+                    name: String,
+                    descriptor: String,
+                    lineNumber: Int
+                ) {
+                }
+            }
     }
 }

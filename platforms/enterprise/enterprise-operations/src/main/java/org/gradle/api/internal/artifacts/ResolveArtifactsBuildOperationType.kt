@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.0
  */
-class ResolveArtifactsBuildOperationType private constructor() : BuildOperationType<ResolveArtifactsBuildOperationType.Details?, ResolveArtifactsBuildOperationType.Result?> {
+class ResolveArtifactsBuildOperationType private constructor() : BuildOperationType<ResolveArtifactsBuildOperationType.Details, ResolveArtifactsBuildOperationType.Result> {
     interface Details
 
     interface Result

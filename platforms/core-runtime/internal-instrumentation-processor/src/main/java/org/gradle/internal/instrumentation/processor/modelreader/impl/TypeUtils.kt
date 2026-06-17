@@ -19,8 +19,8 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import org.objectweb.asm.Type
+import java.util.Comparator
 import java.util.Optional
-import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -33,8 +33,8 @@ import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeMirror
 
 object TypeUtils {
-    fun extractType(typeMirror: TypeMirror): Type? {
-        return typeMirror.accept<Type?, Void?>(TypeMirrorToType(), null)
+    fun extractType(typeMirror: TypeMirror): Type {
+        return requireNotNull(typeMirror.accept<Type?, Void?>(TypeMirrorToType(), null))
     }
 
     fun extractRawType(typeName: TypeName): Type? {
@@ -78,15 +78,15 @@ object TypeUtils {
         return Type.getType("L" + className.reflectionName().replace('.', '/') + ";")
     }
 
-    fun extractReturnType(methodElement: ExecutableElement): Type? {
+    fun extractReturnType(methodElement: ExecutableElement): Type {
         return extractType(methodElement.getReturnType())
     }
 
     fun extractMethodDescriptor(methodElement: ExecutableElement): String {
-        return Type.getMethodDescriptor(
-            extractReturnType(methodElement),
-            *methodElement.getParameters().stream().map<Type?> { it: VariableElement? -> extractType(it!!.asType()) }.toArray<Type?> { _Dummy_.__Array__() }
-        )
+        val parameterTypes = methodElement.getParameters().stream()
+            .map { variableElement: VariableElement -> extractType(variableElement.asType()) }
+            .toArray<Type?> { size: Int -> arrayOfNulls<Type>(size) }
+        return Type.getMethodDescriptor(extractReturnType(methodElement), *parameterTypes.filterNotNull().toTypedArray())
     }
 
     fun getTypeParameter(typeMirror: TypeMirror?, index: Int): Optional<TypeName> {
@@ -115,15 +115,15 @@ object TypeUtils {
             .map<ExecutableElement?> { it: Element? -> it as ExecutableElement }  // Ensure that the elements have a stable order, as the annotation processing engine does not guarantee that for type elements.
             // The order in which the executable elements are listed should be the order in which they appear in the code but
             // we take an extra measure of care here and ensure the ordering between all elements.
-            .sorted(Comparator.comparing<ExecutableElement?, String?>(Function { obj: ExecutableElement? -> TypeUtils.elementQualifiedName() }))
+            .sorted(Comparator.comparing<ExecutableElement?, String> { obj: ExecutableElement? -> TypeUtils.elementQualifiedName(obj!!) })
             .distinct()
             .collect(Collectors.toList())
     }
 
     @JvmStatic
-    fun elementQualifiedName(element: Element): String? {
+    fun elementQualifiedName(element: Element): String {
         if (element is ExecutableElement) {
-            val enclosingTypeName: String? = (element.getEnclosingElement() as TypeElement).getQualifiedName().toString()
+            val enclosingTypeName: String = (element.getEnclosingElement() as TypeElement).getQualifiedName().toString()
             return enclosingTypeName + "." + element.getSimpleName()
         } else if (element is TypeElement) {
             return element.getQualifiedName().toString()

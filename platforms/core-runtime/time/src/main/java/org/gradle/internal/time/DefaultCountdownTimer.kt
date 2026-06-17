@@ -19,22 +19,20 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 internal class DefaultCountdownTimer(timeSource: TimeSource, timeout: Long, unit: TimeUnit) : DefaultTimer(timeSource), CountdownTimer {
-    private val timeoutMillis: Long
+    private val timeoutMillisValue: Long
 
     init {
         require(timeout > 0)
-        this.timeoutMillis = unit.toMillis(timeout)
+        this.timeoutMillisValue = unit.toMillis(timeout)
     }
 
     override fun hasExpired(): Boolean {
-        return getRemainingMillis() <= 0
+        return remainingMillis <= 0
     }
 
-    override fun getRemainingMillis(): Long {
-        return max(timeoutMillis - getElapsedMillis(), 0)
-    }
+    override val remainingMillis: Long
+        get() = max(timeoutMillisValue - elapsedMillis, 0)
 
-    override fun getTimeoutMillis(): Long {
-        return timeoutMillis
-    }
+    override val timeoutMillis: Long
+        get() = timeoutMillisValue
 }

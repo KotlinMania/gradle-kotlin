@@ -64,16 +64,19 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
         onProcessedRequest: java.util.function.Consumer<in CallInterceptionRequest?>,
         onFailure: java.util.function.Consumer<in FailureInfo?>
     ): java.util.function.Consumer<com.squareup.javapoet.TypeSpec.Builder?> {
+        val nonNullRequests = requestsClassGroup.filterNotNull()
         val typeFieldByOwner: kotlin.collections.MutableMap<org.objectweb.asm.Type?, com.squareup.javapoet.FieldSpec?> =
-            InterceptJvmCallsGenerator.Companion.generateFieldsForImplementationOwners(requestsClassGroup)
+            InterceptJvmCallsGenerator.Companion.generateFieldsForImplementationOwners(nonNullRequests)
         val interceptorType: org.gradle.internal.instrumentation.api.types.BytecodeInterceptorType =
-            requestsClassGroup.get(0).requestExtras.getByType(org.gradle.internal.instrumentation.model.RequestExtra.InterceptJvmCalls::class.java)
+            nonNullRequests.get(0).requestExtras.getByType(org.gradle.internal.instrumentation.model.RequestExtra.InterceptJvmCalls::class.java)
                 .map(RequestExtra.InterceptJvmCalls::interceptionType)
                 .orElseThrow({ java.lang.IllegalStateException(org.gradle.internal.instrumentation.model.RequestExtra.InterceptJvmCalls::class.java.getSimpleName() + " should be present at this stage!") })
 
-        val requestsByOwner: kotlin.collections.MutableMap<CallableOwnerInfo?, kotlin.collections.MutableList<CallInterceptionRequest?>?> = requestsClassGroup.stream().collect(
+        val requestsByOwner: kotlin.collections.MutableMap<CallableOwnerInfo?, kotlin.collections.MutableList<CallInterceptionRequest?>?> = nonNullRequests.stream().collect(
             java.util.stream.Collectors.groupingBy(
-                java.util.function.Function { it: CallInterceptionRequest? -> it.interceptedCallable.owner },
+                java.util.function.Function { request: CallInterceptionRequest? ->
+                    requireNotNull(request).interceptedCallable?.owner
+                },
                 java.util.function.Supplier { LinkedHashMap() },
                 java.util.stream.Collectors.toList()
             )
@@ -140,33 +143,36 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             onFailure: java.util.function.Consumer<in FailureInfo?>
         ) {
             val code: com.squareup.javapoet.CodeBlock.Builder = com.squareup.javapoet.CodeBlock.builder()
-            requestsByOwner.forEach { (owner: CallableOwnerInfo?, requests: kotlin.collections.MutableList<CallInterceptionRequest>?) ->
-                InterceptJvmCallsGenerator.Companion.generateCodeForOwner(
-                    owner,
-                    typeFieldByOwner,
-                    requests,
-                    code,
-                    org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.InvocationMatcher { interceptedCallable: CallableInfo? ->
-                        InterceptJvmCallsGenerator.Companion.matchOpcodeExpression(
-                            interceptedCallable
-                        )
-                    },
-                    InvocationGenerator { request: CallInterceptionRequest?, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
-                        InterceptJvmCallsGenerator.Companion.generateInterceptedInvocation(
-                            request,
-                            implTypeField,
-                            method
-                        )
-                    },
-                    InvocationGenerator? { request: CallInterceptionRequest?, ownerTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
-                    InterceptJvmCallsGenerator.Companion.generateKotlinDefaultInvocation(
-                        request,
-                        ownerTypeField,
-                        method
+            requestsByOwner.forEach { (owner: CallableOwnerInfo?, requests: kotlin.collections.MutableList<CallInterceptionRequest?>?) ->
+                if (owner != null && requests != null) {
+                    InterceptJvmCallsGenerator.Companion.generateCodeForOwner(
+                        owner,
+                        typeFieldByOwner,
+                        requests,
+                        code,
+                        org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.InvocationMatcher { interceptedCallable: CallableInfo? ->
+                            InterceptJvmCallsGenerator.Companion.matchOpcodeExpression(
+                                interceptedCallable
+                            )
+                        },
+                        InvocationGenerator { request: CallInterceptionRequest?, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
+                            InterceptJvmCallsGenerator.Companion.generateInterceptedInvocation(
+                                request,
+                                implTypeField,
+                                method
+                            )
+                        },
+                        InvocationGenerator { request: CallInterceptionRequest?, ownerTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
+                            InterceptJvmCallsGenerator.Companion.generateKotlinDefaultInvocation(
+                                request,
+                                ownerTypeField,
+                                method
+                            )
+                        },
+                        onProcessedRequest,
+                        onFailure
                     )
-                },
-                onProcessedRequest,
-                onFailure)
+                }
             }
             code.addStatement("return false")
             method.addCode(code.build())
@@ -180,28 +186,30 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             onFailure: java.util.function.Consumer<in FailureInfo?>
         ) {
             val code: com.squareup.javapoet.CodeBlock.Builder = com.squareup.javapoet.CodeBlock.builder()
-            requestsByOwner.forEach { (owner: CallableOwnerInfo?, requests: kotlin.collections.MutableList<CallInterceptionRequest>?) ->
-                InterceptJvmCallsGenerator.Companion.generateCodeForOwner(
-                    owner,
-                    typeFieldByOwner,
-                    requests,
-                    code,
-                    org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.InvocationMatcher { callableInfo: CallableInfo? ->
-                        InterceptJvmCallsGenerator.Companion.matchTagExpression(
-                            callableInfo
-                        )
-                    },
-                    InvocationGenerator { request: CallInterceptionRequest?, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
-                        InterceptJvmCallsGenerator.Companion.generateBridgeMethodBuilder(
-                            request,
-                            implTypeField,
-                            method
-                        )
-                    },
-                    null,
-                    onProcessedRequest,
-                    onFailure
-                )
+            requestsByOwner.forEach { (owner: CallableOwnerInfo?, requests: kotlin.collections.MutableList<CallInterceptionRequest?>?) ->
+                if (owner != null && requests != null) {
+                    InterceptJvmCallsGenerator.Companion.generateCodeForOwner(
+                        owner,
+                        typeFieldByOwner,
+                        requests,
+                        code,
+                        org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.InvocationMatcher { callableInfo: CallableInfo? ->
+                            InterceptJvmCallsGenerator.Companion.matchTagExpression(
+                                callableInfo
+                            )
+                        },
+                        InvocationGenerator { request: CallInterceptionRequest?, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder? ->
+                            InterceptJvmCallsGenerator.Companion.generateBridgeMethodBuilder(
+                                request,
+                                implTypeField,
+                                method
+                            )
+                        },
+                        null,
+                        onProcessedRequest,
+                        onFailure
+                    )
+                }
             }
             code.addStatement("return null")
             method.addCode(code.build())
@@ -209,8 +217,9 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
 
 
         private fun generateBridgeMethodBuilder(request: CallInterceptionRequest, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder) {
-            val interceptorName: kotlin.String? = request.implementationInfo.name
-            val interceptorDesc: kotlin.String? = request.implementationInfo.descriptor
+            val implementationInfo = requireNotNull(request.implementationInfo)
+            val interceptorName: kotlin.String = requireNotNull(implementationInfo.name)
+            val interceptorDesc: kotlin.String = requireNotNull(implementationInfo.descriptor)
             method.addStatement(
                 "$1T builder = $1T.create(tag, owner, descriptor, $2N, $3S, $4S)",
                 org.gradle.internal.instrumentation.api.jvmbytecode.DefaultBridgeMethodBuilder::class.java,
@@ -218,7 +227,7 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
                 interceptorName,
                 interceptorDesc
             )
-            val callable: CallableInfo = request.interceptedCallable
+            val callable: CallableInfo = requireNotNull(request.interceptedCallable)
             if (callable.hasKotlinDefaultMaskParam()) {
                 method.addStatement("builder = builder.withKotlinDefaultMask()")
             }
@@ -242,14 +251,19 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
 
 
         private fun generateFieldsForImplementationOwners(interceptionRequests: kotlin.collections.MutableCollection<CallInterceptionRequest?>): kotlin.collections.MutableMap<org.objectweb.asm.Type?, com.squareup.javapoet.FieldSpec?> {
-            val knownSimpleNames: kotlin.collections.MutableSet<kotlin.String?> = java.util.HashSet<kotlin.String?>()
-            return interceptionRequests.stream().map<kotlin.Any?> { it: CallInterceptionRequest? -> it.implementationInfo.owner }.distinct()
-                .collect(java.util.stream.Collectors.toMap(java.util.function.Function.identity<kotlin.Any?>(), java.util.function.Function { implementationType: kotlin.Any? ->
+            val knownSimpleNames: kotlin.collections.MutableSet<kotlin.String> = java.util.HashSet()
+            val fields: kotlin.collections.MutableMap<org.objectweb.asm.Type?, com.squareup.javapoet.FieldSpec?> = LinkedHashMap()
+
+            interceptionRequests
+                .asSequence()
+                .mapNotNull { it?.implementationInfo?.owner }
+                .distinct()
+                .forEach { implementationType ->
                     val implementationClassName: com.squareup.javapoet.ClassName = org.gradle.internal.instrumentation.util.NameUtil.getClassName(implementationType.getClassName())
-                    val fieldTypeName: kotlin.String? =
+                    val fieldTypeName: kotlin.String =
                         if (knownSimpleNames.add(implementationClassName.simpleName())) implementationClassName.simpleName() else implementationClassName.reflectionName()
                     val fullFieldName: kotlin.String = org.gradle.internal.instrumentation.util.NameUtil.camelToUpperUnderscoreCase(fieldTypeName) + "_TYPE"
-                    com.squareup.javapoet.FieldSpec.builder(
+                    val field = com.squareup.javapoet.FieldSpec.builder(
                         kotlin.String::class.java,
                         fullFieldName,
                         javax.lang.model.element.Modifier.PRIVATE,
@@ -258,7 +272,9 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
                     )
                         .initializer("\$S", implementationClassName.reflectionName().replace(".", "/"))
                         .build()
-                }, java.util.function.BinaryOperator { u: com.squareup.javapoet.FieldSpec?, v: com.squareup.javapoet.FieldSpec? -> u }, java.util.function.Supplier { LinkedHashMap() }))
+                    fields.put(implementationType, field)
+                }
+            return fields
         }
 
         private val METHOD_VISITOR_PARAM: com.squareup.javapoet.ParameterSpec = com.squareup.javapoet.ParameterSpec.builder(org.gradle.model.internal.asm.MethodVisitorScope::class.java, "mv").build()
@@ -371,8 +387,9 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             interceptStandard: InvocationGenerator,
             interceptKotlinDefault: InvocationGenerator?
         ) {
-            val callableName: kotlin.String = request.interceptedCallable.callableName
-            val interceptedCallable: CallableInfo = request.interceptedCallable
+            val nonNullRequest = requireNotNull(request)
+            val interceptedCallable: CallableInfo = requireNotNull(nonNullRequest.interceptedCallable)
+            val callableName: kotlin.String = requireNotNull(interceptedCallable.callableName)
             val interceptedCallableDescriptor: kotlin.String = InterceptJvmCallsGenerator.Companion.standardCallableDescriptor(interceptedCallable)
             InterceptJvmCallsGenerator.Companion.validateSignature(interceptedCallable)
 
@@ -420,7 +437,7 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             request: CallInterceptionRequest?,
             ownerTypeField: com.squareup.javapoet.FieldSpec?,
             code: com.squareup.javapoet.CodeBlock.Builder,
-            callableName: kotlin.String?,
+            callableName: kotlin.String,
             interceptedCallable: CallableInfo,
             matchOpcodeExpression: com.squareup.javapoet.CodeBlock?,
             invocationGenerator: InvocationGenerator
@@ -449,9 +466,10 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
 
         // TODO: move validation earlier?
         private fun generateInterceptedInvocation(request: CallInterceptionRequest, implTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder) {
-            val callable: CallableInfo = request.interceptedCallable
-            val implementationName: kotlin.String? = request.implementationInfo.name
-            val implementationDescriptor: kotlin.String = request.implementationInfo.descriptor
+            val callable: CallableInfo = requireNotNull(request.interceptedCallable)
+            val implementationInfo = requireNotNull(request.implementationInfo)
+            val implementationName: kotlin.String = requireNotNull(implementationInfo.name)
+            val implementationDescriptor: kotlin.String = requireNotNull(implementationInfo.descriptor)
 
             if (callable.kind === CallableKindInfo.STATIC_METHOD || callable.kind === CallableKindInfo.INSTANCE_METHOD) {
                 InterceptJvmCallsGenerator.Companion.generateNormalInterceptedInvocation(implTypeField, callable, implementationName, implementationDescriptor, method)
@@ -471,7 +489,8 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             kotlin.require(callable.kind === CallableKindInfo.AFTER_CONSTRUCTOR) { "expected after-constructor interceptor" }
 
             val parameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo?> = callable.parameters
-            if (parameters.get(0).kind !== ParameterKindInfo.RECEIVER) {
+            val requiredParameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo> = requireNotNull(parameters)
+            if (requiredParameters.get(0).kind !== ParameterKindInfo.RECEIVER) {
                 throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("Expected @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.Receiver::class.java.getSimpleName() + " first parameter in @" + org.gradle.internal.instrumentation.api.annotations.CallableKind.AfterConstructor::class.java.getSimpleName())
             }
             if (org.objectweb.asm.Type.getReturnType(implementationDescriptor) != org.objectweb.asm.Type.VOID_TYPE) {
@@ -506,13 +525,13 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
         private fun generateNormalInterceptedInvocation(
             ownerTypeField: com.squareup.javapoet.FieldSpec?,
             callable: CallableInfo,
-            implementationName: kotlin.String?,
-            implementationDescriptor: kotlin.String?,
+            implementationName: kotlin.String,
+            implementationDescriptor: kotlin.String,
             code: com.squareup.javapoet.CodeBlock.Builder
         ) {
             kotlin.require(!(callable.kind === CallableKindInfo.GROOVY_PROPERTY_GETTER || callable.kind === CallableKindInfo.GROOVY_PROPERTY_SETTER)) { "cannot generate invocation for Groovy property" }
 
-            val parameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo?> = callable.parameters
+            val parameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo> = requireNotNull(callable.parameters)
             if (parameters.size > 1 && parameters.get(parameters.size - 2).kind === ParameterKindInfo.KOTLIN_DEFAULT_MASK) {
                 // push the default mask equal to zero, meaning that no parameters have the default values
                 code.add("// The interceptor expects a Kotlin default mask, add a zero argument:\n")
@@ -524,11 +543,12 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
         }
 
         private fun generateKotlinDefaultInvocation(request: CallInterceptionRequest, ownerTypeField: com.squareup.javapoet.FieldSpec?, method: com.squareup.javapoet.CodeBlock.Builder) {
-            val interceptedCallable: CallableInfo = request.interceptedCallable
+            val interceptedCallable: CallableInfo = requireNotNull(request.interceptedCallable)
             kotlin.require(!(interceptedCallable.kind === CallableKindInfo.GROOVY_PROPERTY_GETTER || interceptedCallable.kind === CallableKindInfo.GROOVY_PROPERTY_SETTER)) { "cannot generate invocation for Groovy property" }
 
-            val implementationName: kotlin.String? = request.implementationInfo.name
-            val implementationDescriptor: kotlin.String? = request.implementationInfo.descriptor
+            val implementationInfo = requireNotNull(request.implementationInfo)
+            val implementationName: kotlin.String = requireNotNull(implementationInfo.name)
+            val implementationDescriptor: kotlin.String = requireNotNull(implementationInfo.descriptor)
 
             method.addStatement("\$N._POP()", InterceptJvmCallsGenerator.Companion.METHOD_VISITOR_PARAM) // pops the default method signature marker
             InterceptJvmCallsGenerator.Companion.maybeGenerateLoadBinaryClassNameCall(method, interceptedCallable)
@@ -544,25 +564,27 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
 
             val hasInjectVisitorContext: kotlin.Boolean = callable.hasInjectVisitorContextParam()
             if (hasInjectVisitorContext) {
-                val lastParameter: org.gradle.internal.instrumentation.model.ParameterInfo = callable.parameters.get(callable.parameters.size() - 1)
+                val parameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo> = requireNotNull(callable.parameters)
+                val lastParameter: org.gradle.internal.instrumentation.model.ParameterInfo = parameters.get(parameters.size - 1)
                 if (lastParameter.kind !== ParameterKindInfo.INJECT_VISITOR_CONTEXT) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("The interceptor's @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.InjectVisitorContext::class.java.getSimpleName() + " parameter should be last parameter")
                 }
-                if (!lastParameter.parameterType.getClassName().equals(org.gradle.internal.instrumentation.api.types.BytecodeInterceptorFilter::class.java.getName())) {
+                if (!requireNotNull(lastParameter.parameterType).getClassName().equals(org.gradle.internal.instrumentation.api.types.BytecodeInterceptorFilter::class.java.getName())) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("The interceptor's @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.InjectVisitorContext::class.java.getSimpleName() + " parameter should be of type " + org.gradle.internal.instrumentation.api.types.BytecodeInterceptorFilter::class.java.getName() + " but was " + lastParameter.parameterType.getClassName())
                 }
-                if (callable.parameters.stream().filter({ it -> it.kind === ParameterKindInfo.INJECT_VISITOR_CONTEXT }).count() > 1) {
+                if (parameters.stream().filter({ it: org.gradle.internal.instrumentation.model.ParameterInfo -> it.kind === ParameterKindInfo.INJECT_VISITOR_CONTEXT }).count() > 1) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("An interceptor may not have more than one @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.InjectVisitorContext::class.java.getSimpleName() + " parameter")
                 }
             }
 
             val hasCallerClassName: kotlin.Boolean = callable.hasCallerClassNameParam()
+            val parameters: kotlin.collections.MutableList<org.gradle.internal.instrumentation.model.ParameterInfo> = requireNotNull(callable.parameters)
             if (hasCallerClassName) {
-                val expectedIndex: kotlin.Int = if (hasInjectVisitorContext) callable.parameters.size() - 2 else callable.parameters.size() - 1
-                if (callable.parameters.get(expectedIndex).kind !== ParameterKindInfo.CALLER_CLASS_NAME) {
+                val expectedIndex: kotlin.Int = if (hasInjectVisitorContext) parameters.size() - 2 else parameters.size() - 1
+                if (parameters.get(expectedIndex).kind !== ParameterKindInfo.CALLER_CLASS_NAME) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("The interceptor's @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.CallerClassName::class.java.getSimpleName() + " parameter should be last or just before @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.InjectVisitorContext::class.java.getSimpleName() + " if that parameter is present")
                 }
-                if (callable.parameters.stream().filter({ it -> it.kind === ParameterKindInfo.CALLER_CLASS_NAME }).count() > 1) {
+                if (parameters.stream().filter({ it: org.gradle.internal.instrumentation.model.ParameterInfo -> it.kind === ParameterKindInfo.CALLER_CLASS_NAME }).count() > 1) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("An interceptor may not have more than one @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.CallerClassName::class.java.getSimpleName() + " parameter")
                 }
             }
@@ -571,19 +593,20 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
                 // TODO support @AfterConstructor with Kotlin default mask? Kotlin constructors have a special DefaultConstructorMarker as the last argument
                 if (callable.kind !== CallableKindInfo.STATIC_METHOD && callable.kind !== CallableKindInfo.INSTANCE_METHOD) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure(
-                        "Only @" + org.gradle.internal.instrumentation.api.annotations.CallableKind.StaticMethod::class.java.getSimpleName() + " or @" + org.gradle.internal.instrumentation.api.annotations.CallableKind.InstanceMethod::class.java.getSimpleName() + " can use Kotlin default parameters"
+                    "Only @" + org.gradle.internal.instrumentation.api.annotations.CallableKind.StaticMethod::class.java.getSimpleName() + " or @" + org.gradle.internal.instrumentation.api.annotations.CallableKind.InstanceMethod::class.java.getSimpleName() + " can use Kotlin default parameters"
                     )
                 }
 
-                val expectedKotlinDefaultMaskIndex: kotlin.Int = callable.parameters.size() - (if (hasCallerClassName) 2 else 1)
-                if (callable.parameters.get(expectedKotlinDefaultMaskIndex).kind !== ParameterKindInfo.KOTLIN_DEFAULT_MASK) {
+                val expectedKotlinDefaultMaskIndex: kotlin.Int = parameters.size() - (if (hasCallerClassName) 2 else 1)
+                if (parameters.get(expectedKotlinDefaultMaskIndex).kind !== ParameterKindInfo.KOTLIN_DEFAULT_MASK) {
                     throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure(
                         "@" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.KotlinDefaultMask::class.java.getSimpleName() + " should be the last parameter of may be followed only by @" + org.gradle.internal.instrumentation.api.annotations.ParameterKind.CallerClassName::class.java.getSimpleName()
                     )
                 }
             }
 
-            if (callable.owner.isInterceptSubtypes() && !callable.owner.type.getInternalName().startsWith("org/gradle")) {
+            val owner = requireNotNull(callable.owner)
+            if (owner.isInterceptSubtypes() && !owner.type.getInternalName().startsWith("org/gradle")) {
                 throw org.gradle.internal.instrumentation.processor.codegen.jvmbytecode.InterceptJvmCallsGenerator.Failure("Intercepting inherited methods is supported only for Gradle types for now, but type was: " + callable.owner.type.getInternalName())
             }
         }
@@ -606,10 +629,11 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
         }
 
         private fun standardCallableDescriptor(callableInfo: CallableInfo): kotlin.String {
-            val parameterTypes: kotlin.Array<org.objectweb.asm.Type?> = callableInfo.parameters.stream()
-                .filter({ it -> it.kind.isSourceParameter() })
-                .map(org.gradle.internal.instrumentation.model.ParameterInfo::getParameterType).toArray({ _Dummy_.__Array__() })
-            val returnType: org.objectweb.asm.Type = callableInfo.returnType.type
+            val parameterTypes: kotlin.Array<org.objectweb.asm.Type> = requireNotNull(callableInfo.parameters)
+                .filter { it.kind == ParameterKindInfo.METHOD_PARAMETER || it.kind == ParameterKindInfo.VARARG_METHOD_PARAMETER }
+                .map { parameter -> requireNotNull(parameter.parameterType) }
+                .toTypedArray()
+            val returnType: org.objectweb.asm.Type = requireNotNull(callableInfo.returnType).type
             return org.objectweb.asm.Type.getMethodDescriptor(returnType, *parameterTypes)
         }
 
@@ -621,10 +645,10 @@ class InterceptJvmCallsGenerator : RequestGroupingInstrumentationClassSourceGene
             val standardDescriptor: kotlin.String = InterceptJvmCallsGenerator.Companion.standardCallableDescriptor(callableInfo)
             val returnType: org.objectweb.asm.Type = org.objectweb.asm.Type.getReturnType(standardDescriptor)
             val argumentTypes: kotlin.Array<org.objectweb.asm.Type?> = org.objectweb.asm.Type.getArgumentTypes(standardDescriptor)
-            val argumentTypesWithDefault: kotlin.Array<org.objectweb.asm.Type?> = java.util.stream.Stream.concat<org.objectweb.asm.Type?>(
-                java.util.Arrays.stream<org.objectweb.asm.Type?>(argumentTypes),
-                java.util.stream.Stream.of<org.objectweb.asm.Type?>(org.objectweb.asm.Type.getType(kotlin.Int::class.javaPrimitiveType), org.objectweb.asm.Type.getType(kotlin.Any::class.java))
-            ).toArray<org.objectweb.asm.Type?> { _Dummy_.__Array__() }
+            val argumentTypesWithDefault: kotlin.Array<org.objectweb.asm.Type> = argumentTypes + arrayOf(
+                org.objectweb.asm.Type.getType(kotlin.Int::class.javaPrimitiveType),
+                org.objectweb.asm.Type.getType(kotlin.Any::class.java)
+            )
             return org.objectweb.asm.Type.getMethodDescriptor(returnType, *argumentTypesWithDefault)
         }
     }

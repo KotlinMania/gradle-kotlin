@@ -18,7 +18,7 @@ package org.gradle.internal.instrumentation.model
 import org.objectweb.asm.Type
 import java.util.Objects
 
-class CallableOwnerInfo(@JvmField val type: Type?, val isInterceptSubtypes: Boolean) {
+class CallableOwnerInfo(val type: Type?, val isInterceptSubtypes: Boolean) {
     override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true

@@ -17,7 +17,7 @@ package org.gradle.initialization
 
 import org.gradle.internal.operations.BuildOperationType
 
-class LoadBuildBuildOperationType : BuildOperationType<LoadBuildBuildOperationType.Details?, LoadBuildBuildOperationType.Result?> {
+class LoadBuildBuildOperationType : BuildOperationType<LoadBuildBuildOperationType.Details, LoadBuildBuildOperationType.Result> {
     interface Details {
         /**
          * @since 4.6

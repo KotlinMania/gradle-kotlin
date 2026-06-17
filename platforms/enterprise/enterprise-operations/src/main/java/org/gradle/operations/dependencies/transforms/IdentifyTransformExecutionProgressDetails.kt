@@ -15,6 +15,8 @@
  */
 package org.gradle.operations.dependencies.transforms
 
+import org.gradle.operations.dependencies.variants.ComponentIdentifier
+
 /**
  * Fired each time a transform execution is identified by the execution engine.
  *

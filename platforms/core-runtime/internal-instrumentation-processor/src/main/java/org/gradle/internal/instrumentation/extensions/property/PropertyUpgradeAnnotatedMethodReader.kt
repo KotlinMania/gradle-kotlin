@@ -26,6 +26,10 @@ import org.gradle.internal.instrumentation.api.annotations.ReplacedAccessor
 import org.gradle.internal.instrumentation.api.annotations.ReplacedDeprecation
 import org.gradle.internal.instrumentation.api.annotations.ReplacesEagerProperty
 import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.internal.instrumentation.api.declarations.InterceptorDeclaration.GROOVY_INTERCEPTORS_GENERATED_CLASS_NAME_FOR_PROPERTY_UPGRADES
+import org.gradle.internal.instrumentation.api.declarations.InterceptorDeclaration.GROOVY_INTERCEPTORS_GENERATED_CLASS_NAME_FOR_PROPERTY_UPGRADES_REPORT
+import org.gradle.internal.instrumentation.api.declarations.InterceptorDeclaration.JVM_BYTECODE_GENERATED_CLASS_NAME_FOR_PROPERTY_UPGRADES
+import org.gradle.internal.instrumentation.api.declarations.InterceptorDeclaration.JVM_BYTECODE_GENERATED_CLASS_NAME_FOR_PROPERTY_UPGRADES_REPORT
 import org.gradle.internal.instrumentation.api.types.BytecodeInterceptorType
 import org.gradle.internal.instrumentation.extensions.property.PropertyUpgradeAnnotatedMethodReader.Companion.getPropertyName
 import org.gradle.internal.instrumentation.extensions.property.PropertyUpgradeRequestExtra.BridgedMethodInfo
@@ -50,11 +54,11 @@ import org.gradle.internal.instrumentation.processor.extensibility.AnnotatedMeth
 import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterceptionRequestReader
 import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterceptionRequestReader.ReadRequestContext
 import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterceptionRequestReader.Result.InvalidRequest
+import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterceptionRequestReader.Result.Success
 import org.gradle.internal.instrumentation.processor.modelreader.impl.AnnotationUtils
 import org.gradle.internal.instrumentation.processor.modelreader.impl.TypeUtils
 import org.objectweb.asm.Type
 import java.io.File
-import java.lang.String
 import java.util.Arrays
 import java.util.function.Consumer
 import java.util.function.Function
@@ -72,21 +76,8 @@ import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeMirror
 import javax.lang.model.util.Elements
 import javax.lang.model.util.Types
-import kotlin.Array
-import kotlin.Boolean
-import kotlin.IllegalArgumentException
-import kotlin.Int
-import kotlin.arrayOfNulls
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
-import kotlin.collections.LinkedHashMap
-import kotlin.collections.MutableCollection
-import kotlin.collections.MutableList
-import kotlin.collections.MutableMap
-import kotlin.collections.MutableSet
 import kotlin.collections.dropLastWhile
 import kotlin.collections.mutableListOf
-import kotlin.collections.mutableSetOf
 import kotlin.collections.plus
 import kotlin.collections.toTypedArray
 import kotlin.plus
@@ -131,13 +122,17 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         }
     }
 
-    override fun readRequest(method: ExecutableElement, context: ReadRequestContext): MutableCollection<CallInterceptionRequestReader.Result?> {
+    override fun readRequest(method: ExecutableElement?, context: ReadRequestContext?): MutableCollection<CallInterceptionRequestReader.Result?>? {
+        if (method == null || context == null) {
+            return mutableSetOf()
+        }
+
         var annotation = AnnotationUtils.findAnnotationMirror(method, ReplacesEagerProperty::class.java)
         if (!annotation.isPresent()) {
             annotation = AnnotationUtils.findAnnotationMirror(method, ToBeReplacedByLazyProperty::class.java)
         }
         if (!annotation.isPresent()) {
-            return mutableSetOf<CallInterceptionRequestReader.Result?>()
+            return mutableSetOf()
         }
 
         val annotationMirror: AnnotationMirror = annotation.get()
@@ -160,33 +155,31 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
 
         try {
             val accessorSpecs = readAccessorSpecsFromReplacesEagerProperty(method, annotationMirror, context)
-            val requests: MutableList<CallInterceptionRequest?> = ArrayList<CallInterceptionRequest?>()
-            val groovyUpgradeAccessorSpecs: MutableMap<String?, MutableList<AccessorSpec?>?> = LinkedHashMap<String?, MutableList<AccessorSpec?>?>()
+            val requests: MutableList<CallInterceptionRequest> = mutableListOf()
+            val groovyUpgradeAccessorSpecs: MutableMap<String, MutableList<AccessorSpec>> = LinkedHashMap<String, MutableList<AccessorSpec>>()
             for (accessorSpec in accessorSpecs) {
                 if (accessorSpec.interceptorType == BytecodeInterceptorType.BYTECODE_UPGRADE) {
-                    groovyUpgradeAccessorSpecs.computeIfAbsent(accessorSpec.propertyName) { `__`: kotlin.String? -> java.util.ArrayList<AccessorSpec?>() }!!.add(accessorSpec)
+                    groovyUpgradeAccessorSpecs.computeIfAbsent(accessorSpec.propertyName) { java.util.ArrayList() }.add(accessorSpec)
                 }
                 requests.add(createJvmInterceptionRequest(method, accessorSpec))
             }
-            groovyUpgradeAccessorSpecs.values.stream()
-                .flatMap<CallInterceptionRequest?> { specs: MutableList<AccessorSpec>? -> createGroovyPropertyInterceptionRequests(specs!!, method).stream() }
-                .forEach { e: CallInterceptionRequest? -> requests.add(e) }
-
-            return requests.stream()
-                .map<CallInterceptionRequestReader.Result.Success?> { request: CallInterceptionRequest? -> Success(request) }
+            val groovyRequests = groovyUpgradeAccessorSpecs.values.stream()
+                .flatMap { specs: MutableList<AccessorSpec> -> createGroovyPropertyInterceptionRequests(specs, method).stream() }
                 .collect(Collectors.toList())
+            requests.addAll(groovyRequests)
+            return requests.map { request -> Success(request) }.toMutableList()
         } catch (failure: IllegalArgumentException) {
             return mutableListOf<CallInterceptionRequestReader.Result?>(InvalidRequest(failure.message))
         }
     }
 
-    private fun createGroovyPropertyInterceptionRequests(accessors: MutableList<AccessorSpec>, method: ExecutableElement): MutableList<CallInterceptionRequest?> {
-        val requests: MutableList<CallInterceptionRequest?> = ArrayList<CallInterceptionRequest?>()
+    private fun createGroovyPropertyInterceptionRequests(accessors: MutableList<AccessorSpec>, method: ExecutableElement): MutableList<CallInterceptionRequest> {
+        val requests: MutableList<CallInterceptionRequest> = mutableListOf()
 
         val groovyPropertyGetter = accessors.stream()
-            .filter { accessor: AccessorSpec? -> Companion.isGroovyPropertyGetter(accessor!!, accessors) }
+            .filter { accessor: AccessorSpec -> Companion.isGroovyPropertyGetter(accessor, accessors) }
             .findFirst()
-        groovyPropertyGetter.ifPresent(Consumer { getter: AccessorSpec? -> requests.add(createGroovyPropertyInterceptionRequest(getter!!, CallableKindInfo.GROOVY_PROPERTY_GETTER, method)) })
+        groovyPropertyGetter.ifPresent(Consumer { getter: AccessorSpec -> requests.add(createGroovyPropertyInterceptionRequest(getter, CallableKindInfo.GROOVY_PROPERTY_GETTER, method)) })
 
         for (accessor in accessors) {
             if (groovyPropertyGetter.isPresent() && accessor === groovyPropertyGetter.get()) {
@@ -201,7 +194,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         return requests
     }
 
-    private fun createGroovyPropertyInterceptionRequest(accessor: AccessorSpec, callableKindInfo: CallableKindInfo?, method: ExecutableElement): CallInterceptionRequest {
+    private fun createGroovyPropertyInterceptionRequest(accessor: AccessorSpec, callableKindInfo: CallableKindInfo, method: ExecutableElement): CallInterceptionRequest {
         val callableMethodName = if (callableKindInfo == CallableKindInfo.GROOVY_PROPERTY_GETTER || callableKindInfo == CallableKindInfo.GROOVY_PROPERTY_SETTER)
             accessor.propertyName
         else
@@ -210,7 +203,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         val interceptorsClassName = getGroovyInterceptorsClassName(accessor.interceptorType)
         val extras = Arrays.asList<RequestExtra?>(OriginatingElement(method), RequestExtra.InterceptGroovyCalls(interceptorsClassName, accessor.interceptorType))
         val callableParameters: MutableList<ParameterInfo> = prependReceiverParameter(accessor.parameters, TypeUtils.extractType(method.getEnclosingElement().asType()))
-        val returnType = TypeUtils.extractRawType(accessor.returnType)
+        val returnType = requireNotNull(TypeUtils.extractRawType(accessor.returnType))
         return CallInterceptionRequestImpl(
             extractCallableInfo(callableKindInfo, method, returnType, callableMethodName, callableParameters),
             extractImplementationInfo(accessor, method, returnType, accessor.methodName, implementationMethodPrefix, accessor.parameters),
@@ -237,45 +230,48 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             val parentDeprecationSpec = readDeprecationSpec(annotationMirror)
             val parentBinaryCompatibility = readBinaryCompatibility(annotationMirror)
             return replacedAccessors.stream()
-                .map<AccessorSpec?> { annotation: AnnotationMirror? -> getAccessorSpec(method, annotation!!, parentDeprecationSpec, parentBinaryCompatibility) }
+                .map<AccessorSpec> { annotation: AnnotationMirror? ->
+                    getAccessorSpec(method, annotation!!, parentDeprecationSpec, parentBinaryCompatibility)
+                }
                 .collect(Collectors.toList())
         }
 
         // Provider has only a getter, no setter
         if (GradleLazyType.PROVIDER.isEqualToRawTypeOf(TypeName.get(method.getReturnType()))) {
-            return mutableListOf<AccessorSpec?>(getAccessorSpec(method, ReplacedAccessor.AccessorType.GETTER, annotationMirror))
+            return mutableListOf<AccessorSpec>(getAccessorSpec(method, ReplacedAccessor.AccessorType.GETTER, annotationMirror))
         }
-        return Arrays.asList<AccessorSpec?>(
+        return Arrays.asList<AccessorSpec>(
             getAccessorSpec(method, ReplacedAccessor.AccessorType.GETTER, annotationMirror),
             getAccessorSpec(method, ReplacedAccessor.AccessorType.SETTER, annotationMirror)
         )
     }
 
-    private fun readAccessorSpecsFromToBeReplacedByLazyProperty(annotatedMethod: ExecutableElement, annotation: AnnotationMirror?, context: ReadRequestContext): MutableList<AccessorSpec> {
+    private fun readAccessorSpecsFromToBeReplacedByLazyProperty(annotatedMethod: ExecutableElement, annotation: AnnotationMirror, context: ReadRequestContext): MutableList<AccessorSpec> {
         val skipForReport = AnnotationUtils.findAnnotationValueWithDefaults(elements, annotation, "unreported")
-            .map<Boolean?> { v: AnnotationValue? -> v!!.getValue() as Boolean }
+            .map<Boolean> { v: AnnotationValue? -> v!!.getValue() as Boolean }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure(String.format("Missing 'unreported' attribute in @%s", ToBeReplacedByLazyProperty::class.java.getSimpleName())) })
-        if (skipForReport) {
-            return mutableListOf<AccessorSpec?>()
+        if (skipForReport == true) {
+            return mutableListOf<AccessorSpec>()
         }
 
         val propertyName: String = getPropertyName(annotatedMethod)
         val settersKey: String = TO_BE_REPLACED_SETTERS_KEY_PREFIX + annotatedMethod.getEnclosingElement().asType().toString()
         val propertySettersVisitedKey: String = TO_BE_REPLACED_SETTERS_VISITED_KEY_PREFIX + annotatedMethod.getEnclosingElement().asType().toString()
-        val setters: MutableCollection<ExecutableElement?>?
-        val propertySettersVisited: MutableSet<String?> = context.computeIfAbsent<HashSet<String?>>(propertySettersVisitedKey, Function { key: String? -> HashSet<String?>() })
+        val setters: MutableCollection<ExecutableElement?>
+        val propertySettersVisited: MutableSet<String> = context.computeIfAbsent<HashSet<String>>(propertySettersVisitedKey, Function { key: String? -> HashSet<String>() })
         if (isSetterMethodName(annotatedMethod.getSimpleName().toString()) || !propertySettersVisited.add(propertyName)) {
             // If setter is annotated we should not visit other setters
             // also some booleans have two getters, is and get getter, so lets visit setters only once.
             setters = mutableListOf<ExecutableElement?>()
         } else {
-            setters = context.computeIfAbsent<Multimap<String?, ExecutableElement?>?>(settersKey, Function { key: String? -> getAllSetters(annotatedMethod.getEnclosingElement()) }).get(propertyName)
+            setters = context.computeIfAbsent<Multimap<String, ExecutableElement?>>(settersKey, Function { key: String? -> getAllSetters(annotatedMethod.getEnclosingElement()) }).get(propertyName)
         }
 
         val deprecationSpec = DeprecationSpec(false, ReplacedDeprecation.RemovedIn.UNSPECIFIED, -1, "", false)
         val generatedClassName = "org.gradle.internal.classpath.generated." + annotatedMethod.getEnclosingElement().getSimpleName() + "_ReportingAdapter"
         return Stream.concat<ExecutableElement?>(Stream.of<ExecutableElement?>(annotatedMethod), setters.stream())
-            .map<AccessorSpec?> { method: ExecutableElement? ->
+            .filter { method: ExecutableElement? -> method != null }
+            .map<AccessorSpec> { method: ExecutableElement? ->
                 Companion.bridgedMethodToAccessorSpec(
                     method!!,
                     generatedClassName,
@@ -288,18 +284,19 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             .collect(Collectors.toList())
     }
 
-    private fun readAccessorSpecsFromAdapter(adapter: Element, upgradedElement: Element, annotationMirror: AnnotationMirror?): MutableList<AccessorSpec> {
-        val bridgedMethods = TypeUtils.getExecutableElementsFromElements(Stream.of<Element?>(adapter)).stream()
-            .filter { method: ExecutableElement? -> method!!.getAnnotation<BytecodeUpgrade?>(BytecodeUpgrade::class.java) != null }
+    private fun readAccessorSpecsFromAdapter(adapter: Element, upgradedElement: Element, annotationMirror: AnnotationMirror): MutableList<AccessorSpec> {
+        val bridgedMethods = TypeUtils.getExecutableElementsFromElements(Stream.of<Element>(adapter)).stream()
+            .filter { method: ExecutableElement? -> method != null && method.getAnnotation<BytecodeUpgrade?>(BytecodeUpgrade::class.java) != null }
+            .map { method: ExecutableElement? -> method!! }
             .collect(Collectors.toList())
         validateBridgedMethods(adapter, upgradedElement, bridgedMethods)
 
         return bridgedMethods.stream()
-            .map<AccessorSpec?> { method: ExecutableElement? -> adapterBridgedMethodToAccessorSpec(method!!, annotationMirror) }
+            .map<AccessorSpec> { method: ExecutableElement -> adapterBridgedMethodToAccessorSpec(method, annotationMirror) }
             .collect(Collectors.toList())
     }
 
-    private fun adapterBridgedMethodToAccessorSpec(method: ExecutableElement, annotationMirror: AnnotationMirror?): AccessorSpec {
+    private fun adapterBridgedMethodToAccessorSpec(method: ExecutableElement, annotationMirror: AnnotationMirror): AccessorSpec {
         val innerClass = method.getEnclosingElement()
         val topClass = innerClass.getEnclosingElement()
         val packageElement = elements.getPackageOf(innerClass)
@@ -325,29 +322,29 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         )
     }
 
-    private fun readDeprecationSpec(annotation: AnnotationMirror?): DeprecationSpec {
+    private fun readDeprecationSpec(annotation: AnnotationMirror): DeprecationSpec {
         val deprecation = AnnotationUtils.findAnnotationValueWithDefaults(elements, annotation, "deprecation")
             .map<AnnotationMirror> { v: AnnotationValue? -> v!!.getValue() as AnnotationMirror? }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure(String.format("Missing 'deprecation' attribute in @%s", ReplacesEagerProperty::class.java.getSimpleName())) })
         val enabled = AnnotationUtils.findAnnotationValueWithDefaults(elements, deprecation, "enabled")
-            .map<Boolean?> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Boolean? }
+            .map<Boolean> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Boolean }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'enabled' attribute in @ReplacedDeprecation") })
         val removedIn = AnnotationUtils.findAnnotationValueWithDefaults(elements, deprecation, "removedIn")
             .map<ReplacedDeprecation.RemovedIn> { v: AnnotationValue? -> ReplacedDeprecation.RemovedIn.valueOf(v!!.getValue().toString()) }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'removedIn' attribute in @ReplacedDeprecation") })
         val withUpgradeGuideVersion = AnnotationUtils.findAnnotationValueWithDefaults(elements, deprecation, "withUpgradeGuideMajorVersion")
-            .map<Int?> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Int }
+            .map<Int> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Int }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'withUpgradeGuideMajorVersion' attribute in @ReplacedDeprecation") })
         val withUpgradeGuideSection = AnnotationUtils.findAnnotationValueWithDefaults(elements, deprecation, "withUpgradeGuideSection")
             .map<String> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as String? }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'withUpgradeGuideSection' attribute in @ReplacedDeprecation") })
         val withDslReference = AnnotationUtils.findAnnotationValueWithDefaults(elements, deprecation, "withDslReference")
-            .map<Boolean?> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Boolean }
+            .map<Boolean> { annotationValue: AnnotationValue? -> annotationValue!!.getValue() as Boolean }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'withDslReference' attribute in @ReplacedDeprecation") })
         return DeprecationSpec(enabled, removedIn, withUpgradeGuideVersion, withUpgradeGuideSection, withDslReference)
     }
 
-    private fun readBinaryCompatibility(annotation: AnnotationMirror?): ReplacesEagerProperty.BinaryCompatibility {
+    private fun readBinaryCompatibility(annotation: AnnotationMirror): ReplacesEagerProperty.BinaryCompatibility {
         return AnnotationUtils.findAnnotationValueWithDefaults(elements, annotation, "binaryCompatibility")
             .map<ReplacesEagerProperty.BinaryCompatibility> { v: AnnotationValue? -> ReplacesEagerProperty.BinaryCompatibility.valueOf(v!!.getValue().toString()) }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'binaryCompatibility' attribute in @ReplacedAccessor") })
@@ -360,7 +357,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?
     ): AccessorSpec {
         val methodName = AnnotationUtils.findAnnotationValue(annotation, "name")
-            .map<String> { v: AnnotationValue? -> v!!.getValue() as String? }
+            .map<String> { v: AnnotationValue? -> v!!.getValue() as String }
             .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'name' attribute in @ReplacedAccessor") })
         val accessorType = AnnotationUtils.findAnnotationValue(annotation, "value")
             .map<ReplacedAccessor.AccessorType> { v: AnnotationValue? -> ReplacedAccessor.AccessorType.valueOf(v!!.getValue().toString()) }
@@ -392,12 +389,12 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         accessorType: ReplacedAccessor.AccessorType,
         methodName: String,
         originalType: TypeName,
-        annotation: AnnotationMirror?,
+        annotation: AnnotationMirror,
         deprecationSpec: DeprecationSpec?,
         binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?
     ): AccessorSpec {
         val returnType: TypeName
-        val parameters: MutableList<ParameterInfo>?
+        val parameters: MutableList<ParameterInfo>
         when (accessorType) {
             ReplacedAccessor.AccessorType.GETTER -> {
                 parameters = ArrayList<ParameterInfo>()
@@ -405,9 +402,9 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             }
 
             ReplacedAccessor.AccessorType.SETTER -> {
-                parameters = mutableListOf<ParameterInfo?>(ParameterInfoImpl("arg0", TypeUtils.extractRawType(originalType), ParameterKindInfo.METHOD_PARAMETER))
+                parameters = mutableListOf(ParameterInfoImpl("arg0", TypeUtils.extractRawType(originalType), ParameterKindInfo.METHOD_PARAMETER))
                 val isFluentSetter = AnnotationUtils.findAnnotationValueWithDefaults(elements, annotation, "fluentSetter")
-                    .map<Boolean?> { v: AnnotationValue? -> v!!.getValue() as Boolean? }
+                    .map<Boolean> { v: AnnotationValue? -> v!!.getValue() as Boolean }
                     .orElseThrow<AnnotationReadFailure?>(Supplier { AnnotationReadFailure("Missing 'fluentSetter' attribute") })
                 returnType = if (isFluentSetter) TypeName.get(method.getEnclosingElement().asType()) else ClassName.VOID
             }
@@ -441,16 +438,17 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
     private fun createJvmGetterInterceptionRequest(accessor: AccessorSpec, method: ExecutableElement): CallInterceptionRequest {
         val extras = getJvmRequestExtras(accessor, method, accessor.binaryCompatibility)
         val callableName = accessor.methodName
-        val returnType = TypeUtils.extractRawType(accessor.returnType)
+        val returnType = requireNotNull(TypeUtils.extractRawType(accessor.returnType))
         return CallInterceptionRequestImpl(
-            Companion.extractCallableInfo(CallableKindInfo.INSTANCE_METHOD, method, returnType, callableName, mutableListOf<ParameterInfo?>()),
-            Companion.extractImplementationInfo(accessor, method, returnType, accessor.methodName, "get", mutableListOf<ParameterInfo?>()),
+            Companion.extractCallableInfo(CallableKindInfo.INSTANCE_METHOD, method, returnType, callableName, mutableListOf<ParameterInfo>()),
+            Companion.extractImplementationInfo(accessor, method, returnType, accessor.methodName, "get", mutableListOf<ParameterInfo>()),
             extras
         )
     }
 
     private fun createJvmSetterInterceptionRequest(accessor: AccessorSpec, method: ExecutableElement): CallInterceptionRequest {
         val returnType = TypeUtils.extractRawType(accessor.returnType)
+            ?: throw IllegalArgumentException("Accessor return type should not be null")
         val callableName = accessor.methodName
         val parameters = accessor.parameters
         val binaryCompatibility = accessor.binaryCompatibility
@@ -493,19 +491,19 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
     private class AnnotationReadFailure(reason: String?) : IllegalArgumentException(reason)
 
     private class AccessorSpec(
-        private val generatedClassName: String,
-        private val accessorType: ReplacedAccessor.AccessorType,
-        private val propertyName: String?,
-        private val methodName: String,
-        private val returnType: TypeName,
-        private val parameters: MutableList<ParameterInfo>,
-        private val deprecationSpec: DeprecationSpec?,
-        private val binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?,
-        private val interceptorType: BytecodeInterceptorType,
-        private val bridgedMethod: BridgedMethodInfo?
+        val generatedClassName: String,
+        val accessorType: ReplacedAccessor.AccessorType,
+        val propertyName: String,
+        val methodName: String,
+        val returnType: TypeName,
+        val parameters: MutableList<ParameterInfo>,
+        val deprecationSpec: DeprecationSpec?,
+        val binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?,
+        val interceptorType: BytecodeInterceptorType,
+        val bridgedMethod: BridgedMethodInfo?
     )
 
-    internal class DeprecationSpec private constructor(
+    internal class DeprecationSpec(
         val isEnabled: Boolean,
         val removedIn: ReplacedDeprecation.RemovedIn?,
         val withUpgradeGuideVersion: Int,
@@ -536,7 +534,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
                 // For boolean properties we have two getters: isFoo() and getFoo(),
                 // if isFoo() exists then isFoo() is property getter, else we can use getFoo()
                 return isIsGetterMethodName(accessor.methodName) || (isGetGetterMethodName(accessor.methodName) && accessors.stream()
-                    .noneMatch { a: AccessorSpec? -> isIsGetterMethodName(a.methodName) })
+                    .noneMatch { a: AccessorSpec? -> isIsGetterMethodName(a!!.methodName) })
             }
             return isGetGetterMethodName(accessor.methodName)
         }
@@ -553,21 +551,21 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             return result
         }
 
-        private fun getAllSetters(element: Element?): Multimap<String?, ExecutableElement?> {
-            return TypeUtils.getExecutableElementsFromElements(Stream.of<Element?>(element)).stream()
-                .filter { method: ExecutableElement? -> isSetterMethodName(method!!.getSimpleName().toString()) && method.getParameters().size == 1 }
-                .collect(
-                    Multimaps.toMultimap<ExecutableElement?, String?, ExecutableElement?, ArrayListMultimap<String?, ExecutableElement?>>(
-                        Function { method: ExecutableElement? -> Companion.getPropertyName(method!!) },
-                        Function.identity<ExecutableElement?>(),
-                        Supplier { ArrayListMultimap.create() }
-                    ))
+        private fun getAllSetters(element: Element?): Multimap<String, ExecutableElement?> {
+            val setters = ArrayListMultimap.create<String, ExecutableElement?>()
+            TypeUtils.getExecutableElementsFromElements(Stream.of<Element?>(element)).stream()
+                .filter { method: ExecutableElement? -> method != null && isSetterMethodName(method.getSimpleName().toString()) && method.getParameters().size == 1 }
+                .forEach { method: ExecutableElement? ->
+                    method ?: return@forEach
+                    setters.put(Companion.getPropertyName(method), method)
+                }
+            return setters
         }
 
         private fun bridgedMethodToAccessorSpec(
             method: ExecutableElement,
             generatedClassName: String,
-            bridgeType: BridgeType?,
+            bridgeType: BridgeType,
             deprecationSpec: DeprecationSpec?,
             binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?,
             bytecodeInterceptorType: BytecodeInterceptorType
@@ -634,7 +632,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             }
 
             if (!errors.isEmpty()) {
-                throw AnnotationReadFailure(String.join("\n", errors))
+                throw AnnotationReadFailure(errors.joinToString("\n"))
             }
         }
 
@@ -664,8 +662,8 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             else
                 method.getReturnType().toString()
             val gradleLazyType = GradleLazyType.from(typeName)
-            when (gradleLazyType) {
-                GradleLazyType.CONFIGURABLE_FILE_COLLECTION -> return GradleLazyType.FILE_COLLECTION.asClassName()
+        when (gradleLazyType) {
+                GradleLazyType.CONFIGURABLE_FILE_COLLECTION -> return GradleLazyType.FILE_COLLECTION.asClassName()!!
                 GradleLazyType.DIRECTORY_PROPERTY, GradleLazyType.REGULAR_FILE_PROPERTY -> return ClassName.get(File::class.java)
                 GradleLazyType.LIST_PROPERTY -> return ParameterizedTypeName.get(
                     ClassName.get(MutableList::class.java),
@@ -693,7 +691,7 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
                 }
 
                 else -> throw AnnotationReadFailure(
-                    kotlin.String.format(
+                    String.format(
                         "Cannot extract original type for method '%s.%s: %s'. Use explicit @%s#originalType instead.",
                         method.getEnclosingElement(),
                         method,
@@ -705,11 +703,11 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
         }
 
         private fun extractCallableInfo(
-            kindInfo: CallableKindInfo?,
+            kindInfo: CallableKindInfo,
             methodElement: ExecutableElement,
-            returnType: Type?,
-            callableName: kotlin.String?,
-            parameters: MutableList<ParameterInfo>?
+            returnType: Type,
+            callableName: String,
+            parameters: MutableList<ParameterInfo>
         ): CallableInfo {
             val owner = CallableOwnerInfo(TypeUtils.extractType(methodElement.getEnclosingElement().asType()), true)
             val returnTypeInfo = CallableReturnTypeInfo(returnType)
@@ -720,8 +718,8 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             accessor: AccessorSpec,
             method: ExecutableElement,
             returnType: Type,
-            interceptedMethodName: kotlin.String?,
-            methodPrefix: kotlin.String,
+            interceptedMethodName: String,
+            methodPrefix: String,
             parameters: MutableList<ParameterInfo>
         ): ImplementationInfoImpl {
             val owner = TypeUtils.extractType(method.getEnclosingElement().asType())
@@ -731,21 +729,21 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             return ImplementationInfoImpl(implementationOwner, implementationName, implementationDescriptor)
         }
 
-        private fun toArray(owner: Type?, parameters: MutableList<ParameterInfo>): Array<Type?> {
+        private fun toArray(owner: Type?, parameters: MutableList<ParameterInfo>): Array<Type> {
             val array = arrayOfNulls<Type>(1 + parameters.size)
-            array[0] = owner
+            array[0] = owner ?: throw IllegalArgumentException("Method owner type is missing")
             var i = 1
             for (parameter in parameters) {
-                array[i++] = parameter.parameterType
+                array[i++] = requireNotNull(parameter.parameterType)
             }
-            return array
+            return array as Array<Type>
         }
 
-        private fun getPropertyName(method: ExecutableElement): kotlin.String {
+        private fun getPropertyName(method: ExecutableElement): String {
             return getPropertyName(method.getSimpleName().toString())
         }
 
-        private fun getPropertyName(methodName: kotlin.String): kotlin.String {
+        private fun getPropertyName(methodName: String): String {
             if (isIsGetterMethodName(methodName)) {
                 // isFoo() -> foo
                 return methodName.get(2).lowercaseChar().toString() + methodName.substring(3)
@@ -757,15 +755,15 @@ class PropertyUpgradeAnnotatedMethodReader(processingEnv: ProcessingEnvironment)
             }
         }
 
-        private fun isIsGetterMethodName(methodName: kotlin.String): Boolean {
+        private fun isIsGetterMethodName(methodName: String): Boolean {
             return methodName.startsWith("is") && methodName.length > 2 && Character.isUpperCase(methodName.get(2))
         }
 
-        private fun isGetGetterMethodName(methodName: kotlin.String): Boolean {
+        private fun isGetGetterMethodName(methodName: String): Boolean {
             return methodName.startsWith("get") && methodName.length > 3 && Character.isUpperCase(methodName.get(3))
         }
 
-        private fun isSetterMethodName(methodName: kotlin.String): Boolean {
+        private fun isSetterMethodName(methodName: String): Boolean {
             return methodName.startsWith("set") && methodName.length > 3 && Character.isUpperCase(methodName.get(3))
         }
     }

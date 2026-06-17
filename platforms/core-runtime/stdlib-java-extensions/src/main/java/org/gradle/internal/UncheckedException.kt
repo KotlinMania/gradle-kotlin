@@ -32,13 +32,9 @@ class UncheckedException : RuntimeException {
         /**
          * Note: always throws the failure in some form. The return value is to keep the compiler happy.
          */
-        // TODO Use this in org.gradle.internal.Try.Failure once this gets moved out from :base-services
-        /**
-         * Note: always throws the failure in some form. The return value is to keep the compiler happy.
-         */
         @JvmStatic
         @JvmOverloads
-        fun throwAsUncheckedException(t: Throwable, preserveMessage: Boolean = false): Nothing {
+        fun throwAsUncheckedException(t: Throwable, preserveMessage: Boolean = false): RuntimeException {
             if (t is InterruptedException) {
                 Thread.currentThread().interrupt()
             }

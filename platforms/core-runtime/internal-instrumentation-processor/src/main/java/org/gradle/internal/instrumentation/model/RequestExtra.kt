@@ -19,9 +19,9 @@ import org.gradle.internal.instrumentation.api.types.BytecodeInterceptorType
 import javax.lang.model.element.ExecutableElement
 
 interface RequestExtra {
-    class InterceptJvmCalls(@JvmField val implementationClassName: String?, val interceptionType: BytecodeInterceptorType?) : RequestExtra
+    class InterceptJvmCalls(val implementationClassName: String?, val interceptionType: BytecodeInterceptorType?) : RequestExtra
 
-    class InterceptGroovyCalls(@JvmField val implementationClassName: String?, val interceptionType: BytecodeInterceptorType?) : RequestExtra
+    class InterceptGroovyCalls(val implementationClassName: String?, val interceptionType: BytecodeInterceptorType?) : RequestExtra
 
-    class OriginatingElement(@JvmField val element: ExecutableElement?) : RequestExtra
+    class OriginatingElement(val element: ExecutableElement?) : RequestExtra
 }

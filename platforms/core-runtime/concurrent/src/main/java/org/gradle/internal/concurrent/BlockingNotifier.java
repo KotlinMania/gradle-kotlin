@@ -30,7 +30,7 @@ public interface BlockingNotifier {
         }
 
         @Override
-        public <T extends @Nullable Object> T blocking(Factory<T> action) {
+        public <T extends @Nullable Object> @Nullable T blocking(Factory<T> action) {
             return action.create();
         }
     };
@@ -44,5 +44,5 @@ public interface BlockingNotifier {
      * Performs some blocking action, returning the result.
      * This may drop locks or otherwise allow compensating for this thread being blocked.
      */
-    <T extends @Nullable Object> T blocking(Factory<T> action);
+    <T extends @Nullable Object> @Nullable T blocking(Factory<T> action);
 }

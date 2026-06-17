@@ -15,7 +15,6 @@
  */
 package org.gradle.internal.instrumentation.processor.modelreader.impl
 
-import org.gradle.internal.instrumentation.api.annotations.CallableDefinition.Name.value
 import java.util.Map
 import java.util.Optional
 import javax.lang.model.element.AnnotationMirror
@@ -27,16 +26,16 @@ import javax.lang.model.util.Elements
 
 object AnnotationUtils {
     fun findMetaAnnotationMirror(element: Element, annotationClass: Class<out Annotation?>): Optional<out AnnotationMirror?> {
-        return collectMetaAnnotations(element).stream().filter { it: AnnotationMirror? -> AnnotationUtils.isAnnotationOfType(it!!, annotationClass) }.findFirst()
+        return collectMetaAnnotations(element).stream().filter { it: AnnotationMirror -> AnnotationUtils.isAnnotationOfType(it, annotationClass) }.findFirst()
     }
 
-    private fun collectMetaAnnotations(annotatedElement: Element): MutableSet<AnnotationMirror?> {
-        val result: MutableSet<AnnotationMirror?> = LinkedHashSet<AnnotationMirror?>()
+    private fun collectMetaAnnotations(annotatedElement: Element): MutableSet<AnnotationMirror> {
+        val result: MutableSet<AnnotationMirror> = LinkedHashSet()
 
         class Recurse {
             fun recurse(annotatedElement: Element) {
-                annotatedElement.getAnnotationMirrors().forEach { annotationMirror: AnnotationMirror? ->
-                    val element = annotationMirror!!.getAnnotationType().asElement()
+                annotatedElement.getAnnotationMirrors().forEach { annotationMirror: AnnotationMirror ->
+                    val element = annotationMirror.getAnnotationType().asElement()
                     if (element is TypeElement && result.add(annotationMirror)) {
                         recurse(element)
                     }
@@ -49,22 +48,30 @@ object AnnotationUtils {
     }
 
     fun findAnnotationMirror(element: Element, annotationClass: Class<out Annotation?>): Optional<out AnnotationMirror?> {
-        return element.getAnnotationMirrors().stream().filter { it: AnnotationMirror? -> AnnotationUtils.isAnnotationOfType(it!!, annotationClass) }.findFirst()
+        return element.getAnnotationMirrors().stream().filter { it: AnnotationMirror -> AnnotationUtils.isAnnotationOfType(it, annotationClass) }.findFirst()
     }
 
     @JvmStatic
-    fun findAnnotationValue(annotation: AnnotationMirror, key: String?): Optional<out AnnotationValue?> {
-        return annotation.getElementValues().entries.stream().filter { it: MutableMap.MutableEntry<ExecutableElement?, AnnotationValue?>? -> it!!.key!!.getSimpleName().toString() == key }
-            .map { Map.Entry.value }.findFirst()
+    fun findAnnotationValue(annotation: AnnotationMirror, key: String): Optional<AnnotationValue> {
+        for ((element, value) in annotation.getElementValues().entries) {
+            if (element.getSimpleName().toString() == key) {
+                return Optional.ofNullable(value)
+            }
+        }
+        return Optional.empty()
     }
 
     @JvmStatic
-    fun findAnnotationValueWithDefaults(elements: Elements, annotation: AnnotationMirror?, key: String?): Optional<out AnnotationValue?> {
-        return elements.getElementValuesWithDefaults(annotation).entries.stream()
-            .filter { it: MutableMap.MutableEntry<ExecutableElement?, AnnotationValue?>? -> it!!.key!!.getSimpleName().toString() == key }.map { Map.Entry.value }.findFirst()
+    fun findAnnotationValueWithDefaults(elements: Elements, annotation: AnnotationMirror, key: String): Optional<AnnotationValue> {
+        for ((element, value) in elements.getElementValuesWithDefaults(annotation).entries) {
+            if (element.getSimpleName().toString() == key) {
+                return Optional.ofNullable(value)
+            }
+        }
+        return Optional.empty()
     }
 
-    fun isAnnotationOfType(annotation: AnnotationMirror, type: Class<out Annotation?>): Boolean {
+    fun isAnnotationOfType(annotation: AnnotationMirror, type: Class<out Annotation>): Boolean {
         return annotation.getAnnotationType().toString() == type.getCanonicalName()
     }
 }

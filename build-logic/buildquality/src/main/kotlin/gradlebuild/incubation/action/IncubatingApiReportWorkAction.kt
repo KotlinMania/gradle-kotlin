@@ -357,7 +357,14 @@ class KotlinVersionsToIncubatingCollector(val repositoryRoot: Path) : VersionsTo
 
     private
     val KtNamedDeclaration.fullyQualifiedName: String
-        get() = fqName!!.asString()
+        get() = when (this) {
+            is KtConstructor<*> -> {
+                val declaringClass = this.parent as? KtClass
+                val className = declaringClass?.fqName?.asString() ?: "<unknown>"
+                "$className.<init>"
+            }
+            else -> fqName?.asString() ?: name ?: "<anonymous>"
+        }
 
     private
     val KtCallableDeclaration.valueParametersString: String
@@ -372,5 +379,3 @@ class KotlinVersionsToIncubatingCollector(val repositoryRoot: Path) : VersionsTo
         get() = docComment?.getDefaultSection()?.findTagsByName("since")?.singleOrNull()?.getContent()
             ?: VERSION_NOT_FOUND
 }
-
-

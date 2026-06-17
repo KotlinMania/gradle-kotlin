@@ -16,6 +16,7 @@
 package org.gradle.api.logging.configuration
 
 import org.gradle.api.Incubating
+import org.gradle.api.logging.LogLevel
 import org.gradle.internal.instrumentation.api.annotations.NotToBeMigratedToLazy
 
 /**
@@ -30,7 +31,6 @@ interface LoggingConfiguration {
     /**
      * Specifies the minimum logging level to use. All log messages with a lower log level are ignored.
      */
-    @JvmField
     var logLevel: LogLevel?
 
     /**
@@ -68,6 +68,5 @@ interface LoggingConfiguration {
     /**
      * Sets the detail that should be included in stacktraces.
      */
-    @JvmField
     var showStacktrace: ShowStacktrace?
 }

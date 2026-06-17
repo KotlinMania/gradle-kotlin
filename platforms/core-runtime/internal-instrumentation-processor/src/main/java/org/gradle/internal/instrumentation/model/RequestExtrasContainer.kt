@@ -15,7 +15,6 @@
  */
 package org.gradle.internal.instrumentation.model
 
-import org.gradle.internal.Cast
 import java.util.Collections
 import java.util.Optional
 
@@ -25,8 +24,13 @@ class RequestExtrasContainer {
     val all: MutableList<RequestExtra?>
         get() = Collections.unmodifiableList<RequestExtra?>(extras)
 
-    fun <T> getByType(type: Class<T?>): Optional<T?> {
-        return Cast.uncheckedCast<Optional<T?>>(extras.stream().filter { obj: RequestExtra? -> type.isInstance(obj) }.findFirst())!!
+    fun <T : RequestExtra> getByType(type: Class<T>): Optional<T> {
+        for (extra in extras) {
+            if (extra != null && type.isInstance(extra)) {
+                return Optional.of(type.cast(extra))
+            }
+        }
+        return Optional.empty()
     }
 
     fun add(extra: RequestExtra?) {

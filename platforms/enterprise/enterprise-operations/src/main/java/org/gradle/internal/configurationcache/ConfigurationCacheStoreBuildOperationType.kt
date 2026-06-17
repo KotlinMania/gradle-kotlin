@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 7.5
  */
-class ConfigurationCacheStoreBuildOperationType : BuildOperationType<ConfigurationCacheStoreBuildOperationType.Details?, ConfigurationCacheStoreBuildOperationType.Result?> {
+class ConfigurationCacheStoreBuildOperationType : BuildOperationType<ConfigurationCacheStoreBuildOperationType.Details, ConfigurationCacheStoreBuildOperationType.Result> {
     interface Details
 
     interface Result {

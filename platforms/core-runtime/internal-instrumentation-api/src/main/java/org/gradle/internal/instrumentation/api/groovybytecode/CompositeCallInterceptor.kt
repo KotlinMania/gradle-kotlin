@@ -16,18 +16,16 @@
 package org.gradle.internal.instrumentation.api.groovybytecode
 
 import java.util.Collections
+import java.util.LinkedHashSet
 
 class CompositeCallInterceptor(private val first: CallInterceptor, private val second: CallInterceptor) : AbstractCallInterceptor(), SignatureAwareCallInterceptor, PropertyAwareCallInterceptor {
     @Throws(Throwable::class)
     override fun intercept(invocation: Invocation, consumer: String): Any? {
         return first.intercept(object : Invocation {
-            override fun getReceiver(): Any? {
-                return invocation.getReceiver()
-            }
-
-            override fun getArgsCount(): Int {
-                return invocation.getArgsCount()
-            }
+            override val receiver: Any?
+                get() = invocation.receiver
+            override val argsCount: Int
+                get() = invocation.argsCount
 
             override fun getArgument(pos: Int): Any? {
                 return invocation.getArgument(pos)
@@ -40,11 +38,11 @@ class CompositeCallInterceptor(private val first: CallInterceptor, private val s
         }, consumer)
     }
 
-    override fun getInterceptScopes(): MutableSet<InterceptScope> {
+    override val interceptScopes: MutableSet<InterceptScope> = run {
         val union: MutableSet<InterceptScope> = LinkedHashSet<InterceptScope>()
-        union.addAll(first.getInterceptScopes())
-        union.addAll(second.getInterceptScopes())
-        return Collections.unmodifiableSet<InterceptScope>(union)
+        union.addAll(first.interceptScopes)
+        union.addAll(second.interceptScopes)
+        Collections.unmodifiableSet<InterceptScope>(union)
     }
 
     override fun matchesProperty(receiverClass: Class<*>): Class<*>? {

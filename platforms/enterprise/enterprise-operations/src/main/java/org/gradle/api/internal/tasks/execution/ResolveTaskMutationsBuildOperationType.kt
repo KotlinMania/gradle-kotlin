@@ -29,7 +29,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 7.6
  */
-class ResolveTaskMutationsBuildOperationType : BuildOperationType<ResolveTaskMutationsBuildOperationType.Details?, ResolveTaskMutationsBuildOperationType.Result?> {
+class ResolveTaskMutationsBuildOperationType : BuildOperationType<ResolveTaskMutationsBuildOperationType.Details, ResolveTaskMutationsBuildOperationType.Result> {
     interface Details {
         /**
          * The path of the build this task belongs to.

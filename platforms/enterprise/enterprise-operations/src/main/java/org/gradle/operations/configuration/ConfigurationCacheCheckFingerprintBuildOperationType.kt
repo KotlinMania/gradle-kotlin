@@ -23,7 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 8.10
  */
 class ConfigurationCacheCheckFingerprintBuildOperationType :
-    BuildOperationType<ConfigurationCacheCheckFingerprintBuildOperationType.Details?, ConfigurationCacheCheckFingerprintBuildOperationType.Result?> {
+    BuildOperationType<ConfigurationCacheCheckFingerprintBuildOperationType.Details, ConfigurationCacheCheckFingerprintBuildOperationType.Result> {
     /**
      * Build operation details.
      *

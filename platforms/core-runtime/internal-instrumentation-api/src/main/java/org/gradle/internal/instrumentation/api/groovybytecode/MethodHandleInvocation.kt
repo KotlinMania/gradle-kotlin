@@ -34,13 +34,11 @@ internal class MethodHandleInvocation(private val original: MethodHandle, privat
         }
     }
 
-    override fun getReceiver(): Any? {
-        return InvocationUtils.unwrap(originalArgs[0])
-    }
+    override val receiver: Any?
+        get() = InvocationUtils.unwrap(originalArgs[0])
 
-    override fun getArgsCount(): Int {
-        return unspreadArgs.size - unspreadArgsOffset
-    }
+    override val argsCount: Int
+        get() = unspreadArgs.size - unspreadArgsOffset
 
     override fun getArgument(pos: Int): Any? {
         return InvocationUtils.unwrap(unspreadArgs[pos + unspreadArgsOffset])
@@ -48,6 +46,6 @@ internal class MethodHandleInvocation(private val original: MethodHandle, privat
 
     @Throws(Throwable::class)
     override fun callNext(): Any? {
-        return original.invokeExact(*originalArgs)
+        return original.invokeWithArguments(originalArgs.asList())
     }
 }

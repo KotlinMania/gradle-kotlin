@@ -79,7 +79,11 @@ interface Lazy<T : Any?> : Supplier<T?> {
 
         @JvmStatic
         fun unsafe(): Factory {
-            return Lazy.Factory { supplier: Supplier<T?> -> UnsafeLazy(supplier) }
+            return object : Factory {
+                override fun <T : Any?> of(supplier: Supplier<T?>): Lazy<T?> {
+                    return UnsafeLazy(supplier)
+                }
+            }
         }
 
         /**
@@ -94,12 +98,20 @@ interface Lazy<T : Any?> : Supplier<T?> {
          */
         @JvmStatic
         fun atomic(): Factory {
-            return Lazy.Factory { supplier: Supplier<T?> -> AtomicLazy(supplier) }
+            return object : Factory {
+                override fun <T : Any?> of(supplier: Supplier<T?>): Lazy<T?> {
+                    return AtomicLazy(supplier)
+                }
+            }
         }
 
         @JvmStatic
         fun locking(): Factory {
-            return Lazy.Factory { supplier: Supplier<T?> -> LockingLazy(supplier) }
+            return object : Factory {
+                override fun <T : Any?> of(supplier: Supplier<T?>): Lazy<T?> {
+                    return LockingLazy(supplier)
+                }
+            }
         }
     }
 }

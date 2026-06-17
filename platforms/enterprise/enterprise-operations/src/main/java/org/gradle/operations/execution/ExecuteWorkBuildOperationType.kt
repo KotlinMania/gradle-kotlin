@@ -31,7 +31,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 8.3
  */
-class ExecuteWorkBuildOperationType : BuildOperationType<ExecuteWorkBuildOperationType.Details?, ExecuteWorkBuildOperationType.Result?> {
+class ExecuteWorkBuildOperationType : BuildOperationType<ExecuteWorkBuildOperationType.Details, ExecuteWorkBuildOperationType.Result> {
     interface Details {
         /**
          * Type of work being executed.

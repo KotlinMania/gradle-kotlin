@@ -38,7 +38,6 @@ interface EvaluationScopeContext : AutoCloseable {
      *
      * @return the owner
      */
-    @JvmField
     val owner: EvaluationOwner?
 
     /**
@@ -50,7 +49,7 @@ interface EvaluationScopeContext : AutoCloseable {
      *
      * @return the nested context, to close it when done
      */
-    fun nested(): EvaluationScopeContext?
+    fun nested(): EvaluationScopeContext
 
     /**
      * Removes the owner added to evaluation context when obtaining this class from the context.

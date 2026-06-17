@@ -61,6 +61,5 @@ interface LoggingManager : LoggingOutput {
      *
      * @return The current logging level.
      */
-    @JvmField
     val level: LogLevel?
 }

@@ -31,7 +31,7 @@ import org.gradle.internal.scan.NotUsedByScanPlugin
  * (i.e. beforeTask callbacks did not fail), then a result is expected.
  * If the task execution fails, or if afterTask callbacks fail, an operation failure is expected _in addition_.
  */
-class ExecuteTaskBuildOperationType private constructor() : BuildOperationType<ExecuteTaskBuildOperationType.Details?, ExecuteTaskBuildOperationType.Result?> {
+class ExecuteTaskBuildOperationType private constructor() : BuildOperationType<ExecuteTaskBuildOperationType.Details, ExecuteTaskBuildOperationType.Result> {
     interface Details {
         /**
          * The path of the build this task belongs to.

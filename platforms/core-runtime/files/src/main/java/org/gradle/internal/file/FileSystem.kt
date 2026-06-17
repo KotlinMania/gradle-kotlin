@@ -26,7 +26,6 @@ interface FileSystem : Chmod, Stat {
      *
      * @return `true` if the file system is case sensitive, `false` otherwise
      */
-    @JvmField
     val isCaseSensitive: Boolean
 
     /**

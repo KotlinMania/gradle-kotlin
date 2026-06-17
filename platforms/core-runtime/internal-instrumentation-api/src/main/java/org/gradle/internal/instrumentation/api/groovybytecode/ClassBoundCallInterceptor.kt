@@ -27,7 +27,7 @@ package org.gradle.internal.instrumentation.api.groovybytecode
 abstract class ClassBoundCallInterceptor(private val expectedReceiver: Class<*>, vararg scopes: InterceptScope) : AbstractCallInterceptor(*scopes) {
     @Throws(Throwable::class)
     override fun intercept(invocation: Invocation, consumer: String): Any? {
-        if (expectedReceiver != invocation.getReceiver()) {
+        if (expectedReceiver != invocation.receiver) {
             return invocation.callNext()
         }
         return interceptSafe(invocation, consumer)

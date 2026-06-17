@@ -18,5 +18,5 @@ package org.gradle.internal.service
 import java.lang.reflect.Method
 
 internal interface ServiceMethodFactory {
-    fun toServiceMethod(method: Method?): ServiceMethod?
+    fun toServiceMethod(method: Method): ServiceMethod
 }

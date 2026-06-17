@@ -21,11 +21,13 @@ import java.io.InputStream
 import java.util.zip.ZipEntry
 
 internal abstract class AbstractZipEntry(protected val entry: ZipEntry) : org.gradle.api.internal.file.archive.ZipEntry {
-    override fun isDirectory(): Boolean {
-        return entry.isDirectory()
-    }
+    override val isDirectory: Boolean
+        get() {
+            return entry.isDirectory()
+        }
 
-    override fun getName(): String {
+    override val name: String?
+        get() {
         return entry.getName()
     }
 
@@ -33,11 +35,15 @@ internal abstract class AbstractZipEntry(protected val entry: ZipEntry) : org.gr
         return entry.getSize().toInt()
     }
 
-    @Throws(IOException::class)
-    override fun getContent(): ByteArray? {
+    @get:Throws(IOException::class)
+    override val content: ByteArray?
+        get() {
         return withInputStream<ByteArray?>(object : org.gradle.api.internal.file.archive.ZipEntry.IoFunction<InputStream?, ByteArray?> {
             @Throws(IOException::class)
-            override fun apply(inputStream: InputStream): ByteArray? {
+            override fun apply(inputStream: InputStream?): ByteArray? {
+                if (inputStream == null) {
+                    return null
+                }
                 val size = size()
                 if (size >= 0) {
                     val content = ByteArray(size)
@@ -50,11 +56,13 @@ internal abstract class AbstractZipEntry(protected val entry: ZipEntry) : org.gr
         })
     }
 
-    override fun getCompressionMethod(): org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod {
-        when (entry.getMethod()) {
-            ZipEntry.STORED -> return org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.STORED
-            ZipEntry.DEFLATED -> return org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.DEFLATED
-            else -> return org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.OTHER
+    override val compressionMethod: org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod?
+        get() {
+            return when (entry.getMethod()) {
+                ZipEntry.STORED -> org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.STORED
+                ZipEntry.DEFLATED -> org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.DEFLATED
+                else -> org.gradle.api.internal.file.archive.ZipEntry.ZipCompressionMethod.OTHER
+            }
         }
-    }
+    
 }

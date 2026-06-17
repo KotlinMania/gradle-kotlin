@@ -22,6 +22,7 @@ object ArrayUtils {
     /**
      * Checks if a value is contained in the array.
      */
+    @JvmStatic
     fun <T> contains(array: Array<T?>, value: T?): Boolean {
         if (value == null) {
             for (v in array) {

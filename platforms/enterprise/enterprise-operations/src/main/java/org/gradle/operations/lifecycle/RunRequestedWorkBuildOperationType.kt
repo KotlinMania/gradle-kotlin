@@ -26,7 +26,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 8.7
  */
-class RunRequestedWorkBuildOperationType : BuildOperationType<RunRequestedWorkBuildOperationType.Details?, RunRequestedWorkBuildOperationType.Result?> {
+class RunRequestedWorkBuildOperationType : BuildOperationType<RunRequestedWorkBuildOperationType.Details, RunRequestedWorkBuildOperationType.Result> {
     interface Details
 
     interface Result

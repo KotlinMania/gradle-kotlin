@@ -17,4 +17,4 @@ package org.gradle.internal.instrumentation.model
 
 import org.objectweb.asm.Type
 
-class CallableReturnTypeInfo(@JvmField val type: Type?)
+class CallableReturnTypeInfo(val type: Type?)

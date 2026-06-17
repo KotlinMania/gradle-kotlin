@@ -15,10 +15,10 @@
  */
 package org.gradle.internal.instrumentation.model
 
+import org.objectweb.asm.Type
+
 interface ParameterInfo {
     val name: String?
-    @JvmField
     val parameterType: Type?
-    @JvmField
     val kind: ParameterKindInfo?
 }

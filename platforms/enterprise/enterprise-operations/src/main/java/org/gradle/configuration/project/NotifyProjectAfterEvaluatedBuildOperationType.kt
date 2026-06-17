@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.9
  */
-object NotifyProjectAfterEvaluatedBuildOperationType : BuildOperationType<NotifyProjectAfterEvaluatedBuildOperationType.Details?, NotifyProjectAfterEvaluatedBuildOperationType.Result?> {
+object NotifyProjectAfterEvaluatedBuildOperationType : BuildOperationType<NotifyProjectAfterEvaluatedBuildOperationType.Details, NotifyProjectAfterEvaluatedBuildOperationType.Result> {
     val RESULT: Result = object : Result {
     }
 

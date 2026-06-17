@@ -15,11 +15,10 @@
  */
 package org.gradle.internal.instrumentation.model
 
+import org.objectweb.asm.Type
+
 interface ImplementationInfo {
-    @JvmField
     val owner: Type?
-    @JvmField
     val name: String?
-    @JvmField
     val descriptor: String?
 }

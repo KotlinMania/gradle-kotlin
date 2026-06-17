@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.9
  */
-class NotifyProjectsEvaluatedBuildOperationType : BuildOperationType<NotifyProjectsEvaluatedBuildOperationType.Details?, NotifyProjectsEvaluatedBuildOperationType.Result?> {
+class NotifyProjectsEvaluatedBuildOperationType : BuildOperationType<NotifyProjectsEvaluatedBuildOperationType.Details, NotifyProjectsEvaluatedBuildOperationType.Result> {
     interface Details {
         val buildPath: String?
     }

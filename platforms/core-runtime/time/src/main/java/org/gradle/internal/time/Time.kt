@@ -41,7 +41,7 @@ object Time {
      */
     @JvmStatic
     fun currentTimeMillis(): Long {
-        return CLOCK.getCurrentTime()
+        return CLOCK.currentTime
     }
 
     /**

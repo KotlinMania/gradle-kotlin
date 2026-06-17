@@ -28,7 +28,10 @@ class HasPrefixAndSuffixPatternStep(prefix: String, suffix: String, caseSensitiv
         return "{prefix: " + prefixMatch + " suffix: " + suffixMatch + "}"
     }
 
-    override fun matches(candidate: String): Boolean {
+    override fun matches(candidate: String?): Boolean {
+        if (candidate == null) {
+            return false
+        }
         return prefixMatch.matches(candidate) && suffixMatch.matches(candidate)
     }
 }

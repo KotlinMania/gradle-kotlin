@@ -15,27 +15,23 @@
  */
 package org.gradle.internal.service
 
-import org.gradle.internal.Cast
 import java.lang.reflect.Method
 
 /**
  * A service method factory that will try to use method handles if available, otherwise fallback on reflection.
  */
 internal class DefaultServiceMethodFactory : ServiceMethodFactory {
-    private val delegate: ServiceMethodFactory = this.optimalServiceMethodFactory
+    private val delegate: ServiceMethodFactory = getOptimalServiceMethodFactory()
 
-    private val optimalServiceMethodFactory: ServiceMethodFactory
-        get() {
-            try {
-                return Cast.uncheckedNonnullCast<ServiceMethodFactory>(
-                    Class.forName("org.gradle.internal.service.MethodHandleBasedServiceMethodFactory").getConstructor().newInstance()
-                )
-            } catch (e: Exception) {
-                return ReflectionBasedServiceMethodFactory()
-            }
+    private fun getOptimalServiceMethodFactory(): ServiceMethodFactory {
+        return try {
+            Class.forName("org.gradle.internal.service.MethodHandleBasedServiceMethodFactory").getConstructor().newInstance() as ServiceMethodFactory
+        } catch (e: Exception) {
+            ReflectionBasedServiceMethodFactory()
         }
+    }
 
-    override fun toServiceMethod(method: Method?): ServiceMethod? {
+    override fun toServiceMethod(method: Method): ServiceMethod {
         return delegate.toServiceMethod(method)
     }
 }

@@ -29,7 +29,10 @@ class HasPrefixPatternStep(private val prefix: String, private val caseSensitive
         return "{prefix: " + prefix + "}"
     }
 
-    override fun matches(candidate: String): Boolean {
+    override fun matches(candidate: String?): Boolean {
+        if (candidate == null) {
+            return false
+        }
         return candidate.regionMatches(0, prefix, 0, prefixLength, ignoreCase = !caseSensitive)
     }
 }

@@ -18,7 +18,7 @@ package org.gradle.internal.file
 import java.text.MessageFormat
 import java.util.concurrent.atomic.AtomicLong
 
-interface StatStatistics {
+    interface StatStatistics {
     /**
      * Number of times [Stat.stat] was called.
      */
@@ -42,22 +42,20 @@ interface StatStatistics {
         }
 
         fun collect(): StatStatistics {
-            val unixModeCount = this.unixModeCount.getAndSet(0)
-            val statCount = this.statCount.getAndSet(0)
+            val currentUnixModeCount = unixModeCount.getAndSet(0)
+            val currentStatCount = this.statCount.getAndSet(0)
 
             return object : StatStatistics {
-                override fun getStatCount(): Long {
-                    return statCount
-                }
+                override val statCount: Long
+                    get() = currentStatCount
 
-                override fun getUnixModeCount(): Long {
-                    return unixModeCount
-                }
+                override val unixModeCount: Long
+                    get() = currentUnixModeCount
 
                 override fun toString(): String {
                     return MessageFormat.format(
                         "Executed stat() x {0,number,integer}. getUnixMode() x {1,number,integer}",
-                        statCount, unixModeCount
+                        currentStatCount, currentUnixModeCount
                     )
                 }
             }

@@ -18,24 +18,25 @@ package org.gradle.internal.file.impl
 import org.gradle.internal.file.FileMetadata
 import org.gradle.internal.file.FileType
 
-class DefaultFileMetadata private constructor(private val type: FileType, private val lastModified: Long, private val length: Long, private val accessType: FileMetadata.AccessType) : FileMetadata {
-    override fun getType(): FileType {
-        return type
-    }
+class DefaultFileMetadata private constructor(
+    private val metadataType: FileType,
+    private val fileLastModified: Long,
+    private val fileLength: Long,
+    private val access: FileMetadata.AccessType
+) : FileMetadata {
+    override val type: FileType
+        get() = metadataType
 
-    override fun getLastModified(): Long {
-        return lastModified
-    }
+    override val lastModified: Long
+        get() = fileLastModified
 
-    override fun getLength(): Long {
-        return length
-    }
+    override val length: Long
+        get() = fileLength
 
-    override fun getAccessType(): FileMetadata.AccessType {
-        return accessType
-    }
+    override val accessType: FileMetadata.AccessType
+        get() = access
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }
@@ -43,7 +44,7 @@ class DefaultFileMetadata private constructor(private val type: FileType, privat
             return false
         }
         val that = o as DefaultFileMetadata
-        return type == that.type && length == that.length && lastModified == that.lastModified && accessType == that.accessType
+        return type == that.type && length == that.length && lastModified == that.lastModified && access == that.accessType
     }
 
     override fun hashCode(): Int {

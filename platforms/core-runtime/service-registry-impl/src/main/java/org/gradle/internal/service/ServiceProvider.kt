@@ -26,16 +26,16 @@ internal interface ServiceProvider : Stoppable {
     /**
      * Locates a service instance of the given type. Returns null if this provider does not provide a service of this type.
      */
-    fun getService(serviceType: Type?, token: ServiceAccessToken?): Service?
+    fun getService(serviceType: Type, token: ServiceAccessToken?): Service?
 
     /**
      * Collects all services of the given type.
      *
      * @return A visitor that should be used for all subsequent services.
      */
-    fun getAll(serviceType: Class<*>?, token: ServiceAccessToken?, visitor: Visitor?): Visitor?
+    fun getAll(serviceType: Class<*>, token: ServiceAccessToken?, visitor: Visitor): Visitor
 
     interface Visitor {
-        fun visit(service: Service?)
+        fun visit(service: Service)
     }
 }

@@ -23,7 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.2
  */
-class LoadProjectsBuildOperationType : BuildOperationType<LoadProjectsBuildOperationType.Details?, LoadProjectsBuildOperationType.Result?> {
+class LoadProjectsBuildOperationType : BuildOperationType<LoadProjectsBuildOperationType.Details, LoadProjectsBuildOperationType.Result> {
     interface Details {
         /**
          * @since 4.6

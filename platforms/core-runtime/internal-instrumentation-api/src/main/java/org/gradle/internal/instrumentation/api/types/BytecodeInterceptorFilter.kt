@@ -29,10 +29,10 @@ enum class BytecodeInterceptorFilter(private val instrumentationTypes: EnumSet<B
     ALL(EnumSet.of<BytecodeInterceptorType>(BytecodeInterceptorType.INSTRUMENTATION, BytecodeInterceptorType.BYTECODE_UPGRADE_REPORT, BytecodeInterceptorType.BYTECODE_UPGRADE));
 
     fun matches(bytecodeInterceptor: FilterableBytecodeInterceptor): Boolean {
-        return instrumentationTypes.contains(bytecodeInterceptor.getType())
+        return instrumentationTypes.contains(bytecodeInterceptor.type)
     }
 
     fun matches(bytecodeInterceptorFactory: FilterableBytecodeInterceptorFactory): Boolean {
-        return instrumentationTypes.contains(bytecodeInterceptorFactory.getType())
+        return instrumentationTypes.contains(bytecodeInterceptorFactory.type)
     }
 }

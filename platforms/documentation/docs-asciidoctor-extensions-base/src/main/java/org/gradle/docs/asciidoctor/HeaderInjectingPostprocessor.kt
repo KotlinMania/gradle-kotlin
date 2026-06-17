@@ -21,7 +21,7 @@ import org.asciidoctor.extension.Postprocessor
 /**
  * Injects static assets for docs
  */
-class HeaderInjectingPostprocessor internal constructor(config: MutableMap<String?, Any?>?, private val headerHtml: String?) : Postprocessor(config) {
+class HeaderInjectingPostprocessor(config: MutableMap<String?, Any?>?, private val headerHtml: String?) : Postprocessor(config) {
     /**
      * Inject common header before page title.
      */

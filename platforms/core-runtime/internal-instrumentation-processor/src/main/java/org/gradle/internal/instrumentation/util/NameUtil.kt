@@ -20,14 +20,8 @@ import com.squareup.javapoet.ClassName
 import org.gradle.internal.instrumentation.model.CallableInfo
 import org.gradle.internal.instrumentation.model.CallableKindInfo
 import org.objectweb.asm.Type
-import java.lang.String
 import java.util.regex.Pattern
-import kotlin.Array
-import kotlin.text.isEmpty
-import kotlin.text.replace
-import kotlin.text.split
 import kotlin.text.titlecaseChar
-import kotlin.text.toRegex
 import kotlin.text.uppercase
 
 object NameUtil {
@@ -49,15 +43,15 @@ object NameUtil {
             value.get(0).titlecaseChar().toString() + value.substring(1)
     }
 
-    fun camelToUpperUnderscoreCase(camelCase: String?): String {
+    fun camelToUpperUnderscoreCase(camelCase: String): String {
         val split = UPPER_CASE.split(camelCase)
         for (i in split.indices) {
-            split[i] = split[i]!!.uppercase()
+            split[i] = split[i].uppercase()
         }
-        return String.join("_", *split)
+        return split.joinToString("_")
     }
 
-    fun interceptedJvmMethodName(callableInfo: CallableInfo): kotlin.String {
+    fun interceptedJvmMethodName(callableInfo: CallableInfo): String {
         if (callableInfo.kind === CallableKindInfo.GROOVY_PROPERTY_GETTER) {
             return NameUtil.getterName(callableInfo.callableName!!, callableInfo.returnType!!.type!!)
         }
@@ -70,8 +64,8 @@ object NameUtil {
     /**
      * ClassName that correctly resolves name for classes that starts with $
      */
-    fun getClassName(fullClassName: kotlin.String): ClassName? {
-        val splitted: Array<kotlin.String?> = fullClassName.split("[.]".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+    fun getClassName(fullClassName: String): ClassName {
+        val splitted = fullClassName.split("[.]".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val className = splitted[splitted.size - 1]
         val packageName = fullClassName.replace("." + className, "")
         return ClassName.get(packageName, className)

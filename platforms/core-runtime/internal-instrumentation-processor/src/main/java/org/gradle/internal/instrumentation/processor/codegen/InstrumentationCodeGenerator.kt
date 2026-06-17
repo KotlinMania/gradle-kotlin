@@ -32,9 +32,7 @@ interface InstrumentationCodeGenerator {
         }
 
         class CodeFailures(private val failures: MutableList<FailureInfo?>?) : GenerationResult, HasFailures {
-            override fun getFailureDetails(): MutableList<FailureInfo?>? {
-                return failures
-            }
+            override val failureDetails: MutableList<FailureInfo?>? = failures
         }
     }
 }

@@ -15,12 +15,9 @@
  */
 package org.gradle.internal
 
-import java.lang.String
 import java.util.function.Function
 import java.util.stream.Collector
 import java.util.stream.Collectors
-import kotlin.collections.MutableCollection
-import kotlin.collections.MutableList
 
 object RenderingUtils {
     fun quotedOxfordListOf(values: MutableCollection<String>, conjunction: String): String {
@@ -37,13 +34,14 @@ object RenderingUtils {
 
     fun oxfordJoin(conjunction: String): Collector<in String, *, String> {
         return Collectors.collectingAndThen(Collectors.toList(), Function { stringList: MutableList<String>? ->
-            when (stringList!!.size) {
-                0 -> return@collectingAndThen ""
-                1 -> return@collectingAndThen stringList.get(0)
-                2 -> return@collectingAndThen String.join(" " + conjunction + " ", stringList)
+            val list = stringList ?: return@Function("")
+            when (list.size) {
+                0 -> ""
+                1 -> list[0]
+                2 -> java.lang.String.join(" " + conjunction + " ", list)
                 else -> {
-                    val bound = stringList.size - 1
-                    return@collectingAndThen String.join(", ", stringList.subList(0, bound)) + ", " + conjunction + " " + stringList.get(bound)
+                    val bound = list.size - 1
+                    return@Function java.lang.String.join(", ", list.subList(0, bound)) + ", " + conjunction + " " + list[bound]
                 }
             }
         })

@@ -49,8 +49,8 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
     init {
         this.maxChunkSize = max(nextChunkSize, MAX_CHUNK_SIZE)
         currentWriteChunk = StreamByteBufferChunk(nextChunkSize)
-        output = StreamByteBuffer.StreamByteBufferOutputStream()
-        input = StreamByteBuffer.StreamByteBufferInputStream()
+        output = StreamByteBufferOutputStream()
+        input = StreamByteBufferInputStream()
     }
 
     val outputStream: OutputStream
@@ -271,20 +271,20 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
             this.used = buf.size
         }
 
-        fun readToNioBuffer(): ByteBuffer {
-            if (pointer < used) {
-                val result: ByteBuffer
-                if (pointer > 0 || used < size) {
-                    result = ByteBuffer.wrap(buffer, pointer, used - pointer)
-                } else {
-                    result = ByteBuffer.wrap(buffer)
-                }
-                pointer = used
-                return result
+    fun readToNioBuffer(): ByteBuffer {
+        if (pointer < used) {
+            val result: ByteBuffer
+            if (pointer > 0 || used < size) {
+                result = ByteBuffer.wrap(buffer, pointer, used - pointer)
+            } else {
+                result = ByteBuffer.wrap(buffer)
             }
-
-            return null
+            pointer = used
+            return result
         }
+
+        return ByteBuffer.allocate(0)
+    }
 
         fun write(b: Byte): Boolean {
             if (used < size) {
@@ -465,7 +465,7 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
         val buffer: StreamByteBuffer
             get() = this@StreamByteBuffer
 
-        fun readNextBuffer(): ByteArray {
+        fun readNextBuffer(): ByteArray? {
             if (prepareRead() != -1) {
                 return currentReadChunk!!.readBuffer()
             }

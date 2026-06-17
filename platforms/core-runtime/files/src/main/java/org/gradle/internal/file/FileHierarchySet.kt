@@ -48,7 +48,6 @@ abstract class FileHierarchySet {
     /**
      * Whether this hierarchy is empty, i.e. contains no directories.
      */
-    @JvmField
     abstract val isEmpty: Boolean
 
     /**
@@ -83,7 +82,7 @@ abstract class FileHierarchySet {
             this.rootNode = Node(path)
         }
 
-        constructor(rootNode: Node) {
+        private constructor(rootNode: Node) {
             this.rootNode = rootNode
         }
 
@@ -106,9 +105,10 @@ abstract class FileHierarchySet {
             return rootNode.contains(path, 0)
         }
 
-        override fun isEmpty(): Boolean {
-            return false
-        }
+        override val isEmpty: Boolean
+            get() {
+                return false
+            }
 
         override fun contains(file: File): Boolean {
             return rootNode.contains(file.getPath(), 0)
@@ -134,7 +134,7 @@ abstract class FileHierarchySet {
                         prefixStack.removeLast()
                     }
                     if (node.children.isEmpty()) {
-                        val root: String?
+                        val root: String
                         if (prefixStack.isEmpty()) {
                             root = node.prefix
                         } else {
@@ -156,7 +156,7 @@ abstract class FileHierarchySet {
             })
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -210,8 +210,8 @@ abstract class FileHierarchySet {
     }
 
     private class Node {
-        private val prefix: String
-        private val children: MutableList<Node>
+        internal val prefix: String
+        internal val children: MutableList<Node>
 
         internal constructor(prefix: String) {
             this.prefix = prefix
@@ -276,7 +276,7 @@ abstract class FileHierarchySet {
         }
 
         fun sizeOfCommonPrefix(path: String, offset: Int): Int {
-            return sizeOfCommonPrefix(prefix, path, offset)
+            return FilePathUtil.sizeOfCommonPrefix(prefix, path, offset)
         }
 
         /**
@@ -330,7 +330,7 @@ abstract class FileHierarchySet {
             }
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -379,9 +379,10 @@ abstract class FileHierarchySet {
                 return false
             }
 
-            override fun isEmpty(): Boolean {
-                return true
-            }
+            override val isEmpty: Boolean
+                get() {
+                    return true
+                }
 
             override fun plus(rootDir: File): FileHierarchySet {
                 return PrefixFileSet(rootDir)

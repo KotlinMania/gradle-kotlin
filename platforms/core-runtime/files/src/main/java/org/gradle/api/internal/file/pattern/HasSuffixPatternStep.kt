@@ -32,7 +32,10 @@ class HasSuffixPatternStep internal constructor(private val suffix: String, priv
         return "{suffix: " + suffix + "}"
     }
 
-    override fun matches(candidate: String): Boolean {
+    override fun matches(candidate: String?): Boolean {
+        if (candidate == null) {
+            return false
+        }
         return isLongEnough(candidate) && candidate.regionMatches(candidate.length - suffixLength, suffix, 0, suffixLength, ignoreCase = !caseSensitive)
     }
 

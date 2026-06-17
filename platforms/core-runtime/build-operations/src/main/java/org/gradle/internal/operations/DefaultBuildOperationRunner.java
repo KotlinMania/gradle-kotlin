@@ -49,6 +49,7 @@ public class DefaultBuildOperationRunner implements BuildOperationRunner {
     }
 
     @Override
+    @Nullable
     public <T extends @Nullable Object> T call(CallableBuildOperation<T> buildOperation) {
         CallableBuildOperationWorker<T> worker = new CallableBuildOperationWorker<T>();
         execute(buildOperation, worker);
@@ -161,7 +162,7 @@ public class DefaultBuildOperationRunner implements BuildOperationRunner {
             : parent.getDescription().getId());
         assertParentRunning("Cannot start operation (%s) as parent operation (%s) has already completed.", descriptor, parent);
 
-        BuildOperationState operationState = new BuildOperationState(descriptor, clock.currentTime);
+        BuildOperationState operationState = new BuildOperationState(descriptor, clock.getCurrentTime());
         BuildOperationTrackingListener listener = new BuildOperationTrackingListener(currentBuildOperationRef, listenerFactory.createListener());
         DefaultBuildOperationContext context = new DefaultBuildOperationContext(descriptor, listener);
         return execution.execute(
@@ -210,10 +211,11 @@ public class DefaultBuildOperationRunner implements BuildOperationRunner {
             returnValue = buildOperation.call(context);
         }
 
+        @Nullable
         public T getReturnValue() {
             // Strictly speaking this isn't safe, as the method may be called without calling execute() first.
             // But we don't want to do the sentinel dance here.
-            return Cast.unsafeStripNullable(returnValue);
+            return Cast.INSTANCE.unsafeStripNullable(returnValue);
         }
     }
 

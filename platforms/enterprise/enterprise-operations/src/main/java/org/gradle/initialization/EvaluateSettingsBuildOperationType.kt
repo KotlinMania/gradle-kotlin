@@ -17,7 +17,7 @@ package org.gradle.initialization
 
 import org.gradle.internal.operations.BuildOperationType
 
-class EvaluateSettingsBuildOperationType private constructor() : BuildOperationType<EvaluateSettingsBuildOperationType.Details?, EvaluateSettingsBuildOperationType.Result?> {
+class EvaluateSettingsBuildOperationType private constructor() : BuildOperationType<EvaluateSettingsBuildOperationType.Details, EvaluateSettingsBuildOperationType.Result> {
     interface Details {
         /**
          * @since 4.6

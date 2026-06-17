@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.0
  */
-class ApplyPluginBuildOperationType private constructor() : BuildOperationType<ApplyPluginBuildOperationType.Details?, ApplyPluginBuildOperationType.Result?> {
+class ApplyPluginBuildOperationType private constructor() : BuildOperationType<ApplyPluginBuildOperationType.Details, ApplyPluginBuildOperationType.Result> {
     interface Details {
         /**
          * The fully qualified plugin ID, if known.

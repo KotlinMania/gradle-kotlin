@@ -30,12 +30,20 @@ interface CallInterceptionRequestReader<T> {
     class ReadRequestContext {
         private val store: MutableMap<String?, Any?> = HashMap<String?, Any?>()
 
-        fun <T> computeIfAbsent(key: String?, function: Function<String?, T?>): T? {
-            return store.computeIfAbsent(key) { `__`: String? -> Preconditions.checkNotNull<T?>(function.apply(key)) } as T
+        fun <T : Any> computeIfAbsent(key: String?, function: Function<String?, T>): T {
+            return checkNotNull(
+                store.computeIfAbsent(key) { `__`: String? -> function.apply(key) } as T?
+            )
         }
 
-        fun <T> get(key: String?): Optional<T?> {
-            return Optional.ofNullable<T?>(store.get(key) as T?)
+        @Suppress("UNCHECKED_CAST")
+        fun <T : Any> get(key: String?): Optional<T> {
+            val value = store[key] as? T
+            return if (value == null) {
+                Optional.empty()
+            } else {
+                Optional.of(value)
+            }
         }
     }
 

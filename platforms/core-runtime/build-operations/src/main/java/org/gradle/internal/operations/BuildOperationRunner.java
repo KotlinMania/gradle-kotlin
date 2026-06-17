@@ -42,7 +42,7 @@ public interface BuildOperationRunner {
      * Runtime exceptions are rethrown as is.
      * Checked exceptions are wrapped in {@link BuildOperationInvocationException}.</p>
      */
-    <T extends @Nullable Object> T call(CallableBuildOperation<T> buildOperation);
+    <T extends @Nullable Object> @Nullable T call(CallableBuildOperation<T> buildOperation);
 
     /**
      * Starts an operation that can be finished later.

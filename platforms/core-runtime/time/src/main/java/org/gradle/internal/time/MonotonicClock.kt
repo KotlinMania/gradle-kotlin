@@ -55,7 +55,7 @@ internal class MonotonicClock @JvmOverloads constructor(timeSource: TimeSource =
 
     private val syncMillisRef: AtomicLong
     private val syncNanosRef: AtomicLong
-    private val currentTime = AtomicLong()
+    private val currentTimeNanos = AtomicLong()
 
     init {
         val nanoTime = timeSource.nanoTime()
@@ -65,10 +65,11 @@ internal class MonotonicClock @JvmOverloads constructor(timeSource: TimeSource =
         this.syncIntervalMillis = syncIntervalMillis
         this.syncNanosRef = AtomicLong(nanoTime)
         this.syncMillisRef = AtomicLong(currentTimeMillis)
-        this.currentTime.set(currentTimeMillis)
+        this.currentTimeNanos.set(currentTimeMillis)
     }
 
-    override fun getCurrentTime(): Long {
+    override val currentTime: Long
+        get() {
         val nowNanos = timeSource.nanoTime()
         val syncNanos = syncNanosRef.get()
         val syncMillis = syncMillisRef.get()
@@ -103,10 +104,10 @@ internal class MonotonicClock @JvmOverloads constructor(timeSource: TimeSource =
      */
     private fun advance(newTime: Long): Long {
         while (true) {
-            val current = currentTime.get()
+            val current = currentTimeNanos.get()
             if (newTime <= current) {
                 return current
-            } else if (currentTime.compareAndSet(current, newTime)) {
+            } else if (currentTimeNanos.compareAndSet(current, newTime)) {
                 return newTime
             }
         }

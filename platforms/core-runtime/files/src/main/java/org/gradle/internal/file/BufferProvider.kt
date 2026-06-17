@@ -23,6 +23,5 @@ import org.gradle.internal.service.scopes.ServiceScope
  */
 @ServiceScope(Scope.Global::class)
 interface BufferProvider {
-    @JvmField
     val buffer: ByteArray?
 }

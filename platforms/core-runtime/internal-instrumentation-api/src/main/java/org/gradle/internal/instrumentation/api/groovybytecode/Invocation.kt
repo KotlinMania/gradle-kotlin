@@ -27,13 +27,11 @@ interface Invocation {
      * @return the receiver of the method
      * @see org.codehaus.groovy.runtime.callsite.CallSite
      */
-    @JvmField
     val receiver: Any?
 
     /**
      * Returns a number of arguments supplied for this invocation.
      */
-    @JvmField
     val argsCount: Int
 
     /**

@@ -27,7 +27,7 @@ object Combiners {
      */
     @JvmStatic
     fun <T> nonCombining(): BinaryOperator<T?> {
-        return BinaryOperator { obj: Combiners?, a: T?, b: T? -> unsupportedCombineOperation(a, b) }
+        return BinaryOperator { a: T?, b: T? -> unsupportedCombineOperation(a, b) }
     }
 
     private fun <T> unsupportedCombineOperation(a: T?, b: T?): T? {

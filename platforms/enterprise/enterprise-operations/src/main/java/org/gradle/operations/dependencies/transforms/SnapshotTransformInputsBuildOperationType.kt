@@ -26,7 +26,7 @@ import org.gradle.operations.execution.FilePropertyVisitor
  *
  * @since 8.3
  */
-class SnapshotTransformInputsBuildOperationType : BuildOperationType<SnapshotTransformInputsBuildOperationType.Details?, SnapshotTransformInputsBuildOperationType.Result?> {
+class SnapshotTransformInputsBuildOperationType : BuildOperationType<SnapshotTransformInputsBuildOperationType.Details, SnapshotTransformInputsBuildOperationType.Result> {
     interface Details
 
     /**

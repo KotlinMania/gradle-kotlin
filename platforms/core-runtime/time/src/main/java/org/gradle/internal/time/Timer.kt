@@ -19,14 +19,12 @@ interface Timer {
     /**
      * @return A human-consumable description of the elapsed time.
      */
-    @JvmField
     val elapsed: String?
 
     /**
      * Return the elapsed time in ms. Returned value is always &gt;= 0.
      * @return The elapsed time, in ms.
      */
-    @JvmField
     val elapsedMillis: Long
 
     /**

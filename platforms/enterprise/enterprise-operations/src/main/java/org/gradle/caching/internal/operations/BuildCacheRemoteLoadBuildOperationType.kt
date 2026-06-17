@@ -24,7 +24,7 @@ import org.gradle.internal.operations.BuildOperationType
  * It may also fail.
  * Load operation results and failures are mutually exclusive.
  */
-class BuildCacheRemoteLoadBuildOperationType private constructor() : BuildOperationType<BuildCacheRemoteLoadBuildOperationType.Details?, BuildCacheRemoteLoadBuildOperationType.Result?> {
+class BuildCacheRemoteLoadBuildOperationType private constructor() : BuildOperationType<BuildCacheRemoteLoadBuildOperationType.Details, BuildCacheRemoteLoadBuildOperationType.Result> {
     interface Details {
         /**
          * The cache key.

@@ -16,50 +16,44 @@
 package org.gradle.api.internal.file.pattern
 
 class FixedStepPathMatcher(private val step: PatternStep, private val next: PathMatcher) : PathMatcher {
-    private val minSegments: Int
-    private val maxSegments: Int
+    override val minSegments: Int
+    override val maxSegments: Int
 
     init {
-        minSegments = 1 + next.getMinSegments()
-        maxSegments = if (next.getMaxSegments() == Int.MAX_VALUE) Int.MAX_VALUE else next.getMaxSegments() + 1
+        minSegments = 1 + next.minSegments
+        maxSegments = if (next.maxSegments == Int.MAX_VALUE) Int.MAX_VALUE else next.maxSegments + 1
     }
 
     override fun toString(): String {
         return "{fixed-step: " + step + ", next: " + next + "}"
     }
 
-    override fun getMinSegments(): Int {
-        return minSegments
-    }
-
-    override fun getMaxSegments(): Int {
-        return maxSegments
-    }
-
-    override fun matches(segments: Array<String?>, startIndex: Int): Boolean {
-        val remaining = segments.size - startIndex
+    override fun matches(segments: Array<String?>?, startIndex: Int): Boolean {
+        val pathSegments = segments ?: return false
+        val remaining = pathSegments.size - startIndex
         if (remaining < minSegments || remaining > maxSegments) {
             return false
         }
-        if (!step.matches(segments[startIndex])) {
+        if (!step.matches(pathSegments[startIndex])) {
             return false
         }
-        return next.matches(segments, startIndex + 1)
+        return next.matches(pathSegments, startIndex + 1)
     }
 
-    override fun isPrefix(segments: Array<String?>, startIndex: Int): Boolean {
-        if (startIndex == segments.size) {
+    override fun isPrefix(segments: Array<String?>?, startIndex: Int): Boolean {
+        val pathSegments = segments ?: return false
+        if (startIndex == pathSegments.size) {
             // Empty path, might match when more elements added
             return true
         }
-        if (!step.matches(segments[startIndex])) {
+        if (!step.matches(pathSegments[startIndex])) {
             // Does not match element, will never match when more elements added
             return false
         }
-        if (startIndex + 1 == segments.size) {
+        if (startIndex + 1 == pathSegments.size) {
             // End of path, might match when more elements added
             return true
         }
-        return next.isPrefix(segments, startIndex + 1)
+        return next.isPrefix(pathSegments, startIndex + 1)
     }
 }

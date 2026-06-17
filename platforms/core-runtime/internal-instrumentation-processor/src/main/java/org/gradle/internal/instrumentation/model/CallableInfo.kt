@@ -16,20 +16,15 @@
 package org.gradle.internal.instrumentation.model
 
 interface CallableInfo {
-    @JvmField
     val kind: CallableKindInfo?
 
-    @JvmField
     val owner: CallableOwnerInfo?
 
-    @JvmField
     val callableName: String?
 
-    @JvmField
     val returnType: CallableReturnTypeInfo?
 
-    @JvmField
-    val parameters: MutableList<ParameterInfo?>?
+    val parameters: MutableList<ParameterInfo>?
 
     /**
      * Returns true if the interceptor method has a parameter annotated with [KotlinDefaultMask].
@@ -37,7 +32,7 @@ interface CallableInfo {
      * @return true if the method has a default mask parameter
      */
     fun hasKotlinDefaultMaskParam(): Boolean {
-        return this.parameters!!.stream().anyMatch { it: ParameterInfo? -> it!!.getKind() == ParameterKindInfo.KOTLIN_DEFAULT_MASK }
+        return (parameters ?: emptyList()).stream().anyMatch { it: ParameterInfo -> it.kind == ParameterKindInfo.KOTLIN_DEFAULT_MASK }
     }
 
     /**
@@ -46,7 +41,7 @@ interface CallableInfo {
      * @return true if the method has a caller class name parameter
      */
     fun hasCallerClassNameParam(): Boolean {
-        return this.parameters!!.stream().anyMatch { it: ParameterInfo? -> it!!.getKind() == ParameterKindInfo.CALLER_CLASS_NAME }
+        return (parameters ?: emptyList()).stream().anyMatch { it: ParameterInfo -> it.kind == ParameterKindInfo.CALLER_CLASS_NAME }
     }
 
     /**
@@ -55,6 +50,6 @@ interface CallableInfo {
      * @return true if the method has a visitor context parameter
      */
     fun hasInjectVisitorContextParam(): Boolean {
-        return this.parameters!!.stream().anyMatch { it: ParameterInfo? -> it!!.getKind() == ParameterKindInfo.INJECT_VISITOR_CONTEXT }
+        return (parameters ?: emptyList()).stream().anyMatch { it: ParameterInfo -> it.kind == ParameterKindInfo.INJECT_VISITOR_CONTEXT }
     }
 }

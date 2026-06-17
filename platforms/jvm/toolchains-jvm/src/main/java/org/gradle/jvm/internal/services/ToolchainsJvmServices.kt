@@ -69,9 +69,10 @@ import org.gradle.platform.internal.CurrentBuildPlatform
 import org.gradle.process.internal.ClientExecHandleBuilderFactory
 
 class ToolchainsJvmServices : AbstractGradleModuleServices() {
-    protected class GlobalServices : ServiceRegistrationProvider {
+    private class GlobalServices : ServiceRegistrationProvider {
         @Provides
-        protected fun createJavaToolchainSpec(objectFactory: ObjectFactory, currentJvm: Jvm): CurrentJvmToolchainSpec {
+        @Suppress("UNUSED_PARAMETER", "FunctionParameterNaming")
+        fun createJavaToolchainSpec(objectFactory: ObjectFactory, currentJvm: Jvm): CurrentJvmToolchainSpec {
             return objectFactory.newInstance<CurrentJvmToolchainSpec>(CurrentJvmToolchainSpec::class.java)
         }
 
@@ -81,9 +82,9 @@ class ToolchainsJvmServices : AbstractGradleModuleServices() {
         }
     }
 
-    protected class BuildServices : ServiceRegistrationProvider {
+    private class BuildServices : ServiceRegistrationProvider {
         @Provides
-        protected fun createJavaToolchainResolverRegistry(
+        fun createJavaToolchainResolverRegistry(
             gradle: Gradle,
             instantiator: Instantiator,
             objectFactory: ObjectFactory,
@@ -101,12 +102,13 @@ class ToolchainsJvmServices : AbstractGradleModuleServices() {
         }
 
         @Provides
-        protected fun createToolchainManagement(objectFactory: ObjectFactory, registry: JavaToolchainResolverRegistry): JvmToolchainManagement {
+        fun createToolchainManagement(objectFactory: ObjectFactory, registry: JavaToolchainResolverRegistry): JvmToolchainManagement {
             return objectFactory.newInstance<DefaultJvmToolchainManagement>(DefaultJvmToolchainManagement::class.java, registry)
         }
 
         @Provides
-        protected fun createJdkCacheDirectory(
+        @Suppress("UNUSED_PARAMETER", "FunctionParameterNaming")
+        fun createJdkCacheDirectory(
             objectFactory: ObjectFactory,
             homeDirProvider: GradleUserHomeDirProvider,
             operations: FileOperations,

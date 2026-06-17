@@ -19,37 +19,13 @@ import java.lang.reflect.Method
 import java.lang.reflect.Type
 
 internal abstract class AbstractServiceMethod(target: Method) : ServiceMethod {
-    private val method: Method?
-    private val owner: Class<*>
-    private val name: String
-    private val parameterTypes: Array<Type?>
-    private val serviceType: Type
+    override val method: Method = target
+    override val owner: Class<*> = target.getDeclaringClass()
+    override val name: String = target.getName()
+    override val parameterTypes: Array<Type> = target.getGenericParameterTypes()
+    override val serviceType: Type = target.getGenericReturnType()
 
     init {
-        this.method = target
-        this.owner = target.getDeclaringClass()
-        this.name = target.getName()
-        this.parameterTypes = target.getGenericParameterTypes()
-        this.serviceType = target.getGenericReturnType()
-    }
-
-    override fun getServiceType(): Type {
-        return serviceType
-    }
-
-    override fun getParameterTypes(): Array<Type?> {
-        return parameterTypes
-    }
-
-    override fun getOwner(): Class<*> {
-        return owner
-    }
-
-    override fun getName(): String {
-        return name
-    }
-
-    override fun getMethod(): Method? {
-        return method
+        checkNotNull(method)
     }
 }

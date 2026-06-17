@@ -94,7 +94,7 @@ internal object InjectUtil {
         return !Modifier.isPrivate(modifiers) && !Modifier.isProtected(modifiers) && !Modifier.isPublic(modifiers)
     }
 
-    private fun format(type: Type?): String? {
+    private fun format(type: Type): String {
         return TypeStringFormatter.format(type)
     }
 }

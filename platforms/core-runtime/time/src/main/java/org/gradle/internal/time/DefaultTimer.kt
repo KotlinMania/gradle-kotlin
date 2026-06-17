@@ -25,12 +25,13 @@ internal open class DefaultTimer(private val timeSource: TimeSource) : Timer {
         reset()
     }
 
-    override fun getElapsed(): String {
-        val elapsedMillis = getElapsedMillis()
+    override val elapsed: String
+        get() {
         return TimeFormatting.formatDurationVerbose(elapsedMillis)
     }
 
-    override fun getElapsedMillis(): Long {
+    override val elapsedMillis: Long
+        get() {
         val elapsedNanos = timeSource.nanoTime() - startTime
         val elapsedMillis = TimeUnit.NANOSECONDS.toMillis(elapsedNanos)
 

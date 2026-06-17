@@ -17,7 +17,7 @@ package org.gradle.initialization
 
 import org.gradle.internal.operations.BuildOperationType
 
-class RunNestedBuildBuildOperationType : BuildOperationType<RunNestedBuildBuildOperationType.Details?, RunNestedBuildBuildOperationType.Result?> {
+class RunNestedBuildBuildOperationType : BuildOperationType<RunNestedBuildBuildOperationType.Details, RunNestedBuildBuildOperationType.Result> {
     interface Details {
         val buildPath: String?
     }

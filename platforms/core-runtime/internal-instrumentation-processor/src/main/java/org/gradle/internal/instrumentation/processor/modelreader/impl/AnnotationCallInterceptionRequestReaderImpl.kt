@@ -15,7 +15,6 @@
  */
 package org.gradle.internal.instrumentation.processor.modelreader.impl
 
-import org.gradle.internal.Cast
 import org.gradle.internal.instrumentation.api.annotations.CallableDefinition
 import org.gradle.internal.instrumentation.api.annotations.CallableKind
 import org.gradle.internal.instrumentation.api.annotations.InterceptInherited
@@ -50,19 +49,20 @@ import javax.lang.model.type.TypeKind
 import javax.lang.model.type.TypeMirror
 
 class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtension {
-    override fun readRequest(input: ExecutableElement, context: ReadRequestContext?): MutableCollection<CallInterceptionRequestReader.Result?>? {
-        if (input.getKind() != ElementKind.METHOD) {
+    override fun readRequest(input: ExecutableElement?, context: ReadRequestContext?): MutableCollection<CallInterceptionRequestReader.Result?>? {
+        val methodElement: ExecutableElement = input!!
+        if (methodElement.getKind() != ElementKind.METHOD) {
             return mutableListOf<CallInterceptionRequestReader.Result?>()
         }
 
-        if (!input.getModifiers().containsAll(Arrays.asList<Modifier?>(Modifier.STATIC, Modifier.PUBLIC))) {
+        if (!methodElement.getModifiers().containsAll(Arrays.asList<Modifier?>(Modifier.STATIC, Modifier.PUBLIC))) {
             return mutableListOf<CallInterceptionRequestReader.Result?>()
         }
 
         try {
-            val callableInfo: CallableInfo = extractCallableInfo(input)
-            val implementationInfo: ImplementationInfoImpl = extractImplementationInfo(input)
-            val requestExtras = mutableListOf<RequestExtra?>(OriginatingElement(input))
+            val callableInfo: CallableInfo = extractCallableInfo(methodElement)
+            val implementationInfo: ImplementationInfoImpl = extractImplementationInfo(methodElement)
+            val requestExtras = mutableListOf<RequestExtra?>(OriginatingElement(methodElement))
             return mutableListOf<CallInterceptionRequestReader.Result?>(CallInterceptionRequestReader.Result.Success(CallInterceptionRequestImpl(callableInfo, implementationInfo, requestExtras)))
         } catch (e: Failure) {
             return mutableListOf<CallInterceptionRequestReader.Result?>(InvalidRequest(e.reason))
@@ -79,7 +79,7 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
             val owner = CallableOwnerInfo(ownerType, interceptInherited)
             val callableName: String = getCallableName(methodElement, kindInfo)
             val returnType = CallableReturnTypeInfo(TypeUtils.extractReturnType(methodElement))
-            val parameterInfos: MutableList<ParameterInfo?> = extractParameters(methodElement)
+            val parameterInfos: MutableList<ParameterInfo> = extractParameters(methodElement)
             return CallableInfoImpl(kindInfo, owner, callableName, returnType, parameterInfos)
         }
 
@@ -90,8 +90,8 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
             return ImplementationInfoImpl(implementationOwner, implementationName, implementationDescriptor)
         }
 
-        private fun getCallableName(methodElement: ExecutableElement, kindInfo: CallableKindInfo?): String {
-            val nameAnnotation = methodElement.getAnnotation<CallableDefinition.Name?>(CallableDefinition.Name::class.java)
+        private fun getCallableName(methodElement: ExecutableElement, kindInfo: CallableKindInfo): String {
+            val nameAnnotation: CallableDefinition.Name? = methodElement.getAnnotation(CallableDefinition.Name::class.java)
             val nameFromPattern: String? = callableNameFromNamingConvention(methodElement.getSimpleName().toString())
             if (kindInfo == CallableKindInfo.AFTER_CONSTRUCTOR) {
                 if (nameAnnotation != null) {
@@ -130,19 +130,33 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
         }
 
         private fun extractCallableKind(methodElement: ExecutableElement): CallableKindInfo {
-            val kindAnnotations: MutableList<Annotation?> = Stream.of<Class<out Annotation?>?>(*CALLABLE_KIND_ANNOTATION_CLASSES)
-                .map { annotationType: Class<A?>? -> methodElement.getAnnotation(annotationType) }
-                .filter { obj: Any? -> Objects.nonNull(obj) }
-                .collect(Collectors.toList())
+            val kindAnnotations: MutableList<Annotation> = mutableListOf()
+            val instanceMethod = methodElement.getAnnotation(CallableKind.InstanceMethod::class.java)
+            if (instanceMethod != null) {
+                kindAnnotations.add(instanceMethod)
+            }
+            val staticMethod = methodElement.getAnnotation(CallableKind.StaticMethod::class.java)
+            if (staticMethod != null) {
+                kindAnnotations.add(staticMethod)
+            }
+            val constructorMethod = methodElement.getAnnotation(CallableKind.AfterConstructor::class.java)
+            if (constructorMethod != null) {
+                kindAnnotations.add(constructorMethod)
+            }
+            val groovyGetter = methodElement.getAnnotation(CallableKind.GroovyPropertyGetter::class.java)
+            if (groovyGetter != null) {
+                kindAnnotations.add(groovyGetter)
+            }
+            val groovySetter = methodElement.getAnnotation(CallableKind.GroovyPropertySetter::class.java)
+            if (groovySetter != null) {
+                kindAnnotations.add(groovySetter)
+            }
 
             if (kindAnnotations.size > 1) {
                 throw Failure("More than one callable kind annotations present: " + kindAnnotations)
             } else if (kindAnnotations.size == 0) {
                 throw Failure(
-                    "No callable kind annotation specified, expected one of " + Arrays.stream<Class<out Annotation?>?>(CALLABLE_KIND_ANNOTATION_CLASSES)
-                        .map<String?> { obj: Class<out Annotation?>? -> obj!!.getSimpleName() }.collect(
-                            Collectors.joining(", ")
-                        )
+                    "No callable kind annotation specified, expected one of " + CALLABLE_KIND_ANNOTATION_CLASSES.joinToString(", ") { it.getSimpleName() }
                 )
             } else {
                 return CallableKindInfo.fromAnnotation(kindAnnotations.get(0))
@@ -153,8 +167,8 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
             return methodElement.getAnnotation<InterceptInherited?>(InterceptInherited::class.java) != null
         }
 
-        private fun extractParameters(methodElement: ExecutableElement): MutableList<ParameterInfo?> {
-            val list: MutableList<ParameterInfo?> = ArrayList<ParameterInfo?>()
+        private fun extractParameters(methodElement: ExecutableElement): MutableList<ParameterInfo> {
+            val list: MutableList<ParameterInfo> = ArrayList<ParameterInfo>()
             val parameters = methodElement.getParameters()
             for (i in parameters.indices) {
                 val variableElement: VariableElement = parameters.get(i)
@@ -179,10 +193,27 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
         }
 
         private fun extractParameterKind(parameterElement: VariableElement, isVararg: Boolean): ParameterKindInfo {
-            val kindAnnotations: MutableList<Annotation?> = Stream.of<Class<out Annotation?>?>(*PARAMETER_KIND_ANNOTATION_CLASSES)
-                .map { annotationType: Class<A?>? -> parameterElement.getAnnotation(annotationType) }
-                .filter { obj: Any? -> Objects.nonNull(obj) }
-                .collect(Collectors.toList())
+            val kindAnnotations: MutableList<Annotation> = mutableListOf()
+            val receiver = parameterElement.getAnnotation(ParameterKind.Receiver::class.java)
+            if (receiver != null) {
+                kindAnnotations.add(receiver)
+            }
+            val callerClassName = parameterElement.getAnnotation(ParameterKind.CallerClassName::class.java)
+            if (callerClassName != null) {
+                kindAnnotations.add(callerClassName)
+            }
+            val kotlinDefaultMask = parameterElement.getAnnotation(ParameterKind.KotlinDefaultMask::class.java)
+            if (kotlinDefaultMask != null) {
+                kindAnnotations.add(kotlinDefaultMask)
+            }
+            val varargParameter = parameterElement.getAnnotation(ParameterKind.VarargParameter::class.java)
+            if (varargParameter != null) {
+                kindAnnotations.add(varargParameter)
+            }
+            val injectVisitorContext = parameterElement.getAnnotation(ParameterKind.InjectVisitorContext::class.java)
+            if (injectVisitorContext != null) {
+                kindAnnotations.add(injectVisitorContext)
+            }
 
             if (kindAnnotations.size > 1) {
                 throw Failure("More than one parameter kind annotations present: " + kindAnnotations)
@@ -227,24 +258,20 @@ class AnnotationCallInterceptionRequestReaderImpl : AnnotatedMethodReaderExtensi
             return TypeUtils.extractType(receiverType)
         }
 
-        private val CALLABLE_KIND_ANNOTATION_CLASSES: Array<Class<out Annotation?>?> = Cast.uncheckedNonnullCast<Array<Class<out Annotation?>?>?>(
-            arrayOf<Class<*>>(
-                CallableKind.InstanceMethod::class.java,
-                CallableKind.StaticMethod::class.java,
-                CallableKind.AfterConstructor::class.java,
-                CallableKind.GroovyPropertyGetter::class.java,
-                CallableKind.GroovyPropertySetter::class.java
-            )
+        private val CALLABLE_KIND_ANNOTATION_CLASSES: Array<Class<out Annotation>> = arrayOf<Class<out Annotation>>(
+            CallableKind.InstanceMethod::class.java,
+            CallableKind.StaticMethod::class.java,
+            CallableKind.AfterConstructor::class.java,
+            CallableKind.GroovyPropertyGetter::class.java,
+            CallableKind.GroovyPropertySetter::class.java
         )
 
-        private val PARAMETER_KIND_ANNOTATION_CLASSES: Array<Class<out Annotation?>?> = Cast.uncheckedNonnullCast<Array<Class<out Annotation?>?>?>(
-            arrayOf<Class<*>>(
-                ParameterKind.Receiver::class.java,
-                ParameterKind.CallerClassName::class.java,
-                ParameterKind.KotlinDefaultMask::class.java,
-                ParameterKind.VarargParameter::class.java,
-                ParameterKind.InjectVisitorContext::class.java
-            )
+        private val PARAMETER_KIND_ANNOTATION_CLASSES: Array<Class<out Annotation>> = arrayOf<Class<out Annotation>>(
+            ParameterKind.Receiver::class.java,
+            ParameterKind.CallerClassName::class.java,
+            ParameterKind.KotlinDefaultMask::class.java,
+            ParameterKind.VarargParameter::class.java,
+            ParameterKind.InjectVisitorContext::class.java
         )
     }
 }

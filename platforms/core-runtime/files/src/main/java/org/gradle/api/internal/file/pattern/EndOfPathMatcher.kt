@@ -20,16 +20,19 @@ class EndOfPathMatcher : PathMatcher {
         return "{end-of-path}"
     }
 
-    override fun getMaxSegments(): Int {
+    override val maxSegments: Int
+        get() {
         return 0
     }
 
-    override fun getMinSegments(): Int {
+    override val minSegments: Int
+        get() {
         return 0
     }
 
-    override fun matches(segments: Array<String?>, startIndex: Int): Boolean {
-        return startIndex == segments.size
+    override fun matches(segments: Array<String?>?, startIndex: Int): Boolean {
+        val pathSegments = segments ?: return false
+        return startIndex == pathSegments.size
     }
 
     override fun isPrefix(segments: Array<String?>?, startIndex: Int): Boolean {

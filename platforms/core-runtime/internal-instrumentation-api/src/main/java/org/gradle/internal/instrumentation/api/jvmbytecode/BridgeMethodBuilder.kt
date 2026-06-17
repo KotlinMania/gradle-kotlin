@@ -27,8 +27,7 @@ interface BridgeMethodBuilder {
      *
      * @return the descriptor
      */
-    @JvmField
-    val bridgeMethodDescriptor: String?
+    val bridgeMethodDescriptor: String
 
     /**
      * Uses the provided methodVisitor to build the bridge method.

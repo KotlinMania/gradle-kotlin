@@ -30,25 +30,37 @@ import java.util.stream.Collectors
  * Writes all instrumented types with inherited method interception to a resources
  */
 class InstrumentedTypesResourceGenerator : InstrumentationResourceGenerator {
-    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>): MutableCollection<CallInterceptionRequest?> {
+    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>?): MutableCollection<CallInterceptionRequest?>? {
+        if (interceptionRequests == null) {
+            return null
+        }
         return interceptionRequests.stream()
-            .filter { request: CallInterceptionRequest? -> request!!.interceptedCallable.owner.isInterceptSubtypes() }
-            .collect(Collectors.toList())
+            .filter { request: CallInterceptionRequest? ->
+                val owner = request?.interceptedCallable?.owner
+                owner != null && owner.type != null && owner.isInterceptSubtypes
+            }
+                .collect(Collectors.toList())
     }
 
-    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>): InstrumentationResourceGenerator.GenerationResult {
+    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>?): InstrumentationResourceGenerator.GenerationResult? {
+        if (filteredRequests == null || filteredRequests.isEmpty()) {
+            return null
+        }
         return object : CanGenerateResource {
-            override fun getPackageName(): String {
-                return ""
-            }
+            override val packageName: String?
+                get() = ""
 
-            override fun getName(): String {
-                return "META-INF/gradle/instrumentation/instrumented-classes.txt"
-            }
+            override val name: String?
+                get() = "META-INF/gradle/instrumentation/instrumented-classes.txt"
 
-            override fun write(outputStream: OutputStream) {
+            override fun write(outputStream: OutputStream?) {
+                if (outputStream == null) {
+                    return
+                }
                 val types = filteredRequests.stream()
-                    .map<String?> { request: CallInterceptionRequest? -> request!!.interceptedCallable.owner.type.getClassName().replace(".", "/") }
+                    .map<String?> { request: CallInterceptionRequest? ->
+                        requireNotNull(requireNotNull(request!!.interceptedCallable).owner).type!!.getClassName().replace(".", "/")
+                    }
                     .distinct()
                     .sorted()
                     .collect(Collectors.joining("\n"))

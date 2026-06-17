@@ -26,7 +26,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 8.3
  */
-object ExecuteTransformActionBuildOperationType : BuildOperationType<ExecuteTransformActionBuildOperationType.Details?, ExecuteTransformActionBuildOperationType.Result?> {
+object ExecuteTransformActionBuildOperationType : BuildOperationType<ExecuteTransformActionBuildOperationType.Details, ExecuteTransformActionBuildOperationType.Result> {
     val DETAILS_INSTANCE: Details = object : Details {}
     val RESULT_INSTANCE: Result = object : Result {}
 

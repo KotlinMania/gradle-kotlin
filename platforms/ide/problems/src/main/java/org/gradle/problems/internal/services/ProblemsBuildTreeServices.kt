@@ -86,6 +86,7 @@ class ProblemsBuildTreeServices : ServiceRegistrationProvider {
     }
 
     @Provides
+    @Suppress("UNUSED_PARAMETER")
     fun createProblemSummarizer(
         eventEmitter: BuildOperationProgressEventEmitter,
         currentBuildOperationRef: CurrentBuildOperationRef,
@@ -116,6 +117,7 @@ class ProblemsBuildTreeServices : ServiceRegistrationProvider {
     }
 
     @Provides
+    @Suppress("UNUSED_PARAMETER")
     fun createProblemsReportCreator(
         executorFactory: ExecutorFactory,
         temporaryFileProvider: TemporaryFileProvider,

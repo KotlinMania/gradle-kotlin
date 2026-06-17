@@ -20,15 +20,11 @@ import org.gradle.internal.reflect.JavaMethod
 import java.lang.reflect.Method
 
 internal class ReflectionBasedServiceMethod(target: Method) : AbstractServiceMethod(target) {
-    private val javaMethod: JavaMethod<Any?, Any?>
-
-    init {
-        javaMethod = JavaMethod.of<Any?, Any?>(Any::class.java, target)
-    }
+    private val javaMethod: JavaMethod<Any?, Any?> = JavaMethod.of(Any::class.java as Class<Any?>, target)
 
     override fun invoke(target: Any?, vararg args: Any?): Any? {
-        try {
-            return javaMethod.invoke(target, *args)
+        return try {
+            javaMethod.invoke(target, *args)
         } catch (e: Exception) {
             throw UncheckedException.throwAsUncheckedException(e)
         }

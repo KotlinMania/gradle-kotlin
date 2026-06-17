@@ -21,24 +21,26 @@ import java.util.Objects
  * A scope for the CallInterceptor. It defines what methods/properties or constructors the given
  * CallInterceptor is interested in. Use static methods to obtain instances of this class.
  */
-abstract class InterceptScope private constructor(protected val callType: CallType) {
-    private enum class CallType(val descriptorStringPrefix: String) {
-        METHOD("call method"),
-        GET_PROPERTY("get property"),
-        SET_PROPERTY("set property"),
-        CONSTRUCTOR("call constructor")
-    }
+abstract class InterceptScope protected constructor(protected val descriptorStringPrefix: String) {
 
-    @JvmField
     abstract val callSiteName: String?
     abstract val targetDescription: String?
 
     override fun toString(): String {
-        return "InterceptScope{" + callType.descriptorStringPrefix + " " + this.targetDescription + "}"
+        return "InterceptScope{$descriptorStringPrefix $targetDescription}"
     }
 
-    private class NamedMemberScope(callType: CallType, private val memberName: String) : InterceptScope(callType) {
-        override fun equals(o: Any): Boolean {
+    private class NamedMemberScope(
+        private val memberName: String,
+        private val prefix: String
+    ) : InterceptScope(prefix) {
+        override val callSiteName: String?
+            get() = memberName
+
+        override val targetDescription: String?
+            get() = memberName
+
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -46,24 +48,22 @@ abstract class InterceptScope private constructor(protected val callType: CallTy
                 return false
             }
             val that = o as NamedMemberScope
-            return callType == that.callType && memberName == that.memberName
+            return prefix == that.prefix && memberName == that.memberName
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(callType, memberName)
-        }
-
-        override fun getCallSiteName(): String {
-            return memberName
-        }
-
-        override fun getTargetDescription(): String {
-            return memberName
+            return Objects.hash(prefix, memberName)
         }
     }
 
-    private class ConstructorScope(private val constructorClass: Class<*>) : InterceptScope(CallType.CONSTRUCTOR) {
-        override fun equals(o: Any): Boolean {
+    private class ConstructorScope(private val constructorClass: Class<*>) : InterceptScope("call constructor") {
+        override val callSiteName: String
+            get() = "<\$constructor$>"
+
+        override val targetDescription: String
+            get() = constructorClass.getName()
+
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -75,15 +75,7 @@ abstract class InterceptScope private constructor(protected val callType: CallTy
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(callType, constructorClass)
-        }
-
-        override fun getCallSiteName(): String {
-            return "<\$constructor$>"
-        }
-
-        override fun getTargetDescription(): String {
-            return constructorClass.getName()
+            return Objects.hash(descriptorStringPrefix, constructorClass)
         }
     }
 
@@ -106,7 +98,7 @@ abstract class InterceptScope private constructor(protected val callType: CallTy
          */
         @JvmStatic
         fun methodsNamed(methodName: String): InterceptScope {
-            return NamedMemberScope(CallType.METHOD, methodName)
+            return NamedMemberScope(methodName, "call method")
         }
 
         /**
@@ -119,7 +111,7 @@ abstract class InterceptScope private constructor(protected val callType: CallTy
          */
         @JvmStatic
         fun readsOfPropertiesNamed(propertyName: String): InterceptScope {
-            return NamedMemberScope(CallType.GET_PROPERTY, propertyName)
+            return NamedMemberScope(propertyName, "get property")
         }
 
         /**
@@ -132,7 +124,7 @@ abstract class InterceptScope private constructor(protected val callType: CallTy
          */
         @JvmStatic
         fun writesOfPropertiesNamed(propertyName: String): InterceptScope {
-            return NamedMemberScope(CallType.SET_PROPERTY, propertyName)
+            return NamedMemberScope(propertyName, "set property")
         }
     }
 }

@@ -32,7 +32,7 @@ class LineBufferingOutputStream @JvmOverloads constructor(private val handler: T
 
     init {
         buffer = StreamByteBuffer(bufferLength)
-        output = buffer.getOutputStream()
+        output = buffer.outputStream
         val lineSeparatorBytes = lineSeparator.toByteArray(StandardCharsets.UTF_8)
         lastLineSeparatorByte = lineSeparatorBytes[lineSeparatorBytes.size - 1]
     }

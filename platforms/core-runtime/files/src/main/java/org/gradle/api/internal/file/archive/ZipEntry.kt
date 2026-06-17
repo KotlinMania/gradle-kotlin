@@ -39,13 +39,10 @@ interface ZipEntry {
         OTHER,
     }
 
-    @JvmField
     val isDirectory: Boolean
 
-    @JvmField
     val name: String?
 
-    @JvmField
     @get:Throws(IOException::class)
     val content: ByteArray?
 
@@ -71,7 +68,6 @@ interface ZipEntry {
      */
     fun canReopen(): Boolean
 
-    @JvmField
     val compressionMethod: ZipCompressionMethod?
 
     // Copied from org.gradle.internal.io.IoFunction in :functional due to

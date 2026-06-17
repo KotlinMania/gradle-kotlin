@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.0
  */
-class ApplyScriptPluginBuildOperationType private constructor() : BuildOperationType<ApplyScriptPluginBuildOperationType.Details?, ApplyScriptPluginBuildOperationType.Result?> {
+class ApplyScriptPluginBuildOperationType private constructor() : BuildOperationType<ApplyScriptPluginBuildOperationType.Details, ApplyScriptPluginBuildOperationType.Result> {
     interface Details {
         /**
          * The absolute path to the script file.

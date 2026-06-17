@@ -17,16 +17,8 @@ package org.gradle.internal.instrumentation.model
 
 import org.objectweb.asm.Type
 
-class ImplementationInfoImpl(private val owner: Type?, private val name: String?, private val descriptor: String?) : ImplementationInfo {
-    override fun getOwner(): Type? {
-        return owner
-    }
-
-    override fun getName(): String? {
-        return name
-    }
-
-    override fun getDescriptor(): String? {
-        return descriptor
-    }
-}
+class ImplementationInfoImpl(
+    override val owner: Type?,
+    override val name: String?,
+    override val descriptor: String?
+) : ImplementationInfo

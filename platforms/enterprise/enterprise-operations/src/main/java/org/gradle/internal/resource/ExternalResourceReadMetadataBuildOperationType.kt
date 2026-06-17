@@ -23,7 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 4.0
  */
 class ExternalResourceReadMetadataBuildOperationType private constructor() :
-    BuildOperationType<ExternalResourceReadMetadataBuildOperationType.Details?, ExternalResourceReadMetadataBuildOperationType.Result?> {
+    BuildOperationType<ExternalResourceReadMetadataBuildOperationType.Details, ExternalResourceReadMetadataBuildOperationType.Result> {
     interface Details {
         /**
          * The location of the resource.

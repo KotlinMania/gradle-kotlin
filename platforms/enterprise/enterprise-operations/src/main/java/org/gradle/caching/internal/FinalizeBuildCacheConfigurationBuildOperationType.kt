@@ -33,7 +33,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 4.0
  */
 class FinalizeBuildCacheConfigurationBuildOperationType private constructor() :
-    BuildOperationType<FinalizeBuildCacheConfigurationBuildOperationType.Details?, FinalizeBuildCacheConfigurationBuildOperationType.Result?> {
+    BuildOperationType<FinalizeBuildCacheConfigurationBuildOperationType.Details, FinalizeBuildCacheConfigurationBuildOperationType.Result> {
     interface Details {
         /**
          * The path to the build that the build cache configuration is associated with.

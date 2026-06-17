@@ -27,7 +27,7 @@ import org.gradle.internal.scan.NotUsedByScanPlugin
  *
  * @since 8.1
  */
-class ExecutePlannedTransformStepBuildOperationType : BuildOperationType<ExecutePlannedTransformStepBuildOperationType.Details?, ExecutePlannedTransformStepBuildOperationType.Result?> {
+class ExecutePlannedTransformStepBuildOperationType : BuildOperationType<ExecutePlannedTransformStepBuildOperationType.Details, ExecutePlannedTransformStepBuildOperationType.Result> {
     interface Details {
         /**
          * The identity of the transform step executed in this operation.

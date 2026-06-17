@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 /*
  * Copyright 2021 the original author or authors.
  *
@@ -29,14 +31,12 @@ abstract class Either<L, R> {
     /**
      * Take the value if this is a left.
      */
-    @JvmField
-    abstract val left: Optional<L?>?
+    abstract val left: Optional<L>
 
     /**
      * Take the value if this is a right.
      */
-    @JvmField
-    abstract val right: Optional<R?>?
+    abstract val right: Optional<R>
 
     /**
      * Map the left side.
@@ -73,13 +73,11 @@ abstract class Either<L, R> {
     abstract override fun toString(): String
 
     private class Left<L, R>(private val value: L?) : Either<L?, R?>() {
-        override fun getLeft(): Optional<L?> {
-            return Optional.of<L?>(value!!)
-        }
+        override val left: Optional<L?>
+            get() = Optional.ofNullable(value) as Optional<L?>
 
-        override fun getRight(): Optional<R?> {
-            return Optional.empty<R?>()
-        }
+        override val right: Optional<R?>
+            get() = Optional.empty<R?>() as Optional<R?>
 
         override fun <U, V> mapLeft(f: Function<in L?, out U>): Either<U?, V?> {
             return Left<U?, V?>(f.apply(value))
@@ -117,13 +115,11 @@ abstract class Either<L, R> {
     }
 
     private class Right<L, R>(private val value: R?) : Either<L?, R?>() {
-        override fun getLeft(): Optional<L?> {
-            return Optional.empty<L?>()
-        }
+        override val left: Optional<L?>
+            get() = Optional.empty<L?>() as Optional<L?>
 
-        override fun getRight(): Optional<R?> {
-            return Optional.of<R?>(value!!)
-        }
+        override val right: Optional<R?>
+            get() = Optional.ofNullable(value) as Optional<R?>
 
         override fun <U, V> mapLeft(f: Function<in L?, out U>): Either<U?, V?> {
             return this as Either<U?, V?>

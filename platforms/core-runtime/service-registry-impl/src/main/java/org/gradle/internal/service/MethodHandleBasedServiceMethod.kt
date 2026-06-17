@@ -21,15 +21,15 @@ import java.lang.invoke.MethodHandles
 import java.lang.reflect.Method
 
 internal class MethodHandleBasedServiceMethod(target: Method) : AbstractServiceMethod(target) {
-    private val method: MethodHandle
+    private val methodHandle: MethodHandle
 
     init {
-        this.method = LOOKUP.unreflect(target)
+        this.methodHandle = LOOKUP.unreflect(target)
     }
 
     override fun invoke(target: Any?, vararg args: Any?): Any? {
-        try {
-            return method.bindTo(target).invokeWithArguments(*args)
+        return try {
+            methodHandle.bindTo(target).invokeWithArguments(*args)
         } catch (e: Throwable) {
             throw UncheckedException.throwAsUncheckedException(e)
         }

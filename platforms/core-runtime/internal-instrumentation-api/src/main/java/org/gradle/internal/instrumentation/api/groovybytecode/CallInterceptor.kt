@@ -45,6 +45,5 @@ interface CallInterceptor {
 
     fun decorateMethodHandle(original: MethodHandle, caller: MethodHandles.Lookup, flags: Int): MethodHandle?
 
-    @JvmField
-    val interceptScopes: MutableSet<InterceptScope>?
+    val interceptScopes: MutableSet<InterceptScope>
 }

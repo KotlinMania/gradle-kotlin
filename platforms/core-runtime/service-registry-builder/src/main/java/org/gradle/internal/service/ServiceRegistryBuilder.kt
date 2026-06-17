@@ -16,6 +16,7 @@
 package org.gradle.internal.service
 
 import org.gradle.internal.service.ServiceRegistryBuilder.Companion.builder
+import org.gradle.internal.service.ServiceRegistryFactory.create
 import org.gradle.internal.service.scopes.Scope
 
 /**
@@ -52,7 +53,7 @@ class ServiceRegistryBuilder private constructor() {
     private val parents: MutableList<ServiceRegistry?> = ArrayList<ServiceRegistry?>()
     private val providers: MutableList<ServiceRegistrationProvider> = ArrayList<ServiceRegistrationProvider>()
     private var displayName: String? = null
-    private var scope: Class<out Scope?>? = null
+    private var scope: Class<out Scope>? = null
     private var strict = false
 
     /**
@@ -165,12 +166,9 @@ class ServiceRegistryBuilder private constructor() {
      * @see CloseableServiceRegistry
      */
     fun build(): CloseableServiceRegistry {
-        val parents = this.parents.toTypedArray<ServiceRegistry?>()
-
-        val registry = if (scope != null)
-            ScopedServiceRegistry(scope, strict, displayName, *parents)
-        else
-            DefaultServiceRegistry(displayName, *parents)
+        val parentRegistries = this.parents.filterNotNull().toTypedArray()
+        val configuredScope = scope
+        val registry = create(configuredScope, strict, displayName, parentRegistries) as DefaultServiceRegistry
 
         for (provider in providers) {
             registry.addProvider(provider)

@@ -29,7 +29,7 @@ import java.util.zip.ZipFile
 
 class FileZipInput private constructor(file: File) : ZipInput {
     private val file: ZipFile
-    private val entries: Enumeration<out ZipEntry?>
+    private val entries: Enumeration<out ZipEntry>
 
     init {
         try {
@@ -46,7 +46,7 @@ class FileZipInput private constructor(file: File) : ZipInput {
                 if (!entries.hasMoreElements()) {
                     return endOfData()
                 }
-                return FileZipInput.FileZipEntry(entries.nextElement())
+                return FileZipInput.FileZipEntry(file, entries.nextElement())
             }
         }
     }
@@ -56,10 +56,13 @@ class FileZipInput private constructor(file: File) : ZipInput {
         file.close()
     }
 
-    private inner class FileZipEntry(entry: ZipEntry?) : AbstractZipEntry(entry) {
+    private class FileZipEntry(private val file: ZipFile, entry: ZipEntry) : AbstractZipEntry(entry) {
         @Throws(IOException::class)
-        override fun <T> withInputStream(action: org.gradle.api.internal.file.archive.ZipEntry.IoFunction<InputStream?, T?>): T? {
+        override fun <T> withInputStream(action: org.gradle.api.internal.file.archive.ZipEntry.IoFunction<InputStream?, T?>?): T? {
             val inputStream = this.inputStream
+            if (action == null) {
+                return null
+            }
             try {
                 return action.apply(inputStream)
             } finally {
@@ -70,7 +73,7 @@ class FileZipInput private constructor(file: File) : ZipInput {
         val inputStream: InputStream
             get() {
                 try {
-                    return file.getInputStream(getEntry())
+                    return file.getInputStream(entry)
                 } catch (e: IOException) {
                     throw FileException(e)
                 }

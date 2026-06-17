@@ -19,7 +19,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 internal object TypeStringFormatter {
-    fun format(type: Type): String? {
+    fun format(type: Type): String {
         if (type is Class<*>) {
             val aClass = type
             val enclosingClass = aClass.getEnclosingClass()

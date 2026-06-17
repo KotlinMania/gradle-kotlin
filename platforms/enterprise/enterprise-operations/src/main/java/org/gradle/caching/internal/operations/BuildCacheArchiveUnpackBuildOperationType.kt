@@ -17,7 +17,7 @@ package org.gradle.caching.internal.operations
 
 import org.gradle.internal.operations.BuildOperationType
 
-class BuildCacheArchiveUnpackBuildOperationType : BuildOperationType<BuildCacheArchiveUnpackBuildOperationType.Details?, BuildCacheArchiveUnpackBuildOperationType.Result?> {
+class BuildCacheArchiveUnpackBuildOperationType : BuildOperationType<BuildCacheArchiveUnpackBuildOperationType.Details, BuildCacheArchiveUnpackBuildOperationType.Result> {
     interface Details {
         /**
          * The cache key.

@@ -23,7 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 5.1
  */
 object ExecuteDomainObjectCollectionCallbackBuildOperationType :
-    BuildOperationType<ExecuteDomainObjectCollectionCallbackBuildOperationType.Details?, ExecuteDomainObjectCollectionCallbackBuildOperationType.Result?> {
+    BuildOperationType<ExecuteDomainObjectCollectionCallbackBuildOperationType.Details, ExecuteDomainObjectCollectionCallbackBuildOperationType.Result> {
     val RESULT: Result = object : Result {
     }
 

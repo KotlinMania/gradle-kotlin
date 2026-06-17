@@ -16,29 +16,9 @@
 package org.gradle.internal.instrumentation.model
 
 class CallableInfoImpl(
-    private val kind: CallableKindInfo?,
-    private val owner: CallableOwnerInfo?,
-    private val callableName: String?,
-    private val returnType: CallableReturnTypeInfo?,
-    private val parameters: MutableList<ParameterInfo?>?
-) : CallableInfo {
-    override fun getKind(): CallableKindInfo? {
-        return kind
-    }
-
-    override fun getOwner(): CallableOwnerInfo? {
-        return owner
-    }
-
-    override fun getCallableName(): String? {
-        return callableName
-    }
-
-    override fun getReturnType(): CallableReturnTypeInfo? {
-        return returnType
-    }
-
-    override fun getParameters(): MutableList<ParameterInfo?>? {
-        return parameters
-    }
-}
+    override val kind: CallableKindInfo?,
+    override val owner: CallableOwnerInfo?,
+    override val callableName: String?,
+    override val returnType: CallableReturnTypeInfo?,
+    override val parameters: MutableList<ParameterInfo>?
+) : CallableInfo

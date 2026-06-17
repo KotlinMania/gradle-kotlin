@@ -70,6 +70,7 @@ class DefaultJavaToolchainProvisioningService @Inject constructor(
         return !toolchainResolverRegistry.requestedRepositories().isEmpty()
     }
 
+    @Suppress("LoopWithTooManyJumpStatements", "ThrowsCount")
     override fun tryInstall(spec: JavaToolchainSpec): File {
         if (!isAutoDownloadEnabled()) {
             throw ToolchainProvisioningException(

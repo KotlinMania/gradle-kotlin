@@ -23,7 +23,10 @@ class FixedPatternStep(private val value: String, private val caseSensitive: Boo
         return "{match: " + value + "}"
     }
 
-    override fun matches(candidate: String): Boolean {
+    override fun matches(candidate: String?): Boolean {
+        if (candidate == null) {
+            return false
+        }
         return if (caseSensitive) (candidate == value) else candidate.equals(value, ignoreCase = true)
     }
 }

@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.3
  */
-class BuildBuildSrcBuildOperationType private constructor() : BuildOperationType<BuildBuildSrcBuildOperationType.Details?, BuildBuildSrcBuildOperationType.Result?> {
+class BuildBuildSrcBuildOperationType private constructor() : BuildOperationType<BuildBuildSrcBuildOperationType.Details, BuildBuildSrcBuildOperationType.Result> {
     interface Details {
         /**
          * Returns the path of the _containing_ build.

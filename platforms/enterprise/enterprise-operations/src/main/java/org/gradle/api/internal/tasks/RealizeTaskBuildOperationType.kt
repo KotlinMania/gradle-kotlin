@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.9
  */
-class RealizeTaskBuildOperationType private constructor() : BuildOperationType<RealizeTaskBuildOperationType.Details?, RealizeTaskBuildOperationType.Result?> {
+class RealizeTaskBuildOperationType private constructor() : BuildOperationType<RealizeTaskBuildOperationType.Details, RealizeTaskBuildOperationType.Result> {
     interface Details {
         /**
          * The path of the build this task belongs to.

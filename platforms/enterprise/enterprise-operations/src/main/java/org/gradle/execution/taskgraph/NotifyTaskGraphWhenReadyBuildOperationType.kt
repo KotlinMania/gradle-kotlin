@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.9
  */
-object NotifyTaskGraphWhenReadyBuildOperationType : BuildOperationType<NotifyTaskGraphWhenReadyBuildOperationType.Details?, NotifyTaskGraphWhenReadyBuildOperationType.Result?> {
+object NotifyTaskGraphWhenReadyBuildOperationType : BuildOperationType<NotifyTaskGraphWhenReadyBuildOperationType.Details, NotifyTaskGraphWhenReadyBuildOperationType.Result> {
     val RESULT: Result = object : Result {
     }
 

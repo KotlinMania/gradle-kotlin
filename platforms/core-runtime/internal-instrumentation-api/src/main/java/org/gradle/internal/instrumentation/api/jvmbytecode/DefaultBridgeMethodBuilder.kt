@@ -107,9 +107,8 @@ abstract class DefaultBridgeMethodBuilder private constructor(
 
     protected abstract fun copy(hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?): DefaultBridgeMethodBuilder
 
-    override fun getBridgeMethodDescriptor(): String {
-        return bridgeDesc
-    }
+    override val bridgeMethodDescriptor: String
+        get() = bridgeDesc
 
     override fun buildBridgeMethod(methodVisitor: MethodVisitor) {
         val mv = MethodVisitorScope(methodVisitor)
@@ -163,9 +162,9 @@ abstract class DefaultBridgeMethodBuilder private constructor(
         get() = Type.getMethodType(bridgeDesc)
 
     private class StaticBridgeMethodBuilder : DefaultBridgeMethodBuilder {
-        private constructor(bridgeDesc: String, interceptorOwner: String, interceptorName: String, interceptorDesc: String) : super(bridgeDesc, interceptorOwner, interceptorName, interceptorDesc)
+        internal constructor(bridgeDesc: String, interceptorOwner: String, interceptorName: String, interceptorDesc: String) : super(bridgeDesc, interceptorOwner, interceptorName, interceptorDesc)
 
-        private constructor(builder: StaticBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
+        internal constructor(builder: StaticBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
             builder,
             hasKotlinDefaultMask,
             binaryClassName,
@@ -192,7 +191,7 @@ abstract class DefaultBridgeMethodBuilder private constructor(
             this.originalConstructorDesc = originalConstructorDesc
         }
 
-        private constructor(builder: ConstructorBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
+        internal constructor(builder: ConstructorBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
             builder,
             hasKotlinDefaultMask,
             binaryClassName,
@@ -247,12 +246,12 @@ abstract class DefaultBridgeMethodBuilder private constructor(
             this.originalDesc = originalDesc
         }
 
-        private constructor(refinedOwner: String, builder: InstanceBridgeMethodBuilder) : super(builder, buildInstanceBridgeDesc(builder.tag, refinedOwner, builder.originalDesc)) {
+        internal constructor(refinedOwner: String, builder: InstanceBridgeMethodBuilder) : super(builder, buildInstanceBridgeDesc(builder.tag, refinedOwner, builder.originalDesc)) {
             this.tag = builder.tag
             this.originalDesc = builder.originalDesc
         }
 
-        private constructor(builder: InstanceBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
+        internal constructor(builder: InstanceBridgeMethodBuilder, hasKotlinDefaultMask: Boolean, binaryClassName: String?, context: BytecodeInterceptorFilter?) : super(
             builder,
             hasKotlinDefaultMask,
             binaryClassName,

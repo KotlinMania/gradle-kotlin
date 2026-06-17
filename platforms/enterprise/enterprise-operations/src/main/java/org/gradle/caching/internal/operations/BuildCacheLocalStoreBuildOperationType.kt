@@ -25,7 +25,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 8.6
  */
-class BuildCacheLocalStoreBuildOperationType private constructor() : BuildOperationType<BuildCacheLocalStoreBuildOperationType.Details?, BuildCacheLocalStoreBuildOperationType.Result?> {
+class BuildCacheLocalStoreBuildOperationType private constructor() : BuildOperationType<BuildCacheLocalStoreBuildOperationType.Details, BuildCacheLocalStoreBuildOperationType.Result> {
     interface Details {
         /**
          * The cache key.

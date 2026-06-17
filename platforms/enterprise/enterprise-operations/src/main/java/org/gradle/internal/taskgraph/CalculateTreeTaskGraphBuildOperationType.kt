@@ -20,7 +20,7 @@ import org.gradle.internal.operations.BuildOperationType
 /**
  * Computing the task graph for the build tree based on the inputs and build configuration.
  */
-class CalculateTreeTaskGraphBuildOperationType private constructor() : BuildOperationType<CalculateTreeTaskGraphBuildOperationType.Details?, CalculateTreeTaskGraphBuildOperationType.Result?> {
+class CalculateTreeTaskGraphBuildOperationType private constructor() : BuildOperationType<CalculateTreeTaskGraphBuildOperationType.Details, CalculateTreeTaskGraphBuildOperationType.Result> {
     interface Details
 
     interface Result

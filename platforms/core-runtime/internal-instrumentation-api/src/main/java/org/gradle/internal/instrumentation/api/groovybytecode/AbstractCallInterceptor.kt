@@ -24,11 +24,7 @@ import java.lang.invoke.MethodType
 import java.util.Collections
 
 abstract class AbstractCallInterceptor protected constructor(vararg interceptScopes: InterceptScope) : CallInterceptor {
-    private val interceptScopes: MutableSet<InterceptScope>
-
-    init {
-        this.interceptScopes = Collections.unmodifiableSet<InterceptScope>(CollectionUtils.addAll<InterceptScope, LinkedHashSet<InterceptScope>>(LinkedHashSet<InterceptScope?>(), *interceptScopes))
-    }
+    override val interceptScopes: MutableSet<InterceptScope> = Collections.unmodifiableSet(interceptScopes.toMutableSet())
 
     override fun decorateMethodHandle(original: MethodHandle, caller: MethodHandles.Lookup, flags: Int): MethodHandle {
         val spreader = original.asSpreader(Array<Any>::class.java, original.type().parameterCount())
@@ -42,14 +38,10 @@ abstract class AbstractCallInterceptor protected constructor(vararg interceptSco
         val isSafeNavigation = (flags and IndyInterface.SAFE_NAVIGATION) != 0
         if (isSafeNavigation && InvocationUtils.unwrap(args[0]) == null) {
             // Skip interception for safe navigation calls on null receiver
-            return original.invokeExact(*args)
+            return original.invokeWithArguments(args.asList())
         }
         val isSpread = (flags and IndyInterface.SPREAD_CALL) != 0
         return intercept(MethodHandleInvocation(original, args, isSpread), consumer)
-    }
-
-    override fun getInterceptScopes(): MutableSet<InterceptScope> {
-        return interceptScopes
     }
 
     companion object {

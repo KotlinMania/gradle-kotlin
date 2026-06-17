@@ -28,7 +28,10 @@ class RegExpPatternStep(pattern: String, caseSensitive: Boolean) : PatternStep {
         return "{regexp: " + pattern + "}"
     }
 
-    override fun matches(testString: String): Boolean {
+    override fun matches(testString: String?): Boolean {
+        if (testString == null) {
+            return false
+        }
         val matcher = pattern.matcher(testString)
         return matcher.matches()
     }

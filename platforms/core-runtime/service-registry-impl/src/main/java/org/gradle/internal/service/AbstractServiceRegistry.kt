@@ -23,5 +23,5 @@ package org.gradle.internal.service
  * which child registries use to resolve services from their parents.
  */
 internal abstract class AbstractServiceRegistry : ServiceRegistry {
-    abstract fun asServiceProvider(): ServiceProvider?
+    abstract fun asServiceProvider(): ServiceProvider
 }

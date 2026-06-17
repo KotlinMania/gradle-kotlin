@@ -15,29 +15,12 @@
  */
 package org.gradle.internal.instrumentation.model
 
-import java.util.function.Consumer
-
 class CallInterceptionRequestImpl(
-    private val interceptedCallable: CallableInfo?,
-    private val implementationInfo: ImplementationInfo?,
+    override val interceptedCallable: CallableInfo?,
+    override val implementationInfo: ImplementationInfo?,
     requestExtras: MutableList<RequestExtra?>
 ) : CallInterceptionRequest {
-    private val requestExtras: RequestExtrasContainer
-
-    init {
-        this.requestExtras = RequestExtrasContainer()
-        requestExtras.forEach(Consumer { extra: RequestExtra? -> this.requestExtras.add(extra) })
-    }
-
-    override fun getInterceptedCallable(): CallableInfo? {
-        return interceptedCallable
-    }
-
-    override fun getImplementationInfo(): ImplementationInfo? {
-        return implementationInfo
-    }
-
-    override fun getRequestExtras(): RequestExtrasContainer {
-        return requestExtras
+    override val requestExtras: RequestExtrasContainer = RequestExtrasContainer().apply {
+        requestExtras.forEach { add(it) }
     }
 }

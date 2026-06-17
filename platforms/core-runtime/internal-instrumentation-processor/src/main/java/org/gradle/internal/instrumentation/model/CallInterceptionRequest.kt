@@ -16,10 +16,7 @@
 package org.gradle.internal.instrumentation.model
 
 interface CallInterceptionRequest {
-    @JvmField
     val interceptedCallable: CallableInfo?
-    @JvmField
     val implementationInfo: ImplementationInfo?
-    @JvmField
-    val requestExtras: RequestExtrasContainer?
+    val requestExtras: RequestExtrasContainer
 }

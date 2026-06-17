@@ -101,13 +101,12 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
             fun <T> successful(value: T?): Result<T?> {
                 requireNotNull(value)
                 return object : Result<T?>() {
-                    override fun isSuccessful(): Boolean {
-                        return true
-                    }
+                    private val result = value
+                    override val isSuccessful: Boolean
+                        get() = true
 
-                    override fun getValue(): T? {
-                        return value
-                    }
+                    override val value: T?
+                        get() = result
                 }
             }
 
@@ -117,13 +116,12 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
             fun <T> notSuccessful(value: T?): Result<T?> {
                 requireNotNull(value)
                 return object : Result<T?>() {
-                    override fun isSuccessful(): Boolean {
-                        return false
-                    }
+                    private val result = value
+                    override val isSuccessful: Boolean
+                        get() = false
 
-                    override fun getValue(): T? {
-                        return value
-                    }
+                    override val value: T?
+                        get() = result
                 }
             }
         }
@@ -138,8 +136,8 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
         }
 
         @JvmStatic
-        fun <T : Signal?> of(amount: Int, unit: TimeUnit, signal: T?): ExponentialBackoff<T?> {
-            return ExponentialBackoff<T?>(TimeUnit.MILLISECONDS.convert(amount.toLong(), unit).toInt(), signal, SLOT_TIME)
+        fun <T : Signal?> of(amount: Int, unit: TimeUnit, signal: T): ExponentialBackoff<T> {
+            return ExponentialBackoff(TimeUnit.MILLISECONDS.convert(amount.toLong(), unit).toInt(), signal, SLOT_TIME)
         }
 
         @JvmStatic

@@ -15,16 +15,19 @@
  */
 package org.gradle.internal.service
 
+import java.lang.reflect.Method
+import java.lang.reflect.Type
+
 internal interface ServiceMethod {
-    val owner: Class<*>?
+    val owner: Class<*>
 
-    val name: String?
+    val name: String
 
-    val serviceType: Type?
+    val serviceType: Type
 
-    val parameterTypes: Array<Type?>?
+    val parameterTypes: Array<Type>
 
     fun invoke(target: Any?, vararg args: Any?): Any?
 
-    val method: Method?
+    val method: Method
 }

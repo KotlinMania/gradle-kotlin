@@ -20,11 +20,13 @@ class AnythingMatcher : PathMatcher {
         return "{anything}"
     }
 
-    override fun getMaxSegments(): Int {
+    override val maxSegments: Int
+        get() {
         return Int.MAX_VALUE
     }
 
-    override fun getMinSegments(): Int {
+    override val minSegments: Int
+        get() {
         return 0
     }
 

@@ -16,13 +16,14 @@
 package org.gradle.configuration.project
 
 import org.gradle.internal.operations.BuildOperationType
+import java.io.File
 
 /**
  * Configuration of a project.
  *
  * @since 4.0
  */
-object ConfigureProjectBuildOperationType : BuildOperationType<ConfigureProjectBuildOperationType.Details?, ConfigureProjectBuildOperationType.Result?> {
+object ConfigureProjectBuildOperationType : BuildOperationType<ConfigureProjectBuildOperationType.Details, ConfigureProjectBuildOperationType.Result> {
     val RESULT: Result = object : Result {
     }
 

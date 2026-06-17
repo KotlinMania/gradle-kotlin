@@ -26,7 +26,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 8.3
  */
-class FinishRootBuildTreeBuildOperationType : BuildOperationType<FinishRootBuildTreeBuildOperationType.Details?, FinishRootBuildTreeBuildOperationType.Result?> {
+class FinishRootBuildTreeBuildOperationType : BuildOperationType<FinishRootBuildTreeBuildOperationType.Details, FinishRootBuildTreeBuildOperationType.Result> {
     interface Details
 
     interface Result

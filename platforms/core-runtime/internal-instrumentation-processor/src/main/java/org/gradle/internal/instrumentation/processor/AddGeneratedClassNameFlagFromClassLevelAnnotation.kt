@@ -39,17 +39,19 @@ class AddGeneratedClassNameFlagFromClassLevelAnnotation(
     private val generatedClassNameProvidingAnnotation: Class<out Annotation?>,
     private val produceFlagForGeneratedClassName: BiFunction<String?, BytecodeInterceptorType?, RequestExtra?>
 ) : RequestPostProcessorExtension {
-    override fun postProcessRequest(originalRequest: CallInterceptionRequest): MutableCollection<CallInterceptionRequest?>? {
-        val maybeOriginatingElement: Optional<ExecutableElement?> = originalRequest.requestExtras!!.getByType(OriginatingElement::class.java)
-            .map(OriginatingElement::getElement)
+    override fun postProcessRequest(originalRequest: CallInterceptionRequest?): MutableCollection<CallInterceptionRequest?>? {
+        val request = originalRequest ?: return mutableListOf()
+        val maybeOriginatingElement: Optional<ExecutableElement?> = request.requestExtras
+            .getByType(OriginatingElement::class.java)
+            .map { it.element }
 
         if (!maybeOriginatingElement.isPresent()) {
-            return mutableListOf<CallInterceptionRequest?>(originalRequest)
+            return mutableListOf<CallInterceptionRequest?>(request)
         }
 
-        val shouldPostProcess = shouldAddExtraToRequestPredicate.test(originalRequest)
+        val shouldPostProcess = shouldAddExtraToRequestPredicate.test(request)
         if (!shouldPostProcess) {
-            return mutableListOf<CallInterceptionRequest?>(originalRequest)
+            return mutableListOf<CallInterceptionRequest?>(request)
         }
 
         val enclosingElement = maybeOriginatingElement.get().getEnclosingElement()
@@ -58,7 +60,7 @@ class AddGeneratedClassNameFlagFromClassLevelAnnotation(
                 .orElseThrow<IllegalStateException?>(Supplier { IllegalStateException("Annotation " + generatedClassNameProvidingAnnotation + " does not have a generatedClassName attribute") })
             val interceptionType: AnnotationValue = findAnnotationValueWithDefaults(elements, annotationMirror, "type")
                 .orElseThrow<IllegalStateException?>(Supplier { IllegalStateException("Annotation " + generatedClassNameProvidingAnnotation + " does not have a type attribute") })
-            originalRequest.requestExtras!!.add(
+            request.requestExtras.add(
                 produceFlagForGeneratedClassName.apply(
                     generatedClassName.getValue() as String?,
                     BytecodeInterceptorType.valueOf(interceptionType.getValue().toString())
@@ -66,15 +68,15 @@ class AddGeneratedClassNameFlagFromClassLevelAnnotation(
             )
         }
 
-        return mutableListOf<CallInterceptionRequest?>(originalRequest)
+        return mutableListOf<CallInterceptionRequest?>(request)
     }
 
     companion object {
         fun ifHasAnnotation(annotationType: Class<out Annotation?>): Predicate<CallInterceptionRequest?> {
             return Predicate { request: CallInterceptionRequest? ->
-                val maybeOriginatingElement: Optional<ExecutableElement> = request!!.requestExtras!!
+                val maybeOriginatingElement: Optional<ExecutableElement> = request!!.requestExtras
                     .getByType(OriginatingElement::class.java)
-                    .map(OriginatingElement::getElement)
+                    .map { it.element }
                 if (!maybeOriginatingElement.isPresent()) {
                     return@Predicate false
                 }
@@ -84,8 +86,10 @@ class AddGeneratedClassNameFlagFromClassLevelAnnotation(
             }
         }
 
-        fun ifHasExtraOfType(extraType: Class<out RequestExtra?>?): Predicate<CallInterceptionRequest?> {
-            return Predicate { request: CallInterceptionRequest? -> request!!.requestExtras!!.getByType(extraType).isPresent() }
+        fun ifHasExtraOfType(extraType: Class<out RequestExtra>): Predicate<CallInterceptionRequest?> {
+            return Predicate { request: CallInterceptionRequest? ->
+                request!!.requestExtras.getByType(extraType as Class<RequestExtra>).isPresent()
+            }
         }
     }
 }

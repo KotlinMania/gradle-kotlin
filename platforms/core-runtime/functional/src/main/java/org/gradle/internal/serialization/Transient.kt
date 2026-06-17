@@ -66,9 +66,8 @@ abstract class Transient<T> : Serializable {
             throw IllegalStateException("The value of this property has been discarded during serialization.")
         }
 
-        override fun isPresent(): Boolean {
-            return false
-        }
+        override val isPresent: Boolean
+            get() = false
 
         fun readResolve(): Any {
             return DISCARDED

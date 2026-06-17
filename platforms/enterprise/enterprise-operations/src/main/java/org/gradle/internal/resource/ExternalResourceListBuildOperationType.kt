@@ -24,7 +24,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.0
  */
-class ExternalResourceListBuildOperationType private constructor() : BuildOperationType<ExternalResourceListBuildOperationType.Details?, ExternalResourceListBuildOperationType.Result?> {
+class ExternalResourceListBuildOperationType private constructor() : BuildOperationType<ExternalResourceListBuildOperationType.Details, ExternalResourceListBuildOperationType.Result> {
     interface Details {
         /**
          * The location of the resource.

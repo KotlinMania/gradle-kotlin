@@ -60,7 +60,10 @@ class ExtendedOptional<T> private constructor(private val delegate: Optional<T?>
     }
 
     fun <U> flatMap(mapper: Function<in T?, out Optional<out U>>): Optional<U?> {
-        return delegate.flatMap<U?>(mapper as Function<T?, Optional<U?>?>)
+        @Suppress("UNCHECKED_CAST")
+        return delegate.flatMap<U?>(Function { value ->
+            mapper.apply(value) as Optional<U?>
+        })
     }
 
     fun or(supplier: Supplier<out Optional<out T>>): Optional<T?> {
@@ -100,7 +103,6 @@ class ExtendedOptional<T> private constructor(private val delegate: Optional<T?>
     }
 
     @Suppress("unused")
-    @Throws(X::class)
     fun <X : Throwable?> orElseThrow(exceptionSupplier: Supplier<out X>): T? {
         return delegate.orElseThrow(exceptionSupplier)
     }

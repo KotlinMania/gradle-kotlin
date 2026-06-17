@@ -28,7 +28,7 @@ import org.gradle.operations.execution.FilePropertyVisitor.VisitState
  *
  * @since 4.0
  */
-class SnapshotTaskInputsBuildOperationType private constructor() : BuildOperationType<SnapshotTaskInputsBuildOperationType.Details?, SnapshotTaskInputsBuildOperationType.Result?> {
+class SnapshotTaskInputsBuildOperationType private constructor() : BuildOperationType<SnapshotTaskInputsBuildOperationType.Details, SnapshotTaskInputsBuildOperationType.Result> {
     interface Details
 
     /**

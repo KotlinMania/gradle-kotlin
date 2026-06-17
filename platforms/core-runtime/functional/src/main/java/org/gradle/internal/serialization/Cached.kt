@@ -17,9 +17,9 @@ package org.gradle.internal.serialization
 
 import org.gradle.internal.Try
 import org.gradle.internal.evaluation.EvaluationContext
+import org.gradle.internal.evaluation.ScopedEvaluation
 import org.gradle.internal.evaluation.EvaluationOwner
 import java.io.Serializable
-import java.util.Objects
 import java.util.concurrent.Callable
 import kotlin.concurrent.Volatile
 
@@ -49,26 +49,32 @@ abstract class Cached<T> {
         }
 
         override fun get(): T? {
-            return result()!!.get()
+            return result().get()
         }
 
-        fun result(): Try<T?>? {
-            val toCompute = computation
-            if (result == null) {
+        fun result(): Try<T?> {
+            var currentResult: Try<T?>? = result
+            if (currentResult == null) {
+                val toCompute = computation ?: throw IllegalStateException("Computation was already performed.")
                 // copy reference into the call stack to avoid exacerbating https://github.com/gradle/gradle/issues/31239
-                result = tryComputation(Objects.requireNonNull<Callable<T?>?>(toCompute))
+                currentResult = tryComputation(toCompute)
+                result = currentResult
                 computation = null
             }
-            return result
+            return currentResult
         }
 
-        fun tryComputation(toCompute: Callable<T?>?): Try<T?> {
+        private fun tryComputation(toCompute: Callable<T?>): Try<T?> {
             // wrap computation as an "evaluation" so it can be treated specially as other evaluations
-            return EvaluationContext.current().evaluate<R, E?>(this, { Try.ofFailable(toCompute) })
+            return EvaluationContext.current().evaluate<Try<T?>, Exception?>(this, object : ScopedEvaluation<Try<T?>, Exception?> {
+                override fun evaluate(): Try<T?> {
+                    return Try.ofFailable(toCompute)
+                }
+            })!!
         }
 
         fun writeReplace(): Any {
-            return Cached.Fixed<T?>(result()!!)
+            return Cached.Fixed<T?>(result())
         }
     }
 

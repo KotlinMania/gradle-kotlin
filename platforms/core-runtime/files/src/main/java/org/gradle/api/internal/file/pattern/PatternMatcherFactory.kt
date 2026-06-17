@@ -18,6 +18,7 @@ package org.gradle.api.internal.file.pattern
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.CharMatcher
 import com.google.common.base.Splitter
+import java.util.ArrayList
 
 object PatternMatcherFactory {
     private val END_OF_PATH_MATCHER = EndOfPathMatcher()
@@ -52,11 +53,11 @@ object PatternMatcherFactory {
         if (pattern.endsWith("/") || pattern.endsWith("\\")) {
             pattern = pattern + "**"
         }
-        val parts: MutableList<String?> = PATH_SPLITTER.splitToList(pattern)
+        val parts = ArrayList<String>(PATH_SPLITTER.splitToList(pattern))
         return compile(parts, 0, caseSensitive)
     }
 
-    private fun compile(parts: MutableList<String?>, startIndex: Int, caseSensitive: Boolean): PathMatcher {
+    private fun compile(parts: List<String>, startIndex: Int, caseSensitive: Boolean): PathMatcher {
         if (startIndex >= parts.size) {
             return END_OF_PATH_MATCHER
         }

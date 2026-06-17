@@ -16,22 +16,13 @@
 package org.gradle.internal.file
 
 import java.io.File
-import java.lang.String
 import java.util.Arrays
 import java.util.StringTokenizer
-import kotlin.Array
-import kotlin.Char
-import kotlin.Int
-import kotlin.arrayOf
 import kotlin.collections.ArrayList
-import kotlin.collections.MutableList
 import kotlin.collections.contentEquals
-import kotlin.collections.copyOf
 import kotlin.math.min
 
 object FilePathUtil {
-    private val EMPTY_STRING_ARRAY = arrayOf<String>()
-
     // On Windows, / and \ are separators, on Unix only / is a separator.
     private val FILE_PATH_SEPARATORS: String = if (File.separatorChar != '/') ("/" + File.separator) else File.separator
 
@@ -41,7 +32,7 @@ object FilePathUtil {
         while (tokenizer.hasMoreElements()) {
             segments.add(tokenizer.nextToken())
         }
-        return segments.toArray<String>(EMPTY_STRING_ARRAY)
+        return segments.toTypedArray()
     }
 
     /**
@@ -87,15 +78,13 @@ object FilePathUtil {
         val potentialRemovalIndex = pathSegments.size - removalSegments.size
         // Check if the path ends with the removal path.
         if (potentialRemovalIndex > 0) {
-            val lastSegments = Arrays.stream<String>(pathSegments)
-                .skip(potentialRemovalIndex.toLong())
-                .toArray<String> { _Dummy_.__Array__() }
+            val lastSegments = Arrays.copyOfRange(pathSegments, potentialRemovalIndex, pathSegments.size)
 
             if (lastSegments.contentEquals(removalSegments)) {
                 // If it does, we remove the segments from the path
                 // i.e: <rootPath>/<removalPath> becomes just <rootPath>
                 val maybeLeadingSeparator = if (FILE_PATH_SEPARATORS.contains(path.substring(0, 1))) "/" else ""
-                return maybeLeadingSeparator + String.join("/", *pathSegments.copyOf<kotlin.String>(potentialRemovalIndex))
+                return maybeLeadingSeparator + pathSegments.copyOfRange(0, potentialRemovalIndex).joinToString("/")
             }
         }
         // Otherwise, we return the original path.

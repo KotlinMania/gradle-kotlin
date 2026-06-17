@@ -44,17 +44,19 @@ import java.util.Arrays
 import java.util.function.BiFunction
 
 class ConfigurationCacheInstrumentationProcessor : AbstractInstrumentationProcessor() {
-    val extensions: MutableCollection<InstrumentationProcessorExtension?>?
+    override val extensions: MutableCollection<InstrumentationProcessorExtension?>
         get() = Arrays.asList<InstrumentationProcessorExtension?>(
-            ClassLevelAnnotationsContributor {
-                Arrays.asList<Class<out Annotation?>?>(
-                    SpecificJvmCallInterceptors::class.java,
-                    SpecificGroovyCallInterceptors::class.java,
-                    VisitForInstrumentation::class.java,
-                    ReplacesEagerProperty::class.java,
-                    ToBeReplacedByLazyProperty::class.java
-                )
-            } as ClassLevelAnnotationsContributor,
+            object : ClassLevelAnnotationsContributor {
+                override fun contributeClassLevelAnnotationTypes(): MutableCollection<Class<out Annotation?>?>? {
+                    return Arrays.asList<Class<out Annotation?>?>(
+                        SpecificJvmCallInterceptors::class.java,
+                        SpecificGroovyCallInterceptors::class.java,
+                        VisitForInstrumentation::class.java,
+                        ReplacesEagerProperty::class.java,
+                        ToBeReplacedByLazyProperty::class.java
+                    )
+                }
+            },
 
             AnnotationCallInterceptionRequestReaderImpl(),
 
@@ -95,16 +97,30 @@ class ConfigurationCacheInstrumentationProcessor : AbstractInstrumentationProces
                 }
             ),
 
-            CodeGeneratorContributor { InterceptJvmCallsGenerator() } as CodeGeneratorContributor,  // Generate META-INF/services resource with factories for all generated InterceptJvmCallsGenerator
-            ResourceGeneratorContributor { InterceptJvmCallsResourceGenerator() } as ResourceGeneratorContributor,
+            object : CodeGeneratorContributor {
+                override fun contributeCodeGenerator() = InterceptJvmCallsGenerator()
+            },
+            object : ResourceGeneratorContributor {
+                override fun contributeResourceGenerator() = InterceptJvmCallsResourceGenerator()
+            },
 
-            CodeGeneratorContributor { InterceptGroovyCallsGenerator() } as CodeGeneratorContributor,  // Generate META-INF/services resource with all generated CallInterceptors
-            ResourceGeneratorContributor { InterceptGroovyCallsResourceGenerator() } as ResourceGeneratorContributor,  // Properties upgrade extensions
+            object : CodeGeneratorContributor {
+                override fun contributeCodeGenerator() = InterceptGroovyCallsGenerator()
+            },
+            object : ResourceGeneratorContributor {
+                override fun contributeResourceGenerator() = InterceptGroovyCallsResourceGenerator()
+            },
 
             PropertyUpgradeAnnotatedMethodReader(processingEnv),
-            CodeGeneratorContributor { PropertyUpgradeClassSourceGenerator() } as CodeGeneratorContributor,  // Generate resource with instrumented properties
-            ResourceGeneratorContributor { InstrumentedPropertiesResourceGenerator() } as ResourceGeneratorContributor,  // Generate resource with instrumented types
+            object : CodeGeneratorContributor {
+                override fun contributeCodeGenerator() = PropertyUpgradeClassSourceGenerator()
+            },
+            object : ResourceGeneratorContributor {
+                override fun contributeResourceGenerator() = InstrumentedPropertiesResourceGenerator()
+            },
 
-            ResourceGeneratorContributor { InstrumentedTypesResourceGenerator() } as ResourceGeneratorContributor
+            object : ResourceGeneratorContributor {
+                override fun contributeResourceGenerator() = InstrumentedTypesResourceGenerator()
+            }
         )
 }

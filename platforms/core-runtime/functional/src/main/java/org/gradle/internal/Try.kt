@@ -33,7 +33,6 @@ abstract class Try<T : Any?> private constructor() {
     /**
      * Returns whether this `Try` represents a successful execution.
      */
-    @JvmField
     abstract val isSuccessful: Boolean
 
     /**
@@ -51,8 +50,7 @@ abstract class Try<T : Any?> private constructor() {
     /**
      * Returns the failure for a failed result, or [Optional.empty] otherwise.
      */
-    @JvmField
-    abstract val failure: Optional<Throwable>?
+    abstract val failure: Optional<Throwable>
 
     /**
      * If the represented operation was successful, returns the result of applying the given
@@ -100,9 +98,11 @@ abstract class Try<T : Any?> private constructor() {
     abstract fun ifSuccessfulOrElse(successConsumer: Consumer<in T?>, failureConsumer: Consumer<in Throwable>)
 
     private class Success<T : Any?>(private val value: T?) : Try<T?>() {
-        override fun isSuccessful(): Boolean {
-            return true
-        }
+        override val isSuccessful: Boolean
+            get() = true
+
+        override val failure: Optional<Throwable>
+            get() = Optional.empty<Throwable>()
 
         override fun get(): T? {
             return value
@@ -110,10 +110,6 @@ abstract class Try<T : Any?> private constructor() {
 
         override fun getOrMapFailure(f: Function<Throwable, T?>): T? {
             return value
-        }
-
-        override fun getFailure(): Optional<Throwable> {
-            return Optional.empty<Throwable>()
         }
 
         override fun <U : Any?> flatMap(f: Function<in T?, Try<U?>>): Try<U?> {
@@ -140,7 +136,7 @@ abstract class Try<T : Any?> private constructor() {
             successConsumer.accept(value)
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -163,40 +159,38 @@ abstract class Try<T : Any?> private constructor() {
     }
 
     private class Failure<T>(failure: Throwable) : Try<T?>() {
-        private val failure: Throwable
+        private val failureValue: Throwable
 
         init {
-            this.failure = Objects.requireNonNull<Throwable>(failure, "null failure is not allowed")
+            this.failureValue = Objects.requireNonNull<Throwable>(failure, "null failure is not allowed")
         }
 
-        override fun isSuccessful(): Boolean {
-            return false
-        }
+        override val isSuccessful: Boolean
+            get() = false
+
+        override val failure: Optional<Throwable>
+            get() = Optional.of<Throwable>(failureValue)
 
         override fun get(): T? {
             // TODO Merge back with org.gradle.internal.UncheckedException.throwAsUncheckedException()
             //      once it's extracted from :base-services
-            if (failure is InterruptedException) {
+            if (failureValue is InterruptedException) {
                 Thread.currentThread().interrupt()
             }
-            if (failure is RuntimeException) {
-                throw failure
+            if (failureValue is RuntimeException) {
+                throw failureValue as RuntimeException
             }
-            if (failure is Error) {
-                throw failure
+            if (failureValue is Error) {
+                throw failureValue as Error
             }
-            if (failure is IOException) {
-                throw UncheckedException.throwAsUncheckedException(failure)
+            if (failureValue is IOException) {
+                throw UncheckedException.throwAsUncheckedException(failureValue)
             }
-            throw RuntimeException(failure)
+            throw RuntimeException(failureValue)
         }
 
         override fun getOrMapFailure(f: Function<Throwable, T?>): T? {
-            return f.apply(failure)
-        }
-
-        override fun getFailure(): Optional<Throwable> {
-            return Optional.of<Throwable>(failure)
+            return f.apply(failureValue)
         }
 
         override fun <U : Any?> flatMap(f: Function<in T?, Try<U?>>): Try<U?> {
@@ -212,17 +206,17 @@ abstract class Try<T : Any?> private constructor() {
         }
 
         override fun mapFailure(f: Function<in Throwable, out Throwable>): Try<T?> {
-            return failure<T?>(f.apply(failure))
+            return failure<T?>(f.apply(failureValue))
         }
 
         override fun ifSuccessful(consumer: Consumer<T?>) {
         }
 
         override fun ifSuccessfulOrElse(successConsumer: Consumer<in T?>, failureConsumer: Consumer<in Throwable>) {
-            failureConsumer.accept(failure)
+            failureConsumer.accept(failureValue)
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -232,15 +226,15 @@ abstract class Try<T : Any?> private constructor() {
 
             val failure1 = o as Failure<*>
 
-            return failure == failure1.failure
+            return failureValue == failure1.failureValue
         }
 
         override fun hashCode(): Int {
-            return failure.hashCode()
+            return failureValue.hashCode()
         }
 
         override fun toString(): String {
-            return "Failed(" + failure + ")"
+            return "Failed(" + failureValue + ")"
         }
     }
 

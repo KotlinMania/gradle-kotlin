@@ -19,14 +19,12 @@ package org.gradle.internal.service
  * Service instances can implement this interface to apply some lifecycle to all services annotation with a given annotation.
  */
 interface AnnotatedServiceLifecycleHandler {
-    @JvmField
     val annotations: MutableList<Class<out Annotation?>?>?
 
     /**
      * When not null, all services are considered to have the implicit annotation
      * and the handler should be notified about all registrations.
      */
-    @JvmField
     val implicitAnnotation: Class<out Annotation?>?
 
     /**
@@ -38,13 +36,11 @@ interface AnnotatedServiceLifecycleHandler {
         /**
          * One or more services provided by this registration.
          */
-        @JvmField
         val declaredTypes: MutableList<Class<*>?>?
 
         /**
          * Returns the service instance, creating it if required.
          */
-        @JvmField
         val instance: Any?
     }
 }

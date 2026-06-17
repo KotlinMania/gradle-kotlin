@@ -30,7 +30,7 @@ import java.util.function.Supplier
  * This class is thread-safe, but the returned contexts must be closed by the same thread that opens them.
  */
 class EvaluationContext private constructor() {
-    private val threadLocalContext: ThreadLocal<PerThreadContext> = ThreadLocal.withInitial<PerThreadContext>(Supplier { EvaluationContext.PerThreadContext(null) })
+    private val threadLocalContext: ThreadLocal<PerThreadContext> = ThreadLocal.withInitial<PerThreadContext>(Supplier { PerThreadContext(null) })
 
     /**
      * Adds the owner to the set of "evaluating" objects and returns the context instance to remove it from there upon closing.
@@ -44,7 +44,7 @@ class EvaluationContext private constructor() {
         /**
          * Returns the "topmost" evaluation owner or null if nothing is being evaluated right now.
          */
-        get() = this.context.getOwner()
+        get() = this.context.owner
 
     val isEvaluating: Boolean
         /**
@@ -64,7 +64,6 @@ class EvaluationContext private constructor() {
      * @throws E exception from the `evaluation` is propagated
      * @throws CircularEvaluationException if the owner is currently being evaluated in the outer scope
     </E></R> */
-    @Throws(E::class)
     fun <R, E : Exception?> evaluate(owner: EvaluationOwner, evaluation: ScopedEvaluation<out R, E?>): R? {
         open(owner).use { ignored ->
             return evaluation.evaluate()
@@ -86,7 +85,6 @@ class EvaluationContext private constructor() {
      * @return the result of the evaluation
      * @throws E exception from the `evaluation` is propagated
     </E></R> */
-    @Throws(E::class)
     fun <R, E : Exception?> tryEvaluate(owner: EvaluationOwner, fallbackValue: R?, evaluation: ScopedEvaluation<out R, E?>): R? {
         if (this.context.isInScope(owner)) {
             return fallbackValue
@@ -108,7 +106,6 @@ class EvaluationContext private constructor() {
      * @return the result of the evaluation
      * @throws E exception from the `evaluation` is propagated
     </E></R> */
-    @Throws(E::class)
     fun <R, E : Exception?> evaluateNested(evaluation: ScopedEvaluation<out R, E?>): R? {
         nested().use { ignored ->
             return evaluation.evaluate()
@@ -152,7 +149,7 @@ class EvaluationContext private constructor() {
         }
 
         override fun nested(): EvaluationScopeContext {
-            return setContext(EvaluationContext.PerThreadContext(this))
+            return setContext(this@EvaluationContext.PerThreadContext(this))
         }
 
         override fun close() {
@@ -168,7 +165,8 @@ class EvaluationContext private constructor() {
             return indexOf(owner) != -1
         }
 
-        override fun getOwner(): EvaluationOwner? {
+        override val owner: EvaluationOwner?
+            get() {
             if (stack.isEmpty()) {
                 return null
             }
@@ -189,23 +187,22 @@ class EvaluationContext private constructor() {
             return stack.indexOf(owner)
         }
 
-        companion object {
-            /**
-             * This was chosen by looking at the typical stack sizes on the
-             * Gradle build. We're trying to balance resizing vs wasted space.
-             *
-             * Most stacks were small (only 1 element). The biggest stack was 19 elements.
-             *
-             * This size represented about 85% of all contexts, so Gradle does
-             * no resizing in those cases.
-             *
-             * The extreme case still requires 2 resizings.
-             */
-            private const val INITIAL_CAPACITY = 8
-        }
     }
 
     companion object {
+        /**
+         * This was chosen by looking at the typical stack sizes on the
+         * Gradle build. We're trying to balance resizing vs wasted space.
+         *
+         * Most stacks were small (only 1 element). The biggest stack was 19 elements.
+         *
+         * This size represented about 85% of all contexts, so Gradle does
+         * no resizing in those cases.
+         *
+         * The extreme case still requires 2 resizings.
+         */
+        private const val INITIAL_CAPACITY = 8
+
         private val INSTANCE = EvaluationContext()
 
         /**

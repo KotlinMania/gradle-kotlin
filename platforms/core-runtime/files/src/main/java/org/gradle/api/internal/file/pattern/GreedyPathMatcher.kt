@@ -15,26 +15,25 @@
  */
 package org.gradle.api.internal.file.pattern
 
-import kotlin.math.max
-
 class GreedyPathMatcher(private val next: PathMatcher) : PathMatcher {
     override fun toString(): String {
         return "{greedy next: " + next + "}"
     }
 
-    override fun getMaxSegments(): Int {
-        return Int.MAX_VALUE
+    override val maxSegments: Int
+        get() = Int.MAX_VALUE
+
+    override val minSegments: Int
+        get() {
+        return next.minSegments
     }
 
-    override fun getMinSegments(): Int {
-        return next.getMinSegments()
-    }
-
-    override fun matches(segments: Array<String?>, startIndex: Int): Boolean {
-        var pos = segments.size - next.getMinSegments()
-        val minPos = max(startIndex, segments.size - next.getMaxSegments())
+    override fun matches(segments: Array<String?>?, startIndex: Int): Boolean {
+        val pathSegments = segments ?: return false
+        var pos = pathSegments.size - next.minSegments
+        val minPos = if (next.maxSegments == Int.MAX_VALUE) startIndex else maxOf(startIndex, pathSegments.size - next.maxSegments)
         while (pos >= minPos) {
-            if (next.matches(segments, pos)) {
+            if (next.matches(pathSegments, pos)) {
                 return true
             }
             pos--

@@ -26,7 +26,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.0
  */
-class CalculateTaskGraphBuildOperationType private constructor() : BuildOperationType<CalculateTaskGraphBuildOperationType.Details?, CalculateTaskGraphBuildOperationType.Result?> {
+class CalculateTaskGraphBuildOperationType private constructor() : BuildOperationType<CalculateTaskGraphBuildOperationType.Details, CalculateTaskGraphBuildOperationType.Result> {
     /**
      * An identifiable node in the execution graph with its dependencies.
      *

@@ -22,6 +22,5 @@ package org.gradle.internal.evaluation
  * @param <E> (optional) exception type being thrown by the evaluation
 </E></R> */
 fun interface ScopedEvaluation<R, E : Exception?> {
-    @Throws(E::class)
     fun evaluate(): R?
 }

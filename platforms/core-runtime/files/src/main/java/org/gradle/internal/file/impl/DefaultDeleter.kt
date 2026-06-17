@@ -185,7 +185,7 @@ open class DefaultDeleter(private val timeProvider: LongSupplier, private val is
         }
     }
 
-    protected class FileDeletionResult private constructor(private val isSuccessful: Boolean, private val exception: Exception?) {
+    protected class FileDeletionResult private constructor(val isSuccessful: Boolean, val exception: Exception?) {
         companion object {
             fun withoutException(isSuccessful: Boolean): FileDeletionResult {
                 return FileDeletionResult(isSuccessful, null)
@@ -249,24 +249,20 @@ open class DefaultDeleter(private val timeProvider: LongSupplier, private val is
 
     private enum class Handling(private val shouldKeepEntry: Boolean, private val shouldFollowLinkedDirectory: Boolean) {
         KEEP_AND_FOLLOW_SYMLINKED_DIRECTORIES(true, true) {
-            override fun getDescendantHandling(): Handling {
-                return Handling.FOLLOW_SYMLINKED_DIRECTORIES
-            }
+            override val descendantHandling: Handling
+                get() = Handling.FOLLOW_SYMLINKED_DIRECTORIES
         },
         KEEP_AND_DO_NOT_FOLLOW_CHILD_SYMLINKS(true, true) {
-            override fun getDescendantHandling(): Handling {
-                return Handling.DO_NOT_FOLLOW_SYMLINKS
-            }
+            override val descendantHandling: Handling
+                get() = Handling.DO_NOT_FOLLOW_SYMLINKS
         },
         FOLLOW_SYMLINKED_DIRECTORIES(false, true) {
-            override fun getDescendantHandling(): Handling {
-                return Handling.FOLLOW_SYMLINKED_DIRECTORIES
-            }
+            override val descendantHandling: Handling
+                get() = Handling.FOLLOW_SYMLINKED_DIRECTORIES
         },
         DO_NOT_FOLLOW_SYMLINKS(false, false) {
-            override fun getDescendantHandling(): Handling {
-                return Handling.DO_NOT_FOLLOW_SYMLINKS
-            }
+            override val descendantHandling: Handling
+                get() = Handling.DO_NOT_FOLLOW_SYMLINKS
         };
 
         /**
@@ -286,7 +282,7 @@ open class DefaultDeleter(private val timeProvider: LongSupplier, private val is
         /**
          * How to handle descendants.
          */
-        abstract val descendantHandling: Handling?
+        abstract val descendantHandling: Handling
     }
 
     companion object {

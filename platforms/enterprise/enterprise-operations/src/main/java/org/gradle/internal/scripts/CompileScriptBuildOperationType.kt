@@ -22,7 +22,7 @@ import org.gradle.internal.operations.BuildOperationType
  *
  * @since 4.10
  */
-class CompileScriptBuildOperationType : BuildOperationType<CompileScriptBuildOperationType.Details?, CompileScriptBuildOperationType.Result?> {
+class CompileScriptBuildOperationType : BuildOperationType<CompileScriptBuildOperationType.Details, CompileScriptBuildOperationType.Result> {
     interface Details {
         /**
          * The build script backing language.

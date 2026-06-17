@@ -18,23 +18,23 @@ package org.gradle.internal.service
 import org.gradle.internal.service.scopes.Scope
 
 /**
- * A registry validating that all registered services are annotated with a corresponding [Scope].
+ * A registry validating that all registered services are annotated with a corresponding {@link Scope}.
  */
 internal class ScopedServiceRegistry(
-    scope: Class<out Scope?>?,
+    scope: Class<out Scope>,
     strict: Boolean,
     displayName: String?,
-    vararg parents: ServiceRegistry?
-) : DefaultServiceRegistry(displayName, *parents) {
+    vararg parents: ServiceRegistry
+) : DefaultServiceRegistry(displayName, parents) {
     init {
         addServiceValidator(scope, strict)
     }
 
     /**
-     * Validator implements a special type of service ([AnnotatedServiceLifecycleHandler])
+     * Validator implements a special type of service ({@link AnnotatedServiceLifecycleHandler})
      * that gets notified about all existing and further service registrations.
      */
-    private fun addServiceValidator(scope: Class<out Scope?>?, strict: Boolean) {
+    private fun addServiceValidator(scope: Class<out Scope>, strict: Boolean) {
         add(ServiceScopeValidator(scope, strict))
     }
 }

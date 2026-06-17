@@ -29,6 +29,6 @@ class ThreadLocalBufferProvider(bufferSize: Int) : BufferProvider {
         }
     }
 
-    val buffer: ByteArray
+    override val buffer: ByteArray?
         get() = copyBuffers.get()
 }

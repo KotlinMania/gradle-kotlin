@@ -39,8 +39,9 @@ class SampleIncludeProcessor : IncludeProcessor() {
         check(!(!attributes.containsKey("dir") || !attributes.containsKey("files"))) { "Both the 'dir' and 'files' attributes are required to include a sample" }
 
         val sampleBaseDir: String? = document.getAttribute("samples-dir", ".").toString()
-        val sampleDir: String? = attributes.get("dir").toString()
-        val files = Arrays.asList<String?>(*attributes.get("files").toString().split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+        val sampleDir = attributes["dir"].toString()
+        val rawFiles = attributes["files"].toString()
+        val files: MutableList<String> = Arrays.asList(*rawFiles.split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
 
         val sampleContent: String = getSampleContent(sampleBaseDir, sampleDir, files)
         reader.pushInclude(sampleContent, target, target, 1, attributes)
@@ -48,7 +49,7 @@ class SampleIncludeProcessor : IncludeProcessor() {
 
     companion object {
         private const val SAMPLE = "sample"
-        private val FILE_SUFFIX_TO_SYNTAX: MutableMap<String?, String> = initializeSyntaxMap()
+        private val FILE_SUFFIX_TO_SYNTAX: MutableMap<String, String> = initializeSyntaxMap()
 
         private const val DOUBLE_WILDCARD_TAG = "**"
 
@@ -56,15 +57,15 @@ class SampleIncludeProcessor : IncludeProcessor() {
         private val GENERAL_SAMPLE_TAG: Pattern = Pattern.compile(".*(tag|end)::(\\S+)\\[]\\s*")
 
         // Map file suffixes to syntax highlighting where they differ
-        private fun initializeSyntaxMap(): MutableMap<String?, String> {
-            val map: MutableMap<String?, String?> = HashMap<String?, String?>()
-            map.put("gradle", "groovy")
-            map.put("kt", "kotlin")
-            map.put("kts", "kotlin")
-            map.put("py", "python")
-            map.put("sh", "bash")
-            map.put("rb", "ruby")
-            return Collections.unmodifiableMap<String?, String?>(map)
+        private fun initializeSyntaxMap(): MutableMap<String, String> {
+            val map: MutableMap<String, String> = HashMap()
+            map["gradle"] = "groovy"
+            map["kt"] = "kotlin"
+            map["kts"] = "kotlin"
+            map["py"] = "python"
+            map["sh"] = "bash"
+            map["rb"] = "ruby"
+            return map
         }
 
         private fun getSourceSyntax(fileName: String): String {
@@ -81,7 +82,7 @@ class SampleIncludeProcessor : IncludeProcessor() {
             val builder = StringBuilder(String.format("%n[.testable-sample.multi-language-sample,dir=\"%s\"]%n=====%n", sampleDir))
             for (fileDeclaration in files) {
                 val sourceRelativeLocation: String = parseSourceFilePath(fileDeclaration)
-                val tags: MutableList<String?> = parseTags(fileDeclaration)
+                val tags: MutableList<String> = parseTags(fileDeclaration)
                 val sourceSyntax: String = getSourceSyntax(sourceRelativeLocation)
                 val sourcePath = String.format("%s/%s/%s", sampleBaseDir, sampleDir, sourceRelativeLocation)
                 var source: String = getContent(sourcePath)
@@ -106,8 +107,8 @@ class SampleIncludeProcessor : IncludeProcessor() {
             return fileDeclaration.replace("\\[[^]]*]".toRegex(), "")
         }
 
-        private fun parseTags(fileDeclaration: String): MutableList<String?> {
-            val tags: MutableList<String?> = ArrayList<String?>()
+        private fun parseTags(fileDeclaration: String): MutableList<String> {
+            val tags: MutableList<String> = ArrayList()
             val pattern = Pattern.compile(".*\\[tags?=(.*)].*")
             val matcher = pattern.matcher(fileDeclaration)
             if (matcher.matches()) {
@@ -121,7 +122,7 @@ class SampleIncludeProcessor : IncludeProcessor() {
          *
          * @see "https://docs.asciidoctor.org/asciidoc/latest/directives/include-tagged-regions/.tag-filtering"
          */
-        private fun filterByTags(source: String, syntax: String, tags: MutableList<String?>): String {
+        private fun filterByTags(source: String, syntax: String, tags: MutableList<String>): String {
             val sampleTagRegex: Pattern = if (syntax == "html" || syntax == "xml") HTML_XML_SAMPLE_TAG else GENERAL_SAMPLE_TAG
 
             val result = StringBuilder(source.length)
@@ -159,7 +160,7 @@ class SampleIncludeProcessor : IncludeProcessor() {
             return result.toString()
         }
 
-        private fun determineActiveTag(line: String, tags: MutableList<String?>): String? {
+        private fun determineActiveTag(line: String, tags: MutableList<String>): String? {
             for (tag in tags) {
                 if (line.contains("tag::" + tag + "[]")) {
                     return tag

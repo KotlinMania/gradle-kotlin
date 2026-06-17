@@ -28,10 +28,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
-import java.util.Map
-import java.util.function.Function
-import java.util.stream.Collectors
-
+import java.util.HashMap
 
 /**
  * Writes all instrumented properties to a resource file
@@ -39,26 +36,51 @@ import java.util.stream.Collectors
 class InstrumentedPropertiesResourceGenerator : InstrumentationResourceGenerator {
     private val mapper = ObjectMapper()
 
-    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>): MutableCollection<CallInterceptionRequest?> {
-        return interceptionRequests.stream()
-            .filter { request: CallInterceptionRequest? -> request!!.requestExtras.getByType<PropertyUpgradeRequestExtra?>(PropertyUpgradeRequestExtra::class.java).isPresent() }
-            .collect(Collectors.toList())
+    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>?): MutableCollection<CallInterceptionRequest?>? {
+        if (interceptionRequests == null) {
+            return null
+        }
+        return interceptionRequests.asSequence()
+            .filterNotNull()
+            .filter { request ->
+                request.requestExtras.getByType(PropertyUpgradeRequestExtra::class.java).isPresent
+            }
+            .toMutableList()
     }
 
-    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>): InstrumentationResourceGenerator.GenerationResult {
+    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>?): InstrumentationResourceGenerator.GenerationResult? {
+        if (filteredRequests == null || filteredRequests.isEmpty()) {
+            return InstrumentationResourceGenerator.GenerationResult.NoResourceToGenerate()
+        }
+
+        val requests = HashMap<String, MutableList<CallInterceptionRequest>>()
+        for (request in filteredRequests.asSequence().filterNotNull()) {
+            val requestExtras = request.requestExtras
+            val requestExtra = requestExtras
+                .getByType(PropertyUpgradeRequestExtra::class.java)
+                .orElse(null)
+                ?: continue
+            val fqName = getFqName(request, requestExtra)
+            requests.computeIfAbsent(fqName) { ArrayList() }.add(request)
+        }
+
+        if (requests.isEmpty()) {
+            return InstrumentationResourceGenerator.GenerationResult.NoResourceToGenerate()
+        }
+
+        val entries: MutableList<UpgradedProperty> = toPropertyEntries(requests)
+
         return object : CanGenerateResource {
-            override fun getPackageName(): String {
-                return ""
-            }
+            override val packageName: String?
+                get() = ""
 
-            override fun getName(): String {
-                return "META-INF/gradle/instrumentation/upgraded-properties.json"
-            }
+            override val name: String?
+                get() = "META-INF/gradle/instrumentation/upgraded-properties.json"
 
-            override fun write(outputStream: OutputStream) {
-                val requests: MutableMap<String?, MutableList<CallInterceptionRequest?>?> = filteredRequests.stream()
-                    .collect(Collectors.groupingBy(Function { request: CallInterceptionRequest? -> Companion.getFqName(request!!) }))
-                val entries: MutableList<UpgradedProperty?> = toPropertyEntries(requests)
+            override fun write(outputStream: OutputStream?) {
+                if (outputStream == null) {
+                    return
+                }
                 try {
                     OutputStreamWriter(outputStream, StandardCharsets.UTF_8).use { writer ->
                         writer.write(mapper.writeValueAsString(entries))
@@ -76,44 +98,69 @@ class InstrumentedPropertiesResourceGenerator : InstrumentationResourceGenerator
         val propertyName: String?,
         val methodName: String?,
         val methodDescriptor: String?,
-        val replacedAccessors: MutableList<ReplacedAccessor?>?
+        val replacedAccessors: MutableList<ReplacedAccessor>?
     )
 
     @JsonPropertyOrder(alphabetic = true)
-    internal class ReplacedAccessor(val name: String?, val descriptor: String?, val binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?)
+    internal class ReplacedAccessor(
+        val name: String?,
+        val descriptor: String?,
+        val binaryCompatibility: ReplacesEagerProperty.BinaryCompatibility?
+    )
+
     companion object {
-        private fun getFqName(request: CallInterceptionRequest): String {
-            val propertyName = request.requestExtras.getByType<PropertyUpgradeRequestExtra?>(PropertyUpgradeRequestExtra::class.java).get().getPropertyName()
-            val containingType = request.interceptedCallable.owner.type.getClassName()
-            return containingType + "#" + propertyName
+        private fun getFqName(request: CallInterceptionRequest, requestExtra: PropertyUpgradeRequestExtra): String {
+            val containingType = request.interceptedCallable?.owner?.type?.className ?: ""
+            return "$containingType#${requestExtra.propertyName}"
         }
 
-        private fun toPropertyEntries(requests: MutableMap<String?, MutableList<CallInterceptionRequest?>?>): MutableList<UpgradedProperty?> {
-            return requests.entries.stream()
-                .sorted(Map.Entry.comparingByKey<String?, MutableList<CallInterceptionRequest?>?>())
-                .map<UpgradedProperty?> { e: MutableMap.MutableEntry<String?, MutableList<CallInterceptionRequest?>?>? -> Companion.toPropertyEntry(e!!.value) }
-                .collect(Collectors.toList())
+        private fun toPropertyEntries(requests: MutableMap<String, MutableList<CallInterceptionRequest>>): MutableList<UpgradedProperty> {
+            return requests.entries
+                .asSequence()
+                .sortedBy { it.key }
+                .map { entry -> toPropertyEntry(entry.value) }
+                .toMutableList()
         }
 
         private fun toPropertyEntry(requests: MutableList<CallInterceptionRequest>): UpgradedProperty {
-            val firstRequest = requests.get(0)
-            val upgradeExtra = firstRequest.requestExtras.getByType<PropertyUpgradeRequestExtra>(PropertyUpgradeRequestExtra::class.java).get()
-            val propertyName = upgradeExtra.getPropertyName()
-            val methodName = upgradeExtra.getMethodName()
-            val methodDescriptor = upgradeExtra.getMethodDescriptor()
-            val containingType = firstRequest.interceptedCallable.owner.type.getClassName()
-            val upgradedAccessors = requests.stream()
-                .map<ReplacedAccessor?> { request: CallInterceptionRequest? ->
-                    val requestExtra = request!!.requestExtras.getByType<PropertyUpgradeRequestExtra>(PropertyUpgradeRequestExtra::class.java).get()
-                    val intercepted = request.interceptedCallable
-                    val returnType = intercepted.returnType.type
-                    val parameterTypes = intercepted.parameters.stream()
-                        .map<Type?> { obj: ParameterInfo? -> obj!!.parameterType }
-                        .toArray<Type?> { _Dummy_.__Array__() }
-                    ReplacedAccessor(intercepted.callableName, Type.getMethodDescriptor(returnType, *parameterTypes), requestExtra.getBinaryCompatibility())
+            val firstRequest = requireNotNull(requests.firstOrNull())
+            val firstRequestExtras = firstRequest.requestExtras
+            val upgradeExtra = firstRequestExtras
+                .getByType(PropertyUpgradeRequestExtra::class.java)
+                .orElseThrow { IllegalArgumentException("Missing PropertyUpgradeRequestExtra in request for upgraded property entry") }!!
+
+            val propertyName = upgradeExtra.propertyName
+            val methodName = upgradeExtra.methodName
+            val methodDescriptor = upgradeExtra.methodDescriptor
+            val containingType = firstRequest.interceptedCallable?.owner?.type?.className
+
+            val upgradedAccessors = requests
+                .asSequence()
+                .mapNotNull { request ->
+                    val requestExtras = request.requestExtras
+                    val requestExtra = requestExtras
+                        .getByType(PropertyUpgradeRequestExtra::class.java)
+                        .orElse(null)
+                        ?: return@mapNotNull null
+                    val intercepted = request.interceptedCallable ?: return@mapNotNull null
+                    val returnType = intercepted.returnType?.type ?: return@mapNotNull null
+                    val parameterTypes: Array<Type> = intercepted.parameters.orEmpty()
+                        .asSequence()
+                        .filterNotNull()
+                        .map { parameter -> parameter.parameterType }
+                        .filterNotNull()
+                        .toList()
+                        .toTypedArray()
+
+                    ReplacedAccessor(
+                        intercepted.callableName,
+                        Type.getMethodDescriptor(returnType, *parameterTypes),
+                        requestExtra.binaryCompatibility
+                    )
                 }
-                .sorted(Comparator.comparing<ReplacedAccessor?, String?>(Function { o: ReplacedAccessor? -> o!!.name }).thenComparing<String?>(Function { o: ReplacedAccessor? -> o!!.descriptor }))
-                .collect(Collectors.toList())
+                .sortedWith(compareBy({ it.name.orEmpty() }, { it.descriptor.orEmpty() }))
+                .toMutableList()
+
             return UpgradedProperty(containingType, propertyName, methodName, methodDescriptor, upgradedAccessors)
         }
     }

@@ -23,36 +23,36 @@ import org.gradle.internal.instrumentation.processor.extensibility.RequestPostPr
 import org.gradle.internal.instrumentation.processor.modelreader.impl.AnnotationUtils
 import org.gradle.internal.instrumentation.processor.modelreader.impl.TypeUtils
 import org.gradle.internal.instrumentation.util.NameUtil
-import java.util.function.Predicate
 import javax.lang.model.element.AnnotationMirror
 import javax.lang.model.element.AnnotationValue
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.type.TypeMirror
 
 class WithExtensionReferencesReader : RequestPostProcessorExtension {
-    override fun postProcessRequest(originalRequest: CallInterceptionRequest): MutableCollection<CallInterceptionRequest?>? {
-        if (shouldPostProcess(originalRequest)) {
-            originalRequest.requestExtras!!.getByType(OriginatingElement::class.java).ifPresent({ originatingElement ->
-                val element: ExecutableElement = originatingElement.element
-                AnnotationUtils.findAnnotationMirror(element, WithExtensionReferences::class.java).ifPresent { annotation: AnnotationMirror? ->
-                    AnnotationUtils.findAnnotationValue(annotation, "toClass").ifPresent { value: AnnotationValue? ->
-                        val typeMirror = value!!.getValue() as TypeMirror
+    override fun postProcessRequest(originalRequest: CallInterceptionRequest?): MutableCollection<CallInterceptionRequest?>? {
+        val request = checkNotNull(originalRequest)
+        if (shouldPostProcess(request)) {
+            request.requestExtras!!.getByType(OriginatingElement::class.java).ifPresent { originatingElement: OriginatingElement ->
+                val element: ExecutableElement = originatingElement.element ?: return@ifPresent
+                AnnotationUtils.findAnnotationMirror(element, WithExtensionReferences::class.java).ifPresent { annotation: AnnotationMirror ->
+                    AnnotationUtils.findAnnotationValue(annotation, "toClass").ifPresent { value: AnnotationValue ->
+                        val typeMirror = value.value as TypeMirror
                         val type = TypeUtils.extractType(typeMirror)
-                        val methodName: String? = Companion.extractMethodName(originalRequest, annotation!!)
-                        originalRequest.requestExtras!!.add(WithExtensionReferencesExtra(type, methodName))
+                        val methodName: String? = Companion.extractMethodName(request, annotation)
+                        request.requestExtras!!.add(WithExtensionReferencesExtra(type, methodName))
                     }
                 }
-            })
+            }
         }
-        return mutableListOf<CallInterceptionRequest?>(originalRequest)
+        return mutableListOf<CallInterceptionRequest?>(request)
     }
 
     companion object {
         private fun extractMethodName(originalRequest: CallInterceptionRequest, annotation: AnnotationMirror): String? {
             return AnnotationUtils.findAnnotationValue(annotation, "methodName")
-                .map<String?> { it: AnnotationValue? -> it!!.getValue() as String? }
-                .filter(Predicate { it: String? -> !it!!.isEmpty() })
-                .orElse(NameUtil.interceptedJvmMethodName(originalRequest.interceptedCallable))
+                .map { it: AnnotationValue? -> it?.getValue() as String? }
+                .filter { value: String? -> !value.isNullOrEmpty() }
+                .orElse(NameUtil.interceptedJvmMethodName(checkNotNull(originalRequest.interceptedCallable)))
         }
 
         private fun shouldPostProcess(request: CallInterceptionRequest): Boolean {

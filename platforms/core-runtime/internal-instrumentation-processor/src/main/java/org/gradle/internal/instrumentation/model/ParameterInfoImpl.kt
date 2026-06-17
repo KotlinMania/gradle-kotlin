@@ -17,16 +17,8 @@ package org.gradle.internal.instrumentation.model
 
 import org.objectweb.asm.Type
 
-class ParameterInfoImpl(private val name: String?, private val parameterType: Type?, private val kind: ParameterKindInfo?) : ParameterInfo {
-    override fun getName(): String? {
-        return name
-    }
-
-    override fun getParameterType(): Type? {
-        return parameterType
-    }
-
-    override fun getKind(): ParameterKindInfo? {
-        return kind
-    }
-}
+class ParameterInfoImpl(
+    override val name: String?,
+    override val parameterType: Type?,
+    override val kind: ParameterKindInfo?
+) : ParameterInfo

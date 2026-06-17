@@ -19,12 +19,12 @@ package org.gradle.internal.service
  * Wraps a single service instance. Implementations must be thread safe.
  */
 internal interface Service {
-    val displayName: String?
+    fun getDisplayName(): String
 
     /**
      * Returns the instance of the underlying service.
      */
-    fun get(): Any?
+    fun get(): Any
 
     fun requiredBy(serviceProvider: ServiceProvider?)
 }

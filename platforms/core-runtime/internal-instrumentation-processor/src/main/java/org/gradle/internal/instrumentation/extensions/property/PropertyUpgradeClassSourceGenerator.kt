@@ -1,14 +1,14 @@
 /*
  * Copyright 2023 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the \"License\");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an \"AS IS\" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -47,20 +47,34 @@ import javax.lang.model.type.TypeMirror
 import javax.lang.model.type.TypeVariable
 
 class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassSourceGenerator() {
-    override fun classNameForRequest(request: CallInterceptionRequest): String? {
-        return request.requestExtras.getByType<PropertyUpgradeRequestExtra?>(PropertyUpgradeRequestExtra::class.java)
-            .map<String?>(Function { obj: PropertyUpgradeRequestExtra? -> obj!!.getImplementationClassName() })
+    override fun classNameForRequest(request: CallInterceptionRequest?): String? {
+        if (request == null) {
+            return null
+        }
+        return request.requestExtras.getByType(PropertyUpgradeRequestExtra::class.java)
+            .map<String?>(Function { extra: PropertyUpgradeRequestExtra -> extra.implementationClassName })
             .orElse(null)
     }
 
     override fun classContentForClass(
         className: String?,
-        requestsClassGroup: MutableList<CallInterceptionRequest?>,
-        onProcessedRequest: Consumer<in CallInterceptionRequest?>,
-        onFailure: Consumer<in FailureInfo?>
-    ): Consumer<TypeSpec.Builder?> {
-        val methods = requestsClassGroup.stream()
-            .map<MethodSpec?> { request: CallInterceptionRequest? -> Companion.mapToMethodSpec(request!!, onProcessedRequest, onFailure) }
+        requestsClassGroup: MutableList<CallInterceptionRequest?>?,
+        onProcessedRequest: Consumer<in CallInterceptionRequest?>?,
+        onFailure: Consumer<in FailureInfo?>?
+    ): Consumer<TypeSpec.Builder?>? {
+        val requests = requestsClassGroup ?: return null
+        val onRequest = onProcessedRequest ?: return null
+        val onFailureConsumer = onFailure ?: return null
+
+        val methods = requests.stream()
+            .filter { it != null }
+            .map<MethodSpec> { request: CallInterceptionRequest? ->
+                Companion.mapToMethodSpec(
+                    request,
+                    onRequest,
+                    onFailureConsumer
+                )
+            }
             .collect(Collectors.toList())
 
         return Consumer { builder: TypeSpec.Builder? ->
@@ -76,81 +90,98 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
     companion object {
         private const val SELF_PARAMETER_NAME = "self"
 
-        private fun mapToMethodSpec(request: CallInterceptionRequest, onProcessedRequest: Consumer<in CallInterceptionRequest?>, onFailure: Consumer<in FailureInfo?>): MethodSpec {
-            val implementationExtra = request.requestExtras
-                .getByType<PropertyUpgradeRequestExtra>(PropertyUpgradeRequestExtra::class.java)
-                .orElseThrow<RuntimeException?>(Supplier { RuntimeException(PropertyUpgradeRequestExtra::class.java.getSimpleName() + " should be present at this stage!") })
+        private fun mapToMethodSpec(
+            request: CallInterceptionRequest?,
+            onProcessedRequest: Consumer<in CallInterceptionRequest?>,
+            onFailure: Consumer<in FailureInfo?>
+        ): MethodSpec {
+            val nonNullRequest = request ?: throw RuntimeException("Request should be present")
+            val implementationExtra = nonNullRequest.requestExtras
+                .getByType(PropertyUpgradeRequestExtra::class.java)
+                .orElseThrow(
+                    Supplier {
+                        RuntimeException(PropertyUpgradeRequestExtra::class.java.getSimpleName() + " should be present at this stage!")
+                    }
+                )
 
             try {
-                val implementation = request.implementationInfo
-                val callable = request.interceptedCallable
+                val implementation = nonNullRequest.implementationInfo ?: throw RuntimeException("Implementation info should be present")
+                val callable = nonNullRequest.interceptedCallable ?: throw RuntimeException("Intercepted callable should be present")
 
                 val spec: MethodSpec
-                if (implementationExtra.getBridgedMethodInfo() != null) {
-                    spec = mapToBridgedMethod(implementation.name, implementationExtra, callable)
+                if (implementationExtra.bridgedMethodInfo != null) {
+                    spec = mapToBridgedMethod(requireNotNull(implementation.name), implementationExtra, callable)
                 } else {
-                    val parameters = callable.parameters.stream()
-                        .map<ParameterSpec?> { parameter: ParameterInfo? -> ParameterSpec.builder(TypeUtils.typeName(parameter!!.parameterType), parameter.name).build() }
-                        .collect(Collectors.toList())
-                    spec = MethodSpec.methodBuilder(implementation.name)
+                    val parameters = callable.parameters.orEmpty()
+                        .map { parameter: ParameterInfo ->
+                            ParameterSpec.builder(
+                                TypeUtils.typeName(requireNotNull(parameter.parameterType)),
+                                requireNotNull(parameter.name)
+                            ).build()
+                        }
+                    spec = MethodSpec.methodBuilder(requireNotNull(implementation.name))
                         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .addParameter(TypeUtils.typeName(callable.owner.type), SELF_PARAMETER_NAME)
+                        .addParameter(TypeUtils.typeName(requireNotNull(callable.owner).type), SELF_PARAMETER_NAME)
                         .addParameters(parameters)
                         .addCode(generateMethodBody(implementation, callable, implementationExtra))
-                        .returns(TypeUtils.typeName(callable.returnType.type))
+                        .returns(TypeUtils.typeName(requireNotNull(callable.returnType).type))
                         .addAnnotations(getAnnotations(implementationExtra))
                         .build()
                 }
 
-                onProcessedRequest.accept(request)
+                onProcessedRequest.accept(nonNullRequest)
                 return spec
             } catch (e: Exception) {
-                onFailure.accept(FailureInfo(request, e.message))
+                onFailure.accept(FailureInfo(nonNullRequest, e.message))
                 throw e
             }
         }
 
         private fun mapToBridgedMethod(methodName: String, implementationExtra: PropertyUpgradeRequestExtra, callable: CallableInfo): MethodSpec {
-            val bridgedMethodInfo = implementationExtra.getBridgedMethodInfo()
-            val bridgedMethod = bridgedMethodInfo.getBridgedMethod()
+            val bridgedMethodInfo = requireNotNull(implementationExtra.bridgedMethodInfo)
+            val bridgedMethod = requireNotNull(bridgedMethodInfo.bridgedMethod)
             val typeVariables = bridgedMethod.getTypeParameters().stream()
                 .map<TypeVariableName?> { element: TypeParameterElement? -> TypeVariableName.get(element!!.asType() as TypeVariable?) }
                 .collect(Collectors.toList())
             val parameters = bridgedMethod.getParameters().stream()
-                .map<ParameterSpec?> { element: VariableElement? -> ParameterSpec.get(element) }
+                .map<ParameterSpec?> { element: VariableElement? -> ParameterSpec.get(element!!) }
                 .collect(Collectors.toList())
             val exceptions = bridgedMethod.getThrownTypes().stream()
-                .map<TypeName?> { mirror: TypeMirror? -> TypeName.get(mirror) }
+                .map<TypeName?> { mirror: TypeMirror? -> TypeName.get(mirror!!) }
                 .collect(Collectors.toList())
-            val passedParameters = parameters.stream()
-                .map<String?> { parameterSpec: ParameterSpec? -> parameterSpec!!.name }
-                .collect(Collectors.joining(", "))
+            val passedParameters = parameters.stream().map { parameterSpec: ParameterSpec? -> parameterSpec!!.name }.collect(Collectors.joining(", "))
 
             val bodyBuilder = CodeBlock.builder()
-            if (implementationExtra.getDeprecationSpec().isEnabled()) {
+            if (implementationExtra.deprecationSpec?.isEnabled == true) {
                 bodyBuilder.addStatement(getDeprecationCodeBlock(implementationExtra, callable))
             }
 
-            val bridgeCall: CodeBlock?
-            var annotationSpecs = mutableListOf<AnnotationSpec?>()
-            if (bridgedMethodInfo.getBridgeType() == BridgeType.INSTANCE_METHOD_BRIDGE) {
+            val bridgeCall: CodeBlock
+            val annotationSpecs = mutableListOf<AnnotationSpec>()
+            if (bridgedMethodInfo.bridgeType == BridgeType.INSTANCE_METHOD_BRIDGE) {
                 var type = TypeName.get(bridgedMethod.getEnclosingElement().asType())
                 if (type is ParameterizedTypeName) {
                     // To simplify code generation we remove type parameters from the instance type, e.g.:
                     // if we have AbstractExecTask<T>, method parameter has type `AbstractExecTask` without generics
                     type = type.rawType
-                    annotationSpecs = mutableListOf<AnnotationSpec?>(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES)
+                    annotationSpecs.add(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES)
                 }
                 parameters.add(0, ParameterSpec.builder(type, SELF_PARAMETER_NAME).build())
-                bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID)
-                    CodeBlock.of("\$L.\$N(\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
-                else
-                    CodeBlock.of("return \$L.\$N(\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
+                bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID) {
+                    CodeBlock.of("return this.\$N?\$N", /* keep type-safe emission */ self(), passedParameters)
+                } else {
+                    if (parameters.isEmpty()) {
+                        CodeBlock.of("return this.\$N().\$N(\\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
+                    } else {
+                        CodeBlock.of("return \$N.\$N(\\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
+                    }
+                }
             } else {
-                bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID)
-                    CodeBlock.of("\$T.\$N(\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
-                else
-                    CodeBlock.of("return \$T.\$N(\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
+                bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID) {
+                    CodeBlock.of("return \\$T.\$N(\\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
+                } else {
+                    CodeBlock.of("return \\$T.\$N(\\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
+                }
             }
             bodyBuilder.addStatement(bridgeCall)
 
@@ -160,131 +191,154 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                 .addTypeVariables(typeVariables)
                 .addParameters(parameters)
                 .returns(TypeName.get(bridgedMethod.getReturnType()))
-                .varargs(bridgedMethod.isVarArgs())
                 .addExceptions(exceptions)
+                .varargs(bridgedMethod.isVarArgs())
                 .addCode(bodyBuilder.build())
                 .build()
         }
 
-        private fun getAnnotations(implementationExtra: PropertyUpgradeRequestExtra): MutableList<AnnotationSpec?> {
-            val gradleLazyType = GradleLazyType.from(implementationExtra.getNewPropertyType())
-            when (gradleLazyType) {
-                GradleLazyType.LIST_PROPERTY, GradleLazyType.SET_PROPERTY, GradleLazyType.MAP_PROPERTY -> return mutableListOf<AnnotationSpec?>(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES)
-                GradleLazyType.PROVIDER -> return if (implementationExtra.getReturnType() is ParameterizedTypeName) mutableListOf<AnnotationSpec?>(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES) else mutableListOf<AnnotationSpec?>()
-                else -> return mutableListOf<AnnotationSpec?>()
+        private fun getAnnotations(implementationExtra: PropertyUpgradeRequestExtra): MutableList<AnnotationSpec> {
+            val gradleLazyType = GradleLazyType.from(requireNotNull(implementationExtra.newPropertyType))
+            return when (gradleLazyType) {
+                GradleLazyType.LIST_PROPERTY, GradleLazyType.SET_PROPERTY, GradleLazyType.MAP_PROPERTY -> mutableListOf(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES)
+                GradleLazyType.PROVIDER -> if (implementationExtra.returnType is ParameterizedTypeName) mutableListOf(CodeGenUtils.SUPPRESS_UNCHECKED_AND_RAWTYPES) else mutableListOf()
+                else -> mutableListOf()
             }
         }
 
-        private fun generateMethodBody(implementation: ImplementationInfo, callableInfo: CallableInfo, implementationExtra: PropertyUpgradeRequestExtra): CodeBlock {
-            val propertyGetterName = implementationExtra.getMethodName()
-            val isSetter = implementation.name.startsWith("access_set_")
-            val returnType = callableInfo.returnType
-            val upgradedPropertyType = GradleLazyType.from(implementationExtra.getNewPropertyType())
+        private fun generateMethodBody(
+            implementation: ImplementationInfo,
+            callableInfo: CallableInfo,
+            implementationExtra: PropertyUpgradeRequestExtra
+        ): CodeBlock {
+            val propertyGetterName = requireNotNull(implementationExtra.methodName)
+            val isSetter = implementation.name.orEmpty().startsWith("access_set_")
+            val returnType = requireNotNull(callableInfo.returnType)
+            val upgradedPropertyType = GradleLazyType.from(requireNotNull(implementationExtra.newPropertyType))
 
             val codeBlockBuilder = CodeBlock.builder()
-            if (implementationExtra.getDeprecationSpec().isEnabled()) {
+            if (implementationExtra.deprecationSpec?.isEnabled == true) {
                 codeBlockBuilder.addStatement(getDeprecationCodeBlock(implementationExtra, callableInfo))
             }
 
-            val logic: CodeBlock? = if (isSetter)
+            val logic = if (isSetter) {
                 generateSetCall(propertyGetterName, implementationExtra, upgradedPropertyType)
-            else
+            } else {
                 generateGetCall(propertyGetterName, implementationExtra, returnType, upgradedPropertyType)
-
+            }
             return codeBlockBuilder.addStatement(logic).build()
         }
 
         private fun getDeprecationCodeBlock(requestExtra: PropertyUpgradeRequestExtra, callableInfo: CallableInfo): CodeBlock {
-            val newPropertyName = requestExtra.getPropertyName()
-            val deprecatedPropertyName = requestExtra.getInterceptedPropertyName()
-            val deprecationSpec = requestExtra.getDeprecationSpec()
+            val newPropertyName = requireNotNull(requestExtra.propertyName)
+            val deprecatedPropertyName = requireNotNull(requestExtra.interceptedPropertyName)
+            val deprecationSpec = requireNotNull(requestExtra.deprecationSpec)
+            val className = requireNotNull(callableInfo.owner?.type).getClassName()
+            val simpleClassName = className.substring(className.lastIndexOf(".") + 1)
 
-            val deprecationBuilder: CodeBlock.Builder?
-            when (deprecationSpec.getRemovedIn()) {
+            val deprecationBuilder: CodeBlock.Builder = when (deprecationSpec.removedIn) {
                 ReplacedDeprecation.RemovedIn.GRADLE9 -> {
-                    val className = callableInfo.owner.type.getClassName()
-                    val simpleClassName = className.substring(className.lastIndexOf(".") + 1)
-                    deprecationBuilder = CodeBlock.builder()
-                        .add("\$T.deprecate(\$S)\n", GradleReferencedType.DEPRECATION_LOGGER.asClassName(), String.format("The usage of %s.%s", simpleClassName, deprecatedPropertyName))
+                    val message = String.format(
+                        "The usage of %s.%s",
+                        simpleClassName,
+                        deprecatedPropertyName
+                    )
+                    CodeBlock.builder()
+                        .add("\\$T.deprecate(\\$S)\\n", GradleReferencedType.DEPRECATION_LOGGER.asClassName(), message)
                         .add(
-                            ".withContext(\$S)\n",
+                            ".withContext(\\$S)\\n",
                             String.format(
                                 "Property '%s' was removed and this compatibility shim will be removed in Gradle 10. Please use '%s' property instead.",
                                 deprecatedPropertyName,
                                 newPropertyName
                             )
                         )
-                        .add(".willBecomeAnErrorInGradle10()\n")
+                        .add(".willBecomeAnErrorInGradle10()\\n")
                 }
-
                 ReplacedDeprecation.RemovedIn.UNSPECIFIED -> {
-                    deprecationBuilder = CodeBlock.builder()
+                    val builder = CodeBlock.builder()
                         .add(
-                            "\$T.deprecateProperty(\$T.class, \$S)\n",
+                            "\\$T.deprecateProperty(\\$T.class, \\$S)\\n",
                             GradleReferencedType.DEPRECATION_LOGGER.asClassName(),
-                            TypeUtils.typeName(callableInfo.owner.type),
+                            TypeUtils.typeName(requireNotNull(callableInfo.owner).type),
                             deprecatedPropertyName
                         )
-                        .add(".withContext(\$S)\n", "Property was automatically upgraded to the lazy version.")
+                        .add(".withContext(\\$S)\\n", "Property was automatically upgraded to the lazy version.")
                     if (newPropertyName != deprecatedPropertyName) {
-                        deprecationBuilder.add(".replaceWith(\$S)\n", newPropertyName)
+                        builder.add(".replaceWith(\\$S)\\n", newPropertyName)
                     }
-                    deprecationBuilder.add(".startingWithGradle10(\$S)\n", "this property is replaced with a lazy version")
+                    builder.add(".startingWithGradle10(\\$S)\\n", "this property is replaced with a lazy version")
                 }
-
-                else -> throw UnsupportedOperationException("Only " + ReplacedDeprecation.RemovedIn.UNSPECIFIED + " and " + ReplacedDeprecation.RemovedIn.GRADLE9 + " are currently supported for removedIn, but was: " + deprecationSpec.getRemovedIn())
+                else -> throw UnsupportedOperationException(
+                    "Only " + ReplacedDeprecation.RemovedIn.UNSPECIFIED + " and " + ReplacedDeprecation.RemovedIn.GRADLE9 +
+                        " are currently supported for removedIn, but was: " + deprecationSpec.removedIn
+                )
             }
 
-            if (deprecationSpec.getWithUpgradeGuideVersion() != -1) {
-                deprecationBuilder.add(".withUpgradeGuideSection(\$L, \$S)\n", deprecationSpec.getWithUpgradeGuideVersion(), deprecationSpec.getWithUpgradeGuideSection())
-            } else if (deprecationSpec.isWithDslReference()) {
-                deprecationBuilder.add(".withDslReference()\n")
+            if (deprecationSpec.withUpgradeGuideVersion != -1) {
+                deprecationBuilder.add(".withUpgradeGuideSection(\\$L, \\$S)\\n", deprecationSpec.withUpgradeGuideVersion, deprecationSpec.withUpgradeGuideSection)
+            } else if (deprecationSpec.isWithDslReference) {
+                deprecationBuilder.add(".withDslReference()\\n")
             } else {
-                deprecationBuilder.add(".undocumented()\n")
+                deprecationBuilder.add(".undocumented()\\n")
             }
 
-            return deprecationBuilder.add(".nagUser()")
-                .build()
+            return deprecationBuilder.add(".nagUser()").build()
         }
 
         private fun generateGetCall(
-            propertyGetterName: String?,
+            propertyGetterName: String,
             implementationExtra: PropertyUpgradeRequestExtra,
             returnType: CallableReturnTypeInfo,
             upgradedPropertyType: GradleLazyType
-        ): CodeBlock? {
-            when (upgradedPropertyType) {
-                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> return CodeBlock.of("return \$N.\$N().getAsFile().getOrNull()", SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.CONFIGURABLE_FILE_COLLECTION, GradleLazyType.FILE_COLLECTION -> return CodeBlock.of("return \$N.\$N()", SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.LIST_PROPERTY -> return CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.LIST_PROPERTY_LIST_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.SET_PROPERTY -> return CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.SET_PROPERTY_SET_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.MAP_PROPERTY -> return CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.MAP_PROPERTY_MAP_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.PROPERTY -> return CodeBlock.of("return \$N.\$N().getOrElse(\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnType.type))
+        ): CodeBlock {
+            val returnAsmType = requireNotNull(returnType.type)
+            return when (upgradedPropertyType) {
+                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> CodeBlock.of("return \\$N.\\$N().getAsFile().getOrNull()", SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.CONFIGURABLE_FILE_COLLECTION, GradleLazyType.FILE_COLLECTION -> CodeBlock.of("return \\$N.\\$N()", SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.LIST_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.LIST_PROPERTY_LIST_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.SET_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.SET_PROPERTY_SET_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.MAP_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.MAP_PROPERTY_MAP_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.PROPERTY -> CodeBlock.of("return \\$N.\\$N().getOrElse(\\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
                 GradleLazyType.PROVIDER -> {
-                    val providerParameter = TypeUtils.getTypeParameter(implementationExtra.getNewPropertyType(), 0)
-                    return if (providerParameter.map<Boolean?>(Function { typeName: TypeName? -> GradleReferencedType.isAssignableToFileSystemLocation(typeName) }).orElse(false))
-                        CodeBlock.of("return \$N.\$N().map(\$T::getAsFile).getOrNull()", SELF_PARAMETER_NAME, propertyGetterName, GradleReferencedType.FILE_SYSTEM_LOCATION.asClassName())
-                    else
-                        CodeBlock.of("return \$N.\$N().getOrElse(\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnType.type))
+                    val providerParameter = TypeUtils.getTypeParameter(implementationExtra.newPropertyType, 0)
+                    val mapsToFileSystemLocation =
+                        if (providerParameter.isPresent && providerParameter.get() != null) {
+                            GradleReferencedType.isAssignableToFileSystemLocation(providerParameter.get()!!)
+                        } else {
+                            false
+                        }
+                    if (mapsToFileSystemLocation) {
+                        CodeBlock.of(
+                            "return \\$N.\\$N().map(\\$T::getAsFile).getOrNull()",
+                            SELF_PARAMETER_NAME,
+                            propertyGetterName,
+                            GradleReferencedType.FILE_SYSTEM_LOCATION.asClassName()
+                        )
+                    } else {
+                        CodeBlock.of("return \\$N.\\$N().getOrElse(\\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
+                    }
                 }
-
                 else -> throw UnsupportedOperationException("Generating get call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
             }
         }
 
-        private fun generateSetCall(propertyGetterName: String?, implementationExtra: PropertyUpgradeRequestExtra, upgradedPropertyType: GradleLazyType): CodeBlock? {
-            val assignment: String?
-            when (upgradedPropertyType) {
-                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> assignment = ".fileValue(arg0)"
-                GradleLazyType.CONFIGURABLE_FILE_COLLECTION -> assignment = ".setFrom(arg0)"
-                GradleLazyType.LIST_PROPERTY, GradleLazyType.SET_PROPERTY, GradleLazyType.MAP_PROPERTY, GradleLazyType.PROPERTY -> assignment = ".set(arg0)"
+        private fun generateSetCall(
+            propertyGetterName: String,
+            implementationExtra: PropertyUpgradeRequestExtra,
+            upgradedPropertyType: GradleLazyType
+        ): CodeBlock {
+            val assignment = when (upgradedPropertyType) {
+                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> ".fileValue(arg0)"
+                GradleLazyType.CONFIGURABLE_FILE_COLLECTION -> ".setFrom(arg0)"
+                GradleLazyType.LIST_PROPERTY, GradleLazyType.SET_PROPERTY, GradleLazyType.MAP_PROPERTY, GradleLazyType.PROPERTY -> ".set(arg0)"
                 GradleLazyType.PROVIDER -> throw UnsupportedOperationException("Generating set call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
                 else -> throw UnsupportedOperationException("Generating set call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
             }
-            if (implementationExtra.getReturnType() == TypeName.VOID) {
-                return CodeBlock.of("\$N.\$N()\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment)
+            return if (implementationExtra.returnType == TypeName.VOID) {
+                CodeBlock.of("\\$N.\\$N()\\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment)
             } else {
-                return CodeBlock.of("\$N.\$N()\$N;\nreturn \$N", SELF_PARAMETER_NAME, propertyGetterName, assignment, SELF_PARAMETER_NAME)
+                CodeBlock.of("\\$N.\\$N()\\$N;\\nreturn \\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment, SELF_PARAMETER_NAME)
             }
         }
     }

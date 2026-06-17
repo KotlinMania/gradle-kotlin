@@ -39,7 +39,7 @@ class StreamZipInput(inputStream: InputStream) : ZipInput {
                 } catch (e: IOException) {
                     throw FileException(e)
                 }
-                return if (nextEntry == null) endOfData() else StreamZipInput.StreamZipEntry(nextEntry)
+                return if (nextEntry == null) endOfData() else StreamZipInput.StreamZipEntry(inputStream, nextEntry)
             }
         }
     }
@@ -49,12 +49,15 @@ class StreamZipInput(inputStream: InputStream) : ZipInput {
         inputStream.close()
     }
 
-    private inner class StreamZipEntry(entry: java.util.zip.ZipEntry?) : AbstractZipEntry(entry) {
+    private class StreamZipEntry(private val inputStream: ZipInputStream, entry: java.util.zip.ZipEntry) : AbstractZipEntry(entry) {
         private var opened = false
 
         @Throws(IOException::class)
-        override fun <T> withInputStream(action: ZipEntry.IoFunction<InputStream?, T?>): T? {
-            check(!opened) { "The input stream for " + getName() + " has already been opened.  It cannot be reopened again." }
+        override fun <T> withInputStream(action: ZipEntry.IoFunction<InputStream?, T?>?): T? {
+            if (action == null) {
+                return null
+            }
+            check(!opened) { "The input stream for " + name + " has already been opened.  It cannot be reopened again." }
 
             opened = true
 

@@ -19,25 +19,21 @@ package org.gradle.internal.file
  * The metadata of a file.
  */
 interface FileMetadata {
-    @JvmField
     val type: FileType?
 
     /**
      * Note: always 0 for directories and missing files.
      */
-    @JvmField
     val lastModified: Long
 
     /**
      * Note: always 0 for directories and missing files.
      */
-    @JvmField
     val length: Long
 
     /**
      * How the file with the metadata was accessed.
      */
-    @JvmField
     val accessType: AccessType?
 
     /**

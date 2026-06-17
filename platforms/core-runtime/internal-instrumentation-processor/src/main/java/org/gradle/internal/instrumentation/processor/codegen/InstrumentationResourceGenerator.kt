@@ -44,9 +44,7 @@ interface InstrumentationResourceGenerator {
         class NoResourceToGenerate : GenerationResult
 
         class ResourceFailures(private val failures: MutableList<FailureInfo?>?) : GenerationResult, HasFailures {
-            override fun getFailureDetails(): MutableList<FailureInfo?>? {
-                return failures
-            }
+            override val failureDetails: MutableList<FailureInfo?>? = failures
         }
     }
 }

@@ -18,7 +18,7 @@ package org.gradle.docs.asciidoctor
 import org.asciidoctor.ast.Document
 import org.asciidoctor.extension.DocinfoProcessor
 
-internal class NavigationDocinfoProcessor(config: MutableMap<String?, Any?>?, private val html: String?) : DocinfoProcessor(config) {
+class NavigationDocinfoProcessor(config: MutableMap<String?, Any?>?, private val html: String?) : DocinfoProcessor(config) {
     override fun process(document: Document?): String? {
         return html
     }

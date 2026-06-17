@@ -17,26 +17,29 @@ package org.gradle.internal.service
 
 import org.gradle.internal.service.scopes.Scope
 import org.gradle.internal.service.scopes.ServiceScope
-import org.gradle.util.internal.ArrayUtils
-import org.gradle.util.internal.CollectionUtils
+import org.gradle.util.internal.ArrayUtils.contains
+import org.gradle.util.internal.CollectionUtils.join
 import java.util.ArrayDeque
+import java.util.HashSet
+import java.util.LinkedHashSet
 import java.util.Queue
-import java.util.function.Function
 
 /**
  * Checks that services are being declared in the correct scope.
  *
  *
- * Only services that are annotated with [ServiceScope] are validated.
- * In [.strict]-mode all services must be annotated.
+ * Only services that are annotated with {@link ServiceScope} are validated.
+ * In {@link #strict}-mode all services must be annotated.
  */
-internal class ServiceScopeValidator(private val scope: Class<out Scope?>, private val strict: Boolean) : AnnotatedServiceLifecycleHandler {
-    val implicitAnnotation: Class<out Annotation?>
-        get() = ServiceScope::class.java
+internal class ServiceScopeValidator(private val scope: Class<out Scope>, private val strict: Boolean) : AnnotatedServiceLifecycleHandler {
+    override val annotations: MutableList<Class<out Annotation?>?>? = SCOPE_ANNOTATIONS
 
-    override fun whenRegistered(annotation: Class<out Annotation?>?, registration: AnnotatedServiceLifecycleHandler.Registration) {
-        for (declaredType in registration.declaredTypes!!) {
-            validateScope(declaredType!!)
+    override val implicitAnnotation: Class<out Annotation?>? = ServiceScope::class.java
+
+    override fun whenRegistered(annotation: Class<out Annotation?>?, registration: AnnotatedServiceLifecycleHandler.Registration?) {
+        val declaredTypes = checkNotNull(registration).declaredTypes ?: return
+        for (declaredType in declaredTypes) {
+            declaredType?.let { validateScope(it) }
         }
     }
 
@@ -49,7 +52,7 @@ internal class ServiceScopeValidator(private val scope: Class<out Scope?>, priva
             return
         }
 
-        val serviceScopes: Array<Class<out Scope?>?>? = scopeOf(serviceType)
+        val serviceScopes = scopeOf(serviceType)
 
         if (serviceScopes == null) {
             if (strict) {
@@ -60,19 +63,18 @@ internal class ServiceScopeValidator(private val scope: Class<out Scope?>, priva
 
         require(serviceScopes.size != 0) { String.format("Service '%s' is declared with empty scope list", serviceType.getName()) }
 
-        require(ArrayUtils.contains<Class<out Scope?>?>(serviceScopes, scope)) { invalidScopeMessage(serviceType, serviceScopes) }
+        require(contains(serviceScopes, scope)) { invalidScopeMessage(serviceType, serviceScopes) }
     }
 
     private fun failWithMissingScope(serviceType: Class<*>) {
-        val annotatedSupertypes: MutableSet<Class<*>?> = findAnnotatedSupertypes(serviceType)
+        val annotatedSupertypes: MutableSet<Class<*>> = findAnnotatedSupertypes(serviceType)
         require(annotatedSupertypes.size == 1) { missingScopeMessage(serviceType) }
 
-        // TODO(alllex): let the registration explicitly provide the Class of the implementation
         val inferredServiceType: Class<*> = annotatedSupertypes.iterator().next()!!
         throw IllegalArgumentException(implementationWithMissingScopeMessage(inferredServiceType, serviceType))
     }
 
-    private fun invalidScopeMessage(serviceType: Class<*>, actualScopes: Array<Class<out Scope?>?>): String {
+    private fun invalidScopeMessage(serviceType: Class<*>, actualScopes: Array<Class<out Scope>?>): String {
         return String.format(
             "The service '%s' declares %s but is registered in the '%s' scope. " +
                     "Either update the '@ServiceScope()' annotation on '%s' to include the '%s' scope " +
@@ -89,7 +91,10 @@ internal class ServiceScopeValidator(private val scope: Class<out Scope?>, priva
         return String.format(
             "The service '%s' is registered in the '%s' scope but does not declare it. " +
                     "Add the '@ServiceScope()' annotation on '%s' with the '%s' scope.",
-            serviceType.getName(), scope.getSimpleName(), serviceType.getSimpleName(), scope.getSimpleName()
+            serviceType.getName(),
+            scope.getSimpleName(),
+            serviceType.getSimpleName(),
+            scope.getSimpleName()
         )
     }
 
@@ -106,29 +111,26 @@ internal class ServiceScopeValidator(private val scope: Class<out Scope?>, priva
     }
 
     companion object {
-        val annotations: MutableList<Class<out Annotation?>?> = mutableListOf<Class<out Annotation?>?>(ServiceScope::class.java)
-            get() = Companion.field
+        private val SCOPE_ANNOTATIONS: MutableList<Class<out Annotation?>?> = arrayListOf(ServiceScope::class.java)
 
         // TODO: use the implementation from `org.gradle.internal.reflect.Types`, when its available for `:base-services`
-        private fun findAnnotatedSupertypes(serviceType: Class<*>?): MutableSet<Class<*>?> {
-            val annotatedSuperTypes: MutableSet<Class<*>?> = LinkedHashSet<Class<*>?>()
+        private fun findAnnotatedSupertypes(serviceType: Class<*>): MutableSet<Class<*>> {
+            val annotatedSuperTypes: MutableSet<Class<*>> = LinkedHashSet<Class<*>>()
 
-            val seen: MutableSet<Class<*>?> = HashSet<Class<*>?>()
+            val seen: MutableSet<Class<*>> = HashSet<Class<*>>()
             seen.add(Any::class.java)
 
-            val queue: Queue<Class<*>?> = ArrayDeque<Class<*>?>()
+            val queue: Queue<Class<*>> = ArrayDeque()
             queue.add(serviceType)
 
             while (!queue.isEmpty()) {
-                val type: Class<*> = queue.remove()!!
+                val type = queue.remove()
                 if (scopeOf(type) != null) {
                     annotatedSuperTypes.add(type)
                     continue
                 }
 
-                if (type.getSuperclass() != null) {
-                    queue.add(type.getSuperclass())
-                }
+                type.getSuperclass()?.let { queue.add(it) }
                 for (superInterface in type.getInterfaces()) {
                     if (seen.add(superInterface)) {
                         queue.add(superInterface)
@@ -143,17 +145,19 @@ internal class ServiceScopeValidator(private val scope: Class<out Scope?>, priva
             return String.format("'%s' service type", serviceType.getSimpleName())
         }
 
-        private fun displayScopes(scopes: Array<Class<out Scope?>?>): String {
-            if (scopes.size == 1) {
-                return "service scope '" + scopes[0]!!.getSimpleName() + "'"
-            }
-
-            return "service scopes " + CollectionUtils.join<String?, Class<out Scope?>?>(", ", scopes, Function { aClass: Class<out Scope?>? -> "'" + aClass!!.getSimpleName() + "'" })
+    private fun displayScopes(scopes: Array<Class<out Scope>?>): String {
+        if (scopes.size == 1) {
+            return "service scope '${scopes[0]!!.getSimpleName()}'"
         }
 
-        private fun scopeOf(serviceType: Class<*>): Array<Class<out Scope?>?>? {
+            return "service scopes " + join(", ", scopes.toMutableList()) { annotation: Class<out Scope>? -> "'${annotation?.getSimpleName()}'" }
+        }
+
+        private fun scopeOf(serviceType: Class<*>): Array<Class<out Scope>?>? {
             val scopeAnnotation = serviceType.getAnnotation<ServiceScope?>(ServiceScope::class.java)
-            return if (scopeAnnotation != null) scopeAnnotation.value else null
+            return scopeAnnotation?.value
+                ?.map { it.java as Class<out Scope>? }
+                ?.toTypedArray()
         }
     }
 }

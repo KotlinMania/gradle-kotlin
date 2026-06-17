@@ -29,7 +29,7 @@ class CircularEvaluationException internal constructor(evaluationCycle: MutableL
         this.evaluationCycle = ImmutableList.copyOf<EvaluationOwner>(evaluationCycle)
     }
 
-    val message: String
+    override val message: String
         get() = "Circular evaluation detected: " + formatEvaluationChain(evaluationCycle)
 
     /**

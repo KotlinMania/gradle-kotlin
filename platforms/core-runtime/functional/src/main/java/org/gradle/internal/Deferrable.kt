@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 /*
  * Copyright 2022 the original author or authors.
  *
@@ -21,6 +23,8 @@ import java.util.function.Function
 import java.util.function.Supplier
 import kotlin.concurrent.Volatile
 
+private fun <T> optionalOfNullable(value: T?): Optional<T?> = Optional.ofNullable(value) as Optional<T?>
+
 /**
  * An invocation to be executed at most once, but one that can be deferred.
  *
@@ -30,8 +34,7 @@ interface Deferrable<T> {
     /**
      * The result of the invocation when it is already available.
      */
-    @JvmField
-    val completed: Optional<T?>?
+    val completed: Optional<T?>
 
     /**
      * Obtain the result of the invocation, either by returning the already computed result or by computing it synchronously.
@@ -48,16 +51,15 @@ interface Deferrable<T> {
      */
     fun <U> map(mapper: Function<in T?, U?>): Deferrable<U?> {
         return object : Deferrable<U?> {
-            override fun getCompleted(): Optional<U?> {
-                return this@Deferrable.completed
+            override val completed: Optional<U?>
+                get() = this@Deferrable.completed
                     .map<U?>(Function { value: T? -> applyAndRequireNonNull(value, mapper) })
-            }
 
             override fun completeAndGet(): U? {
                 return applyAndRequireNonNull(this@Deferrable.completeAndGet(), mapper)
             }
 
-            fun applyAndRequireNonNull(value: T?, mapper: Function<in T?, U?>): U? {
+            private fun applyAndRequireNonNull(value: T?, mapper: Function<in T?, U?>): U? {
                 val result = mapper.apply(value)
                 return Objects.requireNonNull<U?>(result, "Mapping a Deferrable to null is not allowed")
             }
@@ -88,9 +90,8 @@ interface Deferrable<T> {
          */
         fun <T> completed(successfulResult: T?): Deferrable<T?> {
             return object : Deferrable<T?> {
-                override fun getCompleted(): Optional<T?> {
-                    return Optional.of<T?>(successfulResult!!)
-                }
+                override val completed: Optional<T?>
+                    get() = optionalOfNullable(successfulResult)
 
                 override fun completeAndGet(): T? {
                     return successfulResult
@@ -104,11 +105,10 @@ interface Deferrable<T> {
         fun <T> deferred(result: Supplier<T?>): Deferrable<T?> {
             return object : Deferrable<T?> {
                 @Volatile
-                private val value: T? = null
+                private var value: T? = null
 
-                override fun getCompleted(): Optional<T?> {
-                    return Optional.ofNullable<T?>(value)
-                }
+                override val completed: Optional<T?>
+                    get() = optionalOfNullable(value)
 
                 // the value is MonotonicNonNull, but IDEA doesn't understand it.
                 override fun completeAndGet(): T? {

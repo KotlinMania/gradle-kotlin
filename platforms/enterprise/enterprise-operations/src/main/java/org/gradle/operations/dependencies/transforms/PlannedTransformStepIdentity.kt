@@ -16,6 +16,9 @@
 package org.gradle.operations.dependencies.transforms
 
 import org.gradle.internal.taskgraph.NodeIdentity
+import org.gradle.operations.dependencies.variants.Capability
+import org.gradle.operations.dependencies.variants.ComponentIdentifier
+import org.gradle.operations.dependencies.configurations.ConfigurationIdentity
 
 /**
  * Identity of a transform step node in an execution plan.

@@ -18,7 +18,7 @@ package org.gradle.internal.service
 import java.lang.reflect.Method
 
 internal class ReflectionBasedServiceMethodFactory : ServiceMethodFactory {
-    override fun toServiceMethod(method: Method?): ServiceMethod {
+    override fun toServiceMethod(method: Method): ServiceMethod {
         return ReflectionBasedServiceMethod(method)
     }
 }

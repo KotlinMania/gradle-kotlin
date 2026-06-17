@@ -23,7 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  * A store operation may actually store or fail.
  * Store operation results and failures are mutually exclusive.
  */
-class BuildCacheRemoteStoreBuildOperationType private constructor() : BuildOperationType<BuildCacheRemoteStoreBuildOperationType.Details?, BuildCacheRemoteStoreBuildOperationType.Result?> {
+class BuildCacheRemoteStoreBuildOperationType private constructor() : BuildOperationType<BuildCacheRemoteStoreBuildOperationType.Details, BuildCacheRemoteStoreBuildOperationType.Result> {
     interface Details {
         /**
          * The cache key.

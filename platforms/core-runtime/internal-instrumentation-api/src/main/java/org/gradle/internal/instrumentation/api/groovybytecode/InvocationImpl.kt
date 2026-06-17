@@ -20,19 +20,17 @@ package org.gradle.internal.instrumentation.api.groovybytecode
  *
  * @param <R> the type of the receiver
 </R> */
-class InvocationImpl<R>(private val receiver: R?, private val args: Array<Any>, private val callOriginal: ThrowingSupplier) : Invocation {
+class InvocationImpl<R>(private val invocationReceiver: R?, private val args: Array<Any>, private val callOriginal: ThrowingSupplier) : Invocation {
     fun interface ThrowingSupplier {
         @Throws(Throwable::class)
         fun get(): Any?
     }
 
-    override fun getReceiver(): R? {
-        return receiver
-    }
+    override val receiver: Any?
+        get() = invocationReceiver
 
-    override fun getArgsCount(): Int {
-        return args.size
-    }
+    override val argsCount: Int
+        get() = args.size
 
     override fun getArgument(pos: Int): Any? {
         return InvocationUtils.unwrap(args[pos])
