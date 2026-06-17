@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-import org.gradle.internal.collect.PersistentSet;
+interface CompositeExclude : ExcludeSpec {
+    override fun equals(o: Any?): Boolean
 
-public interface CompositeExclude extends ExcludeSpec {
-    @Override
-    boolean equals(Object o);
+    val components: PersistentSet<ExcludeSpec?>?
 
-    PersistentSet<ExcludeSpec> getComponents();
-
-    default boolean contains(ExcludeSpec spec) {
-        return getComponents().contains(spec);
+    fun contains(spec: ExcludeSpec): Boolean {
+        return this.components.contains(spec)
     }
 
-    int size();
+    fun size(): Int
 }

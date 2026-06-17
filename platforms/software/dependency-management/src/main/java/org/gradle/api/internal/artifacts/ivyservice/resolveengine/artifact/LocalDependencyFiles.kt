@@ -13,25 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.verification.verifier;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact
 
-import org.gradle.internal.logging.text.TreeFormatter;
+import org.gradle.api.internal.file.FileCollectionInternal
 
-import java.io.File;
-
-public class MissingSignature extends AbstractVerificationFailure {
-
-    public MissingSignature(File file) {
-        super(file);
-    }
-
-    @Override
-    public boolean isFatal() {
-        return false;
-    }
-
-    @Override
-    public void explainTo(TreeFormatter formatter) {
-        formatter.append("artifact is not signed");
-    }
-}
+interface LocalDependencyFiles : FileCollectionInternal.Source

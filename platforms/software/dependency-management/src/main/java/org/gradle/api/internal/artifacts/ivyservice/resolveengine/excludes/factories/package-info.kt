@@ -13,8 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * This package contains different accessory factories for excludes.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories;
+package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.factories
+
+import org.gradle.internal.Factory.create
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.Cast.uncheckedCast
+

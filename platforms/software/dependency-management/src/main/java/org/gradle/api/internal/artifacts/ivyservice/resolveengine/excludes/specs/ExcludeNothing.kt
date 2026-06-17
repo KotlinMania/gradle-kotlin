@@ -15,4 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-interface ExcludeEverything : ExcludeSpec
+interface ExcludeNothing : ExcludeSpec

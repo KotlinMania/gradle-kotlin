@@ -13,7 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs;
+package org.gradle.api.internal.artifacts.verification.verifier
 
-public interface ExcludeAllOf extends CompositeExclude {
+import org.gradle.api.internal.artifacts.verification.model.ChecksumKind
+import org.gradle.internal.logging.text.TreeFormatter
+import java.io.File
+
+class ChecksumVerificationFailure(file: File?, val kind: ChecksumKind?, val expected: String?, val actual: String?) : AbstractVerificationFailure(file) {
+    override fun explainTo(formatter: TreeFormatter) {
+        formatter.append("expected a '" + kind + "' checksum of '" + expected + "' but was '" + actual + "'")
+    }
 }
