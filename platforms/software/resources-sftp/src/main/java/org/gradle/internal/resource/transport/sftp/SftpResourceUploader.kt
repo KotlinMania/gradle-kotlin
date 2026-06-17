@@ -13,72 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.SftpException
+import org.apache.commons.io.FilenameUtils
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.transfer.ExternalResourceUploader
+import java.io.IOException
+import java.net.URI
 
-import com.jcraft.jsch.ChannelSftp;
-import org.apache.commons.io.FilenameUtils;
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.transfer.ExternalResourceUploader;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-
-public class SftpResourceUploader implements ExternalResourceUploader {
-
-    private final SftpClientFactory sftpClientFactory;
-    private final PasswordCredentials credentials;
-
-    public SftpResourceUploader(SftpClientFactory sftpClientFactory, PasswordCredentials credentials) {
-        this.sftpClientFactory = sftpClientFactory;
-        this.credentials = credentials;
-    }
-
-    @Override
-    public void upload(ReadableContent resource, ExternalResourceName destination) throws IOException {
-        LockableSftpClient client = sftpClientFactory.createSftpClient(destination.getUri(), credentials);
+class SftpResourceUploader(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : ExternalResourceUploader {
+    @Throws(IOException::class)
+    override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
+        val client = sftpClientFactory.createSftpClient(destination.getUri(), credentials)
 
         try {
-            ChannelSftp channel = client.getSftpClient();
-            ensureParentDirectoryExists(channel, destination.getUri());
-            InputStream sourceStream = resource.open();
+            val channel = client.getSftpClient()
+            ensureParentDirectoryExists(channel, destination.getUri())
+            val sourceStream = resource.open()
             try {
-                channel.put(sourceStream, destination.getPath());
+                channel.put(sourceStream, destination.getPath())
             } finally {
-                sourceStream.close();
+                sourceStream.close()
             }
-        } catch (com.jcraft.jsch.SftpException e) {
-            throw ResourceExceptions.putFailed(destination.getUri(), e);
+        } catch (e: SftpException) {
+            throw ResourceExceptions.putFailed(destination.getUri(), e)
         } finally {
-            sftpClientFactory.releaseSftpClient(client);
+            sftpClientFactory.releaseSftpClient(client)
         }
     }
 
-    private void ensureParentDirectoryExists(ChannelSftp channel, URI uri) {
-        String parentPath = FilenameUtils.getFullPathNoEndSeparator(uri.getPath());
-        if (parentPath.equals("/")) {
-            return;
+    private fun ensureParentDirectoryExists(channel: ChannelSftp, uri: URI) {
+        val parentPath = FilenameUtils.getFullPathNoEndSeparator(uri.getPath())
+        if (parentPath == "/") {
+            return
         }
-        URI parent = uri.resolve(parentPath);
+        val parent = uri.resolve(parentPath)
 
         try {
-            channel.lstat(parentPath);
-            return;
-        } catch (com.jcraft.jsch.SftpException e) {
+            channel.lstat(parentPath)
+            return
+        } catch (e: SftpException) {
             if (e.id != ChannelSftp.SSH_FX_NO_SUCH_FILE) {
-                throw new ResourceException(parent, String.format("Could not lstat resource '%s'.", parent), e);
+                throw ResourceException(parent, String.format("Could not lstat resource '%s'.", parent), e)
             }
         }
-        ensureParentDirectoryExists(channel, parent);
+        ensureParentDirectoryExists(channel, parent)
         try {
-            channel.mkdir(parentPath);
-        } catch (com.jcraft.jsch.SftpException e) {
-            throw new ResourceException(parent, String.format("Could not create resource '%s'.", parent), e);
+            channel.mkdir(parentPath)
+        } catch (e: SftpException) {
+            throw ResourceException(parent, String.format("Could not create resource '%s'.", parent), e)
         }
     }
 }

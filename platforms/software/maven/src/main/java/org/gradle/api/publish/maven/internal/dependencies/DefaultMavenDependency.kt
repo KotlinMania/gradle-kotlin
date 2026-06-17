@@ -13,87 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven.internal.dependencies;
+package org.gradle.api.publish.maven.internal.dependencies
 
-import org.gradle.api.artifacts.ExcludeRule;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+import org.gradle.api.artifacts.ExcludeRule
 
 /**
- * Default implementation of {@link MavenDependency}.
+ * Default implementation of [MavenDependency].
  */
-public class DefaultMavenDependency implements MavenDependency {
-    private final String groupId;
-    private final String artifactId;
-    private final String version;
-    private final String type;
-    private final String classifier;
-    private final String scope;
-    private final Set<ExcludeRule> excludeRules;
-    private final boolean optional;
-
-    public DefaultMavenDependency(
-        String groupId,
-        String artifactId,
-        @Nullable String version,
-        @Nullable String type,
-        @Nullable String classifier,
-        @Nullable String scope,
-        Set<ExcludeRule> excludeRules,
-        boolean optional
-    ) {
-        this.groupId = groupId;
-        this.artifactId = artifactId;
-        this.version = version;
-        this.type = type;
-        this.classifier = classifier;
-        this.scope = scope;
-        this.excludeRules = excludeRules;
-        this.optional = optional;
+class DefaultMavenDependency(
+    private val groupId: String?,
+    private val artifactId: String?,
+    private val version: String?,
+    private val type: String?,
+    private val classifier: String?,
+    private val scope: String?,
+    private val excludeRules: MutableSet<ExcludeRule?>?,
+    private val optional: Boolean
+) : MavenDependency {
+    override fun getGroupId(): String? {
+        return groupId
     }
 
-    @Override
-    public String getGroupId() {
-        return groupId;
+    override fun getArtifactId(): String? {
+        return artifactId
     }
 
-    @Override
-    public String getArtifactId() {
-        return artifactId;
+    override fun getVersion(): String? {
+        return version
     }
 
-    @Nullable
-    @Override
-    public String getVersion() {
-        return version;
+    override fun getType(): String? {
+        return type
     }
 
-    @Nullable
-    @Override
-    public String getType() {
-        return type;
+    override fun getClassifier(): String? {
+        return classifier
     }
 
-    @Nullable
-    @Override
-    public String getClassifier() {
-        return classifier;
+    override fun getScope(): String? {
+        return scope
     }
 
-    @Nullable
-    @Override
-    public String getScope() {
-        return scope;
+    override fun getExcludeRules(): MutableSet<ExcludeRule?>? {
+        return excludeRules
     }
 
-    @Override
-    public Set<ExcludeRule> getExcludeRules() {
-        return excludeRules;
-    }
-
-    @Override
-    public boolean isOptional() {
-        return optional;
+    override fun isOptional(): Boolean {
+        return optional
     }
 }

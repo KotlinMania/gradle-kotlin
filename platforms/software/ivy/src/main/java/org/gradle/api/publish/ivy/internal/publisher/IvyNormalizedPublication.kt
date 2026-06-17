@@ -13,42 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publisher
 
-package org.gradle.api.publish.ivy.internal.publisher;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.publish.ivy.IvyArtifact
+import java.io.File
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.publish.ivy.IvyArtifact;
-
-import java.io.File;
-import java.util.Set;
-
-public class IvyNormalizedPublication {
-
-    private final String name;
-    private final File ivyDescriptorFile;
-    private final Set<IvyArtifact> allArtifacts;
-    private final ModuleVersionIdentifier coordinates;
-
-    public IvyNormalizedPublication(String name, ModuleVersionIdentifier coordinates, File ivyDescriptorFile, Set<IvyArtifact> allArtifacts) {
-        this.name = name;
-        this.coordinates = coordinates;
-        this.ivyDescriptorFile = ivyDescriptorFile;
-        this.allArtifacts = allArtifacts;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public ModuleVersionIdentifier getCoordinates() {
-        return coordinates;
-    }
-
-    public File getIvyDescriptorFile() {
-        return ivyDescriptorFile;
-    }
-
-    public Set<IvyArtifact> getAllArtifacts() {
-        return allArtifacts;
-    }
-}
+class IvyNormalizedPublication(val name: String?, val coordinates: ModuleVersionIdentifier?, val ivyDescriptorFile: File?, val allArtifacts: MutableSet<IvyArtifact?>?)

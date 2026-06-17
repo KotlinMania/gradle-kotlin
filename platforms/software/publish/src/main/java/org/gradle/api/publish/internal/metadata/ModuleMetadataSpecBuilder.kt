@@ -13,396 +13,334 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.metadata
 
-package org.gradle.api.publish.internal.metadata;
-
-import com.google.common.collect.Sets;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.Named;
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.artifacts.VersionConstraint;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.component.ComponentWithCoordinates;
-import org.gradle.api.component.ComponentWithVariants;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.gradle.api.internal.artifacts.DefaultExcludeRule;
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.PublishArtifactInternal;
-import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector;
-import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector;
-import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.provider.MergeProvider;
-import org.gradle.api.internal.provider.Providers;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.api.publish.internal.mapping.ComponentDependencyResolver;
-import org.gradle.api.publish.internal.mapping.DependencyCoordinateResolverFactory;
-import org.gradle.api.publish.internal.mapping.ResolvedCoordinates;
-import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal;
-import org.jspecify.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
-import static com.google.common.base.Strings.isNullOrEmpty;
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import com.google.common.base.Strings
+import com.google.common.collect.Sets
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.Named
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.component.ComponentWithCoordinates
+import org.gradle.api.component.ComponentWithVariants
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.component.SoftwareComponentVariant
+import org.gradle.api.internal.artifacts.DefaultExcludeRule
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.artifacts.PublishArtifactInternal
+import org.gradle.api.internal.artifacts.capability.FeatureCapabilitySelector
+import org.gradle.api.internal.artifacts.capability.SpecificCapabilitySelector
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint.Companion.of
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory.create
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.provider.MergeProvider
+import org.gradle.api.internal.provider.Providers
+import org.gradle.api.provider.Provider
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.internal.mapping.ComponentDependencyResolver
+import org.gradle.api.publish.internal.mapping.DependencyCoordinateResolverFactory
+import org.gradle.api.publish.internal.mapping.ResolvedCoordinates
+import java.util.TreeMap
 
 /**
- * Builds a {@link ModuleMetadataSpec} from a {@link PublicationInternal} and its {@link SoftwareComponent}.
+ * Builds a [ModuleMetadataSpec] from a [PublicationInternal] and its [SoftwareComponent].
  *
- * <p>This builder extracts the variants, dependencies, artifacts, etc from the component to build
- * an independent representation of a GMM file that can be published without additional processing.</p>
+ *
+ * This builder extracts the variants, dependencies, artifacts, etc from the component to build
+ * an independent representation of a GMM file that can be published without additional processing.
  */
-public class ModuleMetadataSpecBuilder {
+class ModuleMetadataSpecBuilder(
+    private val publication: PublicationInternal<*>,
+    private val publications: MutableCollection<out PublicationInternal<*>>,
+    private val checker: InvalidPublicationChecker,
+    private val dependencyCoordinateResolverFactory: DependencyCoordinateResolverFactory
+) {
+    private val publicationCoordinates: ModuleVersionIdentifier
+    private val component: Provider<SoftwareComponentInternal>
+    private val componentCoordinates: MutableMap<SoftwareComponent?, ComponentData?> = HashMap<SoftwareComponent?, ComponentData?>()
 
-    private final PublicationInternal<?> publication;
-    private final ModuleVersionIdentifier publicationCoordinates;
-    private final Provider<SoftwareComponentInternal> component;
-    private final Collection<? extends PublicationInternal<?>> publications;
-    private final Map<SoftwareComponent, ComponentData> componentCoordinates = new HashMap<>();
-    private final DependencyCoordinateResolverFactory dependencyCoordinateResolverFactory;
-    private final InvalidPublicationChecker checker;
-
-    public ModuleMetadataSpecBuilder(
-        PublicationInternal<?> publication,
-        Collection<? extends PublicationInternal<?>> publications,
-        InvalidPublicationChecker checker,
-        DependencyCoordinateResolverFactory dependencyCoordinateResolverFactory
-    ) {
-        this.component = publication.component;
-        this.publicationCoordinates = publication.getCoordinates();
-        this.publication = publication;
-        this.publications = publications;
-        this.checker = checker;
-        this.dependencyCoordinateResolverFactory = dependencyCoordinateResolverFactory;
+    init {
+        this.component = publication.component
+        this.publicationCoordinates = publication.getCoordinates()
         // Collect a map from component to coordinates. This might be better to move to the component or some publications model
-        collectCoordinates(componentCoordinates);
+        collectCoordinates(componentCoordinates)
     }
 
-    public Provider<ModuleMetadataSpec> build() {
-        return variants().map(variants -> new ModuleMetadataSpec(identity(), variants, publication.isPublishBuildId()));
+    fun build(): Provider<ModuleMetadataSpec?> {
+        return variants().map<ModuleMetadataSpec?>(Transformer { variants: MutableList<ModuleMetadataSpec.Variant?>? -> ModuleMetadataSpec(identity(), variants, publication.isPublishBuildId()) })
     }
 
-    private ModuleMetadataSpec.Identity identity() {
+    private fun identity(): ModuleMetadataSpec.Identity {
         // Collect a map from component to its owning component. This might be better to move to the component or some publications model
-        Map<SoftwareComponent, SoftwareComponent> owners = new HashMap<>();
-        collectOwners(publications, owners);
+        val owners: MutableMap<SoftwareComponent?, SoftwareComponent?> = HashMap<SoftwareComponent?, SoftwareComponent?>()
+        collectOwners(publications, owners)
 
-        SoftwareComponent owner = owners.get(component.get());
-        ComponentData ownerData = owner == null ? null : componentCoordinates.get(owner);
-        ComponentData componentData = new ComponentData(publication.getCoordinates(), publication.getAttributes());
+        val owner = owners.get(component.get())
+        val ownerData = if (owner == null) null else componentCoordinates.get(owner)
+        val componentData = ComponentData(publication.getCoordinates(), publication.getAttributes())
 
-        return ownerData != null
-            ? identityFor(ownerData, relativeUrlTo(componentData.coordinates, ownerData.coordinates))
-            : identityFor(componentData, null);
+        return if (ownerData != null)
+            identityFor(ownerData, relativeUrlTo(componentData.coordinates, ownerData.coordinates))
+        else
+            identityFor(componentData, null)
     }
 
-    private ModuleMetadataSpec.Identity identityFor(ComponentData componentData, String relativeUrl) {
-        return new ModuleMetadataSpec.Identity(
+    private fun identityFor(componentData: ComponentData, relativeUrl: String?): ModuleMetadataSpec.Identity {
+        return ModuleMetadataSpec.Identity(
             componentData.coordinates,
             attributesFor(componentData.attributes),
             relativeUrl
-        );
+        )
     }
 
-    private Provider<List<ModuleMetadataSpec.Variant>> variants() {
-        List<Provider<ModuleMetadataSpec.Variant>> variants = new ArrayList<>();
-        SoftwareComponentInternal softwareComponent = component.get();
-        VersionMappingStrategyInternal versionMappingStrategy = publication.getVersionMappingStrategy();
-        checker.checkComponent(softwareComponent);
-        for (SoftwareComponentVariant variant : softwareComponent.getUsages()) {
-            checkVariant(variant);
-            variants.add(dependencyCoordinateResolverFactory.createCoordinateResolvers(variant, versionMappingStrategy).map(resolvers ->
-                new ModuleMetadataSpec.LocalVariant(
-                    variant.getName(),
-                    attributesFor(variant.getAttributes()),
-                    capabilitiesFor(variant.getCapabilities()),
-                    dependenciesOf(variant, resolvers.getComponentResolver()),
-                    dependencyConstraintsFor(variant, resolvers.getComponentResolver()),
-                    artifactsOf(variant)
-                ))
-            );
+    private fun variants(): Provider<MutableList<ModuleMetadataSpec.Variant?>?> {
+        val variants: MutableList<Provider<ModuleMetadataSpec.Variant?>?> = ArrayList<Provider<ModuleMetadataSpec.Variant?>?>()
+        val softwareComponent = component.get()
+        val versionMappingStrategy = publication.getVersionMappingStrategy()
+        checker.checkComponent(softwareComponent)
+        for (variant in softwareComponent.getUsages()) {
+            checkVariant(variant)
+            variants.add(
+                dependencyCoordinateResolverFactory.createCoordinateResolvers(variant, versionMappingStrategy)
+                    .map<ModuleMetadataSpec.Variant?>(Transformer { resolvers: DependencyCoordinateResolverFactory.DependencyResolvers? ->
+                        ModuleMetadataSpec.LocalVariant(
+                            variant.getName(),
+                            attributesFor(variant.getAttributes()),
+                            capabilitiesFor(variant.getCapabilities()),
+                            dependenciesOf(variant, resolvers!!.getComponentResolver()),
+                            dependencyConstraintsFor(variant, resolvers.getComponentResolver()),
+                            artifactsOf(variant)
+                        )
+                    })
+            )
         }
-        if (softwareComponent instanceof ComponentWithVariants) {
-            for (SoftwareComponent childComponent : ((ComponentWithVariants) softwareComponent).getVariants()) {
-                checker.checkComponent(childComponent);
-                ModuleVersionIdentifier childCoordinates = coordinatesOf(childComponent);
-                assert childCoordinates != null;
-                if (childComponent instanceof SoftwareComponentInternal) {
-                    for (SoftwareComponentVariant variant : ((SoftwareComponentInternal) childComponent).getUsages()) {
-                        checkVariant(variant);
-                        variants.add(Providers.of(
-                            new ModuleMetadataSpec.RemoteVariant(
-                                variant.getName(),
-                                attributesFor(variant.getAttributes()),
-                                availableAt(publicationCoordinates, childCoordinates),
-                                capabilitiesFor(variant.getCapabilities())
+        if (softwareComponent is ComponentWithVariants) {
+            for (childComponent in (softwareComponent as ComponentWithVariants).getVariants()) {
+                checker.checkComponent(childComponent)
+                val childCoordinates: ModuleVersionIdentifier? = checkNotNull(coordinatesOf(childComponent))
+                if (childComponent is SoftwareComponentInternal) {
+                    for (variant in childComponent.getUsages()) {
+                        checkVariant(variant)
+                        variants.add(
+                            Providers.of<ModuleMetadataSpec.Variant?>(
+                                ModuleMetadataSpec.RemoteVariant(
+                                    variant.getName(),
+                                    attributesFor(variant.getAttributes()),
+                                    availableAt(publicationCoordinates, childCoordinates!!),
+                                    capabilitiesFor(variant.getCapabilities())
+                                )
                             )
-                        ));
+                        )
                     }
                 }
             }
         }
-        return new MergeProvider<>(variants);
+        return MergeProvider<ModuleMetadataSpec.Variant?>(variants)
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<ModuleMetadataSpec.Artifact> artifactsOf(SoftwareComponentVariant variant) {
+    private fun artifactsOf(variant: SoftwareComponentVariant): MutableList<ModuleMetadataSpec.Artifact?> {
         if (variant.getArtifacts().isEmpty()) {
-            return emptyList();
+            return mutableListOf<ModuleMetadataSpec.Artifact?>()
         }
-        ArrayList<ModuleMetadataSpec.Artifact> artifacts = new ArrayList<>();
-        for (PublishArtifact artifact : variant.getArtifacts()) {
-            ModuleMetadataSpec.Artifact metadataArtifact = artifactFor(artifact);
+        val artifacts = ArrayList<ModuleMetadataSpec.Artifact?>()
+        for (artifact in variant.getArtifacts()) {
+            val metadataArtifact = artifactFor(artifact)
             if (metadataArtifact != null) {
-                artifacts.add(metadataArtifact);
+                artifacts.add(metadataArtifact)
             }
         }
-        return artifacts;
+        return artifacts
     }
 
-    private ModuleMetadataSpec.@Nullable Artifact artifactFor(PublishArtifact artifact) {
+    private fun artifactFor(artifact: PublishArtifact): ModuleMetadataSpec.Artifact? {
         if (shouldNotBePublished(artifact)) {
-            return null;
+            return null
         }
-        PublicationInternal.PublishedFile publishedFile = publication.getPublishedFile(artifact);
-        return new ModuleMetadataSpec.Artifact(
+        val publishedFile = publication.getPublishedFile(artifact)
+        return ModuleMetadataSpec.Artifact(
             publishedFile.getName(),
             publishedFile.getUri(),
             artifact.getFile()
-        );
+        )
     }
 
-    private boolean shouldNotBePublished(PublishArtifact artifact) {
-        return !PublishArtifactInternal.shouldBePublished(artifact);
+    private fun shouldNotBePublished(artifact: PublishArtifact?): Boolean {
+        return !PublishArtifactInternal.shouldBePublished(artifact)
     }
 
-    private ModuleMetadataSpec.AvailableAt availableAt(ModuleVersionIdentifier coordinates, ModuleVersionIdentifier targetCoordinates) {
-        if (coordinates.getModule().equals(targetCoordinates.getModule())) {
-            throw new InvalidUserCodeException("Cannot have a remote variant with coordinates '" + targetCoordinates.getModule() + "' that are the same as the module itself.");
+    private fun availableAt(coordinates: ModuleVersionIdentifier, targetCoordinates: ModuleVersionIdentifier): ModuleMetadataSpec.AvailableAt {
+        if (coordinates.getModule() == targetCoordinates.getModule()) {
+            throw InvalidUserCodeException("Cannot have a remote variant with coordinates '" + targetCoordinates.getModule() + "' that are the same as the module itself.")
         }
-        return new ModuleMetadataSpec.AvailableAt(
+        return ModuleMetadataSpec.AvailableAt(
             relativeUrlTo(coordinates, targetCoordinates),
             targetCoordinates
-        );
+        )
     }
 
-    private ModuleMetadataSpec.Dependency dependencyFor(
-        ModuleDependency dependency,
-        Set<ExcludeRule> additionalExcludes,
-        ComponentDependencyResolver dependencyResolver,
-        DependencyArtifact dependencyArtifact,
-        String variant
-    ) {
-        ModuleMetadataSpec.DependencyCoordinates coordinates = dependencyCoordinatesFor(dependency, dependencyResolver);
-        return new ModuleMetadataSpec.Dependency(
+    private fun dependencyFor(
+        dependency: ModuleDependency,
+        additionalExcludes: MutableSet<ExcludeRule?>,
+        dependencyResolver: ComponentDependencyResolver,
+        dependencyArtifact: DependencyArtifact?,
+        variant: String?
+    ): ModuleMetadataSpec.Dependency {
+        val coordinates = dependencyCoordinatesFor(dependency, dependencyResolver)
+        return ModuleMetadataSpec.Dependency(
             coordinates,
             excludedRulesFor(dependency, additionalExcludes),
             dependencyAttributesFor(variant, coordinates.group, coordinates.name, dependency.getAttributes()),
             capabilitySelectorsFor(dependency.getCapabilitySelectors(), coordinates),
             dependency.isEndorsingStrictVersions(),
-            isNotEmpty(dependency.getReason()) ? dependency.getReason() : null,
-            dependencyArtifact != null ? artifactSelectorFor(dependencyArtifact) : null
-        );
+            if (StringUtils.isNotEmpty(dependency.getReason())) dependency.getReason() else null,
+            if (dependencyArtifact != null) artifactSelectorFor(dependencyArtifact) else null
+        )
     }
 
-    private ModuleMetadataSpec.DependencyConstraint dependencyConstraintFor(
-        DependencyConstraint dependencyConstraint,
-        ComponentDependencyResolver dependencyResolver,
-        String variant
-    ) {
-        ModuleMetadataSpec.DependencyCoordinates coordinates = dependencyConstraintCoordinatesFor(dependencyConstraint, dependencyResolver);
-        return new ModuleMetadataSpec.DependencyConstraint(
+    private fun dependencyConstraintFor(
+        dependencyConstraint: DependencyConstraint,
+        dependencyResolver: ComponentDependencyResolver,
+        variant: String?
+    ): ModuleMetadataSpec.DependencyConstraint {
+        val coordinates = dependencyConstraintCoordinatesFor(dependencyConstraint, dependencyResolver)
+        return ModuleMetadataSpec.DependencyConstraint(
             coordinates,
             dependencyAttributesFor(variant, coordinates.group, coordinates.name, dependencyConstraint.getAttributes()),
-            isNotEmpty(dependencyConstraint.getReason()) ? dependencyConstraint.getReason() : null
-        );
+            if (StringUtils.isNotEmpty(dependencyConstraint.getReason())) dependencyConstraint.getReason() else null
+        )
     }
 
-    private ModuleMetadataSpec.DependencyCoordinates dependencyCoordinatesFor(
-        ModuleDependency dependency,
-        ComponentDependencyResolver resolver
-    ) {
-        if (dependency instanceof ProjectDependency) {
-            ResolvedCoordinates identifier = resolver.resolveComponentCoordinates((ProjectDependency) dependency);
-            return projectDependencyCoordinatesFor(identifier);
-        } else if (dependency instanceof ExternalDependency) {
-            ResolvedCoordinates identifier = resolver.resolveComponentCoordinates((ExternalDependency) dependency);
+    private fun dependencyCoordinatesFor(
+        dependency: ModuleDependency,
+        resolver: ComponentDependencyResolver
+    ): ModuleMetadataSpec.DependencyCoordinates {
+        if (dependency is ProjectDependency) {
+            val identifier = resolver.resolveComponentCoordinates(dependency)
+            return projectDependencyCoordinatesFor(identifier)
+        } else if (dependency is ExternalDependency) {
+            var identifier = resolver.resolveComponentCoordinates(dependency)
             if (identifier == null) {
-                identifier = ResolvedCoordinates.create(dependency.getGroup(), dependency.getName(), null);
+                identifier = ResolvedCoordinates.Companion.create(dependency.getGroup(), dependency.getName(), null)
             }
-            return moduleDependencyCoordinatesFor(identifier, ((ExternalDependency) dependency).getVersionConstraint());
+            return moduleDependencyCoordinatesFor(identifier!!, dependency.getVersionConstraint())
         } else {
-            throw new UnsupportedOperationException("Unsupported dependency type: " + dependency.getClass().getName());
+            throw UnsupportedOperationException("Unsupported dependency type: " + dependency.javaClass.getName())
         }
     }
 
-    private ModuleMetadataSpec.DependencyCoordinates dependencyConstraintCoordinatesFor(
-        DependencyConstraint dependencyConstraint,
-        ComponentDependencyResolver resolver
-    ) {
-        if (dependencyConstraint instanceof DefaultProjectDependencyConstraint) {
-            ResolvedCoordinates identifier = resolver.resolveComponentCoordinates((DefaultProjectDependencyConstraint) dependencyConstraint);
-            return projectDependencyCoordinatesFor(identifier);
+    private fun dependencyConstraintCoordinatesFor(
+        dependencyConstraint: DependencyConstraint,
+        resolver: ComponentDependencyResolver
+    ): ModuleMetadataSpec.DependencyCoordinates {
+        if (dependencyConstraint is DefaultProjectDependencyConstraint) {
+            val identifier = resolver.resolveComponentCoordinates(dependencyConstraint)
+            return projectDependencyCoordinatesFor(identifier)
         } else {
-            ResolvedCoordinates identifier = resolver.resolveComponentCoordinates(dependencyConstraint);
+            var identifier = resolver.resolveComponentCoordinates(dependencyConstraint)
             if (identifier == null) {
-                identifier = ResolvedCoordinates.create(dependencyConstraint.getGroup(), dependencyConstraint.getName(), null);
+                identifier = ResolvedCoordinates.Companion.create(dependencyConstraint.getGroup(), dependencyConstraint.getName(), null)
             }
-            return moduleDependencyCoordinatesFor(identifier, dependencyConstraint.getVersionConstraint());
+            return moduleDependencyCoordinatesFor(identifier!!, dependencyConstraint.getVersionConstraint())
         }
     }
 
-    private ModuleMetadataSpec.DependencyCoordinates moduleDependencyCoordinatesFor(ResolvedCoordinates identifier, VersionConstraint dependencyConstraint) {
-        ImmutableVersionConstraint constraint = DefaultImmutableVersionConstraint.of(dependencyConstraint);
-        ModuleMetadataSpec.Version version = versionFor(constraint, identifier.getVersion());
+    private fun moduleDependencyCoordinatesFor(identifier: ResolvedCoordinates, dependencyConstraint: VersionConstraint): ModuleMetadataSpec.DependencyCoordinates {
+        val constraint = of(dependencyConstraint)
+        val version = versionFor(constraint, identifier.getVersion())
 
-        return new ModuleMetadataSpec.DependencyCoordinates(identifier.getGroup(), identifier.getName(), version);
+        return ModuleMetadataSpec.DependencyCoordinates(identifier.getGroup(), identifier.getName(), version)
     }
 
-    private ModuleMetadataSpec.DependencyCoordinates projectDependencyCoordinatesFor(ResolvedCoordinates identifier) {
-        ImmutableVersionConstraint constraint = DefaultImmutableVersionConstraint.of(identifier.getVersion());
-        ModuleMetadataSpec.Version version = versionFor(constraint, identifier.getVersion());
+    private fun projectDependencyCoordinatesFor(identifier: ResolvedCoordinates): ModuleMetadataSpec.DependencyCoordinates {
+        val constraint = of(identifier.getVersion())
+        val version = versionFor(constraint, identifier.getVersion())
 
-        return new ModuleMetadataSpec.DependencyCoordinates(identifier.getGroup(), identifier.getName(), version);
+        return ModuleMetadataSpec.DependencyCoordinates(identifier.getGroup(), identifier.getName(), version)
     }
 
-    private ModuleMetadataSpec.ArtifactSelector artifactSelectorFor(DependencyArtifact dependencyArtifact) {
-        return new ModuleMetadataSpec.ArtifactSelector(
+    private fun artifactSelectorFor(dependencyArtifact: DependencyArtifact): ModuleMetadataSpec.ArtifactSelector {
+        return ModuleMetadataSpec.ArtifactSelector(
             dependencyArtifact.getName(),
             dependencyArtifact.getType(),
-            dependencyArtifact.getExtension() == null ? dependencyArtifact.getType() : dependencyArtifact.getExtension(),
-            isNullOrEmpty(dependencyArtifact.getClassifier()) ? null : dependencyArtifact.getClassifier()
-        );
+            if (dependencyArtifact.getExtension() == null) dependencyArtifact.getType() else dependencyArtifact.getExtension(),
+            if (Strings.isNullOrEmpty(dependencyArtifact.getClassifier())) null else dependencyArtifact.getClassifier()
+        )
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<ModuleMetadataSpec.Capability> capabilitiesFor(Collection<? extends Capability> capabilities) {
+    private fun capabilitiesFor(capabilities: MutableCollection<out Capability>): MutableList<ModuleMetadataSpec.Capability?> {
         if (capabilities.isEmpty()) {
-            return emptyList();
+            return mutableListOf<ModuleMetadataSpec.Capability?>()
         }
 
-        ArrayList<ModuleMetadataSpec.Capability> metadataCapabilities = new ArrayList<>();
-        for (Capability capability : capabilities) {
+        val metadataCapabilities = ArrayList<ModuleMetadataSpec.Capability?>()
+        for (capability in capabilities) {
             metadataCapabilities.add(
-                new ModuleMetadataSpec.Capability(
+                ModuleMetadataSpec.Capability(
                     capability.getGroup(),
                     capability.getName(),
-                    isNotEmpty(capability.getVersion()) ? capability.getVersion() : null
+                    if (StringUtils.isNotEmpty(capability.getVersion())) capability.getVersion() else null
                 )
-            );
+            )
         }
-        return metadataCapabilities;
+        return metadataCapabilities
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private static List<ModuleMetadataSpec.Capability> capabilitySelectorsFor(
-        Set<CapabilitySelector> capabilitySelectors,
-        ModuleMetadataSpec.DependencyCoordinates targetComponent
-    ) {
-        if (capabilitySelectors.isEmpty()) {
-            return emptyList();
-        }
-
-        ArrayList<ModuleMetadataSpec.Capability> metadataCapabilities = new ArrayList<>();
-        for (CapabilitySelector capabilitySelector : capabilitySelectors) {
-            metadataCapabilities.add(resolveCapability(targetComponent, capabilitySelector));
-        }
-        return metadataCapabilities;
-    }
-
-    private static ModuleMetadataSpec.Capability resolveCapability(
-        ModuleMetadataSpec.DependencyCoordinates componentCoordinates,
-        CapabilitySelector capabilitySelector
-    ) {
-        if (capabilitySelector instanceof SpecificCapabilitySelector) {
-            SpecificCapabilitySelector specificSelector = (SpecificCapabilitySelector) capabilitySelector;
-            return new ModuleMetadataSpec.Capability(
-                specificSelector.getGroup(),
-                specificSelector.getName(),
-                null
-            );
-        } else if (capabilitySelector instanceof FeatureCapabilitySelector) {
-            FeatureCapabilitySelector featureSelector = (FeatureCapabilitySelector) capabilitySelector;
-            return new ModuleMetadataSpec.Capability(
-                componentCoordinates.group,
-                componentCoordinates.name + "-" + featureSelector.getFeatureName(),
-                null
-            );
-        } else {
-            throw new UnsupportedOperationException("Unsupported capability selector type: " + capabilitySelector.getClass().getName());
-        }
-    }
-
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<ModuleMetadataSpec.Attribute> attributesFor(AttributeContainer attributes) {
+    private fun attributesFor(attributes: AttributeContainer): MutableList<ModuleMetadataSpec.Attribute?> {
         if (attributes.isEmpty()) {
-            return emptyList();
+            return mutableListOf<ModuleMetadataSpec.Attribute?>()
         }
 
-        ArrayList<ModuleMetadataSpec.Attribute> metadataAttributes = new ArrayList<>();
-        for (Attribute<?> attribute : sorted(attributes).values()) {
-            String name = attribute.getName();
-            Object value = attributes.getAttribute(attribute);
-            Object effectiveValue = attributeValueFor(value);
-            if (effectiveValue == null) {
-                throw new IllegalArgumentException(
-                    format("Cannot write attribute %s with unsupported value %s of type %s.", name, value, value.getClass().getName())
-                );
-            }
+        val metadataAttributes = ArrayList<ModuleMetadataSpec.Attribute?>()
+        for (attribute in sorted(attributes).values) {
+            val name = attribute.getName()
+            val value: Any? = attributes.getAttribute(attribute)
+            val effectiveValue = attributeValueFor(value!!)
+            requireNotNull(effectiveValue) { String.format("Cannot write attribute %s with unsupported value %s of type %s.", name, value, value.javaClass.getName()) }
             metadataAttributes.add(
-                new ModuleMetadataSpec.Attribute(name, effectiveValue)
-            );
+                ModuleMetadataSpec.Attribute(name, effectiveValue)
+            )
         }
-        return metadataAttributes;
+        return metadataAttributes
     }
 
-    private List<ModuleMetadataSpec.Attribute> dependencyAttributesFor(String variant, String group, String name, AttributeContainer attributes) {
-        checker.validateAttributes(variant, group, name, attributes);
-        return attributesFor(attributes);
+    private fun dependencyAttributesFor(variant: String?, group: String?, name: String?, attributes: AttributeContainer): MutableList<ModuleMetadataSpec.Attribute?> {
+        checker.validateAttributes(variant, group, name, attributes)
+        return attributesFor(attributes)
     }
 
-    private Object attributeValueFor(Object value) {
-        if (value instanceof Boolean || value instanceof Integer || value instanceof String) {
-            return value;
-        } else if (value instanceof Named) {
-            return ((Named) value).getName();
-        } else if (value instanceof Enum) {
-            return ((Enum<?>) value).name();
+    private fun attributeValueFor(value: Any): Any {
+        if (value is Boolean || value is Int || value is String) {
+            return value
+        } else if (value is Named) {
+            return value.getName()
+        } else if (value is Enum<*>) {
+            return value.name
         } else {
-            return null;
+            return null
         }
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<ModuleMetadataSpec.Dependency> dependenciesOf(SoftwareComponentVariant variant, ComponentDependencyResolver dependencyResolver) {
+    private fun dependenciesOf(variant: SoftwareComponentVariant, dependencyResolver: ComponentDependencyResolver): MutableList<ModuleMetadataSpec.Dependency?> {
         if (variant.getDependencies().isEmpty()) {
-            return emptyList();
+            return mutableListOf<ModuleMetadataSpec.Dependency?>()
         }
-        ArrayList<ModuleMetadataSpec.Dependency> dependencies = new ArrayList<>();
-        Set<ExcludeRule> additionalExcludes = variant.getGlobalExcludes();
-        for (ModuleDependency moduleDependency : variant.getDependencies()) {
+        val dependencies = ArrayList<ModuleMetadataSpec.Dependency?>()
+        val additionalExcludes: MutableSet<ExcludeRule?> = variant.getGlobalExcludes()
+        for (moduleDependency in variant.getDependencies()) {
             if (moduleDependency.getArtifacts().isEmpty()) {
                 dependencies.add(
                     dependencyFor(
@@ -410,151 +348,195 @@ public class ModuleMetadataSpecBuilder {
                         additionalExcludes,
                         dependencyResolver,
                         null,
-                        variant.getName())
-                );
+                        variant.getName()
+                    )
+                )
             } else {
-                for (DependencyArtifact dependencyArtifact : moduleDependency.getArtifacts()) {
+                for (dependencyArtifact in moduleDependency.getArtifacts()) {
                     dependencies.add(
                         dependencyFor(
                             moduleDependency,
                             additionalExcludes,
                             dependencyResolver,
                             dependencyArtifact,
-                            variant.getName())
-                    );
+                            variant.getName()
+                        )
+                    )
                 }
             }
         }
-        return dependencies;
+        return dependencies
     }
 
-    @SuppressWarnings("MixedMutabilityReturnType")
-    private List<ModuleMetadataSpec.DependencyConstraint> dependencyConstraintsFor(SoftwareComponentVariant variant, ComponentDependencyResolver dependencyResolver) {
+    private fun dependencyConstraintsFor(variant: SoftwareComponentVariant, dependencyResolver: ComponentDependencyResolver): MutableList<ModuleMetadataSpec.DependencyConstraint?> {
         if (variant.getDependencyConstraints().isEmpty()) {
-            return emptyList();
+            return mutableListOf<ModuleMetadataSpec.DependencyConstraint?>()
         }
-        ArrayList<ModuleMetadataSpec.DependencyConstraint> dependencyConstraints = new ArrayList<>();
-        for (DependencyConstraint dependencyConstraint : variant.getDependencyConstraints()) {
+        val dependencyConstraints = ArrayList<ModuleMetadataSpec.DependencyConstraint?>()
+        for (dependencyConstraint in variant.getDependencyConstraints()) {
             dependencyConstraints.add(
                 dependencyConstraintFor(dependencyConstraint, dependencyResolver, variant.getName())
-            );
+            )
         }
-        return dependencyConstraints;
+        return dependencyConstraints
     }
 
-    private ModuleMetadataSpec.@Nullable Version versionFor(
-        ImmutableVersionConstraint versionConstraint,
-        @Nullable String resolvedVersion
-    ) {
-        checker.sawDependencyOrConstraint();
+    private fun versionFor(
+        versionConstraint: ImmutableVersionConstraint,
+        resolvedVersion: String?
+    ): ModuleMetadataSpec.Version? {
+        checker.sawDependencyOrConstraint()
         if (resolvedVersion == null && isEmpty(versionConstraint)) {
-            return null;
+            return null
         }
-        checker.sawVersion();
+        checker.sawVersion()
 
-        boolean isStrict = !versionConstraint.getStrictVersion().isEmpty();
-        String version;
-        String preferred;
+        val isStrict = !versionConstraint.getStrictVersion().isEmpty()
+        val version: String?
+        val preferred: String?
         if (resolvedVersion != null) {
-            version = resolvedVersion;
-            preferred = null;
+            version = resolvedVersion
+            preferred = null
         } else {
-            version = isStrict
-                ? versionConstraint.getStrictVersion()
-                : !versionConstraint.getRequiredVersion().isEmpty()
-                ? versionConstraint.getRequiredVersion()
-                : null;
-            preferred = !versionConstraint.getPreferredVersion().isEmpty()
-                ? versionConstraint.getPreferredVersion()
-                : null;
+            version = if (isStrict)
+                versionConstraint.getStrictVersion()
+            else
+                if (!versionConstraint.getRequiredVersion().isEmpty())
+                    versionConstraint.getRequiredVersion()
+                else
+                    null
+            preferred = if (!versionConstraint.getPreferredVersion().isEmpty())
+                versionConstraint.getPreferredVersion()
+            else
+                null
         }
-        return new ModuleMetadataSpec.Version(
+        return ModuleMetadataSpec.Version(
             version,
-            isStrict ? version : null,
+            if (isStrict) version else null,
             preferred,
             versionConstraint.getRejectedVersions()
-        );
+        )
     }
 
-    private static void collectOwners(
-        Collection<? extends PublicationInternal<?>> publications,
-        Map<SoftwareComponent, SoftwareComponent> owners
-    ) {
-        for (PublicationInternal<?> publication : publications) {
-            SoftwareComponent component = publication.component.getOrNull();
-            if (component instanceof ComponentWithVariants) {
-                ComponentWithVariants componentWithVariants = (ComponentWithVariants) component;
-                for (SoftwareComponent child : componentWithVariants.getVariants()) {
-                    owners.put(child, component);
-                }
-            }
-        }
-    }
-
-    private void collectCoordinates(Map<SoftwareComponent, ComponentData> coordinates) {
-        for (PublicationInternal<?> publication : publications) {
-            SoftwareComponentInternal component = publication.component.getOrNull();
+    private fun collectCoordinates(coordinates: MutableMap<SoftwareComponent?, ComponentData?>) {
+        for (publication in publications) {
+            val component: SoftwareComponentInternal? = publication.component.getOrNull()
             if (component != null) {
                 coordinates.put(
                     component,
-                    new ComponentData(publication.getCoordinates(), publication.getAttributes())
-                );
+                    ComponentData(publication.getCoordinates(), publication.getAttributes())
+                )
             }
         }
     }
 
-    private void checkVariant(SoftwareComponentVariant variant) {
+    private fun checkVariant(variant: SoftwareComponentVariant) {
         checker.registerVariant(
             variant.getName(),
             variant.getAttributes(),
             variant.getCapabilities()
-        );
+        )
     }
 
-    private Set<ExcludeRule> excludedRulesFor(ModuleDependency moduleDependency, Set<ExcludeRule> additionalExcludes) {
-        return moduleDependency.isTransitive()
-            ? Sets.union(additionalExcludes, moduleDependency.getExcludeRules())
-            : Collections.singleton(new DefaultExcludeRule(null, null));
+    private fun excludedRulesFor(moduleDependency: ModuleDependency, additionalExcludes: MutableSet<ExcludeRule?>): MutableSet<ExcludeRule?> {
+        return if (moduleDependency.isTransitive())
+            Sets.union<ExcludeRule?>(additionalExcludes, moduleDependency.getExcludeRules())
+        else mutableSetOf<ExcludeRule?>(DefaultExcludeRule(null, null))
     }
 
-    private Map<String, Attribute<?>> sorted(AttributeContainer attributes) {
-        Map<String, Attribute<?>> sortedAttributes = new TreeMap<>();
-        for (Attribute<?> attribute : attributes.keySet()) {
-            sortedAttributes.put(attribute.getName(), attribute);
+    private fun sorted(attributes: AttributeContainer): MutableMap<String?, Attribute<*>> {
+        val sortedAttributes: MutableMap<String?, Attribute<*>> = TreeMap<String?, Attribute<*>>()
+        for (attribute in attributes.keySet()) {
+            sortedAttributes.put(attribute.getName(), attribute)
         }
-        return sortedAttributes;
+        return sortedAttributes
     }
 
-    private ModuleVersionIdentifier coordinatesOf(SoftwareComponent childComponent) {
-        if (childComponent instanceof ComponentWithCoordinates) {
-            return ((ComponentWithCoordinates) childComponent).getCoordinates();
+    private fun coordinatesOf(childComponent: SoftwareComponent?): ModuleVersionIdentifier? {
+        if (childComponent is ComponentWithCoordinates) {
+            return childComponent.getCoordinates()
         }
-        ComponentData componentData = componentCoordinates.get(childComponent);
+        val componentData = componentCoordinates.get(childComponent)
         if (componentData != null) {
-            return componentData.coordinates;
+            return componentData.coordinates
         }
-        return null;
+        return null
     }
 
-    private boolean isEmpty(ImmutableVersionConstraint versionConstraint) {
-        return DefaultImmutableVersionConstraint.of().equals(versionConstraint);
+    private fun isEmpty(versionConstraint: ImmutableVersionConstraint?): Boolean {
+        return of() == versionConstraint
     }
 
-    public static String relativeUrlTo(
-        @SuppressWarnings("unused") ModuleVersionIdentifier from,
-        ModuleVersionIdentifier to
-    ) {
-        // TODO - do not assume Maven layout
-        StringBuilder path = new StringBuilder();
-        path.append("../../");
-        path.append(to.getName());
-        path.append("/");
-        path.append(to.getVersion());
-        path.append("/");
-        path.append(to.getName());
-        path.append("-");
-        path.append(to.getVersion());
-        path.append(".module");
-        return path.toString();
+    companion object {
+        private fun capabilitySelectorsFor(
+            capabilitySelectors: MutableSet<CapabilitySelector>,
+            targetComponent: ModuleMetadataSpec.DependencyCoordinates
+        ): MutableList<ModuleMetadataSpec.Capability?> {
+            if (capabilitySelectors.isEmpty()) {
+                return mutableListOf<ModuleMetadataSpec.Capability?>()
+            }
+
+            val metadataCapabilities = ArrayList<ModuleMetadataSpec.Capability?>()
+            for (capabilitySelector in capabilitySelectors) {
+                metadataCapabilities.add(resolveCapability(targetComponent, capabilitySelector))
+            }
+            return metadataCapabilities
+        }
+
+        private fun resolveCapability(
+            componentCoordinates: ModuleMetadataSpec.DependencyCoordinates,
+            capabilitySelector: CapabilitySelector
+        ): ModuleMetadataSpec.Capability {
+            if (capabilitySelector is SpecificCapabilitySelector) {
+                val specificSelector = capabilitySelector
+                return ModuleMetadataSpec.Capability(
+                    specificSelector.getGroup(),
+                    specificSelector.getName(),
+                    null
+                )
+            } else if (capabilitySelector is FeatureCapabilitySelector) {
+                val featureSelector = capabilitySelector
+                return ModuleMetadataSpec.Capability(
+                    componentCoordinates.group,
+                    componentCoordinates.name + "-" + featureSelector.getFeatureName(),
+                    null
+                )
+            } else {
+                throw UnsupportedOperationException("Unsupported capability selector type: " + capabilitySelector.javaClass.getName())
+            }
+        }
+
+        private fun collectOwners(
+            publications: MutableCollection<out PublicationInternal<*>>,
+            owners: MutableMap<SoftwareComponent?, SoftwareComponent?>
+        ) {
+            for (publication in publications) {
+                val component: SoftwareComponent? = publication.component.getOrNull()
+                if (component is ComponentWithVariants) {
+                    val componentWithVariants = component
+                    for (child in componentWithVariants.getVariants()) {
+                        owners.put(child, component)
+                    }
+                }
+            }
+        }
+
+        fun relativeUrlTo(
+            @Suppress("unused") from: ModuleVersionIdentifier?,
+            to: ModuleVersionIdentifier
+        ): String {
+            // TODO - do not assume Maven layout
+            val path = StringBuilder()
+            path.append("../../")
+            path.append(to.getName())
+            path.append("/")
+            path.append(to.getVersion())
+            path.append("/")
+            path.append(to.getName())
+            path.append("-")
+            path.append(to.getVersion())
+            path.append(".module")
+            return path.toString()
+        }
     }
 }

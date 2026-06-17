@@ -13,25 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyExtraInfo
+import org.gradle.api.internal.artifacts.ivyservice.NamespaceId
+import org.gradle.api.publish.ivy.IvyExtraInfoSpec
+import org.gradle.internal.xml.XmlValidation
 
-import org.gradle.api.internal.artifacts.ivyservice.DefaultIvyExtraInfo;
-import org.gradle.api.internal.artifacts.ivyservice.NamespaceId;
-import org.gradle.api.publish.ivy.IvyExtraInfoSpec;
-import org.gradle.internal.xml.XmlValidation;
-
-public class DefaultIvyExtraInfoSpec extends DefaultIvyExtraInfo implements IvyExtraInfoSpec {
-    public DefaultIvyExtraInfoSpec() {
-        super();
-    }
-
-    @Override
-    public void add(String namespace, String name, String value) {
+class DefaultIvyExtraInfoSpec : DefaultIvyExtraInfo(), IvyExtraInfoSpec {
+    override fun add(namespace: String, name: String, value: String) {
         if (XmlValidation.isValidXmlName(name)) {
-            extraInfo.put(new NamespaceId(namespace, name), value);
+            extraInfo.put(NamespaceId(namespace, name), value)
         } else {
-            throw new IllegalArgumentException(String.format("Invalid ivy extra info element name: '%s'", name));
+            throw IllegalArgumentException(String.format("Invalid ivy extra info element name: '%s'", name))
         }
     }
 }

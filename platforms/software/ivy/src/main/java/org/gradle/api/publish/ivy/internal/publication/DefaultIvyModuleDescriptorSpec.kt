@@ -13,154 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.XmlProvider
+import org.gradle.api.internal.UserCodeAction
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.publish.ivy.IvyConfiguration
+import org.gradle.api.publish.ivy.IvyExtraInfoSpec
+import org.gradle.api.publish.ivy.IvyModuleDescriptorAuthor
+import org.gradle.api.publish.ivy.IvyModuleDescriptorDescription
+import org.gradle.api.publish.ivy.IvyModuleDescriptorLicense
+import org.gradle.api.publish.ivy.internal.dependency.IvyDependency
+import org.gradle.api.publish.ivy.internal.dependency.IvyExcludeRule
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.internal.MutableActionSet
+import javax.inject.Inject
 
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.internal.UserCodeAction;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.IvyConfiguration;
-import org.gradle.api.publish.ivy.IvyExtraInfoSpec;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorAuthor;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorDescription;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorLicense;
-import org.gradle.api.publish.ivy.internal.dependency.IvyDependency;
-import org.gradle.api.publish.ivy.internal.dependency.IvyExcludeRule;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.internal.MutableActionSet;
-import org.jspecify.annotations.Nullable;
+abstract class DefaultIvyModuleDescriptorSpec @Inject constructor(private val objectFactory: ObjectFactory, private val ivyPublicationCoordinates: IvyPublicationCoordinates) :
+    IvyModuleDescriptorSpecInternal {
+    private val xmlActions = MutableActionSet<XmlProvider>()
+    var status: String? = null
+    var branch: String? = null
+    val extraInfo: IvyExtraInfoSpec = DefaultIvyExtraInfoSpec()
+    private val authors: MutableList<IvyModuleDescriptorAuthor> = ArrayList<IvyModuleDescriptorAuthor>()
+    private val licenses: MutableList<IvyModuleDescriptorLicense> = ArrayList<IvyModuleDescriptorLicense>()
+    private var description: IvyModuleDescriptorDescription? = null
 
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-
-public abstract class DefaultIvyModuleDescriptorSpec implements IvyModuleDescriptorSpecInternal {
-
-    private final MutableActionSet<XmlProvider> xmlActions = new MutableActionSet<>();
-    private final ObjectFactory objectFactory;
-    private final IvyPublicationCoordinates ivyPublicationCoordinates;
-    private String status;
-    private String branch;
-    private final IvyExtraInfoSpec extraInfo = new DefaultIvyExtraInfoSpec();
-    private final List<IvyModuleDescriptorAuthor> authors = new ArrayList<>();
-    private final List<IvyModuleDescriptorLicense> licenses = new ArrayList<>();
-    private IvyModuleDescriptorDescription description;
-
-    @Inject
-    public DefaultIvyModuleDescriptorSpec(ObjectFactory objectFactory, IvyPublicationCoordinates ivyPublicationCoordinates) {
-        this.objectFactory = objectFactory;
-        this.ivyPublicationCoordinates = ivyPublicationCoordinates;
-    }
-
-    @Nullable
-    @Override
-    public String getStatus() {
-        return status;
-    }
-
-    @Override
-    public void setStatus(@Nullable String status) {
-        this.status = status;
-    }
-
-    @Nullable
-    @Override
-    public String getBranch() {
-        return branch;
-    }
-
-    @Override
-    public void setBranch(@Nullable String branch) {
-        this.branch = branch;
-    }
-
-    @Override
-    public IvyExtraInfoSpec getExtraInfo() {
-        return extraInfo;
-    }
-
-    @Override
-    public void extraInfo(String namespace, String elementName, String value) {
+    override fun extraInfo(namespace: String, elementName: String, value: String) {
         if (elementName == null) {
-            throw new InvalidUserDataException("Cannot add an extra info element with null element name");
+            throw InvalidUserDataException("Cannot add an extra info element with null element name")
         }
         if (namespace == null) {
-            throw new InvalidUserDataException("Cannot add an extra info element with null namespace");
+            throw InvalidUserDataException("Cannot add an extra info element with null namespace")
         }
-        extraInfo.add(namespace, elementName, value);
+        extraInfo.add(namespace, elementName, value)
     }
 
-    @Override
-    public IvyPublicationCoordinates getCoordinates() {
-        return ivyPublicationCoordinates;
+    override fun getCoordinates(): IvyPublicationCoordinates {
+        return ivyPublicationCoordinates
     }
 
-    @Override
-    public void withXml(Action<? super XmlProvider> action) {
-        xmlActions.add(new UserCodeAction<>("Could not apply withXml() to Ivy module descriptor", action));
+    override fun withXml(action: Action<in XmlProvider>) {
+        xmlActions.add(UserCodeAction<XmlProvider?>("Could not apply withXml() to Ivy module descriptor", action))
     }
 
-    @Override
-    public Action<XmlProvider> getXmlAction() {
-        return xmlActions;
+    override fun getXmlAction(): Action<XmlProvider> {
+        return xmlActions
     }
 
-    @Override
-    public abstract SetProperty<IvyConfiguration> getConfigurations();
+    abstract override fun getConfigurations(): SetProperty<IvyConfiguration>?
 
-    @Override
-    public abstract SetProperty<IvyArtifact> getArtifacts();
+    abstract override fun getArtifacts(): SetProperty<IvyArtifact>?
 
-    @Override
-    public abstract SetProperty<IvyDependency> getDependencies();
+    abstract override fun getDependencies(): SetProperty<IvyDependency>?
 
-    @Override
-    public abstract SetProperty<IvyExcludeRule> getGlobalExcludes();
+    abstract override fun getGlobalExcludes(): SetProperty<IvyExcludeRule>?
 
-    @Override
-    public void license(Action<? super IvyModuleDescriptorLicense> action) {
-        configureAndAdd(IvyModuleDescriptorLicense.class, action, licenses);
+    override fun license(action: Action<in IvyModuleDescriptorLicense>) {
+        configureAndAdd<IvyModuleDescriptorLicense>(IvyModuleDescriptorLicense::class.java, action, licenses)
     }
 
-    @Override
-    public List<IvyModuleDescriptorLicense> getLicenses() {
-        return licenses;
+    override fun getLicenses(): MutableList<IvyModuleDescriptorLicense> {
+        return licenses
     }
 
-    @Override
-    public void author(Action<? super IvyModuleDescriptorAuthor> action) {
-        configureAndAdd(IvyModuleDescriptorAuthor.class, action, authors);
+    override fun author(action: Action<in IvyModuleDescriptorAuthor>) {
+        configureAndAdd<IvyModuleDescriptorAuthor>(IvyModuleDescriptorAuthor::class.java, action, authors)
     }
 
-    @Override
-    public List<IvyModuleDescriptorAuthor> getAuthors() {
-        return authors;
+    override fun getAuthors(): MutableList<IvyModuleDescriptorAuthor> {
+        return authors
     }
 
-    @Override
-    public void description(Action<? super IvyModuleDescriptorDescription> action) {
+    override fun description(action: Action<in IvyModuleDescriptorDescription>) {
         if (description == null) {
-            description = objectFactory.newInstance(IvyModuleDescriptorDescription.class);
+            description = objectFactory.newInstance<IvyModuleDescriptorDescription>(IvyModuleDescriptorDescription::class.java)
         }
-        action.execute(description);
+        action.execute(description)
     }
 
-    @Override
-    public IvyModuleDescriptorDescription getDescription() {
-        return description;
+    override fun getDescription(): IvyModuleDescriptorDescription {
+        return description!!
     }
 
-    @Override
-    public abstract Property<Boolean> getWriteGradleMetadataMarker();
+    abstract override fun getWriteGradleMetadataMarker(): Property<Boolean>?
 
-    private <T> void configureAndAdd(Class<? extends T> clazz, Action<? super T> action, List<T> items) {
-        T item = objectFactory.newInstance(clazz);
-        action.execute(item);
-        items.add(item);
+    private fun <T> configureAndAdd(clazz: Class<out T>, action: Action<in T>, items: MutableList<T?>) {
+        val item: T? = objectFactory.newInstance(clazz)
+        action.execute(item)
+        items.add(item)
     }
 }

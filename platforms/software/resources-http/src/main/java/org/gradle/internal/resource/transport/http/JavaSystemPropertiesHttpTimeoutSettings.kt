@@ -13,67 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.commons.lang3.StringUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.time.Duration
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+class JavaSystemPropertiesHttpTimeoutSettings : HttpTimeoutSettings {
+    private val connectionTimeoutMs: Int
+    private val socketTimeoutMs: Int
+    private val idleConnectionTimeoutMs: Int
 
-import java.time.Duration;
-
-public class JavaSystemPropertiesHttpTimeoutSettings implements HttpTimeoutSettings {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(JavaSystemPropertiesHttpTimeoutSettings.class);
-    public static final String CONNECTION_TIMEOUT_SYSTEM_PROPERTY = "org.gradle.internal.http.connectionTimeout";
-    public static final String SOCKET_TIMEOUT_SYSTEM_PROPERTY = "org.gradle.internal.http.socketTimeout";
-    public static final String IDLE_CONNECTION_TIMEOUT_SYSTEM_PROPERTY = "org.gradle.internal.http.idleConnectionTimeout";
-    public static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
-    public static final int DEFAULT_SOCKET_TIMEOUT = 30000;
-    /**
-     * The default time in milliseconds for an idle connection to remain open.
-     * <a href="https://azure.microsoft.com/en-us/blog/new-configurable-idle-timeout-for-azure-load-balancer/">Microsoft Azure closes idle connections after 4 min</a>,
-     * so we set our default to be below that.
-     */
-    public static final int DEFAULT_IDLE_CONNECTION_TIMEOUT = (int) Duration.ofMinutes(3).toMillis();
-
-    private final int connectionTimeoutMs;
-    private final int socketTimeoutMs;
-    private final int idleConnectionTimeoutMs;
-
-    public JavaSystemPropertiesHttpTimeoutSettings() {
-        this.connectionTimeoutMs = initTimeout(CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_CONNECTION_TIMEOUT);
-        this.socketTimeoutMs = initTimeout(SOCKET_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_SOCKET_TIMEOUT);
-        this.idleConnectionTimeoutMs = initTimeout(IDLE_CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_IDLE_CONNECTION_TIMEOUT);
+    init {
+        this.connectionTimeoutMs = initTimeout(CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_CONNECTION_TIMEOUT)
+        this.socketTimeoutMs = initTimeout(SOCKET_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_SOCKET_TIMEOUT)
+        this.idleConnectionTimeoutMs = initTimeout(IDLE_CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_IDLE_CONNECTION_TIMEOUT)
     }
 
-    @Override
-    public int getConnectionTimeoutMs() {
-        return connectionTimeoutMs;
+    override fun getConnectionTimeoutMs(): Int {
+        return connectionTimeoutMs
     }
 
-    @Override
-    public int getSocketTimeoutMs() {
-        return socketTimeoutMs;
+    override fun getSocketTimeoutMs(): Int {
+        return socketTimeoutMs
     }
 
-    @Override
-    public int getIdleConnectionTimeoutMs() {
-        return idleConnectionTimeoutMs;
+    override fun getIdleConnectionTimeoutMs(): Int {
+        return idleConnectionTimeoutMs
     }
 
-    private int initTimeout(String propertyName, int defaultValue) {
-        String systemProperty = System.getProperty(propertyName);
+    private fun initTimeout(propertyName: String, defaultValue: Int): Int {
+        val systemProperty = System.getProperty(propertyName)
 
         if (!StringUtils.isBlank(systemProperty)) {
             try {
-                return Integer.parseInt(systemProperty);
-            } catch (NumberFormatException e) {
-                LOGGER.warn("Invalid value for java system property '{}': {}. Default timeout '{}' will be used.",
-                    propertyName, systemProperty, defaultValue);
+                return systemProperty!!.toInt()
+            } catch (e: NumberFormatException) {
+                LOGGER.warn(
+                    "Invalid value for java system property '{}': {}. Default timeout '{}' will be used.",
+                    propertyName, systemProperty, defaultValue
+                )
             }
         }
 
-        return defaultValue;
+        return defaultValue
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(JavaSystemPropertiesHttpTimeoutSettings::class.java)
+        const val CONNECTION_TIMEOUT_SYSTEM_PROPERTY: String = "org.gradle.internal.http.connectionTimeout"
+        const val SOCKET_TIMEOUT_SYSTEM_PROPERTY: String = "org.gradle.internal.http.socketTimeout"
+        const val IDLE_CONNECTION_TIMEOUT_SYSTEM_PROPERTY: String = "org.gradle.internal.http.idleConnectionTimeout"
+        const val DEFAULT_CONNECTION_TIMEOUT: Int = 30000
+        const val DEFAULT_SOCKET_TIMEOUT: Int = 30000
+
+        /**
+         * The default time in milliseconds for an idle connection to remain open.
+         * [Microsoft Azure closes idle connections after 4 min](https://azure.microsoft.com/en-us/blog/new-configurable-idle-timeout-for-azure-load-balancer/),
+         * so we set our default to be below that.
+         */
+        val DEFAULT_IDLE_CONNECTION_TIMEOUT: Int = Duration.ofMinutes(3).toMillis().toInt()
     }
 }

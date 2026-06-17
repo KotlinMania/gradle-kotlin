@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.authentication.aws
 
-package org.gradle.authentication.aws;
-
-import org.gradle.authentication.Authentication;
+import org.gradle.authentication.Authentication
 
 /**
  * Authentication scheme for digest access authentication over S3.
  *
  * @since 3.1
  */
-public interface AwsImAuthentication extends Authentication {
-}
+interface AwsImAuthentication : Authentication
 
 

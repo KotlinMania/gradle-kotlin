@@ -13,91 +13,91 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.plugins
 
-package org.gradle.api.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.DomainObjectCollectionInternal;
-import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal;
-import org.gradle.api.internal.plugins.BuildConfigurationRule;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
-import org.gradle.internal.Cast;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.language.base.plugins.LifecycleBasePlugin;
-
-import static org.gradle.api.artifacts.Dependency.ARCHIVES_CONFIGURATION;
-import static org.gradle.api.internal.artifacts.configurations.ConfigurationRolesForMigration.CONSUMABLE_TO_RETIRED;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConsumableConfiguration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.DomainObjectCollectionInternal
+import org.gradle.api.internal.artifacts.configurations.ConfigurationRolesForMigration
+import org.gradle.api.internal.artifacts.configurations.RoleBasedConfigurationContainerInternal
+import org.gradle.api.internal.plugins.BuildConfigurationRule
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateConfiguration
+import org.gradle.language.base.plugins.LifecycleBasePlugin
+import java.util.concurrent.Callable
 
 /**
- * <p>A {@link org.gradle.api.Plugin} which defines a basic project lifecycle and some common convention properties.</p>
  *
- * @see <a href="https://docs.gradle.org/current/userguide/base_plugin.html">Base plugin reference</a>
+ * A [Plugin] which defines a basic project lifecycle and some common convention properties.
+ *
+ * @see [Base plugin reference](https://docs.gradle.org/current/userguide/base_plugin.html)
  */
-public abstract class BasePlugin implements Plugin<Project> {
-    public static final String CLEAN_TASK_NAME = LifecycleBasePlugin.CLEAN_TASK_NAME;
-    public static final String ASSEMBLE_TASK_NAME = LifecycleBasePlugin.ASSEMBLE_TASK_NAME;
-    public static final String BUILD_GROUP = LifecycleBasePlugin.BUILD_GROUP;
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(LifecycleBasePlugin.class);
-        BasePluginExtension baseExtension = project.getExtensions().create("base", BasePluginExtension.class);
-        configureExtension(project, baseExtension);
-        configureBuildConfigurationRule(project);
-        configureArchiveDefaults(project, baseExtension);
-        configureConfigurations(project);
+abstract class BasePlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(LifecycleBasePlugin::class.java)
+        val baseExtension = project.getExtensions().create<BasePluginExtension>("base", BasePluginExtension::class.java)
+        configureExtension(project, baseExtension)
+        configureBuildConfigurationRule(project)
+        configureArchiveDefaults(project, baseExtension)
+        configureConfigurations(project)
     }
 
-    private void configureExtension(Project project, BasePluginExtension extension) {
-        extension.getArchivesName().convention(project.getName());
-        extension.getLibsDirectory().convention(project.getLayout().getBuildDirectory().dir("libs"));
-        extension.getDistsDirectory().convention(project.getLayout().getBuildDirectory().dir("distributions"));
+    private fun configureExtension(project: Project, extension: BasePluginExtension) {
+        extension.getArchivesName().convention(project.getName())
+        extension.getLibsDirectory().convention(project.getLayout().getBuildDirectory().dir("libs"))
+        extension.getDistsDirectory().convention(project.getLayout().getBuildDirectory().dir("distributions"))
     }
 
-    private void configureArchiveDefaults(final Project project, final BasePluginExtension extension) {
-        project.getTasks().withType(AbstractArchiveTask.class).configureEach(task -> {
-            task.getDestinationDirectory().convention(extension.getDistsDirectory());
+    private fun configureArchiveDefaults(project: Project, extension: BasePluginExtension) {
+        project.getTasks().withType<AbstractArchiveTask?>(AbstractArchiveTask::class.java).configureEach(Action { task: AbstractArchiveTask? ->
+            task!!.getDestinationDirectory().convention(extension.getDistsDirectory())
             task.getArchiveVersion().convention(
-                project.provider(() -> project.getVersion() == Project.DEFAULT_VERSION ? null : project.getVersion().toString())
-            );
-
-            task.getArchiveBaseName().convention(extension.getArchivesName());
-        });
+                project.provider<String?>(Callable { if (project.getVersion() === Project.DEFAULT_VERSION) null else project.getVersion().toString() })
+            )
+            task.getArchiveBaseName().convention(extension.getArchivesName())
+        })
     }
 
-    private void configureBuildConfigurationRule(Project project) {
-        project.getTasks().addRule(new BuildConfigurationRule(project.getConfigurations(), project.getTasks()));
+    private fun configureBuildConfigurationRule(project: Project) {
+        project.getTasks().addRule(BuildConfigurationRule(project.getConfigurations(), project.getTasks()))
     }
 
-    private void configureConfigurations(final Project project) {
-        RoleBasedConfigurationContainerInternal configurations = (RoleBasedConfigurationContainerInternal) project.getConfigurations();
-        ((ProjectInternal) project).getInternalStatus().convention("integration");
+    private fun configureConfigurations(project: Project) {
+        val configurations = project.getConfigurations() as RoleBasedConfigurationContainerInternal
+        (project as ProjectInternal).getInternalStatus().convention("integration")
 
-        final Configuration archivesConfiguration = configurations.migratingLocked(ARCHIVES_CONFIGURATION, CONSUMABLE_TO_RETIRED, conf -> {
-            conf.setDescription("Configuration for archive artifacts.");
-            DomainObjectCollectionInternal<PublishArtifact> artifacts = Cast.uncheckedCast(conf.getArtifacts());
-            artifacts.beforeCollectionChanges(artifact -> {
-                DeprecationLogger.deprecateConfiguration(ARCHIVES_CONFIGURATION)
+        val archivesConfiguration = configurations.migratingLocked(Dependency.ARCHIVES_CONFIGURATION, ConfigurationRolesForMigration.CONSUMABLE_TO_RETIRED, Action { conf: Configuration? ->
+            conf!!.setDescription("Configuration for archive artifacts.")
+            val artifacts: DomainObjectCollectionInternal<PublishArtifact?> = uncheckedCast<DomainObjectCollectionInternal<PublishArtifact?>?>(conf.getArtifacts())!!
+            artifacts.beforeCollectionChanges(Action { artifact: String? ->
+                deprecateConfiguration(Dependency.ARCHIVES_CONFIGURATION)
                     .forArtifactDeclaration()
-                    .withAdvice("Add artifacts as direct task dependencies of the 'assemble' task instead of declaring them in the " + ARCHIVES_CONFIGURATION + " configuration.")
+                    .withAdvice("Add artifacts as direct task dependencies of the 'assemble' task instead of declaring them in the " + Dependency.ARCHIVES_CONFIGURATION + " configuration.")!!
                     .willBecomeAnErrorInNextMajorGradleVersion()
-                    .withUpgradeGuideSection(9, "sec:archives-configuration")
-                    .nagUser();
-            });
-        });
+                    .withUpgradeGuideSection(9, "sec:archives-configuration")!!
+                    .nagUser()
+            })
+        })
 
-        configurations.consumable(Dependency.DEFAULT_CONFIGURATION, conf -> {
-            conf.setDescription("Configuration for default artifacts.");
-        });
+        configurations.consumable(Dependency.DEFAULT_CONFIGURATION, Action { conf: ConsumableConfiguration? ->
+            conf!!.setDescription("Configuration for default artifacts.")
+        })
 
-        project.getTasks().named(ASSEMBLE_TASK_NAME, task ->
-            task.dependsOn(archivesConfiguration.getAllArtifacts().getBuildDependencies())
-        );
+        project.getTasks().named(ASSEMBLE_TASK_NAME, Action { task: Task? -> task!!.dependsOn(archivesConfiguration.getAllArtifacts().getBuildDependencies()) }
+        )
     }
 
+    companion object {
+        val CLEAN_TASK_NAME: String = LifecycleBasePlugin.CLEAN_TASK_NAME
+        val ASSEMBLE_TASK_NAME: String = LifecycleBasePlugin.ASSEMBLE_TASK_NAME
+        val BUILD_GROUP: String = LifecycleBasePlugin.BUILD_GROUP
+    }
 }

@@ -13,30 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
-
-import org.gradle.api.Project;
-import org.gradle.api.reporting.ReportingExtension;
+import org.gradle.api.Project
 
 /**
  * Utility to calculate report titles for API documentation.
  *
- * TODO: This should be moved to java-base or similar as its only used by JVM-based plugins once the deprecated {@link ReportingExtension#getApiDocTitle()} is removed.
+ * TODO: This should be moved to java-base or similar as its only used by JVM-based plugins once the deprecated [ReportingExtension.getApiDocTitle] is removed.
  */
-public interface ReportUtilities {
-    /**
-     * Returns API title based on project name and version of the given project.
-     *
-     * @implNote Since the project version is eagerly read, changes to the project version do not affect the title after this method is called.
-     * In the future, if the project version was Provider-based, this method could be updated or inlined in each place its called.
-     */
-    static String getApiDocTitleFor(Project project) {
-        Object version = project.getVersion();
-        if (Project.DEFAULT_VERSION.equals(version)) {
-            return project.getName() + " API";
-        } else {
-            return project.getName() + " " + version + " API";
+interface ReportUtilities {
+    companion object {
+        /**
+         * Returns API title based on project name and version of the given project.
+         *
+         * @implNote Since the project version is eagerly read, changes to the project version do not affect the title after this method is called.
+         * In the future, if the project version was Provider-based, this method could be updated or inlined in each place its called.
+         */
+        fun getApiDocTitleFor(project: Project): String {
+            val version = project.getVersion()
+            if (Project.DEFAULT_VERSION == version) {
+                return project.getName() + " API"
+            } else {
+                return project.getName() + " " + version + " API"
+            }
         }
     }
 }

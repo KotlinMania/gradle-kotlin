@@ -13,43 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.compile
 
-package org.gradle.language.base.internal.compile;
-
-import org.gradle.language.base.compile.CompilerVersion;
-import org.gradle.util.internal.VersionNumber;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.language.base.compile.CompilerVersion
+import org.gradle.util.internal.VersionNumber
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
-public class DefaultCompilerVersion implements CompilerVersion {
-
-    private final String type;
-    private final String vendor;
-    private final VersionNumber version;
-
-    public DefaultCompilerVersion(String type, String vendor, VersionNumber version) {
-        this.type = type;
-        this.vendor = vendor;
-        this.version = version;
+class DefaultCompilerVersion(private val type: String, private val vendor: String, private val version: VersionNumber) : CompilerVersion {
+    override fun getType(): String {
+        return type
     }
 
-    @Override
-    public String getType() {
-        return type;
+    override fun getVendor(): String {
+        return vendor
     }
 
-    @Override
-    public String getVendor() {
-        return vendor;
+    override fun getVersion(): String {
+        return version.toString()
     }
 
-    @Override
-    public String getVersion() {
-        return version.toString();
-    }
-
-    @Override
-    public String toString() {
-        return "CompilerVersion{" + "type='" + type + '\'' + ", vendor='" + vendor + '\'' + ", version=" + version + '}';
+    override fun toString(): String {
+        return "CompilerVersion{" + "type='" + type + '\'' + ", vendor='" + vendor + '\'' + ", version=" + version + '}'
     }
 }

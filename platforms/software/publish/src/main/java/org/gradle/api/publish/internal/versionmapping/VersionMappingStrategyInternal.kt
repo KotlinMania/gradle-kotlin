@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.versionmapping;
+package org.gradle.api.publish.internal.versionmapping
 
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.publish.VersionMappingStrategy;
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.publish.VersionMappingStrategy
 
-public interface VersionMappingStrategyInternal extends VersionMappingStrategy {
-    void defaultResolutionConfiguration(String usage, String defaultConfiguration);
-    VariantVersionMappingStrategyInternal findStrategyForVariant(ImmutableAttributes variantAttributes);
+interface VersionMappingStrategyInternal : VersionMappingStrategy {
+    fun defaultResolutionConfiguration(usage: String, defaultConfiguration: String)
+    fun findStrategyForVariant(variantAttributes: ImmutableAttributes): VariantVersionMappingStrategyInternal?
 }

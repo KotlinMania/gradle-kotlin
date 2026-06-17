@@ -13,61 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.aws.s3
 
-package org.gradle.internal.resource.transport.aws.s3;
+import com.amazonaws.services.s3.model.S3Object
+import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.resource.transfer.ExternalResourceReadResponse;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.Date;
-
-public class S3Resource implements ExternalResourceReadResponse {
-
-    private final S3Object s3Object;
-    private final URI uri;
-
-    public S3Resource(S3Object s3Object, URI uri) {
-        this.s3Object = s3Object;
-        this.uri = uri;
+class S3Resource(private val s3Object: S3Object, val uRI: URI?) : ExternalResourceReadResponse {
+    @Throws(IOException::class)
+    override fun openStream(): InputStream? {
+        return s3Object.getObjectContent()
     }
 
-    @Override
-    public InputStream openStream() throws IOException {
-        return s3Object.getObjectContent();
+    val contentLength: Long
+        get() = s3Object.getObjectMetadata().getContentLength()
+
+    val isLocal: Boolean
+        get() = false
+
+    override fun getMetaData(): ExternalResourceMetaData {
+        val objectMetadata = s3Object.getObjectMetadata()
+        val lastModified = objectMetadata.getLastModified()
+        return DefaultExternalResourceMetaData(
+            this.uRI,
+            lastModified.getTime(),
+            this.contentLength,
+            s3Object.getObjectMetadata().getContentType(),
+            s3Object.getObjectMetadata().getETag(),
+            null
+        ) // Passing null for sha1 - TODO - consider using the etag which is an MD5 hash of the file (when less than 5Gb)
     }
 
-    public URI getURI() {
-        return uri;
-    }
-
-    public long getContentLength() {
-        return s3Object.getObjectMetadata().getContentLength();
-    }
-
-    public boolean isLocal() {
-        return false;
-    }
-
-    @Override
-    public ExternalResourceMetaData getMetaData() {
-        ObjectMetadata objectMetadata = s3Object.getObjectMetadata();
-        Date lastModified = objectMetadata.getLastModified();
-        return new DefaultExternalResourceMetaData(uri,
-                lastModified.getTime(),
-                getContentLength(),
-                s3Object.getObjectMetadata().getContentType(),
-                s3Object.getObjectMetadata().getETag(),
-                null); // Passing null for sha1 - TODO - consider using the etag which is an MD5 hash of the file (when less than 5Gb)
-    }
-
-    @Override
-    public void close() throws IOException {
-        s3Object.close();
+    @Throws(IOException::class)
+    override fun close() {
+        s3Object.close()
     }
 }

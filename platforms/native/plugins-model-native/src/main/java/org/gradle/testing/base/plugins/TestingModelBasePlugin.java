@@ -66,7 +66,7 @@ public abstract class TestingModelBasePlugin implements Plugin<Project> {
         void copyTestBinariesToGlobalContainer(BinaryContainer binaries, TestSuiteContainer testSuites) {
             for (TestSuiteSpec testSuite : testSuites.values()) {
                 for (BinarySpecInternal binary : testSuite.getBinaries().withType(BinarySpecInternal.class).values()) {
-                    binaries.put(binary.getProjectScopedName(), binary);
+                    binaries.put(binary.projectScopedName, binary);
                 }
             }
         }
@@ -76,12 +76,12 @@ public abstract class TestingModelBasePlugin implements Plugin<Project> {
             binaries.afterEach(new Action<TestSuiteBinarySpec>() {
                 @Override
                 public void execute(TestSuiteBinarySpec testSuiteBinary) {
-                    if (testSuiteBinary.isBuildable()) {
-                        if (testSuiteBinary.getTasks() instanceof TestSuiteTaskCollection) {
-                            testSuiteBinary.checkedBy(((TestSuiteTaskCollection) testSuiteBinary.getTasks()).getRun());
+                    if (testSuiteBinary.isBuildable) {
+                        if (testSuiteBinary.tasks instanceof TestSuiteTaskCollection) {
+                            testSuiteBinary.checkedBy(((TestSuiteTaskCollection) testSuiteBinary.tasks).getRun());
                         }
                         BinarySpec testedBinary = testSuiteBinary.getTestedBinary();
-                        if (testedBinary != null && testedBinary.isBuildable()) {
+                        if (testedBinary != null && testedBinary.isBuildable) {
                             testedBinary.checkedBy(testSuiteBinary.getCheckTask());
                         }
                     }
@@ -92,7 +92,7 @@ public abstract class TestingModelBasePlugin implements Plugin<Project> {
         @Finalize
         void attachBinariesCheckTasksToCheckLifecycle(@Path("tasks.check") Task checkTask, @Path("binaries") ModelMap<BinarySpec> binaries) {
             for (BinarySpec binary : binaries) {
-                if (binary.isBuildable()) {
+                if (binary.isBuildable) {
                     Task binaryCheckTask = binary.getCheckTask();
                     if (binaryCheckTask != null) {
                         checkTask.dependsOn(binaryCheckTask);

@@ -13,21 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.connector
 
-package org.gradle.internal.resource.connector;
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+@ServiceScope(Scope.Global::class)
+interface ResourceConnectorFactory {
+    val supportedProtocols: MutableSet<String?>?
 
-import java.util.Set;
+    val supportedAuthentication: MutableSet<Class<out Authentication?>?>?
 
-@ServiceScope(Scope.Global.class)
-public interface ResourceConnectorFactory {
-    Set<String> getSupportedProtocols();
-
-    Set<Class<? extends Authentication>> getSupportedAuthentication();
-
-    ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails);
+    fun createResourceConnector(connectionDetails: ResourceConnectorSpecification?): ExternalResourceConnector?
 }

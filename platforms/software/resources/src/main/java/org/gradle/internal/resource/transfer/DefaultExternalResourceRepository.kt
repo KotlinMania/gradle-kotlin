@@ -13,50 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
 
 
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-
-public class DefaultExternalResourceRepository implements ExternalResourceRepository {
-    private final String name;
-    private final ExternalResourceAccessor accessor;
-    private final ExternalResourceUploader uploader;
-    private final ExternalResourceLister lister;
-
-    public DefaultExternalResourceRepository(
-        String name,
-        ExternalResourceAccessor accessor,
-        ExternalResourceUploader uploader,
-        ExternalResourceLister lister
-    ) {
-        this.name = name;
-        this.accessor = accessor;
-        this.uploader = uploader;
-        this.lister = lister;
+class DefaultExternalResourceRepository(
+    private val name: String?,
+    private val accessor: ExternalResourceAccessor?,
+    private val uploader: ExternalResourceUploader?,
+    private val lister: ExternalResourceLister?
+) : ExternalResourceRepository {
+    override fun withProgressLogging(): ExternalResourceRepository {
+        return this
     }
 
-    @Override
-    public ExternalResourceRepository withProgressLogging() {
-        return this;
+    override fun resource(resource: ExternalResourceName?, revalidate: Boolean): ExternalResource {
+        return AccessorBackedExternalResource(resource, accessor, uploader, lister, revalidate)
     }
 
-    @Override
-    public ExternalResource resource(ExternalResourceName resource, boolean revalidate) {
-        return new AccessorBackedExternalResource(resource, accessor, uploader, lister, revalidate);
+    override fun resource(resource: ExternalResourceName?): ExternalResource {
+        return resource(resource, false)
     }
 
-    @Override
-    public ExternalResource resource(ExternalResourceName resource) {
-        return resource(resource, false);
+    override fun toString(): String {
+        return name!!
     }
-
-    @Override
-    public String toString() {
-        return name;
-    }
-
 }

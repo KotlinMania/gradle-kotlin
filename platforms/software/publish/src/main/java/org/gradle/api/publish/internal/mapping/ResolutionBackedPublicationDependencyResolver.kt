@@ -13,493 +13,422 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.mapping
 
-package org.gradle.api.publish.internal.mapping;
-
-import org.gradle.api.GradleException;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.artifacts.capability.CapabilitySelector;
-import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ComponentSelector;
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.component.ModuleComponentSelector;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentSelector;
-import org.gradle.api.artifacts.result.DependencyResult;
-import org.gradle.api.artifacts.result.ResolvedComponentResult;
-import org.gradle.api.artifacts.result.ResolvedDependencyResult;
-import org.gradle.api.artifacts.result.ResolvedVariantResult;
-import org.gradle.api.artifacts.result.UnresolvedDependencyResult;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ProjectComponentIdentifierInternal;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint;
-import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal;
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectDependencyPublicationResolver;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.AttributeDesugaring;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.publish.internal.validation.VariantWarningCollector;
-import org.gradle.internal.component.local.model.ProjectComponentSelectorInternal;
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Consumer;
+import org.gradle.api.GradleException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ModuleIdentifier
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.capability.CapabilitySelector
+import org.gradle.api.artifacts.component.ComponentSelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentSelector
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ProjectComponentIdentifierInternal
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.internal.artifacts.dependencies.ProjectDependencyInternal
+import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectDependencyPublicationResolver
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.attributes.AttributeDesugaring
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory.create
+import org.gradle.api.publish.internal.validation.VariantWarningCollector
+import org.gradle.internal.component.local.model.ProjectComponentSelectorInternal
+import org.gradle.util.Path
+import java.util.Objects
+import java.util.function.Consumer
 
 /**
- * A {@link VariantDependencyResolver} that analyzes a resolution result to determine the
+ * A [VariantDependencyResolver] that analyzes a resolution result to determine the
  * resolved coordinates for a given dependency.
  *
- * <p>The configuration being resolved should declare the same dependencies as the variant
+ *
+ * The configuration being resolved should declare the same dependencies as the variant
  * being published. Then, each outgoing edge of the analyzed resolution result will correspond
  * to each declared dependency on the published variant. We build a mapping from requested
  * coordinates to resolved coordinates. Then, when resolving individual variant or component
  * coordinates, we can look up in the map to determine what coordinates should be published
- * for a given declared dependency.</p>
+ * for a given declared dependency.
  */
-public class ResolutionBackedPublicationDependencyResolver implements VariantDependencyResolver, ComponentDependencyResolver {
+class ResolutionBackedPublicationDependencyResolver(
+    private val projectDependencyResolver: ProjectDependencyPublicationResolver,
+    private val moduleIdentifierFactory: ImmutableModuleIdentifierFactory,
+    rootComponent: ResolvedComponentResult,
+    rootVariant: ResolvedVariantResult,
+    private val attributeDesugaring: AttributeDesugaring
+) : VariantDependencyResolver, ComponentDependencyResolver {
+    private val mappings: ResolvedMappings
 
-    private final ProjectDependencyPublicationResolver projectDependencyResolver;
-    private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
-    private final AttributeDesugaring attributeDesugaring;
-
-    private final ResolvedMappings mappings;
-
-    public ResolutionBackedPublicationDependencyResolver(
-        ProjectDependencyPublicationResolver projectDependencyResolver,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory,
-        ResolvedComponentResult rootComponent,
-        ResolvedVariantResult rootVariant,
-        AttributeDesugaring attributeDesugaring
-    ) {
-        this.projectDependencyResolver = projectDependencyResolver;
-        this.moduleIdentifierFactory = moduleIdentifierFactory;
-        this.attributeDesugaring = attributeDesugaring;
-
-        this.mappings = calculateMappings(rootComponent, rootVariant, projectDependencyResolver, moduleIdentifierFactory);
+    init {
+        this.mappings = calculateMappings(
+            rootComponent, rootVariant,
+            projectDependencyResolver,
+            moduleIdentifierFactory
+        )
     }
 
-    private static ResolvedMappings calculateMappings(
-        ResolvedComponentResult rootComponent,
-        ResolvedVariantResult rootVariant,
-        ProjectDependencyPublicationResolver projectDependencyResolver,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory
-    ) {
-        Set<ModuleDependencyKey> incompatibleModuleDeps = new HashSet<>();
-        Set<ProjectDependencyKey> incompatibleProjectDeps = new HashSet<>();
+    override fun resolveVariantCoordinates(dependency: ExternalDependency, warnings: VariantWarningCollector): ResolvedCoordinates? {
+        val module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName())
+        val key = ResolutionBackedPublicationDependencyResolver.ModuleDependencyKey(module!!, ModuleDependencyDetails.Companion.from(dependency, attributeDesugaring))
 
-        Map<ModuleIdentifier, ModuleVersionIdentifier> resolvedModuleComponents = new HashMap<>();
-        Map<Path, ModuleVersionIdentifier> resolvedProjectComponents = new HashMap<>();
-
-        Map<ModuleDependencyKey, ModuleVersionIdentifier> resolvedModuleVariants = new HashMap<>();
-        Map<ProjectDependencyKey, ModuleVersionIdentifier> resolvedProjectVariants = new HashMap<>();
-
-        visitFirstLevelEdges(rootComponent, rootVariant, edge -> {
-
-            ComponentSelector requested = edge.getRequested();
-            CoordinatePair coordinates = getResolvedCoordinates(edge.getResolvedVariant(), projectDependencyResolver, moduleIdentifierFactory);
-            if (requested instanceof ModuleComponentSelector) {
-                ModuleComponentSelector requestedModule = (ModuleComponentSelector) requested;
-
-                ModuleVersionIdentifier existingComponent = resolvedModuleComponents.put(requestedModule.getModuleIdentifier(), coordinates.componentCoordinates);
-                if (existingComponent != null && !existingComponent.equals(coordinates.componentCoordinates)) {
-                    throw new GradleException("Expected all requested coordinates to resolve to the same component coordinates.");
-                }
-
-                ModuleDependencyKey key = new ModuleDependencyKey(requestedModule.getModuleIdentifier(), ModuleDependencyDetails.from(requested));
-                if (incompatibleModuleDeps.contains(key)) {
-                    return;
-                }
-
-                ModuleVersionIdentifier existingVariant = resolvedModuleVariants.put(key, coordinates.variantCoordinates);
-                if (existingVariant != null && !existingVariant.equals(coordinates.variantCoordinates)) {
-                    resolvedModuleVariants.remove(key);
-                    incompatibleModuleDeps.add(key);
-                }
-            } else if (requested instanceof ProjectComponentSelector) {
-                ProjectComponentSelectorInternal requestedProject = (ProjectComponentSelectorInternal) requested;
-
-                ModuleVersionIdentifier existingComponent = resolvedProjectComponents.put(requestedProject.getIdentityPath(), coordinates.componentCoordinates);
-                if (existingComponent != null && !existingComponent.equals(coordinates.componentCoordinates)) {
-                    throw new GradleException("Expected all requested projects to resolve to the same component coordinates.");
-                }
-
-                ProjectDependencyKey key = new ProjectDependencyKey(requestedProject.getIdentityPath(), ModuleDependencyDetails.from(requested));
-                if (incompatibleProjectDeps.contains(key)) {
-                    return;
-                }
-
-                ModuleVersionIdentifier existingVariant = resolvedProjectVariants.put(key, coordinates.variantCoordinates);
-                if (existingVariant != null && !existingVariant.equals(coordinates.variantCoordinates)) {
-                    resolvedProjectVariants.remove(key);
-                    incompatibleProjectDeps.add(key);
-                }
-            }
-
-        });
-
-        return new ResolvedMappings(
-            resolvedModuleComponents,
-            resolvedProjectComponents,
-            resolvedModuleVariants,
-            resolvedProjectVariants,
-            incompatibleModuleDeps,
-            incompatibleProjectDeps
-        );
-    }
-
-    private static void visitFirstLevelEdges(ResolvedComponentResult rootComponent, ResolvedVariantResult rootVariant, Consumer<ResolvedDependencyResult> visitor) {
-        List<DependencyResult> rootEdges = rootComponent.getDependenciesForVariant(rootVariant);
-        for (DependencyResult dependencyResult : rootEdges) {
-            if (!(dependencyResult instanceof ResolvedDependencyResult)) {
-                UnresolvedDependencyResult unresolved = (UnresolvedDependencyResult) dependencyResult;
-                throw new GradleException("Could not map coordinates for " + unresolved.getAttempted().getDisplayName() + ".", unresolved.getFailure());
-            }
-
-            if (dependencyResult.isConstraint()) {
-                // Constraints also appear in the graph if they contributed to it.
-                // Ignore them for now, though perhaps we can use them in the future to
-                // publish version ranges.
-                continue;
-            }
-
-            visitor.accept((ResolvedDependencyResult) dependencyResult);
-        }
-    }
-
-    private static CoordinatePair getResolvedCoordinates(
-        ResolvedVariantResult variant,
-        ProjectDependencyPublicationResolver projectDependencyResolver,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory
-    ) {
-        ComponentIdentifier componentId = variant.getOwner();
-
-        // TODO #3170: We should analyze artifacts to determine if we need to publish additional
-        // artifact information like type or classifier.
-
-        if (componentId instanceof ProjectComponentIdentifier) {
-            return getProjectCoordinates(variant, (ProjectComponentIdentifierInternal) componentId, projectDependencyResolver);
-        } else if (componentId instanceof ModuleComponentIdentifier) {
-            return getModuleCoordinates(variant, (ModuleComponentIdentifier) componentId, moduleIdentifierFactory);
-        } else {
-            throw new UnsupportedOperationException("Unexpected component identifier type: " + componentId);
-        }
-    }
-
-    private static CoordinatePair getModuleCoordinates(
-        ResolvedVariantResult variant,
-        ModuleComponentIdentifier componentId,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory
-    ) {
-        ModuleVersionIdentifier componentCoordinates = moduleIdentifierFactory.moduleWithVersion(componentId.getModuleIdentifier(), componentId.getVersion());
-        ModuleVersionIdentifier variantCoordinates = getExternalCoordinates(variant, moduleIdentifierFactory);
-
-        return new CoordinatePair(
-            componentCoordinates,
-            variantCoordinates != null ? variantCoordinates : componentCoordinates
-        );
-    }
-
-    private static @Nullable ModuleVersionIdentifier getExternalCoordinates(
-        ResolvedVariantResult variant,
-        ImmutableModuleIdentifierFactory moduleIdentifierFactory
-    ) {
-        ResolvedVariantResult externalVariant = variant.getExternalVariant().orElse(null);
-        if (externalVariant != null) {
-            ComponentIdentifier owningComponent = externalVariant.getOwner();
-            if (owningComponent instanceof ModuleComponentIdentifier) {
-                ModuleComponentIdentifier moduleComponentId = (ModuleComponentIdentifier) owningComponent;
-                return moduleIdentifierFactory.moduleWithVersion(moduleComponentId.getModuleIdentifier(), moduleComponentId.getVersion());
-            }
-            throw new GradleException("Expected owning component of module component to be a module component: " + owningComponent);
-        }
-        return null;
-    }
-
-    private static CoordinatePair getProjectCoordinates(
-        ResolvedVariantResult variant,
-        ProjectComponentIdentifierInternal componentId,
-        ProjectDependencyPublicationResolver projectDependencyResolver
-    ) {
-        Path identityPath = componentId.getIdentityPath();
-
-        // TODO: Using the display name here is not great, however it is the same as the variant name.
-        // Instead, the resolution result should expose the project coordinates via getExternalVariant.
-        String variantName = variant.getDisplayName();
-        ModuleVersionIdentifier variantCoordinates = projectDependencyResolver.resolveVariant(ModuleVersionIdentifier.class, identityPath, variantName);
-
-        if (variantCoordinates == null) {
-            throw new InvalidUserDataException(String.format(
-                "Could not resolve coordinates for variant '%s' of project '%s'.",
-                variantName, identityPath
-            ));
-        }
-
-        ModuleVersionIdentifier componentCoordinates = projectDependencyResolver.resolveComponent(ModuleVersionIdentifier.class, identityPath);
-        return new CoordinatePair(componentCoordinates, variantCoordinates);
-    }
-
-    @Override
-    @Nullable
-    public ResolvedCoordinates resolveVariantCoordinates(ExternalDependency dependency, VariantWarningCollector warnings) {
-        ModuleIdentifier module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName());
-        ModuleDependencyKey key = new ModuleDependencyKey(module, ModuleDependencyDetails.from(dependency, attributeDesugaring));
-
-        ModuleVersionIdentifier resolved = mappings.resolvedModuleVariants.get(key);
+        val resolved = mappings.resolvedModuleVariants.get(key)
         if (resolved != null) {
-            return ResolvedCoordinates.create(resolved);
+            return ResolvedCoordinates.Companion.create(resolved)
         }
 
         if (mappings.incompatibleModules.contains(key)) {
             // TODO: We should enhance this warning to list the conflicting dependencies.
-            warnings.addIncompatible(String.format(
-                "Cannot determine variant coordinates for dependency '%s' since " +
-                    "multiple dependencies ambiguously map to different resolved coordinates.",
-                module
-            ));
+            warnings.addIncompatible(
+                String.format(
+                    "Cannot determine variant coordinates for dependency '%s' since " +
+                            "multiple dependencies ambiguously map to different resolved coordinates.",
+                    module
+                )
+            )
         } else {
             // This is likely user error, as the resolution result should have the same dependencies as the published variant.
-            warnings.addIncompatible(String.format(
-                "Cannot determine variant coordinates for dependency '%s' since " +
-                    "the resolved graph does not contain the requested module.",
-                module
-            ));
+            warnings.addIncompatible(
+                String.format(
+                    "Cannot determine variant coordinates for dependency '%s' since " +
+                            "the resolved graph does not contain the requested module.",
+                    module
+                )
+            )
         }
 
         // Fallback to component coordinate mapping only.
-        return resolveModuleComponentCoordinates(module);
+        return resolveModuleComponentCoordinates(module)
     }
 
-    @Override
-    public ResolvedCoordinates resolveVariantCoordinates(ProjectDependency dependency, VariantWarningCollector warnings) {
-        Path identityPath = ((ProjectDependencyInternal) dependency).getTargetProjectIdentity().getBuildTreePath();
-        ProjectDependencyKey key = new ProjectDependencyKey(identityPath, ModuleDependencyDetails.from(dependency, attributeDesugaring));
+    override fun resolveVariantCoordinates(dependency: ProjectDependency, warnings: VariantWarningCollector): ResolvedCoordinates {
+        val identityPath = (dependency as ProjectDependencyInternal).getTargetProjectIdentity().getBuildTreePath()
+        val key = ProjectDependencyKey(identityPath, ModuleDependencyDetails.Companion.from(dependency, attributeDesugaring))
 
-        ModuleVersionIdentifier resolved = mappings.resolvedProjectVariants.get(key);
+        val resolved = mappings.resolvedProjectVariants.get(key)
         if (resolved != null) {
-            return ResolvedCoordinates.create(resolved);
+            return ResolvedCoordinates.Companion.create(resolved)
         }
 
         if (mappings.incompatibleProjects.contains(key)) {
             // TODO: We should enhance this warning to list the conflicting dependencies.
-            warnings.addIncompatible(String.format(
-                "Cannot determine variant coordinates for Project dependency '%s' since " +
-                    "multiple dependencies ambiguously map to different resolved coordinates.",
-                identityPath
-            ));
+            warnings.addIncompatible(
+                String.format(
+                    "Cannot determine variant coordinates for Project dependency '%s' since " +
+                            "multiple dependencies ambiguously map to different resolved coordinates.",
+                    identityPath
+                )
+            )
         } else {
             // This is likely user error, as the resolution result should have the same dependencies as the published variant.
-            warnings.addIncompatible(String.format(
-                "Cannot determine variant coordinates for Project dependency '%s' since " +
-                    "the resolved graph does not contain the requested project.",
-                identityPath
-            ));
+            warnings.addIncompatible(
+                String.format(
+                    "Cannot determine variant coordinates for Project dependency '%s' since " +
+                            "the resolved graph does not contain the requested project.",
+                    identityPath
+                )
+            )
         }
 
         // Fallback to component coordinate mapping only.
-        return resolveComponentCoordinates(dependency);
+        return resolveComponentCoordinates(dependency)
     }
 
-    @Nullable
-    @Override
-    public ResolvedCoordinates resolveComponentCoordinates(ExternalDependency dependency) {
-        ModuleIdentifier module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName());
-        return resolveModuleComponentCoordinates(module);
+    override fun resolveComponentCoordinates(dependency: ExternalDependency): ResolvedCoordinates? {
+        val module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName())
+        return resolveModuleComponentCoordinates(module!!)
     }
 
-    @Override
-    public ResolvedCoordinates resolveComponentCoordinates(ProjectDependency dependency) {
-        Path identityPath = ((ProjectDependencyInternal) dependency).getTargetProjectIdentity().getBuildTreePath();
-        ModuleVersionIdentifier resolved = mappings.resolvedProjectComponents.get(identityPath);
+    override fun resolveComponentCoordinates(dependency: ProjectDependency): ResolvedCoordinates {
+        val identityPath = (dependency as ProjectDependencyInternal).getTargetProjectIdentity().getBuildTreePath()
+        val resolved = mappings.resolvedProjectComponents.get(identityPath)
         if (resolved != null) {
-            return ResolvedCoordinates.create(resolved);
+            return ResolvedCoordinates.Companion.create(resolved)
         }
 
         // This is likely user error, as the resolution result should have the same
         // dependencies as the published variant. Fallback to resolving the project
         // coordinates directly.
-
-        return ResolvedCoordinates.create(
-            projectDependencyResolver.resolveComponent(ModuleVersionIdentifier.class, identityPath)
-        );
+        return ResolvedCoordinates.Companion.create(
+            projectDependencyResolver.resolveComponent<ModuleVersionIdentifier?>(ModuleVersionIdentifier::class.java, identityPath)
+        )
     }
 
-    @Nullable
-    @Override
-    public ResolvedCoordinates resolveComponentCoordinates(DependencyConstraint dependency) {
-        assert !(dependency instanceof DefaultProjectDependencyConstraint);
-        ModuleIdentifier module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName());
-        return resolveModuleComponentCoordinates(module);
+    override fun resolveComponentCoordinates(dependency: DependencyConstraint): ResolvedCoordinates? {
+        assert(dependency !is DefaultProjectDependencyConstraint)
+        val module = moduleIdentifierFactory.module(dependency.getGroup(), dependency.getName())
+        return resolveModuleComponentCoordinates(module!!)
     }
 
-    @Override
-    public ResolvedCoordinates resolveComponentCoordinates(DefaultProjectDependencyConstraint dependency) {
-        return resolveComponentCoordinates(dependency.projectDependency);
+    override fun resolveComponentCoordinates(dependency: DefaultProjectDependencyConstraint): ResolvedCoordinates {
+        return resolveComponentCoordinates(dependency.projectDependency)
     }
 
 
-    @Nullable
-    private ResolvedCoordinates resolveModuleComponentCoordinates(ModuleIdentifier module) {
-        ModuleVersionIdentifier resolved = mappings.resolvedModuleComponents.get(module);
+    private fun resolveModuleComponentCoordinates(module: ModuleIdentifier): ResolvedCoordinates? {
+        val resolved = mappings.resolvedModuleComponents.get(module)
         if (resolved != null) {
-            return ResolvedCoordinates.create(resolved);
+            return ResolvedCoordinates.Companion.create(resolved)
         }
-        return null;
+        return null
     }
 
-    private static class ResolvedMappings {
-
-        final Map<ModuleIdentifier, ModuleVersionIdentifier> resolvedModuleComponents;
-        final Map<Path, ModuleVersionIdentifier> resolvedProjectComponents;
-
-        final Map<ModuleDependencyKey, ModuleVersionIdentifier> resolvedModuleVariants;
-        final Map<ProjectDependencyKey, ModuleVersionIdentifier> resolvedProjectVariants;
-
+    private class ResolvedMappings(
+        val resolvedModuleComponents: MutableMap<ModuleIdentifier, ModuleVersionIdentifier>,
+        val resolvedProjectComponents: MutableMap<Path, ModuleVersionIdentifier>,
+        val resolvedModuleVariants: MutableMap<ModuleDependencyKey, ModuleVersionIdentifier>,
+        val resolvedProjectVariants: MutableMap<ProjectDependencyKey, ModuleVersionIdentifier>,
         // Incompatible modules and projects are those that have multiple dependencies with the same
         // attributes and capabilities, but have somehow resolved to different coordinates. This can
         // often happen when the dependency is declared with a targetConfiguration.
-        final Set<ModuleDependencyKey> incompatibleModules;
-        final Set<ProjectDependencyKey> incompatibleProjects;
+        val incompatibleModules: MutableSet<ModuleDependencyKey>,
+        val incompatibleProjects: MutableSet<ProjectDependencyKey>
+    )
 
-        ResolvedMappings(
-            Map<ModuleIdentifier, ModuleVersionIdentifier> resolvedModuleComponents,
-            Map<Path, ModuleVersionIdentifier> resolvedProjectComponents,
-            Map<ModuleDependencyKey, ModuleVersionIdentifier> resolvedModuleVariants,
-            Map<ProjectDependencyKey, ModuleVersionIdentifier> resolvedProjectVariants,
-            Set<ModuleDependencyKey> incompatibleModules,
-            Set<ProjectDependencyKey> incompatibleProjects
-        ) {
-            this.resolvedModuleComponents = resolvedModuleComponents;
-            this.resolvedProjectComponents = resolvedProjectComponents;
-            this.resolvedModuleVariants = resolvedModuleVariants;
-            this.resolvedProjectVariants = resolvedProjectVariants;
-            this.incompatibleModules = incompatibleModules;
-            this.incompatibleProjects = incompatibleProjects;
+    private class CoordinatePair(
+        val componentCoordinates: ModuleVersionIdentifier,
+        val variantCoordinates: ModuleVersionIdentifier
+    )
+
+    private class ModuleDependencyKey(private val module: ModuleIdentifier, private val details: ModuleDependencyDetails) {
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+            val that = o as ModuleDependencyKey
+            return module == that.module && details == that.details
+        }
+
+        override fun hashCode(): Int {
+            return Objects.hash(module, details)
         }
     }
 
-    private static class CoordinatePair {
-        final ModuleVersionIdentifier componentCoordinates;
-        final ModuleVersionIdentifier variantCoordinates;
+    private class ProjectDependencyKey(private val identityPath: Path, private val details: ModuleDependencyDetails) {
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+            val that = o as ProjectDependencyKey
+            return identityPath == that.identityPath && details == that.details
+        }
 
-        private CoordinatePair(
-            ModuleVersionIdentifier componentCoordinates,
-            ModuleVersionIdentifier variantCoordinates
-        ) {
-            this.componentCoordinates = componentCoordinates;
-            this.variantCoordinates = variantCoordinates;
+        override fun hashCode(): Int {
+            return Objects.hash(identityPath, details)
         }
     }
 
-    private static class ModuleDependencyKey {
-        private final ModuleIdentifier module;
-        private final ModuleDependencyDetails details;
-
-        public ModuleDependencyKey(ModuleIdentifier module, ModuleDependencyDetails details) {
-            this.module = module;
-            this.details = details;
+    private class ModuleDependencyDetails(
+        val requestAttributes: AttributeContainer,
+        val capabilitySelectors: MutableSet<CapabilitySelector>
+    ) {
+        override fun equals(o: Any): Boolean {
+            if (this === o) {
+                return true
+            }
+            if (o == null || javaClass != o.javaClass) {
+                return false
+            }
+            val that = o as ModuleDependencyDetails
+            return requestAttributes == that.requestAttributes && capabilitySelectors == that.capabilitySelectors
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            ModuleDependencyKey that = (ModuleDependencyKey) o;
-            return Objects.equals(module, that.module) && Objects.equals(details, that.details);
+        override fun hashCode(): Int {
+            return Objects.hash(requestAttributes, capabilitySelectors)
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(module, details);
+        companion object {
+            fun from(dependency: ModuleDependency, attributeDesugaring: AttributeDesugaring): ModuleDependencyDetails {
+                val attributes = (dependency.getAttributes() as AttributeContainerInternal).asImmutable()
+                return ModuleDependencyDetails(
+                    attributeDesugaring.desugar(attributes),
+                    dependency.getCapabilitySelectors()
+                )
+            }
+
+            // Do not desugar here since resolution results already expose desugared attributes.
+            fun from(componentSelector: ComponentSelector): ModuleDependencyDetails {
+                return ModuleDependencyDetails(
+                    componentSelector.getAttributes(),
+                    componentSelector.getCapabilitySelectors()
+                )
+            }
         }
     }
 
-    private static class ProjectDependencyKey {
-        private final Path identityPath;
-        private final ModuleDependencyDetails details;
+    companion object {
+        private fun calculateMappings(
+            rootComponent: ResolvedComponentResult,
+            rootVariant: ResolvedVariantResult,
+            projectDependencyResolver: ProjectDependencyPublicationResolver,
+            moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+        ): ResolvedMappings {
+            val incompatibleModuleDeps: MutableSet<ModuleDependencyKey> = HashSet<ModuleDependencyKey>()
+            val incompatibleProjectDeps: MutableSet<ProjectDependencyKey> = HashSet<ProjectDependencyKey>()
 
-        public ProjectDependencyKey(Path identityPath, ModuleDependencyDetails details) {
-            this.identityPath = identityPath;
-            this.details = details;
+            val resolvedModuleComponents: MutableMap<ModuleIdentifier, ModuleVersionIdentifier> = HashMap<ModuleIdentifier, ModuleVersionIdentifier>()
+            val resolvedProjectComponents: MutableMap<Path, ModuleVersionIdentifier> = HashMap<Path, ModuleVersionIdentifier>()
+
+            val resolvedModuleVariants: MutableMap<ModuleDependencyKey, ModuleVersionIdentifier> = HashMap<ModuleDependencyKey, ModuleVersionIdentifier>()
+            val resolvedProjectVariants: MutableMap<ProjectDependencyKey, ModuleVersionIdentifier> = HashMap<ProjectDependencyKey, ModuleVersionIdentifier>()
+
+            visitFirstLevelEdges(rootComponent, rootVariant, Consumer { edge: ResolvedDependencyResult ->
+                val requested = edge.getRequested()
+                val coordinates: CoordinatePair = getResolvedCoordinates(edge.getResolvedVariant(), projectDependencyResolver, moduleIdentifierFactory)
+                if (requested is ModuleComponentSelector) {
+                    val requestedModule = requested
+
+                    val existingComponent = resolvedModuleComponents.put(requestedModule.getModuleIdentifier(), coordinates.componentCoordinates)
+                    if (existingComponent != null && existingComponent != coordinates.componentCoordinates) {
+                        throw GradleException("Expected all requested coordinates to resolve to the same component coordinates.")
+                    }
+
+                    val key = ModuleDependencyKey(requestedModule.getModuleIdentifier(), ModuleDependencyDetails.Companion.from(requested))
+                    if (incompatibleModuleDeps.contains(key)) {
+                        return@visitFirstLevelEdges
+                    }
+
+                    val existingVariant = resolvedModuleVariants.put(key, coordinates.variantCoordinates)
+                    if (existingVariant != null && existingVariant != coordinates.variantCoordinates) {
+                        resolvedModuleVariants.remove(key)
+                        incompatibleModuleDeps.add(key)
+                    }
+                } else if (requested is ProjectComponentSelector) {
+                    val requestedProject = requested as ProjectComponentSelectorInternal
+
+                    val existingComponent = resolvedProjectComponents.put(requestedProject.identityPath, coordinates.componentCoordinates)
+                    if (existingComponent != null && existingComponent != coordinates.componentCoordinates) {
+                        throw GradleException("Expected all requested projects to resolve to the same component coordinates.")
+                    }
+
+                    val key = ProjectDependencyKey(requestedProject.identityPath, ModuleDependencyDetails.Companion.from(requested))
+                    if (incompatibleProjectDeps.contains(key)) {
+                        return@visitFirstLevelEdges
+                    }
+
+                    val existingVariant = resolvedProjectVariants.put(key, coordinates.variantCoordinates)
+                    if (existingVariant != null && existingVariant != coordinates.variantCoordinates) {
+                        resolvedProjectVariants.remove(key)
+                        incompatibleProjectDeps.add(key)
+                    }
+                }
+            })
+
+            return ResolvedMappings(
+                resolvedModuleComponents,
+                resolvedProjectComponents,
+                resolvedModuleVariants,
+                resolvedProjectVariants,
+                incompatibleModuleDeps,
+                incompatibleProjectDeps
+            )
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        private fun visitFirstLevelEdges(rootComponent: ResolvedComponentResult, rootVariant: ResolvedVariantResult, visitor: Consumer<ResolvedDependencyResult>) {
+            val rootEdges = rootComponent.getDependenciesForVariant(rootVariant)
+            for (dependencyResult in rootEdges) {
+                if (dependencyResult !is ResolvedDependencyResult) {
+                    val unresolved = dependencyResult as UnresolvedDependencyResult
+                    throw GradleException("Could not map coordinates for " + unresolved.getAttempted().getDisplayName() + ".", unresolved.getFailure())
+                }
+
+                if (dependencyResult.isConstraint()) {
+                    // Constraints also appear in the graph if they contributed to it.
+                    // Ignore them for now, though perhaps we can use them in the future to
+                    // publish version ranges.
+                    continue
+                }
+
+                visitor.accept(dependencyResult)
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+        }
+
+        private fun getResolvedCoordinates(
+            variant: ResolvedVariantResult,
+            projectDependencyResolver: ProjectDependencyPublicationResolver,
+            moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+        ): CoordinatePair {
+            val componentId = variant.getOwner()
+
+            // TODO #3170: We should analyze artifacts to determine if we need to publish additional
+            // artifact information like type or classifier.
+            if (componentId is ProjectComponentIdentifier) {
+                return getProjectCoordinates(variant, componentId as ProjectComponentIdentifierInternal, projectDependencyResolver)
+            } else if (componentId is ModuleComponentIdentifier) {
+                return getModuleCoordinates(variant, componentId, moduleIdentifierFactory)
+            } else {
+                throw UnsupportedOperationException("Unexpected component identifier type: " + componentId)
             }
-            ProjectDependencyKey that = (ProjectDependencyKey) o;
-            return Objects.equals(identityPath, that.identityPath) && Objects.equals(details, that.details);
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(identityPath, details);
-        }
-    }
+        private fun getModuleCoordinates(
+            variant: ResolvedVariantResult,
+            componentId: ModuleComponentIdentifier,
+            moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+        ): CoordinatePair {
+            val componentCoordinates = moduleIdentifierFactory.moduleWithVersion(componentId.getModuleIdentifier(), componentId.getVersion())
+            val variantCoordinates: ModuleVersionIdentifier? = getExternalCoordinates(variant, moduleIdentifierFactory)
 
-    private static class ModuleDependencyDetails {
-        final AttributeContainer requestAttributes;
-        final Set<CapabilitySelector> capabilitySelectors;
-
-        public ModuleDependencyDetails(
-            AttributeContainer requestAttributes,
-            Set<CapabilitySelector> capabilitySelectors
-        ) {
-            this.requestAttributes = requestAttributes;
-            this.capabilitySelectors = capabilitySelectors;
+            return ResolutionBackedPublicationDependencyResolver.CoordinatePair(
+                componentCoordinates!!,
+                (if (variantCoordinates != null) variantCoordinates else componentCoordinates)
+            )
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+        private fun getExternalCoordinates(
+            variant: ResolvedVariantResult,
+            moduleIdentifierFactory: ImmutableModuleIdentifierFactory
+        ): ModuleVersionIdentifier? {
+            val externalVariant = variant.getExternalVariant().orElse(null)
+            if (externalVariant != null) {
+                val owningComponent = externalVariant.getOwner()
+                if (owningComponent is ModuleComponentIdentifier) {
+                    val moduleComponentId = owningComponent
+                    return moduleIdentifierFactory.moduleWithVersion(moduleComponentId.getModuleIdentifier(), moduleComponentId.getVersion())
+                }
+                throw GradleException("Expected owning component of module component to be a module component: " + owningComponent)
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
+            return null
+        }
+
+        private fun getProjectCoordinates(
+            variant: ResolvedVariantResult,
+            componentId: ProjectComponentIdentifierInternal,
+            projectDependencyResolver: ProjectDependencyPublicationResolver
+        ): CoordinatePair {
+            val identityPath = componentId.getIdentityPath()
+
+            // TODO: Using the display name here is not great, however it is the same as the variant name.
+            // Instead, the resolution result should expose the project coordinates via getExternalVariant.
+            val variantName = variant.getDisplayName()
+            val variantCoordinates = projectDependencyResolver.resolveVariant<ModuleVersionIdentifier?>(ModuleVersionIdentifier::class.java, identityPath, variantName)
+
+            if (variantCoordinates == null) {
+                throw InvalidUserDataException(
+                    String.format(
+                        "Could not resolve coordinates for variant '%s' of project '%s'.",
+                        variantName, identityPath
+                    )
+                )
             }
-            ModuleDependencyDetails that = (ModuleDependencyDetails) o;
-            return Objects.equals(requestAttributes, that.requestAttributes) && Objects.equals(capabilitySelectors, that.capabilitySelectors);
-        }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(requestAttributes, capabilitySelectors);
-        }
-
-        public static ModuleDependencyDetails from(ModuleDependency dependency, AttributeDesugaring attributeDesugaring) {
-            ImmutableAttributes attributes = ((AttributeContainerInternal) dependency.getAttributes()).asImmutable();
-            return new ModuleDependencyDetails(
-                attributeDesugaring.desugar(attributes),
-                dependency.getCapabilitySelectors()
-            );
-        }
-
-        // Do not desugar here since resolution results already expose desugared attributes.
-        public static ModuleDependencyDetails from(ComponentSelector componentSelector) {
-            return new ModuleDependencyDetails(
-                componentSelector.getAttributes(),
-                componentSelector.getCapabilitySelectors()
-            );
+            val componentCoordinates = projectDependencyResolver.resolveComponent<ModuleVersionIdentifier?>(ModuleVersionIdentifier::class.java, identityPath)
+            return ResolutionBackedPublicationDependencyResolver.CoordinatePair(componentCoordinates!!, variantCoordinates)
         }
     }
 }

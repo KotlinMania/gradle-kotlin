@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog.internal;
+package org.gradle.api.plugins.catalog.internal
 
-import org.gradle.api.internal.catalog.DefaultVersionCatalog;
-import org.gradle.api.plugins.catalog.CatalogPluginExtension;
-import org.gradle.api.provider.Provider;
+import org.gradle.api.plugins.catalog.CatalogPluginExtension
 
-public interface CatalogExtensionInternal extends CatalogPluginExtension {
-    Provider<DefaultVersionCatalog> getVersionCatalog();
+interface CatalogExtensionInternal : CatalogPluginExtension {
+    val versionCatalog: Provider<DefaultVersionCatalog>?
 }

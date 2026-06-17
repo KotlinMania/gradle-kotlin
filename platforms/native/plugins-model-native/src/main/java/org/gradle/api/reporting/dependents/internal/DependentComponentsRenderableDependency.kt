@@ -72,14 +72,14 @@ class DependentComponentsRenderableDependency(id: Any, name: String, description
             internalProtocol: ComponentSpecInternal,
             children: LinkedHashSet<DependentComponentsRenderableDependency> = LinkedHashSet<DependentComponentsRenderableDependency>()
         ): DependentComponentsRenderableDependency {
-            val id = internalProtocol.getIdentifier()
+            val id = internalProtocol.identifier
             val name = DependentComponentsUtils.getBuildScopedTerseName(id)
             val description = componentSpec.getDisplayName()
             var buildable = true
             if (componentSpec is VariantComponentSpec) {
                 // Consider variant aware components with no buildable binaries as non-buildables
                 val variantComponentSpec = componentSpec
-                buildable = variantComponentSpec.getBinaries().values().stream().anyMatch { obj: BinarySpec? -> obj!!.isBuildable() }
+                buildable = variantComponentSpec.getBinaries().values().stream().anyMatch { obj: BinarySpec? -> obj!!.isBuildable }
             }
             return DependentComponentsRenderableDependency(id, name, description, buildable, false, children)
         }

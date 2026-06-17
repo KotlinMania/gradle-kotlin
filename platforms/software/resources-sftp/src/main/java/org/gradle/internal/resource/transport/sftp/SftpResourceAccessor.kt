@@ -13,65 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.SftpATTRS
+import com.jcraft.jsch.SftpException
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.resource.transfer.AbstractExternalResourceAccessor
+import org.gradle.internal.resource.transfer.ExternalResourceAccessor
+import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
+import java.net.URI
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.SftpATTRS;
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.resource.transfer.AbstractExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.ExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.ExternalResourceReadResponse;
-
-import java.net.URI;
-
-public class SftpResourceAccessor extends AbstractExternalResourceAccessor implements ExternalResourceAccessor {
-
-    private final SftpClientFactory sftpClientFactory;
-    private final PasswordCredentials credentials;
-
-    public SftpResourceAccessor(SftpClientFactory sftpClientFactory, PasswordCredentials credentials) {
-        this.sftpClientFactory = sftpClientFactory;
-        this.credentials = credentials;
-    }
-
-    @Override
-    public ExternalResourceMetaData getMetaData(ExternalResourceName location, boolean revalidate) {
-        LockableSftpClient sftpClient = sftpClientFactory.createSftpClient(location.getUri(), credentials);
+class SftpResourceAccessor(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : AbstractExternalResourceAccessor(), ExternalResourceAccessor {
+    override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
+        val sftpClient = sftpClientFactory.createSftpClient(location.getUri(), credentials)
         try {
-            SftpATTRS attributes = sftpClient.getSftpClient().lstat(location.getPath());
-            return attributes != null ? toMetaData(location.getUri(), attributes) : null;
-        } catch (com.jcraft.jsch.SftpException e) {
+            val attributes = sftpClient.getSftpClient().lstat(location.getPath())
+            return if (attributes != null) toMetaData(location.getUri(), attributes) else null
+        } catch (e: SftpException) {
             if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
-                return null;
+                return null
             }
-            throw ResourceExceptions.getFailed(location.getUri(), e);
+            throw ResourceExceptions.getFailed(location.getUri(), e)
         } finally {
-            sftpClientFactory.releaseSftpClient(sftpClient);
+            sftpClientFactory.releaseSftpClient(sftpClient)
         }
     }
 
-    private ExternalResourceMetaData toMetaData(URI uri, SftpATTRS attributes) {
-        long lastModified = -1;
-        long contentLength = -1;
+    private fun toMetaData(uri: URI?, attributes: SftpATTRS): ExternalResourceMetaData {
+        var lastModified: Long = -1
+        var contentLength: Long = -1
 
-        if ((attributes.getFlags() & SftpATTRS.SSH_FILEXFER_ATTR_ACMODTIME) != 0) {
-            lastModified = (long)attributes.getMTime() * 1000;
+        if ((attributes.getFlags() and SftpATTRS.SSH_FILEXFER_ATTR_ACMODTIME) != 0) {
+            lastModified = attributes.getMTime().toLong() * 1000
         }
-        if ((attributes.getFlags() & SftpATTRS.SSH_FILEXFER_ATTR_SIZE) != 0) {
-            contentLength = attributes.getSize();
+        if ((attributes.getFlags() and SftpATTRS.SSH_FILEXFER_ATTR_SIZE) != 0) {
+            contentLength = attributes.getSize()
         }
 
-        return new DefaultExternalResourceMetaData(uri, lastModified, contentLength);
+        return DefaultExternalResourceMetaData(uri, lastModified, contentLength)
     }
 
-    @Override
-    public ExternalResourceReadResponse openResource(ExternalResourceName location, boolean revalidate) {
-        ExternalResourceMetaData metaData = getMetaData(location, revalidate);
-        return metaData != null ? new SftpResource(sftpClientFactory, metaData, location.getUri(), credentials) : null;
+    public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
+        val metaData = getMetaData(location, revalidate)
+        return if (metaData != null) SftpResource(sftpClientFactory, metaData, location.getUri(), credentials) else null
     }
 }

@@ -13,34 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal
 
-package org.gradle.api.publish.internal;
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.CompositeDomainObjectSet
+import org.gradle.api.internal.DelegatingDomainObjectSet
+import org.gradle.api.internal.file.FileCollectionInternal
+import org.gradle.api.internal.file.UnionFileCollection
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.publish.PublicationArtifact
 
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.CompositeDomainObjectSet;
-import org.gradle.api.internal.DelegatingDomainObjectSet;
-import org.gradle.api.internal.file.FileCollectionInternal;
-import org.gradle.api.internal.file.UnionFileCollection;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.publish.PublicationArtifact;
+class CompositePublicationArtifactSet<T : PublicationArtifact?> @SafeVarargs constructor(
+    taskDependencyFactory: TaskDependencyFactory,
+    type: Class<T?>,
+    vararg artifactSets: PublicationArtifactSet<T?>?
+) : DelegatingDomainObjectSet<T?>(
+    CompositeDomainObjectSet.create<T?>(type, *artifactSets)
+), PublicationArtifactSet<T?> {
+    private val files: FileCollection
 
-public class CompositePublicationArtifactSet<T extends PublicationArtifact> extends DelegatingDomainObjectSet<T> implements PublicationArtifactSet<T> {
-
-    private final FileCollection files;
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public CompositePublicationArtifactSet(TaskDependencyFactory taskDependencyFactory, Class<T> type, PublicationArtifactSet<T>... artifactSets) {
-        super(CompositeDomainObjectSet.create(type, artifactSets));
-        FileCollectionInternal[] fileCollections = new FileCollectionInternal[artifactSets.length];
-        for (int i = 0; i < artifactSets.length; i++) {
-            fileCollections[i] = (FileCollectionInternal) artifactSets[i].getFiles();
+    init {
+        val fileCollections = arrayOfNulls<FileCollectionInternal>(artifactSets.size)
+        for (i in artifactSets.indices) {
+            fileCollections[i] = artifactSets[i]!!.getFiles() as FileCollectionInternal?
         }
-        files = new UnionFileCollection(taskDependencyFactory, fileCollections);
+        files = UnionFileCollection(taskDependencyFactory, *fileCollections)
     }
 
-    @Override
-    public FileCollection getFiles() {
-        return files;
+    override fun getFiles(): FileCollection {
+        return files
     }
 }

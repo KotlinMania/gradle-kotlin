@@ -13,27 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.tasks
 
-package org.gradle.api.publish.maven.tasks;
-
-import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.publish.maven.MavenPom;
-import org.gradle.api.publish.maven.internal.publication.MavenPomInternal;
-import org.gradle.api.publish.maven.internal.tasks.MavenPomFileGenerator;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.UntrackedTask;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.gradle.internal.serialization.Cached;
-import org.gradle.internal.serialization.Transient;
-
-import javax.inject.Inject;
-import java.io.File;
-
-import static org.gradle.internal.serialization.Transient.varOf;
+import org.gradle.api.DefaultTask
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
+import org.gradle.api.publish.maven.internal.tasks.MavenPomFileGenerator
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.internal.serialization.Cached
+import org.gradle.internal.serialization.Transient.Companion.varOf
+import java.io.File
+import javax.inject.Inject
 
 /**
  * Generates a Maven module descriptor (POM) file.
@@ -41,16 +35,14 @@ import static org.gradle.internal.serialization.Transient.varOf;
  * @since 1.4
  */
 @UntrackedTask(because = "Gradle doesn't understand the data structures used to configure this task")
-public abstract class GenerateMavenPom extends DefaultTask {
+abstract class GenerateMavenPom : DefaultTask() {
+    private val pom = varOf<MavenPom?>()
+    private var destination: Any? = null
+    private val mavenPomSpec = Cached.of({ MavenPomFileGenerator.generateSpec(getPom() as MavenPomInternal?) }
+    )
 
-    private final Transient.Var<MavenPom> pom = varOf();
-    private Object destination;
-    private final Cached<MavenPomFileGenerator.MavenPomSpec> mavenPomSpec = Cached.of(() ->
-        MavenPomFileGenerator.generateSpec((MavenPomInternal) getPom())
-    );
-
-    @Inject
-    protected abstract FileResolver getFileResolver();
+    @get:Inject
+    protected abstract val fileResolver: FileResolver?
 
     /**
      * The Maven POM.
@@ -59,12 +51,12 @@ public abstract class GenerateMavenPom extends DefaultTask {
      */
     @Internal
     @ToBeReplacedByLazyProperty
-    public MavenPom getPom() {
-        return pom.get();
+    fun getPom(): MavenPom? {
+        return pom.get()
     }
 
-    public void setPom(MavenPom pom) {
-        this.pom.set(pom);
+    fun setPom(pom: MavenPom?) {
+        this.pom.set(pom)
     }
 
     /**
@@ -74,8 +66,8 @@ public abstract class GenerateMavenPom extends DefaultTask {
      */
     @OutputFile
     @ToBeReplacedByLazyProperty
-    public File getDestination() {
-        return destination == null ? null : getFileResolver().resolve(destination);
+    fun getDestination(): File? {
+        return if (destination == null) null else this.fileResolver.resolve(destination)
     }
 
     /**
@@ -84,24 +76,23 @@ public abstract class GenerateMavenPom extends DefaultTask {
      * @param destination The file the descriptor will be written to.
      * @since 4.0
      */
-    public void setDestination(File destination) {
-        this.destination = destination;
+    fun setDestination(destination: File?) {
+        this.destination = destination
     }
 
     /**
      * Sets the destination the descriptor will be written to.
      *
-     * The value is resolved with {@link Project#file(Object)}
+     * The value is resolved with [Project.file]
      *
      * @param destination The file the descriptor will be written to.
      */
-    public void setDestination(Object destination) {
-        this.destination = destination;
+    fun setDestination(destination: Any?) {
+        this.destination = destination
     }
 
     @TaskAction
-    public void doGenerate() {
-        mavenPomSpec.get().writeTo(getDestination());
+    fun doGenerate() {
+        mavenPomSpec.get()!!.writeTo(getDestination())
     }
-
 }

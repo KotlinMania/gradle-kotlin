@@ -32,14 +32,14 @@ internal class SourceSetRenderer : ReportRenderer<LanguageSourceSet?, TextReport
     }
 
     private fun renderSourceSetDirectories(sourceSet: LanguageSourceSet, builder: TextReportBuilder) {
-        val srcDirs: MutableSet<File?> = sourceSet.getSource().getSrcDirs()
+        val srcDirs: MutableSet<File?> = sourceSet.source.getSrcDirs()
         if (srcDirs.isEmpty()) {
             builder.item("No source directories")
         } else {
             for (file in srcDirs) {
                 builder.item("srcDir", file)
             }
-            val source = sourceSet.getSource()
+            val source = sourceSet.source
             val includes: MutableSet<String?> = source.getIncludes()
             if (!includes.isEmpty()) {
                 builder.item("includes", includes)

@@ -42,14 +42,14 @@ internal class DefaultLibraryResolver(private val libraryBinaryLocator: LibraryB
     }
 
     private fun getFailureMessage(requirement: NativeLibraryRequirement): String {
-        return if (requirement.getProjectPath() == null || requirement.getProjectPath() == context.getProjectPath()) String.format(
+        return if (requirement.getProjectPath() == null || requirement.getProjectPath() == context.projectPath) String.format(
             "Could not locate library '%s' required by %s.", requirement.getLibraryName(),
             this.contextMessage
         ) else String.format("Could not locate library '%s' in project '%s' required by %s.", requirement.getLibraryName(), requirement.getProjectPath(), this.contextMessage)
     }
 
     private val contextMessage: String
-        get() = String.format("'%s' in project '%s'", context.getComponent().getName(), context.getProjectPath())
+        get() = String.format("'%s' in project '%s'", context.getComponent().getName(), context.projectPath)
 
     private inner class LibraryResolution {
         private var flavor: Flavor? = null

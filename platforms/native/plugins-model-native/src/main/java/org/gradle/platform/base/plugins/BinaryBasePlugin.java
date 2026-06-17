@@ -70,10 +70,10 @@ public abstract class BinaryBasePlugin implements Plugin<Project> {
         void copyBinaryTasksToTaskContainer(TaskContainer tasks, BinaryContainer binaries) {
             for (BinarySpecInternal binary : binaries.withType(BinarySpecInternal.class)) {
                 TaskContainerInternal tasksInternal = (TaskContainerInternal) tasks;
-                if (binary.isLegacyBinary()) {
+                if (binary.isLegacyBinary) {
                     continue;
                 }
-                tasksInternal.addAllInternal(binary.getTasks());
+                tasksInternal.addAllInternal(binary.tasks);
                 Task buildTask = binary.getBuildTask();
                 if (buildTask != null) {
                     tasksInternal.addInternal(buildTask);
@@ -83,10 +83,10 @@ public abstract class BinaryBasePlugin implements Plugin<Project> {
 
         @Finalize
         public void defineBuildLifecycleTask(@Each BinarySpecInternal binary, NamedEntityInstantiator<Task> taskInstantiator) {
-            if (binary.isLegacyBinary()) {
+            if (binary.isLegacyBinary) {
                 return;
             }
-            TaskInternal binaryLifecycleTask = taskInstantiator.create(binary.getProjectScopedName(), DefaultTask.class);
+            TaskInternal binaryLifecycleTask = taskInstantiator.create(binary.projectScopedName, DefaultTask.class);
             binaryLifecycleTask.setGroup(LifecycleBasePlugin.BUILD_GROUP);
             binaryLifecycleTask.setDescription(String.format("Assembles %s.", binary));
             binary.setBuildTask(binaryLifecycleTask);
@@ -94,10 +94,10 @@ public abstract class BinaryBasePlugin implements Plugin<Project> {
 
         @Finalize
         void addSourceSetsOwnedByBinariesToTheirInputs(@Each BinarySpecInternal binary) {
-            if (binary.isLegacyBinary()) {
+            if (binary.isLegacyBinary) {
                 return;
             }
-            binary.getInputs().addAll(binary.getSources().values());
+            binary.inputs.addAll(binary.sources.values());
         }
     }
 }

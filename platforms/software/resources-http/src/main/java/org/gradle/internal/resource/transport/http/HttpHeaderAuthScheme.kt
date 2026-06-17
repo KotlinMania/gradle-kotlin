@@ -13,62 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.http.Header
+import org.apache.http.HttpRequest
+import org.apache.http.auth.AuthenticationException
+import org.apache.http.auth.ContextAwareAuthScheme
+import org.apache.http.auth.Credentials
+import org.apache.http.auth.MalformedChallengeException
+import org.apache.http.protocol.BasicHttpContext
+import org.apache.http.protocol.HttpContext
+import org.apache.http.util.Args
 
-import org.apache.http.Header;
-import org.apache.http.HttpRequest;
-import org.apache.http.auth.AuthenticationException;
-import org.apache.http.auth.ContextAwareAuthScheme;
-import org.apache.http.auth.Credentials;
-import org.apache.http.auth.MalformedChallengeException;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.util.Args;
-
-public class HttpHeaderAuthScheme implements ContextAwareAuthScheme {
-
-    public static final String AUTH_SCHEME_NAME = "header";
-
-    @Override
-    public void processChallenge(final Header header) throws MalformedChallengeException {
+class HttpHeaderAuthScheme : ContextAwareAuthScheme {
+    @Throws(MalformedChallengeException::class)
+    override fun processChallenge(header: Header?) {
     }
 
-    @Override
-    public String getSchemeName() {
-        return AUTH_SCHEME_NAME;
+    override fun getSchemeName(): String {
+        return AUTH_SCHEME_NAME
     }
 
-    @Override
-    public String getParameter(final String name) {
-        return null;
+    override fun getParameter(name: String?): String? {
+        return null
     }
 
-    @Override
-    public String getRealm() {
-        return null;
+    override fun getRealm(): String? {
+        return null
     }
 
-    @Override
-    public boolean isConnectionBased() {
-        return false;
+    override fun isConnectionBased(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean isComplete() {
-        return true;
+    override fun isComplete(): Boolean {
+        return true
     }
 
-    @Override
-    @SuppressWarnings("deprecation")
-    public Header authenticate(final Credentials credentials, final HttpRequest request) throws AuthenticationException {
-        return this.authenticate(credentials, request, new BasicHttpContext());
+    @Suppress("deprecation")
+    @Throws(AuthenticationException::class)
+    override fun authenticate(credentials: Credentials, request: HttpRequest?): Header? {
+        return this.authenticate(credentials, request, BasicHttpContext())
     }
 
-    @Override
-    public Header authenticate(final Credentials credentials, final HttpRequest request, final HttpContext context) throws AuthenticationException {
-        Args.check(credentials instanceof HttpClientHttpHeaderCredentials, "Only " + HttpClientHttpHeaderCredentials.class.getCanonicalName() + " supported for AuthScheme " + this.getClass().getCanonicalName() + ", got " + credentials.getClass().getName());
-        HttpClientHttpHeaderCredentials httpClientHttpHeaderCredentials = (HttpClientHttpHeaderCredentials) credentials;
-        return httpClientHttpHeaderCredentials.getHeader();
+    @Throws(AuthenticationException::class)
+    override fun authenticate(credentials: Credentials, request: HttpRequest?, context: HttpContext?): Header? {
+        Args.check(
+            credentials is HttpClientHttpHeaderCredentials,
+            "Only " + HttpClientHttpHeaderCredentials::class.java.getCanonicalName() + " supported for AuthScheme " + this.javaClass.getCanonicalName() + ", got " + credentials.javaClass.getName()
+        )
+        val httpClientHttpHeaderCredentials = credentials as HttpClientHttpHeaderCredentials
+        return httpClientHttpHeaderCredentials.header
+    }
+
+    companion object {
+        const val AUTH_SCHEME_NAME: String = "header"
     }
 }

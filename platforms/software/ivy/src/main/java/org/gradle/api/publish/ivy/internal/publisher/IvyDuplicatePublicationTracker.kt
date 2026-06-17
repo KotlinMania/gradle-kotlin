@@ -13,28 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publisher
 
-package org.gradle.api.publish.ivy.internal.publisher;
+import org.gradle.api.Project
+import org.gradle.api.publish.internal.validation.DuplicatePublicationTracker
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.net.URI
 
-import org.gradle.api.Project;
-import org.gradle.api.publish.internal.validation.DuplicatePublicationTracker;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-
-@ServiceScope(Scope.Project.class)
-public class IvyDuplicatePublicationTracker {
-    private final Project project;
-    private final DuplicatePublicationTracker duplicatePublicationTracker;
-
-    public IvyDuplicatePublicationTracker(Project project, DuplicatePublicationTracker duplicatePublicationTracker) {
-        this.project = project;
-        this.duplicatePublicationTracker = duplicatePublicationTracker;
-    }
-
-    public void checkCanPublish(IvyNormalizedPublication publication, @Nullable URI repositoryLocation, String repositoryName) {
-        duplicatePublicationTracker.checkCanPublish(project.getDisplayName(), publication.getName(), publication.getCoordinates(), repositoryLocation, repositoryName);
+@ServiceScope(Scope.Project::class)
+class IvyDuplicatePublicationTracker(private val project: Project, private val duplicatePublicationTracker: DuplicatePublicationTracker) {
+    fun checkCanPublish(publication: IvyNormalizedPublication, repositoryLocation: URI?, repositoryName: String?) {
+        duplicatePublicationTracker.checkCanPublish(project.getDisplayName(), publication.getName(), publication.getCoordinates(), repositoryLocation, repositoryName)
     }
 }

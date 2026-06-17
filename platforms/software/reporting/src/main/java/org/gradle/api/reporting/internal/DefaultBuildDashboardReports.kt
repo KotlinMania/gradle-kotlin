@@ -13,29 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import com.google.common.collect.ImmutableList
+import org.gradle.api.Describable
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.reporting.BuildDashboardReports
+import org.gradle.api.reporting.DirectoryReport
+import org.gradle.api.reporting.Report
+import javax.inject.Inject
 
-import com.google.common.collect.ImmutableList;
-import org.gradle.api.Describable;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.reporting.BuildDashboardReports;
-import org.gradle.api.reporting.DirectoryReport;
-import org.gradle.api.reporting.Report;
-
-import javax.inject.Inject;
-
-public class DefaultBuildDashboardReports extends DelegatingReportContainer<Report> implements BuildDashboardReports {
-
-    @Inject
-    public DefaultBuildDashboardReports(Describable owner, ObjectFactory objectFactory) {
-        super(DefaultReportContainer.create(objectFactory, Report.class, factory -> ImmutableList.of(
-            factory.instantiateReport(SingleDirectoryReport.class, "html", owner, "index.html")
-        )));
-    }
-
-    @Override
-    public DirectoryReport getHtml() {
-        return (DirectoryReport)getByName("html");
+class DefaultBuildDashboardReports @Inject constructor(owner: Describable, objectFactory: ObjectFactory) : DelegatingReportContainer<Report>(
+    DefaultReportContainer.Companion.create<Report>(
+        objectFactory,
+        Report::class.java,
+        DefaultReportContainer.ReportGenerator { factory: DefaultReportContainer.ReportFactory<Report>? ->
+            ImmutableList.of<Report>(
+                factory!!.instantiateReport<SingleDirectoryReport>(SingleDirectoryReport::class.java, "html", owner, "index.html")
+            )
+        })
+), BuildDashboardReports {
+    override fun getHtml(): DirectoryReport {
+        return getByName("html") as DirectoryReport
     }
 }

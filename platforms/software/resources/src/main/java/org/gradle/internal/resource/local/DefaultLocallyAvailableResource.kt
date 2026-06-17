@@ -13,28 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local;
+package org.gradle.internal.resource.local
 
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.hash.HashCode;
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.hash.HashCode
+import java.io.File
 
-import java.io.File;
+class DefaultLocallyAvailableResource : AbstractLocallyAvailableResource {
+    private val origin: File?
 
-public class DefaultLocallyAvailableResource extends AbstractLocallyAvailableResource {
-    private final File origin;
-
-    public DefaultLocallyAvailableResource(File origin, ChecksumService checksumService) {
-        super(() -> checksumService.sha1(origin));
-        this.origin = origin;
+    constructor(origin: File, checksumService: ChecksumService) : super(org.gradle.internal.Factory { checksumService.sha1(origin) }) {
+        this.origin = origin
     }
 
-    public DefaultLocallyAvailableResource(File origin, HashCode sha1) {
-        super(sha1);
-        this.origin = origin;
+    constructor(origin: File?, sha1: HashCode?) : super(sha1) {
+        this.origin = origin
     }
 
-    @Override
-    public File getFile() {
-        return origin;
+    override fun getFile(): File? {
+        return origin
     }
 }

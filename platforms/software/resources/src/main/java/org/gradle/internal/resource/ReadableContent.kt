@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-import org.gradle.api.resources.ResourceException;
-
-import java.io.InputStream;
+import org.gradle.api.resources.ResourceException
+import java.io.InputStream
 
 /**
  * Some resource content with a known length.
  */
-public interface ReadableContent {
+interface ReadableContent {
     /**
      * Unbuffered input stream to read contents of resource.
      */
-    InputStream open() throws ResourceException;
+    @Throws(ResourceException::class)
+    fun open(): InputStream?
 
-    long getContentLength();
+    val contentLength: Long
 }

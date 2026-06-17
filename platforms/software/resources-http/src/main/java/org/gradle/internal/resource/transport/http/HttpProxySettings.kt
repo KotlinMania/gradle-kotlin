@@ -13,51 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.http;
+package org.gradle.internal.resource.transport.http
+
+import com.google.common.base.Preconditions
+import org.gradle.api.credentials.Credentials
+import org.jspecify.annotations.NullMarked
 
 
-import com.google.common.base.Preconditions;
-import org.gradle.api.credentials.Credentials;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
+interface HttpProxySettings {
+    @JvmField
+    val proxy: HttpProxy?
 
-public interface HttpProxySettings {
+    class HttpProxy(@JvmField val host: String?, @JvmField val port: Int, username: String?, password: String?) {
+        @JvmField
+        val credentials: HttpProxyCredentials?
 
-    HttpProxy getProxy();
-
-    class HttpProxy {
-        public final String host;
-        public final int port;
-        public final HttpProxyCredentials credentials;
-
-        public HttpProxy(String host, int port, String username, String password) {
-            this.host = host;
-            this.port = port;
+        init {
             if (username == null || username.isEmpty()) {
-                credentials = null;
+                credentials = null
             } else {
-                credentials = new HttpProxyCredentials(username, password);
+                credentials = HttpProxyCredentials(username, password)
             }
         }
     }
 
     @NullMarked
-    class HttpProxyCredentials implements Credentials {
-        private final String username;
-        private final String password;
+    class HttpProxyCredentials(username: String, @JvmField val password: String?) : Credentials {
+        @JvmField
+        val username: String
 
-        public HttpProxyCredentials(String username, @Nullable String password) {
-            this.username = Preconditions.checkNotNull(username);
-            this.password = password;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        @Nullable
-        public String getPassword() {
-            return password;
+        init {
+            this.username = Preconditions.checkNotNull<String>(username)
         }
     }
 }

@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import java.net.URI
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.internal.verifier.HttpRedirectVerifier;
+interface TextUriResourceLoader {
+    fun loadUri(description: String?, sourceUri: URI?): TextResource?
 
-import java.net.URI;
-
-public interface TextUriResourceLoader {
-    TextResource loadUri(String description, URI sourceUri);
-
-    @ServiceScope(Scope.Build.class)
-    @FunctionalInterface
-    interface Factory {
-        TextUriResourceLoader create(HttpRedirectVerifier redirectVerifier);
+    @ServiceScope(Scope.Build::class)
+    fun interface Factory {
+        fun create(redirectVerifier: HttpRedirectVerifier?): TextUriResourceLoader?
     }
 }

@@ -13,40 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.distribution.internal;
+package org.gradle.api.distribution.internal
 
-import org.gradle.api.Action;
-import org.gradle.api.distribution.Distribution;
-import org.gradle.api.file.CopySpec;
-
-import javax.inject.Inject;
+import org.gradle.api.Action
+import org.gradle.api.distribution.Distribution
+import org.gradle.api.file.CopySpec
+import javax.inject.Inject
 
 /**
  * Allow user to declare a distribution.
  */
-public abstract class DefaultDistribution implements Distribution {
-    private final String name;
-    private final CopySpec contents;
-
-    @Inject
-    public DefaultDistribution(String name, CopySpec contents) {
-        this.name = name;
-        this.contents = contents;
+abstract class DefaultDistribution @Inject constructor(private val name: String?, private val contents: CopySpec?) : Distribution {
+    override fun getName(): String? {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getContents(): CopySpec? {
+        return contents
     }
 
-    @Override
-    public CopySpec getContents() {
-        return contents;
-    }
-
-    @Override
-    public CopySpec contents(Action<? super CopySpec> action) {
-        action.execute(contents);
-        return contents;
+    override fun contents(action: Action<in CopySpec?>): CopySpec? {
+        action.execute(contents)
+        return contents
     }
 }

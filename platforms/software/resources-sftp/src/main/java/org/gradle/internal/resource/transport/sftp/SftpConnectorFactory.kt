@@ -13,46 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.authentication.Authentication
+import org.gradle.internal.authentication.AllSchemesAuthentication
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.transfer.DefaultExternalResourceConnector
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.authentication.AllSchemesAuthentication;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.transfer.DefaultExternalResourceConnector;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-public class SftpConnectorFactory implements ResourceConnectorFactory {
-    private final SftpClientFactory sftpClientFactory;
-
-    public SftpConnectorFactory(SftpClientFactory sftpClientFactory) {
-        this.sftpClientFactory = sftpClientFactory;
+class SftpConnectorFactory(private val sftpClientFactory: SftpClientFactory?) : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String?> {
+        return mutableSetOf<String?>("sftp")
     }
 
-    @Override
-    public Set<String> getSupportedProtocols() {
-        return Collections.singleton("sftp");
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
+        val supported: MutableSet<Class<out Authentication?>?> = HashSet<Class<out Authentication?>?>()
+        supported.add(AllSchemesAuthentication::class.java)
+        return supported
     }
 
-    @Override
-    public Set<Class<? extends Authentication>> getSupportedAuthentication() {
-        Set<Class<? extends Authentication>> supported = new HashSet<Class<? extends Authentication>>();
-        supported.add(AllSchemesAuthentication.class);
-        return supported;
-    }
-
-    @Override
-    public ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails) {
-        PasswordCredentials passwordCredentials = connectionDetails.getCredentials(PasswordCredentials.class);
-        SftpResourceAccessor accessor = new SftpResourceAccessor(sftpClientFactory, passwordCredentials);
-        SftpResourceLister lister = new SftpResourceLister(sftpClientFactory, passwordCredentials);
-        SftpResourceUploader uploader = new SftpResourceUploader(sftpClientFactory, passwordCredentials);
-        return new DefaultExternalResourceConnector(accessor, lister, uploader);
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
+        val passwordCredentials = connectionDetails.getCredentials<PasswordCredentials?>(PasswordCredentials::class.java)
+        val accessor = SftpResourceAccessor(sftpClientFactory, passwordCredentials)
+        val lister = SftpResourceLister(sftpClientFactory, passwordCredentials)
+        val uploader = SftpResourceUploader(sftpClientFactory, passwordCredentials)
+        return DefaultExternalResourceConnector(accessor, lister, uploader)
     }
 }

@@ -13,49 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import com.google.common.io.Files
+import org.gradle.api.internal.artifacts.repositories.AbstractArtifactRepository.getName
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.publish.internal.PublicationInternal
 
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.publish.internal.PublicationInternal;
+class DerivedMavenArtifact(private val original: AbstractMavenArtifact, private val derivedFile: PublicationInternal.DerivedArtifact, taskDependencyFactory: TaskDependencyFactory) :
+    AbstractMavenArtifact(taskDependencyFactory) {
+    val file: File
+        get() = derivedFile.create()
 
-import java.io.File;
-
-import static com.google.common.io.Files.getFileExtension;
-
-public class DerivedMavenArtifact extends AbstractMavenArtifact {
-    private final AbstractMavenArtifact original;
-    private final PublicationInternal.DerivedArtifact derivedFile;
-
-    public DerivedMavenArtifact(AbstractMavenArtifact original, PublicationInternal.DerivedArtifact derivedFile, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.original = original;
-        this.derivedFile = derivedFile;
+    override fun getDefaultExtension(): String {
+        return original.getExtension() + "." + Files.getFileExtension(this.file.getName())
     }
 
-    @Override
-    public File getFile() {
-        return derivedFile.create();
+    override fun getDefaultClassifier(): String? {
+        return original.getClassifier()
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return original.getExtension() + "." + getFileExtension(getFile().getName());
+    override fun getDefaultBuildDependencies(): TaskDependencyInternal {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return original.getClassifier();
-    }
-
-    @Override
-    protected TaskDependencyInternal getDefaultBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return original.shouldBePublished() && derivedFile.shouldBePublished();
+    override fun shouldBePublished(): Boolean {
+        return original.shouldBePublished() && derivedFile.shouldBePublished()
     }
 }

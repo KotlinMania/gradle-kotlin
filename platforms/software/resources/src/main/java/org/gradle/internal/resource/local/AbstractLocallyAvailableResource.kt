@@ -13,58 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local;
+package org.gradle.internal.resource.local
 
-import org.gradle.internal.Factory;
-import org.gradle.internal.hash.HashCode;
+import org.gradle.internal.Factory
+import org.gradle.internal.hash.HashCode
 
-public abstract class AbstractLocallyAvailableResource implements LocallyAvailableResource {
-    private Factory<HashCode> factory;
+abstract class AbstractLocallyAvailableResource : LocallyAvailableResource {
+    private var factory: Factory<HashCode?>? = null
+
     // Calculated on demand
-    private HashCode sha1;
-    private Long contentLength;
-    private Long lastModified;
+    private var sha1: HashCode? = null
+    private var contentLength: Long? = null
+    private var lastModified: Long? = null
 
-    protected AbstractLocallyAvailableResource(Factory<HashCode> factory) {
-        this.factory = factory;
+    protected constructor(factory: Factory<HashCode?>) {
+        this.factory = factory
     }
 
-    protected AbstractLocallyAvailableResource(HashCode sha1) {
-        this.sha1 = sha1;
+    protected constructor(sha1: HashCode?) {
+        this.sha1 = sha1
     }
 
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return getFile().getPath();
+    override fun getDisplayName(): String {
+        return getFile().getPath()
     }
 
-    @Override
-    public HashCode getSha1() {
+    override fun getSha1(): HashCode? {
         if (sha1 == null) {
-            sha1 = factory.create();
+            sha1 = factory!!.create()
         }
-        return sha1;
+        return sha1
     }
 
-    @Override
-    public long getContentLength() {
+    override fun getContentLength(): Long {
         if (contentLength == null) {
-            contentLength = getFile().length();
+            contentLength = getFile().length()
         }
-        return contentLength;
+        return contentLength!!
     }
 
-    @Override
-    public long getLastModified() {
+    override fun getLastModified(): Long {
         if (lastModified == null) {
-            lastModified = getFile().lastModified();
+            lastModified = getFile().lastModified()
         }
-        return lastModified;
+        return lastModified!!
     }
-
 }

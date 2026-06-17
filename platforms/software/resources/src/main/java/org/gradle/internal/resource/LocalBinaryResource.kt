@@ -13,22 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource;
-
-import java.io.File;
-import java.net.URI;
+package org.gradle.internal.resource
 
 /**
  * Some binary resource available somewhere on the local file system.
  */
-public interface LocalBinaryResource extends Resource, ReadableContent {
-    URI getURI();
+interface LocalBinaryResource : Resource, ReadableContent {
+    val uRI: URI?
 
-    String getBaseName();
+    val baseName: String?
 
     /**
      * Returns the file containing this resource. Note that the content of this resource may not be the same as the file (for example, the file may be compressed, or this resource may represent an entry in an archive file, or both)
      */
-    File getContainingFile();
+    val containingFile: File?
 }

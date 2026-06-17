@@ -13,39 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.File;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
 
 /**
- * Receives events about accessing file resources through {@link ExternalResource}.
- * These events are not sent through {@code ListenerManager}.
+ * Receives events about accessing file resources through [ExternalResource].
+ * These events are not sent through `ListenerManager`.
  */
-@ServiceScope(Scope.BuildTree.class)
-public interface FileResourceListener {
-    /**
-     * An empty implementation that does nothing
-     */
-    FileResourceListener NO_OP = new FileResourceListener() {
-        @Override
-        public void fileObserved(File file) {}
-
-        @Override
-        public void directoryChildrenObserved(File file) {}
-    };
-
+@ServiceScope(Scope.BuildTree::class)
+interface FileResourceListener {
     /**
      * Called when a file system resource is accessed as a regular file.
      */
-    void fileObserved(File file);
+    fun fileObserved(file: File?)
 
     /**
      * Called when the children of a file system resource are listed.
      */
-    void directoryChildrenObserved(File file);
+    fun directoryChildrenObserved(file: File?)
+
+    companion object {
+        /**
+         * An empty implementation that does nothing
+         */
+        val NO_OP: FileResourceListener = object : FileResourceListener {
+            override fun fileObserved(file: File?) {}
+
+            override fun directoryChildrenObserved(file: File?) {}
+        }
+    }
 }

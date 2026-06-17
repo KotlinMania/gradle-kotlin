@@ -13,73 +13,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal
 
-package org.gradle.api.publish.internal;
+import org.gradle.api.InvalidUserDataException
 
-import org.gradle.api.InvalidUserDataException;
-
-public abstract class PublicationFieldValidator<T extends PublicationFieldValidator<T>> {
-    private final Class<T> type;
-    protected final String publicationName;
-    protected final String name;
-    protected final String value;
-
-    public PublicationFieldValidator(Class<T> type, String publicationName, String name, String value) {
-        this.type = type;
-        this.publicationName = publicationName;
-        this.name = name;
-        this.value = value;
-    }
-
-    public T notNull() {
+abstract class PublicationFieldValidator<T : PublicationFieldValidator<T?>?>(
+    private val type: Class<T?>,
+    protected val publicationName: String?,
+    protected val name: String?,
+    protected val value: String?
+) {
+    fun notNull(): T? {
         if (value == null) {
-            String message = String.format("%s cannot be null.", name);
-            throw failure(message);
+            val message = String.format("%s cannot be null.", name)
+            throw failure(message)
         }
-        return type.cast(this);
+        return type.cast(this)
     }
 
-    public T notEmpty() {
-        notNull();
-        if (value.length() == 0) {
-            throw failure(String.format("%s cannot be empty.", name));
+    fun notEmpty(): T? {
+        notNull()
+        if (value!!.length == 0) {
+            throw failure(String.format("%s cannot be empty.", name))
         }
-        return type.cast(this);
+        return type.cast(this)
     }
 
-    public T validInFileName() {
-        if (value == null || value.length() == 0) {
-            return type.cast(this);
+    fun validInFileName(): T? {
+        if (value == null || value.length == 0) {
+            return type.cast(this)
         }
-        doesNotContainSpecialCharacters(false);
-        return type.cast(this);
+        doesNotContainSpecialCharacters(false)
+        return type.cast(this)
     }
 
-    public T doesNotContainSpecialCharacters(boolean allowSlash) {
-        if (value == null || value.length() == 0) {
-            return type.cast(this);
+    fun doesNotContainSpecialCharacters(allowSlash: Boolean): T? {
+        if (value == null || value.length == 0) {
+            return type.cast(this)
         }
         // Iterate over unicode characters
-        int offset = 0;
-        while (offset < value.length()) {
-            final int unicodeChar = value.codePointAt(offset);
+        var offset = 0
+        while (offset < value.length) {
+            val unicodeChar = value.codePointAt(offset)
             if (Character.isISOControl(unicodeChar)) {
-                throw failure(String.format("%s cannot contain ISO control character '\\u%04x'.", name, unicodeChar));
+                throw failure(String.format("%s cannot contain ISO control character '\\u%04x'.", name, unicodeChar))
             }
-            if ('\\' == unicodeChar || ('/' == unicodeChar && !allowSlash)) {
-                throw failure(String.format("%s cannot contain '%c'.", name, (char) unicodeChar));
+            if ('\\'.code == unicodeChar || ('/'.code == unicodeChar && !allowSlash)) {
+                throw failure(String.format("%s cannot contain '%c'.", name, unicodeChar.toChar()))
             }
-            offset += Character.charCount(unicodeChar);
+            offset += Character.charCount(unicodeChar)
         }
-        return type.cast(this);
+        return type.cast(this)
     }
 
-    public T optionalNotEmpty() {
-        if (value != null && value.length() == 0) {
-            throw failure(String.format("%s cannot be an empty string. Use null instead.", name));
+    fun optionalNotEmpty(): T? {
+        if (value != null && value.length == 0) {
+            throw failure(String.format("%s cannot be an empty string. Use null instead.", name))
         }
-        return type.cast(this);
+        return type.cast(this)
     }
 
-    protected abstract InvalidUserDataException failure(String message);
+    protected abstract fun failure(message: String?): InvalidUserDataException?
 }

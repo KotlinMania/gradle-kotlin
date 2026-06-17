@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.maven
 
-package org.gradle.maven;
-
-import org.gradle.api.component.Artifact;
+import org.gradle.api.component.Artifact
 
 /**
  * A Maven POM artifact.
  */
-public interface MavenPomArtifact extends Artifact {
-}
+interface MavenPomArtifact : Artifact

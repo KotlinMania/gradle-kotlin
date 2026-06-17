@@ -29,23 +29,27 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
     private val causes: MutableList<Throwable> = CopyOnWriteArrayList<Throwable>()
 
     @Transient
-    private var hideCause: ThreadLocal<Boolean?> = threadLocal()
+    private var hideCause: ThreadLocal<Boolean> = threadLocal()
 
     @Transient
     private var messageFactory: Factory<String?>? = null
-    private var message: String? = null
+    private var messageValue: String? = null
 
     constructor(message: String?) : super(message) {
-        this.message = message
+        this.messageValue = message
     }
 
     constructor(message: String?, vararg causes: Throwable?) : super(message) {
-        this.message = message
-        this.causes.addAll(Arrays.asList<Throwable?>(*causes))
+        this.messageValue = message
+        for (cause in causes) {
+            if (cause != null) {
+                this.causes.add(cause)
+            }
+        }
     }
 
     constructor(message: String?, causes: Iterable<out Throwable?>) : super(message) {
-        this.message = message
+        this.messageValue = message
         initCauses(causes)
     }
 
@@ -54,7 +58,11 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
     }
 
     constructor(messageFactory: Factory<String?>?, vararg causes: Throwable?) : this(messageFactory) {
-        this.causes.addAll(Arrays.asList<Throwable?>(*causes))
+        for (cause in causes) {
+            if (cause != null) {
+                this.causes.add(cause)
+            }
+        }
     }
 
     constructor(messageFactory: Factory<String?>?, causes: Iterable<out Throwable?>) : this(messageFactory) {
@@ -70,11 +78,11 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
     @Throws(IOException::class)
     private fun writeObject(out: ObjectOutputStream) {
         // Ensure fields are initialized before serialization
-        val ignored = message
+        val ignored = messageValue
         out.defaultWriteObject()
     }
 
-    private fun threadLocal(): ThreadLocal<Boolean?> {
+    private fun threadLocal(): ThreadLocal<Boolean> {
         return HideStacktrace()
     }
 
@@ -88,7 +96,7 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
         return resolutions
     }
 
-    private class HideStacktrace : ThreadLocal<Boolean?>() {
+    private class HideStacktrace : ThreadLocal<Boolean>() {
         override fun initialValue(): Boolean {
             return false
         }
@@ -108,12 +116,14 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
     fun initCauses(causes: Iterable<out Throwable?>) {
         this.causes.clear()
         for (cause in causes) {
-            this.causes.add(cause!!)
+            if (cause != null) {
+                this.causes.add(cause)
+            }
         }
     }
 
     @get:Synchronized
-    val cause: Throwable?
+    override val cause: Throwable?
         get() {
             if (hideCause.get()) {
                 return null
@@ -161,23 +171,27 @@ open class DefaultMultiCauseException : GradleException, MultiCauseException, No
         }
     }
 
-    override fun getMessage(): String? {
+    override val message: String?
+        get() {
         if (messageFactory != null) {
-            message = messageFactory!!.create()
+            messageValue = messageFactory!!.create()
             messageFactory = null
-            return message
+            return messageValue
         }
-        return message
+        return messageValue
     }
 
-    override fun hasCause(type: Class<*>): Boolean {
+    override fun hasCause(type: Class<*>?): Boolean {
         for (cause in getCauses()) {
+            if (cause == null) {
+                continue
+            }
             if (cause is NonGradleCauseExceptionsHolder) {
                 val hasCauseOfType = (cause as NonGradleCauseExceptionsHolder).hasCause(type)
                 if (hasCauseOfType) {
                     return true
                 }
-            } else if (type.isInstance(cause)) {
+            } else if (type != null && type.isInstance(cause)) {
                 return true
             }
         }

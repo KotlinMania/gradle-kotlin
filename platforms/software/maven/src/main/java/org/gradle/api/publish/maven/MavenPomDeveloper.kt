@@ -13,65 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.SetProperty;
+package org.gradle.api.publish.maven
 
 /**
  * A developer of a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomDeveloperSpec
  */
-public interface MavenPomDeveloper {
-
+interface MavenPomDeveloper {
     /**
      * The unique ID of this developer in the SCM.
      */
-    Property<String> getId();
+    val id: Property<String?>?
 
     /**
      * The name of this developer.
      */
-    Property<String> getName();
+    val name: Property<String?>?
 
     /**
      * The email
      */
-    Property<String> getEmail();
+    val email: Property<String?>?
 
     /**
      * The URL of this developer.
      */
-    Property<String> getUrl();
+    val url: Property<String?>?
 
     /**
      * The organization name of this developer.
      */
-    Property<String> getOrganization();
+    val organization: Property<String?>?
 
     /**
      * The organization's URL of this developer.
      */
-    Property<String> getOrganizationUrl();
+    val organizationUrl: Property<String?>?
 
     /**
      * The roles of this developer.
      */
-    SetProperty<String> getRoles();
+    val roles: SetProperty<String?>?
 
     /**
      * The timezone of this developer.
      */
-    Property<String> getTimezone();
+    val timezone: Property<String?>?
 
     /**
      * The properties of this developer.
      */
-    MapProperty<String, String> getProperties();
-
+    val properties: MapProperty<String?, String?>?
 }

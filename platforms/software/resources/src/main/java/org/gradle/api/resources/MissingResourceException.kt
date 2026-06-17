@@ -13,28 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.resources
 
-package org.gradle.api.resources;
-
-import java.net.URI;
+import java.net.URI
 
 /**
  * Exception thrown when the resource does not exist
  */
-public class MissingResourceException extends ResourceException {
-    public MissingResourceException(String message) {
-        super(message);
-    }
+class MissingResourceException : ResourceException {
+    constructor(message: String?) : super(message)
 
-    public MissingResourceException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 
-    public MissingResourceException(URI location, String message) {
-        super(location, message);
-    }
+    constructor(location: URI?, message: String?) : super(location, message)
 
-    public MissingResourceException(URI location, String message, Throwable cause) {
-        super(location, message, cause);
-    }
+    constructor(location: URI?, message: String?, cause: Throwable?) : super(location, message, cause)
 }

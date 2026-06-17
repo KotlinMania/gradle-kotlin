@@ -13,23 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.verifier
 
-package org.gradle.internal.verifier;
-
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.util.Collection;
-import java.util.function.Consumer;
-
-import static java.util.Objects.requireNonNull;
+import org.gradle.util.internal.GUtil
+import java.net.URI
+import java.util.Objects
+import java.util.function.Consumer
 
 /**
- * Used to create instances of {@link HttpRedirectVerifier}.
+ * Used to create instances of [HttpRedirectVerifier].
  */
-public class HttpRedirectVerifierFactory {
-
+object HttpRedirectVerifierFactory {
     /**
      * Verifies that the base URL and all subsequent redirects followed during an interaction with a server are done so securely unless
      * the user has explicitly opted out from this protection.
@@ -39,38 +33,40 @@ public class HttpRedirectVerifierFactory {
      * @param insecureBaseHost Callback when the base host URL is insecure.
      * @param insecureRedirect Callback when the server returns an 30x redirect to an insecure server.
      */
-    public static HttpRedirectVerifier create(
-        @Nullable URI baseHost,
-        boolean allowInsecureProtocol,
-        Runnable insecureBaseHost,
-        Consumer<URI> insecureRedirect
-    ) {
-        requireNonNull(insecureBaseHost, "insecureBaseHost must not be null");
-        requireNonNull(insecureRedirect, "insecureRedirect must not be null");
+    fun create(
+        baseHost: URI?,
+        allowInsecureProtocol: Boolean,
+        insecureBaseHost: Runnable?,
+        insecureRedirect: Consumer<URI?>?
+    ): HttpRedirectVerifier? {
+        Objects.requireNonNull<Runnable?>(insecureBaseHost, "insecureBaseHost must not be null")
+        Objects.requireNonNull<Consumer<URI?>?>(insecureRedirect, "insecureRedirect must not be null")
         if (allowInsecureProtocol) {
-            return NoopHttpRedirectVerifier.instance;
+            return NoopHttpRedirectVerifier.Companion.instance
         } else {
             // Verify that the base URL is secure now.
             if (baseHost != null && !GUtil.isSecureUrl(baseHost)) {
-                insecureBaseHost.run();
+                insecureBaseHost!!.run()
             }
 
             // Verify that any future redirect locations are secure.
             // Lambda will be called back on for every redirect in the chain.
-            return redirectLocations ->
-                redirectLocations
+            return HttpRedirectVerifier { redirectLocations: MutableCollection<URI?>? ->
+                redirectLocations!!
                     .stream()
-                    .filter(url -> !GUtil.isSecureUrl(url))
-                    .forEach(insecureRedirect);
+                    .filter { url: URI? -> !GUtil.isSecureUrl(url) }
+                    .forEach(insecureRedirect)
+            }
         }
     }
 
-    private static class NoopHttpRedirectVerifier implements HttpRedirectVerifier {
-        private static NoopHttpRedirectVerifier instance = new NoopHttpRedirectVerifier();
-
-        @Override
-        public void validateRedirects(Collection<URI> redirectLocations) {
+    private class NoopHttpRedirectVerifier : HttpRedirectVerifier {
+        override fun validateRedirects(redirectLocations: MutableCollection<URI?>?) {
             // Noop
+        }
+
+        companion object {
+            private val instance = NoopHttpRedirectVerifier()
         }
     }
 }

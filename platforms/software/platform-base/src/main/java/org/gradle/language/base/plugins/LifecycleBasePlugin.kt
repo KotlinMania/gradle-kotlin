@@ -13,80 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.plugins
 
-package org.gradle.language.base.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.file.Directory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.Delete;
-import org.gradle.internal.execution.BuildOutputCleanupRegistry;
-import org.gradle.language.base.internal.plugins.CleanRule;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Delete
+import org.gradle.internal.execution.BuildOutputCleanupRegistry
+import org.gradle.language.base.internal.plugins.CleanRule
 
 /**
- * <p>A {@link org.gradle.api.Plugin} which defines a basic project lifecycle.</p>
  *
- * @see <a href="https://docs.gradle.org/current/userguide/base_plugin.html">Base plugin reference</a>
+ * A [Plugin] which defines a basic project lifecycle.
+ *
+ * @see [Base plugin reference](https://docs.gradle.org/current/userguide/base_plugin.html)
  */
-public abstract class LifecycleBasePlugin implements Plugin<Project> {
-    public static final String CLEAN_TASK_NAME = "clean";
-    public static final String ASSEMBLE_TASK_NAME = "assemble";
-    public static final String CHECK_TASK_NAME = "check";
-    public static final String BUILD_TASK_NAME = "build";
-    public static final String BUILD_GROUP = "build";
-    public static final String VERIFICATION_GROUP = "verification";
-
-    @Override
-    public void apply(final Project project) {
-        final ProjectInternal projectInternal = (ProjectInternal) project;
-        addClean(projectInternal);
-        addCleanRule(project);
-        addAssemble(project);
-        addCheck(project);
-        addBuild(project);
+abstract class LifecycleBasePlugin : Plugin<Project?> {
+    override fun apply(project: Project?) {
+        val projectInternal = project as ProjectInternal
+        addClean(projectInternal)
+        addCleanRule(project)
+        addAssemble(project)
+        addCheck(project)
+        addBuild(project)
     }
 
-    private void addClean(final ProjectInternal project) {
-        Provider<Directory> buildDir = project.getLayout().getBuildDirectory();
+    private fun addClean(project: ProjectInternal) {
+        val buildDir: Provider<Directory?> = project.getLayout().getBuildDirectory()
 
         // Register at least the project buildDir as a directory to be deleted.
-        final BuildOutputCleanupRegistry buildOutputCleanupRegistry = project.getServices().get(BuildOutputCleanupRegistry.class);
-        buildOutputCleanupRegistry.registerOutputs(buildDir);
+        val buildOutputCleanupRegistry = project.getServices().get<BuildOutputCleanupRegistry?>(BuildOutputCleanupRegistry::class.java)
+        buildOutputCleanupRegistry!!.registerOutputs(buildDir)
 
-        final Provider<Delete> clean = project.getTasks().register(CLEAN_TASK_NAME, Delete.class, cleanTask -> {
-            cleanTask.setDescription("Deletes the build directory.");
-            cleanTask.setGroup(BUILD_GROUP);
-            cleanTask.delete(buildDir);
-        });
-        buildOutputCleanupRegistry.registerOutputs(clean.map(cl -> cl.getTargetFiles()));
+        val clean: Provider<Delete?> = project.getTasks().register<Delete?>(CLEAN_TASK_NAME, Delete::class.java, Action { cleanTask: Delete? ->
+            cleanTask!!.setDescription("Deletes the build directory.")
+            cleanTask.setGroup(BUILD_GROUP)
+            cleanTask.delete(buildDir)
+        })
+        buildOutputCleanupRegistry.registerOutputs(clean.map<FileCollection?>(Transformer { cl: Delete? -> cl!!.getTargetFiles() }))
     }
 
-    private void addCleanRule(Project project) {
-        project.getTasks().addRule(new CleanRule(project.getTasks()));
+    private fun addCleanRule(project: Project) {
+        project.getTasks().addRule(CleanRule(project.getTasks()))
     }
 
-    private void addAssemble(Project project) {
-        project.getTasks().register(ASSEMBLE_TASK_NAME, assembleTask -> {
-            assembleTask.setDescription("Assembles the outputs of this project.");
-            assembleTask.setGroup(BUILD_GROUP);
-        });
+    private fun addAssemble(project: Project) {
+        project.getTasks().register(ASSEMBLE_TASK_NAME, Action { assembleTask: Task? ->
+            assembleTask!!.setDescription("Assembles the outputs of this project.")
+            assembleTask.setGroup(BUILD_GROUP)
+        })
     }
 
-    private void addCheck(Project project) {
-        project.getTasks().register(CHECK_TASK_NAME, checkTask -> {
-            checkTask.setDescription("Runs all checks.");
-            checkTask.setGroup(VERIFICATION_GROUP);
-        });
+    private fun addCheck(project: Project) {
+        project.getTasks().register(CHECK_TASK_NAME, Action { checkTask: Task? ->
+            checkTask!!.setDescription("Runs all checks.")
+            checkTask.setGroup(VERIFICATION_GROUP)
+        })
     }
 
-    private void addBuild(final Project project) {
-        project.getTasks().register(BUILD_TASK_NAME, buildTask -> {
-            buildTask.setDescription("Assembles and tests this project.");
-            buildTask.setGroup(BUILD_GROUP);
-            buildTask.dependsOn(ASSEMBLE_TASK_NAME);
-            buildTask.dependsOn(CHECK_TASK_NAME);
-        });
+    private fun addBuild(project: Project) {
+        project.getTasks().register(BUILD_TASK_NAME, Action { buildTask: Task? ->
+            buildTask!!.setDescription("Assembles and tests this project.")
+            buildTask.setGroup(BUILD_GROUP)
+            buildTask.dependsOn(ASSEMBLE_TASK_NAME)
+            buildTask.dependsOn(CHECK_TASK_NAME)
+        })
+    }
+
+    companion object {
+        const val CLEAN_TASK_NAME: String = "clean"
+        const val ASSEMBLE_TASK_NAME: String = "assemble"
+        const val CHECK_TASK_NAME: String = "check"
+        const val BUILD_TASK_NAME: String = "build"
+        const val BUILD_GROUP: String = "build"
+        const val VERIFICATION_GROUP: String = "verification"
     }
 }

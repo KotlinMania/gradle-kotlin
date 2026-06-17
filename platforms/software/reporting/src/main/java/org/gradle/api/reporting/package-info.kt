@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * Plugins for reporting
+ * Classes for reporting
  */
-package org.gradle.api.reporting.plugins
+package org.gradle.api.reporting
 
 import org.gradle.reporting.HtmlReportRenderer.renderRawSinglePage
 import org.gradle.reporting.HtmlPageBuilder.requireResource

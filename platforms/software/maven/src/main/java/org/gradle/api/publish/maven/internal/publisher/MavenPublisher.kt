@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven.internal.publisher;
+package org.gradle.api.publish.maven.internal.publisher
 
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 
 /**
  * Used by `maven-publish` plugin to publish Maven modules.
  */
-public interface MavenPublisher {
-    void publish(MavenNormalizedPublication publication, @Nullable MavenArtifactRepository artifactRepository);
+interface MavenPublisher {
+    fun publish(publication: MavenNormalizedPublication?, artifactRepository: MavenArtifactRepository?)
 }

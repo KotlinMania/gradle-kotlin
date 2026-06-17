@@ -13,33 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base;
+package org.gradle.language.base
 
-import org.gradle.api.BuildableComponentSpec;
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.internal.HasInternalProtocol;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.BuildableComponentSpec
+import org.gradle.api.Incubating
+import org.gradle.api.Task
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * A set of sources for a programming language.
  */
 @Incubating
 @HasInternalProtocol
-public interface LanguageSourceSet extends BuildableComponentSpec {
-
+interface LanguageSourceSet : BuildableComponentSpec {
     // TODO: do we want to keep using SourceDirectorySet in the new API?
     // would feel more natural if dirs could be added directly to LanguageSourceSet
     // could also think about extending SourceDirectorySet
-
     /**
      * The source files.
      */
-    SourceDirectorySet getSource();
+    @JvmField
+    val source: SourceDirectorySet?
 
-    void generatedBy(Task generatorTask);
+    fun generatedBy(generatorTask: Task?)
 
-    @Nullable
-    String getParentName();
+    val parentName: String?
 }

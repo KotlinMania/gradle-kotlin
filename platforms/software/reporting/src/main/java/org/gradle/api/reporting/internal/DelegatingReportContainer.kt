@@ -13,45 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
-
-import groovy.lang.Closure;
-import org.gradle.api.NamedDomainObjectSet;
-import org.gradle.api.internal.DelegatingNamedDomainObjectSet;
-import org.gradle.api.reporting.Report;
-import org.gradle.api.reporting.ReportContainer;
-import org.gradle.api.tasks.Internal;
-
-import java.util.Map;
+import groovy.lang.Closure
+import org.gradle.api.NamedDomainObjectSet
+import org.gradle.api.internal.DelegatingNamedDomainObjectSet
+import org.gradle.api.reporting.Report
+import org.gradle.api.reporting.ReportContainer
+import org.gradle.api.tasks.Internal
 
 /**
- * A {@link ReportContainer} which delegates all methods to a provided delegate.
+ * A [ReportContainer] which delegates all methods to a provided delegate.
  */
-public abstract class DelegatingReportContainer<T extends Report> extends DelegatingNamedDomainObjectSet<T> implements ReportContainer<T> {
-
-    public DelegatingReportContainer(ReportContainer<T> delegate) {
-        super(delegate);
-    }
-
+abstract class DelegatingReportContainer<T : Report?>(delegate: ReportContainer<T?>) : DelegatingNamedDomainObjectSet<T?>(delegate), ReportContainer<T?> {
     @Internal
-    @Override
-    protected ReportContainer<T> getDelegate() {
-        return (ReportContainer<T>) super.getDelegate();
+    override fun getDelegate(): ReportContainer<T?> {
+        return super.getDelegate() as ReportContainer<T?>
     }
 
-    @Override
-    public NamedDomainObjectSet<T> getEnabled() {
-        return getDelegate().getEnabled();
+    override fun getEnabled(): NamedDomainObjectSet<T?> {
+        return getDelegate().getEnabled()
     }
 
-    @Override
-    public Map<String, T> getEnabledReports() {
-        return getDelegate().getEnabledReports();
+    override fun getEnabledReports(): MutableMap<String, T?> {
+        return getDelegate().getEnabledReports()
     }
 
-    @Override
-    public ReportContainer<T> configure(Closure cl) {
-        return getDelegate().configure(cl);
+    override fun configure(cl: Closure<*>): ReportContainer<T?> {
+        return getDelegate().configure(cl)
     }
 }

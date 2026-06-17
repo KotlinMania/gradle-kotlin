@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.internal.hash.ChecksumService;
-
-import java.util.stream.Collectors;
+import org.gradle.internal.hash.ChecksumService
+import java.io.File
+import java.util.function.Function
+import java.util.stream.Collectors
 
 /**
  * Makes a LocallyAvailableResourceFinder out of a FileStoreSearcher.
  * @param <C> The type of criterion the filestore can be searched for, and therefore locally available resources searched for.
- */
-public class LocallyAvailableResourceFinderSearchableFileStoreAdapter<C> extends AbstractLocallyAvailableResourceFinder<C> {
-
-    public LocallyAvailableResourceFinderSearchableFileStoreAdapter(final FileStoreSearcher<C> fileStore, ChecksumService checksumService) {
-        super(criterion -> () -> {
-            return fileStore.search(criterion).stream().map(LocallyAvailableResource::getFile).collect(Collectors.toList());
-        }, checksumService);
-    }
-
-}
+</C> */
+class LocallyAvailableResourceFinderSearchableFileStoreAdapter<C>(fileStore: FileStoreSearcher<C?>, checksumService: ChecksumService?) :
+    AbstractLocallyAvailableResourceFinder<C?>(Function { criterion: C? ->
+        org.gradle.internal.Factory {
+            fileStore.search(criterion).stream().map<File?> { obj: LocallyAvailableResource? -> obj!!.getFile() }.collect(Collectors.toList())
+        }
+    }, checksumService)

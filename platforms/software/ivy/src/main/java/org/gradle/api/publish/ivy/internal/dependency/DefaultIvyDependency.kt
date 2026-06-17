@@ -13,84 +13,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.dependency
 
-package org.gradle.api.publish.ivy.internal.dependency;
+import com.google.common.base.Strings
+import org.gradle.api.artifacts.DependencyArtifact
+import org.gradle.api.artifacts.ExcludeRule
 
-import com.google.common.base.Strings;
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.jspecify.annotations.Nullable;
+class DefaultIvyDependency(
+    private val organisation: String?,
+    private val module: String?,
+    revision: String?,
+    private val confMapping: String?,
+    private val transitive: Boolean,
+    private val revConstraint: String?,
+    private val artifacts: MutableSet<DependencyArtifact?>?,
+    private val excludeRules: MutableSet<ExcludeRule?>?
+) : IvyDependency {
+    private val revision: String
 
-import java.util.Set;
-
-public class DefaultIvyDependency implements IvyDependency {
-    private final String organisation;
-    private final String module;
-    private final String revision;
-    private final String confMapping;
-    private final boolean transitive;
-    private final String revConstraint;
-    private final Set<DependencyArtifact> artifacts;
-    private final Set<ExcludeRule> excludeRules;
-
-    public DefaultIvyDependency(
-        String organisation,
-        String module,
-        String revision,
-        String confMapping,
-        boolean transitive,
-        @Nullable String revConstraint,
-        Set<DependencyArtifact> artifacts,
-        Set<ExcludeRule> excludeRules
-    ) {
-        this.organisation = organisation;
-        this.module = module;
-        this.revision = Strings.nullToEmpty(revision);
-        this.confMapping = confMapping;
-        this.transitive = transitive;
-        this.revConstraint = revConstraint;
-        this.excludeRules = excludeRules;
-        this.artifacts = artifacts;
+    init {
+        this.revision = Strings.nullToEmpty(revision)
     }
 
-    @Override
-    public String getOrganisation() {
-        return organisation;
+    override fun getOrganisation(): String? {
+        return organisation
     }
 
-    @Override
-    public String getModule() {
-        return module;
+    override fun getModule(): String? {
+        return module
     }
 
-    @Override
-    public String getRevision() {
-        return revision;
+    override fun getRevision(): String {
+        return revision
     }
 
-    @Nullable
-    @Override
-    public String getRevConstraint() {
-        return revConstraint;
+    override fun getRevConstraint(): String? {
+        return revConstraint
     }
 
-    @Override
-    public String getConfMapping() {
-        return confMapping;
+    override fun getConfMapping(): String? {
+        return confMapping
     }
 
-    @Override
-    public boolean isTransitive() {
-        return transitive;
+    override fun isTransitive(): Boolean {
+        return transitive
     }
 
-    @Override
-    public Set<DependencyArtifact> getArtifacts() {
-        return artifacts;
+    override fun getArtifacts(): MutableSet<DependencyArtifact?>? {
+        return artifacts
     }
 
-    @Override
-    public Set<ExcludeRule> getExcludeRules() {
-        return excludeRules;
+    override fun getExcludeRules(): MutableSet<ExcludeRule?>? {
+        return excludeRules
     }
 }

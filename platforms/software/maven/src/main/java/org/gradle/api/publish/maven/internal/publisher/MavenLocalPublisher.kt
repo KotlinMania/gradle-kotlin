@@ -13,79 +13,73 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publisher
 
-package org.gradle.api.publish.maven.internal.publisher;
-
-import org.apache.maven.artifact.repository.metadata.Metadata;
-import org.apache.maven.artifact.repository.metadata.Snapshot;
-import org.apache.maven.artifact.repository.metadata.SnapshotVersion;
-import org.apache.maven.artifact.repository.metadata.Versioning;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransport;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.internal.Factory;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.net.URI;
+import org.apache.maven.artifact.repository.metadata.Metadata
+import org.apache.maven.artifact.repository.metadata.Snapshot
+import org.apache.maven.artifact.repository.metadata.SnapshotVersion
+import org.apache.maven.artifact.repository.metadata.Versioning
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.internal.Factory
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.jspecify.annotations.NullMarked
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.net.URI
 
 @NullMarked
-public class MavenLocalPublisher extends AbstractMavenPublisher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MavenLocalPublisher.class);
+class MavenLocalPublisher(temporaryDirFactory: Factory<File?>, private val repositoryTransportFactory: RepositoryTransportFactory, private val mavenRepositoryLocator: LocalMavenRepositoryLocator) :
+    AbstractMavenPublisher(temporaryDirFactory) {
+    override fun publish(publication: MavenNormalizedPublication, artifactRepository: MavenArtifactRepository?) {
+        LOGGER.info("Publishing to maven local repository")
 
-    private final RepositoryTransportFactory repositoryTransportFactory;
-    private final LocalMavenRepositoryLocator mavenRepositoryLocator;
+        val rootUri: URI = mavenRepositoryLocator.localMavenRepository.toURI()
+        val transport = repositoryTransportFactory.createFileTransport("mavenLocal")
+        val repository: ExternalResourceRepository = transport.repository
 
-    public MavenLocalPublisher(Factory<File> temporaryDirFactory, RepositoryTransportFactory repositoryTransportFactory, LocalMavenRepositoryLocator mavenRepositoryLocator) {
-        super(temporaryDirFactory);
-        this.repositoryTransportFactory = repositoryTransportFactory;
-        this.mavenRepositoryLocator = mavenRepositoryLocator;
+        publish(publication, repository, rootUri, true)
     }
 
-    @Override
-    public void publish(MavenNormalizedPublication publication, @Nullable MavenArtifactRepository artifactRepository) {
-        LOGGER.info("Publishing to maven local repository");
+    override fun createSnapshotMetadata(
+        publication: MavenNormalizedPublication,
+        groupId: String,
+        artifactId: String,
+        version: String,
+        repository: ExternalResourceRepository,
+        metadataResource: ExternalResourceName
+    ): Metadata {
+        val metadata = Metadata()
+        metadata.setModelVersion("1.1.0")
+        metadata.setGroupId(groupId)
+        metadata.setArtifactId(artifactId)
+        metadata.setVersion(version)
 
-        URI rootUri = mavenRepositoryLocator.localMavenRepository.toURI();
-        RepositoryTransport transport = repositoryTransportFactory.createFileTransport("mavenLocal");
-        ExternalResourceRepository repository = transport.repository;
+        val snapshot = Snapshot()
+        snapshot.setLocalCopy(true)
+        val versioning = Versioning()
+        versioning.updateTimestamp()
+        versioning.setSnapshot(snapshot)
 
-        publish(publication, repository, rootUri, true);
-    }
+        for (artifact in publication.getAllArtifacts()) {
+            val sv = SnapshotVersion()
+            sv.setClassifier(artifact.getClassifier())
+            sv.setExtension(artifact.getExtension())
+            sv.setVersion(version)
+            sv.setUpdated(versioning.getLastUpdated())
 
-    @Override
-    protected Metadata createSnapshotMetadata(MavenNormalizedPublication publication, String groupId, String artifactId, String version, ExternalResourceRepository repository, ExternalResourceName metadataResource) {
-        Metadata metadata = new Metadata();
-        metadata.setModelVersion("1.1.0");
-        metadata.setGroupId(groupId);
-        metadata.setArtifactId(artifactId);
-        metadata.setVersion(version);
-
-        Snapshot snapshot = new Snapshot();
-        snapshot.setLocalCopy(true);
-        Versioning versioning = new Versioning();
-        versioning.updateTimestamp();
-        versioning.setSnapshot(snapshot);
-
-        for (MavenArtifact artifact : publication.getAllArtifacts()) {
-            SnapshotVersion sv = new SnapshotVersion();
-            sv.setClassifier(artifact.getClassifier());
-            sv.setExtension(artifact.getExtension());
-            sv.setVersion(version);
-            sv.setUpdated(versioning.getLastUpdated());
-
-            versioning.getSnapshotVersions().add(sv);
+            versioning.getSnapshotVersions().add(sv)
         }
 
-        metadata.setVersioning(versioning);
+        metadata.setVersioning(versioning)
 
-        return metadata;
+        return metadata
+    }
+
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(MavenLocalPublisher::class.java)
     }
 }

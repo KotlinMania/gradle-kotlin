@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.internal.hash.HashCode;
+import org.gradle.internal.hash.HashCode
 
 /**
  * A set of locally available resources that were "selected" through some means.
  */
-public interface LocallyAvailableResourceCandidates {
+interface LocallyAvailableResourceCandidates {
+    val isNone: Boolean
 
-    boolean isNone();
-
-    LocallyAvailableResource findByHashValue(HashCode hashValue);
-
+    fun findByHashValue(hashValue: HashCode?): LocallyAvailableResource?
 }

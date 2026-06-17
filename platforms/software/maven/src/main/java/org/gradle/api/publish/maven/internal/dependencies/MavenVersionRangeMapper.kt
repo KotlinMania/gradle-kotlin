@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.dependencies
 
-package org.gradle.api.publish.maven.internal.dependencies;
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.MavenVersionSelectorScheme
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme
 
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.MavenVersionSelectorScheme;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme;
+class MavenVersionRangeMapper(private val defaultVersionSelectorScheme: VersionSelectorScheme) : VersionRangeMapper {
+    private val mavenVersionSelectorScheme: VersionSelectorScheme
 
-public class MavenVersionRangeMapper implements VersionRangeMapper {
-    private final VersionSelectorScheme defaultVersionSelectorScheme;
-    private final VersionSelectorScheme mavenVersionSelectorScheme;
-
-    public MavenVersionRangeMapper(VersionSelectorScheme defaultVersionSelector) {
-        this.defaultVersionSelectorScheme = defaultVersionSelector;
-        mavenVersionSelectorScheme = new MavenVersionSelectorScheme(defaultVersionSelectorScheme);
+    init {
+        mavenVersionSelectorScheme = MavenVersionSelectorScheme(defaultVersionSelectorScheme)
     }
 
-    @Override
-    public String map(String version) {
-        return mavenVersionSelectorScheme.renderSelector(defaultVersionSelectorScheme.parseSelector(version));
+    override fun map(version: String?): String? {
+        return mavenVersionSelectorScheme.renderSelector(defaultVersionSelectorScheme.parseSelector(version))
     }
 }

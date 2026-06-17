@@ -16,6 +16,7 @@
 package org.gradle.internal.reflect
 
 import org.gradle.api.GradleException
+import org.gradle.internal.UncheckedException
 import org.gradle.util.internal.CollectionUtils
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -45,8 +46,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
             val result = method.invoke(target, *args)
             return returnType.cast(result)
         } catch (e: InvocationTargetException) {
-            val cause = e.cause
-            throw throwAsUncheckedException(if (cause != null) cause else e)
+            throw UncheckedException.throwAsUncheckedException((e.cause ?: e))
         } catch (e: Exception) {
             throw GradleException(String.format("Could not call %s.%s() on %s", method.getDeclaringClass().getSimpleName(), method.getName(), target), e)
         }
@@ -93,7 +93,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
             return JavaMethod<T?, R?>(returnType, method)
         }
 
-        private fun findMethod(target: Class<*>, name: String?, allowStatic: Boolean, paramTypes: Array<Class<*>?>?): Method {
+        private fun findMethod(target: Class<*>, name: String?, allowStatic: Boolean, paramTypes: Array<out Class<*>?>): Method {
             // First try to find a method from all public methods
             var method: Method? = findMethodFrom(target.getMethods(), name, allowStatic, paramTypes)
             if (method == null) {
@@ -103,10 +103,10 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
             if (method != null) {
                 return method
             }
-            throw NoSuchMethodException(String.format("Could not find method %s(%s) on %s.", name, CollectionUtils.join(", ", paramTypes), target.getSimpleName()))
+            throw NoSuchMethodException(String.format("Could not find method %s(%s) on %s.", name, CollectionUtils.join(", ", paramTypes.asList()), target.getSimpleName()))
         }
 
-        private fun findDeclaredMethod(origTarget: Class<*>?, name: String?, allowStatic: Boolean, paramTypes: Array<Class<*>?>?): Method? {
+        private fun findDeclaredMethod(origTarget: Class<*>?, name: String?, allowStatic: Boolean, paramTypes: Array<out Class<*>?>): Method? {
             var target = origTarget
             while (target != null) {
                 val method: Method? = findMethodFrom(target.getDeclaredMethods(), name, allowStatic, paramTypes)
@@ -118,7 +118,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
             return null
         }
 
-        private fun findMethodFrom(methods: Array<Method>, name: String?, allowStatic: Boolean, paramTypes: Array<Class<*>?>?): Method? {
+        private fun findMethodFrom(methods: Array<Method>, name: String?, allowStatic: Boolean, paramTypes: Array<out Class<*>?>): Method? {
             for (method in methods) {
                 if (!allowStatic && Modifier.isStatic(method.getModifiers())) {
                     continue

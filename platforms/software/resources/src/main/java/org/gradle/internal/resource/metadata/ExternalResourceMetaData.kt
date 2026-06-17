@@ -13,36 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.metadata
 
-package org.gradle.internal.resource.metadata;
+interface ExternalResourceMetaData {
+    val location: URI?
 
-import org.gradle.internal.hash.HashCode;
-import org.jspecify.annotations.Nullable;
+    val lastModified: Date?
 
-import java.net.URI;
-import java.util.Date;
-
-public interface ExternalResourceMetaData {
-
-    URI getLocation();
-
-    @Nullable
-    Date getLastModified();
-
-    @Nullable
-    String getContentType();
+    val contentType: String?
 
     /**
      * If there is a file associated with the resource and its name can be determined, return it.
      * Otherwise, return null.
      */
-    @Nullable
-    String getFilename();
+    val filename: String?
 
     /**
      * Returns -1 when the content length is unknown.
      */
-    long getContentLength();
+    val contentLength: Long
 
     /**
      * Some kind of opaque checksum that was advertised by the remote "server".
@@ -51,8 +40,7 @@ public interface ExternalResourceMetaData {
      *
      * @return The entity tag, or null if there was no advertised or suitable etag.
      */
-    @Nullable
-    String getEtag();
+    val etag: String?
 
     /**
      * The advertised sha-1 of the external resource.
@@ -62,8 +50,7 @@ public interface ExternalResourceMetaData {
      *
      * @return The sha1, or null if it's unknown.
      */
-    @Nullable
-    HashCode getSha1();
+    val sha1: HashCode?
 
-    boolean wasMissing();
+    fun wasMissing(): Boolean
 }

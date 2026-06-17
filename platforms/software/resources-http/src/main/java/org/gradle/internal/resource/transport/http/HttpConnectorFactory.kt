@@ -13,60 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import com.google.common.collect.ImmutableSet
+import org.gradle.authentication.Authentication
+import org.gradle.authentication.http.BasicAuthentication
+import org.gradle.authentication.http.DigestAuthentication
+import org.gradle.authentication.http.HttpHeaderAuthentication
+import org.gradle.internal.authentication.AllSchemesAuthentication
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.transfer.DefaultExternalResourceConnector
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.authentication.Authentication;
-import org.gradle.authentication.http.BasicAuthentication;
-import org.gradle.authentication.http.DigestAuthentication;
-import org.gradle.authentication.http.HttpHeaderAuthentication;
-import org.gradle.internal.authentication.AllSchemesAuthentication;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.transfer.DefaultExternalResourceConnector;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-
-import java.util.Set;
-
-public class HttpConnectorFactory implements ResourceConnectorFactory {
-    private final static Set<String> SUPPORTED_PROTOCOLS = ImmutableSet.of("http", "https");
-    private final static Set<Class<? extends Authentication>> SUPPORTED_AUTHENTICATION = ImmutableSet.of(
-        BasicAuthentication.class,
-        DigestAuthentication.class,
-        HttpHeaderAuthentication.class,
-        AllSchemesAuthentication.class
-    );
-
-    private final SslContextFactory sslContextFactory;
-    private final HttpClientFactory httpClientFactory;
-
-    public HttpConnectorFactory(SslContextFactory sslContextFactory, HttpClientFactory httpClientFactory) {
-        this.sslContextFactory = sslContextFactory;
-        this.httpClientFactory = httpClientFactory;
+class HttpConnectorFactory(private val sslContextFactory: SslContextFactory?, private val httpClientFactory: HttpClientFactory) : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String?> {
+        return SUPPORTED_PROTOCOLS
     }
 
-    @Override
-    public Set<String> getSupportedProtocols() {
-        return SUPPORTED_PROTOCOLS;
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
+        return SUPPORTED_AUTHENTICATION
     }
 
-    @Override
-    public Set<Class<? extends Authentication>> getSupportedAuthentication() {
-        return SUPPORTED_AUTHENTICATION;
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
+        val client = httpClientFactory.createClient(
+            DefaultHttpSettings.Companion.builder()
+                .withAuthenticationSettings(connectionDetails.getAuthentications())
+                .withSslContextFactory(sslContextFactory)
+                .withRedirectVerifier(connectionDetails.getRedirectVerifier())
+                .build()
+        )
+        val accessor = HttpResourceAccessor(client)
+        val lister = HttpResourceLister(accessor)
+        val uploader = HttpResourceUploader(client)
+        return DefaultExternalResourceConnector(accessor, lister, uploader)
     }
 
-    @Override
-    public ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails) {
-        HttpClient client = httpClientFactory.createClient(DefaultHttpSettings.builder()
-            .withAuthenticationSettings(connectionDetails.getAuthentications())
-            .withSslContextFactory(sslContextFactory)
-            .withRedirectVerifier(connectionDetails.getRedirectVerifier())
-            .build()
-        );
-        HttpResourceAccessor accessor = new HttpResourceAccessor(client);
-        HttpResourceLister lister = new HttpResourceLister(accessor);
-        HttpResourceUploader uploader = new HttpResourceUploader(client);
-        return new DefaultExternalResourceConnector(accessor, lister, uploader);
+    companion object {
+        private val SUPPORTED_PROTOCOLS: MutableSet<String?> = ImmutableSet.of<String?>("http", "https")
+        private val SUPPORTED_AUTHENTICATION: MutableSet<Class<out Authentication?>?> = ImmutableSet.of<Class<out Authentication?>?>(
+            BasicAuthentication::class.java,
+            DigestAuthentication::class.java,
+            HttpHeaderAuthentication::class.java,
+            AllSchemesAuthentication::class.java
+        )
     }
 }

@@ -13,308 +13,276 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-import com.google.common.base.Objects;
-import org.gradle.api.Describable;
-import org.gradle.internal.UncheckedException;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.lang.String.format;
+import com.google.common.base.Objects
+import org.gradle.api.Describable
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.jspecify.annotations.NullMarked
+import java.net.URI
+import java.net.URISyntaxException
 
 /**
  * An immutable resource name. Resources are arranged in a hierarchy. Names may be relative, or absolute with some opaque root resource.
  */
 @NullMarked
-public class ExternalResourceName implements Describable {
-    @Nullable
-    private final String encodedRoot;
-    private final String path;
-    private final String encodedQuery;
-
-    public ExternalResourceName(URI uri) {
-        this(encodeRoot(uri), extractPath(uri), extractQuery(uri));
-    }
-
-    public ExternalResourceName(String path) {
-        this(null, path, "");
-    }
-
-    private ExternalResourceName(@Nullable String encodedRoot, String path) {
-        this(encodedRoot, path, "");
-    }
-
-    public ExternalResourceName(URI parent, String path) {
-        this(encodeRoot(parent), combine(parent, path), "");
-    }
-
-    private ExternalResourceName(@Nullable String encodedRoot, String path, String encodedQuery) {
-        this.encodedRoot = encodedRoot;
-        this.path = path;
-        this.encodedQuery = encodedQuery;
-    }
-
-    @Override
-    public String getDisplayName() {
-        return getDisplayable();
-    }
-
-    public String getShortDisplayName() {
-        int lastSlash = path.lastIndexOf('/');
-        return lastSlash == -1 ? getDisplayable() : path.substring(lastSlash + 1);
-    }
-
-    @Override
-    public String toString() {
-        return getDisplayName();
-    }
-
-    /**
-     * Returns a URI that represents this resource.
-     */
-    public URI getUri() {
-        try {
-            if (encodedRoot == null) {
-                return new URI(encode(path, false) + encodedQuery);
-            }
-            return new URI(encodedRoot + encode(path, true) + encodedQuery);
-        } catch (URISyntaxException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
-    }
-
-    /**
-     * Returns the 'displayable' name, which is the opaque root + the encoded path of the name.
-     */
-    public String getDisplayable() {
-        if (encodedRoot == null) {
-            return encode(path, false);
-        }
-        return encodedRoot + encode(path, true);
-    }
-
-    /**
-     * Returns the root name for this name.
-     */
-    public ExternalResourceName getRoot() {
-        return new ExternalResourceName(encodedRoot, path.startsWith("/") ? "/" : "");
-    }
-
+open class ExternalResourceName private constructor(
+    private val encodedRoot: String?,
     /**
      * Returns the path for this resource. The '/' character is used to separate the elements of the path.
      */
-    public String getPath() {
-        return path;
+    val path: String, private val encodedQuery: String = ""
+) : Describable {
+    constructor(uri: URI) : this(encodeRoot(uri), extractPath(uri), extractQuery(uri))
+
+    constructor(path: String) : this(null, path, "")
+
+    constructor(parent: URI, path: String) : this(encodeRoot(parent), combine(parent, path), "")
+
+    override fun getDisplayName(): String {
+        return this.displayable
     }
+
+    open val shortDisplayName: String
+        get() {
+            val lastSlash = path.lastIndexOf('/')
+            return if (lastSlash == -1) this.displayable else path.substring(lastSlash + 1)
+        }
+
+    override fun toString(): String {
+        return getDisplayName()
+    }
+
+    val uri: URI
+        /**
+         * Returns a URI that represents this resource.
+         */
+        get() {
+            try {
+                if (encodedRoot == null) {
+                    return URI(encode(path, false) + encodedQuery)
+                }
+                return URI(encodedRoot + encode(path, true) + encodedQuery)
+            } catch (e: URISyntaxException) {
+                throw throwAsUncheckedException(e)
+            }
+        }
+
+    val displayable: String
+        /**
+         * Returns the 'displayable' name, which is the opaque root + the encoded path of the name.
+         */
+        get() {
+            if (encodedRoot == null) {
+                return encode(path, false)
+            }
+            return encodedRoot + encode(path, true)
+        }
+
+    val root: ExternalResourceName
+        /**
+         * Returns the root name for this name.
+         */
+        get() = ExternalResourceName(encodedRoot, if (path.startsWith("/")) "/" else "")
 
     /**
      * Resolves the given path relative to this name. The path can be a relative path or an absolute path. The '/' character is used to separate the elements of the path.
      */
-    public ExternalResourceName resolve(String path) {
-        List<String> parts = new ArrayList<>();
-        boolean leadingSlash;
-        boolean trailingSlash = path.endsWith("/");
+    fun resolve(path: String): ExternalResourceName {
+        val parts: MutableList<String> = ArrayList<String>()
+        val leadingSlash: Boolean
+        val trailingSlash = path.endsWith("/")
         if (path.startsWith("/")) {
-            leadingSlash = true;
+            leadingSlash = true
         } else {
-            leadingSlash = this.path.startsWith("/");
-            append(this.path, parts);
+            leadingSlash = this.path.startsWith("/")
+            append(this.path, parts)
         }
-        append(path, parts);
-        String newPath = join(leadingSlash, trailingSlash, parts);
-        return new ExternalResourceName(encodedRoot, newPath);
+        append(path, parts)
+        val newPath = join(leadingSlash, trailingSlash, parts)
+        return ExternalResourceName(encodedRoot, newPath)
     }
 
     /**
      * Appends the given text to the end of this path.
      */
-    public ExternalResourceName append(String path) {
-        return new ExternalResourceName(encodedRoot, this.path + path);
+    fun append(path: String): ExternalResourceName {
+        return ExternalResourceName(encodedRoot, this.path + path)
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
+    override fun equals(obj: Any): Boolean {
+        if (obj === this) {
+            return true
         }
-        if (obj == null || !obj.getClass().equals(getClass())) {
-            return false;
+        if (obj == null || obj.javaClass != javaClass) {
+            return false
         }
-        ExternalResourceName other = (ExternalResourceName) obj;
-        return Objects.equal(encodedRoot, other.encodedRoot) && path.equals(other.path);
+        val other = obj as ExternalResourceName
+        return Objects.equal(encodedRoot, other.encodedRoot) && path == other.path
     }
 
-    @Override
-    public int hashCode() {
-        return (encodedRoot == null ? 0 : encodedRoot.hashCode()) ^ path.hashCode();
+    override fun hashCode(): Int {
+        return (if (encodedRoot == null) 0 else encodedRoot.hashCode()) xor path.hashCode()
     }
 
-    private static String combine(URI parent, String path) {
-        String parentPath = extractPath(parent);
-        String childPath = path.startsWith("/") ? path.substring(1) : path;
-        if (childPath.length() == 0) {
-            return parentPath;
-        } else if (parentPath.endsWith("/")) {
-            return parentPath + childPath;
-        } else {
-            return parentPath + "/" + childPath;
-        }
-    }
-
-    private static boolean isFileOnHost(URI uri) {
-        return "file".equals(uri.getScheme()) && uri.getPath().startsWith("//");
-    }
-
-    private static String extractPath(URI parent) {
-        if (isFileOnHost(parent)) {
-            return URI.create(parent.getPath()).getPath();
-        }
-        return parent.getPath();
-    }
-
-    private static String extractQuery(URI uri) {
-        String rawQuery = uri.getRawQuery();
-        if (rawQuery == null) {
-            return "";
-        }
-        return "?" + rawQuery;
-    }
-
-    private static String encodeRoot(URI uri) {
-        //based on reversing the operations performed by URI.toString()
-        if (uri.getPath() == null) {
-            throw new IllegalArgumentException(format("Cannot create resource name from non-hierarchical URI '%s'.", uri));
-        }
-
-        StringBuilder builder = new StringBuilder(uri.toString());
-
-        String fragment = uri.getRawFragment();
-        if (fragment != null) {
-            int index = builder.lastIndexOf("#" + fragment);
-            if (index < 0) {
-                throw new RuntimeException(format("Can't locate fragment in URI: %s", uri));
-            }
-            builder.delete(index, builder.length());
-        }
-
-        if (uri.isOpaque()) {
-            return builder.toString();
-        }
-
-        String query = uri.getRawQuery();
-        if (query != null) {
-            int index = builder.lastIndexOf("?" + query);
-            if (index < 0) {
-                throw new RuntimeException(format("Can't locate query in URI: %s", uri));
-            }
-            builder.delete(index, builder.length());
-        }
-
-        String path = uri.getRawPath();
-        if (path != null && isFileOnHost(uri)) {  //if file URI
-            path = URI.create(path).getRawPath(); //remove hostname from path
-        }
-        if (path != null) {
-            int index = builder.lastIndexOf(path);
-            if (index < 0) {
-                throw new RuntimeException(format("Can't locate path in URI: %s", uri));
-            }
-            builder.delete(index, builder.length());
-        }
-
-        return builder.toString();
-    }
-
-    private static String encode(String path, boolean isPathSeg) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < path.length(); i++) {
-            char ch = path.charAt(i);
-            if (isLowerCaseChar(ch) ||
-                isUpperCaseChar(ch) ||
-                isDigit(ch)) {
-                builder.append(ch);
-            } else if (ch == '/' || ch == '@' || (isPathSeg && ch == ':') || ch == '.' || ch == '-' || ch == '_' || ch == '~'
-                || ch == '!' || ch == '$' || ch == '&' || ch == '\'' || ch == '(' || ch == ')' || ch == '*' || ch == '+'
-                || ch == ',' || ch == ';' || ch == '=') {
-                builder.append(ch);
-            } else {
-                if (ch <= 0x7F) {
-                    escapeByte(ch, builder);
-                } else if (ch <= 0x7FF) {
-                    escapeByte(0xC0 | ((ch >> 6) & 0x1F), builder);
-                    escapeByte(0x80 | (ch & 0x3F), builder);
-                } else {
-                    escapeByte(0xE0 | ((ch >> 12) & 0x1F), builder);
-                    escapeByte(0x80 | ((ch >> 6) & 0x3F), builder);
-                    escapeByte(0x80 | (ch & 0x3F), builder);
-                }
-            }
-        }
-        return builder.toString();
-    }
-
-    private static boolean isDigit(char ch) {
-        return ch >= '0' && ch <= '9';
-    }
-
-    private static boolean isUpperCaseChar(char ch) {
-        return ch >= 'A' && ch <= 'Z';
-    }
-
-    private static boolean isLowerCaseChar(char ch) {
-        return ch >= 'a' && ch <= 'z';
-    }
-
-    private static void escapeByte(int ch, StringBuilder builder) {
-        builder.append('%');
-        builder.append(Character.toUpperCase(Character.forDigit(ch >> 4 & 0xFF, 16)));
-        builder.append(Character.toUpperCase(Character.forDigit(ch & 0xF, 16)));
-    }
-
-    private String join(boolean leadingSlash, boolean trailingSlash, List<String> parts) {
+    private fun join(leadingSlash: Boolean, trailingSlash: Boolean, parts: MutableList<String>): String {
         if (parts.isEmpty() && leadingSlash) {
-            return "/";
+            return "/"
         }
-        StringBuilder builder = new StringBuilder();
-        for (String part : parts) {
-            if (builder.length() > 0 || leadingSlash) {
-                builder.append("/");
+        val builder = StringBuilder()
+        for (part in parts) {
+            if (builder.length > 0 || leadingSlash) {
+                builder.append("/")
             }
-            builder.append(part);
+            builder.append(part)
         }
         if (trailingSlash) {
-            builder.append("/");
+            builder.append("/")
         }
-        return builder.toString();
+        return builder.toString()
     }
 
-    private void append(String path, List<String> parts) {
-        int pos = 0;
-        while (pos < path.length()) {
-            int end = path.indexOf('/', pos);
-            String part;
+    private fun append(path: String, parts: MutableList<String>) {
+        var pos = 0
+        while (pos < path.length) {
+            val end = path.indexOf('/', pos)
+            val part: String?
             if (end < 0) {
-                part = path.substring(pos);
-                pos = path.length();
+                part = path.substring(pos)
+                pos = path.length
             } else {
-                part = path.substring(pos, end);
-                pos = end + 1;
+                part = path.substring(pos, end)
+                pos = end + 1
             }
-            if (part.length() == 0 || part.equals(".")) {
-                continue;
+            if (part.length == 0 || part == ".") {
+                continue
             }
-            if (part.equals("..")) {
-                parts.remove(parts.size() - 1);
-                continue;
+            if (part == "..") {
+                parts.removeAt(parts.size - 1)
+                continue
             }
-            parts.add(part);
+            parts.add(part)
+        }
+    }
+
+    companion object {
+        private fun combine(parent: URI, path: String): String {
+            val parentPath: String = extractPath(parent)
+            val childPath = if (path.startsWith("/")) path.substring(1) else path
+            if (childPath.length == 0) {
+                return parentPath
+            } else if (parentPath.endsWith("/")) {
+                return parentPath + childPath
+            } else {
+                return parentPath + "/" + childPath
+            }
+        }
+
+        private fun isFileOnHost(uri: URI): Boolean {
+            return "file" == uri.getScheme() && uri.getPath().startsWith("//")
+        }
+
+        private fun extractPath(parent: URI): String {
+            if (isFileOnHost(parent)) {
+                return URI.create(parent.getPath()).getPath()
+            }
+            return parent.getPath()
+        }
+
+        private fun extractQuery(uri: URI): String {
+            val rawQuery = uri.getRawQuery()
+            if (rawQuery == null) {
+                return ""
+            }
+            return "?" + rawQuery
+        }
+
+        private fun encodeRoot(uri: URI): String {
+            //based on reversing the operations performed by URI.toString()
+            requireNotNull(uri.getPath()) { String.format("Cannot create resource name from non-hierarchical URI '%s'.", uri) }
+
+            val builder = StringBuilder(uri.toString())
+
+            val fragment = uri.getRawFragment()
+            if (fragment != null) {
+                val index = builder.lastIndexOf("#" + fragment)
+                if (index < 0) {
+                    throw RuntimeException(String.format("Can't locate fragment in URI: %s", uri))
+                }
+                builder.delete(index, builder.length)
+            }
+
+            if (uri.isOpaque()) {
+                return builder.toString()
+            }
+
+            val query = uri.getRawQuery()
+            if (query != null) {
+                val index = builder.lastIndexOf("?" + query)
+                if (index < 0) {
+                    throw RuntimeException(String.format("Can't locate query in URI: %s", uri))
+                }
+                builder.delete(index, builder.length)
+            }
+
+            var path = uri.getRawPath()
+            if (path != null && isFileOnHost(uri)) {  //if file URI
+                path = URI.create(path).getRawPath() //remove hostname from path
+            }
+            if (path != null) {
+                val index = builder.lastIndexOf(path)
+                if (index < 0) {
+                    throw RuntimeException(String.format("Can't locate path in URI: %s", uri))
+                }
+                builder.delete(index, builder.length)
+            }
+
+            return builder.toString()
+        }
+
+        private fun encode(path: String, isPathSeg: Boolean): String {
+            val builder = StringBuilder()
+            for (i in 0..<path.length) {
+                val ch = path.get(i)
+                if (isLowerCaseChar(ch) ||
+                    isUpperCaseChar(ch) ||
+                    isDigit(ch)
+                ) {
+                    builder.append(ch)
+                } else if (ch == '/' || ch == '@' || (isPathSeg && ch == ':') || ch == '.' || ch == '-' || ch == '_' || ch == '~' || ch == '!' || ch == '$' || ch == '&' || ch == '\'' || ch == '(' || ch == ')' || ch == '*' || ch == '+' || ch == ',' || ch == ';' || ch == '=') {
+                    builder.append(ch)
+                } else {
+                    if (ch.code <= 0x7F) {
+                        escapeByte(ch.code, builder)
+                    } else if (ch.code <= 0x7FF) {
+                        escapeByte(0xC0 or ((ch.code shr 6) and 0x1F), builder)
+                        escapeByte(0x80 or (ch.code and 0x3F), builder)
+                    } else {
+                        escapeByte(0xE0 or ((ch.code shr 12) and 0x1F), builder)
+                        escapeByte(0x80 or ((ch.code shr 6) and 0x3F), builder)
+                        escapeByte(0x80 or (ch.code and 0x3F), builder)
+                    }
+                }
+            }
+            return builder.toString()
+        }
+
+        private fun isDigit(ch: Char): Boolean {
+            return ch >= '0' && ch <= '9'
+        }
+
+        private fun isUpperCaseChar(ch: Char): Boolean {
+            return ch >= 'A' && ch <= 'Z'
+        }
+
+        private fun isLowerCaseChar(ch: Char): Boolean {
+            return ch >= 'a' && ch <= 'z'
+        }
+
+        private fun escapeByte(ch: Int, builder: StringBuilder) {
+            builder.append('%')
+            builder.append(Character.forDigit(ch shr 4 and 0xFF, 16).uppercaseChar())
+            builder.append(Character.forDigit(ch and 0xF, 16).uppercaseChar())
         }
     }
 }

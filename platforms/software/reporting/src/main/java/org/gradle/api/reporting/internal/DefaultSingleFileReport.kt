@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import org.gradle.api.Describable
+import org.gradle.api.reporting.Report
+import org.gradle.api.reporting.SingleFileReport
+import org.gradle.internal.Describables
+import javax.inject.Inject
 
-import org.gradle.api.Describable;
-import org.gradle.api.reporting.SingleFileReport;
-import org.gradle.internal.Describables;
-
-import javax.inject.Inject;
-
-public abstract class DefaultSingleFileReport extends SimpleReport implements SingleFileReport {
-
-    @Inject
-    public DefaultSingleFileReport(String name, Describable owner) {
-        super(name, Describables.of(name, "report for", owner), OutputType.FILE);
-        getRequired().convention(false);
+abstract class DefaultSingleFileReport @Inject constructor(name: String, owner: Describable) : SimpleReport(name, Describables.of(name, "report for", owner), Report.OutputType.FILE),
+    SingleFileReport {
+    init {
+        getRequired().convention(false)
     }
 }

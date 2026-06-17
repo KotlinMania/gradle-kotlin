@@ -13,52 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.tasks
 
-package org.gradle.api.publish.maven.tasks;
-
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.publish.internal.PublishOperation;
-import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal;
-import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication;
-import org.gradle.api.publish.maven.internal.publisher.MavenPublisher;
-import org.gradle.api.publish.maven.internal.publisher.ValidatingMavenPublisher;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.serialization.Cached;
-import org.gradle.work.DisableCachingByDefault;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.publish.internal.PublishOperation
+import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication
+import org.gradle.api.publish.maven.internal.publisher.MavenPublisher
+import org.gradle.api.publish.maven.internal.publisher.ValidatingMavenPublisher
+import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.serialization.Cached
+import org.gradle.work.DisableCachingByDefault
 
 /**
- * Publishes a {@link org.gradle.api.publish.maven.MavenPublication} to the Maven Local repository.
+ * Publishes a [org.gradle.api.publish.maven.MavenPublication] to the Maven Local repository.
  *
  * @since 1.4
  */
 @DisableCachingByDefault(because = "Not worth caching")
-public abstract class PublishToMavenLocal extends AbstractPublishToMaven {
-    private final Cached<MavenNormalizedPublication> normalizedPublication = Cached.of(this::computeNormalizedPublication);
+abstract class PublishToMavenLocal : AbstractPublishToMaven() {
+    private val normalizedPublication = Cached.of({ this.computeNormalizedPublication() })
 
-    private MavenNormalizedPublication computeNormalizedPublication() {
-        MavenPublicationInternal publicationInternal = getPublicationInternal();
+    private fun computeNormalizedPublication(): MavenNormalizedPublication {
+        val publicationInternal = getPublicationInternal()
         if (publicationInternal == null) {
-            throw new InvalidUserDataException("The 'publication' property is required");
+            throw InvalidUserDataException("The 'publication' property is required")
         }
 
-        return publicationInternal.asNormalisedPublication();
+        return publicationInternal.asNormalisedPublication()
     }
 
     @TaskAction
-    public void publish() {
-        MavenNormalizedPublication normalizedPublication = this.normalizedPublication.get();
-        getDuplicatePublicationTracker().checkCanPublishToMavenLocal(normalizedPublication);
-        doPublish(normalizedPublication);
+    fun publish() {
+        val normalizedPublication = this.normalizedPublication.get()
+        getDuplicatePublicationTracker().checkCanPublishToMavenLocal(normalizedPublication)
+        doPublish(normalizedPublication!!)
     }
 
-    private void doPublish(MavenNormalizedPublication normalizedPublication) {
-        new PublishOperation(normalizedPublication.getName(), "mavenLocal") {
-            @Override
-            protected void publish() {
-                MavenPublisher localPublisher = getMavenPublishers().getLocalPublisher(getTemporaryDirFactory());
-                MavenPublisher validatingPublisher = new ValidatingMavenPublisher(localPublisher);
-                validatingPublisher.publish(normalizedPublication, null);
+    private fun doPublish(normalizedPublication: MavenNormalizedPublication) {
+        object : PublishOperation(normalizedPublication.getName(), "mavenLocal") {
+            override fun publish() {
+                val localPublisher = getMavenPublishers().getLocalPublisher(getTemporaryDirFactory())
+                val validatingPublisher: MavenPublisher = ValidatingMavenPublisher(localPublisher)
+                validatingPublisher.publish(normalizedPublication, null)
             }
-        }.run();
+        }.run()
     }
 }

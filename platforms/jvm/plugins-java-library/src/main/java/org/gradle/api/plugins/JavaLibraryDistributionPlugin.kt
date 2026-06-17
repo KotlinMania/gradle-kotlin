@@ -46,7 +46,7 @@ abstract class JavaLibraryDistributionPlugin : Plugin<Project?> {
             libSpec.from(mainFeature.runtimeClasspathConfiguration)
 
             childSpec.with(libSpec)
-            dist!!.getContents().with(childSpec)
+            dist!!.contents.with(childSpec)
         })
     }
 }

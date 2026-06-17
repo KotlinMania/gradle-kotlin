@@ -13,31 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import org.gradle.api.Describable
+import org.gradle.api.reporting.CustomizableHtmlReport
+import org.gradle.api.resources.TextResource
 
-import org.gradle.api.Describable;
-import org.gradle.api.reporting.CustomizableHtmlReport;
-import org.gradle.api.resources.TextResource;
-import org.jspecify.annotations.Nullable;
+abstract class CustomizableHtmlReportImpl(name: String, owner: Describable) : DefaultSingleFileReport(name, owner), CustomizableHtmlReport {
+    private var stylesheet: TextResource? = null
 
-public abstract class CustomizableHtmlReportImpl extends DefaultSingleFileReport implements CustomizableHtmlReport {
-
-    private TextResource stylesheet;
-
-    public CustomizableHtmlReportImpl(String name, Describable owner) {
-        super(name, owner);
+    override fun getStylesheet(): TextResource? {
+        return stylesheet
     }
 
-    @Override
-    @Nullable
-    public TextResource getStylesheet() {
-        return stylesheet;
+    override fun setStylesheet(stylesheet: TextResource?) {
+        this.stylesheet = stylesheet
     }
-
-    @Override
-    public void setStylesheet(@Nullable TextResource stylesheet) {
-        this.stylesheet = stylesheet;
-    }
-
 }

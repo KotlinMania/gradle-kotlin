@@ -13,32 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.Factory
+import org.gradle.internal.hash.ChecksumService
+import java.io.File
+import java.util.function.Function
 
-import org.gradle.internal.Factory;
-import org.gradle.internal.hash.ChecksumService;
-
-import java.io.File;
-import java.util.List;
-import java.util.function.Function;
-
-public class AbstractLocallyAvailableResourceFinder<C> implements LocallyAvailableResourceFinder<C> {
-
-    private final Function<C, Factory<List<File>>> producer;
-    private final ChecksumService checksumService;
-
-    public AbstractLocallyAvailableResourceFinder(Function<C, Factory<List<File>>> producer, ChecksumService checksumService) {
-        this.producer = producer;
-        this.checksumService = checksumService;
-    }
-
-    @Override
-    public LocallyAvailableResourceCandidates findCandidates(C criterion) {
-        return new LazyLocallyAvailableResourceCandidates(producer.apply(criterion), checksumService);
-    }
-
-    public ChecksumService getChecksumService() {
-        return checksumService;
+open class AbstractLocallyAvailableResourceFinder<C>(private val producer: Function<C?, Factory<MutableList<File?>?>?>, val checksumService: ChecksumService?) : LocallyAvailableResourceFinder<C?> {
+    override fun findCandidates(criterion: C?): LocallyAvailableResourceCandidates {
+        return LazyLocallyAvailableResourceCandidates(producer.apply(criterion), checksumService)
     }
 }

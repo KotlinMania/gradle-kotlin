@@ -13,28 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.component
 
-package org.gradle.api.publish.internal.component;
-
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.component.SoftwareComponentVariant
 
 /**
- * A {@link SoftwareComponentVariant} which is optionally backed by resolution during publication.
+ * A [SoftwareComponentVariant] which is optionally backed by resolution during publication.
  * If enabled, the resolution configuration is resolved in order to override declared dependencies
  * with the resolved coordinates and versions.
  */
-public interface ResolutionBackedVariant extends SoftwareComponentVariant {
+interface ResolutionBackedVariant : SoftwareComponentVariant {
+    /**
+     * See [ConfigurationVariantDetailsInternal.DependencyMappingDetails.getPublishResolvedCoordinates]
+     */
+    val publishResolvedCoordinates: Boolean
 
     /**
-     * See {@link ConfigurationVariantDetailsInternal.DependencyMappingDetails#getPublishResolvedCoordinates()}
+     * See [ConfigurationVariantDetailsInternal.DependencyMappingDetails.fromResolutionOf]
      */
-    boolean getPublishResolvedCoordinates();
-
-    /**
-     * See {@link ConfigurationVariantDetailsInternal.DependencyMappingDetails#fromResolutionOf(Configuration)}
-     */
-    @Nullable
-    Configuration getResolutionConfiguration();
+    val resolutionConfiguration: Configuration?
 }

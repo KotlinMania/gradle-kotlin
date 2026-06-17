@@ -13,13 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import java.util.Set;
-
-public interface FileStoreSearcher<S> {
-
-    Set<? extends LocallyAvailableResource> search(S key);
-
+interface FileStoreSearcher<S> {
+    fun search(key: S?): MutableSet<out LocallyAvailableResource?>?
 }

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base.internal
 
-package org.gradle.platform.base.internal;
-
-public interface ComponentSpecInternal {
-    ComponentSpecIdentifier getIdentifier();
+interface ComponentSpecInternal {
+    @JvmField
+    val identifier: ComponentSpecIdentifier?
 }

@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base
 
-package org.gradle.platform.base;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.component.Component;
+import org.gradle.api.Incubating
+import org.gradle.api.component.Component
 
 /**
  * A library that can be linked into or depended on by another software element.
  */
 @Incubating
-public interface Library extends Component {
-}
+interface Library : Component

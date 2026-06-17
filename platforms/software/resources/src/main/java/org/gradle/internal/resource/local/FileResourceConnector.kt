@@ -13,58 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local;
+package org.gradle.internal.resource.local
 
-import org.gradle.internal.nativeintegration.filesystem.FileSystem;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.LocalBinaryResource;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
+import org.gradle.internal.nativeintegration.filesystem.FileSystem
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.LocalBinaryResource
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.File
+import java.net.URI
 
-import java.io.File;
-import java.net.URI;
-
-public class FileResourceConnector implements FileResourceRepository {
-    private final FileSystem fileSystem;
-    private final FileResourceListener listener;
-
-    public FileResourceConnector(FileSystem fileSystem, FileResourceListener listener) {
-        this.fileSystem = fileSystem;
-        this.listener = listener;
+class FileResourceConnector(private val fileSystem: FileSystem?, private val listener: FileResourceListener?) : FileResourceRepository {
+    override fun withProgressLogging(): ExternalResourceRepository {
+        return this
     }
 
-    @Override
-    public ExternalResourceRepository withProgressLogging() {
-        return this;
+    override fun localResource(file: File?): LocalBinaryResource {
+        return LocalFileStandInExternalResource(file, fileSystem, listener)
     }
 
-    @Override
-    public LocalBinaryResource localResource(File file) {
-        return new LocalFileStandInExternalResource(file, fileSystem, listener);
+    override fun resource(resource: ExternalResourceName, revalidate: Boolean): LocallyAvailableExternalResource {
+        return resource(resource)
     }
 
-    @Override
-    public LocallyAvailableExternalResource resource(ExternalResourceName resource, boolean revalidate) {
-        return resource(resource);
+    override fun resource(location: ExternalResourceName): LocallyAvailableExternalResource {
+        val localFile: File = getFile(location)
+        return LocalFileStandInExternalResource(localFile, fileSystem, listener)
     }
 
-    @Override
-    public LocallyAvailableExternalResource resource(ExternalResourceName location) {
-        File localFile = getFile(location);
-        return new LocalFileStandInExternalResource(localFile, fileSystem, listener);
+    override fun resource(file: File?): LocallyAvailableExternalResource {
+        return LocalFileStandInExternalResource(file, fileSystem, listener)
     }
 
-    @Override
-    public LocallyAvailableExternalResource resource(File file) {
-        return new LocalFileStandInExternalResource(file, fileSystem, listener);
+    override fun resource(file: File?, originUri: URI?, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource {
+        return DefaultLocallyAvailableExternalResource(originUri, file, originMetadata, fileSystem)
     }
 
-    @Override
-    public LocallyAvailableExternalResource resource(File file, URI originUri, ExternalResourceMetaData originMetadata) {
-        return new DefaultLocallyAvailableExternalResource(originUri, file, originMetadata, fileSystem);
-    }
-
-    private static File getFile(ExternalResourceName location) {
-        return new File(location.getUri());
+    companion object {
+        private fun getFile(location: ExternalResourceName): File {
+            return File(location.getUri())
+        }
     }
 }

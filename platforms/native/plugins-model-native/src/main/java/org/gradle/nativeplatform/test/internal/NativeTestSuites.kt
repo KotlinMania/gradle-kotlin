@@ -64,11 +64,11 @@ object NativeTestSuites {
         val namingScheme = NativeTestSuites.namingSchemeFor(testSuite, (testedBinary as org.gradle.nativeplatform.internal.NativeBinarySpecInternal?)!!, typeString)
         val resolver = serviceRegistry.get<NativeDependencyResolver?>(NativeDependencyResolver::class.java)
 
-        binaries.create<S?>(namingScheme.getBinaryName(), testSuiteBinaryClass, object : Action<S?> {
+        binaries.create<S?>(namingScheme.binaryName, testSuiteBinaryClass, object : Action<S?> {
             override fun execute(binary: S?) {
                 val testBinary = binary as NativeTestSuiteBinarySpecInternal
                 testBinary.setTestedBinary(testedBinary as NativeBinarySpecInternal)
-                testBinary.setNamingScheme(namingScheme)
+                testBinary.namingScheme = namingScheme
                 testBinary.setResolver(resolver)
                 testBinary.setToolChain(testedBinary.getToolChain())
                 val executable = testBinary.getExecutable()
@@ -105,7 +105,7 @@ object NativeTestSuites {
     }
 
     private fun namingSchemeFor(testSuite: NativeTestSuiteSpec, testedBinary: NativeBinarySpecInternal, typeString: String?): BinaryNamingScheme {
-        return testedBinary.getNamingScheme()
+        return testedBinary.namingScheme
             .withComponentName(testSuite.getBaseName())
             .withBinaryType(typeString)
             .withRole("executable", true)

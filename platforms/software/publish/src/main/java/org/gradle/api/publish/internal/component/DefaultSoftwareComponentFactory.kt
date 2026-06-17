@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.component;
+package org.gradle.api.publish.internal.component
 
-import org.gradle.api.component.AdhocComponentWithVariants;
-import org.gradle.api.component.SoftwareComponentFactory;
-import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.component.AdhocComponentWithVariants
+import org.gradle.api.component.SoftwareComponentFactory
+import org.gradle.api.model.ObjectFactory
 
-public class DefaultSoftwareComponentFactory implements SoftwareComponentFactory {
-    private final ObjectFactory objectFactory;
-
-    public DefaultSoftwareComponentFactory(ObjectFactory objectFactory) {
-        this.objectFactory = objectFactory;
-    }
-
-    @Override
-    public AdhocComponentWithVariants adhoc(String name) {
-        return objectFactory.newInstance(DefaultAdhocSoftwareComponent.class, name, objectFactory);
+class DefaultSoftwareComponentFactory(private val objectFactory: ObjectFactory) : SoftwareComponentFactory {
+    override fun adhoc(name: String): AdhocComponentWithVariants {
+        return objectFactory.newInstance<DefaultAdhocSoftwareComponent>(DefaultAdhocSoftwareComponent::class.java, name, objectFactory)
     }
 }

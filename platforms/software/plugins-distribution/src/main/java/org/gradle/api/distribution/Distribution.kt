@@ -13,69 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.distribution
 
-package org.gradle.api.distribution;
-
-import org.gradle.api.Action;
-import org.gradle.api.Incubating;
-import org.gradle.api.Named;
-import org.gradle.api.file.CopySpec;
-import org.gradle.api.provider.Property;
+import org.gradle.api.Action
+import org.gradle.api.Incubating
+import org.gradle.api.Named
+import org.gradle.api.file.CopySpec
 
 /**
  * A distribution allows to bundle an application or a library including dependencies, sources...
  */
-public interface Distribution extends Named {
-
+interface Distribution : Named {
     /**
      * The name of this distribution.
      */
-    @Override
-    String getName();
+    override fun getName(): String?
 
     /**
      * The baseName of the distribution, used in naming the distribution archives.
-     * <p>
-     * If the {@link #getName()} of this distribution is "{@code main}" this defaults to the project's name.
-     * Otherwise it is "{@code $project.name-$this.name}".
+     *
+     *
+     * If the [.getName] of this distribution is "`main`" this defaults to the project's name.
+     * Otherwise it is "`$project.name-$this.name`".
      *
      * @since 6.0
      */
-    Property<String> getDistributionBaseName();
+    val distributionBaseName: Property<String?>?
 
-    /**
-     * The classifier of the distribution, used as the archive classifier in the archives of this distribution.
-     * <p>
-     * By default, no classifier is added.
-     *
-     * @since 7.6
-     */
-    @Incubating
-    Property<String> getDistributionClassifier();
+    @get:Incubating
+    val distributionClassifier: Property<String?>?
 
     /**
      * The contents of the distribution.
      */
-    CopySpec getContents();
+    val contents: CopySpec?
 
     /**
      * Configures the contents of the distribution.
-     * <p>
+     *
+     *
      * Can be used to configure the contents of the distribution:
      * <pre class='autoTested'>
      * plugins {
-     *     id 'distribution'
+     * id 'distribution'
      * }
      *
      * distributions {
-     *     main {
-     *         contents {
-     *             from "src/readme"
-     *         }
-     *     }
+     * main {
+     * contents {
+     * from "src/readme"
      * }
-     * </pre>
-     * The DSL inside the {@code contents{} } block is the same DSL used for Copy tasks.
+     * }
+     * }
+    </pre> *
+     * The DSL inside the `contents{} ` block is the same DSL used for Copy tasks.
      */
-    CopySpec contents(Action<? super CopySpec> action);
+    fun contents(action: Action<in CopySpec?>?): CopySpec?
 }

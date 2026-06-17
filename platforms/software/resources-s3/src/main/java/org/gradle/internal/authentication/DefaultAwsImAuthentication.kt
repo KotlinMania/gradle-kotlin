@@ -13,24 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
-
-import org.gradle.authentication.aws.AwsImAuthentication;
+import org.gradle.authentication.aws.AwsImAuthentication
 
 /**
  * Implementation class for Authentication scheme for digest access authentication over S3.
  *
  * @since 3.1
  */
-public class DefaultAwsImAuthentication extends AbstractAuthentication implements AwsImAuthentication {
-    public DefaultAwsImAuthentication(String name) {
-        super(name, AwsImAuthentication.class);
-    }
-
-    @Override
-    public boolean requiresCredentials() {
-        return false;
+class DefaultAwsImAuthentication(name: String?) : AbstractAuthentication(name, AwsImAuthentication::class.java), AwsImAuthentication {
+    override fun requiresCredentials(): Boolean {
+        return false
     }
 }
 

@@ -73,7 +73,7 @@ abstract class AbstractNativeBinarySpec : BaseBinarySpec(), NativeBinarySpecInte
     private var fileCollectionFactory: FileCollectionFactory? = null
 
     override fun getDisplayName(): String? {
-        return getNamingScheme().getDescription()
+        return getNamingScheme().description
     }
 
     override fun getComponent(): NativeComponentSpec? {

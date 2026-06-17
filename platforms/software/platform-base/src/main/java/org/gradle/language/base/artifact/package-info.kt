@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Classes representing artifacts relevant to languages in general.
  */
-package org.gradle.language.base.artifact;
+package org.gradle.language.base.artifact

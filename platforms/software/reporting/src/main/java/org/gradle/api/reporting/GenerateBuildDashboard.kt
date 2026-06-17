@@ -13,113 +13,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting
 
-package org.gradle.api.reporting;
-
-import com.google.common.collect.Sets;
-import groovy.lang.Closure;
-import org.gradle.api.Action;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.NamedDomainObjectSet;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.internal.ConfigurationCacheDegradation;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.reporting.internal.BuildDashboardGenerator;
-import org.gradle.api.reporting.internal.DefaultBuildDashboardReports;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Describables;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.gradle.util.internal.ClosureBackedAction;
-import org.gradle.util.internal.CollectionUtils;
-import org.gradle.work.DisableCachingByDefault;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import com.google.common.collect.Sets
+import groovy.lang.Closure
+import org.gradle.api.Action
+import org.gradle.api.DefaultTask
+import org.gradle.api.NamedDomainObjectSet
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.internal.ConfigurationCacheDegradation
+import org.gradle.api.reporting.internal.BuildDashboardGenerator
+import org.gradle.api.reporting.internal.DefaultBuildDashboardReports
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.Describables
+import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.util.internal.ClosureBackedAction
+import org.gradle.util.internal.CollectionUtils
+import org.gradle.work.DisableCachingByDefault
+import java.io.File
+import java.io.Serializable
+import java.util.Arrays
+import java.util.function.Function
+import javax.inject.Inject
+import kotlin.collections.HashSet
+import kotlin.collections.LinkedHashSet
+import kotlin.collections.MutableSet
 
 /**
  * Generates build dashboard report.
  */
 @DisableCachingByDefault(because = "Not made cacheable, yet")
-public abstract class GenerateBuildDashboard extends DefaultTask implements Reporting<BuildDashboardReports> {
-    private final Set<Reporting<? extends ReportContainer<?>>> aggregated = new LinkedHashSet<Reporting<? extends ReportContainer<?>>>();
+abstract class GenerateBuildDashboard : DefaultTask(), Reporting<BuildDashboardReports> {
+    private val aggregated: MutableSet<Reporting<out ReportContainer<*>>> = LinkedHashSet<Reporting<out ReportContainer<*>>>()
 
-    private final BuildDashboardReports reports;
+    private val reports: BuildDashboardReports
 
-    public GenerateBuildDashboard() {
-        ConfigurationCacheDegradation.requireDegradation(this, "Task is not compatible with the Configuration Cache");
-        reports = getObjectFactory().newInstance(DefaultBuildDashboardReports.class, Describables.quoted("Task", getIdentityPath()));
-        reports.getHtml().getRequired().set(true);
+    init {
+        ConfigurationCacheDegradation.requireDegradation<GenerateBuildDashboard>(this, "Task is not compatible with the Configuration Cache")
+        reports = this.objectFactory.newInstance<DefaultBuildDashboardReports>(DefaultBuildDashboardReports::class.java, Describables.quoted("Task", getIdentityPath()))
+        reports.getHtml().getRequired().set(true)
     }
 
-    @Input
-    @ToBeReplacedByLazyProperty(unreported = true, comment = "Skipped for report since ReportState is private")
-    public Set<ReportState> getInputReports() {
-        Set<ReportState> inputs = new LinkedHashSet<ReportState>();
-        for (Report report : getEnabledInputReports()) {
-            if (getReports().contains(report)) {
-                // A report to be generated, ignore
-                continue;
+    @get:ToBeReplacedByLazyProperty(unreported = true, comment = "Skipped for report since ReportState is private")
+    @get:Input
+    val inputReports: MutableSet<ReportState>
+        get() {
+            val inputs: MutableSet<ReportState> =
+                LinkedHashSet<ReportState>()
+            for (report in this.enabledInputReports) {
+                if (getReports().contains(report)) {
+                    // A report to be generated, ignore
+                    continue
+                }
+                val outputLocation = report.getOutputLocation().get().getAsFile()
+                inputs.add(ReportState(report.getDisplayName(), outputLocation, outputLocation.exists()))
             }
-            File outputLocation = report.getOutputLocation().get().getAsFile();
-            inputs.add(new ReportState(report.getDisplayName(), outputLocation, outputLocation.exists()));
+            return inputs
         }
-        return inputs;
-    }
 
-    private Set<Report> getEnabledInputReports() {
-        HashSet<Reporting<? extends ReportContainer<?>>> allAggregatedReports = Sets.newHashSet(aggregated);
-        allAggregatedReports.addAll(getAggregatedTasks());
+    private val enabledInputReports: MutableSet<Report>
+        get() {
+            val allAggregatedReports =
+                Sets.newHashSet<Reporting<out ReportContainer<*>>>(aggregated)
+            allAggregatedReports.addAll(this.aggregatedTasks)
 
-        Set<NamedDomainObjectSet<? extends Report>> enabledReportSets = CollectionUtils.collect(
-            allAggregatedReports, reporting -> reporting.getReports().getEnabled()
-        );
-        return new LinkedHashSet<Report>(CollectionUtils.flattenCollections(Report.class, enabledReportSets));
-    }
+            val enabledReportSets: MutableSet<NamedDomainObjectSet<out Report>> =
+                CollectionUtils.collect<NamedDomainObjectSet<out Report>?, Reporting<out ReportContainer<*>>?>(
+                    allAggregatedReports,
+                    Function { reporting: Reporting<out ReportContainer<*>>? -> reporting!!.getReports().getEnabled() }
+                )
+            return LinkedHashSet<Report>(
+                CollectionUtils.flattenCollections<Report?>(
+                    Report::class.java,
+                    enabledReportSets
+                )
+            )
+        }
 
-    private Set<Reporting<? extends ReportContainer<?>>> getAggregatedTasks() {
-        final Set<Reporting<? extends ReportContainer<?>>> reports = new HashSet<>();
-        DeprecationLogger.whileDisabled(this::getProject).allprojects(new Action<Project>() {
-            @Override
-            public void execute(Project project) {
-                project.getTasks().all(new Action<Task>() {
-                    @Override
-                    public void execute(Task task) {
-                        if (!(task instanceof Reporting)) {
-                            return;
-                        }
-                        reports.add(Cast.uncheckedNonnullCast(task));
+    private val aggregatedTasks: MutableSet<Reporting<out ReportContainer<*>>>
+        get() {
+            val reports: MutableSet<Reporting<out ReportContainer<*>>> =
+                HashSet<Reporting<out ReportContainer<*>>>()
+            whileDisabled<Project?>(org.gradle.internal.Factory { this.getProject() })!!
+                .allprojects(object : Action<Project> {
+                    override fun execute(project: Project) {
+                        project.getTasks().all(object : Action<Task> {
+                            override fun execute(task: Task) {
+                                if (task !is Reporting<*>) {
+                                    return
+                                }
+                                reports.add(uncheckedNonnullCast<Reporting<out ReportContainer<*>>?>(task)!!)
+                            }
+                        })
                     }
-                });
-            }
-        });
-        return reports;
-    }
+                })
+            return reports
+        }
 
     /**
      * Configures which reports are to be aggregated in the build dashboard report generated by this task.
      *
      * <pre>
      * buildDashboard {
-     *   aggregate codenarcMain, checkstyleMain
+     * aggregate codenarcMain, checkstyleMain
      * }
-     * </pre>
+    </pre> *
      *
-     * @param reportings an array of {@link Reporting} instances that are to be aggregated
+     * @param reportings an array of [Reporting] instances that are to be aggregated
      */
     @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final void aggregate(Reporting<? extends ReportContainer<?>>... reportings) {
-        aggregated.addAll(Arrays.asList(reportings));
+    fun aggregate(vararg reportings: Reporting<out ReportContainer<*>>) {
+        aggregated.addAll(Arrays.asList<Reporting<out ReportContainer<*>>>(*reportings))
     }
 
     /**
@@ -128,9 +137,8 @@ public abstract class GenerateBuildDashboard extends DefaultTask implements Repo
      * @return The reports container
      */
     @Nested
-    @Override
-    public BuildDashboardReports getReports() {
-        return reports;
+    override fun getReports(): BuildDashboardReports {
+        return reports
     }
 
     /**
@@ -140,20 +148,19 @@ public abstract class GenerateBuildDashboard extends DefaultTask implements Repo
      *
      * <pre>
      * buildDashboard {
-     *   reports {
-     *     html {
-     *       destination "build/dashboard.html"
-     *     }
-     *   }
+     * reports {
+     * html {
+     * destination "build/dashboard.html"
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param closure The configuration
      * @return The reports container
      */
-    @Override
-    public BuildDashboardReports reports(Closure closure) {
-        return reports(new ClosureBackedAction<BuildDashboardReports>(closure));
+    override fun reports(closure: Closure<*>): BuildDashboardReports {
+        return reports(ClosureBackedAction<BuildDashboardReports>(closure))
     }
 
     /**
@@ -163,59 +170,46 @@ public abstract class GenerateBuildDashboard extends DefaultTask implements Repo
      *
      * <pre>
      * buildDashboard {
-     *   reports {
-     *     html {
-     *       destination "build/dashboard.html"
-     *     }
-     *   }
+     * reports {
+     * html {
+     * destination "build/dashboard.html"
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param configureAction The configuration
      * @return The reports container
      */
-    @Override
-    public BuildDashboardReports reports(Action<? super BuildDashboardReports> configureAction) {
-        configureAction.execute(reports);
-        return reports;
+    override fun reports(configureAction: Action<in BuildDashboardReports>): BuildDashboardReports {
+        configureAction.execute(reports)
+        return reports
     }
 
     @TaskAction
-    void run() {
+    fun run() {
         if (getReports().getHtml().getRequired().get()) {
-            BuildDashboardGenerator generator = new BuildDashboardGenerator();
-            generator.render(getEnabledInputReports(), reports.getHtml().getEntryPoint());
+            val generator = BuildDashboardGenerator()
+            generator.render(this.enabledInputReports, reports.getHtml().getEntryPoint())
         } else {
-            setDidWork(false);
+            setDidWork(false)
         }
     }
 
-    @Inject
-    protected abstract ObjectFactory getObjectFactory();
+    @get:Inject
+    protected abstract val objectFactory: ObjectFactory?
 
-    private static class ReportState implements Serializable {
-        private final String name;
-        private final File destination;
-        private final boolean available;
-
-        private ReportState(String name, File destination, boolean available) {
-            this.name = name;
-            this.destination = destination;
-            this.available = available;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof ReportState)) {
-                return false;
+    private class ReportState(private val name: String, private val destination: File, private val available: Boolean) : Serializable {
+        override fun equals(obj: Any): Boolean {
+            if (obj !is ReportState) {
+                return false
             }
-            ReportState other = (ReportState) obj;
-            return name.equals(other.name) && destination.equals(other.destination) && available == other.available;
+            val other = obj
+            return name == other.name && destination == other.destination && available == other.available
         }
 
-        @Override
-        public int hashCode() {
-            return name.hashCode() ^ destination.hashCode();
+        override fun hashCode(): Int {
+            return name.hashCode() xor destination.hashCode()
         }
     }
 }

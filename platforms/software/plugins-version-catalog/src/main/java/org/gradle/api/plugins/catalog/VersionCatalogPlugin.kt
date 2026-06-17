@@ -13,89 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog;
+package org.gradle.api.plugins.catalog
 
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConsumableConfiguration;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.component.AdhocComponentWithVariants;
-import org.gradle.api.component.SoftwareComponentFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.plugins.BasePlugin;
-import org.gradle.api.plugins.catalog.internal.CatalogExtensionInternal;
-import org.gradle.api.plugins.catalog.internal.DefaultVersionCatalogPluginExtension;
-import org.gradle.api.plugins.catalog.internal.TomlFileGenerator;
-import org.gradle.api.plugins.internal.JavaConfigurationVariantMapping;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.TaskProvider;
-
-import javax.inject.Inject;
+import org.gradle.api.Action
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConsumableConfiguration
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.Usage
+import org.gradle.api.component.SoftwareComponentFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.catalog.internal.CatalogExtensionInternal
+import org.gradle.api.plugins.catalog.internal.DefaultVersionCatalogPluginExtension
+import org.gradle.api.plugins.catalog.internal.TomlFileGenerator
+import org.gradle.api.plugins.internal.JavaConfigurationVariantMapping
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskProvider
+import javax.inject.Inject
 
 /**
- * <p>A {@link Plugin} makes it possible to generate a version catalog,  which is a set of versions and
- * coordinates for dependencies and plugins to import in the settings of a Gradle build.</p>
+ *
+ * A [Plugin] makes it possible to generate a version catalog,  which is a set of versions and
+ * coordinates for dependencies and plugins to import in the settings of a Gradle build.
  *
  * @since 7.0
  */
-public abstract class VersionCatalogPlugin implements Plugin<Project> {
-    public static final String GENERATE_CATALOG_FILE_TASKNAME = "generateCatalogAsToml";
-    public static final String GRADLE_PLATFORM_DEPENDENCIES = "versionCatalog";
-    public static final String VERSION_CATALOG_ELEMENTS = "versionCatalogElements";
-
-    private final SoftwareComponentFactory softwareComponentFactory;
-
-    @Inject
-    public VersionCatalogPlugin(SoftwareComponentFactory softwareComponentFactory) {
-        this.softwareComponentFactory = softwareComponentFactory;
+abstract class VersionCatalogPlugin @Inject constructor(private val softwareComponentFactory: SoftwareComponentFactory) : Plugin<Project?> {
+    override fun apply(project: Project?) {
+        val projectInternal = project as ProjectInternal
+        val extension = createExtension(projectInternal)
+        val generator: TaskProvider<TomlFileGenerator?> = createGenerator(project, extension)
+        createPublication(project, generator)
     }
 
-    @Override
-    public void apply(Project project) {
-        ProjectInternal projectInternal = (ProjectInternal) project;
-        CatalogExtensionInternal extension = createExtension(projectInternal);
-        TaskProvider<TomlFileGenerator> generator = createGenerator(project, extension);
-        createPublication((ProjectInternal) project, generator);
+    private fun createPublication(project: ProjectInternal, generator: TaskProvider<TomlFileGenerator?>) {
+        val exported: Provider<ConsumableConfiguration?> = project.getConfigurations().consumable(VERSION_CATALOG_ELEMENTS, Action { cnf: ConsumableConfiguration? ->
+            cnf!!.setDescription("Artifacts for the version catalog")
+            cnf.getOutgoing().artifact(generator)
+            cnf.attributes(Action { attrs: AttributeContainer? ->
+                attrs!!.attribute<Category?>(Category.CATEGORY_ATTRIBUTE, attrs.named<Category?>(Category::class.java, Category.REGULAR_PLATFORM))
+                attrs.attribute<Usage?>(Usage.USAGE_ATTRIBUTE, attrs.named<Usage?>(Usage::class.java, Usage.VERSION_CATALOG))
+            })
+        })
+
+        project.getPlugins().withType<BasePlugin?>(BasePlugin::class.java, Action { plugin: BasePlugin? ->
+            project.getTasks().named(BasePlugin.ASSEMBLE_TASK_NAME).configure(Action { assemble: Task? ->
+                assemble!!.dependsOn(exported.get()!!.getArtifacts())
+            })
+        })
+
+        val versionCatalog = softwareComponentFactory.adhoc("versionCatalog")
+        project.getComponents().add(versionCatalog)
+        versionCatalog.addVariantsFromConfiguration(exported, JavaConfigurationVariantMapping("compile", true))
     }
 
-    private void createPublication(ProjectInternal project, TaskProvider<TomlFileGenerator> generator) {
-        Provider<ConsumableConfiguration> exported = project.getConfigurations().consumable(VERSION_CATALOG_ELEMENTS, cnf -> {
-            cnf.setDescription("Artifacts for the version catalog");
-            cnf.getOutgoing().artifact(generator);
-            cnf.attributes(attrs -> {
-                attrs.attribute(Category.CATEGORY_ATTRIBUTE, attrs.named(Category.class, Category.REGULAR_PLATFORM));
-                attrs.attribute(Usage.USAGE_ATTRIBUTE, attrs.named(Usage.class, Usage.VERSION_CATALOG));
-            });
-        });
-
-        project.getPlugins().withType(BasePlugin.class, plugin -> {
-            project.getTasks().named(BasePlugin.ASSEMBLE_TASK_NAME).configure(assemble -> {
-                assemble.dependsOn(exported.get().getArtifacts());
-            });
-        });
-
-        AdhocComponentWithVariants versionCatalog = softwareComponentFactory.adhoc("versionCatalog");
-        project.getComponents().add(versionCatalog);
-        versionCatalog.addVariantsFromConfiguration(exported, new JavaConfigurationVariantMapping("compile", true));
+    private fun createGenerator(project: Project, extension: CatalogExtensionInternal): TaskProvider<TomlFileGenerator?> {
+        return project.getTasks()
+            .register<TomlFileGenerator?>(GENERATE_CATALOG_FILE_TASKNAME, TomlFileGenerator::class.java, Action { t: TomlFileGenerator? -> configureTask(project, extension, t!!) })
     }
 
-    private TaskProvider<TomlFileGenerator> createGenerator(Project project, CatalogExtensionInternal extension) {
-        return project.getTasks().register(GENERATE_CATALOG_FILE_TASKNAME, TomlFileGenerator.class, t -> configureTask(project, extension, t));
+    private fun configureTask(project: Project, extension: CatalogExtensionInternal, task: TomlFileGenerator) {
+        task.setGroup(BasePlugin.BUILD_GROUP)
+        task.setDescription("Generates a TOML file for a version catalog")
+        task.getOutputFile().convention(project.getLayout().getBuildDirectory().file("version-catalog/libs.versions.toml"))
+        task.getDependenciesModel().convention(extension.getVersionCatalog())
     }
 
-    private void configureTask(Project project, CatalogExtensionInternal extension, TomlFileGenerator task) {
-        task.setGroup(BasePlugin.BUILD_GROUP);
-        task.setDescription("Generates a TOML file for a version catalog");
-        task.getOutputFile().convention(project.getLayout().getBuildDirectory().file("version-catalog/libs.versions.toml"));
-        task.getDependenciesModel().convention(extension.getVersionCatalog());
+    private fun createExtension(project: ProjectInternal): CatalogExtensionInternal {
+        val dependenciesConfiguration: Configuration = project.getConfigurations().dependencyScopeLocked(GRADLE_PLATFORM_DEPENDENCIES)
+        return project.getExtensions()
+            .create<CatalogPluginExtension?>(CatalogPluginExtension::class.java, "catalog", DefaultVersionCatalogPluginExtension::class.java, dependenciesConfiguration) as CatalogExtensionInternal
     }
 
-    private CatalogExtensionInternal createExtension(ProjectInternal project) {
-        Configuration dependenciesConfiguration = project.getConfigurations().dependencyScopeLocked(GRADLE_PLATFORM_DEPENDENCIES);
-        return (CatalogExtensionInternal) project.getExtensions()
-            .create(CatalogPluginExtension.class, "catalog", DefaultVersionCatalogPluginExtension.class, dependenciesConfiguration);
+    companion object {
+        const val GENERATE_CATALOG_FILE_TASKNAME: String = "generateCatalogAsToml"
+        const val GRADLE_PLATFORM_DEPENDENCIES: String = "versionCatalog"
+        const val VERSION_CATALOG_ELEMENTS: String = "versionCatalogElements"
     }
-
 }

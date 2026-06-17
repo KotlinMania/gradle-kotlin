@@ -13,50 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.validation
 
-package org.gradle.api.publish.internal.validation;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-
-import java.util.Objects;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import java.util.Objects
 
 /**
  * A publication associated with a project's display text, for better error feedback.
  */
-final class PublicationWithProject {
-    private final String projectDisplayText;
-    private final String publicationName;
-    private final ModuleVersionIdentifier coordinates;
-
-    public PublicationWithProject(String projectDisplayText, String publicationName, ModuleVersionIdentifier coordinates) {
-        this.projectDisplayText = projectDisplayText;
-        this.publicationName = publicationName;
-        this.coordinates = coordinates;
+internal class PublicationWithProject(private val projectDisplayText: String?, private val publicationName: String, val coordinates: ModuleVersionIdentifier?) {
+    override fun toString(): String {
+        return "'" + publicationName + "' in " + projectDisplayText
     }
 
-    public ModuleVersionIdentifier getCoordinates() {
-        return coordinates;
-    }
-
-    @Override
-    public String toString() {
-        return "'" + publicationName + "' in " + projectDisplayText;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
-        PublicationWithProject that = (PublicationWithProject) o;
-        return Objects.equals(projectDisplayText, that.projectDisplayText) && Objects.equals(publicationName, that.publicationName) && Objects.equals(coordinates, that.coordinates);
+        val that = o as PublicationWithProject
+        return projectDisplayText == that.projectDisplayText && publicationName == that.publicationName && coordinates == that.coordinates
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(projectDisplayText, publicationName, coordinates);
+    override fun hashCode(): Int {
+        return Objects.hash(projectDisplayText, publicationName, coordinates)
     }
 }

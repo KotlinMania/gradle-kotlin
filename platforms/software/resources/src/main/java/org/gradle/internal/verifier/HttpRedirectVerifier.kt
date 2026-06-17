@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.verifier
 
-package org.gradle.internal.verifier;
-
-import java.net.URI;
-import java.util.Collection;
+import java.net.URI
 
 /**
- * Use {@link HttpRedirectVerifierFactory#create} to instantiate an instance of this.
+ * Use [HttpRedirectVerifierFactory.create] to instantiate an instance of this.
  */
-@FunctionalInterface
-public interface HttpRedirectVerifier {
+fun interface HttpRedirectVerifier {
     /**
      * Perform verification on the URI's in an HTTP request's redirect chain.
      */
-    void validateRedirects(Collection<URI> redirectLocations);
+    fun validateRedirects(redirectLocations: MutableCollection<URI?>?)
 }

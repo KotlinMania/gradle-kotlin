@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * General purpose types for language support.
  */
-package org.gradle.language.base;
+package org.gradle.language.base
+
+import org.gradle.internal.service.ServiceRegistry.get
+

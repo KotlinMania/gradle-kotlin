@@ -140,7 +140,7 @@ public class BaseBinarySpec extends AbstractBuildableComponentSpec implements Bi
     public LibraryBinaryIdentifier getId() {
         // TODO: This can throw a NPE: will need an identifier for a variant without an owning component
         ComponentSpec component = getComponent();
-        return new DefaultLibraryBinaryIdentifier(component.getProjectPath(), component.getName(), getName());
+        return new DefaultLibraryBinaryIdentifier(component.projectPath, component.getName(), getName());
     }
 
     @Override
@@ -167,7 +167,7 @@ public class BaseBinarySpec extends AbstractBuildableComponentSpec implements Bi
 
     @Override
     public String getProjectScopedName() {
-        return getIdentifier().getProjectScopedName();
+        return getIdentifier().projectScopedName;
     }
 
     @Override
@@ -177,7 +177,7 @@ public class BaseBinarySpec extends AbstractBuildableComponentSpec implements Bi
 
     @Override
     public final boolean isBuildable() {
-        return getBuildAbility().isBuildable();
+        return getBuildAbility().isBuildable;
     }
 
     @Override

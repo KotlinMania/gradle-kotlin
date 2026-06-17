@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base
 
-package org.gradle.platform.base;
-
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.model.ModelElement;
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.model.ModelElement
 
 /**
  * A software component that is built by Gradle.
  */
 @Incubating
 @HasInternalProtocol
-public interface ComponentSpec extends ModelElement {
+interface ComponentSpec : ModelElement {
     /**
      * The path to the project containing this component.
      */
-    String getProjectPath();
+    @JvmField
+    val projectPath: String?
 }

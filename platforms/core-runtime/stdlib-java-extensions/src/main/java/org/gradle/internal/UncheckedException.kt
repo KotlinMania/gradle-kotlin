@@ -15,7 +15,6 @@
  */
 package org.gradle.internal
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
 import java.io.IOException
 import java.io.UncheckedIOException
 import java.lang.reflect.InvocationTargetException
@@ -39,7 +38,7 @@ class UncheckedException : RuntimeException {
          */
         @JvmStatic
         @JvmOverloads
-        fun throwAsUncheckedException(t: Throwable, preserveMessage: Boolean = false): RuntimeException? {
+        fun throwAsUncheckedException(t: Throwable, preserveMessage: Boolean = false): Nothing {
             if (t is InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -80,8 +79,8 @@ class UncheckedException : RuntimeException {
          * @return an instance of RuntimeException based on the target exception of the parameter.
          */
         @JvmStatic
-        fun unwrapAndRethrow(e: InvocationTargetException): RuntimeException? {
-            return throwAsUncheckedException(e.getTargetException())
+        fun unwrapAndRethrow(e: InvocationTargetException): Nothing {
+            throw throwAsUncheckedException(e.targetException)
         }
 
         /**

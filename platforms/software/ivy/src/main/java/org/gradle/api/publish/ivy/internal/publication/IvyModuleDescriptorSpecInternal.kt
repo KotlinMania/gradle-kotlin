@@ -13,44 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec
 
-import org.gradle.api.Action;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.IvyConfiguration;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorAuthor;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorDescription;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorLicense;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec;
-import org.gradle.api.publish.ivy.internal.dependency.IvyDependency;
-import org.gradle.api.publish.ivy.internal.dependency.IvyExcludeRule;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
+interface IvyModuleDescriptorSpecInternal : IvyModuleDescriptorSpec {
+    val coordinates: IvyPublicationCoordinates?
 
-import java.util.List;
+    val configurations: SetProperty<IvyConfiguration>?
 
-public interface IvyModuleDescriptorSpecInternal extends IvyModuleDescriptorSpec {
+    val artifacts: SetProperty<IvyArtifact>?
 
-    IvyPublicationCoordinates getCoordinates();
+    val dependencies: SetProperty<IvyDependency>?
 
-    SetProperty<IvyConfiguration> getConfigurations();
+    val globalExcludes: SetProperty<IvyExcludeRule>?
 
-    SetProperty<IvyArtifact> getArtifacts();
+    val xmlAction: Action<XmlProvider>?
 
-    SetProperty<IvyDependency> getDependencies();
+    val authors: MutableList<IvyModuleDescriptorAuthor>?
 
-    SetProperty<IvyExcludeRule> getGlobalExcludes();
+    val licenses: MutableList<IvyModuleDescriptorLicense>?
 
-    Action<XmlProvider> getXmlAction();
+    val description: IvyModuleDescriptorDescription?
 
-    List<IvyModuleDescriptorAuthor> getAuthors();
-
-    List<IvyModuleDescriptorLicense> getLicenses();
-
-    IvyModuleDescriptorDescription getDescription();
-
-    Property<Boolean> getWriteGradleMetadataMarker();
+    val writeGradleMetadataMarker: Property<Boolean>?
 }

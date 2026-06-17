@@ -13,337 +13,315 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-import com.google.common.io.Files;
-import org.apache.commons.io.IOUtils;
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.FileUtils;
-import org.gradle.internal.SystemProperties;
-import org.gradle.internal.file.RelativeFilePathResolver;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.hash.PrimitiveHasher;
-import org.gradle.util.GradleVersion;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.JarURLConnection;
-import java.net.URI;
-import java.net.URLConnection;
-import java.nio.charset.Charset;
+import com.google.common.io.Files
+import org.apache.commons.io.IOUtils
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.FileUtils
+import org.gradle.internal.SystemProperties
+import org.gradle.internal.file.RelativeFilePathResolver
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.hash.Hashing
+import org.gradle.util.GradleVersion
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStreamReader
+import java.io.Reader
+import java.net.JarURLConnection
+import java.net.URI
+import java.nio.charset.Charset
 
 /**
- * A {@link TextResource} implementation backed by a URI. Defaults content encoding to UTF-8.
+ * A [TextResource] implementation backed by a URI. Defaults content encoding to UTF-8.
  */
-public class UriTextResource implements TextResource {
-    private static final HashCode SIGNATURE = Hashing.signature(UriTextResource.class);
-    protected static final Charset DEFAULT_ENCODING = Charset.forName("utf-8");
-    private static final String USER_AGENT;
+open class UriTextResource : TextResource {
+    private val description: String
+    private val sourceFile: File?
+    private val sourceUri: URI
+    private val resolver: RelativeFilePathResolver
 
-    static {
-        String osName = System.getProperty("os.name");
-        String osVersion = System.getProperty("os.version");
-        String osArch = System.getProperty("os.arch");
-        String javaVendor = System.getProperty("java.vendor");
-        String javaVersion = SystemProperties.getInstance().getJavaVersion();
-        String javaVendorVersion = System.getProperty("java.vm.version");
-        USER_AGENT = String.format("Gradle/%s (%s;%s;%s) (%s;%s;%s)",
-            GradleVersion.current().getVersion(),
-            osName,
-            osVersion,
-            osArch,
-            javaVendor,
-            javaVersion,
-            javaVendorVersion);
+    internal constructor(description: String, sourceFile: File, resolver: RelativeFilePathResolver) {
+        this.description = description
+        this.sourceFile = FileUtils.normalize(sourceFile)
+        this.sourceUri = sourceFile.toURI()
+        this.resolver = resolver
     }
 
-    private final String description;
-    private final File sourceFile;
-    private final URI sourceUri;
-    private final RelativeFilePathResolver resolver;
-
-    UriTextResource(String description, @NonNull File sourceFile, RelativeFilePathResolver resolver) {
-        this.description = description;
-        this.sourceFile = FileUtils.normalize(sourceFile);
-        this.sourceUri = sourceFile.toURI();
-        this.resolver = resolver;
+    constructor(description: String, sourceUri: URI, resolver: RelativeFilePathResolver) {
+        this.description = description
+        this.sourceFile = if (sourceUri.getScheme() == "file") FileUtils.normalize(File(sourceUri.getPath())) else null
+        this.sourceUri = sourceUri
+        this.resolver = resolver
     }
 
-    public UriTextResource(String description, @NonNull URI sourceUri, RelativeFilePathResolver resolver) {
-        this.description = description;
-        this.sourceFile = sourceUri.getScheme().equals("file") ? FileUtils.normalize(new File(sourceUri.getPath())) : null;
-        this.sourceUri = sourceUri;
-        this.resolver = resolver;
+    override fun getDisplayName(): String? {
+        return getLongDisplayName().getDisplayName()
     }
 
-    public static UriTextResource from(String description, File sourceFile, RelativeFilePathResolver resolver) {
-        return sourceFile.exists() ?
-            new UriTextResource(description, sourceFile, resolver) :
-            new EmptyFileTextResource(description, sourceFile, resolver);
-    }
-
-    @Override
-    public String getDisplayName() {
-        return getLongDisplayName().getDisplayName();
-    }
-
-    @Override
-    public DisplayName getLongDisplayName() {
+    override fun getLongDisplayName(): DisplayName {
         if (sourceFile != null) {
-            return Describables.quoted(description, sourceFile.getAbsolutePath());
+            return Describables.quoted(description, sourceFile.getAbsolutePath())
         } else {
-            return Describables.quoted(description, sourceUri);
+            return Describables.quoted(description, sourceUri)
         }
     }
 
-    @Override
-    public DisplayName getShortDisplayName() {
+    override fun getShortDisplayName(): DisplayName {
         if (sourceFile != null) {
-            return Describables.quoted(description, resolver.resolveForDisplay(sourceFile));
+            return Describables.quoted(description, resolver.resolveForDisplay(sourceFile))
         } else {
-            return Describables.quoted(description, sourceUri);
+            return Describables.quoted(description, sourceUri)
         }
     }
 
-    @Override
-    public boolean isContentCached() {
-        return false;
+    override fun isContentCached(): Boolean {
+        return false
     }
 
-    @Override
-    public boolean getHasEmptyContent() {
-        File file = getFile();
+    override fun getHasEmptyContent(): Boolean {
+        val file = getFile()
         if (file != null) {
-            assertNoDirectory();
+            assertNoDirectory()
             if (!file.exists()) {
-                throw new MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()));
+                throw MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()))
             }
-            return file.length() == 0;
+            return file.length() == 0L
         }
-        Reader reader = getAsReader();
+        val reader = getAsReader()
         try {
             try {
-                return reader.read() == -1;
+                return reader.read() == -1
             } finally {
-                reader.close();
+                reader.close()
             }
-        } catch (Exception e) {
-            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e);
+        } catch (e: Exception) {
+            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e)
         }
     }
 
-    @Override
-    public String getText() {
-        File file = getFile();
+    override fun getText(): String? {
+        val file = getFile()
         if (file != null) {
-            assertNoDirectory();
+            assertNoDirectory()
             try {
-                return Files.asCharSource(file, getCharset()).read();
-            } catch (FileNotFoundException e) {
-                throw new MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()));
-            } catch (Exception e) {
-                throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e);
+                return Files.asCharSource(file, getCharset()!!).read()
+            } catch (e: FileNotFoundException) {
+                throw MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()))
+            } catch (e: Exception) {
+                throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e)
             }
         }
-        Reader reader = getAsReader();
+        val reader = getAsReader()
         try {
             try {
-                return IOUtils.toString(reader);
+                return IOUtils.toString(reader)
             } finally {
-                reader.close();
+                reader.close()
             }
-        } catch (Exception e) {
-            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e);
+        } catch (e: Exception) {
+            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e)
         }
     }
 
-    @Override
-    public HashCode getContentHash() throws ResourceException {
-        PrimitiveHasher hasher = Hashing.newPrimitiveHasher();
-        hasher.putHash(SIGNATURE);
-        hasher.putString(getText());
-        return hasher.hash();
+    @Throws(ResourceException::class)
+    override fun getContentHash(): HashCode? {
+        val hasher = Hashing.newPrimitiveHasher()
+        hasher.putHash(SIGNATURE)
+        hasher.putString(getText()!!)
+        return hasher.hash()
     }
 
-    @Override
-    public Reader getAsReader() {
-        assertNoDirectory();
+    override fun getAsReader(): Reader {
+        assertNoDirectory()
         try {
-            return openReader();
-        } catch (FileNotFoundException e) {
-            throw new MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()));
-        } catch (Exception e) {
-            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e);
+            return openReader()
+        } catch (e: FileNotFoundException) {
+            throw MissingResourceException(sourceUri, String.format("Could not read %s as it does not exist.", getDisplayName()))
+        } catch (e: Exception) {
+            throw ResourceExceptions.failure(sourceUri, String.format("Could not read %s.", getDisplayName()), e)
         }
     }
 
-    private void assertNoDirectory() {
+    private fun assertNoDirectory() {
         if (sourceFile != null && sourceFile.isDirectory()) {
-            throw new ResourceIsAFolderException(sourceUri, String.format("Could not read %s as it is a directory.", getDisplayName()));
+            throw ResourceIsAFolderException(sourceUri, String.format("Could not read %s as it is a directory.", getDisplayName()))
         }
     }
 
-    @Override
-    public boolean getExists() {
-        File file = getFile();
+    override fun getExists(): Boolean {
+        val file = getFile()
         if (file != null) {
-            return file.exists();
+            return file.exists()
         }
         try {
-            Reader reader = openReader();
+            val reader = openReader()
             try {
-                return true;
+                return true
             } finally {
-                reader.close();
+                reader.close()
             }
-        } catch (FileNotFoundException e) {
-            return false;
-        } catch (Exception e) {
-            throw ResourceExceptions.failure(sourceUri, String.format("Could not determine if %s exists.", getDisplayName()), e);
+        } catch (e: FileNotFoundException) {
+            return false
+        } catch (e: Exception) {
+            throw ResourceExceptions.failure(sourceUri, String.format("Could not determine if %s exists.", getDisplayName()), e)
         }
     }
 
-    protected Reader openReader() throws IOException {
-        File file = getFile();
+    @Throws(IOException::class)
+    protected open fun openReader(): Reader {
+        val file = getFile()
         if (file != null) {
-            return new InputStreamReader(new FileInputStream(file), getCharset());
+            return InputStreamReader(FileInputStream(file), getCharset())
         }
-        final URLConnection urlConnection = sourceUri.toURL().openConnection();
-        urlConnection.setRequestProperty("User-Agent", getUserAgentString());
+        val urlConnection = sourceUri.toURL().openConnection()
+        urlConnection.setRequestProperty("User-Agent", userAgentString)
 
         // Without this, the URLConnection will keep the backing Jar file open indefinitely
         // This will have a performance impact for Jar-backed `UriTextResource` instances
-        if (urlConnection instanceof JarURLConnection) {
-            urlConnection.setUseCaches(false);
+        if (urlConnection is JarURLConnection) {
+            urlConnection.setUseCaches(false)
         }
-        urlConnection.connect();
-        String contentType = urlConnection.getContentType();
-        Charset charset = extractCharacterEncoding(contentType, DEFAULT_ENCODING);
-        return new InputStreamReader(urlConnection.getInputStream(), charset);
+        urlConnection.connect()
+        val contentType = urlConnection.getContentType()
+        val charset: Charset = extractCharacterEncoding(contentType, DEFAULT_ENCODING)
+        return InputStreamReader(urlConnection.getInputStream(), charset)
     }
 
-    @Override
-    public File getFile() {
-        return sourceFile;
+    override fun getFile(): File? {
+        return sourceFile
     }
 
-    @Override
-    public Charset getCharset() {
+    override fun getCharset(): Charset? {
         if (getFile() != null) {
-            return DEFAULT_ENCODING;
+            return DEFAULT_ENCODING
         }
-        return null;
+        return null
     }
 
-    @Override
-    public ResourceLocation getLocation() {
-        return new UriResourceLocation();
+    override fun getLocation(): ResourceLocation {
+        return UriTextResource.UriResourceLocation()
     }
 
-    public static Charset extractCharacterEncoding(String contentType, Charset defaultEncoding) {
-        if (contentType == null) {
-            return defaultEncoding;
+    private inner class UriResourceLocation : ResourceLocation {
+        override fun getDisplayName(): String? {
+            return this@UriTextResource.getDisplayName()
         }
-        int pos = findFirstParameter(0, contentType);
-        if (pos == -1) {
-            return defaultEncoding;
+
+        override fun getFile(): File? {
+            return sourceFile
         }
-        StringBuilder paramName = new StringBuilder();
-        StringBuilder paramValue = new StringBuilder();
-        pos = findNextParameter(pos, contentType, paramName, paramValue);
-        while (pos != -1) {
-            if (paramName.toString().equals("charset") && paramValue.length() > 0) {
-                return Charset.forName(paramValue.toString());
+
+        override fun getURI(): URI {
+            return sourceUri
+        }
+    }
+
+    companion object {
+        private val SIGNATURE = Hashing.signature(UriTextResource::class.java)
+        protected val DEFAULT_ENCODING: Charset = Charset.forName("utf-8")
+        val userAgentString: String
+
+        init {
+            val osName = System.getProperty("os.name")
+            val osVersion = System.getProperty("os.version")
+            val osArch = System.getProperty("os.arch")
+            val javaVendor = System.getProperty("java.vendor")
+            val javaVersion = SystemProperties.getInstance().getJavaVersion()
+            val javaVendorVersion = System.getProperty("java.vm.version")
+            userAgentString = String.format(
+                "Gradle/%s (%s;%s;%s) (%s;%s;%s)",
+                GradleVersion.current().getVersion(),
+                osName,
+                osVersion,
+                osArch,
+                javaVendor,
+                javaVersion,
+                javaVendorVersion
+            )
+        }
+
+        fun from(description: String, sourceFile: File, resolver: RelativeFilePathResolver): UriTextResource {
+            return if (sourceFile.exists()) UriTextResource(description, sourceFile, resolver) else EmptyFileTextResource(description, sourceFile, resolver)
+        }
+
+        fun extractCharacterEncoding(contentType: String?, defaultEncoding: Charset): Charset {
+            if (contentType == null) {
+                return defaultEncoding
             }
-            pos = findNextParameter(pos, contentType, paramName, paramValue);
-        }
-        return defaultEncoding;
-    }
-
-    private static int findFirstParameter(int pos, String contentType) {
-        int index = contentType.indexOf(';', pos);
-        if (index < 0) {
-            return -1;
-        }
-        return index + 1;
-    }
-
-    private static int findNextParameter(int pos, String contentType, StringBuilder paramName, StringBuilder paramValue) {
-        if (pos >= contentType.length()) {
-            return -1;
-        }
-        paramName.setLength(0);
-        paramValue.setLength(0);
-        int separator = contentType.indexOf("=", pos);
-        if (separator < 0) {
-            separator = contentType.length();
-        }
-        paramName.append(contentType.substring(pos, separator).trim());
-        if (separator >= contentType.length() - 1) {
-            return contentType.length();
-        }
-
-        int startValue = separator + 1;
-        int endValue;
-        if (contentType.charAt(startValue) == '"') {
-            startValue++;
-            int i = startValue;
-            while (i < contentType.length()) {
-                char ch = contentType.charAt(i);
-                if (ch == '\\' && i < contentType.length() - 1 && contentType.charAt(i + 1) == '"') {
-                    paramValue.append('"');
-                    i += 2;
-                } else if (ch == '"') {
-                    break;
-                } else {
-                    paramValue.append(ch);
-                    i++;
+            var pos: Int = findFirstParameter(0, contentType)
+            if (pos == -1) {
+                return defaultEncoding
+            }
+            val paramName = StringBuilder()
+            val paramValue = StringBuilder()
+            pos = findNextParameter(pos, contentType, paramName, paramValue)
+            while (pos != -1) {
+                if (paramName.toString() == "charset" && paramValue.length > 0) {
+                    return Charset.forName(paramValue.toString())
                 }
+                pos = findNextParameter(pos, contentType, paramName, paramValue)
             }
-            endValue = i + 1;
-        } else {
-            endValue = contentType.indexOf(';', startValue);
-            if (endValue < 0) {
-                endValue = contentType.length();
+            return defaultEncoding
+        }
+
+        private fun findFirstParameter(pos: Int, contentType: String): Int {
+            val index = contentType.indexOf(';', pos)
+            if (index < 0) {
+                return -1
             }
-            paramValue.append(contentType.substring(startValue, endValue));
-        }
-        if (endValue < contentType.length() && contentType.charAt(endValue) == ';') {
-            endValue++;
-        }
-        return endValue;
-    }
-
-    public static String getUserAgentString() {
-        return USER_AGENT;
-    }
-
-    private class UriResourceLocation implements ResourceLocation {
-        @Override
-        public String getDisplayName() {
-            return UriTextResource.this.getDisplayName();
+            return index + 1
         }
 
-        @Nullable
-        @Override
-        public File getFile() {
-            return sourceFile;
-        }
+        private fun findNextParameter(pos: Int, contentType: String, paramName: StringBuilder, paramValue: StringBuilder): Int {
+            if (pos >= contentType.length) {
+                return -1
+            }
+            paramName.setLength(0)
+            paramValue.setLength(0)
+            var separator = contentType.indexOf("=", pos)
+            if (separator < 0) {
+                separator = contentType.length
+            }
+            paramName.append(contentType.substring(pos, separator).trim { it <= ' ' })
+            if (separator >= contentType.length - 1) {
+                return contentType.length
+            }
 
-        @Override
-        public URI getURI() {
-            return sourceUri;
+            var startValue = separator + 1
+            var endValue: Int
+            if (contentType.get(startValue) == '"') {
+                startValue++
+                var i = startValue
+                while (i < contentType.length) {
+                    val ch = contentType.get(i)
+                    if (ch == '\\' && i < contentType.length - 1 && contentType.get(i + 1) == '"') {
+                        paramValue.append('"')
+                        i += 2
+                    } else if (ch == '"') {
+                        break
+                    } else {
+                        paramValue.append(ch)
+                        i++
+                    }
+                }
+                endValue = i + 1
+            } else {
+                endValue = contentType.indexOf(';', startValue)
+                if (endValue < 0) {
+                    endValue = contentType.length
+                }
+                paramValue.append(contentType.substring(startValue, endValue))
+            }
+            if (endValue < contentType.length && contentType.get(endValue) == ';') {
+                endValue++
+            }
+            return endValue
         }
     }
 }

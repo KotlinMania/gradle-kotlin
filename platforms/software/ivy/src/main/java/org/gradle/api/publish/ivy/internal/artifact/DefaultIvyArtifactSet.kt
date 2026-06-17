@@ -13,79 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.Action
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultDomainObjectSet
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.publish.internal.PublicationArtifactSet
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.publish.ivy.IvyArtifactSet
+import org.gradle.internal.typeconversion.NotationParser
+import java.io.File
+import java.util.function.Consumer
 
-import org.gradle.api.Action;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultDomainObjectSet;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.publish.internal.PublicationArtifactSet;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.IvyArtifactSet;
-import org.gradle.internal.typeconversion.NotationParser;
+class DefaultIvyArtifactSet(
+    private val publicationName: String,
+    private val ivyArtifactParser: NotationParser<Any, IvyArtifact>,
+    fileCollectionFactory: FileCollectionFactory,
+    collectionCallbackActionDecorator: CollectionCallbackActionDecorator
+) : DefaultDomainObjectSet<IvyArtifact>(IvyArtifact::class.java, collectionCallbackActionDecorator), IvyArtifactSet, PublicationArtifactSet<IvyArtifact?> {
+    val files: FileCollection
 
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class DefaultIvyArtifactSet extends DefaultDomainObjectSet<IvyArtifact> implements IvyArtifactSet, PublicationArtifactSet<IvyArtifact> {
-    private final String publicationName;
-    private final FileCollection files;
-    private final NotationParser<Object, IvyArtifact> ivyArtifactParser;
-
-    public DefaultIvyArtifactSet(
-        String publicationName,
-        NotationParser<Object, IvyArtifact> ivyArtifactParser,
-        FileCollectionFactory fileCollectionFactory,
-        CollectionCallbackActionDecorator collectionCallbackActionDecorator
-    ) {
-        super(IvyArtifact.class, collectionCallbackActionDecorator);
-        this.publicationName = publicationName;
-        this.ivyArtifactParser = ivyArtifactParser;
+    init {
         this.files = fileCollectionFactory.create(
-            new ArtifactsFileCollection(), context -> {
-                for (IvyArtifact ivyArtifact : this) {
-                    context.add(ivyArtifact);
+            DefaultIvyArtifactSet.ArtifactsFileCollection(), Consumer { context: TaskDependencyResolveContext? ->
+                for (ivyArtifact in this) {
+                    context!!.add(ivyArtifact)
                 }
             }
-        );
+        )
     }
 
-    @Override
-    public IvyArtifact artifact(Object source) {
-        IvyArtifact artifact = ivyArtifactParser.parseNotation(source);
-        add(artifact);
-        return artifact;
+    override fun artifact(source: Any): IvyArtifact {
+        val artifact = ivyArtifactParser.parseNotation(source)
+        add(artifact)
+        return artifact
     }
 
-    @Override
-    public IvyArtifact artifact(Object source, Action<? super IvyArtifact> config) {
-        IvyArtifact artifact = artifact(source);
-        config.execute(artifact);
-        return artifact;
+    override fun artifact(source: Any, config: Action<in IvyArtifact>): IvyArtifact {
+        val artifact = artifact(source)
+        config.execute(artifact)
+        return artifact
     }
 
-    @Override
-    public FileCollection getFiles() {
-        return files;
-    }
-
-    private class ArtifactsFileCollection implements MinimalFileSet {
-        @Override
-        public String getDisplayName() {
-            return "artifacts for Ivy publication '" + publicationName + "'";
+    private inner class ArtifactsFileCollection : MinimalFileSet {
+        override fun getDisplayName(): String {
+            return "artifacts for Ivy publication '" + publicationName + "'"
         }
 
-        @Override
-        public Set<File> getFiles() {
-            Set<File> files = new LinkedHashSet<>();
-            for (IvyArtifact artifact : DefaultIvyArtifactSet.this) {
-                files.add(artifact.getFile());
+        override fun getFiles(): MutableSet<File> {
+            val files: MutableSet<File> = LinkedHashSet<File>()
+            for (artifact in this@DefaultIvyArtifactSet) {
+                files.add(artifact.file)
             }
-            return files;
+            return files
         }
     }
 }

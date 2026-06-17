@@ -13,38 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.gcp.gcs
 
-package org.gradle.internal.resource.transport.gcp.gcs;
+import org.gradle.authentication.Authentication
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-
-import java.util.Collections;
-import java.util.Set;
-
-import static java.util.Collections.emptySet;
-
-public class GcsConnectorFactory implements ResourceConnectorFactory {
-
-    @Override
-    public Set<String> getSupportedProtocols() {
-        return Collections.singleton("gcs");
+class GcsConnectorFactory : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String?> {
+        return mutableSetOf<String?>("gcs")
     }
 
-    @Override
-    public Set<Class<? extends Authentication>> getSupportedAuthentication() {
-        return emptySet();
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
+        return mutableSetOf<Class<out Authentication?>?>()
     }
 
-    @Override
-    public ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails) {
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification?): ExternalResourceConnector {
         try {
-            return new GcsResourceConnector(GcsClient.create(new GcsConnectionProperties()));
-        } catch (Exception e) {
-            throw UncheckedException.throwAsUncheckedException(e);
+            return GcsResourceConnector(GcsClient.Companion.create(GcsConnectionProperties()))
+        } catch (e: Exception) {
+            throw throwAsUncheckedException(e)
         }
     }
 }

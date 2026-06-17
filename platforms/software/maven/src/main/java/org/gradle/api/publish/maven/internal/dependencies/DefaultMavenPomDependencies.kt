@@ -13,34 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.dependencies
 
-package org.gradle.api.publish.maven.internal.dependencies;
-
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList
 
 /**
- * Default implementation of {@link MavenPomDependencies}.
+ * Default implementation of [MavenPomDependencies].
  */
-public class DefaultMavenPomDependencies implements MavenPomDependencies {
-
-    private final ImmutableList<MavenDependency> dependencies;
-    private final ImmutableList<MavenDependency> dependencyManagement;
-
-    public DefaultMavenPomDependencies(
-        ImmutableList<MavenDependency> dependencies,
-        ImmutableList<MavenDependency> dependencyManagement
-    ) {
-        this.dependencies = dependencies;
-        this.dependencyManagement = dependencyManagement;
+class DefaultMavenPomDependencies(
+    private val dependencies: ImmutableList<MavenDependency?>?,
+    private val dependencyManagement: ImmutableList<MavenDependency?>?
+) : MavenPomDependencies {
+    override fun getDependencies(): ImmutableList<MavenDependency?>? {
+        return dependencies
     }
 
-    @Override
-    public ImmutableList<MavenDependency> getDependencies() {
-        return dependencies;
-    }
-
-    @Override
-    public ImmutableList<MavenDependency> getDependencyManagement() {
-        return dependencyManagement;
+    override fun getDependencyManagement(): ImmutableList<MavenDependency?>? {
+        return dependencyManagement
     }
 }

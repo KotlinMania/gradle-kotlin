@@ -13,56 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.metadata
 
-package org.gradle.internal.resource.metadata;
+import org.gradle.internal.Factory
 
-import org.gradle.internal.Factory;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Date;
-
-public abstract class ExternalResourceMetaDataCompare {
-    public static boolean isDefinitelyUnchanged(@Nullable ExternalResourceMetaData local, Factory<ExternalResourceMetaData> remoteFactory) {
+object ExternalResourceMetaDataCompare {
+    fun isDefinitelyUnchanged(local: ExternalResourceMetaData?, remoteFactory: Factory<ExternalResourceMetaData?>): Boolean {
         if (local == null) {
-            return false;
+            return false
         }
 
-        String localEtag = local.getEtag();
+        val localEtag = local.getEtag()
 
-        Date localLastModified = local.getLastModified();
+        val localLastModified = local.getLastModified()
         if (localEtag == null && localLastModified == null) {
-            return false;
+            return false
         }
 
-        long localContentLength = local.getContentLength();
+        val localContentLength = local.getContentLength()
         if (localEtag == null && localContentLength < 1) {
-            return false;
+            return false
         }
 
         // We have enough local data to make a comparison, get the remote metadata
-        ExternalResourceMetaData remote = remoteFactory.create();
+        val remote = remoteFactory.create()
         if (remote == null) {
-            return false;
+            return false
         }
 
-        String remoteEtag = remote.getEtag();
+        val remoteEtag = remote.getEtag()
         if (localEtag != null && remoteEtag != null) {
-            return localEtag.equals(remoteEtag);
+            return localEtag == remoteEtag
         }
 
-        Date remoteLastModified = remote.getLastModified();
+        val remoteLastModified = remote.getLastModified()
         if (remoteLastModified == null) {
-            return false;
+            return false
         }
 
-        long remoteContentLength = remote.getContentLength();
-        //noinspection SimplifiableIfStatement
+        val remoteContentLength = remote.getContentLength()
         if (remoteContentLength < 1) {
-            return false;
+            return false
         }
 
-        return localContentLength == remoteContentLength
-            && localLastModified != null
-            && remoteLastModified.getTime() == localLastModified.getTime();
+        return localContentLength == remoteContentLength && localLastModified != null && remoteLastModified.getTime() == localLastModified.getTime()
     }
 }

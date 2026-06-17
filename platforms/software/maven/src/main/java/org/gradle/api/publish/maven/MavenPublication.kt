@@ -13,125 +13,121 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Action;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.VersionMappingStrategy;
-import org.gradle.api.tasks.Nested;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
+import org.gradle.api.Action
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.VersionMappingStrategy
+import org.gradle.api.tasks.Nested
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
 
 /**
- * A {@code MavenPublication} is the representation/configuration of how Gradle should publish something in Maven format.
+ * A `MavenPublication` is the representation/configuration of how Gradle should publish something in Maven format.
  *
- * You directly add a named Maven publication the project's {@code publishing.publications} container by providing {@link MavenPublication} as the type.
+ * You directly add a named Maven publication the project's `publishing.publications` container by providing [MavenPublication] as the type.
  * <pre>
  * publishing {
- *   publications {
- *     myPublicationName(MavenPublication) {
- *       // Configure the publication here
- *     }
- *   }
+ * publications {
+ * myPublicationName(MavenPublication) {
+ * // Configure the publication here
  * }
- * </pre>
+ * }
+ * }
+</pre> *
  *
  * The default Maven POM identifying attributes are mapped as follows:
- * <ul>
- * <li>{@code groupId} - {@code project.group}</li>
- * <li>{@code artifactId} - {@code project.name}</li>
- * <li>{@code version} - {@code project.version}</li>
- * </ul>
  *
- * <p>
- * For certain common use cases, it's often sufficient to specify the component to publish, and nothing more ({@link #from(org.gradle.api.component.SoftwareComponent)}.
+ *  * `groupId` - `project.group`
+ *  * `artifactId` - `project.name`
+ *  * `version` - `project.version`
+ *
+ *
+ *
+ *
+ * For certain common use cases, it's often sufficient to specify the component to publish, and nothing more ([.from].
  * The published component is used to determine which artifacts to publish, and which dependencies should be listed in the generated POM file.
- * </p><p>
- * To add additional artifacts to the set published, use the {@link #artifact(Object)} and {@link #artifact(Object, org.gradle.api.Action)} methods.
- * You can also completely replace the set of published artifacts using {@link #setArtifacts(Iterable)}.
+ *
+ *
+ * To add additional artifacts to the set published, use the [.artifact] and [.artifact] methods.
+ * You can also completely replace the set of published artifacts using [.setArtifacts].
  * Together, these methods give you full control over what artifacts will be published.
- * </p><p>
- * To customize the metadata published in the generated POM, set properties, e.g. {@link MavenPom#getDescription()}, on the POM returned via the {@link #getPom()}
- * method or directly by an action (or closure) passed into {@link #pom(org.gradle.api.Action)}.
- * As a last resort, it is possible to modify the generated POM using the {@link MavenPom#withXml(org.gradle.api.Action)} method.
- * </p>
+ *
+ *
+ * To customize the metadata published in the generated POM, set properties, e.g. [MavenPom.getDescription], on the POM returned via the [.getPom]
+ * method or directly by an action (or closure) passed into [.pom].
+ * As a last resort, it is possible to modify the generated POM using the [MavenPom.withXml] method.
+ *
  *
  * <pre class='autoTested'>
  * // Example of publishing a Java module with a source artifact and a customized POM
  * plugins {
- *     id 'java'
- *     id 'maven-publish'
+ * id 'java'
+ * id 'maven-publish'
  * }
  *
  * task sourceJar(type: Jar) {
- *   from sourceSets.main.allJava
- *   archiveClassifier = "sources"
+ * from sourceSets.main.allJava
+ * archiveClassifier = "sources"
  * }
  *
  * publishing {
- *   publications {
- *     myPublication(MavenPublication) {
- *       from components.java
- *       artifact sourceJar
- *       pom {
- *         name = "Demo"
- *         description = "A demonstration of Maven POM customization"
- *         url = "http://www.example.com/project"
- *         licenses {
- *           license {
- *             name = "The Apache License, Version 2.0"
- *             url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
- *           }
- *         }
- *         developers {
- *           developer {
- *             id = "johnd"
- *             name = "John Doe"
- *             email = "john.doe@example.com"
- *           }
- *         }
- *         scm {
- *           connection = "scm:svn:http://subversion.example.com/svn/project/trunk/"
- *           developerConnection = "scm:svn:https://subversion.example.com/svn/project/trunk/"
- *           url = "http://subversion.example.com/svn/project/trunk/"
- *         }
- *       }
- *     }
- *   }
+ * publications {
+ * myPublication(MavenPublication) {
+ * from components.java
+ * artifact sourceJar
+ * pom {
+ * name = "Demo"
+ * description = "A demonstration of Maven POM customization"
+ * url = "http://www.example.com/project"
+ * licenses {
+ * license {
+ * name = "The Apache License, Version 2.0"
+ * url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
  * }
- * </pre>
+ * }
+ * developers {
+ * developer {
+ * id = "johnd"
+ * name = "John Doe"
+ * email = "john.doe@example.com"
+ * }
+ * }
+ * scm {
+ * connection = "scm:svn:http://subversion.example.com/svn/project/trunk/"
+ * developerConnection = "scm:svn:https://subversion.example.com/svn/project/trunk/"
+ * url = "http://subversion.example.com/svn/project/trunk/"
+ * }
+ * }
+ * }
+ * }
+ * }
+</pre> *
  *
  * @since 1.4
  */
 @HasInternalProtocol
-public interface MavenPublication extends Publication {
-
-    /**
-     * The POM that will be published.
-     *
-     * @return The POM that will be published.
-     */
-    @Nested
-    MavenPom getPom();
+interface MavenPublication : Publication {
+    @get:Nested
+    val pom: MavenPom?
 
     /**
      * Configures the POM that will be published.
      *
-     * The supplied action will be executed against the {@link #getPom()} result. This method also accepts a closure argument, by type coercion.
+     * The supplied action will be executed against the [.getPom] result. This method also accepts a closure argument, by type coercion.
      *
      * @param configure The configuration action.
      */
-    void pom(Action<? super MavenPom> configure);
+    fun pom(configure: Action<in MavenPom?>?)
 
     /**
      * Provides the software component that should be published.
      *
-     * <ul>
-     *     <li>Any artifacts declared by the component will be included in the publication.</li>
-     *     <li>The dependencies declared by the component will be included in the published meta-data.</li>
-     * </ul>
+     *
+     *  * Any artifacts declared by the component will be included in the publication.
+     *  * The dependencies declared by the component will be included in the published meta-data.
+     *
      *
      * Currently 3 types of component are supported: 'components.java' (added by the JavaPlugin), 'components.web' (added by the WarPlugin)
      * and `components.javaPlatform` (added by the JavaPlatformPlugin).
@@ -141,166 +137,149 @@ public interface MavenPublication extends Publication {
      * The following example demonstrates how to publish the 'java' component to a Maven repository.
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'maven-publish'
+     * id 'java'
+     * id 'maven-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     maven(MavenPublication) {
-     *       from components.java
-     *     }
-     *   }
+     * publications {
+     * maven(MavenPublication) {
+     * from components.java
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param component The software component to publish.
      */
-    void from(SoftwareComponent component);
+    fun from(component: SoftwareComponent?)
 
     /**
-     * Creates a custom {@link MavenArtifact} to be included in the publication.
+     * Creates a custom [MavenArtifact] to be included in the publication.
      *
-     * The <code>artifact</code> method can take a variety of input:
-     * <ul>
-     *     <li>A {@link org.gradle.api.artifacts.PublishArtifact} instance. Extension and classifier values are taken from the wrapped instance.</li>
-     *     <li>An {@link org.gradle.api.tasks.bundling.AbstractArchiveTask} instance. Extension and classifier values are taken from the wrapped instance.</li>
-     *     <li>Anything that can be resolved to a {@link java.io.File} via the {@link org.gradle.api.Project#file(Object)} method.
-     *          Extension and classifier values are interpolated from the file name.</li>
-     *     <li>A {@link java.util.Map} that contains a 'source' entry that can be resolved as any of the other input types, including file.
-     *         This map can contain a 'classifier' and an 'extension' entry to further configure the constructed artifact.</li>
-     * </ul>
+     * The `artifact` method can take a variety of input:
+     *
+     *  * A [org.gradle.api.artifacts.PublishArtifact] instance. Extension and classifier values are taken from the wrapped instance.
+     *  * An [org.gradle.api.tasks.bundling.AbstractArchiveTask] instance. Extension and classifier values are taken from the wrapped instance.
+     *  * Anything that can be resolved to a [java.io.File] via the [org.gradle.api.Project.file] method.
+     * Extension and classifier values are interpolated from the file name.
+     *  * A [java.util.Map] that contains a 'source' entry that can be resolved as any of the other input types, including file.
+     * This map can contain a 'classifier' and an 'extension' entry to further configure the constructed artifact.
+     *
      *
      * The following example demonstrates the addition of various custom artifacts.
      * <pre class='autoTested'>
      * plugins {
-     *     id 'maven-publish'
+     * id 'maven-publish'
      * }
      *
      * task sourceJar(type: Jar) {
-     *   archiveClassifier = "sources"
+     * archiveClassifier = "sources"
      * }
      *
      * publishing {
-     *   publications {
-     *     maven(MavenPublication) {
-     *       artifact sourceJar // Publish the output of the sourceJar task
-     *       artifact 'my-file-name.jar' // Publish a file created outside of the build
-     *       artifact source: sourceJar, classifier: 'src', extension: 'zip'
-     *     }
-     *   }
+     * publications {
+     * maven(MavenPublication) {
+     * artifact sourceJar // Publish the output of the sourceJar task
+     * artifact 'my-file-name.jar' // Publish a file created outside of the build
+     * artifact source: sourceJar, classifier: 'src', extension: 'zip'
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param source The source of the artifact content.
      */
-    MavenArtifact artifact(Object source);
+    fun artifact(source: Any?): MavenArtifact?
 
     /**
-     * Creates an {@link MavenArtifact} to be included in the publication, which is configured by the associated action.
+     * Creates an [MavenArtifact] to be included in the publication, which is configured by the associated action.
      *
-     * The first parameter is used to create a custom artifact and add it to the publication, as per {@link #artifact(Object)}.
-     * The created {@link MavenArtifact} is then configured using the supplied action, which can override the extension or classifier of the artifact.
+     * The first parameter is used to create a custom artifact and add it to the publication, as per [.artifact].
+     * The created [MavenArtifact] is then configured using the supplied action, which can override the extension or classifier of the artifact.
      * This method also accepts the configure action as a closure argument, by type coercion.
      *
      * <pre class='autoTested'>
      * plugins {
-     *     id 'maven-publish'
+     * id 'maven-publish'
      * }
      *
      * task sourceJar(type: Jar) {
-     *   archiveClassifier = "sources"
+     * archiveClassifier = "sources"
      * }
      *
      * publishing {
-     *   publications {
-     *     maven(MavenPublication) {
-     *       artifact(sourceJar) {
-     *         // These values will be used instead of the values from the task. The task values will not be updated.
-     *         classifier = "src"
-     *         extension = "zip"
-     *       }
-     *       artifact("my-docs-file.htm") {
-     *         classifier = "documentation"
-     *         extension = "html"
-     *       }
-     *     }
-     *   }
+     * publications {
+     * maven(MavenPublication) {
+     * artifact(sourceJar) {
+     * // These values will be used instead of the values from the task. The task values will not be updated.
+     * classifier = "src"
+     * extension = "zip"
      * }
-     * </pre>
+     * artifact("my-docs-file.htm") {
+     * classifier = "documentation"
+     * extension = "html"
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
      * @param source The source of the artifact.
-     * @param config An action to configure the values of the constructed {@link MavenArtifact}.
+     * @param config An action to configure the values of the constructed [MavenArtifact].
      */
-    MavenArtifact artifact(Object source, Action<? super MavenArtifact> config);
-
-    /**
-     * Clears any previously added artifacts from {@link #getArtifacts} and creates artifacts from the specified sources.
-     * Each supplied source is interpreted as per {@link #artifact(Object)}.
-     *
-     * For example, to exclude the dependencies declared by a component and instead use a custom set of artifacts:
-     * <pre class='autoTested'>
-     * plugins {
-     *     id 'java'
-     *     id 'maven-publish'
-     * }
-     *
-     * task sourceJar(type: Jar) {
-     *   archiveClassifier = "sources"
-     * }
-
-     * publishing {
-     *   publications {
-     *     maven(MavenPublication) {
-     *       from components.java
-     *       artifacts = ["my-custom-jar.jar", sourceJar]
-     *     }
-     *   }
-     * }
-     * </pre>
-     *
-     * @param sources The set of artifacts for this publication.
-     */
-    void setArtifacts(Iterable<?> sources);
+    fun artifact(source: Any?, config: Action<in MavenArtifact?>?): MavenArtifact?
 
     /**
      * Returns the complete set of artifacts for this publication.
      * @return the artifacts.
      */
-    MavenArtifactSet getArtifacts();
-
     /**
-     * Returns the groupId for this publication.
+     * Clears any previously added artifacts from [.getArtifacts] and creates artifacts from the specified sources.
+     * Each supplied source is interpreted as per [.artifact].
+     *
+     * For example, to exclude the dependencies declared by a component and instead use a custom set of artifacts:
+     * <pre class='autoTested'>
+     * plugins {
+     * id 'java'
+     * id 'maven-publish'
+     * }
+     *
+     * task sourceJar(type: Jar) {
+     * archiveClassifier = "sources"
+     * }
+     *
+     * publishing {
+     * publications {
+     * maven(MavenPublication) {
+     * from components.java
+     * artifacts = ["my-custom-jar.jar", sourceJar]
+     * }
+     * }
+     * }
+    </pre> *
+     *
+     * @param sources The set of artifacts for this publication.
      */
-    @ToBeReplacedByLazyProperty
-    String getGroupId();
+    var artifacts: MavenArtifactSet?
 
     /**
      * Sets the groupId for this publication.
      */
-    void setGroupId(String groupId);
-
-    /**
-     * Returns the artifactId for this publication.
-     */
-    @ToBeReplacedByLazyProperty
-    String getArtifactId();
+    @get:ToBeReplacedByLazyProperty
+    var groupId: String?
 
     /**
      * Sets the artifactId for this publication.
      */
-    void setArtifactId(String artifactId);
-
-    /**
-     * Returns the version for this publication.
-     */
-    @ToBeReplacedByLazyProperty
-    String getVersion();
+    @get:ToBeReplacedByLazyProperty
+    var artifactId: String?
 
     /**
      * Sets the version for this publication.
      */
-    void setVersion(String version);
+    @get:ToBeReplacedByLazyProperty
+    var version: String?
 
     /**
      * Configures the version mapping strategy.
@@ -308,29 +287,29 @@ public interface MavenPublication extends Publication {
      * For example, to use resolved versions for runtime dependencies:
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'maven-publish'
+     * id 'java'
+     * id 'maven-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     maven(MavenPublication) {
-     *       from components.java
-     *       versionMapping {
-     *         usage('java-runtime'){
-     *           fromResolutionResult()
-     *         }
-     *       }
-     *     }
-     *   }
+     * publications {
+     * maven(MavenPublication) {
+     * from components.java
+     * versionMapping {
+     * usage('java-runtime'){
+     * fromResolutionResult()
      * }
-     * </pre>
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
      * @param configureAction the configuration
      *
      * @since 5.2
      */
-    void versionMapping(Action<? super VersionMappingStrategy> configureAction);
+    fun versionMapping(configureAction: Action<in VersionMappingStrategy?>?)
 
     /**
      * Silences the compatibility warnings for the Maven publication for the specified variant.
@@ -341,7 +320,7 @@ public interface MavenPublication extends Publication {
      *
      * @since 6.0
      */
-    void suppressPomMetadataWarningsFor(String variantName);
+    fun suppressPomMetadataWarningsFor(variantName: String?)
 
 
     /**
@@ -351,5 +330,5 @@ public interface MavenPublication extends Publication {
      *
      * @since 6.0
      */
-    void suppressAllPomMetadataWarnings();
+    fun suppressAllPomMetadataWarnings()
 }

@@ -13,327 +13,252 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.tasks
 
-package org.gradle.api.publish.tasks;
-
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.Action;
-import org.gradle.api.Buildable;
-import org.gradle.api.DefaultTask;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectDependencyPublicationResolver;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.internal.tasks.DefaultTaskDependency;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.api.publish.internal.mapping.DependencyCoordinateResolverFactory;
-import org.gradle.api.publish.internal.metadata.GradleModuleMetadataWriter;
-import org.gradle.api.publish.internal.metadata.InvalidPublicationChecker;
-import org.gradle.api.publish.internal.metadata.ModuleMetadataSpec;
-import org.gradle.api.publish.internal.metadata.ModuleMetadataSpecBuilder;
-import org.gradle.api.specs.Specs;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Try;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.scopeids.id.BuildInvocationScopeId;
-import org.gradle.internal.serialization.Cached;
-import org.gradle.internal.serialization.Transient;
-import org.gradle.work.DisableCachingByDefault;
-import org.jspecify.annotations.NonNull;
-
-import javax.inject.Inject;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.UncheckedIOException;
-import java.io.Writer;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.gradle.api.internal.lambdas.SerializableLambdas.spec;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.api.Buildable
+import org.gradle.api.DefaultTask
+import org.gradle.api.Task
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory.create
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.internal.metadata.GradleModuleMetadataWriter
+import org.gradle.api.publish.internal.metadata.InvalidPublicationChecker
+import org.gradle.api.publish.internal.metadata.ModuleMetadataSpec
+import org.gradle.api.publish.internal.metadata.ModuleMetadataSpecBuilder
+import org.gradle.api.specs.Specs
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.Try
+import org.gradle.internal.serialization.Cached
+import org.gradle.internal.serialization.Transient
+import org.gradle.work.DisableCachingByDefault
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStreamWriter
+import java.io.UncheckedIOException
+import java.nio.charset.StandardCharsets
+import javax.inject.Inject
 
 /**
- * Generates a Gradle metadata file to represent a published {@link SoftwareComponent} instance.
+ * Generates a Gradle metadata file to represent a published [SoftwareComponent] instance.
  *
  * @since 4.3
  */
 @DisableCachingByDefault(because = "Not made cacheable, yet")
-public abstract class GenerateModuleMetadata extends DefaultTask {
-    private final Transient<Property<Publication>> publication;
-    private final Transient<ListProperty<Publication>> publications;
-    private final FileCollection variantFiles;
-    private final Cached<InputState> inputState = Cached.of(this::computeInputState);
+abstract class GenerateModuleMetadata : DefaultTask() {
+    private val publication: Transient<Property<Publication?>?>
+    private val publications: Transient<ListProperty<Publication?>?>
 
-    public GenerateModuleMetadata() {
-        ObjectFactory objectFactory = getObjectFactory();
-        this.publication = Transient.of(objectFactory.property(Publication.class));
-        this.publications = Transient.of(objectFactory.listProperty(Publication.class));
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    @get:InputFiles
+    val artifacts: FileCollection
+    private val inputState = Cached.of({ this.computeInputState() })
 
-        this.variantFiles = getFileCollectionFactory().create(new VariantFiles(getTaskDependencyFactory()));
+    init {
+        val objectFactory = this.objectFactory
+        this.publication = Transient.of(objectFactory.property<T?>(Publication::class.java))
+        this.publications = Transient.of(objectFactory.listProperty<T?>(Publication::class.java))
 
-        getSuppressedValidationErrors().convention(Collections.emptySet());
+        this.artifacts = this.fileCollectionFactory.create(GenerateModuleMetadata.VariantFiles(this.taskDependencyFactory))
+
+        this.suppressedValidationErrors.convention(mutableSetOf<String?>())
 
         // TODO - should be incremental
-        getOutputs().upToDateWhen(Specs.satisfyNone());
-        setOnlyIf("The publication is attached to a component", spec(task -> hasAttachedComponent()));
+        getOutputs().upToDateWhen(Specs.satisfyNone<Task?>())
+        setOnlyIf("The publication is attached to a component", SerializableLambdas.spec<Task?>(SerializableLambdas.SerializableSpec { task: Task? -> hasAttachedComponent() }))
     }
 
     // TODO - this should be an input
-
     /**
      * Returns the publication to generate the metadata file for.
      */
     @Internal
-    public Property<Publication> getPublication() {
-        return publication.get();
+    fun getPublication(): Property<Publication?>? {
+        return publication.get()
     }
 
     // TODO - this should be an input
-
     /**
      * Returns the publications of the current project, used in generation to connect the modules of a component together.
      *
      * @since 4.4
      */
     @Internal
-    public ListProperty<Publication> getPublications() {
-        return publications.get();
+    fun getPublications(): ListProperty<Publication?>? {
+        return publications.get()
     }
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.NAME_ONLY)
-    FileCollection getArtifacts() {
-        return variantFiles;
-    }
+    @get:Inject
+    protected abstract val fileCollectionFactory: FileCollectionFactory?
 
-    /**
-     * Returns the {@link FileCollectionFactory} to use for generation.
-     *
-     * @since 4.4
-     */
-    @Inject
-    protected abstract FileCollectionFactory getFileCollectionFactory();
+    @get:Inject
+    protected abstract val buildInvocationScopeId: BuildInvocationScopeId?
 
-    /**
-     * Returns the {@link BuildInvocationScopeId} to use for generation.
-     *
-     * @since 4.4
-     */
-    @Inject
-    protected abstract BuildInvocationScopeId getBuildInvocationScopeId();
+    @get:Inject
+    protected abstract val projectDependencyPublicationResolver: ProjectDependencyPublicationResolver?
 
-    /**
-     * Returns the {@link ProjectDependencyPublicationResolver} to use for generation.
-     *
-     * @since 4.4
-     */
-    @Inject
-    protected abstract ProjectDependencyPublicationResolver getProjectDependencyPublicationResolver();
+    @get:Inject
+    protected abstract val checksumService: ChecksumService?
 
-    /**
-     * Returns the {@link ChecksumService} to use.
-     *
-     * @since 6.6
-     */
-    @Inject
-    protected abstract ChecksumService getChecksumService();
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty?
 
-    /**
-     * Returns the output file location.
-     */
-    @OutputFile
-    public abstract RegularFileProperty getOutputFile();
-
-    /**
-     * Returns the set of suppressed validation errors
-     *
-     * @since 7.0
-     */
-    @Input
-    public abstract SetProperty<String> getSuppressedValidationErrors();
+    @get:Input
+    abstract val suppressedValidationErrors: SetProperty<String?>?
 
     @TaskAction
-    void run() {
-        InputState inputState = inputState();
-        if (!(inputState instanceof InputState.Ready)) {
-            throw new IllegalStateException(inputState.toString());
-        }
+    fun run() {
+        val inputState = inputState()
+        check(inputState is InputState.Ready) { inputState.toString() }
         writeModuleMetadata(
-            ((InputState.Ready) inputState).moduleMetadataSpec.get()
-        );
+            inputState.moduleMetadataSpec.get()
+        )
     }
 
-    private void writeModuleMetadata(ModuleMetadataSpec moduleMetadataSpec) {
-        RegularFile outputFile = getOutputFile().get();
-        try (Writer writer = bufferedWriterFor(outputFile.getAsFile())) {
-            moduleMetadataWriter().writeTo(writer, moduleMetadataSpec);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Could not generate metadata file " + outputFile, e);
+    private fun writeModuleMetadata(moduleMetadataSpec: ModuleMetadataSpec?) {
+        val outputFile = this.outputFile.get()
+        try {
+            bufferedWriterFor(outputFile.getAsFile()).use { writer ->
+                moduleMetadataWriter().writeTo(writer, moduleMetadataSpec)
+            }
+        } catch (e: IOException) {
+            throw UncheckedIOException("Could not generate metadata file " + outputFile, e)
         }
     }
 
-    private BufferedWriter bufferedWriterFor(File file) throws FileNotFoundException {
-        return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), UTF_8));
+    @Throws(FileNotFoundException::class)
+    private fun bufferedWriterFor(file: File): BufferedWriter {
+        return BufferedWriter(OutputStreamWriter(FileOutputStream(file), StandardCharsets.UTF_8))
     }
 
-    private GradleModuleMetadataWriter moduleMetadataWriter() {
-        return new GradleModuleMetadataWriter(getBuildInvocationScopeId(), getChecksumService());
+    private fun moduleMetadataWriter(): GradleModuleMetadataWriter {
+        return GradleModuleMetadataWriter(this.buildInvocationScopeId, this.checksumService)
     }
 
-    private boolean hasAttachedComponent() {
-        InputState inputState = inputState();
-        if (inputState instanceof InputState.ComponentMissing) {
-            String publicationName = ((InputState.ComponentMissing) inputState).publicationName;
+    private fun hasAttachedComponent(): Boolean {
+        val inputState = inputState()
+        if (inputState is InputState.ComponentMissing) {
+            val publicationName = inputState.publicationName
             getLogger().warn(
                 publicationName + " isn't attached to a component. Gradle metadata only supports publications with software components (e.g. from component.java)"
-            );
-            return false;
+            )
+            return false
         }
-        return true;
+        return true
     }
 
-    private InputState computeInputState() {
-        return component() == null
-            ? new InputState.ComponentMissing(publicationName())
-            : new InputState.Ready(moduleMetadataSpec());
+    private fun computeInputState(): InputState {
+        return if (component() == null)
+            InputState.ComponentMissing(publicationName())
+        else
+            InputState.Ready(moduleMetadataSpec())
     }
 
-    private Try<ModuleMetadataSpec> moduleMetadataSpec() {
-        return Try.ofFailable(this::computeModuleMetadataSpec);
+    private fun moduleMetadataSpec(): Try<ModuleMetadataSpec?> {
+        return Try.ofFailable({ this.computeModuleMetadataSpec() })
     }
 
-    private ModuleMetadataSpec computeModuleMetadataSpec() {
-        PublicationInternal<?> publication = publication();
-        InvalidPublicationChecker checker = new InvalidPublicationChecker(publication.getName(), getPath(), getSuppressedValidationErrors().get());
-        ModuleMetadataSpec spec = new ModuleMetadataSpecBuilder(
+    private fun computeModuleMetadataSpec(): ModuleMetadataSpec {
+        val publication = publication()
+        val checker = InvalidPublicationChecker(publication.getName(), getPath(), this.suppressedValidationErrors.get())
+        val spec = ModuleMetadataSpecBuilder(
             publication,
             publications(),
             checker,
-            getDependencyCoordinateResolverFactory()
-        ).build().get();
-        checker.validate();
-        return spec;
+            this.dependencyCoordinateResolverFactory
+        ).build().get()
+        checker.validate()
+        return spec
     }
 
-    static class InputState {
+    internal open class InputState {
+        internal class Ready(val moduleMetadataSpec: Try<ModuleMetadataSpec?>) : InputState()
 
-        static class Ready extends InputState {
-            final Try<ModuleMetadataSpec> moduleMetadataSpec;
-
-            public Ready(Try<ModuleMetadataSpec> moduleMetadataSpec) {
-                this.moduleMetadataSpec = moduleMetadataSpec;
-            }
-        }
-
-        static class ComponentMissing extends InputState {
-            final String publicationName;
-
-            public ComponentMissing(String publicationName) {
-                this.publicationName = publicationName;
-            }
-        }
+        internal class ComponentMissing(val publicationName: String?) : InputState()
     }
 
-    private class VariantFiles implements MinimalFileSet, Buildable {
-        private final TaskDependencyFactory taskDependencyFactory;
-
-        private VariantFiles(TaskDependencyFactory taskDependencyFactory) {
-            this.taskDependencyFactory = taskDependencyFactory;
+    private inner class VariantFiles(private val taskDependencyFactory: TaskDependencyFactory) : MinimalFileSet, Buildable {
+        override fun getDisplayName(): String {
+            return "files of " + this@GenerateModuleMetadata.getPath()
         }
 
-        @Override
-        @NonNull
-        public String getDisplayName() {
-            return "files of " + GenerateModuleMetadata.this.getPath();
-        }
-
-        @Override
-        @NonNull
-        public TaskDependency getBuildDependencies() {
-            DefaultTaskDependency dependency = taskDependencyFactory.configurableDependency();
-            SoftwareComponentInternal component = component();
+        override fun getBuildDependencies(): TaskDependency {
+            val dependency = taskDependencyFactory.configurableDependency()
+            val component = component()
             if (component != null) {
-                forEachArtifactOf(component, dependency::add);
+                forEachArtifactOf(component, Action { values: PublishArtifact? -> dependency.add(values) })
             }
-            return dependency;
+            return dependency
         }
 
-        @Override
-        @NonNull
-        public Set<File> getFiles() {
-            SoftwareComponentInternal component = component();
-            return component == null ? ImmutableSet.of() : filesOf(component);
+        override fun getFiles(): MutableSet<File?> {
+            val component = component()
+            return if (component == null) ImmutableSet.of<File?>() else filesOf(component)
         }
 
-        private Set<File> filesOf(SoftwareComponentInternal component) {
-            Set<File> files = new LinkedHashSet<>();
-            forEachArtifactOf(component, artifact -> files.add(artifact.getFile()));
-            return files;
-
+        fun filesOf(component: SoftwareComponentInternal): MutableSet<File?> {
+            val files: MutableSet<File?> = LinkedHashSet<File?>()
+            forEachArtifactOf(component, Action { artifact: PublishArtifact? -> files.add(artifact!!.getFile()) })
+            return files
         }
 
-        private void forEachArtifactOf(SoftwareComponentInternal component, Action<PublishArtifact> action) {
-            for (SoftwareComponentVariant variant : component.getUsages()) {
-                for (PublishArtifact publishArtifact : variant.getArtifacts()) {
-                    action.execute(publishArtifact);
+        fun forEachArtifactOf(component: SoftwareComponentInternal, action: Action<PublishArtifact?>) {
+            for (variant in component.getUsages()) {
+                for (publishArtifact in variant.getArtifacts()) {
+                    action.execute(publishArtifact)
                 }
             }
         }
     }
 
-    private InputState inputState() {
-        return this.inputState.get();
+    private fun inputState(): InputState {
+        return this.inputState.get()!!
     }
 
-    private String publicationName() {
-        return publication().displayName.toString();
+    private fun publicationName(): String {
+        return publication().displayName.toString()
     }
 
-    private SoftwareComponentInternal component() {
-        return publication().component.getOrNull();
+    private fun component(): SoftwareComponentInternal {
+        return publication().component.getOrNull()
     }
 
-    private PublicationInternal<?> publication() {
-        return Cast.uncheckedNonnullCast(publication.get().get());
+    private fun publication(): PublicationInternal<*> {
+        return uncheckedNonnullCast<PublicationInternal<*>?>(publication.get()!!.get())!!
     }
 
-    private List<PublicationInternal<?>> publications() {
-        return Cast.uncheckedCast(publications.get().get());
+    private fun publications(): MutableList<PublicationInternal<*>?> {
+        return uncheckedCast<MutableList<PublicationInternal<*>?>?>(publications.get()!!.get())!!
     }
 
-    @Inject
-    protected abstract ObjectFactory getObjectFactory();
+    @get:Inject
+    protected abstract val objectFactory: ObjectFactory
 
-    @Inject
-    protected abstract DependencyCoordinateResolverFactory getDependencyCoordinateResolverFactory();
+    @get:Inject
+    protected abstract val dependencyCoordinateResolverFactory: DependencyCoordinateResolverFactory?
 
-    @Inject
-    protected abstract TaskDependencyFactory getTaskDependencyFactory();
-
+    @get:Inject
+    protected abstract val taskDependencyFactory: TaskDependencyFactory?
 }

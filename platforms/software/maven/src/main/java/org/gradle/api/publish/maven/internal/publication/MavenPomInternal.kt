@@ -13,62 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publication
 
-package org.gradle.api.publish.maven.internal.publication;
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.tasks.Nested
 
-import org.gradle.api.Action;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.provider.Property;
-import org.gradle.api.publish.maven.MavenPom;
-import org.gradle.api.publish.maven.MavenPomCiManagement;
-import org.gradle.api.publish.maven.MavenPomContributor;
-import org.gradle.api.publish.maven.MavenPomDeveloper;
-import org.gradle.api.publish.maven.MavenPomIssueManagement;
-import org.gradle.api.publish.maven.MavenPomLicense;
-import org.gradle.api.publish.maven.MavenPomMailingList;
-import org.gradle.api.publish.maven.MavenPomOrganization;
-import org.gradle.api.publish.maven.MavenPomScm;
-import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies;
-import org.gradle.api.publish.maven.internal.publisher.MavenPublicationCoordinates;
-import org.gradle.api.tasks.Nested;
-import org.jspecify.annotations.Nullable;
+interface MavenPomInternal : MavenPom {
+    val packagingProperty: Property<String>?
 
-import java.util.List;
+    val licenses: MutableList<MavenPomLicense>?
 
-public interface MavenPomInternal extends MavenPom {
+    val organization: MavenPomOrganization?
 
-    Property<String> getPackagingProperty();
+    val developers: MutableList<MavenPomDeveloper>?
 
-    List<MavenPomLicense> getLicenses();
+    val contributors: MutableList<MavenPomContributor>?
 
-    @Nullable
-    MavenPomOrganization getOrganization();
+    val scm: MavenPomScm?
 
-    List<MavenPomDeveloper> getDevelopers();
+    val issueManagement: MavenPomIssueManagement?
 
-    List<MavenPomContributor> getContributors();
+    val ciManagement: MavenPomCiManagement?
 
-    @Nullable
-    MavenPomScm getScm();
+    val distributionManagement: MavenPomDistributionManagementInternal?
 
-    @Nullable
-    MavenPomIssueManagement getIssueManagement();
+    val mailingLists: MutableList<MavenPomMailingList>?
 
-    @Nullable
-    MavenPomCiManagement getCiManagement();
+    @get:Nested
+    val coordinates: MavenPublicationCoordinates?
 
-    @Nullable
-    MavenPomDistributionManagementInternal getDistributionManagement();
+    val dependencies: Property<MavenPomDependencies>?
 
-    List<MavenPomMailingList> getMailingLists();
+    val xmlAction: Action<XmlProvider>?
 
-    @Nested
-    MavenPublicationCoordinates getCoordinates();
-
-    Property<MavenPomDependencies> getDependencies();
-
-    Action<XmlProvider> getXmlAction();
-
-    Property<Boolean> getWriteGradleMetadataMarker();
-
+    val writeGradleMetadataMarker: Property<Boolean>?
 }

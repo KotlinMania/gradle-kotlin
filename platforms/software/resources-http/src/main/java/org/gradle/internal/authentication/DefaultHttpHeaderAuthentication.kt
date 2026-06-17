@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.api.credentials.HttpHeaderCredentials
+import org.gradle.authentication.http.HttpHeaderAuthentication
 
-import org.gradle.api.credentials.HttpHeaderCredentials;
-import org.gradle.authentication.http.HttpHeaderAuthentication;
-
-public class DefaultHttpHeaderAuthentication extends AbstractAuthentication implements HttpHeaderAuthentication {
-    public DefaultHttpHeaderAuthentication(String name) {
-        super(name, HttpHeaderAuthentication.class, HttpHeaderCredentials.class);
-    }
-
-    @Override
-    public boolean requiresCredentials() {
-        return true;
+class DefaultHttpHeaderAuthentication(name: String?) : AbstractAuthentication(name, HttpHeaderAuthentication::class.java, HttpHeaderCredentials::class.java), HttpHeaderAuthentication {
+    override fun requiresCredentials(): Boolean {
+        return true
     }
 }

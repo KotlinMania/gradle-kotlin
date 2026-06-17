@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.metadata;
+package org.gradle.api.publish.internal.metadata
 
-import org.gradle.api.attributes.AttributeContainer;
+import org.gradle.api.attributes.AttributeContainer
+import java.util.Optional
 
-import java.util.Optional;
+interface DependencyAttributesValidator {
+    val suppressor: String?
+    val explanation: String?
 
-public interface DependencyAttributesValidator {
-    String getSuppressor();
-    String getExplanation();
-
-    Optional<String> validationErrorFor(String group, String name, AttributeContainer attributes);
+    fun validationErrorFor(group: String?, name: String?, attributes: AttributeContainer?): Optional<String?>?
 }

@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Action;
+import org.gradle.api.Action
 
 /**
  * Allows to add developers to a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomDeveloper
  */
-public interface MavenPomDeveloperSpec {
-
+interface MavenPomDeveloperSpec {
     /**
      * Creates, configures and adds a developer to the publication.
      */
-    void developer(Action<? super MavenPomDeveloper> action);
-
+    fun developer(action: Action<in MavenPomDeveloper?>?)
 }

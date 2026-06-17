@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.dependency
 
-package org.gradle.api.publish.ivy.internal.dependency;
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultDomainObjectSet
 
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultDomainObjectSet;
-
-public class DefaultIvyDependencySet extends DefaultDomainObjectSet<IvyDependency> {
-    public DefaultIvyDependencySet(CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        super(IvyDependency.class, collectionCallbackActionDecorator);
-    }
-}
+class DefaultIvyDependencySet(collectionCallbackActionDecorator: CollectionCallbackActionDecorator) :
+    DefaultDomainObjectSet<IvyDependency?>(IvyDependency::class.java, collectionCallbackActionDecorator)

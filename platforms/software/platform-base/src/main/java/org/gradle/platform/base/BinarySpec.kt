@@ -13,34 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base
 
-package org.gradle.platform.base;
-
-import org.gradle.api.BuildableComponentSpec;
-import org.gradle.api.CheckableComponentSpec;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.Incubating;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.model.ModelMap;
+import org.gradle.api.BuildableComponentSpec
+import org.gradle.api.CheckableComponentSpec
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * Represents a binary that is the result of building a component.
  */
-@Incubating @HasInternalProtocol
-public interface BinarySpec extends BuildableComponentSpec, CheckableComponentSpec, Binary {
-
+@Incubating
+@HasInternalProtocol
+interface BinarySpec : BuildableComponentSpec, CheckableComponentSpec, Binary {
     /**
      * Can this binary be built in the current environment?
      */
-    boolean isBuildable();
+    @JvmField
+    val isBuildable: Boolean
 
     /**
      * The sources owned by this binary.
      *
      * @return the sources owned by the binary.
      */
-    ModelMap<LanguageSourceSet> getSources();
+    @JvmField
+    val sources: ModelMap<LanguageSourceSet?>?
 
     /**
      * Returns all inputs of the binary. This includes source sets owned by the binary,
@@ -48,10 +46,12 @@ public interface BinarySpec extends BuildableComponentSpec, CheckableComponentSp
      *
      * @return all inputs of the binary.
      */
-    DomainObjectSet<LanguageSourceSet> getInputs();
+    @JvmField
+    val inputs: DomainObjectSet<LanguageSourceSet?>?
 
     /**
      * The set of tasks associated with this binary.
      */
-    BinaryTasksCollection getTasks();
+    @JvmField
+    val tasks: BinaryTasksCollection?
 }

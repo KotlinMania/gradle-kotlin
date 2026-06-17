@@ -13,46 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.artifacts.PublishArtifactInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.tasks.TaskDependency
 
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.artifacts.PublishArtifactInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.tasks.TaskDependency;
+class PublishArtifactBasedMavenArtifact(private val publishArtifact: PublishArtifact, taskDependencyFactory: TaskDependencyFactory) : AbstractMavenArtifact(taskDependencyFactory) {
+    val file: File
+        get() = publishArtifact.getFile()
 
-import java.io.File;
-
-public class PublishArtifactBasedMavenArtifact extends AbstractMavenArtifact {
-    private final PublishArtifact publishArtifact;
-
-    public PublishArtifactBasedMavenArtifact(PublishArtifact publishArtifact, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.publishArtifact = publishArtifact;
+    override fun getDefaultExtension(): String {
+        return publishArtifact.getExtension()
     }
 
-    @Override
-    public File getFile() {
-        return publishArtifact.getFile();
+    override fun getDefaultClassifier(): String? {
+        return publishArtifact.getClassifier()
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return publishArtifact.getExtension();
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return publishArtifact.getBuildDependencies()
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return publishArtifact.getClassifier();
-    }
-
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return publishArtifact.getBuildDependencies();
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return PublishArtifactInternal.shouldBePublished(publishArtifact);
+    override fun shouldBePublished(): Boolean {
+        return PublishArtifactInternal.shouldBePublished(publishArtifact)
     }
 }

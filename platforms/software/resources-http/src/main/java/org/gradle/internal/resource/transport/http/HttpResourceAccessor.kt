@@ -13,68 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import com.google.common.collect.ImmutableMap
+import org.apache.http.HttpHeaders
+import org.gradle.internal.IoActions
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.resource.transfer.AbstractExternalResourceAccessor
+import org.gradle.internal.resource.transfer.ExternalResourceAccessor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.net.URI
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.http.HttpHeaders;
-import org.gradle.internal.IoActions;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.resource.transfer.AbstractExternalResourceAccessor;
-import org.gradle.internal.resource.transfer.ExternalResourceAccessor;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+open class HttpResourceAccessor(private val client: HttpClient) : AbstractExternalResourceAccessor(), ExternalResourceAccessor {
+    public override fun openResource(location: ExternalResourceName, revalidate: Boolean): HttpResponseResource? {
+        LOGGER.debug("Constructing external resource: {}", location)
 
-import java.net.URI;
-
-public class HttpResourceAccessor extends AbstractExternalResourceAccessor implements ExternalResourceAccessor {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpResourceAccessor.class);
-    private static final ImmutableMap<String, String> REVALIDATE_HEADERS = ImmutableMap.of(HttpHeaders.CACHE_CONTROL, "max-age=0");
-
-    private final HttpClient client;
-
-    public HttpResourceAccessor(HttpClient client) {
-        this.client = client;
+        val uri = location.getUri()
+        val response = client.performGet(uri, getHeaders(revalidate))
+        return wrapResponse(uri, response)
     }
 
-    @Override
-    @Nullable
-    public HttpResponseResource openResource(final ExternalResourceName location, boolean revalidate) {
-        LOGGER.debug("Constructing external resource: {}", location);
+    override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
+        LOGGER.debug("Constructing external resource metadata: {}", location)
 
-        URI uri = location.getUri();
-        HttpClient.Response response = client.performGet(uri, getHeaders(revalidate));
-        return wrapResponse(uri, response);
-    }
-
-    @Override
-    public ExternalResourceMetaData getMetaData(ExternalResourceName location, boolean revalidate) {
-        LOGGER.debug("Constructing external resource metadata: {}", location);
-
-        URI uri = location.getUri();
-        HttpClient.Response response = client.performHead(uri, getHeaders(revalidate));
+        val uri = location.getUri()
+        val response = client.performHead(uri, getHeaders(revalidate))
 
         if (response.isMissing()) {
-            return null;
+            return null
         }
 
-        HttpResponseResource resource = new HttpResponseResource("HEAD", uri, response);
+        val resource = HttpResponseResource("HEAD", uri, response)
         try {
-            return resource.getMetaData();
+            return resource.getMetaData()
         } finally {
-            IoActions.closeQuietly(resource);
+            IoActions.closeQuietly(resource)
         }
     }
 
-    private HttpResponseResource wrapResponse(URI uri, HttpClient.Response response) {
-        return new HttpResponseResource("GET", uri, response);
+    private fun wrapResponse(uri: URI?, response: HttpClient.Response?): HttpResponseResource {
+        return HttpResponseResource("GET", uri, response)
     }
 
-    private static ImmutableMap<String, String> getHeaders(boolean revalidate) {
-        return revalidate ? REVALIDATE_HEADERS : ImmutableMap.of();
-    }
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(HttpResourceAccessor::class.java)
+        private val REVALIDATE_HEADERS = ImmutableMap.of<String?, String?>(HttpHeaders.CACHE_CONTROL, "max-age=0")
 
+        private fun getHeaders(revalidate: Boolean): ImmutableMap<String?, String?> {
+            return if (revalidate) REVALIDATE_HEADERS else ImmutableMap.of<String?, String?>()
+        }
+    }
 }

@@ -13,34 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.Named;
-
-import java.util.Set;
+import org.gradle.api.Named
 
 /**
- * A configuration included in an {@link IvyPublication}, which will be published in the ivy descriptor file generated.
+ * A configuration included in an [IvyPublication], which will be published in the ivy descriptor file generated.
  */
-public interface IvyConfiguration extends Named {
-
+interface IvyConfiguration : Named {
     /**
      * Add the name of a configuration that this configuration extends.
      * The extend value can use the following wildcards:
-     * <ul>
-     *     <li>* - all other configurations</li>
-     *     <li>*(public) - all other public configurations</li>
-     *     <li>*(private) - all other private configurations</li>
-     * </ul>
+     *
+     *  * * - all other configurations
+     *  * *(public) - all other public configurations
+     *  * *(private) - all other private configurations
+     *
      * @param configuration The extended configuration name
      */
-    void extend(String configuration);
+    fun extend(configuration: String?)
 
     /**
-     * The set of names of extended configurations, added via {@link #extend(String)}.
+     * The set of names of extended configurations, added via [.extend].
      *
      * @return The names of extended configurations.
      */
-    Set<String> getExtends();
+    @JvmField
+    val extends: MutableSet<String?>?
 }

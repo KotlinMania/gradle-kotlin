@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.internal.AbstractNamedDomainObjectContainer
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.publish.ivy.IvyConfiguration
+import org.gradle.api.publish.ivy.IvyConfigurationContainer
+import org.gradle.internal.reflect.Instantiator
 
-import org.gradle.api.internal.AbstractNamedDomainObjectContainer;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.publish.ivy.IvyConfiguration;
-import org.gradle.api.publish.ivy.IvyConfigurationContainer;
-import org.gradle.internal.reflect.Instantiator;
-
-public class DefaultIvyConfigurationContainer extends AbstractNamedDomainObjectContainer<IvyConfiguration> implements IvyConfigurationContainer {
-
-    public DefaultIvyConfigurationContainer(Instantiator instantiator, CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        super(IvyConfiguration.class, instantiator, collectionCallbackActionDecorator);
-    }
-
-    @Override
-    protected IvyConfiguration doCreate(String name) {
-        return getInstantiator().newInstance(DefaultIvyConfiguration.class, name);
+class DefaultIvyConfigurationContainer(instantiator: Instantiator, collectionCallbackActionDecorator: CollectionCallbackActionDecorator) : AbstractNamedDomainObjectContainer<IvyConfiguration>(
+    IvyConfiguration::class.java, instantiator, collectionCallbackActionDecorator
+), IvyConfigurationContainer {
+    override fun doCreate(name: String): IvyConfiguration {
+        return getInstantiator().newInstance<DefaultIvyConfiguration>(DefaultIvyConfiguration::class.java, name)
     }
 }

@@ -13,25 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource;
+package org.gradle.internal.resource
 
-import org.gradle.internal.file.RelativeFilePathResolver;
-import org.jspecify.annotations.Nullable;
+import org.gradle.internal.file.RelativeFilePathResolver
+import java.io.File
 
-import java.io.File;
-
-public class DefaultTextFileResourceLoader implements TextFileResourceLoader {
-    private final RelativeFilePathResolver resolver;
-
-    public DefaultTextFileResourceLoader(RelativeFilePathResolver resolver) {
-        this.resolver = resolver;
-    }
-
-    @Override
-    public TextResource loadFile(String description, @Nullable File sourceFile) {
+class DefaultTextFileResourceLoader(private val resolver: RelativeFilePathResolver?) : TextFileResourceLoader {
+    override fun loadFile(description: String?, sourceFile: File?): TextResource {
         if (sourceFile == null) {
-            return new StringTextResource(description, "");
+            return StringTextResource(description, "")
         }
-        return UriTextResource.from(description, sourceFile, resolver);
+        return UriTextResource.Companion.from(description, sourceFile, resolver)
     }
 }

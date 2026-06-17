@@ -13,123 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.Describables
+import org.gradle.internal.DisplayName
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.hash.Hashing
+import java.io.File
+import java.io.Reader
+import java.io.StringReader
+import java.net.URI
+import java.nio.charset.Charset
 
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.hash.PrimitiveHasher;
-import org.jspecify.annotations.Nullable;
+class StringTextResource(private val displayName: String, private val contents: CharSequence) : TextResource {
+    private var contentHash: HashCode? = null
 
-import java.io.File;
-import java.io.Reader;
-import java.io.StringReader;
-import java.net.URI;
-import java.nio.charset.Charset;
-
-public class StringTextResource implements TextResource {
-    private static final HashCode SIGNATURE = Hashing.signature(StringTextResource.class);
-
-    private final String displayName;
-    private final CharSequence contents;
-    private HashCode contentHash;
-
-    public StringTextResource(String displayName, CharSequence contents) {
-        this.displayName = displayName;
-        this.contents = contents;
+    override fun getDisplayName(): String {
+        return displayName
     }
 
-    @Override
-    public String getDisplayName() {
-        return displayName;
+    override fun getLongDisplayName(): DisplayName {
+        return Describables.of(displayName)
     }
 
-    @Override
-    public DisplayName getLongDisplayName() {
-        return Describables.of(displayName);
+    override fun getShortDisplayName(): DisplayName {
+        return getLongDisplayName()
     }
 
-    @Override
-    public DisplayName getShortDisplayName() {
-        return getLongDisplayName();
+    override fun isContentCached(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isContentCached() {
-        return true;
+    override fun getHasEmptyContent(): Boolean {
+        return contents.length == 0
     }
 
-    @Override
-    public boolean getHasEmptyContent() {
-        return contents.length() == 0;
+    override fun getAsReader(): Reader {
+        return StringReader(getText())
     }
 
-    @Override
-    public Reader getAsReader() {
-        return new StringReader(getText());
+    override fun getText(): String {
+        return contents.toString()
     }
 
-    @Override
-    public String getText() {
-        return contents.toString();
-    }
-
-    @Override
-    public HashCode getContentHash() throws ResourceException {
+    @Throws(ResourceException::class)
+    override fun getContentHash(): HashCode {
         if (contentHash == null) {
-            PrimitiveHasher hasher = Hashing.newPrimitiveHasher();
-            hasher.putHash(SIGNATURE);
-            hasher.putString(getText());
-            contentHash = hasher.hash();
+            val hasher = Hashing.newPrimitiveHasher()
+            hasher.putHash(SIGNATURE)
+            hasher.putString(getText())
+            contentHash = hasher.hash()
         }
-        return contentHash;
+        return contentHash!!
     }
 
-    @Override
-    public File getFile() {
-        return null;
+    override fun getFile(): File? {
+        return null
     }
 
-    @Override
-    public Charset getCharset() {
-        return null;
+    override fun getCharset(): Charset? {
+        return null
     }
 
-    @Override
-    public ResourceLocation getLocation() {
-        return new StringResourceLocation(displayName);
+    override fun getLocation(): ResourceLocation {
+        return StringResourceLocation(displayName)
     }
 
-    @Override
-    public boolean getExists() {
-        return true;
+    override fun getExists(): Boolean {
+        return true
     }
 
-    private static class StringResourceLocation implements ResourceLocation {
-        private final String displayName;
-
-        public StringResourceLocation(String displayName) {
-            this.displayName = displayName;
+    private class StringResourceLocation(private val displayName: String?) : ResourceLocation {
+        override fun getDisplayName(): String? {
+            return displayName
         }
 
-        @Override
-        public String getDisplayName() {
-            return displayName;
+        override fun getFile(): File? {
+            return null
         }
 
-        @Nullable
-        @Override
-        public File getFile() {
-            return null;
+        override fun getURI(): URI? {
+            return null
         }
+    }
 
-        @Nullable
-        @Override
-        public URI getURI() {
-            return null;
-        }
+    companion object {
+        private val SIGNATURE = Hashing.signature(StringTextResource::class.java)
     }
 }

@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.InvalidUserDataException;
+import org.gradle.api.InvalidUserDataException
 
 /**
- * Thrown when attempting to publish with an invalid {@link IvyPublication}.
+ * Thrown when attempting to publish with an invalid [IvyPublication].
  *
  * @since 1.5
  */
-public class InvalidIvyPublicationException extends InvalidUserDataException {
-    public InvalidIvyPublicationException(String publicationName, String error) {
-        super(formatMessage(publicationName, error));
-    }
+class InvalidIvyPublicationException : InvalidUserDataException {
+    constructor(publicationName: String?, error: String?) : super(formatMessage(publicationName, error))
 
-    public InvalidIvyPublicationException(String publicationName, String error, Throwable cause) {
-        super(formatMessage(publicationName, error), cause);
-    }
+    constructor(publicationName: String?, error: String?, cause: Throwable?) : super(formatMessage(publicationName, error), cause)
 
-    private static String formatMessage(String publicationName, String error) {
-        return String.format("Invalid publication '%s': %s", publicationName, error);
+    companion object {
+        private fun formatMessage(publicationName: String?, error: String?): String {
+            return String.format("Invalid publication '%s': %s", publicationName, error)
+        }
     }
 }

@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-
-public class SftpResourcesServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.addProvider(new GlobalScopeServices());
+class SftpResourcesServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.addProvider(GlobalScopeServices())
     }
 
-    private static class GlobalScopeServices implements ServiceRegistrationProvider {
+    private class GlobalScopeServices : ServiceRegistrationProvider {
         @Provides
-        SftpClientFactory createSftpClientFactory() {
-            return new SftpClientFactory();
+        fun createSftpClientFactory(): SftpClientFactory {
+            return SftpClientFactory()
         }
 
         @Provides
-        ResourceConnectorFactory createSftpConnectorFactory(SftpClientFactory clientFactory) {
-            return new SftpConnectorFactory(clientFactory);
+        fun createSftpConnectorFactory(clientFactory: SftpClientFactory?): ResourceConnectorFactory {
+            return SftpConnectorFactory(clientFactory)
         }
     }
 }

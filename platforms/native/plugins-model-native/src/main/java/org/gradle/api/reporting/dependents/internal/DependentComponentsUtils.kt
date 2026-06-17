@@ -27,7 +27,7 @@ import org.gradle.platform.base.internal.ComponentSpecIdentifier
 
 object DependentComponentsUtils {
     fun getBuildScopedTerseName(id: ComponentSpecIdentifier): String {
-        return getProjectPrefix(id.getProjectPath()) + id.getProjectScopedName()
+        return getProjectPrefix(id.projectPath) + id.projectScopedName
     }
 
     fun getBuildScopedTerseName(id: LibraryBinaryIdentifier): String {

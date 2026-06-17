@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base.internal
 
-package org.gradle.platform.base.internal;
+import org.gradle.internal.logging.text.DiagnosticsVisitor
 
-import org.gradle.internal.logging.text.DiagnosticsVisitor;
-
-public interface BinaryBuildAbility {
-    boolean isBuildable();
-    void explain(DiagnosticsVisitor visitor);
+interface BinaryBuildAbility {
+    @JvmField
+    val isBuildable: Boolean
+    fun explain(visitor: DiagnosticsVisitor?)
 }

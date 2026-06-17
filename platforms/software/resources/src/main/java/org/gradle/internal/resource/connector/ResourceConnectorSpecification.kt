@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.connector
 
-package org.gradle.internal.resource.connector;
+import org.gradle.authentication.Authentication
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import java.net.URI
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.verifier.HttpRedirectVerifier;
-
-import java.util.Collection;
-import java.util.Collections;
-
-public interface ResourceConnectorSpecification {
-    default <T> T getCredentials(Class<T> type) {
-        return null;
+interface ResourceConnectorSpecification {
+    fun <T> getCredentials(type: Class<T?>?): T? {
+        return null
     }
 
-    default Collection<Authentication> getAuthentications() {
-        return Collections.emptyList();
-    }
+    val authentications: MutableCollection<Authentication?>?
+        get() = mutableListOf<Authentication?>()
 
-    default HttpRedirectVerifier getRedirectVerifier() {
-        return uris -> {
-        };
-    }
+    val redirectVerifier: HttpRedirectVerifier?
+        get() {
+            return HttpRedirectVerifier? { uris: MutableCollection<URI?>? -> }
+        }
 }

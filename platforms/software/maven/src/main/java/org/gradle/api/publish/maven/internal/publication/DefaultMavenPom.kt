@@ -13,201 +13,171 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publication
 
-package org.gradle.api.publish.maven.internal.publication;
+import org.gradle.api.Action
+import org.gradle.api.XmlProvider
+import org.gradle.api.internal.UserCodeAction
+import org.gradle.api.provider.Property
+import org.gradle.api.publish.maven.MavenPomCiManagement
+import org.gradle.api.publish.maven.MavenPomContributor
+import org.gradle.api.publish.maven.MavenPomContributorSpec
+import org.gradle.api.publish.maven.MavenPomDeveloper
+import org.gradle.api.publish.maven.MavenPomDeveloperSpec
+import org.gradle.api.publish.maven.MavenPomDistributionManagement
+import org.gradle.api.publish.maven.MavenPomIssueManagement
+import org.gradle.api.publish.maven.MavenPomLicense
+import org.gradle.api.publish.maven.MavenPomLicenseSpec
+import org.gradle.api.publish.maven.MavenPomMailingList
+import org.gradle.api.publish.maven.MavenPomMailingListSpec
+import org.gradle.api.publish.maven.MavenPomOrganization
+import org.gradle.api.publish.maven.MavenPomScm
+import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies
+import org.gradle.internal.MutableActionSet
+import javax.inject.Inject
 
-import org.gradle.api.Action;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.internal.UserCodeAction;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.publish.maven.MavenPomCiManagement;
-import org.gradle.api.publish.maven.MavenPomContributor;
-import org.gradle.api.publish.maven.MavenPomContributorSpec;
-import org.gradle.api.publish.maven.MavenPomDeveloper;
-import org.gradle.api.publish.maven.MavenPomDeveloperSpec;
-import org.gradle.api.publish.maven.MavenPomDistributionManagement;
-import org.gradle.api.publish.maven.MavenPomIssueManagement;
-import org.gradle.api.publish.maven.MavenPomLicense;
-import org.gradle.api.publish.maven.MavenPomLicenseSpec;
-import org.gradle.api.publish.maven.MavenPomMailingList;
-import org.gradle.api.publish.maven.MavenPomMailingListSpec;
-import org.gradle.api.publish.maven.MavenPomOrganization;
-import org.gradle.api.publish.maven.MavenPomScm;
-import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies;
-import org.gradle.internal.MutableActionSet;
+abstract class DefaultMavenPom : MavenPomInternal, MavenPomLicenseSpec, MavenPomDeveloperSpec, MavenPomContributorSpec, MavenPomMailingListSpec {
+    private val xmlAction = MutableActionSet<XmlProvider>()
+    private val licenses: MutableList<MavenPomLicense> = ArrayList<MavenPomLicense>()
+    private var organization: MavenPomOrganization? = null
+    private val developers: MutableList<MavenPomDeveloper> = ArrayList<MavenPomDeveloper>()
+    private val contributors: MutableList<MavenPomContributor> = ArrayList<MavenPomContributor>()
+    private var scm: MavenPomScm? = null
+    private var issueManagement: MavenPomIssueManagement? = null
+    private var ciManagement: MavenPomCiManagement? = null
+    private var distributionManagement: MavenPomDistributionManagementInternal? = null
+    private val mailingLists: MutableList<MavenPomMailingList> = ArrayList<MavenPomMailingList>()
 
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
+    @get:Inject
+    protected abstract val objectFactory: ObjectFactory?
 
-public abstract class DefaultMavenPom implements MavenPomInternal, MavenPomLicenseSpec, MavenPomDeveloperSpec, MavenPomContributorSpec, MavenPomMailingListSpec {
-
-    private final MutableActionSet<XmlProvider> xmlAction = new MutableActionSet<>();
-    private final List<MavenPomLicense> licenses = new ArrayList<>();
-    private MavenPomOrganization organization;
-    private final List<MavenPomDeveloper> developers = new ArrayList<>();
-    private final List<MavenPomContributor> contributors = new ArrayList<>();
-    private MavenPomScm scm;
-    private MavenPomIssueManagement issueManagement;
-    private MavenPomCiManagement ciManagement;
-    private MavenPomDistributionManagementInternal distributionManagement;
-    private final List<MavenPomMailingList> mailingLists = new ArrayList<>();
-
-    @Inject
-    protected abstract ObjectFactory getObjectFactory();
-
-    @Override
-    public void withXml(Action<? super XmlProvider> action) {
-        xmlAction.add(new UserCodeAction<>("Could not apply withXml() to generated POM", action));
+    override fun withXml(action: Action<in XmlProvider>) {
+        xmlAction.add(UserCodeAction<XmlProvider?>("Could not apply withXml() to generated POM", action))
     }
 
-    @Override
-    public Action<XmlProvider> getXmlAction() {
-        return xmlAction;
+    override fun getXmlAction(): Action<XmlProvider> {
+        return xmlAction
     }
 
-    @Override
-    public String getPackaging() {
-        return getPackagingProperty().get();
+    override fun getPackaging(): String {
+        return getPackagingProperty().get()
     }
 
-    @Override
-    public void setPackaging(String packaging) {
-        getPackagingProperty().set(packaging);
+    override fun setPackaging(packaging: String) {
+        getPackagingProperty().set(packaging)
     }
 
-    @Override
-    public void licenses(Action<? super MavenPomLicenseSpec> action) {
-        action.execute(this);
+    override fun licenses(action: Action<in MavenPomLicenseSpec>) {
+        action.execute(this)
     }
 
-    @Override
-    public void license(Action<? super MavenPomLicense> action) {
-        configureAndAdd(MavenPomLicense.class, action, licenses);
+    override fun license(action: Action<in MavenPomLicense>) {
+        configureAndAdd<MavenPomLicense>(MavenPomLicense::class.java, action, licenses)
     }
 
-    @Override
-    public List<MavenPomLicense> getLicenses() {
-        return licenses;
+    override fun getLicenses(): MutableList<MavenPomLicense> {
+        return licenses
     }
 
-    @Override
-    public void organization(Action<? super MavenPomOrganization> action) {
+    override fun organization(action: Action<in MavenPomOrganization>) {
         if (organization == null) {
-            organization = getObjectFactory().newInstance(MavenPomOrganization.class);
+            organization = this.objectFactory.newInstance<MavenPomOrganization>(MavenPomOrganization::class.java)
         }
-        action.execute(organization);
+        action.execute(organization)
     }
 
-    @Override
-    public MavenPomOrganization getOrganization() {
-        return organization;
+    override fun getOrganization(): MavenPomOrganization {
+        return organization!!
     }
 
-    @Override
-    public void developers(Action<? super MavenPomDeveloperSpec> action) {
-        action.execute(this);
+    override fun developers(action: Action<in MavenPomDeveloperSpec>) {
+        action.execute(this)
     }
 
-    @Override
-    public void developer(Action<? super MavenPomDeveloper> action) {
-        configureAndAdd(MavenPomDeveloper.class, action, developers);
+    override fun developer(action: Action<in MavenPomDeveloper>) {
+        configureAndAdd<MavenPomDeveloper>(MavenPomDeveloper::class.java, action, developers)
     }
 
-    @Override
-    public List<MavenPomDeveloper> getDevelopers() {
-        return developers;
+    override fun getDevelopers(): MutableList<MavenPomDeveloper> {
+        return developers
     }
 
-    @Override
-    public void contributors(Action<? super MavenPomContributorSpec> action) {
-        action.execute(this);
+    override fun contributors(action: Action<in MavenPomContributorSpec>) {
+        action.execute(this)
     }
 
-    @Override
-    public void contributor(Action<? super MavenPomContributor> action) {
-        configureAndAdd(MavenPomContributor.class, action, contributors);
+    override fun contributor(action: Action<in MavenPomContributor>) {
+        configureAndAdd<MavenPomContributor>(MavenPomContributor::class.java, action, contributors)
     }
 
-    @Override
-    public List<MavenPomContributor> getContributors() {
-        return contributors;
+    override fun getContributors(): MutableList<MavenPomContributor> {
+        return contributors
     }
 
-    @Override
-    public MavenPomScm getScm() {
-        return scm;
+    override fun getScm(): MavenPomScm {
+        return scm!!
     }
 
-    @Override
-    public void scm(Action<? super MavenPomScm> action) {
+    override fun scm(action: Action<in MavenPomScm>) {
         if (scm == null) {
-            scm = getObjectFactory().newInstance(MavenPomScm.class);
+            scm = this.objectFactory.newInstance<MavenPomScm>(MavenPomScm::class.java)
         }
-        action.execute(scm);
+        action.execute(scm)
     }
 
-    @Override
-    public void issueManagement(Action<? super MavenPomIssueManagement> action) {
+    override fun issueManagement(action: Action<in MavenPomIssueManagement>) {
         if (issueManagement == null) {
-            issueManagement = getObjectFactory().newInstance(MavenPomIssueManagement.class);
+            issueManagement = this.objectFactory.newInstance<MavenPomIssueManagement>(MavenPomIssueManagement::class.java)
         }
-        action.execute(issueManagement);
+        action.execute(issueManagement)
     }
 
-    @Override
-    public MavenPomIssueManagement getIssueManagement() {
-        return issueManagement;
+    override fun getIssueManagement(): MavenPomIssueManagement {
+        return issueManagement!!
     }
 
-    @Override
-    public void ciManagement(Action<? super MavenPomCiManagement> action) {
+    override fun ciManagement(action: Action<in MavenPomCiManagement>) {
         if (ciManagement == null) {
-            ciManagement = getObjectFactory().newInstance(MavenPomCiManagement.class);
+            ciManagement = this.objectFactory.newInstance<MavenPomCiManagement>(MavenPomCiManagement::class.java)
         }
-        action.execute(ciManagement);
+        action.execute(ciManagement)
     }
 
-    @Override
-    public MavenPomCiManagement getCiManagement() {
-        return ciManagement;
+    override fun getCiManagement(): MavenPomCiManagement {
+        return ciManagement!!
     }
 
-    @Override
-    public void distributionManagement(Action<? super MavenPomDistributionManagement> action) {
+    override fun distributionManagement(action: Action<in MavenPomDistributionManagement>) {
         if (distributionManagement == null) {
-            distributionManagement = getObjectFactory().newInstance(DefaultMavenPomDistributionManagement.class, getObjectFactory());
+            distributionManagement = this.objectFactory.newInstance<DefaultMavenPomDistributionManagement>(
+                DefaultMavenPomDistributionManagement::class.java,
+                this.objectFactory
+            )
         }
-        action.execute(distributionManagement);
+        action.execute(distributionManagement)
     }
 
-    @Override
-    public MavenPomDistributionManagementInternal getDistributionManagement() {
-        return distributionManagement;
+    override fun getDistributionManagement(): MavenPomDistributionManagementInternal {
+        return distributionManagement!!
     }
 
-    @Override
-    public void mailingLists(Action<? super MavenPomMailingListSpec> action) {
-        action.execute(this);
+    override fun mailingLists(action: Action<in MavenPomMailingListSpec>) {
+        action.execute(this)
     }
 
-    @Override
-    public void mailingList(Action<? super MavenPomMailingList> action) {
-        configureAndAdd(MavenPomMailingList.class, action, mailingLists);
+    override fun mailingList(action: Action<in MavenPomMailingList>) {
+        configureAndAdd<MavenPomMailingList>(MavenPomMailingList::class.java, action, mailingLists)
     }
 
-    @Override
-    public List<MavenPomMailingList> getMailingLists() {
-        return mailingLists;
+    override fun getMailingLists(): MutableList<MavenPomMailingList> {
+        return mailingLists
     }
 
-    @Override
-    public abstract Property<MavenPomDependencies> getDependencies();
+    abstract override fun getDependencies(): Property<MavenPomDependencies>?
 
-    private <T> void configureAndAdd(Class<? extends T> clazz, Action<? super T> action, List<T> items) {
-        T item = getObjectFactory().newInstance(clazz);
-        action.execute(item);
-        items.add(item);
+    private fun <T> configureAndAdd(clazz: Class<out T>, action: Action<in T>, items: MutableList<T?>) {
+        val item: T? = this.objectFactory.newInstance(clazz)
+        action.execute(item)
+        items.add(item)
     }
 }

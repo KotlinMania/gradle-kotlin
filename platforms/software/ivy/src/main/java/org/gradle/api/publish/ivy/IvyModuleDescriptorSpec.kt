@@ -13,121 +13,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.Action;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.tasks.Nested;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.Action
+import org.gradle.api.XmlProvider
+import org.gradle.api.tasks.Nested
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
 
 /**
  * The descriptor of any Ivy publication.
- * <p>
- * Corresponds to the <a href="http://ant.apache.org/ivy/history/latest-milestone/ivyfile.html">XML version of the Ivy Module Descriptor</a>.
- * <p>
- * The {@link #withXml(org.gradle.api.Action)} method can be used to modify the descriptor after it has been generated according to the publication data.
+ *
+ *
+ * Corresponds to the [XML version of the Ivy Module Descriptor](http://ant.apache.org/ivy/history/latest-milestone/ivyfile.html).
+ *
+ *
+ * The [.withXml] method can be used to modify the descriptor after it has been generated according to the publication data.
  * However, the preferred way to customize the project information to be published is to use the dedicated configuration methods exposed by this class, e.g.
- * {@link #description(Action)}.
+ * [.description].
  *
  * @since 1.3
  */
 @HasInternalProtocol
-public interface IvyModuleDescriptorSpec {
-
+interface IvyModuleDescriptorSpec {
     /**
      * Allow configuration of the descriptor, after it has been generated according to the input data.
      *
      * <pre class='autoTested'>
      * plugins {
-     *     id 'ivy-publish'
+     * id 'ivy-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       descriptor {
-     *         withXml {
-     *           asNode().dependencies.dependency.find { it.@org == "junit" }.@rev = "4.10"
-     *         }
-     *       }
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * descriptor {
+     * withXml {
+     * asNode().dependencies.dependency.find { it.@org == "junit" }.@rev = "4.10"
      * }
-     * </pre>
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
      * Note that due to Gradle's internal type conversion system, you can pass a Groovy closure to this method and
-     * it will be automatically converted to an {@code Action}.
-     * <p>
+     * it will be automatically converted to an `Action`.
+     *
+     *
      * Each action/closure passed to this method will be stored as a callback, and executed when the publication
      * that this descriptor is attached to is published.
-     * <p>
-     * For details on the structure of the XML to be modified, see <a href="http://ant.apache.org/ivy/history/latest-milestone/ivyfile.html">the
-     * Ivy Module Descriptor reference</a>.
+     *
+     *
+     * For details on the structure of the XML to be modified, see [the
+     * Ivy Module Descriptor reference](http://ant.apache.org/ivy/history/latest-milestone/ivyfile.html).
      *
      *
      * @param action The configuration action.
      * @see IvyPublication
+     *
      * @see XmlProvider
      */
-    void withXml(Action<? super XmlProvider> action);
-
-    /**
-     * Returns the status for this publication.
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getStatus();
+    fun withXml(action: Action<in XmlProvider?>?)
 
     /**
      * Sets the status for this publication.
      */
-    void setStatus(@Nullable String status);
-
-    /**
-     * Returns the branch for this publication
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getBranch();
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    var status: String?
 
     /**
      * Sets the branch for this publication
      */
-    void setBranch(@Nullable String branch);
+    @JvmField
+    @get:ToBeReplacedByLazyProperty
+    var branch: String?
 
-    /**
-     * Returns the extra info element spec for this publication
-     */
-    @Nested
-    IvyExtraInfoSpec getExtraInfo();
+    @JvmField
+    @get:Nested
+    val extraInfo: IvyExtraInfoSpec?
 
     /**
      * Adds a new extra info element to the publication
      */
-    void extraInfo(String namespace, String elementName, String value);
+    fun extraInfo(namespace: String?, elementName: String?, value: String?)
 
     /**
      * Creates, configures and adds a license to this publication.
      *
      * @since 4.8
      */
-    void license(Action<? super IvyModuleDescriptorLicense> action);
+    fun license(action: Action<in IvyModuleDescriptorLicense?>?)
 
     /**
      * Creates, configures and adds an author to this publication.
      *
      * @since 4.8
      */
-    void author(Action<? super IvyModuleDescriptorAuthor> action);
+    fun author(action: Action<in IvyModuleDescriptorAuthor?>?)
 
     /**
      * Configures the description for this publication.
      *
      * @since 4.8
      */
-    void description(Action<? super IvyModuleDescriptorDescription> action);
-
+    fun description(action: Action<in IvyModuleDescriptorDescription?>?)
 }

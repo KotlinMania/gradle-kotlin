@@ -34,7 +34,7 @@ abstract class AbstractPrebuiltLibraryBinary(
     protected val fileCollectionFactory: FileCollectionFactory
 ) : NativeLibraryBinary {
     override fun toString(): String {
-        return getDisplayName()
+        return displayName
     }
 
     override fun getBuildType(): BuildType? {
@@ -59,15 +59,15 @@ abstract class AbstractPrebuiltLibraryBinary(
 
     private inner class ValidatingFileSet(private val file: File, private val fileCollectionDisplayName: String?, private val fileDescription: String?) : MinimalFileSet {
         override fun getDisplayName(): String {
-            return fileCollectionDisplayName + " for " + this@AbstractPrebuiltLibraryBinary.getDisplayName()
+            return fileCollectionDisplayName + " for " + this@AbstractPrebuiltLibraryBinary.displayName
         }
 
         override fun getFiles(): MutableSet<File?> {
             if (file == null) {
-                throw PrebuiltLibraryResolveException(String.format("%s not set for %s.", fileDescription, this@AbstractPrebuiltLibraryBinary.getDisplayName()))
+                throw PrebuiltLibraryResolveException(String.format("%s not set for %s.", fileDescription, this@AbstractPrebuiltLibraryBinary.displayName))
             }
             if (!file.exists() || !file.isFile()) {
-                throw PrebuiltLibraryResolveException(String.format("%s %s does not exist for %s.", fileDescription, file.getAbsolutePath(), this@AbstractPrebuiltLibraryBinary.getDisplayName()))
+                throw PrebuiltLibraryResolveException(String.format("%s %s does not exist for %s.", fileDescription, file.getAbsolutePath(), this@AbstractPrebuiltLibraryBinary.displayName))
             }
             return mutableSetOf<File?>(file)
         }

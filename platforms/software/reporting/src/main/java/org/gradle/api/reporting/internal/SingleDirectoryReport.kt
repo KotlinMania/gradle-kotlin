@@ -13,39 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import org.gradle.api.Describable
+import org.gradle.api.reporting.DirectoryReport
+import org.gradle.api.reporting.Report
+import org.gradle.internal.Describables
+import java.io.File
+import javax.inject.Inject
 
-import org.gradle.api.Describable;
-import org.gradle.api.file.ProjectLayout;
-import org.gradle.api.reporting.DirectoryReport;
-import org.gradle.internal.Describables;
-import org.jspecify.annotations.Nullable;
-
-import javax.inject.Inject;
-import java.io.File;
-
-public abstract class SingleDirectoryReport extends SimpleReport implements DirectoryReport {
-
-    @Nullable
-    private final String relativeEntryPath;
-
-    @Inject
-    public SingleDirectoryReport(String name, Describable owner, @Nullable String relativeEntryPath) {
-        super(name, Describables.of(name, "report for", owner), OutputType.DIRECTORY);
-        this.relativeEntryPath = relativeEntryPath;
-        getRequired().convention(false);
+abstract class SingleDirectoryReport @Inject constructor(name: String, owner: Describable, private val relativeEntryPath: String?) :
+    SimpleReport(name, Describables.of(name, "report for", owner), Report.OutputType.DIRECTORY), DirectoryReport {
+    init {
+        getRequired().convention(false)
     }
 
-    @Inject
-    protected abstract ProjectLayout getProjectLayout();
+    @get:Inject
+    protected abstract val projectLayout: ProjectLayout?
 
-    @Override
-    public File getEntryPoint() {
+    override fun getEntryPoint(): File {
         if (relativeEntryPath == null) {
-            return getOutputLocation().getAsFile().get();
+            return getOutputLocation().getAsFile().get()
         } else {
-            return new File(getOutputLocation().getAsFile().getOrNull(), relativeEntryPath);
+            return File(getOutputLocation().getAsFile().getOrNull(), relativeEntryPath)
         }
     }
 }

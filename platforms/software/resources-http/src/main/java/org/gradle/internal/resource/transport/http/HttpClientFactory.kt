@@ -13,26 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
-
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.jspecify.annotations.NullMarked
 
 /**
  * Factory for creating HTTP clients with specific settings.
- * <p>
+ *
+ *
  * Returned clients must be thread-safe. Implementations of this
  * factory may retain state to support features like connection pooling.
  */
 @NullMarked
-@ServiceScope(Scope.Global.class)
-public interface HttpClientFactory {
-
+@ServiceScope(Scope.Global::class)
+interface HttpClientFactory {
     /**
      * Create a new HTTP client with the given settings.
      */
-    HttpClient createClient(HttpSettings settings);
-
+    fun createClient(settings: HttpSettings): HttpClient?
 }

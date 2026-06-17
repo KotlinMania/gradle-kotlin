@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.maven
 
-package org.gradle.maven;
-
-import org.gradle.api.component.Component;
+import org.gradle.api.component.Component
 
 /**
  * A Maven Module component.
  */
-public interface MavenModule extends Component {
-}
+interface MavenModule : Component

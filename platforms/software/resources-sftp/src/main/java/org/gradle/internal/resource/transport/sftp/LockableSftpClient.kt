@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import org.gradle.internal.concurrent.Stoppable
 
-import com.jcraft.jsch.ChannelSftp;
-import org.gradle.internal.concurrent.Stoppable;
-
-public interface LockableSftpClient extends Stoppable {
-    SftpHost getHost();
-    ChannelSftp getSftpClient();
-    boolean isConnected();
+interface LockableSftpClient : Stoppable {
+    val host: SftpHost?
+    val sftpClient: ChannelSftp?
+    val isConnected: Boolean
 }

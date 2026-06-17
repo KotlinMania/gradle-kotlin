@@ -13,33 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api
 
-package org.gradle.api;
-
-import org.gradle.platform.base.ComponentSpec;
-import org.jspecify.annotations.Nullable;
+import org.gradle.platform.base.ComponentSpec
 
 /**
- * A {@link ComponentSpec} that is directly {@link Buildable} via a specified task.
+ * A [ComponentSpec] that is directly [Buildable] via a specified task.
  */
 @Incubating
-public interface BuildableComponentSpec extends Buildable, ComponentSpec {
+interface BuildableComponentSpec : Buildable, ComponentSpec {
     /**
      * Returns the task responsible for building this component.
      */
-    @Nullable
-    Task getBuildTask();
-
     /**
      * Specifies the task responsible for building this component.
      */
-    void setBuildTask(@Nullable Task buildTask);
+    var buildTask: Task?
 
     /**
      * Adds tasks required to build this component. Tasks added this way are subsequently
-     * added as dependencies of this component's {@link #getBuildTask() build task}.
+     * added as dependencies of this component's [build task][.getBuildTask].
      */
-    void builtBy(Object... tasks);
+    fun builtBy(vararg tasks: Any?)
 
-    boolean hasBuildDependencies();
+    fun hasBuildDependencies(): Boolean
 }

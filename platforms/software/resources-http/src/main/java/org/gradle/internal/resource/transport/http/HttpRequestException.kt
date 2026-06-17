@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
-
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.internal.exceptions.Contextual
 
 /**
  * Signals that some error occurred when making an HTTP request.
  * This is different from a HTTP request returning an HTTP error code.
  */
 @Contextual
-public class HttpRequestException extends RuntimeException {
-
-    public HttpRequestException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
+class HttpRequestException(message: String?, cause: Throwable?) : RuntimeException(message, cause)

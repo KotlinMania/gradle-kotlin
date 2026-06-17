@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
 
 @Contextual
-public class FileStoreException extends GradleException {
-    public FileStoreException(String message) {
-        super(message);
-    }
+open class FileStoreException : GradleException {
+    constructor(message: String?) : super(message)
 
-    public FileStoreException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 }

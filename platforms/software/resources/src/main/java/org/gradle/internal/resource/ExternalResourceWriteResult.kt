@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-public class ExternalResourceWriteResult {
-    private final long bytesWritten;
-
-    public ExternalResourceWriteResult(long bytesWritten) {
-        this.bytesWritten = bytesWritten;
-    }
-
+class ExternalResourceWriteResult(
     /**
-     * The number of <em>content</em> bytes written. This is not necessarily the same as the number of bytes transferred.
+     * The number of *content* bytes written. This is not necessarily the same as the number of bytes transferred.
      */
-    long getBytesWritten() {
-        return bytesWritten;
-    }
-}
+    val bytesWritten: Long
+)

@@ -13,11 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-public class FileStoreAddActionException extends FileStoreException {
-    public FileStoreAddActionException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
+class FileStoreAddActionException(message: String?, cause: Throwable?) : FileStoreException(message, cause)

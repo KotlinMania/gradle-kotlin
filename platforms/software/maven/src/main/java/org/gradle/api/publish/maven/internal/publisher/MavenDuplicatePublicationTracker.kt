@@ -13,37 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publisher
 
-package org.gradle.api.publish.maven.internal.publisher;
+import org.gradle.api.Project
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator
+import org.gradle.api.publish.internal.validation.DuplicatePublicationTracker
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.net.URI
 
-import org.gradle.api.Project;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator;
-import org.gradle.api.publish.internal.validation.DuplicatePublicationTracker;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
+@ServiceScope(Scope.Project::class)
+class MavenDuplicatePublicationTracker(project: Project, private val duplicatePublicationTracker: DuplicatePublicationTracker, private val mavenRepositoryLocator: LocalMavenRepositoryLocator) {
+    private val projectDisplayName: String
 
-import java.net.URI;
-
-@ServiceScope(Scope.Project.class)
-public class MavenDuplicatePublicationTracker {
-    private final String projectDisplayName;
-    private final DuplicatePublicationTracker duplicatePublicationTracker;
-    private final LocalMavenRepositoryLocator mavenRepositoryLocator;
-
-    public MavenDuplicatePublicationTracker(Project project, DuplicatePublicationTracker duplicatePublicationTracker, LocalMavenRepositoryLocator mavenRepositoryLocator) {
-        this.projectDisplayName = project.getDisplayName();
-        this.duplicatePublicationTracker = duplicatePublicationTracker;
-        this.mavenRepositoryLocator = mavenRepositoryLocator;
+    init {
+        this.projectDisplayName = project.getDisplayName()
     }
 
-    public void checkCanPublish(MavenNormalizedPublication publication, @Nullable URI repositoryLocation, String repositoryName) {
+    fun checkCanPublish(publication: MavenNormalizedPublication, repositoryLocation: URI?, repositoryName: String?) {
         duplicatePublicationTracker.checkCanPublish(
-            projectDisplayName, publication.getName(), DefaultModuleVersionIdentifier.newId(publication.getProjectIdentity()), repositoryLocation, repositoryName);
+            projectDisplayName, publication.getName(), DefaultModuleVersionIdentifier.newId(publication.getProjectIdentity()), repositoryLocation, repositoryName
+        )
     }
 
-    public void checkCanPublishToMavenLocal(MavenNormalizedPublication publication) {
-        checkCanPublish(publication, mavenRepositoryLocator.localMavenRepository.toURI(), "mavenLocal");
+    fun checkCanPublishToMavenLocal(publication: MavenNormalizedPublication) {
+        checkCanPublish(publication, mavenRepositoryLocator.localMavenRepository.toURI(), "mavenLocal")
     }
 }

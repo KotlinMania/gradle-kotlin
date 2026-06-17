@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.compile
 
-package org.gradle.language.base.compile;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.tasks.Input;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.Incubating
+import org.gradle.api.tasks.Input
+import org.jspecify.annotations.NullMarked
 
 /**
  * Version of a compiler.
@@ -27,23 +26,13 @@ import org.jspecify.annotations.NullMarked;
  */
 @Incubating
 @NullMarked
-public interface CompilerVersion {
+interface CompilerVersion {
+    @get:Input
+    val type: String?
 
-    /**
-     * Returns the type of the compiler.
-     */
-    @Input
-    String getType();
+    @get:Input
+    val vendor: String?
 
-    /**
-     * Returns the vendor of the compiler.
-     */
-    @Input
-    String getVendor();
-
-    /**
-     * Returns the version of the compiler.
-     */
-    @Input
-    String getVersion();
+    @get:Input
+    val version: String?
 }

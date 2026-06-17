@@ -93,13 +93,13 @@ public class BinaryTasksModelRuleExtractor extends AbstractAnnotationDrivenCompo
             ModelMap<Task> cast = DomainObjectCollectionBackedModelMap.wrap(
                     "tasks",
                     Task.class,
-                    binary.getTasks(),
+                binary.tasks,
                     taskFactory,
                     Named.Namer.INSTANCE,
                     new Action<Task>() {
                         @Override
                         public void execute(Task task) {
-                            binary.getTasks().add(task);
+                            binary.tasks.add(task);
                             binary.builtBy(task);
                         }
                     });

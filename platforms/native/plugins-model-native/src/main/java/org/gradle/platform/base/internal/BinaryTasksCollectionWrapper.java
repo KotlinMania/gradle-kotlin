@@ -57,12 +57,12 @@ public class BinaryTasksCollectionWrapper extends DelegatingDomainObjectSet<Task
 
     @Override
     public Task getBuild() {
-        return getDelegate().getBuild();
+        return getDelegate().build;
     }
 
     @Override
     public Task getCheck() {
-        return getDelegate().getCheck();
+        return getDelegate().check;
     }
 
     @Override

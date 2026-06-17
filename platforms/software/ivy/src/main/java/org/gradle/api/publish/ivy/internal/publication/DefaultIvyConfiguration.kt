@@ -13,34 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.publish.ivy.IvyConfiguration
 
-import org.gradle.api.publish.ivy.IvyConfiguration;
+class DefaultIvyConfiguration(private val name: String) : IvyConfiguration {
+    val extends: MutableSet<String> = LinkedHashSet<String>()
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-public class DefaultIvyConfiguration implements IvyConfiguration {
-    private final String name;
-    private final Set<String> extendsFrom = new LinkedHashSet<String>();
-
-    public DefaultIvyConfiguration(String name) {
-        this.name = name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public void extend(String configuration) {
-        extendsFrom.add(configuration);
-    }
-
-    @Override
-    public Set<String> getExtends() {
-        return extendsFrom;
+    override fun extend(configuration: String) {
+        extends.add(configuration)
     }
 }

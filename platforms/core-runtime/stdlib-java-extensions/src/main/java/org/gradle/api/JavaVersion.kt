@@ -17,6 +17,8 @@ package org.gradle.api
 
 import org.gradle.api.internal.jvm.JavaVersionParser
 
+private const val FIRST_MAJOR_VERSION_ORDINAL = 9 - 1
+
 /**
  * An enumeration of Java versions.
  * Before 9: http://www.oracle.com/technetwork/java/javase/versioning-naming-139433.html
@@ -284,8 +286,6 @@ enum class JavaVersion {
 
     companion object {
         // Since Java 9, version should be X instead of 1.X
-        private val FIRST_MAJOR_VERSION_ORDINAL = 9 - 1
-
         // Class file versions: 1.1 == 45, 1.2 == 46...
         private const val CLASS_MAJOR_VERSION_OFFSET = 44
         private var currentJavaVersion: JavaVersion? = null
@@ -310,7 +310,7 @@ enum class JavaVersion {
                 return getVersionForMajor(value)
             }
 
-            val name: String? = value.toString()
+            val name: String = value.toString()
             return getVersionForMajor(JavaVersionParser.parseMajorVersion(name))
         }
 
@@ -344,7 +344,7 @@ enum class JavaVersion {
         }
 
         private fun getVersionForMajor(major: Int): JavaVersion? {
-            return if (major >= entries.toTypedArray().length) JavaVersion.VERSION_HIGHER else entries[major - 1]
+            return if (major >= entries.size) JavaVersion.VERSION_HIGHER else entries[major - 1]
         }
     }
 }

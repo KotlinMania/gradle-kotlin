@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.dependency
 
-package org.gradle.api.publish.ivy.internal.dependency;
-
-public interface IvyExcludeRule {
-    String getOrg();
-    String getModule();
-    String getConf();
+interface IvyExcludeRule {
+    val org: String?
+    val module: String?
+    val conf: String?
 }

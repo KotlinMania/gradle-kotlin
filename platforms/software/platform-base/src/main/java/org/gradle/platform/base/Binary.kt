@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base
 
-package org.gradle.platform.base;
-
-import org.gradle.api.Incubating;
+import org.gradle.api.Incubating
 
 /**
  * A physical binary artifact, which can run on a particular platform or runtime.
  */
 @Incubating
-public interface Binary {
+interface Binary {
     /**
      * Returns a human-consumable display name for this binary.
      */
-    String getDisplayName();
+    val displayName: String?
 }

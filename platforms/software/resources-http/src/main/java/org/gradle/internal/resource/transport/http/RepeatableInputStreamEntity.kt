@@ -13,57 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.commons.io.IOUtils
+import org.apache.http.entity.AbstractHttpEntity
+import org.apache.http.entity.ContentType
+import org.gradle.internal.IoActions
+import org.gradle.internal.resource.ReadableContent
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 
-import org.apache.commons.io.IOUtils;
-import org.apache.http.entity.AbstractHttpEntity;
-import org.apache.http.entity.ContentType;
-import org.gradle.internal.IoActions;
-import org.gradle.internal.resource.ReadableContent;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-public class RepeatableInputStreamEntity extends AbstractHttpEntity {
-    private final ReadableContent source;
-
-    public RepeatableInputStreamEntity(ReadableContent source, ContentType contentType) {
-        super();
-        this.source = source;
+class RepeatableInputStreamEntity(private val source: ReadableContent, contentType: ContentType?) : AbstractHttpEntity() {
+    init {
         if (contentType != null) {
-            setContentType(contentType.toString());
+            setContentType(contentType.toString())
         }
     }
 
-    @Override
-    public boolean isRepeatable() {
-        return true;
+    override fun isRepeatable(): Boolean {
+        return true
     }
 
-    @Override
-    public long getContentLength() {
-        return source.getContentLength();
+    override fun getContentLength(): Long {
+        return source.getContentLength()
     }
 
-    @Override
-    public InputStream getContent() throws IOException, IllegalStateException {
-        return source.open();
+    @Throws(IOException::class, IllegalStateException::class)
+    override fun getContent(): InputStream {
+        return source.open()
     }
 
-    @Override
-    public void writeTo(OutputStream outstream) throws IOException {
-        InputStream content = getContent();
+    @Throws(IOException::class)
+    override fun writeTo(outstream: OutputStream) {
+        val content = getContent()
         try {
-            IOUtils.copyLarge(content, outstream);
+            IOUtils.copyLarge(content, outstream)
         } finally {
-            IoActions.closeQuietly(content);
+            IoActions.closeQuietly(content)
         }
     }
 
-    @Override
-    public boolean isStreaming() {
-        return true;
+    override fun isStreaming(): Boolean {
+        return true
     }
 }

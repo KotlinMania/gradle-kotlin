@@ -13,87 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.metadata
 
-package org.gradle.internal.resource.metadata;
+import org.gradle.internal.hash.HashCode
+import java.net.URI
+import java.util.Date
 
-import org.gradle.internal.hash.HashCode;
-import org.jspecify.annotations.Nullable;
+class DefaultExternalResourceMetaData(
+    private val location: URI?,
+    private val lastModified: Date?,
+    private val contentLength: Long,
+    private val contentType: String?,
+    private val etag: String?,
+    private val sha1: HashCode?,
+    private val fileName: String?,
+    private val wasMissing: Boolean
+) : ExternalResourceMetaData {
+    constructor(location: URI?, lastModified: Long, contentLength: Long) : this(location, if (lastModified > 0) Date(lastModified) else null, contentLength, null, null, null, null, false)
 
-import java.net.URI;
-import java.util.Date;
+    constructor(location: URI?, lastModified: Long, contentLength: Long, contentType: String?, etag: String?, sha1: HashCode?) : this(
+        location,
+        if (lastModified > 0) Date(lastModified) else null,
+        contentLength,
+        contentType,
+        etag,
+        sha1,
+        null,
+        false
+    )
 
-public class DefaultExternalResourceMetaData implements ExternalResourceMetaData {
-    private final URI location;
-    private final Date lastModified;
-    private final long contentLength;
-    private final String etag;
-    private final HashCode sha1;
-    private final String contentType;
-
-    private final String fileName;
-    private final boolean wasMissing;
-
-    public DefaultExternalResourceMetaData(URI location, long lastModified, long contentLength) {
-        this(location, lastModified > 0 ? new Date(lastModified) : null, contentLength, null, null, null, null, false);
+    override fun getLocation(): URI? {
+        return location
     }
 
-    public DefaultExternalResourceMetaData(URI location, long lastModified, long contentLength, @Nullable String contentType, @Nullable String etag, @Nullable HashCode sha1) {
-        this(location, lastModified > 0 ? new Date(lastModified) : null, contentLength, contentType, etag, sha1, null, false);
+    override fun getLastModified(): Date? {
+        return lastModified
     }
 
-    public DefaultExternalResourceMetaData(URI location, @Nullable Date lastModified, long contentLength, @Nullable String contentType, @Nullable String etag, @Nullable HashCode sha1, @Nullable String fileName, boolean wasMissing) {
-        this.location = location;
-        this.lastModified = lastModified;
-        this.contentLength = contentLength;
-        this.contentType = contentType;
-        this.etag = etag;
-        this.sha1 = sha1;
-        this.fileName = fileName;
-        this.wasMissing = wasMissing;
+    override fun getContentLength(): Long {
+        return contentLength
     }
 
-    @Override
-    public URI getLocation() {
-        return location;
+    override fun getContentType(): String? {
+        return contentType
     }
 
-    @Nullable
-    @Override
-    public Date getLastModified() {
-        return lastModified;
+    override fun getEtag(): String? {
+        return etag
     }
 
-    @Override
-    public long getContentLength() {
-        return contentLength;
+    override fun getSha1(): HashCode? {
+        return sha1
     }
 
-    @Nullable
-    @Override
-    public String getContentType() {
-        return contentType;
+    override fun wasMissing(): Boolean {
+        return wasMissing
     }
 
-    @Nullable
-    @Override
-    public String getEtag() {
-        return etag;
-    }
-
-    @Nullable
-    @Override
-    public HashCode getSha1() {
-        return sha1;
-    }
-
-    @Override
-    public boolean wasMissing() {
-        return wasMissing;
-    }
-
-    @Nullable
-    @Override
-    public String getFilename() {
-        return fileName;
+    override fun getFilename(): String? {
+        return fileName
     }
 }

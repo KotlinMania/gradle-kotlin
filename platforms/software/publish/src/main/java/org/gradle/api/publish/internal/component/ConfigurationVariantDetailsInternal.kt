@@ -13,33 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.component
 
-package org.gradle.api.publish.internal.component;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.component.ConfigurationVariantDetails;
-import org.gradle.api.provider.Property;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.component.ConfigurationVariantDetails
 
 /**
- * Internal counterpart to {@link org.gradle.api.component.ConfigurationVariantDetails}.
+ * Internal counterpart to [ConfigurationVariantDetails].
  */
-public interface ConfigurationVariantDetailsInternal extends ConfigurationVariantDetails {
-
+interface ConfigurationVariantDetailsInternal : ConfigurationVariantDetails {
     /**
      * Configure the dependency mapping options for this configuration variant.
      *
-     * <p>This method should eventually be moved to {@link ConfigurationVariantDetails} once
-     * dependency mapping is stabilized.</p>
+     *
+     * This method should eventually be moved to [ConfigurationVariantDetails] once
+     * dependency mapping is stabilized.
      *
      * @param action The action to execute against this variant's dependency mapping details.
      */
-    void dependencyMapping(Action<? super DependencyMappingDetails> action);
+    fun dependencyMapping(action: Action<in DependencyMappingDetails>)
 
     /**
      * Describes how declared dependencies of a local component should be mapped to the dependencies of the published component.
      *
-     * <p>This interface should eventually be moved to its own file once dependency mapping is stabilized.</p>
+     *
+     * This interface should eventually be moved to its own file once dependency mapping is stabilized.
      */
     interface DependencyMappingDetails {
         /**
@@ -48,15 +47,14 @@ public interface ConfigurationVariantDetailsInternal extends ConfigurationVarian
          * of the target component that is published as an external variant, then the external
          * coordinates will be published instead of the declared coordinates.
          */
-        Property<Boolean> getPublishResolvedCoordinates();
+        val publishResolvedCoordinates: Property<Boolean>?
 
         /**
          * Sets the configuration that is resolved in order to determine the coordinates and versions
-         * of the dependencies to publish. This configuration <strong>must</strong> have the same
+         * of the dependencies to publish. This configuration **must** have the same
          * exact dependencies and dependency constraints as the variant being published, otherwise
          * the behavior of this feature is undefined.
          */
-        void fromResolutionOf(Configuration configuration);
+        fun fromResolutionOf(configuration: Configuration)
     }
-
 }

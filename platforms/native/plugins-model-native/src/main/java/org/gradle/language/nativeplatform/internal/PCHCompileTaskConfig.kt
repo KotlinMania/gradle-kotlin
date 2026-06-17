@@ -35,7 +35,7 @@ class PCHCompileTaskConfig(languageTransform: NativeLanguageTransform<*>?, taskT
         task.setDescription("Compiles a pre-compiled header for the " + sourceSet + " of " + binary)
 
         // Add the source of the source set to the include paths to resolve any headers that may be in source directories
-        task.includes(sourceSet.getSource().getSourceDirectories())
+        task.includes(sourceSet.source.getSourceDirectories())
 
         val project = task.getProject()
         task.source(sourceSet.getPrefixHeaderFile())
@@ -43,7 +43,7 @@ class PCHCompileTaskConfig(languageTransform: NativeLanguageTransform<*>?, taskT
 
         task.objectFileDir.fileProvider(
             project.getLayout().getBuildDirectory().getAsFile()
-                .map<S?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), languageSourceSet.projectScopedName + "PCH") })
+                .map<S?>(Transformer { it: File? -> File(binary.namingScheme.getOutputDirectory(it, "objs"), languageSourceSet.projectScopedName + "PCH") })
         )
 
         task.dependsOn(project.getTasks().withType<PrefixHeaderFileGenerateTask?>(PrefixHeaderFileGenerateTask::class.java).matching(object : Spec<PrefixHeaderFileGenerateTask?> {

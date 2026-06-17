@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.component
 
-package org.gradle.api.publish.internal.component;
+import org.gradle.api.component.SoftwareComponentVariant
 
-import org.gradle.api.component.SoftwareComponentVariant;
-
-public interface IvyPublishingAwareVariant extends SoftwareComponentVariant {
-
-    boolean isOptional();
+interface IvyPublishingAwareVariant : SoftwareComponentVariant {
+    val isOptional: Boolean
 }

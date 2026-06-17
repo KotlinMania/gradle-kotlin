@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.authentication.http.BasicAuthentication
 
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.authentication.http.BasicAuthentication;
-
-public class DefaultBasicAuthentication extends AbstractAuthentication implements BasicAuthentication {
-    public DefaultBasicAuthentication(String name) {
-        super(name, BasicAuthentication.class, PasswordCredentials.class);
-    }
-
-    @Override
-    public boolean requiresCredentials() {
-        return true;
+class DefaultBasicAuthentication(name: String?) : AbstractAuthentication(name, BasicAuthentication::class.java, PasswordCredentials::class.java), BasicAuthentication {
+    override fun requiresCredentials(): Boolean {
+        return true
     }
 }

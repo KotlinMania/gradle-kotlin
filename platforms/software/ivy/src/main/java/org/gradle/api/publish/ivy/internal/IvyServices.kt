@@ -13,52 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal
 
-package org.gradle.api.publish.ivy.internal;
+import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager
+import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory
+import org.gradle.api.internal.component.ArtifactType
+import org.gradle.api.internal.component.ComponentTypeRegistry
+import org.gradle.api.publish.ivy.internal.publisher.ContextualizingIvyPublisher
+import org.gradle.api.publish.ivy.internal.publisher.DependencyResolverIvyPublisher
+import org.gradle.api.publish.ivy.internal.publisher.IvyDuplicatePublicationTracker
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublisher
+import org.gradle.api.publish.ivy.internal.publisher.ValidatingIvyPublisher
+import org.gradle.internal.resource.local.FileResourceRepository
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
+import org.gradle.ivy.IvyDescriptorArtifact
+import org.gradle.ivy.IvyModule
 
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager;
-import org.gradle.api.internal.artifacts.repositories.metadata.IvyMutableModuleMetadataFactory;
-import org.gradle.api.internal.component.ArtifactType;
-import org.gradle.api.internal.component.ComponentTypeRegistry;
-import org.gradle.api.publish.ivy.internal.publisher.ContextualizingIvyPublisher;
-import org.gradle.api.publish.ivy.internal.publisher.DependencyResolverIvyPublisher;
-import org.gradle.api.publish.ivy.internal.publisher.IvyDuplicatePublicationTracker;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublisher;
-import org.gradle.api.publish.ivy.internal.publisher.ValidatingIvyPublisher;
-import org.gradle.internal.resource.local.FileResourceRepository;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-import org.gradle.ivy.IvyDescriptorArtifact;
-import org.gradle.ivy.IvyModule;
-
-public class IvyServices extends AbstractGradleModuleServices {
-    @Override
-    public void registerBuildServices(ServiceRegistration registration) {
-        registration.addProvider(new BuildServices());
+class IvyServices : AbstractGradleModuleServices() {
+    public override fun registerBuildServices(registration: ServiceRegistration) {
+        registration.addProvider(BuildServices())
     }
 
-    @Override
-    public void registerProjectServices(ServiceRegistration registration) {
-        registration.add(IvyDuplicatePublicationTracker.class);
+    public override fun registerProjectServices(registration: ServiceRegistration) {
+        registration.add(IvyDuplicatePublicationTracker::class.java)
     }
 
-    private static class BuildServices implements ServiceRegistrationProvider {
+    private class BuildServices : ServiceRegistrationProvider {
         @Provides
-        IvyPublisher createIvyPublisher(IvyContextManager ivyContextManager, ImmutableModuleIdentifierFactory moduleIdentifierFactory, FileResourceRepository fileResourceRepository, IvyMutableModuleMetadataFactory metadataFactory) {
-            IvyPublisher publisher = new DependencyResolverIvyPublisher();
-            publisher = new ValidatingIvyPublisher(publisher, moduleIdentifierFactory, fileResourceRepository, metadataFactory);
-            return new ContextualizingIvyPublisher(publisher, ivyContextManager);
+        fun createIvyPublisher(
+            ivyContextManager: IvyContextManager?,
+            moduleIdentifierFactory: ImmutableModuleIdentifierFactory?,
+            fileResourceRepository: FileResourceRepository?,
+            metadataFactory: IvyMutableModuleMetadataFactory?
+        ): IvyPublisher {
+            var publisher: IvyPublisher = DependencyResolverIvyPublisher()
+            publisher = ValidatingIvyPublisher(publisher, moduleIdentifierFactory, fileResourceRepository, metadataFactory)
+            return ContextualizingIvyPublisher(publisher, ivyContextManager)
         }
 
-        @SuppressWarnings("UnusedVariable")
         @Provides
-        public void configure(ServiceRegistration registration, ComponentTypeRegistry componentTypeRegistry) {
+        fun configure(registration: ServiceRegistration?, componentTypeRegistry: ComponentTypeRegistry) {
             // TODO There should be a more explicit way to execute an action against existing services
-            componentTypeRegistry.maybeRegisterComponentType(IvyModule.class)
-                    .registerArtifactType(IvyDescriptorArtifact.class, ArtifactType.IVY_DESCRIPTOR);
+            componentTypeRegistry.maybeRegisterComponentType(IvyModule::class.java)
+                .registerArtifactType(IvyDescriptorArtifact::class.java, ArtifactType.IVY_DESCRIPTOR)
         }
     }
 }

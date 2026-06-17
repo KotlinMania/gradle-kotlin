@@ -13,56 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.versionmapping;
+package org.gradle.api.publish.internal.versionmapping
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 
-public class DefaultVariantVersionMappingStrategy implements VariantVersionMappingStrategyInternal {
-    private final ConfigurationContainer configurations;
-    private boolean enabled;
-    private Configuration userConfiguration;
-    private Configuration defaultConfiguration;
+class DefaultVariantVersionMappingStrategy(private val configurations: ConfigurationContainer) : VariantVersionMappingStrategyInternal {
+    private var enabled = false
+    private var userConfiguration: Configuration? = null
+    private var defaultConfiguration: Configuration? = null
 
-    public DefaultVariantVersionMappingStrategy(ConfigurationContainer configurations) {
-        this.configurations = configurations;
+    override fun fromResolutionResult() {
+        enabled = true
     }
 
-    @Override
-    public void fromResolutionResult() {
-        enabled = true;
+    override fun fromResolutionOf(configuration: Configuration) {
+        enabled = true
+        userConfiguration = configuration
     }
 
-    @Override
-    public void fromResolutionOf(Configuration configuration) {
-        enabled = true;
-        userConfiguration = configuration;
+    override fun fromResolutionOf(configurationName: String) {
+        fromResolutionOf(configurations.getByName(configurationName))
     }
 
-    @Override
-    public void fromResolutionOf(String configurationName) {
-        fromResolutionOf(configurations.getByName(configurationName));
+    fun setDefaultResolutionConfiguration(defaultConfiguration: Configuration?) {
+        this.defaultConfiguration = defaultConfiguration
     }
 
-    public void setDefaultResolutionConfiguration(@Nullable Configuration defaultConfiguration) {
-        this.defaultConfiguration = defaultConfiguration;
+    override fun isEnabled(): Boolean {
+        return enabled
     }
 
-    @Override
-    public boolean isEnabled() {
-        return enabled;
+    override fun getUserResolutionConfiguration(): Configuration? {
+        return userConfiguration
     }
 
-    @Nullable
-    @Override
-    public Configuration getUserResolutionConfiguration() {
-        return userConfiguration;
-    }
-
-    @Nullable
-    @Override
-    public Configuration getDefaultResolutionConfiguration() {
-        return defaultConfiguration;
+    override fun getDefaultResolutionConfiguration(): Configuration? {
+        return defaultConfiguration
     }
 }

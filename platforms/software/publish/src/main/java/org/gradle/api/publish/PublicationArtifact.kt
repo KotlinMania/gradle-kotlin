@@ -13,28 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish
 
-package org.gradle.api.publish;
-
-import org.gradle.api.Buildable;
-
-import java.io.File;
+import org.gradle.api.Buildable
 
 /**
- * An artifact published as part of a {@link Publication}.
+ * An artifact published as part of a [Publication].
  *
  * @since 4.8
  */
-public interface PublicationArtifact extends Buildable {
+interface PublicationArtifact : Buildable {
     /**
      * The actual file contents to publish.
      */
-    File getFile();
+    val file: File?
 
     /**
      * Registers some tasks which build this artifact.
      *
-     * @param tasks The tasks. These are evaluated as per {@link org.gradle.api.Task#dependsOn(Object...)}.
+     * @param tasks The tasks. These are evaluated as per [org.gradle.api.Task.dependsOn].
      */
-    void builtBy(Object... tasks);
+    fun builtBy(vararg tasks: Any?)
 }

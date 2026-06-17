@@ -13,64 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base.internal
 
-package org.gradle.platform.base.internal;
+import org.gradle.api.Named
+import java.io.File
 
-import org.gradle.api.Named;
-import org.jspecify.annotations.Nullable;
+interface BinaryNamingScheme {
+    val binaryName: String?
 
-import java.io.File;
-import java.util.Collection;
-import java.util.List;
+    fun getTaskName(verb: String?): String?
 
-public interface BinaryNamingScheme {
-    String getBinaryName();
-
-    String getTaskName(@Nullable String verb);
-
-    String getTaskName(@Nullable String verb, @Nullable String target);
+    fun getTaskName(verb: String?, target: String?): String?
 
     /**
      * Returns a directory that can be used for outputs for this binary.
      */
-    File getOutputDirectory(File baseDir);
+    fun getOutputDirectory(baseDir: File?): File?
 
     /**
      * Returns a directory that can be used for outputs of the given type for this binary.
      */
-    File getOutputDirectory(File baseDir, String outputType);
+    fun getOutputDirectory(baseDir: File?, outputType: String?): File?
 
-    String getDescription();
+    val description: String?
 
-    List<String> getVariantDimensions();
+    val variantDimensions: MutableList<String?>?
 
     /**
      * Creates a copy of this scheme, replacing the component name.
      */
-    BinaryNamingScheme withComponentName(String componentName);
+    fun withComponentName(componentName: String?): BinaryNamingScheme?
 
     /**
      * Creates a copy of this scheme, replacing the role. The 'role' refers to the role that the binary plays within its component.
      */
-    BinaryNamingScheme withRole(String role, boolean isMain);
+    fun withRole(role: String?, isMain: Boolean): BinaryNamingScheme?
 
     /**
      * Creates a copy of this scheme, replacing the binary type.
      */
-    BinaryNamingScheme withBinaryType(String type);
+    fun withBinaryType(type: String?): BinaryNamingScheme?
 
     /**
      * Creates a copy of this scheme, specifying a binary name. This overrides the default binary name that would be generated from the other attributes.
      */
-    BinaryNamingScheme withBinaryName(String name);
+    fun withBinaryName(name: String?): BinaryNamingScheme?
 
     /**
-     * Creates a copy of this scheme, <em>adding</em> a variant dimension.
+     * Creates a copy of this scheme, *adding* a variant dimension.
      */
-    BinaryNamingScheme withVariantDimension(String dimension);
+    fun withVariantDimension(dimension: String?): BinaryNamingScheme?
 
     /**
-     * Creates a copy of this scheme, <em>adding</em> a variant dimension if required.
+     * Creates a copy of this scheme, *adding* a variant dimension if required.
      */
-    <T extends Named> BinaryNamingScheme withVariantDimension(T value, Collection<? extends T> allValuesForAxis);
+    fun <T : Named?> withVariantDimension(value: T?, allValuesForAxis: MutableCollection<out T?>?): BinaryNamingScheme?
 }

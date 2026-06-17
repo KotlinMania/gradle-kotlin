@@ -13,46 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.mapping
 
-package org.gradle.api.publish.internal.mapping;
-
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.api.component.SoftwareComponentVariant
+import org.gradle.api.provider.Provider
+import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
- * Creates {@link VariantDependencyResolver} and {@link ComponentDependencyResolver} scoped to a particular variant,
+ * Creates [VariantDependencyResolver] and [ComponentDependencyResolver] scoped to a particular variant,
  * taking into account whether dependency mapping or version mapping is enabled.
  */
-@ServiceScope(Scope.Build.class)
-public interface DependencyCoordinateResolverFactory {
-
+@ServiceScope(Scope.Build::class)
+interface DependencyCoordinateResolverFactory {
     /**
      * Create coordinate resolvers for the given variant.
      */
-    Provider<DependencyResolvers> createCoordinateResolvers(SoftwareComponentVariant variant, VersionMappingStrategyInternal versionMappingStrategy);
+    fun createCoordinateResolvers(variant: SoftwareComponentVariant, versionMappingStrategy: VersionMappingStrategyInternal): Provider<DependencyResolvers>?
 
     /**
      * Contains the variant and component coordinate resolver for a given variant.
      */
-    class DependencyResolvers {
-
-        private final VariantDependencyResolver variantResolver;
-        private final ComponentDependencyResolver componentResolver;
-
-        public DependencyResolvers(VariantDependencyResolver variantResolver, ComponentDependencyResolver componentResolver) {
-            this.variantResolver = variantResolver;
-            this.componentResolver = componentResolver;
-        }
-
-        public VariantDependencyResolver getVariantResolver() {
-            return variantResolver;
-        }
-
-        public ComponentDependencyResolver getComponentResolver() {
-            return componentResolver;
-        }
-    }
+    class DependencyResolvers(val variantResolver: VariantDependencyResolver, val componentResolver: ComponentDependencyResolver)
 }

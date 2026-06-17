@@ -13,36 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ExternalResourceRepository
+import org.gradle.internal.resource.LocalBinaryResource
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
+import java.net.URI
 
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ExternalResourceRepository;
-import org.gradle.internal.resource.LocalBinaryResource;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-import java.io.File;
-import java.net.URI;
-
-@ServiceScope(Scope.Build.class)
-public interface FileResourceRepository extends ExternalResourceRepository {
-    LocalBinaryResource localResource(File file);
+@ServiceScope(Scope.Build::class)
+interface FileResourceRepository : ExternalResourceRepository {
+    fun localResource(file: File?): LocalBinaryResource?
 
     /**
      * Returns the given file as a resource.
      */
-    LocallyAvailableExternalResource resource(File file);
+    fun resource(file: File?): LocallyAvailableExternalResource?
 
     /**
      * Returns the given file as a resource, with the given origin details.
      */
-    LocallyAvailableExternalResource resource(File file, URI originUri, ExternalResourceMetaData originMetadata);
+    fun resource(file: File?, originUri: URI?, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource?
 
-    @Override
-    LocallyAvailableExternalResource resource(ExternalResourceName resource);
+    override fun resource(resource: ExternalResourceName?): LocallyAvailableExternalResource?
 
-    @Override
-    LocallyAvailableExternalResource resource(ExternalResourceName resource, boolean revalidate);
+    override fun resource(resource: ExternalResourceName?, revalidate: Boolean): LocallyAvailableExternalResource?
 }

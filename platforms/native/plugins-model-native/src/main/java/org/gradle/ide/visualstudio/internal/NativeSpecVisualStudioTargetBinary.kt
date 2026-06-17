@@ -47,10 +47,10 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
     }
 
     val projectPath: String?
-        get() = binary.getProjectPath()
+        get() = binary.projectPath
 
     val componentName: String?
-        get() = binary.getComponent()!!.getName()
+        get() = binary.component!!.getName()
 
     val visualStudioProjectName: String?
         get() = Companion.projectPrefix(projectPath!!) + componentName + projectType!!.suffix
@@ -76,11 +76,11 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
             val transform: Transformer<FileCollection?, LanguageSourceSet?> =
                 object : Transformer<FileCollection?, LanguageSourceSet?> {
                     override fun transform(sourceSet: LanguageSourceSet): FileCollection? {
-                        return sourceSet.getSource()
+                        return sourceSet.source
                     }
                 }
 
-            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " source files", binary.getInputs(), filter, transform)
+            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " source files", binary.inputs, filter, transform)
         }
 
     val resourceFiles: FileCollection
@@ -93,11 +93,11 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
             val transform: Transformer<FileCollection?, LanguageSourceSet?> =
                 object : Transformer<FileCollection?, LanguageSourceSet?> {
                     override fun transform(sourceSet: LanguageSourceSet): FileCollection? {
-                        return sourceSet.getSource()
+                        return sourceSet.source
                     }
                 }
 
-            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " resource files", binary.getInputs(), filter, transform)
+            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " resource files", binary.inputs, filter, transform)
         }
 
     val headerFiles: FileCollection
@@ -115,7 +115,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
                     }
                 }
 
-            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " header files", binary.getInputs(), filter, transform)
+            return NativeSpecVisualStudioTargetBinary.LanguageSourceSetCollectionAdapter(componentName + " header files", binary.inputs, filter, transform)
         }
 
     val isExecutable: Boolean
@@ -138,7 +138,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
 
     val variantDimensions: MutableList<String?>?
         get() {
-            val dimensions = binary.getNamingScheme().getVariantDimensions()
+            val dimensions = binary.namingScheme.variantDimensions
             if (dimensions.isEmpty()) {
                 return mutableListOf<String?>(binary.getBuildType().getName())
             } else {
@@ -149,7 +149,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
     private val installTask: InstallExecutable?
         get() {
             val installTasks =
-                binary.getTasks().withType<InstallExecutable?>(InstallExecutable::class.java)
+                binary.tasks.withType<InstallExecutable?>(InstallExecutable::class.java)
             return if (installTasks.isEmpty()) null else installTasks.iterator().next()
         }
 
@@ -158,7 +158,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
             if (isExecutable) {
                 return this.installTask.getPath()
             } else {
-                return binary.getTasks().getBuild().getPath()
+                return binary.tasks.build.getPath()
             }
         }
 
@@ -166,7 +166,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
         get() = taskPath("clean")
 
     private fun taskPath(taskName: String): String {
-        val projectPath = binary.getComponent()!!.getProjectPath()
+        val projectPath = binary.component!!.projectPath
         if (":" == projectPath) {
             return ":" + taskName
         }
@@ -212,7 +212,7 @@ class NativeSpecVisualStudioTargetBinary(binary: NativeBinarySpec?) : VisualStud
         get() {
             val includes: MutableSet<File?> = LinkedHashSet<File?>()
 
-            for (sourceSet in binary.getInputs()) {
+            for (sourceSet in binary.inputs) {
                 if (sourceSet is HeaderExportingSourceSet) {
                     includes.addAll(sourceSet.exportedHeaders.getSrcDirs())
                 }

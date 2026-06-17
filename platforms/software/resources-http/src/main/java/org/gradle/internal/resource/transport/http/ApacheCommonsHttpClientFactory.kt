@@ -13,27 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
-
-import org.gradle.api.internal.DocumentationRegistry;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.internal.DocumentationRegistry
+import org.jspecify.annotations.NullMarked
 
 /**
- * {@link HttpClientFactory} producing Apache Commons backed {@link HttpClient} instances.
+ * [HttpClientFactory] producing Apache Commons backed [HttpClient] instances.
  */
 @NullMarked
-public class ApacheCommonsHttpClientFactory implements HttpClientFactory {
-
-    private final DocumentationRegistry documentationRegistry;
-
-    public ApacheCommonsHttpClientFactory(DocumentationRegistry documentationRegistry) {
-        this.documentationRegistry = documentationRegistry;
+class ApacheCommonsHttpClientFactory(private val documentationRegistry: DocumentationRegistry) : HttpClientFactory {
+    override fun createClient(settings: HttpSettings): HttpClient {
+        return ApacheCommonsHttpClient(documentationRegistry, settings)
     }
-
-    @Override
-    public HttpClient createClient(HttpSettings settings) {
-        return new ApacheCommonsHttpClient(documentationRegistry, settings);
-    }
-
 }

@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish;
+package org.gradle.api.publish
 
-import org.gradle.api.Action;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.Action
+import org.gradle.api.attributes.Attribute
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * The version mapping strategy for a publication. By default,
@@ -28,12 +28,12 @@ import org.gradle.internal.HasInternalProtocol;
  * @since 5.2
  */
 @HasInternalProtocol
-public interface VersionMappingStrategy {
+interface VersionMappingStrategy {
     /**
      * Configures the version mapping strategy for all variants
      * @param action the configuration action
      */
-    void allVariants(Action<? super VariantVersionMappingStrategy> action);
+    fun allVariants(action: Action<in VariantVersionMappingStrategy?>?)
 
     /**
      * Configures the version mapping strategy for the variant which matches the provided
@@ -42,7 +42,7 @@ public interface VersionMappingStrategy {
      * @param attributeValue the attribute value
      * @param action the configuration action
      */
-    <T> void variant(Attribute<T> attribute, T attributeValue, Action<? super VariantVersionMappingStrategy> action);
+    fun <T> variant(attribute: Attribute<T?>?, attributeValue: T?, action: Action<in VariantVersionMappingStrategy?>?)
 
     /**
      * A short hand method to configure the variants which matches the provided Usage attribute.
@@ -50,5 +50,5 @@ public interface VersionMappingStrategy {
      * @param usage the usage to look for
      * @param action the configuration action
      */
-    void usage(String usage, Action<? super VariantVersionMappingStrategy> action);
+    fun usage(usage: String?, action: Action<in VariantVersionMappingStrategy?>?)
 }

@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publisher
 
-package org.gradle.api.publish.ivy.internal.publisher;
+interface IvyPublicationCoordinates {
+    val organisation: Property<String?>?
 
-import org.gradle.api.provider.Property;
+    val module: Property<String?>?
 
-public interface IvyPublicationCoordinates {
-
-    Property<String> getOrganisation();
-
-    Property<String> getModule();
-
-    Property<String> getRevision();
-
+    val revision: Property<String?>?
 }

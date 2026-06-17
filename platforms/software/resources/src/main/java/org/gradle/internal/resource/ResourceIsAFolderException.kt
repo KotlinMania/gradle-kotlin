@@ -13,18 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-import org.gradle.api.resources.ResourceException;
-
-import java.net.URI;
+import org.gradle.api.resources.ResourceException
+import java.net.URI
 
 /**
  * Exception thrown when one attempts to read a folder
  */
-public class ResourceIsAFolderException extends ResourceException {
-    public ResourceIsAFolderException(URI location, String message) {
-        super(location, message);
-    }
-}
+class ResourceIsAFolderException(location: URI?, message: String?) : ResourceException(location, message)

@@ -13,91 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.plugins
 
-package org.gradle.api.publish.plugins;
-
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.artifacts.ArtifactPublicationServices;
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectPublicationRegistry;
-import org.gradle.api.internal.project.ProjectIdentity;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.PublicationContainer;
-import org.gradle.api.publish.PublishingExtension;
-import org.gradle.api.publish.internal.DefaultPublicationContainer;
-import org.gradle.api.publish.internal.DefaultPublishingExtension;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.internal.Cast;
-import org.gradle.internal.reflect.Instantiator;
-
-import javax.inject.Inject;
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.artifacts.ArtifactPublicationServices
+import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectPublicationRegistry
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.PublicationContainer
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.internal.DefaultPublicationContainer
+import org.gradle.api.publish.internal.DefaultPublishingExtension
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.reflect.Instantiator
+import javax.inject.Inject
 
 /**
- * Installs a {@link org.gradle.api.publish.PublishingExtension} with name {@value org.gradle.api.publish.PublishingExtension#NAME}.
+ * Installs a [PublishingExtension] with name {@value org.gradle.api.publish.PublishingExtension#NAME}.
  *
  * @since 1.3
- * @see <a href="https://docs.gradle.org/current/userguide/publishing_setup.html#publishing_overview">Publishing reference</a>
+ * @see [Publishing reference](https://docs.gradle.org/current/userguide/publishing_setup.html.publishing_overview)
  */
-public abstract class PublishingPlugin implements Plugin<Project> {
+abstract class PublishingPlugin @Inject constructor(
+    private val publicationServices: ArtifactPublicationServices,
+    private val instantiator: Instantiator,
+    private val projectPublicationRegistry: ProjectPublicationRegistry,
+    private val collectionCallbackActionDecorator: CollectionCallbackActionDecorator?
+) : Plugin<Project?> {
+    override fun apply(project: Project) {
+        val repositories = publicationServices.createRepositoryHandler()
+        val publications: PublicationContainer = instantiator.newInstance<DefaultPublicationContainer>(DefaultPublicationContainer::class.java, instantiator, collectionCallbackActionDecorator)
+        val extension = project.getExtensions()
+            .create<PublishingExtension>(PublishingExtension::class.java, PublishingExtension.Companion.NAME, DefaultPublishingExtension::class.java, repositories!!, publications)
+        project.getTasks().register(PUBLISH_LIFECYCLE_TASK_NAME, Action { task: Task? ->
+            task!!.setDescription("Publishes all publications produced by this project.")
+            task.setGroup(PUBLISH_TASK_GROUP)
+        })
 
-    public static final String PUBLISH_TASK_GROUP = "publishing";
-    public static final String PUBLISH_LIFECYCLE_TASK_NAME = "publish";
-    private static final String VALID_NAME_REGEX = "[A-Za-z0-9_\\-.]+";
-
-    private final Instantiator instantiator;
-    private final ArtifactPublicationServices publicationServices;
-    private final ProjectPublicationRegistry projectPublicationRegistry;
-    private final CollectionCallbackActionDecorator collectionCallbackActionDecorator;
-
-    @Inject
-    public PublishingPlugin(ArtifactPublicationServices publicationServices,
-                            Instantiator instantiator,
-                            ProjectPublicationRegistry projectPublicationRegistry,
-                            CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        this.publicationServices = publicationServices;
-        this.instantiator = instantiator;
-        this.projectPublicationRegistry = projectPublicationRegistry;
-        this.collectionCallbackActionDecorator = collectionCallbackActionDecorator;
+        val projectIdentity = (project as ProjectInternal).getProjectIdentity()
+        extension.getPublications().all(Action { publication: Publication? ->
+            val internalPublication = uncheckedNonnullCast<PublicationInternal<*>?>(publication)
+            projectPublicationRegistry.registerPublication(projectIdentity, internalPublication!!)
+        })
+        validatePublishingModelWhenComplete(project, extension)
     }
 
-    @Override
-    public void apply(final Project project) {
-        RepositoryHandler repositories = publicationServices.createRepositoryHandler();
-        PublicationContainer publications = instantiator.newInstance(DefaultPublicationContainer.class, instantiator, collectionCallbackActionDecorator);
-        PublishingExtension extension = project.getExtensions().create(PublishingExtension.class, PublishingExtension.NAME, DefaultPublishingExtension.class, repositories, publications);
-        project.getTasks().register(PUBLISH_LIFECYCLE_TASK_NAME, task -> {
-            task.setDescription("Publishes all publications produced by this project.");
-            task.setGroup(PUBLISH_TASK_GROUP);
-        });
-
-        ProjectIdentity projectIdentity = ((ProjectInternal) project).getProjectIdentity();
-        extension.getPublications().all(publication -> {
-            PublicationInternal<?> internalPublication = Cast.uncheckedNonnullCast(publication);
-            projectPublicationRegistry.registerPublication(projectIdentity, internalPublication);
-        });
-        validatePublishingModelWhenComplete(project, extension);
-    }
-
-    private void validatePublishingModelWhenComplete(Project project, PublishingExtension extension) {
-        project.afterEvaluate(projectAfterEvaluate -> {
-            for (ArtifactRepository repository : extension.getRepositories()) {
-                String repositoryName = repository.getName();
-                if (!repositoryName.matches(VALID_NAME_REGEX)) {
-                    throw new InvalidUserDataException("Repository name '" + repositoryName + "' is not valid for publication. Must match regex " + VALID_NAME_REGEX + ".");
+    private fun validatePublishingModelWhenComplete(project: Project, extension: PublishingExtension) {
+        project.afterEvaluate(Action { projectAfterEvaluate: Project? ->
+            for (repository in extension.getRepositories()) {
+                val repositoryName = repository.getName()
+                if (!repositoryName.matches(VALID_NAME_REGEX.toRegex())) {
+                    throw InvalidUserDataException("Repository name '" + repositoryName + "' is not valid for publication. Must match regex " + VALID_NAME_REGEX + ".")
                 }
             }
-            for (Publication publication : extension.getPublications()) {
-                String publicationName = publication.getName();
-                if (!publicationName.matches(VALID_NAME_REGEX)) {
-                    throw new InvalidUserDataException("Publication name '" + publicationName + "' is not valid for publication. Must match regex " + VALID_NAME_REGEX + ".");
+            for (publication in extension.getPublications()) {
+                val publicationName = publication.getName()
+                if (!publicationName.matches(VALID_NAME_REGEX.toRegex())) {
+                    throw InvalidUserDataException("Publication name '" + publicationName + "' is not valid for publication. Must match regex " + VALID_NAME_REGEX + ".")
                 }
             }
-        });
+        })
     }
 
+    companion object {
+        const val PUBLISH_TASK_GROUP: String = "publishing"
+        const val PUBLISH_LIFECYCLE_TASK_NAME: String = "publish"
+        private const val VALID_NAME_REGEX = "[A-Za-z0-9_\\-.]+"
+    }
 }

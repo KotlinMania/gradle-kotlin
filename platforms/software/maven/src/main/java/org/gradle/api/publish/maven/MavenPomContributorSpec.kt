@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Action;
+import org.gradle.api.Action
 
 /**
  * Allows to add contributors of a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomContributor
  */
-public interface MavenPomContributorSpec {
-
+interface MavenPomContributorSpec {
     /**
      * Creates, configures and adds a contributor to the publication.
      */
-    void contributor(Action<? super MavenPomContributor> action);
-
+    fun contributor(action: Action<in MavenPomContributor?>?)
 }

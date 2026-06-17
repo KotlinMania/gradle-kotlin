@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
+package org.gradle.api.publish.maven
 
 /**
  * The organization of a Maven publication.
@@ -24,16 +21,14 @@ import org.gradle.api.provider.Property;
  * @since 4.8
  * @see MavenPom
  */
-public interface MavenPomOrganization {
-
+interface MavenPomOrganization {
     /**
      * The name of this organization.
      */
-    Property<String> getName();
+    val name: Property<String?>?
 
     /**
      * The URL of this organization.
      */
-    Property<String> getUrl();
-
+    val url: Property<String?>?
 }

@@ -13,39 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal
 
-package org.gradle.api.publish.internal;
+import org.gradle.api.artifacts.PublishException
+import org.gradle.api.publish.Publication
 
-import org.gradle.api.artifacts.PublishException;
-import org.gradle.api.publish.Publication;
+abstract class PublishOperation protected constructor(private val publicationName: String?, private val repository: String?) : Runnable {
+    protected constructor(publication: Publication, repository: String?) : this(publication.getName(), repository)
 
-import static java.lang.String.format;
+    @Throws(Exception::class)
+    protected abstract fun publish()
 
-public abstract class PublishOperation implements Runnable {
-
-    private final String publicationName;
-    private final String repository;
-
-    protected PublishOperation(Publication publication, String repository) {
-        this(publication.getName(), repository);
-    }
-
-    protected PublishOperation(String publicationName, String repository) {
-        this.publicationName = publicationName;
-        this.repository = repository;
-    }
-
-    protected abstract void publish() throws Exception;
-
-    @Override
-    public void run() {
+    override fun run() {
         try {
-            publish();
-        } catch (Exception e) {
-            throw new PublishException(
-                format("Failed to publish publication '%s' to repository '%s'", publicationName, repository),
+            publish()
+        } catch (e: Exception) {
+            throw PublishException(
+                String.format("Failed to publish publication '%s' to repository '%s'", publicationName, repository),
                 e
-            );
+            )
         }
     }
 }

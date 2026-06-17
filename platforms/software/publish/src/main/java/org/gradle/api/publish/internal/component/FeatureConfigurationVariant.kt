@@ -13,54 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.component;
+package org.gradle.api.publish.internal.component
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationVariant;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationVariant
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint.Companion.of
+import org.gradle.api.internal.attributes.AttributeContainerInternal
 
 /**
- * A {@link ConfigurationSoftwareComponentVariant} which is aware of both Maven and Ivy publishing, and can optionally
+ * A [ConfigurationSoftwareComponentVariant] which is aware of both Maven and Ivy publishing, and can optionally
  * be backed by resolution during publication.
  */
-public class FeatureConfigurationVariant extends ConfigurationSoftwareComponentVariant implements MavenPublishingAwareVariant, IvyPublishingAwareVariant, ResolutionBackedVariant {
-    private final ScopeMapping scopeMapping;
-    private final boolean optional;
-    ConfigurationVariantMapping.DefaultDependencyMappingDetails dependencyMapping;
+class FeatureConfigurationVariant(
+    name: String,
+    configuration: Configuration,
+    variant: ConfigurationVariant,
+    mavenScope: String,
+    private val optional: Boolean,
+    var dependencyMapping: ConfigurationVariantMapping.DefaultDependencyMappingDetails?
+) : ConfigurationSoftwareComponentVariant(name, (variant.getAttributes() as AttributeContainerInternal).asImmutable(), variant.getArtifacts(), configuration), MavenPublishingAwareVariant,
+    IvyPublishingAwareVariant, ResolutionBackedVariant {
+    private val scopeMapping: MavenPublishingAwareVariant.ScopeMapping
 
-    public FeatureConfigurationVariant(
-        String name,
-        Configuration configuration,
-        ConfigurationVariant variant,
-        String mavenScope,
-        boolean optional,
-        ConfigurationVariantMapping.@Nullable DefaultDependencyMappingDetails dependencyMapping
-    ) {
-        super(name, ((AttributeContainerInternal)variant.getAttributes()).asImmutable(), variant.getArtifacts(), configuration);
-        this.scopeMapping = ScopeMapping.of(mavenScope, optional);
-        this.optional = optional;
-        this.dependencyMapping = dependencyMapping;
+    init {
+        this.scopeMapping = MavenPublishingAwareVariant.ScopeMapping.Companion.of(mavenScope, optional)
     }
 
-    @Override
-    public ScopeMapping getScopeMapping() {
-        return scopeMapping;
+    override fun getScopeMapping(): MavenPublishingAwareVariant.ScopeMapping {
+        return scopeMapping
     }
 
-    @Override
-    public boolean isOptional() {
-        return optional;
+    override fun isOptional(): Boolean {
+        return optional
     }
 
-    @Override
-    public boolean getPublishResolvedCoordinates() {
-        return dependencyMapping != null && dependencyMapping.getPublishResolvedCoordinates().getOrElse(false);
+    override fun getPublishResolvedCoordinates(): Boolean {
+        return dependencyMapping != null && dependencyMapping!!.getPublishResolvedCoordinates().getOrElse(false)
     }
 
-    @Nullable
-    @Override
-    public Configuration getResolutionConfiguration() {
-        return dependencyMapping != null ? dependencyMapping.getResolutionConfiguration() : null;
+    override fun getResolutionConfiguration(): Configuration? {
+        return if (dependencyMapping != null) dependencyMapping!!.getResolutionConfiguration() else null
     }
 }

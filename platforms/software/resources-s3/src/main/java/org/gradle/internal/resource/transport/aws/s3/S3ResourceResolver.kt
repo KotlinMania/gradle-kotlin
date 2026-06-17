@@ -13,73 +13,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.aws.s3
 
-package org.gradle.internal.resource.transport.aws.s3;
+import com.amazonaws.services.s3.model.ObjectListing
+import com.amazonaws.services.s3.model.S3ObjectSummary
+import com.google.common.base.Function
+import com.google.common.base.Predicates
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Iterables
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.common.base.Function;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+class S3ResourceResolver {
+    fun resolveResourceNames(objectListing: ObjectListing): MutableList<String?> {
+        val results: MutableList<String?> = ArrayList<String?>()
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+        results.addAll(resolveFileResourceNames(objectListing))
+        results.addAll(resolveDirectoryResourceNames(objectListing))
 
-public class S3ResourceResolver {
-
-    private static final Pattern FILENAME_PATTERN = Pattern.compile("[^/]+\\.*$");
-
-    private static final Function<S3ObjectSummary, String> EXTRACT_FILE_NAME = new Function<S3ObjectSummary, String>() {
-        @Override
-        public String apply(S3ObjectSummary input) {
-            Matcher matcher = FILENAME_PATTERN.matcher(input.getKey());
-            if (matcher.find()) {
-                String group = matcher.group(0);
-                return group.contains(".") ? group : null;
-            }
-            return null;
-        }
-    };
-
-    public List<String> resolveResourceNames(ObjectListing objectListing) {
-        List<String> results = new ArrayList<String>();
-
-        results.addAll(resolveFileResourceNames(objectListing));
-        results.addAll(resolveDirectoryResourceNames(objectListing));
-
-        return results;
+        return results
     }
 
-    private List<String> resolveFileResourceNames(ObjectListing objectListing) {
-        List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
+    private fun resolveFileResourceNames(objectListing: ObjectListing): MutableList<String?> {
+        val objectSummaries = objectListing.getObjectSummaries()
         if (null != objectSummaries) {
-            return ImmutableList.copyOf(Iterables.filter(
-                Iterables.transform(objectSummaries, EXTRACT_FILE_NAME),
-                Predicates.notNull()
-            ));
+            return ImmutableList.copyOf<String?>(
+                Iterables.filter<String?>(
+                    Iterables.transform<S3ObjectSummary?, String?>(objectSummaries, EXTRACT_FILE_NAME),
+                    Predicates.notNull<String?>()
+                )
+            )
         }
-        return Collections.emptyList();
-
+        return mutableListOf<String?>()
     }
 
-    private List<String> resolveDirectoryResourceNames(ObjectListing objectListing) {
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
+    private fun resolveDirectoryResourceNames(objectListing: ObjectListing): MutableList<String?> {
+        val builder = ImmutableList.builder<String?>()
         if (objectListing.getCommonPrefixes() != null) {
-            for (String prefix : objectListing.getCommonPrefixes()) {
+            for (prefix in objectListing.getCommonPrefixes()) {
                 // The common prefixes will also include the prefix of the <code>ObjectListing</code>
-                String directChild = prefix.split(Pattern.quote(objectListing.getPrefix()))[1];
+                val directChild = prefix.split(Pattern.quote(objectListing.getPrefix()).toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
                 if (directChild.endsWith("/")) {
-                    builder.add(directChild.substring(0, directChild.length() - 1));
+                    builder.add(directChild.substring(0, directChild.length - 1))
                 } else {
-                    builder.add(directChild);
+                    builder.add(directChild)
                 }
             }
-            return builder.build();
+            return builder.build()
         }
-        return Collections.emptyList();
+        return mutableListOf<String?>()
+    }
+
+    companion object {
+        private val FILENAME_PATTERN: Pattern = Pattern.compile("[^/]+\\.*$")
+
+        private val EXTRACT_FILE_NAME: Function<S3ObjectSummary?, String?> = object : Function<S3ObjectSummary?, String?> {
+            override fun apply(input: S3ObjectSummary): String? {
+                val matcher: Matcher = FILENAME_PATTERN.matcher(input.getKey())
+                if (matcher.find()) {
+                    val group = matcher.group(0)
+                    return if (group.contains(".")) group else null
+                }
+                return null
+            }
+        }
     }
 }

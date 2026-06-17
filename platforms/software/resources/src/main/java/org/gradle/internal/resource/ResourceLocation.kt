@@ -13,24 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource;
-
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.net.URI;
+package org.gradle.internal.resource
 
 /**
  * Represents the location or identity of a resource.
  */
-public interface ResourceLocation {
+interface ResourceLocation {
     /**
      * Returns a display name for the resource. This can be used in log and error messages.
      *
      * @return the display name
      */
-    String getDisplayName();
+    val displayName: String?
 
     /**
      * Returns a file representing the location of the resource. Not all resources are available as a file.
@@ -39,8 +33,7 @@ public interface ResourceLocation {
      *
      * @return A file location this resource. Returns null if this resource is not available as a file.
      */
-    @Nullable
-    File getFile();
+    val file: File?
 
     /**
      * Returns the URI for this resource. Not all resources have a URI.
@@ -49,6 +42,5 @@ public interface ResourceLocation {
      *
      * @return The URI for this resource. Returns null if this resource does not have a URI.
      */
-    @Nullable
-    URI getURI();
+    val uRI: URI?
 }

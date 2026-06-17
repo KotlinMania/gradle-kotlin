@@ -198,8 +198,8 @@ abstract class ApplicationPlugin : Plugin<Project> {
     }
 
     private fun configureDistribution(project: Project, mainFeature: JvmFeatureInternal, mainDistribution: Distribution, pluginExtension: JavaApplication): CopySpec {
-        mainDistribution.getDistributionBaseName().convention(project.provider<String>(Callable { pluginExtension.getApplicationName() }))
-        val distSpec = mainDistribution.getContents()
+        mainDistribution.distributionBaseName.convention(project.provider<String>(Callable { pluginExtension.getApplicationName() }))
+        val distSpec = mainDistribution.contents
 
         val jar: TaskProvider<Jar> = mainFeature.jarTask
         val startScripts: TaskProvider<Task> = project.getTasks().named(TASK_START_SCRIPTS_NAME)

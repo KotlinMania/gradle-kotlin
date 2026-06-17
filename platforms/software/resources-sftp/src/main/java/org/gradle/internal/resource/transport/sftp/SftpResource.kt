@@ -13,58 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import com.jcraft.jsch.SftpException
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
+import java.io.InputStream
+import java.net.URI
 
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.resource.transfer.ExternalResourceReadResponse;
+class SftpResource(private val clientFactory: SftpClientFactory, private val metaData: ExternalResourceMetaData?, val uRI: URI, private val credentials: PasswordCredentials?) :
+    ExternalResourceReadResponse {
+    private var client: LockableSftpClient? = null
 
-import java.io.InputStream;
-import java.net.URI;
-
-public class SftpResource implements ExternalResourceReadResponse {
-
-    private final SftpClientFactory clientFactory;
-    private final ExternalResourceMetaData metaData;
-    private final URI uri;
-    private final PasswordCredentials credentials;
-
-    private LockableSftpClient client;
-
-    public SftpResource(SftpClientFactory clientFactory, ExternalResourceMetaData metaData, URI uri, PasswordCredentials credentials) {
-        this.clientFactory = clientFactory;
-        this.metaData = metaData;
-        this.uri = uri;
-        this.credentials = credentials;
-    }
-
-    @Override
-    public InputStream openStream() {
-        client = clientFactory.createSftpClient(uri, credentials);
+    override fun openStream(): InputStream? {
+        client = clientFactory.createSftpClient(this.uRI, credentials)
         try {
-            return client.getSftpClient().get(uri.getPath());
-        } catch (com.jcraft.jsch.SftpException e) {
-            throw ResourceExceptions.getFailed(uri, e);
+            return client!!.getSftpClient().get(uRI.getPath())
+        } catch (e: SftpException) {
+            throw ResourceExceptions.getFailed(this.uRI, e)
         }
     }
 
-    public URI getURI() {
-        return uri;
+    val isLocal: Boolean
+        get() = false
+
+    override fun getMetaData(): ExternalResourceMetaData? {
+        return metaData
     }
 
-    public boolean isLocal() {
-        return false;
-    }
-
-    @Override
-    public ExternalResourceMetaData getMetaData() {
-        return metaData;
-    }
-
-    @Override
-    public void close() {
-        clientFactory.releaseSftpClient(client);
+    override fun close() {
+        clientFactory.releaseSftpClient(client)
     }
 }

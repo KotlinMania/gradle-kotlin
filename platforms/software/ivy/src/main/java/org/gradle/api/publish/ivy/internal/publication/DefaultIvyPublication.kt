@@ -13,542 +13,452 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import com.google.common.collect.Streams
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.publish.VersionMappingStrategy
+import org.gradle.api.publish.internal.CompositePublicationArtifactSet
+import org.gradle.api.publish.internal.DefaultPublicationArtifactSet
+import org.gradle.api.publish.internal.PublicationArtifactInternal
+import org.gradle.api.publish.internal.PublicationArtifactSet
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal
+import org.gradle.api.publish.ivy.InvalidIvyPublicationException
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.publish.ivy.IvyConfigurationContainer
+import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec
+import org.gradle.api.publish.ivy.internal.artifact.DefaultIvyArtifactSet
+import org.gradle.api.publish.ivy.internal.artifact.DerivedIvyArtifact
+import org.gradle.api.publish.ivy.internal.artifact.IvyArtifactInternal
+import org.gradle.api.publish.ivy.internal.artifact.NormalizedIvyArtifact
+import org.gradle.api.publish.ivy.internal.artifact.SingleOutputTaskIvyArtifact
+import org.gradle.api.publish.ivy.internal.dependency.DefaultIvyDependencySet
+import org.gradle.api.publish.ivy.internal.dependency.IvyExcludeRule
+import org.gradle.api.publish.ivy.internal.publisher.IvyNormalizedPublication
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Describables
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.util.internal.GUtil
+import java.io.File
+import java.util.concurrent.Callable
+import java.util.function.Predicate
+import java.util.stream.Stream
+import javax.inject.Inject
 
-import com.google.common.collect.Streams;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.publish.VersionMappingStrategy;
-import org.gradle.api.publish.internal.CompositePublicationArtifactSet;
-import org.gradle.api.publish.internal.DefaultPublicationArtifactSet;
-import org.gradle.api.publish.internal.PublicationArtifactInternal;
-import org.gradle.api.publish.internal.PublicationArtifactSet;
-import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal;
-import org.gradle.api.publish.ivy.InvalidIvyPublicationException;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.IvyConfiguration;
-import org.gradle.api.publish.ivy.IvyConfigurationContainer;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec;
-import org.gradle.api.publish.ivy.internal.artifact.DefaultIvyArtifactSet;
-import org.gradle.api.publish.ivy.internal.artifact.DerivedIvyArtifact;
-import org.gradle.api.publish.ivy.internal.artifact.IvyArtifactInternal;
-import org.gradle.api.publish.ivy.internal.artifact.NormalizedIvyArtifact;
-import org.gradle.api.publish.ivy.internal.artifact.SingleOutputTaskIvyArtifact;
-import org.gradle.api.publish.ivy.internal.publisher.IvyNormalizedPublication;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.TaskProvider;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
+abstract class DefaultIvyPublication @Inject constructor(
+    private val name: String,
+    instantiator: Instantiator,
+    objectFactory: ObjectFactory,
+    private val publicationCoordinates: IvyPublicationCoordinates,
+    ivyArtifactNotationParser: NotationParser<Any, IvyArtifact>,
+    fileCollectionFactory: FileCollectionFactory,
+    private val attributesFactory: AttributesFactory,
+    collectionCallbackActionDecorator: CollectionCallbackActionDecorator,
+    val versionMappingStrategy: VersionMappingStrategyInternal,
+    private val taskDependencyFactory: TaskDependencyFactory,
+    providerFactory: ProviderFactory
+) : IvyPublicationInternal {
+    val descriptor: IvyModuleDescriptorSpecInternal
+    private val configurations: IvyConfigurationContainer
+    private val mainArtifacts: DefaultIvyArtifactSet
+    private val metadataArtifacts: PublicationArtifactSet<IvyArtifact?>
+    private val derivedArtifacts: PublicationArtifactSet<IvyArtifact?>
+    private val publishableArtifacts: PublicationArtifactSet<IvyArtifact?>
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
+    private val silencedVariants: MutableSet<String> = HashSet<String>()
+    private var ivyDescriptorArtifact: IvyArtifact? = null
+    private var moduleDescriptorGenerator: TaskProvider<out Task>? = null
+    private var gradleModuleDescriptorArtifact: SingleOutputTaskIvyArtifact? = null
+    private var alias = false
+    private var populated = false
+    private var artifactsOverridden = false
+    private var silenceAllPublicationWarnings = false
+    var isPublishBuildId: Boolean = false
+        private set
 
-public abstract class DefaultIvyPublication implements IvyPublicationInternal {
+    init {
+        val ivyComponentParser = objectFactory.newInstance<IvyComponentParser>(IvyComponentParser::class.java, ivyArtifactNotationParser)
 
-    public static final String DEFAULT_STATUS = "integration";
+        this.componentArtifacts.convention(this.component.map<MutableSet<IvyArtifact>>(Transformer { component: SoftwareComponentInternal? -> ivyComponentParser.parseArtifacts(component!!) }))
+        this.componentArtifacts.finalizeValueOnRead()
 
-    private final String name;
-    private final IvyPublicationCoordinates publicationCoordinates;
-    private final VersionMappingStrategyInternal versionMappingStrategy;
-    private final TaskDependencyFactory taskDependencyFactory;
-    private final AttributesFactory attributesFactory;
+        this.componentConfigurations.convention(this.component.map<IvyConfigurationContainer>(Transformer { component: SoftwareComponentInternal? -> ivyComponentParser.parseConfigurations(component!!) }))
+        this.componentConfigurations.finalizeValueOnRead()
 
-    private final IvyModuleDescriptorSpecInternal descriptor;
-    private final IvyConfigurationContainer configurations;
-    private final DefaultIvyArtifactSet mainArtifacts;
-    private final PublicationArtifactSet<IvyArtifact> metadataArtifacts;
-    private final PublicationArtifactSet<IvyArtifact> derivedArtifacts;
-    private final PublicationArtifactSet<IvyArtifact> publishableArtifacts;
+        this.mainArtifacts = instantiator.newInstance<DefaultIvyArtifactSet>(
+            DefaultIvyArtifactSet::class.java,
+            name, ivyArtifactNotationParser, fileCollectionFactory, collectionCallbackActionDecorator
+        )
+        this.metadataArtifacts = DefaultPublicationArtifactSet<IvyArtifact?>(IvyArtifact::class.java, "metadata artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator)
+        this.derivedArtifacts = DefaultPublicationArtifactSet<IvyArtifact?>(IvyArtifact::class.java, "derived artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator)
+        this.publishableArtifacts = CompositePublicationArtifactSet<IvyArtifact?>(
+            taskDependencyFactory,
+            IvyArtifact::class.java,
+            *uncheckedCast<Array<PublicationArtifactSet<IvyArtifact?>>?>(arrayOf<PublicationArtifactSet<*>>(mainArtifacts, metadataArtifacts, derivedArtifacts))!!
+        )
 
-    private final Set<String> silencedVariants = new HashSet<>();
-    private IvyArtifact ivyDescriptorArtifact;
-    private TaskProvider<? extends Task> moduleDescriptorGenerator;
-    private SingleOutputTaskIvyArtifact gradleModuleDescriptorArtifact;
-    private boolean alias;
-    private boolean populated;
-    private boolean artifactsOverridden;
-    private boolean silenceAllPublicationWarnings;
-    private boolean withBuildIdentifier;
+        this.configurations = instantiator.newInstance<DefaultIvyConfigurationContainer>(DefaultIvyConfigurationContainer::class.java, instantiator, collectionCallbackActionDecorator)
 
-    @Inject
-    public DefaultIvyPublication(
-        String name,
-        Instantiator instantiator,
-        ObjectFactory objectFactory,
-        IvyPublicationCoordinates publicationCoordinates,
-        NotationParser<Object, IvyArtifact> ivyArtifactNotationParser,
-        FileCollectionFactory fileCollectionFactory,
-        AttributesFactory attributesFactory,
-        CollectionCallbackActionDecorator collectionCallbackActionDecorator,
-        VersionMappingStrategyInternal versionMappingStrategy,
-        TaskDependencyFactory taskDependencyFactory,
-        ProviderFactory providerFactory
-    ) {
-        this.name = name;
-        this.publicationCoordinates = publicationCoordinates;
-        this.attributesFactory = attributesFactory;
-        this.versionMappingStrategy = versionMappingStrategy;
-        this.taskDependencyFactory = taskDependencyFactory;
-
-        IvyComponentParser ivyComponentParser = objectFactory.newInstance(IvyComponentParser.class, ivyArtifactNotationParser);
-
-        getComponentArtifacts().convention(getComponent().map(ivyComponentParser::parseArtifacts));
-        getComponentArtifacts().finalizeValueOnRead();
-
-        getComponentConfigurations().convention(getComponent().map(ivyComponentParser::parseConfigurations));
-        getComponentConfigurations().finalizeValueOnRead();
-
-        this.mainArtifacts = instantiator.newInstance(DefaultIvyArtifactSet.class, name, ivyArtifactNotationParser, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.metadataArtifacts = new DefaultPublicationArtifactSet<>(IvyArtifact.class, "metadata artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.derivedArtifacts = new DefaultPublicationArtifactSet<>(IvyArtifact.class, "derived artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.publishableArtifacts = new CompositePublicationArtifactSet<>(taskDependencyFactory, IvyArtifact.class, Cast.uncheckedCast(new PublicationArtifactSet<?>[]{mainArtifacts, metadataArtifacts, derivedArtifacts}));
-
-        this.configurations = instantiator.newInstance(DefaultIvyConfigurationContainer.class, instantiator, collectionCallbackActionDecorator);
-
-        this.descriptor = objectFactory.newInstance(DefaultIvyModuleDescriptorSpec.class, objectFactory, publicationCoordinates);
-        this.descriptor.setStatus(DEFAULT_STATUS);
-        this.descriptor.getWriteGradleMetadataMarker().set(providerFactory.provider(this::writeGradleMetadataMarker));
-        this.descriptor.getGlobalExcludes().set(getComponent().map(ivyComponentParser::parseGlobalExcludes));
-        this.descriptor.getConfigurations().set(this.configurations);
-        this.descriptor.getArtifacts().set(providerFactory.provider(this::getArtifacts));
+        this.descriptor = objectFactory.newInstance<DefaultIvyModuleDescriptorSpec>(
+            DefaultIvyModuleDescriptorSpec::class.java, objectFactory,
+            publicationCoordinates
+        )
+        this.descriptor.setStatus(DEFAULT_STATUS)
+        this.descriptor.getWriteGradleMetadataMarker().set(providerFactory.provider<Boolean>(Callable { this.writeGradleMetadataMarker() }))
+        this.descriptor.getGlobalExcludes()
+            .set(this.component.map<MutableSet<IvyExcludeRule>>(Transformer { component: SoftwareComponentInternal? -> ivyComponentParser.parseGlobalExcludes(component!!) }))
+        this.descriptor.getConfigurations().set(this.configurations)
+        this.descriptor.getArtifacts().set(providerFactory.provider<DefaultIvyArtifactSet>(Callable { this.artifacts }))
         this.descriptor.getDependencies().set(
-            getComponent()
-                .flatMap(component -> ivyComponentParser.parseDependencies(component, versionMappingStrategy))
-                .map(parsed -> {
-                    if (!silenceAllPublicationWarnings) {
-                        parsed.getWarnings().complete(getDisplayName() + " ivy metadata", silencedVariants);
-                    }
-                    return parsed.getDependencies();
+            this.component
+                .flatMap<IvyComponentParser.ParsedDependencyResult>(Transformer { component: SoftwareComponentInternal? ->
+                    ivyComponentParser.parseDependencies(
+                        component!!,
+                        versionMappingStrategy
+                    )
                 })
-        );
+                .map<DefaultIvyDependencySet>(Transformer { parsed: IvyComponentParser.ParsedDependencyResult? ->
+                    if (!silenceAllPublicationWarnings) {
+                        parsed!!.getWarnings().complete(this.displayName.toString() + " ivy metadata", silencedVariants)
+                    }
+                    parsed!!.getDependencies()
+                })
+        )
     }
 
-    @Override
-    @NonNull
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public void withoutBuildIdentifier() {
-        withBuildIdentifier = false;
+    override fun withoutBuildIdentifier() {
+        this.isPublishBuildId = false
     }
 
-    @Override
-    public void withBuildIdentifier() {
-        withBuildIdentifier = true;
+    override fun withBuildIdentifier() {
+        this.isPublishBuildId = true
     }
 
-    @Override
-    public boolean isPublishBuildId() {
-        return withBuildIdentifier;
-    }
+    val displayName: DisplayName
+        get() = Describables.withTypeAndName("Ivy publication", name)
 
-    @Override
-    public DisplayName getDisplayName() {
-        return Describables.withTypeAndName("Ivy publication", name);
-    }
+    val isLegacy: Boolean
+        get() = false
 
-    @Override
-    public boolean isLegacy() {
-        return false;
-    }
+    abstract val component: Property<SoftwareComponentInternal>?
 
-    @Override
-    public abstract Property<SoftwareComponentInternal> getComponent();
-
-    @Override
-    public IvyModuleDescriptorSpecInternal getDescriptor() {
-        return descriptor;
-    }
-
-    @Override
-    public void setIvyDescriptorGenerator(TaskProvider<? extends Task> descriptorGenerator) {
+    override fun setIvyDescriptorGenerator(descriptorGenerator: TaskProvider<out Task>) {
         if (ivyDescriptorArtifact != null) {
-            metadataArtifacts.remove(ivyDescriptorArtifact);
+            metadataArtifacts.remove(ivyDescriptorArtifact)
         }
-        ivyDescriptorArtifact = new SingleOutputTaskIvyArtifact(descriptorGenerator, publicationCoordinates, "xml", "ivy", null, taskDependencyFactory);
-        ivyDescriptorArtifact.setName("ivy");
-        metadataArtifacts.add(ivyDescriptorArtifact);
+        ivyDescriptorArtifact = SingleOutputTaskIvyArtifact(descriptorGenerator, publicationCoordinates, "xml", "ivy", null, taskDependencyFactory)
+        ivyDescriptorArtifact.setName("ivy")
+        metadataArtifacts.add(ivyDescriptorArtifact)
     }
 
-    @Override
-    public void setModuleDescriptorGenerator(TaskProvider<? extends Task> descriptorGenerator) {
-        moduleDescriptorGenerator = descriptorGenerator;
+    override fun setModuleDescriptorGenerator(descriptorGenerator: TaskProvider<out Task>) {
+        moduleDescriptorGenerator = descriptorGenerator
         if (gradleModuleDescriptorArtifact != null) {
-            metadataArtifacts.remove(gradleModuleDescriptorArtifact);
+            metadataArtifacts.remove(gradleModuleDescriptorArtifact)
         }
-        gradleModuleDescriptorArtifact = null;
-        updateModuleDescriptorArtifact();
+        gradleModuleDescriptorArtifact = null
+        updateModuleDescriptorArtifact()
     }
 
-    private void updateModuleDescriptorArtifact() {
+    private fun updateModuleDescriptorArtifact() {
         if (!canPublishModuleMetadata()) {
-            return;
+            return
         }
         if (moduleDescriptorGenerator == null) {
-            return;
+            return
         }
-        gradleModuleDescriptorArtifact = new SingleOutputTaskIvyArtifact(moduleDescriptorGenerator, publicationCoordinates, "module", "json", null, taskDependencyFactory);
-        metadataArtifacts.add(gradleModuleDescriptorArtifact);
-        moduleDescriptorGenerator = null;
+        gradleModuleDescriptorArtifact = SingleOutputTaskIvyArtifact(moduleDescriptorGenerator!!, publicationCoordinates, "module", "json", null, taskDependencyFactory)
+        metadataArtifacts.add(gradleModuleDescriptorArtifact)
+        moduleDescriptorGenerator = null
     }
 
-    @Override
-    public void descriptor(Action<? super IvyModuleDescriptorSpec> configure) {
-        configure.execute(descriptor);
+    override fun descriptor(configure: Action<in IvyModuleDescriptorSpec>) {
+        configure.execute(descriptor)
     }
 
-    @Override
-    public boolean isAlias() {
-        return alias;
+    override fun isAlias(): Boolean {
+        return alias
     }
 
-    @Override
-    public void setAlias(boolean alias) {
-        this.alias = alias;
+    override fun setAlias(alias: Boolean) {
+        this.alias = alias
     }
 
-    @Override
-    public void from(SoftwareComponent component) {
-        if (getComponent().isPresent()) {
-            throw new InvalidUserDataException(String.format("Ivy publication '%s' cannot include multiple components", name));
+    override fun from(component: SoftwareComponent) {
+        if (this.component.isPresent()) {
+            throw InvalidUserDataException(String.format("Ivy publication '%s' cannot include multiple components", name))
         }
-        getComponent().set((SoftwareComponentInternal) component);
-        getComponent().finalizeValue();
-        artifactsOverridden = false;
+        this.component.set(component as SoftwareComponentInternal)
+        this.component.finalizeValue()
+        artifactsOverridden = false
 
-        updateModuleDescriptorArtifact();
+        updateModuleDescriptorArtifact()
     }
 
     // TODO: This method should be removed in favor of lazily adding artifacts to the publication state.
     // This is currently blocked by Signing eagerly realizing the publication artifacts.
-    private void populateFromComponent() {
+    private fun populateFromComponent() {
         if (populated) {
-            return;
+            return
         }
-        populated = true;
-        if (!artifactsOverridden && getComponentArtifacts().isPresent()) {
-            mainArtifacts.addAll(getComponentArtifacts().get());
+        populated = true
+        if (!artifactsOverridden && this.componentArtifacts.isPresent()) {
+            mainArtifacts.addAll(this.componentArtifacts.get())
         }
-        if (getComponentConfigurations().isPresent()) {
-            configurations.addAll(getComponentConfigurations().get());
-        }
-    }
-
-    protected abstract SetProperty<IvyArtifact> getComponentArtifacts();
-    protected abstract SetProperty<IvyConfiguration> getComponentConfigurations();
-
-    @Override
-    public void configurations(Action<? super IvyConfigurationContainer> config) {
-        populateFromComponent();
-        config.execute(configurations);
-    }
-
-    @Override
-    public IvyConfigurationContainer getConfigurations() {
-        populateFromComponent();
-        return configurations;
-    }
-
-    @Override
-    public IvyArtifact artifact(Object source) {
-        return mainArtifacts.artifact(source);
-    }
-
-    @Override
-    public IvyArtifact artifact(Object source, Action<? super IvyArtifact> config) {
-        return mainArtifacts.artifact(source, config);
-    }
-
-    @Override
-    public void setArtifacts(Iterable<?> sources) {
-        artifactsOverridden = true;
-        mainArtifacts.clear();
-        for (Object source : sources) {
-            artifact(source);
+        if (this.componentConfigurations.isPresent()) {
+            configurations.addAll(this.componentConfigurations.get())
         }
     }
 
-    @Override
-    public DefaultIvyArtifactSet getArtifacts() {
-        populateFromComponent();
-        return mainArtifacts;
+    protected abstract val componentArtifacts: SetProperty<IvyArtifact>?
+    protected abstract val componentConfigurations: SetProperty<IvyConfiguration>?
+
+    override fun configurations(config: Action<in IvyConfigurationContainer>) {
+        populateFromComponent()
+        config.execute(configurations)
     }
 
-    @Override
-    public String getOrganisation() {
-        return descriptor.getCoordinates().getOrganisation().get();
+    override fun getConfigurations(): IvyConfigurationContainer {
+        populateFromComponent()
+        return configurations
     }
 
-    @Override
-    public void setOrganisation(String organisation) {
-        descriptor.getCoordinates().getOrganisation().set(organisation);
+    override fun artifact(source: Any): IvyArtifact {
+        return mainArtifacts.artifact(source)
     }
 
-    @Override
-    public String getModule() {
-        return descriptor.getCoordinates().getModule().get();
+    override fun artifact(source: Any, config: Action<in IvyArtifact>): IvyArtifact {
+        return mainArtifacts.artifact(source, config)
     }
 
-    @Override
-    public void setModule(String module) {
-        descriptor.getCoordinates().getModule().set(module);
+    var artifacts: DefaultIvyArtifactSet
+        get() {
+            populateFromComponent()
+            return mainArtifacts
+        }
+        set(sources) {
+            artifactsOverridden = true
+            mainArtifacts.clear()
+            for (source in sources) {
+                artifact(source)
+            }
+        }
+
+    var organisation: String
+        get() = descriptor.getCoordinates().getOrganisation().get()
+        set(organisation) {
+            descriptor.getCoordinates().getOrganisation().set(organisation)
+        }
+
+    var module: String
+        get() = descriptor.getCoordinates().getModule().get()
+        set(module) {
+            descriptor.getCoordinates().getModule().set(module)
+        }
+
+    var revision: String
+        get() = descriptor.getCoordinates().getRevision().get()
+        set(revision) {
+            descriptor.getCoordinates().getRevision().set(revision)
+        }
+
+    override fun getPublishableArtifacts(): PublicationArtifactSet<IvyArtifact?> {
+        populateFromComponent()
+        return publishableArtifacts
     }
 
-    @Override
-    public String getRevision() {
-        return descriptor.getCoordinates().getRevision().get();
+    override fun allPublishableArtifacts(action: Action<in IvyArtifact>) {
+        publishableArtifacts.all(action)
     }
 
-    @Override
-    public void setRevision(String revision) {
-        descriptor.getCoordinates().getRevision().set(revision);
+    override fun whenPublishableArtifactRemoved(action: Action<in IvyArtifact>) {
+        publishableArtifacts.whenObjectRemoved(action)
     }
 
-    @Override
-    public PublicationArtifactSet<IvyArtifact> getPublishableArtifacts() {
-        populateFromComponent();
-        return publishableArtifacts;
+    override fun addDerivedArtifact(originalArtifact: IvyArtifact, fileProvider: PublicationInternal.DerivedArtifact): IvyArtifact {
+        val effectiveFileProvider = if (originalArtifact === gradleModuleDescriptorArtifact)
+            DefaultIvyPublication.GradleModuleDescriptorDerivedArtifact(fileProvider, gradleModuleDescriptorArtifact!!)
+        else
+            fileProvider
+
+        val artifact: IvyArtifact = DerivedIvyArtifact(originalArtifact, effectiveFileProvider, taskDependencyFactory)
+        derivedArtifacts.add(artifact)
+        return artifact
     }
 
-    @Override
-    public void allPublishableArtifacts(Action<? super IvyArtifact> action) {
-        publishableArtifacts.all(action);
+    override fun removeDerivedArtifact(artifact: IvyArtifact) {
+        derivedArtifacts.remove(artifact)
     }
 
-    @Override
-    public void whenPublishableArtifactRemoved(Action<? super IvyArtifact> action) {
-        publishableArtifacts.whenObjectRemoved(action);
-    }
-
-    @Override
-    public IvyArtifact addDerivedArtifact(IvyArtifact originalArtifact, DerivedArtifact fileProvider) {
-        DerivedArtifact effectiveFileProvider = originalArtifact == gradleModuleDescriptorArtifact
-            ? new GradleModuleDescriptorDerivedArtifact(fileProvider, gradleModuleDescriptorArtifact)
-            : fileProvider;
-
-        IvyArtifact artifact = new DerivedIvyArtifact(originalArtifact, effectiveFileProvider, taskDependencyFactory);
-        derivedArtifacts.add(artifact);
-        return artifact;
-    }
-
-    @Override
-    public void removeDerivedArtifact(IvyArtifact artifact) {
-        derivedArtifacts.remove(artifact);
-    }
-
-    @Override
-    public IvyNormalizedPublication asNormalisedPublication() {
-        populateFromComponent();
+    override fun asNormalisedPublication(): IvyNormalizedPublication {
+        populateFromComponent()
 
         // Preserve identity of artifacts
-        Set<IvyArtifact> main = linkedHashSetOf(
+        val main: MutableSet<IvyArtifact> = Companion.linkedHashSetOf<IvyArtifact>(
             normalized(
                 mainArtifacts.stream(),
-                this::isValidArtifact
+                Predicate { artifact: IvyArtifact -> this.isValidArtifact(artifact) }
             )
-        );
-        LinkedHashSet<IvyArtifact> all = new LinkedHashSet<>(main);
+        )
+        val all = LinkedHashSet<IvyArtifact>(main)
         normalized(
-            Streams.concat(metadataArtifacts.stream(), derivedArtifacts.stream()),
-            this::isPublishableArtifact
-        ).forEach(all::add);
-        return new IvyNormalizedPublication(
+            Streams.concat<IvyArtifact>(metadataArtifacts.stream(), derivedArtifacts.stream()),
+            Predicate { element: IvyArtifact -> this.isPublishableArtifact(element) }
+        ).forEach { e: IvyArtifact? -> all.add(e!!) }
+        return IvyNormalizedPublication(
             name,
-            getCoordinates(),
-            getIvyDescriptorFile(),
+            coordinates,
+            this.ivyDescriptorFile,
             all
-        );
+        )
     }
 
-    private static <T> Set<T> linkedHashSetOf(Stream<T> stream) {
-        LinkedHashSet<T> set = new LinkedHashSet<>();
-        stream.forEach(set::add);
-        return set;
-    }
-
-    private boolean isValidArtifact(IvyArtifact artifact) {
+    private fun isValidArtifact(artifact: IvyArtifact): Boolean {
         // Validation is done this way for backwards compatibility
-        File artifactFile = artifact.getFile();
+        val artifactFile: File = artifact.file
         if (artifactFile == null) {
-            throw new InvalidIvyPublicationException(name, String.format("artifact file does not exist: '%s'", artifact));
+            throw InvalidIvyPublicationException(name, String.format("artifact file does not exist: '%s'", artifact))
         }
-        if (!((IvyArtifactInternal) artifact).shouldBePublished()) {
+        if (!(artifact as IvyArtifactInternal).shouldBePublished()) {
             // Fail if it's the main artifact, otherwise simply disable publication
-            if (artifact.getClassifier() == null) {
-                throw new IllegalStateException("Artifact " + artifact.getFile().getName() + " wasn't produced by this build.");
-            }
-            return false;
+            checkNotNull(artifact.getClassifier()) { "Artifact " + artifact.file.getName() + " wasn't produced by this build." }
+            return false
         }
-        return true;
+        return true
     }
 
-    private static Stream<IvyArtifact> normalized(Stream<IvyArtifact> artifacts, Predicate<IvyArtifact> predicate) {
-        return artifacts
-            .filter(predicate)
-            .map(DefaultIvyPublication::normalizedArtifactFor);
-    }
-
-    private boolean isPublishableArtifact(IvyArtifact element) {
-        if (!((PublicationArtifactInternal) element).shouldBePublished()) {
-            return false;
+    private fun isPublishableArtifact(element: IvyArtifact): Boolean {
+        if (!(element as PublicationArtifactInternal).shouldBePublished()) {
+            return false
         }
-        if (gradleModuleDescriptorArtifact == element) {
+        if (gradleModuleDescriptorArtifact === element) {
             // We temporarily want to allow skipping the publication of Gradle module metadata
-            return gradleModuleDescriptorArtifact.isEnabled();
+            return gradleModuleDescriptorArtifact!!.isEnabled()
         }
-        return true;
+        return true
     }
 
-    private static NormalizedIvyArtifact normalizedArtifactFor(IvyArtifact artifact) {
-        return ((IvyArtifactInternal) artifact).asNormalisedArtifact();
-    }
-
-    @Override
-    public boolean writeGradleMetadataMarker() {
+    override fun writeGradleMetadataMarker(): Boolean {
         return canPublishModuleMetadata()
-            && gradleModuleDescriptorArtifact != null
-            && gradleModuleDescriptorArtifact.isEnabled();
+                && gradleModuleDescriptorArtifact != null && gradleModuleDescriptorArtifact!!.isEnabled()
     }
 
-    private boolean canPublishModuleMetadata() {
+    private fun canPublishModuleMetadata(): Boolean {
         // Cannot yet publish module metadata without component
-        return getComponent().isPresent();
+        return this.component.isPresent()
     }
 
-    private File getIvyDescriptorFile() {
-        if (ivyDescriptorArtifact == null) {
-            throw new IllegalStateException("ivyDescriptorArtifact not set for publication");
+    private val ivyDescriptorFile: File
+        get() {
+            checkNotNull(ivyDescriptorArtifact) { "ivyDescriptorArtifact not set for publication" }
+            return ivyDescriptorArtifact!!.file
         }
-        return ivyDescriptorArtifact.getFile();
-    }
 
-    @Override
-    public ModuleVersionIdentifier getCoordinates() {
-        return DefaultModuleVersionIdentifier.newId(getOrganisation(), getModule(), getRevision());
-    }
+    val coordinates: ModuleVersionIdentifier
+        get() = DefaultModuleVersionIdentifier.newId(organisation, module, revision)
 
-    @Nullable
-    @Override
-    public <T> T getCoordinates(Class<T> type) {
-        if (type.isAssignableFrom(ModuleVersionIdentifier.class)) {
-            return type.cast(getCoordinates());
+    override fun <T> getCoordinates(type: Class<T?>): T? {
+        if (type.isAssignableFrom(ModuleVersionIdentifier::class.java)) {
+            return type.cast(coordinates)
         }
-        return null;
+        return null
     }
 
-    @Override
-    public ImmutableAttributes getAttributes() {
-        return attributesFactory.of(ProjectInternal.STATUS_ATTRIBUTE, getDescriptor().getStatus());
+    val attributes: ImmutableAttributes
+        get() = attributesFactory.of<T>(ProjectInternal.STATUS_ATTRIBUTE, this.descriptor.getStatus())
+
+    private fun getPublishedUrl(source: PublishArtifact): String {
+        return getArtifactFileName(source.getClassifier(), source.getExtension())
     }
 
-    private String getPublishedUrl(PublishArtifact source) {
-        return getArtifactFileName(source.getClassifier(), source.getExtension());
-    }
-
-    private String getArtifactFileName(@Nullable String classifier, String extension) {
-        StringBuilder artifactPath = new StringBuilder();
-        ModuleVersionIdentifier coordinates = getCoordinates();
-        artifactPath.append(coordinates.getName());
-        artifactPath.append('-');
-        artifactPath.append(coordinates.getVersion());
+    private fun getArtifactFileName(classifier: String?, extension: String): String {
+        val artifactPath = StringBuilder()
+        val coordinates = coordinates
+        artifactPath.append(coordinates.getName())
+        artifactPath.append('-')
+        artifactPath.append(coordinates.getVersion())
         if (GUtil.isTrue(classifier)) {
-            artifactPath.append('-');
-            artifactPath.append(classifier);
+            artifactPath.append('-')
+            artifactPath.append(classifier)
         }
         if (GUtil.isTrue(extension)) {
-            artifactPath.append('.');
-            artifactPath.append(extension);
+            artifactPath.append('.')
+            artifactPath.append(extension)
         }
-        return artifactPath.toString();
+        return artifactPath.toString()
     }
 
-    @Override
-    public PublishedFile getPublishedFile(PublishArtifact source) {
-        final String publishedUrl = getPublishedUrl(source);
-        return new PublishedFile() {
-            @Override
-            public String getName() {
-                return publishedUrl;
-            }
-
-            @Override
-            public String getUri() {
-                return publishedUrl;
-            }
-        };
+    override fun getPublishedFile(source: PublishArtifact): PublicationInternal.PublishedFile {
+        val uri = getPublishedUrl(source)
+        get() = this.name
+        return object : PublicationInternal.PublishedFile {
+        }
     }
 
-    @Override
-    public void versionMapping(Action<? super VersionMappingStrategy> configureAction) {
-        configureAction.execute(versionMappingStrategy);
+    override fun versionMapping(configureAction: Action<in VersionMappingStrategy>) {
+        configureAction.execute(versionMappingStrategy)
     }
 
-    @Override
-    public void suppressIvyMetadataWarningsFor(String variantName) {
-        silencedVariants.add(variantName);
+    override fun suppressIvyMetadataWarningsFor(variantName: String) {
+        silencedVariants.add(variantName)
     }
 
-    @Override
-    public void suppressAllIvyMetadataWarnings() {
-        this.silenceAllPublicationWarnings = true;
+    override fun suppressAllIvyMetadataWarnings() {
+        this.silenceAllPublicationWarnings = true
     }
 
-    @Override
-    public VersionMappingStrategyInternal getVersionMappingStrategy() {
-        return versionMappingStrategy;
-    }
-
-    private static class GradleModuleDescriptorDerivedArtifact implements DerivedArtifact {
-
-        private final DerivedArtifact derivedArtifact;
-
-        private final SingleOutputTaskIvyArtifact gradleModuleDescriptorArtifact;
-
-        public GradleModuleDescriptorDerivedArtifact(DerivedArtifact derivedArtifact, SingleOutputTaskIvyArtifact gradleModuleDescriptorArtifact) {
-            this.derivedArtifact = derivedArtifact;
-            this.gradleModuleDescriptorArtifact = gradleModuleDescriptorArtifact;
+    private class GradleModuleDescriptorDerivedArtifact(private val derivedArtifact: PublicationInternal.DerivedArtifact, private val gradleModuleDescriptorArtifact: SingleOutputTaskIvyArtifact) :
+        PublicationInternal.DerivedArtifact {
+        override fun create(): File? {
+            return derivedArtifact.create()
         }
 
-        @Nullable
-        @Override
-        public File create() {
-            return derivedArtifact.create();
-        }
-
-        @Override
-        public boolean shouldBePublished() {
+        override fun shouldBePublished(): Boolean {
             return gradleModuleDescriptorArtifact.shouldBePublished() &&
-                derivedArtifact.shouldBePublished();
+                    derivedArtifact.shouldBePublished()
+        }
+    }
+
+    companion object {
+        const val DEFAULT_STATUS: String = "integration"
+
+        private fun <T> linkedHashSetOf(stream: Stream<T?>): MutableSet<T?> {
+            val set = LinkedHashSet<T?>()
+            stream.forEach { e: T? -> set.add(e) }
+            return set
+        }
+
+        private fun normalized(artifacts: Stream<IvyArtifact>, predicate: Predicate<IvyArtifact>): Stream<IvyArtifact> {
+            return artifacts
+                .filter(predicate)
+                .map<IvyArtifact> { artifact: IvyArtifact? -> Companion.normalizedArtifactFor(artifact!!) }
+        }
+
+        private fun normalizedArtifactFor(artifact: IvyArtifact): NormalizedIvyArtifact {
+            return (artifact as IvyArtifactInternal).asNormalisedArtifact()
         }
     }
 }

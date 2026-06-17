@@ -93,7 +93,7 @@ object NativeBinaries {
         buildType: BuildType?,
         flavor: Flavor?
     ) {
-        val name = namingScheme.getBinaryName()
+        val name = namingScheme.binaryName
         binaries.create<T?>(name, type)
 
         // TODO:REUSE Refactor after removing reuse
@@ -130,7 +130,7 @@ object NativeBinaries {
         flavor: Flavor?
     ) {
         val nativeBinary = nativeBinarySpec as NativeBinarySpecInternal
-        nativeBinary.setNamingScheme(namingScheme)
+        nativeBinary.namingScheme = namingScheme
         nativeBinary.setTargetPlatform(platform)
         nativeBinary.setBuildType(buildType)
         nativeBinary.setFlavor(flavor)

@@ -13,67 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.commons.lang3.StringUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+abstract class JavaSystemPropertiesProxySettings internal constructor(
+    val propertyPrefix: String?,
+    val defaultPort: Int,
+    proxyHost: String?,
+    proxyPortString: String?,
+    proxyUser: String?,
+    proxyPassword: String?
+) : HttpProxySettings {
+    private val proxy: HttpProxySettings.HttpProxy?
 
-public abstract class JavaSystemPropertiesProxySettings implements HttpProxySettings {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JavaSystemPropertiesProxySettings.class);
+    constructor(propertyPrefix: String?, defaultPort: Int) : this(
+        propertyPrefix, defaultPort,
+        getAndTrimSystemProperty(propertyPrefix + ".proxyHost"),
+        getAndTrimSystemProperty(propertyPrefix + ".proxyPort"),
+        getAndTrimSystemProperty(propertyPrefix + ".proxyUser"),
+        getAndTrimSystemProperty(propertyPrefix + ".proxyPassword")
+    )
 
-    private final HttpProxy proxy;
-    private final String propertyPrefix;
-    private final int defaultPort;
-
-    public JavaSystemPropertiesProxySettings(String propertyPrefix, int defaultPort) {
-        this(propertyPrefix, defaultPort,
-                getAndTrimSystemProperty(propertyPrefix + ".proxyHost"),
-                getAndTrimSystemProperty(propertyPrefix + ".proxyPort"),
-                getAndTrimSystemProperty(propertyPrefix + ".proxyUser"),
-                getAndTrimSystemProperty(propertyPrefix + ".proxyPassword"));
-    }
-
-    JavaSystemPropertiesProxySettings(String propertyPrefix, int defaultPort, String proxyHost, String proxyPortString, String proxyUser, String proxyPassword) {
-        this.propertyPrefix = propertyPrefix;
-        this.defaultPort = defaultPort;
+    init {
         if (StringUtils.isBlank(proxyHost)) {
-            this.proxy = null;
+            this.proxy = null
         } else {
-            this.proxy = new HttpProxy(proxyHost, initProxyPort(proxyPortString), proxyUser, proxyPassword);
+            this.proxy = HttpProxySettings.HttpProxy(proxyHost, initProxyPort(proxyPortString), proxyUser, proxyPassword)
         }
     }
 
-    private int initProxyPort(String proxyPortString) {
+    private fun initProxyPort(proxyPortString: String?): Int {
         if (StringUtils.isBlank(proxyPortString)) {
-            return defaultPort;
+            return defaultPort
         }
         try {
-            return Integer.parseInt(proxyPortString);
-        } catch (NumberFormatException e) {
-            String key = propertyPrefix + ".proxyPort";
-            LOGGER.warn("Invalid value for java system property '{}': '{}'. Value is not a valid number. Default port '{}' will be used.",
-                key, proxyPortString, defaultPort);
-            return defaultPort;
+            return proxyPortString!!.toInt()
+        } catch (e: NumberFormatException) {
+            val key = propertyPrefix + ".proxyPort"
+            LOGGER.warn(
+                "Invalid value for java system property '{}': '{}'. Value is not a valid number. Default port '{}' will be used.",
+                key, proxyPortString, defaultPort
+            )
+            return defaultPort
         }
     }
 
-    @Override
-    public HttpProxySettings.HttpProxy getProxy() {
-        return proxy;
+    override fun getProxy(): HttpProxySettings.HttpProxy? {
+        return proxy
     }
 
-    public String getPropertyPrefix() {
-        return propertyPrefix;
-    }
+    companion object {
+        private val LOGGER: Logger = LoggerFactory.getLogger(JavaSystemPropertiesProxySettings::class.java)
 
-    public int getDefaultPort() {
-        return defaultPort;
-    }
-
-    private static String getAndTrimSystemProperty(String key) {
-        String value = System.getProperty(key);
-        return value != null ? value.trim() : null;
+        private fun getAndTrimSystemProperty(key: String): String? {
+            val value = System.getProperty(key)
+            return if (value != null) value.trim { it <= ' ' } else null
+        }
     }
 }

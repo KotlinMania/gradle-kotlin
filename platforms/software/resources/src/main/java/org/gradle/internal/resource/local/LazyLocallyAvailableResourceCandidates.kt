@@ -13,50 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.Factory
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.hash.HashCode
+import java.io.File
 
-import org.gradle.internal.Factory;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.hash.HashCode;
-
-import java.io.File;
-import java.util.List;
-
-public class LazyLocallyAvailableResourceCandidates implements LocallyAvailableResourceCandidates {
-
-    private final Factory<List<File>> filesFactory;
-    private final ChecksumService checksumService;
-    private List<File> files;
-
-    public LazyLocallyAvailableResourceCandidates(Factory<List<File>> filesFactory, ChecksumService checksumService) {
-        this.filesFactory = filesFactory;
-        this.checksumService = checksumService;
-    }
-
-    protected List<File> getFiles() {
-        if (files == null) {
-            files = filesFactory.create();
+class LazyLocallyAvailableResourceCandidates(private val filesFactory: Factory<MutableList<File>?>, private val checksumService: ChecksumService) : LocallyAvailableResourceCandidates {
+    protected var files: MutableList<File>? = null
+        get() {
+            if (field == null) {
+                field = filesFactory.create()
+            }
+            return field
         }
-        return files;
+        private set
+
+    override fun isNone(): Boolean {
+        return this.files!!.isEmpty()
     }
 
-    @Override
-    public boolean isNone() {
-        return getFiles().isEmpty();
-    }
-
-    @Override
-    public LocallyAvailableResource findByHashValue(HashCode targetHash) {
-        HashCode thisHash;
-        for (File file : getFiles()) {
-            thisHash = checksumService.sha1(file);
-            if (thisHash.equals(targetHash)) {
-                return new DefaultLocallyAvailableResource(file, thisHash);
+    override fun findByHashValue(targetHash: HashCode?): LocallyAvailableResource? {
+        var thisHash: HashCode?
+        for (file in this.files!!) {
+            thisHash = checksumService.sha1(file)
+            if (thisHash == targetHash) {
+                return DefaultLocallyAvailableResource(file, thisHash)
             }
         }
 
-        return null;
+        return null
     }
-
 }

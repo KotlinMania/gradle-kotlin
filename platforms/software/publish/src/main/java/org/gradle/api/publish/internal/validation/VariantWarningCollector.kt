@@ -13,54 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.internal.validation;
-
-import java.util.HashSet;
-import java.util.Set;
+package org.gradle.api.publish.internal.validation
 
 /**
  * Collects all publication warnings for a single variant.
  */
-public class VariantWarningCollector {
-    private Set<String> unsupportedUsages = null;
-    private Set<String> incompatibleUsages = null;
-    private Set<String> variantUnsupported = null;
+class VariantWarningCollector {
+    var unsupportedUsages: MutableSet<String?>? = null
+        private set
+    var incompatibleUsages: MutableSet<String?>? = null
+        private set
+    var variantUnsupported: MutableSet<String?>? = null
+        private set
 
-    public void addUnsupported(String text) {
+    fun addUnsupported(text: String?) {
         if (unsupportedUsages == null) {
-            unsupportedUsages = new HashSet<>();
+            unsupportedUsages = HashSet<String?>()
         }
-        unsupportedUsages.add(text);
+        unsupportedUsages!!.add(text)
     }
 
-    public void addIncompatible(String text) {
+    fun addIncompatible(text: String?) {
         if (incompatibleUsages == null) {
-            incompatibleUsages = new HashSet<>();
+            incompatibleUsages = HashSet<String?>()
         }
-        incompatibleUsages.add(text);
+        incompatibleUsages!!.add(text)
     }
 
-    public Set<String> getVariantUnsupported() {
-        return variantUnsupported;
-    }
+    val isEmpty: Boolean
+        get() = incompatibleUsages == null && unsupportedUsages == null && variantUnsupported == null
 
-    public Set<String> getUnsupportedUsages() {
-        return unsupportedUsages;
-    }
-
-    public Set<String> getIncompatibleUsages() {
-        return incompatibleUsages;
-    }
-
-    public boolean isEmpty() {
-        return incompatibleUsages == null && unsupportedUsages == null && variantUnsupported == null;
-    }
-
-    public void addVariantUnsupported(String text) {
+    fun addVariantUnsupported(text: String?) {
         if (variantUnsupported == null) {
-            variantUnsupported = new HashSet<>();
+            variantUnsupported = HashSet<String?>()
         }
-        variantUnsupported.add(text);
+        variantUnsupported!!.add(text)
     }
 }

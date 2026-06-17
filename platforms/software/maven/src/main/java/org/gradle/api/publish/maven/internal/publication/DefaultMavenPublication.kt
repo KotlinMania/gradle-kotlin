@@ -13,611 +13,537 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publication
 
-package org.gradle.api.publish.maven.internal.publication;
+import org.gradle.api.Action
+import org.gradle.api.DomainObjectCollection
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.file.Directory
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.CompositeDomainObjectSet
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.Module
+import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils.inferStatusFromVersionNumber
+import org.gradle.api.internal.artifacts.repositories.AbstractArtifactRepository.getName
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.component.SoftwareComponentInternal
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.publish.VersionMappingStrategy
+import org.gradle.api.publish.internal.CompositePublicationArtifactSet
+import org.gradle.api.publish.internal.DefaultPublicationArtifactSet
+import org.gradle.api.publish.internal.PublicationArtifactInternal
+import org.gradle.api.publish.internal.PublicationArtifactSet
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal
+import org.gradle.api.publish.maven.MavenArtifact
+import org.gradle.api.publish.maven.MavenArtifactSet
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.publish.maven.internal.artifact.AbstractMavenArtifact
+import org.gradle.api.publish.maven.internal.artifact.DefaultMavenArtifactSet
+import org.gradle.api.publish.maven.internal.artifact.DerivedMavenArtifact
+import org.gradle.api.publish.maven.internal.artifact.SingleOutputTaskMavenArtifact
+import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies
+import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication
+import org.gradle.api.publish.maven.internal.validation.MavenPublicationErrorChecker
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Describables
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.util.internal.CollectionUtils.filter
+import org.gradle.util.internal.GUtil
+import java.io.File
+import java.util.concurrent.Callable
+import java.util.function.Function
+import java.util.stream.Collectors
+import javax.inject.Inject
 
-import org.gradle.api.Action;
-import org.gradle.api.DomainObjectCollection;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.file.Directory;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.CompositeDomainObjectSet;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.Module;
-import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MavenVersionUtils;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.project.ProjectInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.ProviderFactory;
-import org.gradle.api.provider.SetProperty;
-import org.gradle.api.publish.VersionMappingStrategy;
-import org.gradle.api.publish.internal.CompositePublicationArtifactSet;
-import org.gradle.api.publish.internal.DefaultPublicationArtifactSet;
-import org.gradle.api.publish.internal.PublicationArtifactInternal;
-import org.gradle.api.publish.internal.PublicationArtifactSet;
-import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.api.publish.maven.MavenArtifactSet;
-import org.gradle.api.publish.maven.MavenPom;
-import org.gradle.api.publish.maven.internal.artifact.AbstractMavenArtifact;
-import org.gradle.api.publish.maven.internal.artifact.DefaultMavenArtifactSet;
-import org.gradle.api.publish.maven.internal.artifact.DerivedMavenArtifact;
-import org.gradle.api.publish.maven.internal.artifact.SingleOutputTaskMavenArtifact;
-import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication;
-import org.gradle.api.publish.maven.internal.publisher.MavenPublicationCoordinates;
-import org.gradle.api.publish.maven.internal.validation.MavenPublicationErrorChecker;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.api.tasks.TaskProvider;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Describables;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.util.internal.CollectionUtils;
-import org.gradle.util.internal.GUtil;
-import org.jspecify.annotations.Nullable;
+abstract class DefaultMavenPublication @Inject constructor(
+    private val name: String,
+    dependencyMetaDataProvider: DependencyMetaDataProvider,
+    mavenArtifactParser: NotationParser<Any, MavenArtifact>,
+    objectFactory: ObjectFactory,
+    fileCollectionFactory: FileCollectionFactory,
+    private val attributesFactory: AttributesFactory,
+    collectionCallbackActionDecorator: CollectionCallbackActionDecorator,
+    val versionMappingStrategy: VersionMappingStrategyInternal,
+    private val taskDependencyFactory: TaskDependencyFactory,
+    providerFactory: ProviderFactory,
+    project: Project
+) : MavenPublicationInternal {
+    private val projectDisplayName: String
+    private val buildDir: Directory
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+    private val pom: MavenPomInternal
+    private val mainArtifacts: DefaultMavenArtifactSet
+    private val metadataArtifacts: PublicationArtifactSet<MavenArtifact?>
+    private val derivedArtifacts: PublicationArtifactSet<MavenArtifact?>
+    private val publishableArtifacts: PublicationArtifactSet<MavenArtifact?>
 
-import static java.util.stream.Collectors.toMap;
+    private val silencedVariants: MutableSet<String> = HashSet<String>()
+    private var pomArtifact: MavenArtifact? = null
+    private var moduleMetadataArtifact: SingleOutputTaskMavenArtifact? = null
+    private var moduleDescriptorGenerator: TaskProvider<out Task>? = null
+    private var isPublishWithOriginalFileName = false
+    private var alias = false
+    private var populated = false
+    private var artifactsOverridden = false
+    private var silenceAllPublicationWarnings = false
+    var isPublishBuildId: Boolean = false
+        private set
 
-public abstract class DefaultMavenPublication implements MavenPublicationInternal {
+    init {
+        this.projectDisplayName = project.getDisplayName()
+        this.buildDir = project.getLayout().getProjectDirectory()
 
-    private final String name;
-    private final AttributesFactory attributesFactory;
-    private final TaskDependencyFactory taskDependencyFactory;
-    private final String projectDisplayName;
-    private final Directory buildDir;
+        val mavenComponentParser = objectFactory.newInstance<MavenComponentParser>(MavenComponentParser::class.java, mavenArtifactParser)
 
-    private final VersionMappingStrategyInternal versionMappingStrategy;
-    private final MavenPomInternal pom;
-    private final DefaultMavenArtifactSet mainArtifacts;
-    private final PublicationArtifactSet<MavenArtifact> metadataArtifacts;
-    private final PublicationArtifactSet<MavenArtifact> derivedArtifacts;
-    private final PublicationArtifactSet<MavenArtifact> publishableArtifacts;
+        this.componentArtifacts.convention(this.component.map<MutableSet<MavenArtifact>>(Transformer { component: SoftwareComponentInternal? -> mavenComponentParser.parseArtifacts(component!!) }))
+        this.componentArtifacts.finalizeValueOnRead()
 
-    private final Set<String> silencedVariants = new HashSet<>();
-    private MavenArtifact pomArtifact;
-    private SingleOutputTaskMavenArtifact moduleMetadataArtifact;
-    private TaskProvider<? extends Task> moduleDescriptorGenerator;
-    private boolean isPublishWithOriginalFileName;
-    private boolean alias;
-    private boolean populated;
-    private boolean artifactsOverridden;
-    private boolean silenceAllPublicationWarnings;
-    private boolean withBuildIdentifier;
+        this.mainArtifacts = objectFactory.newInstance<DefaultMavenArtifactSet>(
+            DefaultMavenArtifactSet::class.java,
+            name, mavenArtifactParser, fileCollectionFactory, collectionCallbackActionDecorator
+        )
+        this.metadataArtifacts = DefaultPublicationArtifactSet<MavenArtifact?>(MavenArtifact::class.java, "metadata artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator)
+        this.derivedArtifacts = DefaultPublicationArtifactSet<MavenArtifact?>(MavenArtifact::class.java, "derived artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator)
+        this.publishableArtifacts = CompositePublicationArtifactSet<MavenArtifact?>(
+            taskDependencyFactory, MavenArtifact::class.java, *uncheckedCast<Array<PublicationArtifactSet<MavenArtifact?>>?>(
+                arrayOf<PublicationArtifactSet<*>>(mainArtifacts, metadataArtifacts, derivedArtifacts)
+            )!!
+        )
 
-    @Inject
-    public DefaultMavenPublication(
-        String name,
-        DependencyMetaDataProvider dependencyMetaDataProvider,
-        NotationParser<Object, MavenArtifact> mavenArtifactParser,
-        ObjectFactory objectFactory,
-        FileCollectionFactory fileCollectionFactory,
-        AttributesFactory attributesFactory,
-        CollectionCallbackActionDecorator collectionCallbackActionDecorator,
-        VersionMappingStrategyInternal versionMappingStrategy,
-        TaskDependencyFactory taskDependencyFactory,
-        ProviderFactory providerFactory,
-        Project project
-    ) {
-        this.name = name;
-        this.attributesFactory = attributesFactory;
-        this.versionMappingStrategy = versionMappingStrategy;
-        this.taskDependencyFactory = taskDependencyFactory;
-        this.projectDisplayName = project.getDisplayName();
-        this.buildDir = project.getLayout().getProjectDirectory();
-
-        MavenComponentParser mavenComponentParser = objectFactory.newInstance(MavenComponentParser.class, mavenArtifactParser);
-
-        getComponentArtifacts().convention(getComponent().map(mavenComponentParser::parseArtifacts));
-        getComponentArtifacts().finalizeValueOnRead();
-
-        this.mainArtifacts = objectFactory.newInstance(DefaultMavenArtifactSet.class, name, mavenArtifactParser, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.metadataArtifacts = new DefaultPublicationArtifactSet<>(MavenArtifact.class, "metadata artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.derivedArtifacts = new DefaultPublicationArtifactSet<>(MavenArtifact.class, "derived artifacts for " + name, fileCollectionFactory, collectionCallbackActionDecorator);
-        this.publishableArtifacts = new CompositePublicationArtifactSet<>(taskDependencyFactory, MavenArtifact.class, Cast.uncheckedCast(new PublicationArtifactSet<?>[]{mainArtifacts, metadataArtifacts, derivedArtifacts}));
-
-        this.pom = objectFactory.newInstance(DefaultMavenPom.class);
-        this.pom.getWriteGradleMetadataMarker().set(providerFactory.provider(this::writeGradleMetadataMarker));
-        this.pom.getPackagingProperty().convention(providerFactory.provider(this::determinePackagingFromArtifacts));
+        this.pom = objectFactory.newInstance<DefaultMavenPom>(DefaultMavenPom::class.java)
+        this.pom.getWriteGradleMetadataMarker().set(providerFactory.provider<Boolean>(Callable { this.writeGradleMetadataMarker() }))
+        this.pom.getPackagingProperty().convention(providerFactory.provider<String>(Callable { this.determinePackagingFromArtifacts() }))
         this.pom.getDependencies().set(
-            getComponent()
-                .flatMap(component -> mavenComponentParser.parseDependencies(component, versionMappingStrategy, getCoordinates()))
-                .map(result -> {
-                    if (!silenceAllPublicationWarnings) {
-                        result.getWarnings().complete(getDisplayName() + " pom metadata", silencedVariants);
-                    }
-                    return result.getDependencies();
+            this.component
+                .flatMap<MavenComponentParser.ParsedDependencyResult>(Transformer { component: SoftwareComponentInternal? ->
+                    mavenComponentParser.parseDependencies(
+                        component!!,
+                        versionMappingStrategy, coordinates
+                    )
                 })
-        );
+                .map<MavenPomDependencies>(Transformer { result: MavenComponentParser.ParsedDependencyResult? ->
+                    if (!silenceAllPublicationWarnings) {
+                        result!!.getWarnings().complete(this.displayName.toString() + " pom metadata", silencedVariants)
+                    }
+                    result!!.getDependencies()
+                })
+        )
 
-        Module module = dependencyMetaDataProvider.module;
-        MavenPublicationCoordinates coordinates = pom.getCoordinates();
-        coordinates.getGroupId().convention(providerFactory.provider(module::getGroup));
-        coordinates.getArtifactId().convention(providerFactory.provider(module::getName));
-        coordinates.getVersion().convention(providerFactory.provider(module::getVersion));
+        val module: Module = dependencyMetaDataProvider.module
+        val coordinates = pom.getCoordinates()
+        coordinates.getGroupId().convention(providerFactory.provider<String>(module::getGroup))
+        coordinates.getArtifactId().convention(providerFactory.provider<String>(module::getName))
+        coordinates.getVersion().convention(providerFactory.provider<String>(module::getVersion))
     }
 
-    @Override
-    public abstract Property<SoftwareComponentInternal> getComponent();
+    abstract val component: Property<SoftwareComponentInternal>?
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public void withoutBuildIdentifier() {
-        withBuildIdentifier = false;
+    override fun withoutBuildIdentifier() {
+        this.isPublishBuildId = false
     }
 
-    @Override
-    public void withBuildIdentifier() {
-        withBuildIdentifier = true;
+    override fun withBuildIdentifier() {
+        this.isPublishBuildId = true
     }
 
-    @Override
-    public boolean isPublishBuildId() {
-        return withBuildIdentifier;
+    val displayName: DisplayName
+        get() = Describables.withTypeAndName("Maven publication", name)
+
+    val isLegacy: Boolean
+        get() = false
+
+    override fun getPom(): MavenPomInternal {
+        return pom
     }
 
-    @Override
-    public DisplayName getDisplayName() {
-        return Describables.withTypeAndName("Maven publication", name);
-    }
-
-    @Override
-    public boolean isLegacy() {
-        return false;
-    }
-
-    @Override
-    public MavenPomInternal getPom() {
-        return pom;
-    }
-
-    @Override
-    public void setPomGenerator(TaskProvider<? extends Task> pomGenerator) {
+    override fun setPomGenerator(pomGenerator: TaskProvider<out Task>) {
         if (pomArtifact != null) {
-            metadataArtifacts.remove(pomArtifact);
+            metadataArtifacts.remove(pomArtifact)
         }
-        pomArtifact = new SingleOutputTaskMavenArtifact(pomGenerator, "pom", null, taskDependencyFactory);
-        metadataArtifacts.add(pomArtifact);
+        pomArtifact = SingleOutputTaskMavenArtifact(pomGenerator, "pom", null, taskDependencyFactory)
+        metadataArtifacts.add(pomArtifact)
     }
 
-    @Override
-    public void setModuleDescriptorGenerator(TaskProvider<? extends Task> descriptorGenerator) {
-        moduleDescriptorGenerator = descriptorGenerator;
+    override fun setModuleDescriptorGenerator(descriptorGenerator: TaskProvider<out Task>) {
+        moduleDescriptorGenerator = descriptorGenerator
         if (moduleMetadataArtifact != null) {
-            metadataArtifacts.remove(moduleMetadataArtifact);
+            metadataArtifacts.remove(moduleMetadataArtifact)
         }
-        moduleMetadataArtifact = null;
-        updateModuleDescriptorArtifact();
+        moduleMetadataArtifact = null
+        updateModuleDescriptorArtifact()
     }
 
-    private void updateModuleDescriptorArtifact() {
+    private fun updateModuleDescriptorArtifact() {
         if (!canPublishModuleMetadata()) {
-            return;
+            return
         }
         if (moduleDescriptorGenerator == null) {
-            return;
+            return
         }
-        moduleMetadataArtifact = new SingleOutputTaskMavenArtifact(moduleDescriptorGenerator, "module", null, taskDependencyFactory);
-        metadataArtifacts.add(moduleMetadataArtifact);
-        moduleDescriptorGenerator = null;
+        moduleMetadataArtifact = SingleOutputTaskMavenArtifact(moduleDescriptorGenerator, "module", null, taskDependencyFactory)
+        metadataArtifacts.add(moduleMetadataArtifact)
+        moduleDescriptorGenerator = null
     }
 
 
-    @Override
-    public void pom(Action<? super MavenPom> configure) {
-        configure.execute(pom);
+    override fun pom(configure: Action<in MavenPom>) {
+        configure.execute(pom)
     }
 
-    @Override
-    public boolean isAlias() {
-        return alias;
+    override fun isAlias(): Boolean {
+        return alias
     }
 
-    @Override
-    public void setAlias(boolean alias) {
-        this.alias = alias;
+    override fun setAlias(alias: Boolean) {
+        this.alias = alias
     }
 
-    @Override
-    public void from(SoftwareComponent component) {
-        if (getComponent().isPresent()) {
-            throw new InvalidUserDataException(String.format("Maven publication '%s' cannot include multiple components", name));
+    override fun from(component: SoftwareComponent) {
+        if (this.component.isPresent()) {
+            throw InvalidUserDataException(String.format("Maven publication '%s' cannot include multiple components", name))
         }
-        getComponent().set((SoftwareComponentInternal) component);
-        getComponent().finalizeValue();
-        artifactsOverridden = false;
+        this.component.set(component as SoftwareComponentInternal)
+        this.component.finalizeValue()
+        artifactsOverridden = false
 
-        updateModuleDescriptorArtifact();
+        updateModuleDescriptorArtifact()
     }
 
     // TODO: This method should be removed in favor of lazily adding artifacts to the publication state.
     // This is currently blocked by Signing eagerly realizing the publication artifacts.
-    private void populateFromComponent() {
+    private fun populateFromComponent() {
         if (populated) {
-            return;
+            return
         }
-        populated = true;
-        if (!artifactsOverridden && getComponentArtifacts().isPresent()) {
-            mainArtifacts.addAll(getComponentArtifacts().get());
-        }
-    }
-
-    protected abstract SetProperty<MavenArtifact> getComponentArtifacts();
-
-    @Override
-    public MavenArtifact artifact(Object source) {
-        return mainArtifacts.artifact(source);
-    }
-
-    @Override
-    public MavenArtifact artifact(Object source, Action<? super MavenArtifact> config) {
-        return mainArtifacts.artifact(source, config);
-    }
-
-    @Override
-    public MavenArtifactSet getArtifacts() {
-        populateFromComponent();
-        return mainArtifacts;
-    }
-
-    @Override
-    public void setArtifacts(Iterable<?> sources) {
-        artifactsOverridden = true;
-        mainArtifacts.clear();
-        for (Object source : sources) {
-            artifact(source);
+        populated = true
+        if (!artifactsOverridden && this.componentArtifacts.isPresent()) {
+            mainArtifacts.addAll(this.componentArtifacts.get())
         }
     }
 
-    @Override
-    public String getGroupId() {
-        return pom.getCoordinates().getGroupId().get();
+    protected abstract val componentArtifacts: SetProperty<MavenArtifact>?
+
+    override fun artifact(source: Any): MavenArtifact {
+        return mainArtifacts.artifact(source)
     }
 
-    @Override
-    public void setGroupId(String groupId) {
-        pom.getCoordinates().getGroupId().set(groupId);
+    override fun artifact(source: Any, config: Action<in MavenArtifact>): MavenArtifact {
+        return mainArtifacts.artifact(source, config)
     }
 
-    @Override
-    public String getArtifactId() {
-        return pom.getCoordinates().getArtifactId().get();
+    override fun getArtifacts(): MavenArtifactSet {
+        populateFromComponent()
+        return mainArtifacts
     }
 
-    @Override
-    public void setArtifactId(String artifactId) {
-        pom.getCoordinates().getArtifactId().set(artifactId);
+    override fun setArtifacts(sources: Iterable<*>) {
+        artifactsOverridden = true
+        mainArtifacts.clear()
+        for (source in sources) {
+            artifact(source!!)
+        }
     }
 
-    @Override
-    public String getVersion() {
-        return pom.getCoordinates().getVersion().get();
+    override fun getGroupId(): String {
+        return pom.getCoordinates().getGroupId().get()
     }
 
-    @Override
-    public void setVersion(String version) {
-        pom.getCoordinates().getVersion().set(version);
+    override fun setGroupId(groupId: String) {
+        pom.getCoordinates().getGroupId().set(groupId)
     }
 
-    @Override
-    public void versionMapping(Action<? super VersionMappingStrategy> configureAction) {
-        configureAction.execute(versionMappingStrategy);
+    override fun getArtifactId(): String {
+        return pom.getCoordinates().getArtifactId().get()
     }
 
-    @Override
-    public void suppressPomMetadataWarningsFor(String variantName) {
-        this.silencedVariants.add(variantName);
+    override fun setArtifactId(artifactId: String) {
+        pom.getCoordinates().getArtifactId().set(artifactId)
     }
 
-    @Override
-    public void suppressAllPomMetadataWarnings() {
-        this.silenceAllPublicationWarnings = true;
+    override fun getVersion(): String {
+        return pom.getCoordinates().getVersion().get()
     }
 
-    @Override
-    public VersionMappingStrategyInternal getVersionMappingStrategy() {
-        return versionMappingStrategy;
+    override fun setVersion(version: String) {
+        pom.getCoordinates().getVersion().set(version)
     }
 
-    private boolean writeGradleMetadataMarker() {
-        return canPublishModuleMetadata() && moduleMetadataArtifact != null && moduleMetadataArtifact.isEnabled();
+    override fun versionMapping(configureAction: Action<in VersionMappingStrategy>) {
+        configureAction.execute(versionMappingStrategy)
     }
 
-    @Override
-    public PublicationArtifactSet<MavenArtifact> getPublishableArtifacts() {
-        populateFromComponent();
-        return publishableArtifacts;
+    override fun suppressPomMetadataWarningsFor(variantName: String) {
+        this.silencedVariants.add(variantName)
     }
 
-    @Override
-    public void allPublishableArtifacts(Action<? super MavenArtifact> action) {
-        publishableArtifacts.all(action);
+    override fun suppressAllPomMetadataWarnings() {
+        this.silenceAllPublicationWarnings = true
     }
 
-    @Override
-    public void whenPublishableArtifactRemoved(Action<? super MavenArtifact> action) {
-        publishableArtifacts.whenObjectRemoved(action);
+    private fun writeGradleMetadataMarker(): Boolean {
+        return canPublishModuleMetadata() && moduleMetadataArtifact != null && moduleMetadataArtifact!!.isEnabled()
     }
 
-    @Override
-    public MavenArtifact addDerivedArtifact(MavenArtifact originalArtifact, DerivedArtifact file) {
-        MavenArtifact artifact = new DerivedMavenArtifact((AbstractMavenArtifact) originalArtifact, file, taskDependencyFactory);
-        derivedArtifacts.add(artifact);
-        return artifact;
+    override fun getPublishableArtifacts(): PublicationArtifactSet<MavenArtifact?> {
+        populateFromComponent()
+        return publishableArtifacts
     }
 
-    @Override
-    public void removeDerivedArtifact(MavenArtifact artifact) {
-        derivedArtifacts.remove(artifact);
+    override fun allPublishableArtifacts(action: Action<in MavenArtifact>) {
+        publishableArtifacts.all(action)
     }
 
-    @Override
-    public MavenNormalizedPublication asNormalisedPublication() {
-        populateFromComponent();
+    override fun whenPublishableArtifactRemoved(action: Action<in MavenArtifact>) {
+        publishableArtifacts.whenObjectRemoved(action)
+    }
+
+    override fun addDerivedArtifact(originalArtifact: MavenArtifact, file: PublicationInternal.DerivedArtifact): MavenArtifact {
+        val artifact: MavenArtifact = DerivedMavenArtifact(originalArtifact as AbstractMavenArtifact, file, taskDependencyFactory)
+        derivedArtifacts.add(artifact)
+        return artifact
+    }
+
+    override fun removeDerivedArtifact(artifact: MavenArtifact) {
+        derivedArtifacts.remove(artifact)
+    }
+
+    override fun asNormalisedPublication(): MavenNormalizedPublication {
+        populateFromComponent()
 
         // Preserve identity of artifacts
-        Map<MavenArtifact, MavenArtifact> normalizedArtifacts = normalizedMavenArtifacts();
+        val normalizedArtifacts = normalizedMavenArtifacts()
 
-        return new MavenNormalizedPublication(
+        return MavenNormalizedPublication(
             name,
             pom.getCoordinates(),
             pom.getPackaging(),
             normalizedArtifactFor(getPomArtifact(), normalizedArtifacts),
             normalizedArtifactFor(determineMainArtifact(), normalizedArtifacts),
-            new LinkedHashSet<>(normalizedArtifacts.values())
-        );
+            LinkedHashSet<MavenArtifact?>(normalizedArtifacts.values)
+        )
     }
 
-    @Nullable
-    private static MavenArtifact normalizedArtifactFor(@Nullable MavenArtifact artifact, Map<MavenArtifact, MavenArtifact> normalizedArtifacts) {
-        if (artifact == null) {
-            return null;
-        }
-        MavenArtifact normalized = normalizedArtifacts.get(artifact);
-        if (normalized != null) {
-            return normalized;
-        }
-        return normalizedArtifactFor(artifact);
-    }
-
-    private Map<MavenArtifact, MavenArtifact> normalizedMavenArtifacts() {
+    private fun normalizedMavenArtifacts(): MutableMap<MavenArtifact, MavenArtifact> {
         return artifactsToBePublished()
             .stream()
-            .collect(toMap(
-                Function.identity(),
-                DefaultMavenPublication::normalizedArtifactFor
-            ));
+            .collect(
+                Collectors.toMap(
+                    Function.identity<MavenArtifact>(),
+                    Function { artifact: MavenArtifact? -> Companion.normalizedArtifactFor(artifact!!) }
+                ))
     }
 
-    private static MavenArtifact normalizedArtifactFor(MavenArtifact artifact) {
-        // TODO: introduce something like a NormalizedMavenArtifact to capture the required MavenArtifact
-        //  information and only that instead of having MavenArtifact references in
-        //  MavenNormalizedPublication
-        return new SerializableMavenArtifact(artifact);
-    }
-
-    private DomainObjectSet<MavenArtifact> artifactsToBePublished() {
-        return CompositeDomainObjectSet.create(
-            MavenArtifact.class,
-            Cast.uncheckedCast(
-                new DomainObjectCollection<?>[]{mainArtifacts, metadataArtifacts, derivedArtifacts}
+    private fun artifactsToBePublished(): DomainObjectSet<MavenArtifact> {
+        return CompositeDomainObjectSet.create<MavenArtifact>(
+            MavenArtifact::class.java,
+            *uncheckedCast<Array<DomainObjectCollection<out MavenArtifact>>?>(
+                arrayOf<DomainObjectCollection<*>>(mainArtifacts, metadataArtifacts, derivedArtifacts)
             )
-        ).matching(element -> {
-            if (!((PublicationArtifactInternal) element).shouldBePublished()) {
-                return false;
+        ).matching(org.gradle.api.specs.Spec { element: MavenArtifact? ->
+            if (!(element as PublicationArtifactInternal).shouldBePublished()) {
+                return@matching false
             }
-            if (moduleMetadataArtifact == element) {
+            if (moduleMetadataArtifact === element) {
                 // We temporarily want to allow skipping the publication of Gradle module metadata
-                return moduleMetadataArtifact.isEnabled();
+                return@matching moduleMetadataArtifact!!.isEnabled()
             }
-            return true;
-        });
+            true
+        })
     }
 
-    private MavenArtifact getPomArtifact() {
-        if (pomArtifact == null) {
-            throw new IllegalStateException("pomArtifact not set for publication");
-        }
-        return pomArtifact;
+    private fun getPomArtifact(): MavenArtifact {
+        checkNotNull(pomArtifact) { "pomArtifact not set for publication" }
+        return pomArtifact!!
     }
 
     // TODO Remove this attempt to guess packaging from artifacts. Packaging should come from component, or be explicitly set.
-    private String determinePackagingFromArtifacts() {
-        Set<MavenArtifact> unclassifiedArtifacts = getUnclassifiedArtifactsWithExtension();
-        if (unclassifiedArtifacts.size() == 1) {
-            return unclassifiedArtifacts.iterator().next().getExtension();
+    private fun determinePackagingFromArtifacts(): String {
+        val unclassifiedArtifacts = this.unclassifiedArtifactsWithExtension
+        if (unclassifiedArtifacts.size == 1) {
+            return unclassifiedArtifacts.iterator().next().getExtension()
         }
-        return "pom";
+        return "pom"
     }
 
-    @Nullable
-    private MavenArtifact determineMainArtifact() {
-        Set<MavenArtifact> unclassifiedArtifacts = getUnclassifiedArtifactsWithExtension();
+    private fun determineMainArtifact(): MavenArtifact? {
+        val unclassifiedArtifacts = this.unclassifiedArtifactsWithExtension
         if (unclassifiedArtifacts.isEmpty()) {
-            return null;
+            return null
         }
-        if (unclassifiedArtifacts.size() == 1) {
+        if (unclassifiedArtifacts.size == 1) {
             // Pom packaging doesn't matter when we have a single unclassified artifact
-            return unclassifiedArtifacts.iterator().next();
+            return unclassifiedArtifacts.iterator().next()
         }
-        for (MavenArtifact unclassifiedArtifact : unclassifiedArtifacts) {
+        for (unclassifiedArtifact in unclassifiedArtifacts) {
             // With multiple unclassified artifacts, choose the one with extension matching pom packaging
-            String packaging = pom.getPackaging();
-            if (unclassifiedArtifact.getExtension().equals(packaging)) {
-                return unclassifiedArtifact;
+            val packaging = pom.getPackaging()
+            if (unclassifiedArtifact.getExtension() == packaging) {
+                return unclassifiedArtifact
             }
         }
-        return null;
+        return null
     }
 
-    private Set<MavenArtifact> getUnclassifiedArtifactsWithExtension() {
-        populateFromComponent();
-        return CollectionUtils.filter(mainArtifacts, mavenArtifact -> hasNoClassifier(mavenArtifact) && hasExtension(mavenArtifact));
-    }
-
-    private static boolean hasNoClassifier(MavenArtifact element) {
-        return element.getClassifier() == null || element.getClassifier().length() == 0;
-    }
-
-    private static boolean hasExtension(MavenArtifact element) {
-        return element.getExtension() != null && element.getExtension().length() > 0;
-    }
-
-    @Override
-    public ModuleVersionIdentifier getCoordinates() {
-        return DefaultModuleVersionIdentifier.newId(getGroupId(), getArtifactId(), getVersion());
-    }
-
-    @Nullable
-    @Override
-    public <T> T getCoordinates(Class<T> type) {
-        if (type.isAssignableFrom(ModuleVersionIdentifier.class)) {
-            return type.cast(getCoordinates());
+    private val unclassifiedArtifactsWithExtension: MutableSet<MavenArtifact>
+        get() {
+            populateFromComponent()
+            return filter<MavenArtifact?>(
+                mainArtifacts,
+                org.gradle.api.specs.Spec { mavenArtifact: MavenArtifact? ->
+                    Companion.hasNoClassifier(mavenArtifact!!) && Companion.hasExtension(
+                        mavenArtifact
+                    )
+                })
         }
-        return null;
+
+    val coordinates: ModuleVersionIdentifier
+        get() = DefaultModuleVersionIdentifier.newId(getGroupId(), getArtifactId(), getVersion())
+
+    override fun <T> getCoordinates(type: Class<T?>): T? {
+        if (type.isAssignableFrom(ModuleVersionIdentifier::class.java)) {
+            return type.cast(coordinates)
+        }
+        return null
     }
 
-    @Override
-    public void publishWithOriginalFileName() {
-        this.isPublishWithOriginalFileName = true;
+    override fun publishWithOriginalFileName() {
+        this.isPublishWithOriginalFileName = true
     }
 
-    private boolean canPublishModuleMetadata() {
+    private fun canPublishModuleMetadata(): Boolean {
         // Cannot yet publish module metadata without component
-        return getComponent().isPresent();
+        return this.component.isPresent()
     }
 
-    @Override
-    public PublishedFile getPublishedFile(final PublishArtifact source) {
-        populateFromComponent();
-        if (getComponent().isPresent()) {
+    override fun getPublishedFile(source: PublishArtifact): PublicationInternal.PublishedFile {
+        populateFromComponent()
+        if (this.component.isPresent()) {
             MavenPublicationErrorChecker.checkThatArtifactIsPublishedUnmodified(
-                projectDisplayName, buildDir.getAsFile().toPath().toAbsolutePath(), getComponent().get().getName(),
+                projectDisplayName, buildDir.getAsFile().toPath().toAbsolutePath(), this.component.get().getName(),
                 source, mainArtifacts
-            );
+            )
         }
-        final String publishedUrl = getPublishedUrl(source);
-        final String publishedName = isPublishWithOriginalFileName ? source.getFile().getName() : publishedUrl;
-        return new PublishedFile() {
-            @Override
-            public String getName() {
-                return publishedName;
-            }
-
-            @Override
-            public String getUri() {
-                return publishedUrl;
-            }
-        };
+        val uri = getPublishedUrl(source)
+        val name = if (isPublishWithOriginalFileName) source.getFile().getName() else this.uri
+        return object : PublicationInternal.PublishedFile {
+        }
     }
 
-    @Nullable
-    @Override
-    public ImmutableAttributes getAttributes() {
-        String version = pom.getCoordinates().getVersion().get();
-        String status = MavenVersionUtils.inferStatusFromVersionNumber(version);
-        return attributesFactory.of(ProjectInternal.STATUS_ATTRIBUTE, status);
+    val attributes: ImmutableAttributes?
+        get() {
+            val version = pom.getCoordinates().getVersion().get()
+            val status = inferStatusFromVersionNumber(version)
+            return attributesFactory.of<String>(ProjectInternal.STATUS_ATTRIBUTE, status)
+        }
+
+    private fun getPublishedUrl(source: PublishArtifact): String {
+        return getArtifactFileName(source.getClassifier()!!, source.getExtension())
     }
 
-    private String getPublishedUrl(PublishArtifact source) {
-        return getArtifactFileName(source.getClassifier(), source.getExtension());
-    }
-
-    private String getArtifactFileName(String classifier, String extension) {
-        StringBuilder artifactPath = new StringBuilder();
-        ModuleVersionIdentifier coordinates = getCoordinates();
-        artifactPath.append(coordinates.getName());
-        artifactPath.append('-');
-        artifactPath.append(coordinates.getVersion());
+    private fun getArtifactFileName(classifier: String, extension: String): String {
+        val artifactPath = StringBuilder()
+        val coordinates = coordinates
+        artifactPath.append(coordinates.getName())
+        artifactPath.append('-')
+        artifactPath.append(coordinates.getVersion())
         if (GUtil.isTrue(classifier)) {
-            artifactPath.append('-');
-            artifactPath.append(classifier);
+            artifactPath.append('-')
+            artifactPath.append(classifier)
         }
         if (GUtil.isTrue(extension)) {
-            artifactPath.append('.');
-            artifactPath.append(extension);
+            artifactPath.append('.')
+            artifactPath.append(extension)
         }
-        return artifactPath.toString();
+        return artifactPath.toString()
     }
 
-    private static class SerializableMavenArtifact implements MavenArtifact, PublicationArtifactInternal {
+    private class SerializableMavenArtifact(artifact: MavenArtifact) : MavenArtifact, PublicationArtifactInternal {
+        val file: File
+        private val extension: String
+        private val classifier: String
+        private val shouldBePublished: Boolean
 
-        private final File file;
-        private final String extension;
-        private final String classifier;
-        private final boolean shouldBePublished;
-
-        public SerializableMavenArtifact(MavenArtifact artifact) {
-            PublicationArtifactInternal artifactInternal = (PublicationArtifactInternal) artifact;
-            this.file = artifact.getFile();
-            this.extension = artifact.getExtension();
-            this.classifier = artifact.getClassifier();
-            this.shouldBePublished = artifactInternal.shouldBePublished();
+        init {
+            val artifactInternal = artifact as PublicationArtifactInternal
+            this.file = artifact.file
+            this.extension = artifact.getExtension()
+            this.classifier = artifact.getClassifier()!!
+            this.shouldBePublished = artifactInternal.shouldBePublished()
         }
 
-        @Override
-        public String getExtension() {
-            return extension;
+        override fun getExtension(): String {
+            return extension
         }
 
-        @Override
-        public void setExtension(String extension) {
-            throw new IllegalStateException();
+        override fun setExtension(extension: String) {
+            throw IllegalStateException()
         }
 
-        @Nullable
-        @Override
-        public String getClassifier() {
-            return classifier;
+        override fun getClassifier(): String? {
+            return classifier
         }
 
-        @Override
-        public void setClassifier(@Nullable String classifier) {
-            throw new IllegalStateException();
+        override fun setClassifier(classifier: String?) {
+            throw IllegalStateException()
         }
 
-        @Override
-        public File getFile() {
-            return file;
+        override fun builtBy(vararg tasks: Any) {
+            throw IllegalStateException()
         }
 
-        @Override
-        public void builtBy(Object... tasks) {
-            throw new IllegalStateException();
+        override fun getBuildDependencies(): TaskDependency? {
+            throw IllegalStateException()
         }
 
-        @Override
-        public TaskDependency getBuildDependencies() {
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public boolean shouldBePublished() {
-            return shouldBePublished;
+        override fun shouldBePublished(): Boolean {
+            return shouldBePublished
         }
     }
 
+    companion object {
+        private fun normalizedArtifactFor(artifact: MavenArtifact?, normalizedArtifacts: MutableMap<MavenArtifact, MavenArtifact>): MavenArtifact? {
+            if (artifact == null) {
+                return null
+            }
+            val normalized = normalizedArtifacts.get(artifact)
+            if (normalized != null) {
+                return normalized
+            }
+            return normalizedArtifactFor(artifact)
+        }
+
+        private fun normalizedArtifactFor(artifact: MavenArtifact): MavenArtifact {
+            // TODO: introduce something like a NormalizedMavenArtifact to capture the required MavenArtifact
+            //  information and only that instead of having MavenArtifact references in
+            //  MavenNormalizedPublication
+            return SerializableMavenArtifact(artifact)
+        }
+
+        private fun hasNoClassifier(element: MavenArtifact): Boolean {
+            return element.getClassifier() == null || element.getClassifier()!!.length == 0
+        }
+
+        private fun hasExtension(element: MavenArtifact): Boolean {
+            return element.getExtension() != null && element.getExtension().length > 0
+        }
+    }
 }

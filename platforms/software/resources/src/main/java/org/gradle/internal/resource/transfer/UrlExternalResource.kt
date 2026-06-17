@@ -13,96 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.ResourceExceptions
+import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
+import java.net.URISyntaxException
+import java.net.URL
 
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.ResourceExceptions;
-import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.List;
-
-public class UrlExternalResource extends AbstractExternalResourceAccessor implements ExternalResourceConnector {
-    public static ExternalResource open(URL url) throws IOException {
-        URI uri;
+class UrlExternalResource : AbstractExternalResourceAccessor(), ExternalResourceConnector {
+    @Throws(ResourceException::class)
+    override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
         try {
-            uri = url.toURI();
-        } catch (URISyntaxException e) {
-            throw UncheckedException.throwAsUncheckedException(e);
-        }
-        UrlExternalResource connector = new UrlExternalResource();
-        return new AccessorBackedExternalResource(new ExternalResourceName(uri), connector, connector, connector, false);
-    }
-
-    @Nullable
-    @Override
-    public ExternalResourceMetaData getMetaData(ExternalResourceName location, boolean revalidate) throws ResourceException {
-        try {
-            URL url = location.getUri().toURL();
-            URLConnection connection = url.openConnection();
+            val url = location.getUri().toURL()
+            val connection = url.openConnection()
             try {
-                return new DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength(), connection.getContentType(), null, null);
+                return DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
             } finally {
-                connection.getInputStream().close();
+                connection.getInputStream().close()
             }
-        } catch (FileNotFoundException e) {
-            return null;
-        } catch (Exception e) {
-            throw ResourceExceptions.getFailed(location.getUri(), e);
+        } catch (e: FileNotFoundException) {
+            return null
+        } catch (e: Exception) {
+            throw ResourceExceptions.getFailed(location.getUri(), e)
         }
     }
 
-    @Nullable
-    @Override
-    public ExternalResourceReadResponse openResource(final ExternalResourceName location, boolean revalidate) throws ResourceException {
+    @Throws(ResourceException::class)
+    public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
         try {
-            URL url = location.getUri().toURL();
-            final URLConnection connection = url.openConnection();
-            final InputStream inputStream = connection.getInputStream();
-            return new ExternalResourceReadResponse() {
-                @Override
-                public InputStream openStream() {
-                    return inputStream;
+            val url = location.getUri().toURL()
+            val connection = url.openConnection()
+            val inputStream = connection.getInputStream()
+            return object : ExternalResourceReadResponse {
+                override fun openStream(): InputStream {
+                    return inputStream
                 }
 
-                @Override
-                public ExternalResourceMetaData getMetaData() {
-                    return new DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength(), connection.getContentType(), null, null);
+                override fun getMetaData(): ExternalResourceMetaData {
+                    return DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
                 }
 
-                @Override
-                public void close() throws IOException {
-                    inputStream.close();
+                @Throws(IOException::class)
+                override fun close() {
+                    inputStream.close()
                 }
-            };
-        } catch (FileNotFoundException e) {
-            return null;
-        } catch (Exception e) {
-            throw ResourceExceptions.getFailed(location.getUri(), e);
+            }
+        } catch (e: FileNotFoundException) {
+            return null
+        } catch (e: Exception) {
+            throw ResourceExceptions.getFailed(location.getUri(), e)
         }
     }
 
-    @Nullable
-    @Override
-    public List<String> list(ExternalResourceName parent) throws ResourceException {
-        throw new UnsupportedOperationException();
+    @Throws(ResourceException::class)
+    override fun list(parent: ExternalResourceName?): MutableList<String?>? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public void upload(ReadableContent resource, ExternalResourceName destination) throws IOException {
-        throw new UnsupportedOperationException();
+    @Throws(IOException::class)
+    override fun upload(resource: ReadableContent?, destination: ExternalResourceName?) {
+        throw UnsupportedOperationException()
+    }
+
+    companion object {
+        @Throws(IOException::class)
+        fun open(url: URL): ExternalResource {
+            val uri: URI?
+            try {
+                uri = url.toURI()
+            } catch (e: URISyntaxException) {
+                throw throwAsUncheckedException(e)
+            }
+            val connector = UrlExternalResource()
+            return AccessorBackedExternalResource(ExternalResourceName(uri), connector, connector, connector, false)
+        }
     }
 }

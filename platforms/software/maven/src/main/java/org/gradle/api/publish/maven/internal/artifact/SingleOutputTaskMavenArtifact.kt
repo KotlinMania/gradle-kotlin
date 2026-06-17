@@ -13,60 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import org.gradle.api.Task
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.tasks.TaskProvider
+import java.util.function.Consumer
 
-import org.gradle.api.Task;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.tasks.TaskProvider;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
+class SingleOutputTaskMavenArtifact(private val generator: TaskProvider<out Task>, private val extension: String?, private val classifier: String?, taskDependencyFactory: TaskDependencyFactory) :
+    AbstractMavenArtifact(taskDependencyFactory) {
+    private val buildDependencies: TaskDependencyInternal?
 
-import java.io.File;
-
-public class SingleOutputTaskMavenArtifact extends AbstractMavenArtifact {
-    private final TaskProvider<? extends Task> generator;
-    private final String extension;
-    private final String classifier;
-    private final TaskDependencyInternal buildDependencies;
-
-    public SingleOutputTaskMavenArtifact(TaskProvider<? extends Task> generator, String extension, String classifier, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.generator = generator;
-        this.extension = extension;
-        this.classifier = classifier;
-        this.buildDependencies = taskDependencyFactory.visitingDependencies(context -> context.add(getGenerator()));
+    init {
+        this.buildDependencies = taskDependencyFactory.visitingDependencies(Consumer { context: TaskDependencyResolveContext? -> context!!.add(getGenerator()) })
     }
 
-    @Override
-    public File getFile() {
-        return getGenerator().getOutputs().getFiles().getSingleFile();
+    val file: File
+        get() = getGenerator().getOutputs().getFiles().getSingleFile()
+
+    private fun getGenerator(): Task {
+        return generator.get()
     }
 
-    private Task getGenerator() {
-        return generator.get();
+    override fun getDefaultExtension(): String? {
+        return extension
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return extension;
+    override fun getDefaultClassifier(): String? {
+        return classifier
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return classifier;
+    override fun getDefaultBuildDependencies(): TaskDependencyInternal? {
+        return buildDependencies
     }
 
-    @Override
-    protected TaskDependencyInternal getDefaultBuildDependencies() {
-        return buildDependencies;
-    }
+    val isEnabled: Boolean
+        get() = getGenerator().getEnabled()
 
-    public boolean isEnabled() {
-        return getGenerator().getEnabled();
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return isEnabled();
+    override fun shouldBePublished(): Boolean {
+        return this.isEnabled
     }
 }

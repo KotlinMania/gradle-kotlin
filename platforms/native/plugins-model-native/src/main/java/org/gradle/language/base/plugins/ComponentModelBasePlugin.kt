@@ -145,7 +145,7 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
         ) {
             val transformations = BinarySourceTransformations(tasks!!, languageTransforms!!, serviceRegistry!!)
             for (binary in binaries) {
-                if (binary.isLegacyBinary()) {
+                if (binary.isLegacyBinary) {
                     continue
                 }
 
@@ -178,7 +178,7 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
         fun collectBinaries(binaries: BinaryContainer, componentSpecs: ComponentSpecContainer) {
             for (componentSpec in componentSpecs.withType<VariantComponentSpec>(VariantComponentSpec::class.java)) {
                 for (binary in componentSpec.getBinaries().withType<BinarySpecInternal>(BinarySpecInternal::class.java).values()) {
-                    binaries.put(binary.getProjectScopedName(), binary)
+                    binaries.put(binary.projectScopedName, binary)
                 }
             }
         }
@@ -189,7 +189,7 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
             var hasBuildableBinaries = false
             for (component in components.withType<VariantComponentSpec>(VariantComponentSpec::class.java)) {
                 for (binary in component.getBinaries().withType<BinarySpecInternal>(BinarySpecInternal::class.java)) {
-                    if (binary.isBuildable()) {
+                    if (binary.isBuildable) {
                         assemble.dependsOn(binary)
                         hasBuildableBinaries = true
                     } else {
@@ -213,7 +213,7 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
                     for (binary in notBuildable) {
                         formatter.node(binary.getDisplayName())
                         formatter.startChildren()
-                        binary.getBuildAbility().explain(formatter)
+                        binary.buildAbility.explain(formatter)
                         formatter.endChildren()
                     }
                     formatter.endChildren()
@@ -235,20 +235,20 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
         @Finalize
         fun applyFallbackSourceConventions(@Each languageSourceSet: LanguageSourceSet, projectIdentifier: ProjectIdentifier) {
             // Only apply default locations when none explicitly configured
-            if (languageSourceSet.getSource().getSourceDirectories().isEmpty()) {
+            if (languageSourceSet.source.getSourceDirectories().isEmpty()) {
                 val baseDir = projectIdentifier.getProjectDir()
                 val defaultSourceDir =
-                    Joiner.on(File.separator).skipNulls().join(baseDir.getPath(), "src", Strings.emptyToNull(languageSourceSet.getParentName()), Strings.emptyToNull(languageSourceSet.getName()))
-                languageSourceSet.getSource().srcDir(defaultSourceDir)
+                    Joiner.on(File.separator).skipNulls().join(baseDir.getPath(), "src", Strings.emptyToNull(languageSourceSet.parentName), Strings.emptyToNull(languageSourceSet.getName()))
+                languageSourceSet.source.srcDir(defaultSourceDir)
             }
         }
 
         @Finalize
         fun defineBinariesCheckTasks(@Each binary: BinarySpecInternal, taskInstantiator: NamedEntityInstantiator<Task?>) {
-            if (binary.isLegacyBinary()) {
+            if (binary.isLegacyBinary) {
                 return
             }
-            val binaryLifecycleTask: TaskInternal = taskInstantiator.create<DefaultTask>(binary.getNamingScheme().getTaskName("check"), DefaultTask::class.java)
+            val binaryLifecycleTask: TaskInternal = taskInstantiator.create<DefaultTask>(binary.namingScheme.getTaskName("check"), DefaultTask::class.java)
             binaryLifecycleTask.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP)
             binaryLifecycleTask.setDescription("Check " + binary)
             binary.setCheckTask(binaryLifecycleTask)
@@ -291,7 +291,7 @@ abstract class ComponentModelBasePlugin : Plugin<Project?> {
                 // TODO - sources is not actual an input to binaries, it's an input to each binary
                 binaries.withType<BinarySpecInternal?>(BinarySpecInternal::class.java, object : Action<BinarySpecInternal?> {
                     override fun execute(binary: BinarySpecInternal) {
-                        binary.getInputs().addAll(this.sources.values())
+                        binary.inputs.addAll(this.sources.values())
                     }
                 })
             }

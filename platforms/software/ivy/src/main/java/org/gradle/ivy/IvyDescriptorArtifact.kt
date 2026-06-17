@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.ivy
 
-package org.gradle.ivy;
-
-import org.gradle.api.component.Artifact;
+import org.gradle.api.component.Artifact
 
 /**
  * An Ivy descriptor artifact.
  */
-public interface IvyDescriptorArtifact extends Artifact {
-}
+interface IvyDescriptorArtifact : Artifact

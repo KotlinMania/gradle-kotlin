@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local;
+package org.gradle.internal.resource.local
 
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.resource.Resource;
-
-import java.io.File;
+import org.gradle.internal.resource.Resource
 
 /**
  * Represents a file backed local resource.
  */
-public interface LocallyAvailableResource extends Resource {
+interface LocallyAvailableResource : Resource {
+    val file: File?
 
-    File getFile();
+    val sha1: HashCode?
 
-    HashCode getSha1();
+    val lastModified: Long
 
-    long getLastModified();
-
-    long getContentLength();
+    val contentLength: Long
 }

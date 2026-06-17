@@ -13,220 +13,174 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.component;
+package org.gradle.api.publish.internal.component
 
-import org.apache.commons.lang3.StringUtils;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.NamedDomainObjectContainer;
-import org.gradle.api.artifacts.ConfigurablePublishArtifact;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ConfigurationVariant;
-import org.gradle.api.artifacts.PublishArtifactSet;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.component.ConfigurationVariantDetails;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.component.UsageContext;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.internal.Actions;
-import org.gradle.internal.deprecation.DeprecationLogger;
-import org.jspecify.annotations.Nullable;
+import org.apache.commons.lang3.StringUtils
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.artifacts.ConfigurablePublishArtifact
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationVariant
+import org.gradle.api.artifacts.PublishArtifactSet
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.component.ConfigurationVariantDetails
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.component.UsageContext
+import org.gradle.api.model.ObjectFactory
+import org.gradle.internal.Actions
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateBehaviour
+import java.util.function.Consumer
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
-import java.util.function.Consumer;
-
-public class ConfigurationVariantMapping {
-    private final ConfigurationInternal outgoingConfiguration;
-    private Action<? super ConfigurationVariantDetails> action;
-    private final ObjectFactory objectFactory;
-
-    public ConfigurationVariantMapping(ConfigurationInternal outgoingConfiguration, Action<? super ConfigurationVariantDetails> action, ObjectFactory objectFactory) {
-        this.outgoingConfiguration = outgoingConfiguration;
-        this.action = action;
-        this.objectFactory = objectFactory;
+class ConfigurationVariantMapping(private val outgoingConfiguration: ConfigurationInternal, private var action: Action<in ConfigurationVariantDetails>, private val objectFactory: ObjectFactory) {
+    fun addAction(action: Action<in ConfigurationVariantDetails>) {
+        this.action = Actions.composite<ConfigurationVariantDetails>(this.action, action)
     }
 
-    public void addAction(Action<? super ConfigurationVariantDetails> action) {
-        this.action = Actions.composite(this.action, action);
-    }
-
-    public void collectVariants(Consumer<UsageContext> collector) {
-        outgoingConfiguration.runDependencyActions();
-        outgoingConfiguration.markAsObserved("published as a variant");
-        outgoingConfiguration.markDependenciesObserved();
-        String outgoingConfigurationName = outgoingConfiguration.getName();
+    fun collectVariants(collector: Consumer<UsageContext>) {
+        outgoingConfiguration.runDependencyActions()
+        outgoingConfiguration.markAsObserved("published as a variant")
+        outgoingConfiguration.markDependenciesObserved()
+        val outgoingConfigurationName = outgoingConfiguration.getName()
 
         if (!outgoingConfiguration.isTransitive()) {
-            DeprecationLogger.deprecateBehaviour(String.format("Publishing non-transitive configuration '%s'.", outgoingConfigurationName))
-                .withContext("Setting 'transitive = false' at the configuration level is ignored by publishing.")
-                .withAdvice("Consider using 'transitive = false' on each dependency if this needs to be published.")
+            deprecateBehaviour(String.format("Publishing non-transitive configuration '%s'.", outgoingConfigurationName))
+                .withContext("Setting 'transitive = false' at the configuration level is ignored by publishing.")!!
+                .withAdvice("Consider using 'transitive = false' on each dependency if this needs to be published.")!!
                 .willBecomeAnErrorInGradle10()
-                .undocumented() // TODO: We don't have documentation for this anymore?
-                .nagUser();
+                .undocumented()!! // TODO: We don't have documentation for this anymore?
+                .nagUser()
         }
 
-        Set<String> seen = new HashSet<>();
+        val seen: MutableSet<String> = HashSet<String>()
 
         // Visit implicit sub-variant
-        ConfigurationVariant defaultConfigurationVariant = objectFactory.newInstance(DefaultConfigurationVariant.class, outgoingConfiguration);
-        visitVariant(collector, seen, defaultConfigurationVariant, outgoingConfigurationName);
+        val defaultConfigurationVariant: ConfigurationVariant = objectFactory.newInstance<DefaultConfigurationVariant>(DefaultConfigurationVariant::class.java, outgoingConfiguration)
+        visitVariant(collector, seen, defaultConfigurationVariant, outgoingConfigurationName)
 
         // Visit explicit sub-variants
-        NamedDomainObjectContainer<ConfigurationVariant> subvariants = outgoingConfiguration.getOutgoing().getVariants();
-        for (ConfigurationVariant subvariant : subvariants) {
-            String publishedVariantName = outgoingConfigurationName + StringUtils.capitalize(subvariant.getName());
-            visitVariant(collector, seen, subvariant, publishedVariantName);
+        val subvariants = outgoingConfiguration.getOutgoing().getVariants()
+        for (subvariant in subvariants) {
+            val publishedVariantName = outgoingConfigurationName + StringUtils.capitalize(subvariant.getName())
+            visitVariant(collector, seen, subvariant, publishedVariantName)
         }
     }
 
-    private void visitVariant(
-        Consumer<UsageContext> collector,
-        Set<String> seen,
-        ConfigurationVariant subvariant,
-        String name
+    private fun visitVariant(
+        collector: Consumer<UsageContext>,
+        seen: MutableSet<String>,
+        subvariant: ConfigurationVariant,
+        name: String
     ) {
-        DefaultConfigurationVariantDetails details = objectFactory.newInstance(DefaultConfigurationVariantDetails.class, subvariant);
-        action.execute(details);
+        val details = objectFactory.newInstance<DefaultConfigurationVariantDetails>(DefaultConfigurationVariantDetails::class.java, subvariant)
+        action.execute(details)
 
         if (!details.shouldPublish()) {
-            return;
+            return
         }
 
         if (!seen.add(name)) {
-            throw new InvalidUserDataException("Cannot add feature variant '" + name + "' as a variant with the same name is already registered");
+            throw InvalidUserDataException("Cannot add feature variant '" + name + "' as a variant with the same name is already registered")
         }
 
-        collector.accept(new FeatureConfigurationVariant(
-            name,
-            outgoingConfiguration,
-            subvariant,
-            details.getMavenScope(),
-            details.isOptional(),
-            details.dependencyMappingDetails
-        ));
+        collector.accept(
+            FeatureConfigurationVariant(
+                name,
+                outgoingConfiguration,
+                subvariant,
+                details.mavenScope,
+                details.isOptional,
+                details.dependencyMappingDetails
+            )
+        )
     }
 
     // Cannot be private due to reflective instantiation
-    static abstract class DefaultConfigurationVariant implements ConfigurationVariant {
-        private final ConfigurationInternal outgoingConfiguration;
-
-        @Inject
-        public DefaultConfigurationVariant(ConfigurationInternal outgoingConfiguration) {
-            this.outgoingConfiguration = outgoingConfiguration;
-            getDescription().convention(outgoingConfiguration.getDescription()).finalizeValueOnRead();
+    internal abstract class DefaultConfigurationVariant @Inject constructor(private val outgoingConfiguration: ConfigurationInternal) : ConfigurationVariant {
+        init {
+            getDescription().convention(outgoingConfiguration.getDescription()).finalizeValueOnRead()
         }
 
-        @Override
-        public PublishArtifactSet getArtifacts() {
-            return outgoingConfiguration.getArtifacts();
+        override fun getArtifacts(): PublishArtifactSet {
+            return outgoingConfiguration.getArtifacts()
         }
 
-        @Override
-        public void artifact(Object notation) {
-            throw new InvalidUserCodeException("Cannot add artifacts during filtering");
+        override fun artifact(notation: Any) {
+            throw InvalidUserCodeException("Cannot add artifacts during filtering")
         }
 
-        @Override
-        public void artifact(Object notation, Action<? super ConfigurablePublishArtifact> configureAction) {
-            throw new InvalidUserCodeException("Cannot add artifacts during filtering");
+        override fun artifact(notation: Any, configureAction: Action<in ConfigurablePublishArtifact>) {
+            throw InvalidUserCodeException("Cannot add artifacts during filtering")
         }
 
-        @Override
-        public String getName() {
-            return outgoingConfiguration.getName();
+        override fun getName(): String {
+            return outgoingConfiguration.getName()
         }
 
-        @Override
-        public ConfigurationVariant attributes(Action<? super AttributeContainer> action) {
-            throw new InvalidUserCodeException("Cannot mutate outgoing configuration during filtering");
+        override fun attributes(action: Action<in AttributeContainer>): ConfigurationVariant? {
+            throw InvalidUserCodeException("Cannot mutate outgoing configuration during filtering")
         }
 
-        @Override
-        public AttributeContainer getAttributes() {
-            return outgoingConfiguration.getAttributes();
+        override fun getAttributes(): AttributeContainer {
+            return outgoingConfiguration.getAttributes()!!
         }
     }
 
     // Cannot be private due to reflective instantiation
-    static class DefaultConfigurationVariantDetails implements ConfigurationVariantDetailsInternal {
-        private final ConfigurationVariant variant;
-        private final ObjectFactory objectFactory;
-        private boolean skip = false;
-        private String mavenScope = "compile";
-        private boolean optional = false;
-        private DefaultDependencyMappingDetails dependencyMappingDetails;
+    internal class DefaultConfigurationVariantDetails @Inject constructor(private val variant: ConfigurationVariant, private val objectFactory: ObjectFactory) : ConfigurationVariantDetailsInternal {
+        private var skip = false
+        var mavenScope: String = "compile"
+            private set
+        var isOptional: Boolean = false
+            private set
+        private var dependencyMappingDetails: DefaultDependencyMappingDetails? = null
 
-        @Inject
-        public DefaultConfigurationVariantDetails(ConfigurationVariant variant, ObjectFactory objectFactory) {
-            this.variant = variant;
-            this.objectFactory = objectFactory;
+        override fun getConfigurationVariant(): ConfigurationVariant {
+            return variant
         }
 
-        @Override
-        public ConfigurationVariant getConfigurationVariant() {
-            return variant;
+        override fun skip() {
+            skip = true
         }
 
-        @Override
-        public void skip() {
-            skip = true;
+        override fun mapToOptional() {
+            this.isOptional = true
         }
 
-        @Override
-        public void mapToOptional() {
-            this.optional = true;
+        override fun mapToMavenScope(scope: String) {
+            this.mavenScope = assertValidScope(scope)
         }
 
-        @Override
-        public void mapToMavenScope(String scope) {
-            this.mavenScope = assertValidScope(scope);
-        }
-
-        @Override
-        public void dependencyMapping(Action<? super DependencyMappingDetails> action) {
+        override fun dependencyMapping(action: Action<in ConfigurationVariantDetailsInternal.DependencyMappingDetails>) {
             if (dependencyMappingDetails == null) {
-                dependencyMappingDetails = objectFactory.newInstance(DefaultDependencyMappingDetails.class);
+                dependencyMappingDetails = objectFactory.newInstance<DefaultDependencyMappingDetails>(DefaultDependencyMappingDetails::class.java)
             }
-            action.execute(dependencyMappingDetails);
+            action.execute(dependencyMappingDetails)
         }
 
-        private static String assertValidScope(String scope) {
-            scope = scope.toLowerCase(Locale.ROOT);
-            if ("compile".equals(scope) || "runtime".equals(scope)) {
-                return scope;
+        fun shouldPublish(): Boolean {
+            return !skip
+        }
+
+        companion object {
+            private fun assertValidScope(scope: String): String {
+                var scope = scope
+                scope = scope.lowercase()
+                if ("compile" == scope || "runtime" == scope) {
+                    return scope
+                }
+                throw InvalidUserCodeException("Invalid Maven scope '" + scope + "'. You must choose between 'compile' and 'runtime'")
             }
-            throw new InvalidUserCodeException("Invalid Maven scope '" + scope + "'. You must choose between 'compile' and 'runtime'");
-        }
-
-        public boolean shouldPublish() {
-            return !skip;
-        }
-
-        public String getMavenScope() {
-            return mavenScope;
-        }
-
-        public boolean isOptional() {
-            return optional;
         }
     }
 
-    public static abstract class DefaultDependencyMappingDetails implements ConfigurationVariantDetailsInternal.DependencyMappingDetails {
+    abstract class DefaultDependencyMappingDetails : ConfigurationVariantDetailsInternal.DependencyMappingDetails {
+        var resolutionConfiguration: Configuration? = null
+            private set
 
-        private Configuration resolutionConfiguration;
-
-        @Override
-        public void fromResolutionOf(Configuration configuration) {
-            this.resolutionConfiguration = configuration;
-        }
-
-        @Nullable
-        public Configuration getResolutionConfiguration() {
-            return resolutionConfiguration;
+        override fun fromResolutionOf(configuration: Configuration) {
+            this.resolutionConfiguration = configuration
         }
     }
 }

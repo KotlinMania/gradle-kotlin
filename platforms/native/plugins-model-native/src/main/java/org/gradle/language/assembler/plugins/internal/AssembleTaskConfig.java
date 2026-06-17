@@ -61,7 +61,7 @@ public class AssembleTaskConfig implements SourceTransformTaskConfig {
         task.toolChain.set(binary.getToolChain());
         task.targetPlatform.set(binary.getTargetPlatform());
 
-        task.source(sourceSet.getSource());
+        task.source(sourceSet.source);
 
         FileCollectionFactory fileCollectionFactory = ((ProjectInternal) task.getProject()).getServices().get(FileCollectionFactory.class);
         task.includes(fileCollectionFactory.create(new MinimalFileSet() {
@@ -78,7 +78,7 @@ public class AssembleTaskConfig implements SourceTransformTaskConfig {
         }));
 
         final Project project = task.getProject();
-        task.objectFileDir = project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())).get();
+        task.objectFileDir = project.getLayout().getBuildDirectory().getAsFile().map(it -> new File(binary.namingScheme.getOutputDirectory(it, "objs"), sourceSet.getProjectScopedName())).get();
 
         Tool assemblerTool = binary.getToolByName("assembler");
         task.setAssemblerArgs(assemblerTool.getArgs());

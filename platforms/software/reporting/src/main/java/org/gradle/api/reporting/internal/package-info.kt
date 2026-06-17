@@ -13,8 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-@NullMarked
-package org.gradle.api.reporting.internal;
+import org.gradle.reporting.HtmlReportRenderer.renderRawSinglePage
+import org.gradle.reporting.HtmlPageBuilder.requireResource
+import org.gradle.reporting.HtmlPageBuilder.formatDate
+import org.gradle.util.internal.CollectionUtils.collect
+import org.gradle.util.internal.CollectionUtils.flattenCollections
+import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
+import org.gradle.internal.Cast.uncheckedNonnullCast
+import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
+import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithReplacement.replaceWith
+import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
+import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
+import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
 
-import org.jspecify.annotations.NullMarked;

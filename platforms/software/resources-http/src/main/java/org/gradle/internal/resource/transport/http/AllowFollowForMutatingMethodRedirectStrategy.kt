@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.http.impl.client.DefaultRedirectStrategy
 
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-
-public class AllowFollowForMutatingMethodRedirectStrategy extends DefaultRedirectStrategy {
-
-    public AllowFollowForMutatingMethodRedirectStrategy() {
+class AllowFollowForMutatingMethodRedirectStrategy : DefaultRedirectStrategy() {
+    override fun isRedirectable(method: String?): Boolean {
+        return true
     }
-
-    @Override
-    protected boolean isRedirectable(String method) {
-        return true;
-    }
-
 }

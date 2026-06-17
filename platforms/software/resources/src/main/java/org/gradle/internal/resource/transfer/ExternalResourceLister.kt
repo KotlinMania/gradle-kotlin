@@ -13,28 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
-
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.jspecify.annotations.Nullable;
-
-import java.util.List;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.resource.ExternalResourceName
 
 /**
- * You should use {@link ExternalResource} instead of this type.
+ * You should use [ExternalResource] instead of this type.
  */
-public interface ExternalResourceLister {
-
+interface ExternalResourceLister {
     /**
      * Lists the direct children of the parent resource
      *
      * @param parent the resource to list from
-     * @return A list of the direct children of the <code>parent</code>, null when the resource does not exist.
+     * @return A list of the direct children of the `parent`, null when the resource does not exist.
      */
-    @Nullable
-    List<String> list(ExternalResourceName parent) throws ResourceException;
-
+    @Throws(ResourceException::class)
+    fun list(parent: ExternalResourceName?): MutableList<String?>?
 }

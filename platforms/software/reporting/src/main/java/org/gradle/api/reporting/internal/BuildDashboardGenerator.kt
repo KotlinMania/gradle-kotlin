@@ -13,97 +13,91 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import com.googlecode.jatl.Html
+import org.gradle.api.reporting.DirectoryReport
+import org.gradle.api.reporting.Report
+import org.gradle.reporting.HtmlPageBuilder
+import org.gradle.reporting.HtmlReportRenderer
+import org.gradle.reporting.ReportRenderer
+import org.gradle.util.GradleVersion
+import org.gradle.util.internal.RelativePathUtil
+import java.io.File
+import java.io.Writer
+import java.util.Date
+import java.util.TreeSet
 
-import com.googlecode.jatl.Html;
-import org.gradle.api.reporting.DirectoryReport;
-import org.gradle.api.reporting.Report;
-import org.gradle.reporting.HtmlPageBuilder;
-import org.gradle.reporting.HtmlReportRenderer;
-import org.gradle.reporting.ReportRenderer;
-import org.gradle.util.GradleVersion;
-import org.gradle.util.internal.RelativePathUtil;
+class BuildDashboardGenerator : ReportRenderer<MutableCollection<Report>?, File?>() {
+    private var reports: MutableSet<Report>? = null
+    private var outputFile: File? = null
 
-import java.io.File;
-import java.io.Writer;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Set;
-import java.util.TreeSet;
-
-public class BuildDashboardGenerator extends ReportRenderer<Collection<Report>, File> {
-    private Set<Report> reports;
-    private File outputFile;
-
-    @Override
-    public void render(Collection<Report> reports, final File outputFile) {
-        this.reports = new TreeSet<Report>(new Comparator<Report>() {
-            @Override
-            public int compare(Report o1, Report o2) {
-                return o1.getDisplayName().compareTo(o2.getDisplayName());
+    public override fun render(reports: MutableCollection<Report>, outputFile: File) {
+        this.reports = TreeSet<Report>(object : Comparator<Report> {
+            override fun compare(o1: Report, o2: Report): Int {
+                return o1.getDisplayName().compareTo(o2.getDisplayName())
             }
-        });
-        this.reports.addAll(reports);
-        this.outputFile = outputFile;
+        })
+        this.reports!!.addAll(reports)
+        this.outputFile = outputFile
 
-        HtmlReportRenderer renderer = new HtmlReportRenderer();
-        renderer.renderRawSinglePage(reports, new ReportRenderer<Collection<Report>, HtmlPageBuilder<Writer>>() {
-            @Override
-            public void render(Collection<Report> model, HtmlPageBuilder<Writer> builder) {
-                generate(builder);
+        val renderer = HtmlReportRenderer()
+        renderer.renderRawSinglePage<MutableCollection<Report>?>(reports, object : ReportRenderer<MutableCollection<Report>?, HtmlPageBuilder<Writer>?>() {
+            public override fun render(model: MutableCollection<Report>, builder: HtmlPageBuilder<Writer?>) {
+                generate(builder)
             }
-        }, outputFile);
+        }, outputFile)
     }
 
-    private void generate(final HtmlPageBuilder<Writer> builder) {
-        final String baseCssLink = builder.requireResource(getClass().getResource("/org/gradle/reporting/base-style.css"));
-        final String cssLink = builder.requireResource(getClass().getResource("style.css"));
-        new Html(builder.output) {{
-            html();
-                head();
-                    meta().httpEquiv("Content-Type").content("text/html; charset=utf-8");
-                    meta().httpEquiv("x-ua-compatible").content("IE=edge");
-                    link().rel("stylesheet").type("text/css").href(baseCssLink).end();
-                    link().rel("stylesheet").type("text/css").href(cssLink).end();
-                    title().text("Build dashboard").end();
-                end();
-                body();
-                div().id("content");
-                    if (reports.size() > 0) {
-                        h1().text("Build reports").end();
-                        ul();
-                        for (Report report : reports) {
-                            li();
-                            if (report.getOutputLocation().get().getAsFile().exists()) {
-                                a().href(RelativePathUtil.relativePath(outputFile.getParentFile(), getHtmlLinkedFileFromReport(report))).text(report.getDisplayName());
-                            } else {
-                                span().classAttr("unavailable").text(report.getDisplayName());
-                            }
-                            end(2);
+    private fun generate(builder: HtmlPageBuilder<Writer?>) {
+        val baseCssLink = builder.requireResource(javaClass.getResource("/org/gradle/reporting/base-style.css"))
+        val cssLink = builder.requireResource(javaClass.getResource("style.css"))
+        object : Html(builder.output) {
+            init {
+                html()
+                head()
+                meta().httpEquiv("Content-Type").content("text/html; charset=utf-8")
+                meta().httpEquiv("x-ua-compatible").content("IE=edge")
+                link().rel("stylesheet").type("text/css").href(baseCssLink).end()
+                link().rel("stylesheet").type("text/css").href(cssLink).end()
+                title().text("Build dashboard").end()
+                end()
+                body()
+                div().id("content")
+                if (reports!!.size > 0) {
+                    h1().text("Build reports").end()
+                    ul()
+                    for (report in reports!!) {
+                        li()
+                        if (report.getOutputLocation().get().getAsFile().exists()) {
+                            a().href(RelativePathUtil.relativePath(outputFile!!.getParentFile(), getHtmlLinkedFileFromReport(report))).text(report.getDisplayName())
+                        } else {
+                            span().classAttr("unavailable").text(report.getDisplayName())
                         }
-                        end();
-                    } else {
-                        h1().text("There are no build reports available.").end();
+                        end(2)
                     }
-                    div().id("footer");
-                        p();
-                            text("Generated by ");
-                            a().href("https://www.gradle.org").text(GradleVersion.current().toString()).end();
-                            text(" at " + builder.formatDate(new Date()));
-                        end();
-                    end();
-                end();
-            endAll();
-        }};
+                    end()
+                } else {
+                    h1().text("There are no build reports available.").end()
+                }
+                div().id("footer")
+                p()
+                text("Generated by ")
+                a().href("https://www.gradle.org").text(GradleVersion.current().toString()).end()
+                text(" at " + builder.formatDate(Date()))
+                end()
+                end()
+                end()
+                endAll()
+            }
+        }
     }
 
-    private File getHtmlLinkedFileFromReport(Report report) {
-        if (report instanceof DirectoryReport) {
-            return ((DirectoryReport) report).getEntryPoint();
+    private fun getHtmlLinkedFileFromReport(report: Report): File {
+        if (report is DirectoryReport) {
+            return report.getEntryPoint()
         } else {
-            return report.getOutputLocation().get().getAsFile();
+            return report.getOutputLocation().get().getAsFile()
         }
     }
 }

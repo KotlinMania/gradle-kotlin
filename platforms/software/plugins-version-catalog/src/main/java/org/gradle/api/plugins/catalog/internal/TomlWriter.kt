@@ -13,200 +13,198 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog.internal;
+package org.gradle.api.plugins.catalog.internal
 
-import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
-import org.gradle.api.internal.catalog.DefaultVersionCatalog;
-import org.gradle.api.internal.catalog.DependencyModel;
-import org.gradle.api.internal.catalog.PluginModel;
-import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
+import org.gradle.api.internal.catalog.DefaultVersionCatalog
+import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser
+import java.io.IOException
+import java.io.Writer
+import java.lang.String
+import java.util.regex.Pattern
+import java.util.stream.Collectors
+import kotlin.RuntimeException
+import kotlin.collections.ArrayList
+import kotlin.collections.MutableList
+import kotlin.collections.plus
+import kotlin.plus
+import kotlin.sequences.plus
+import kotlin.text.StringBuilder
+import kotlin.text.isEmpty
+import kotlin.text.plus
 
-import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-class TomlWriter {
-    private final static Pattern SEPARATOR = Pattern.compile("[_.-]");
-
-    private static String normalizeForToml(String alias) {
-        return SEPARATOR.matcher(alias).replaceAll("-");
+internal class TomlWriter(private val writer: Writer) {
+    private fun writeLn(line: String = ""): TomlWriter {
+        return write(line + "\n")
     }
 
-    private final Writer writer;
-
-    TomlWriter(Writer writer) {
-        this.writer = writer;
-    }
-
-    private TomlWriter writeLn(String line) {
-        return write(line + "\n");
-    }
-
-    private TomlWriter writeLn() {
-        return writeLn("");
-    }
-
-    private TomlWriter write(String text) {
+    private fun write(text: String): TomlWriter {
         try {
-            writer.write(text);
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            writer.write(text)
+        } catch (ex: IOException) {
+            throw RuntimeException(ex)
         }
-        return this;
+        return this
     }
 
-    public void generate(DefaultVersionCatalog model) {
-        writeHeader();
-        writeMetadata();
-        writeVersions(model);
-        writeLibraries(model);
-        writeBundles(model);
-        writePlugins(model);
+    fun generate(model: DefaultVersionCatalog) {
+        writeHeader()
+        writeMetadata()
+        writeVersions(model)
+        writeLibraries(model)
+        writeBundles(model)
+        writePlugins(model)
     }
 
-    private void writeVersions(DefaultVersionCatalog model) {
-        List<String> versions = model.getVersionAliases();
+    private fun writeVersions(model: DefaultVersionCatalog) {
+        val versions = model.versionAliases
         if (versions.isEmpty()) {
-            return;
+            return
         }
-        writeTableHeader("versions");
-        for (String alias : versions) {
-            write(normalizeForToml(alias) + " = ");
-            writeLn(versionString(model.getVersion(alias).getVersion()));
+        writeTableHeader("versions")
+        for (alias in versions) {
+            write(normalizeForToml(alias) + " = ")
+            writeLn(versionString(model.getVersion(alias).version))
         }
-        writeLn();
+        writeLn()
     }
 
-    private void writeLibraries(DefaultVersionCatalog model) {
-        List<String> aliases = model.getLibraryAliases();
+    private fun writeLibraries(model: DefaultVersionCatalog) {
+        val aliases = model.libraryAliases
         if (aliases.isEmpty()) {
-            return;
+            return
         }
-        writeTableHeader("libraries");
-        for (String alias : aliases) {
-            DependencyModel data = model.getDependencyData(alias);
-            String group = data.getGroup();
-            String name = data.getName();
-            String versionRef = data.getVersionRef();
-            ImmutableVersionConstraint version = data.getVersion();
-            StringBuilder sb = new StringBuilder();
+        writeTableHeader("libraries")
+        for (alias in aliases) {
+            val data = model.getDependencyData(alias)
+            val group = data.group
+            val name = data.name
+            val versionRef = data.versionRef
+            val version = data.getVersion()
+            val sb = StringBuilder()
             sb.append(normalizeForToml(alias))
                 .append(" = {")
                 .append(keyValuePair("group", group))
                 .append(", ")
                 .append(keyValuePair("name", name))
-                .append(", ");
+                .append(", ")
             if (versionRef != null) {
-                sb.append(keyValuePair("version.ref", normalizeForToml(versionRef)));
+                sb.append(keyValuePair("version.ref", normalizeForToml(versionRef)))
             } else {
-                sb.append("version = ").append(versionString(version));
+                sb.append("version = ").append(versionString(version))
             }
-            sb.append(" }");
-            writeLn(sb.toString());
+            sb.append(" }")
+            writeLn(sb.toString())
         }
-        writeLn();
+        writeLn()
     }
 
-    private void writeBundles(DefaultVersionCatalog model) {
-        List<String> aliases = model.getBundleAliases();
+    private fun writeBundles(model: DefaultVersionCatalog) {
+        val aliases = model.bundleAliases
         if (aliases.isEmpty()) {
-            return;
+            return
         }
-        writeTableHeader("bundles");
-        for (String alias : aliases) {
-            List<String> bundle = model.getBundle(alias).getComponents();
-            writeLn(normalizeForToml(alias) + " = [" + bundle.stream()
-                .map(TomlWriter::normalizeForToml)
-                .map(TomlWriter::quoted)
-                .collect(Collectors.joining(", ")) + "]");
+        writeTableHeader("bundles")
+        for (alias in aliases) {
+            val bundle = model.getBundle(alias).components
+            writeLn(
+                normalizeForToml(alias) + " = [" + bundle.stream()
+                    .map<String> { alias: String? -> Companion.normalizeForToml(alias!!) }
+                    .map<String> { string: String? -> Companion.quoted(string!!) }
+                    .collect(Collectors.joining(", ")) + "]")
         }
-        writeLn();
+        writeLn()
     }
 
-    private void writePlugins(DefaultVersionCatalog model) {
-        List<String> aliases = model.getPluginAliases();
+    private fun writePlugins(model: DefaultVersionCatalog) {
+        val aliases = model.pluginAliases
         if (aliases.isEmpty()) {
-            return;
+            return
         }
-        writeTableHeader("plugins");
-        for (String alias : aliases) {
-            PluginModel data = model.getPlugin(alias);
-            String id = data.getId();
-            String versionRef = data.getVersionRef();
-            ImmutableVersionConstraint version = data.getVersion();
-            StringBuilder sb = new StringBuilder();
+        writeTableHeader("plugins")
+        for (alias in aliases) {
+            val data = model.getPlugin(alias)
+            val id = data.id
+            val versionRef = data.versionRef
+            val version = data.getVersion()
+            val sb = StringBuilder()
             sb.append(normalizeForToml(alias))
                 .append(" = {")
                 .append(keyValuePair("id", id))
-                .append(", ");
+                .append(", ")
             if (versionRef != null) {
-                sb.append(keyValuePair("version.ref", normalizeForToml(versionRef)));
+                sb.append(keyValuePair("version.ref", normalizeForToml(versionRef)))
             } else {
-                sb.append("version = ").append(versionString(version));
+                sb.append("version = ").append(versionString(version))
             }
-            sb.append(" }");
-            writeLn(sb.toString());
+            sb.append(" }")
+            writeLn(sb.toString())
         }
-        writeLn();
+        writeLn()
     }
 
-    private static String versionString(ImmutableVersionConstraint version) {
-        String requiredVersion = version.getRequiredVersion();
-        String strictVersion = version.getStrictVersion();
-        String preferredVersion = version.getPreferredVersion();
-        List<String> rejectedVersions = version.getRejectedVersions();
-        StringBuilder sb = new StringBuilder();
-        if (rejectedVersions.isEmpty() && strictVersion.isEmpty() && preferredVersion.isEmpty()) {
-            // typical shortcut case, "foo='1.2'"
-            sb.append(quoted(requiredVersion));
-            return sb.toString();
+    private fun writeHeader() {
+        writeLn("#")
+        writeLn("# This file has been generated by Gradle and is intended to be consumed by Gradle")
+        writeLn("#")
+    }
+
+    private fun writeMetadata() {
+        writeLn("[metadata]")
+        writeLn("format.version = \"" + TomlCatalogFileParser.CURRENT_VERSION + "\"")
+        writeLn()
+    }
+
+    private fun writeTableHeader(title: String) {
+        writeLn("[" + title + "]")
+    }
+
+    companion object {
+        private val SEPARATOR: Pattern = Pattern.compile("[_.-]")
+
+        private fun normalizeForToml(alias: String): String {
+            return SEPARATOR.matcher(alias).replaceAll("-")
         }
-        sb.append("{ ");
-        List<String> parts = new ArrayList<>();
-        if (!strictVersion.isEmpty()) {
-            parts.add(keyValuePair("strictly", strictVersion));
-        }
-        if (!preferredVersion.isEmpty()) {
-            parts.add(keyValuePair("prefer", preferredVersion));
-        }
-        if (!requiredVersion.isEmpty() && strictVersion.isEmpty()) {
-            parts.add(keyValuePair("require", requiredVersion));
-        }
-        if (!rejectedVersions.isEmpty()) {
-            if (rejectedVersions.contains("+")) {
-                parts.add("rejectAll = true");
-            } else {
-                parts.add("reject = [" + rejectedVersions.stream().map(TomlWriter::quoted).collect(Collectors.joining(", ")) + "]");
+
+        private fun versionString(version: ImmutableVersionConstraint): String {
+            val requiredVersion = version.getRequiredVersion()
+            val strictVersion = version.getStrictVersion()
+            val preferredVersion = version.getPreferredVersion()
+            val rejectedVersions = version.getRejectedVersions()
+            val sb = StringBuilder()
+            if (rejectedVersions.isEmpty() && strictVersion.isEmpty() && preferredVersion.isEmpty()) {
+                // typical shortcut case, "foo='1.2'"
+                sb.append(quoted(requiredVersion))
+                return sb.toString()
             }
+            sb.append("{ ")
+            val parts: MutableList<String> = ArrayList<String>()
+            if (!strictVersion.isEmpty()) {
+                parts.add(keyValuePair("strictly", strictVersion))
+            }
+            if (!preferredVersion.isEmpty()) {
+                parts.add(keyValuePair("prefer", preferredVersion))
+            }
+            if (!requiredVersion.isEmpty() && strictVersion.isEmpty()) {
+                parts.add(keyValuePair("require", requiredVersion))
+            }
+            if (!rejectedVersions.isEmpty()) {
+                if (rejectedVersions.contains("+")) {
+                    parts.add("rejectAll = true")
+                } else {
+                    parts.add("reject = [" + rejectedVersions.stream().map<String> { string: String? -> Companion.quoted(string!!) }.collect(Collectors.joining(", ")) + "]")
+                }
+            }
+            sb.append(String.join(", ", parts)).append(" }")
+            return sb.toString()
         }
-        sb.append(String.join(", ", parts)).append(" }");
-        return sb.toString();
-    }
 
-    private void writeHeader() {
-        writeLn("#");
-        writeLn("# This file has been generated by Gradle and is intended to be consumed by Gradle");
-        writeLn("#");
-    }
+        private fun keyValuePair(key: kotlin.String, value: kotlin.String): kotlin.String {
+            return key + " = " + quoted(value)
+        }
 
-    private void writeMetadata() {
-        writeLn("[metadata]");
-        writeLn("format.version = \"" + TomlCatalogFileParser.CURRENT_VERSION + "\"");
-        writeLn();
-    }
-
-    private void writeTableHeader(String title) {
-        writeLn("[" + title + "]");
-    }
-
-    private static String keyValuePair(String key, String value) {
-        return key + " = " + quoted(value);
-    }
-
-    private static String quoted(String string) {
-        return "\"" + string + "\"";
+        private fun quoted(string: kotlin.String): kotlin.String {
+            return "\"" + string + "\""
+        }
     }
 }

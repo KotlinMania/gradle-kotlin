@@ -13,70 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.mapping
 
-package org.gradle.api.publish.internal.mapping;
-
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
 
 /**
  * Represents the coordinates that a declared dependency should be published to.
- * Similar to {@link ModuleVersionIdentifier}, but allows a null version.
+ * Similar to [ModuleVersionIdentifier], but allows a null version.
  */
-public interface ResolvedCoordinates {
-
+interface ResolvedCoordinates {
     /**
      * The group of the dependency to publish.
      */
-    String getGroup();
+    val group: String?
 
     /**
      * The name of the dependency to publish.
      */
-    String getName();
+    val name: String?
 
     /**
      * The version of the dependency to publish.
      */
-    @Nullable
-    String getVersion();
+    val version: String?
 
-    static ResolvedCoordinates create(String group, String name, @Nullable String version) {
-        return new ResolvedCoordinates() {
-            @Override
-            public String getGroup() {
-                return group;
-            }
+    companion object {
+        fun create(group: String, name: String, version: String?): ResolvedCoordinates {
+            return object : ResolvedCoordinates {
+                override fun getGroup(): String {
+                    return group
+                }
 
-            @Override
-            public String getName() {
-                return name;
-            }
+                override fun getName(): String {
+                    return name
+                }
 
-            @Override
-            public String getVersion() {
-                return version;
+                override fun getVersion(): String {
+                    return version!!
+                }
             }
-        };
-    }
+        }
 
-    // Returns a separate implementation than `create` to avoid deconstructing the identifier.
-    static ResolvedCoordinates create(ModuleVersionIdentifier identifier) {
-        return new ResolvedCoordinates() {
-            @Override
-            public String getGroup() {
-                return identifier.getGroup();
-            }
+        // Returns a separate implementation than `create` to avoid deconstructing the identifier.
+        fun create(identifier: ModuleVersionIdentifier): ResolvedCoordinates {
+            return object : ResolvedCoordinates {
+                override fun getGroup(): String {
+                    return identifier.getGroup()
+                }
 
-            @Override
-            public String getName() {
-                return identifier.getName();
-            }
+                override fun getName(): String {
+                    return identifier.getName()
+                }
 
-            @Override
-            public String getVersion() {
-                return identifier.getVersion();
+                override fun getVersion(): String {
+                    return identifier.getVersion()
+                }
             }
-        };
+        }
     }
 }

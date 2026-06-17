@@ -13,82 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.http.ntlm;
+package org.gradle.internal.resource.transport.http.ntlm
+
+import com.google.common.base.Preconditions
+import java.net.InetAddress
+import java.net.UnknownHostException
 
 
-import com.google.common.base.Preconditions;
+open class NTLMCredentials(username: String, password: String?) {
+    val domain: String?
+    val username: String
+    val password: String?
+    val workstation: String
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Locale;
-
-public class NTLMCredentials {
-    private static final String DEFAULT_DOMAIN = "";
-    private static final String DEFAULT_WORKSTATION = "";
-    private final String domain;
-    private final String username;
-    private final String password;
-    private final String workstation;
-
-    public NTLMCredentials(String username, String password) {
-        String domain;
-        Preconditions.checkNotNull(username, "Username must not be null!");
-        int slashPos = username.indexOf('\\');
-        slashPos = slashPos >= 0 ? slashPos : username.indexOf('/');
+    init {
+        var username = username
+        val domain: String?
+        Preconditions.checkNotNull<String?>(username, "Username must not be null!")
+        var slashPos = username.indexOf('\\')
+        slashPos = if (slashPos >= 0) slashPos else username.indexOf('/')
         if (slashPos >= 0) {
-            domain = username.substring(0, slashPos);
-            username = username.substring(slashPos + 1);
+            domain = username.substring(0, slashPos)
+            username = username.substring(slashPos + 1)
         } else {
-            domain = System.getProperty("http.auth.ntlm.domain", DEFAULT_DOMAIN);
+            domain = System.getProperty("http.auth.ntlm.domain", DEFAULT_DOMAIN)
         }
-        this.domain = domain == null ? null : domain.toUpperCase(Locale.ROOT);
-        this.username = username;
-        this.password = password;
-        this.workstation = determineWorkstationName();
+        this.domain = if (domain == null) null else domain.uppercase()
+        this.username = username
+        this.password = password
+        this.workstation = determineWorkstationName()
     }
 
-    private String determineWorkstationName() {
+    private fun determineWorkstationName(): String {
         // This is a hidden property that may be useful to track down issues. Remove when NTLM Auth is solid.
-        String sysPropWorkstation = System.getProperty("http.auth.ntlm.workstation");
+        val sysPropWorkstation = System.getProperty("http.auth.ntlm.workstation")
         if (sysPropWorkstation != null) {
-            return sysPropWorkstation;
+            return sysPropWorkstation
         }
 
         try {
-            return removeDotSuffix(getHostName()).toUpperCase(Locale.ROOT);
-        } catch (UnknownHostException e) {
-            return DEFAULT_WORKSTATION;
+            return removeDotSuffix(this.hostName!!).uppercase()
+        } catch (e: UnknownHostException) {
+            return DEFAULT_WORKSTATION
         }
     }
 
-    protected String getHostName() throws UnknownHostException {
-        return InetAddress.getLocalHost().getHostName();
+    @get:Throws(UnknownHostException::class)
+    protected open val hostName: String?
+        get() = InetAddress.getLocalHost().getHostName()
+
+    private fun removeDotSuffix(`val`: String): String {
+        val dotPos = `val`.indexOf('.')
+        return if (dotPos == -1) `val` else `val`.substring(0, dotPos)
     }
 
-    private String removeDotSuffix(String val) {
-        int dotPos = val.indexOf('.');
-        return dotPos == -1 ? val : val.substring(0, dotPos);
+
+    override fun toString(): String {
+        return String.format("NTLM Credentials [user: %s, domain: %s, workstation: %s]", username, domain, workstation)
     }
 
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public String getWorkstation() {
-        return workstation;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("NTLM Credentials [user: %s, domain: %s, workstation: %s]", username, domain, workstation);
+    companion object {
+        private const val DEFAULT_DOMAIN = ""
+        private const val DEFAULT_WORKSTATION = ""
     }
 }

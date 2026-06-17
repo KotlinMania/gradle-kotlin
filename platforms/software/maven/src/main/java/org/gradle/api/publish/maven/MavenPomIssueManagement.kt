@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
+package org.gradle.api.publish.maven
 
 /**
  * The issue management system of a Maven publication.
@@ -24,16 +21,14 @@ import org.gradle.api.provider.Property;
  * @since 4.8
  * @see MavenPom
  */
-public interface MavenPomIssueManagement {
-
+interface MavenPomIssueManagement {
     /**
      * The name of this issue management system.
      */
-    Property<String> getSystem();
+    val system: Property<String?>?
 
     /**
      * The URL of this issue management system.
      */
-    Property<String> getUrl();
-
+    val url: Property<String?>?
 }

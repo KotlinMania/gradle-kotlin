@@ -13,62 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
-
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableSet;
-import org.apache.http.ssl.SSLInitializationException;
-import org.gradle.internal.SystemProperties;
-import org.jspecify.annotations.NullMarked;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLContext;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
+import com.google.common.collect.ImmutableSet
+import org.apache.http.ssl.SSLInitializationException
+import org.gradle.internal.SystemProperties
+import org.gradle.internal.resource.transport.http.SystemDefaultSSLContextFactory.create
+import org.jspecify.annotations.NullMarked
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.TreeMap
+import javax.net.ssl.SSLContext
 
 @NullMarked
-public class DefaultSslContextFactory implements SslContextFactory {
-    private static final Set<String> SSL_SYSTEM_PROPERTIES = ImmutableSet.of(
-        "ssl.TrustManagerFactory.algorithm",
-        "javax.net.ssl.trustStoreType",
-        "javax.net.ssl.trustStore",
-        "javax.net.ssl.trustStoreProvider",
-        "javax.net.ssl.trustStorePassword",
-        "ssl.KeyManagerFactory.algorithm",
-        "javax.net.ssl.keyStoreType",
-        "javax.net.ssl.keyStore",
-        "javax.net.ssl.keyStoreProvider",
-        "javax.net.ssl.keyStorePassword",
-        "java.home"
-    );
+class DefaultSslContextFactory : SslContextFactory {
+    private val cache = CacheBuilder.newBuilder().softValues().build<MutableMap<String, String>, SSLContext>(
+        SynchronizedSystemPropertiesCacheLoader()
+    )
 
-    private final LoadingCache<Map<String, String>, SSLContext> cache = CacheBuilder.newBuilder().softValues().build(
-        new SynchronizedSystemPropertiesCacheLoader()
-    );
-
-    @Override
-    public SSLContext createSslContext() {
-        return cache.getUnchecked(getCurrentProperties());
+    override fun createSslContext(): SSLContext {
+        return cache.getUnchecked(currentProperties)
     }
 
-    private static Map<String, String> getCurrentProperties() {
-        return SystemProperties.getInstance().withSystemProperties(() -> {
-            Map<String, String> currentProperties = new TreeMap<>();
-            for (String prop : SSL_SYSTEM_PROPERTIES) {
-                currentProperties.put(prop, System.getProperty(prop));
-            }
-            return currentProperties;
-        });
-    }
-
-    private static class SynchronizedSystemPropertiesCacheLoader extends CacheLoader<Map<String, String>, SSLContext> {
-        @Override
-        public SSLContext load(Map<String, String> props) {
+    private class SynchronizedSystemPropertiesCacheLoader : CacheLoader<MutableMap<String, String>, SSLContext>() {
+        override fun load(props: MutableMap<String, String>): SSLContext {
             /*
              * NOTE! The JDK code to create SSLContexts relies on the values of the given system properties.
              *
@@ -82,20 +52,45 @@ public class DefaultSslContextFactory implements SslContextFactory {
              * https://github.com/gradle/gradle/issues/7842
              * https://github.com/gradle/gradle/issues/2588
              */
-            return SystemProperties.getInstance().withSystemProperties(props, () -> SslContextLoader.load(props));
+            return SystemProperties.getInstance().withSystemProperties<SSLContext>(props, org.gradle.internal.Factory { SslContextLoader.load(props) })
         }
     }
 
-    private static class SslContextLoader {
-        private static final Logger LOGGER = LoggerFactory.getLogger(SslContextLoader.class);
+    private object SslContextLoader {
+        private val LOGGER: Logger = LoggerFactory.getLogger(SslContextLoader::class.java)
 
-        public static SSLContext load(Map<String, String> props) {
+        fun load(props: MutableMap<String, String>): SSLContext {
             try {
-                return SystemDefaultSSLContextFactory.create();
-            } catch (Exception e) {
-                LOGGER.error("Could not initialize SSL context. Used properties: {}", props);
-                throw new SSLInitializationException(e.getMessage(), e);
+                return create()
+            } catch (e: Exception) {
+                LOGGER.error("Could not initialize SSL context. Used properties: {}", props)
+                throw SSLInitializationException(e.message, e)
             }
         }
+    }
+
+    companion object {
+        private val SSL_SYSTEM_PROPERTIES: MutableSet<String> = ImmutableSet.of<String>(
+            "ssl.TrustManagerFactory.algorithm",
+            "javax.net.ssl.trustStoreType",
+            "javax.net.ssl.trustStore",
+            "javax.net.ssl.trustStoreProvider",
+            "javax.net.ssl.trustStorePassword",
+            "ssl.KeyManagerFactory.algorithm",
+            "javax.net.ssl.keyStoreType",
+            "javax.net.ssl.keyStore",
+            "javax.net.ssl.keyStoreProvider",
+            "javax.net.ssl.keyStorePassword",
+            "java.home"
+        )
+
+        private val currentProperties: MutableMap<String, String>
+            get() = SystemProperties.getInstance().withSystemProperties<MutableMap<String, String>>(org.gradle.internal.Factory {
+                val currentProperties: MutableMap<String, String> = TreeMap<String, String>()
+                for (prop in SSL_SYSTEM_PROPERTIES) {
+                    currentProperties.put(prop, System.getProperty(prop))
+                }
+                currentProperties
+            })
     }
 }

@@ -13,83 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.Task
+import org.gradle.api.internal.TaskInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.api.tasks.TaskProvider
+import java.util.function.Consumer
 
-import org.gradle.api.Task;
-import org.gradle.api.internal.TaskInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.api.tasks.TaskProvider;
-import org.jspecify.annotations.Nullable;
+class SingleOutputTaskIvyArtifact(
+    private val generator: TaskProvider<out Task>,
+    private val coordinates: IvyPublicationCoordinates,
+    private val extension: String,
+    private val type: String,
+    private val classifier: String?,
+    taskDependencyFactory: TaskDependencyFactory
+) : AbstractIvyArtifact(taskDependencyFactory) {
+    private val buildDependencies: TaskDependencyInternal
 
-import java.io.File;
-
-public class SingleOutputTaskIvyArtifact extends AbstractIvyArtifact {
-
-    private final TaskProvider<? extends Task> generator;
-    private final IvyPublicationCoordinates coordinates;
-    private final String extension;
-    private final String type;
-    private final String classifier;
-    private final TaskDependencyInternal buildDependencies;
-
-    public SingleOutputTaskIvyArtifact(TaskProvider<? extends Task> generator, IvyPublicationCoordinates coordinates, String extension, String type, @Nullable String classifier, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.generator = generator;
-        this.coordinates = coordinates;
-        this.extension = extension;
-        this.type = type;
-        this.classifier = classifier;
-        this.buildDependencies = taskDependencyFactory.visitingDependencies(context -> {
-            context.add(generator.get());
-        });
+    init {
+        this.buildDependencies = taskDependencyFactory.visitingDependencies(Consumer { context: TaskDependencyResolveContext? ->
+            context!!.add(generator.get())
+        })
     }
 
-    @Override
-    protected String getDefaultName() {
-        return coordinates.getModule().get();
+    override fun getDefaultName(): String {
+        return coordinates.getModule().get()
     }
 
-    @Override
-    protected String getDefaultType() {
-        return type;
+    override fun getDefaultType(): String {
+        return type
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return extension;
+    override fun getDefaultExtension(): String {
+        return extension
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return classifier;
+    override fun getDefaultClassifier(): String {
+        return classifier!!
     }
 
-    @Override
-    protected String getDefaultConf() {
-        return null;
+    override fun getDefaultConf(): String {
+        return null
     }
 
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return buildDependencies;
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return buildDependencies
     }
 
-    @Override
-    public File getFile() {
-        return generator.get().getOutputs().getFiles().getSingleFile();
-    }
+    val file: File
+        get() = generator.get().getOutputs().getFiles().getSingleFile()
 
-    public boolean isEnabled() {
-        TaskInternal task = (TaskInternal) generator.get();
-        return task.getOnlyIf().isSatisfiedBy(task);
-    }
+    val isEnabled: Boolean
+        get() {
+            val task = generator.get() as TaskInternal
+            return task.getOnlyIf().isSatisfiedBy(task)
+        }
 
-    @Override
-    public boolean shouldBePublished() {
-        return isEnabled();
+    override fun shouldBePublished(): Boolean {
+        return this.isEnabled
     }
 }

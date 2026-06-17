@@ -49,34 +49,33 @@ abstract class OperatingSystem internal constructor() {
     open val isLinux: Boolean
         get() = false
 
-    abstract val nativePrefix: String?
+    abstract val nativePrefix: String
 
-    abstract fun getScriptName(scriptPath: String?): String?
+    abstract fun getScriptName(scriptPath: String): String
 
-    abstract fun getExecutableName(executablePath: String?): String
+    abstract fun getExecutableName(executablePath: String): String
 
-    abstract val executableSuffix: String?
+    abstract val executableSuffix: String
 
-    abstract fun getSharedLibraryName(libraryName: String?): String?
+    abstract fun getSharedLibraryName(libraryName: String): String
 
-    abstract val sharedLibrarySuffix: String?
+    abstract val sharedLibrarySuffix: String
 
-    abstract fun getStaticLibraryName(libraryName: String?): String?
+    abstract fun getStaticLibraryName(libraryName: String): String
 
-    abstract val staticLibrarySuffix: String?
+    abstract val staticLibrarySuffix: String
 
-    abstract val linkLibrarySuffix: String?
+    abstract val linkLibrarySuffix: String
 
-    abstract fun getLinkLibraryName(libraryPath: String?): String?
+    abstract fun getLinkLibraryName(libraryPath: String): String
 
-    @JvmField
     @get:UsedByScanPlugin
-    abstract val familyName: String?
+    abstract val familyName: String
 
     /**
      * Locates the given executable in the system path. Returns null if not found.
      */
-    fun findInPath(name: String?): File? {
+    fun findInPath(name: String): File? {
         val exeName = getExecutableName(name)
         if (exeName.contains(File.separator)) {
             val candidate = File(exeName)
@@ -124,59 +123,55 @@ abstract class OperatingSystem internal constructor() {
     open val pathVar: String
         get() = "PATH"
 
-    internal open class Windows : OperatingSystem() {
-        private val nativePrefix: String
+    open class Windows : OperatingSystem() {
+        private val nativePrefixValue: String
 
         init {
-            nativePrefix = resolveNativePrefix()
+            nativePrefixValue = resolveNativePrefix()
         }
 
-        override fun isWindows(): Boolean {
-            return true
-        }
+        override val isWindows: Boolean
+            get() = true
 
-        override fun getFamilyName(): String {
-            return "windows"
-        }
+        override val familyName: String
+            get() = "windows"
+
+        override val executableSuffix: String
+            get() = ".exe"
+
+        override val sharedLibrarySuffix: String
+            get() = ".dll"
+
+        override val linkLibrarySuffix: String
+            get() = ".lib"
+
+        override val staticLibrarySuffix: String
+            get() = ".lib"
+
+        override val nativePrefix: String
+            get() = nativePrefixValue
+
+        override val pathVar: String
+            get() = "Path"
 
         override fun getScriptName(scriptPath: String): String {
             return withExtension(scriptPath, ".bat")
-        }
-
-        override fun getExecutableSuffix(): String {
-            return ".exe"
         }
 
         override fun getExecutableName(executablePath: String): String {
             return withExtension(executablePath, ".exe")
         }
 
-        override fun getSharedLibrarySuffix(): String {
-            return ".dll"
-        }
-
         override fun getSharedLibraryName(libraryPath: String): String {
             return withExtension(libraryPath, ".dll")
-        }
-
-        override fun getLinkLibrarySuffix(): String {
-            return ".lib"
         }
 
         override fun getLinkLibraryName(libraryPath: String): String {
             return withExtension(libraryPath, ".lib")
         }
 
-        override fun getStaticLibrarySuffix(): String {
-            return ".lib"
-        }
-
         override fun getStaticLibraryName(libraryName: String): String {
             return withExtension(libraryName, ".lib")
-        }
-
-        override fun getNativePrefix(): String {
-            return nativePrefix
         }
 
         private fun resolveNativePrefix(): String {
@@ -185,10 +180,6 @@ abstract class OperatingSystem internal constructor() {
                 arch = "x86"
             }
             return "win32-" + arch
-        }
-
-        override fun getPathVar(): String {
-            return "Path"
         }
 
         companion object {
@@ -204,31 +195,44 @@ abstract class OperatingSystem internal constructor() {
         }
     }
 
-    internal open class Unix : OperatingSystem() {
-        private val nativePrefix: String
+    open class Unix : OperatingSystem() {
+        private val nativePrefixValue: String
 
         init {
-            this.nativePrefix = resolveNativePrefix()
+            this.nativePrefixValue = resolveNativePrefix()
         }
 
-        override fun getScriptName(scriptPath: String?): String? {
+        override val isUnix: Boolean
+            get() = true
+
+        override val familyName: String
+            get() = "unknown"
+
+        override val executableSuffix: String
+            get() = ""
+
+        override val sharedLibrarySuffix: String
+            get() = ".so"
+
+        override val linkLibrarySuffix: String
+            get() = sharedLibrarySuffix
+
+        override val staticLibrarySuffix: String
+            get() = ".a"
+
+        override val nativePrefix: String
+            get() = nativePrefixValue
+
+        override fun getScriptName(scriptPath: String): String {
             return scriptPath
         }
 
-        override fun getFamilyName(): String {
-            return "unknown"
-        }
-
-        override fun getExecutableSuffix(): String {
-            return ""
-        }
-
-        override fun getExecutableName(executablePath: String?): String? {
+        override fun getExecutableName(executablePath: String): String {
             return executablePath
         }
 
         override fun getSharedLibraryName(libraryName: String): String {
-            return getLibraryName(libraryName, getSharedLibrarySuffix())
+            return getLibraryName(libraryName, sharedLibrarySuffix)
         }
 
         private fun getLibraryName(libraryName: String, suffix: String): String {
@@ -243,112 +247,83 @@ abstract class OperatingSystem internal constructor() {
             }
         }
 
-        override fun getSharedLibrarySuffix(): String {
-            return ".so"
-        }
-
-        override fun getLinkLibrarySuffix(): String {
-            return getSharedLibrarySuffix()
-        }
-
         override fun getLinkLibraryName(libraryPath: String): String {
             return getSharedLibraryName(libraryPath)
-        }
-
-        override fun getStaticLibrarySuffix(): String {
-            return ".a"
         }
 
         override fun getStaticLibraryName(libraryName: String): String {
             return getLibraryName(libraryName, ".a")
         }
 
-        override fun isUnix(): Boolean {
-            return true
-        }
-
-        override fun getNativePrefix(): String {
-            return nativePrefix
-        }
-
         private fun resolveNativePrefix(): String {
-            val arch = this.arch
-            var osPrefix = this.osPrefix
+            val arch = this.getArch()
+            var osPrefix = this.getOsPrefix()
             osPrefix += "-" + arch
             return osPrefix
         }
 
-        protected open val arch: String
-            get() {
-                var arch = System.getProperty("os.arch")
-                if ("x86" == arch) {
-                    arch = "i386"
-                }
-                if ("x86_64" == arch) {
-                    arch = "amd64"
-                }
-                if ("powerpc" == arch) {
-                    arch = "ppc"
-                }
-                return arch
+        protected open fun getArch(): String {
+            var arch = System.getProperty("os.arch")
+            if ("x86" == arch) {
+                arch = "i386"
             }
-
-        protected open val osPrefix: String
-            get() {
-                var osPrefix = this.name.lowercase()
-                val space = osPrefix.indexOf(" ")
-                if (space != -1) {
-                    osPrefix = osPrefix.substring(0, space)
-                }
-                return osPrefix
+            if ("x86_64" == arch) {
+                arch = "amd64"
             }
-    }
-
-    internal class MacOs : Unix() {
-        override fun isMacOsX(): Boolean {
-            return true
+            if ("powerpc" == arch) {
+                arch = "ppc"
+            }
+            return arch
         }
 
-        override fun getFamilyName(): String {
-            return "os x"
-        }
-
-        override fun getSharedLibrarySuffix(): String {
-            return ".dylib"
-        }
-
-        override fun getNativePrefix(): String {
-            return "darwin"
+        protected open fun getOsPrefix(): String {
+            var osPrefix = this.name.lowercase()
+            val space = osPrefix.indexOf(" ")
+            if (space != -1) {
+                osPrefix = osPrefix.substring(0, space)
+            }
+            return osPrefix
         }
     }
 
-    internal class Linux : Unix() {
-        override fun isLinux(): Boolean {
-            return true
-        }
+    class MacOs : Unix() {
+        override val isMacOsX: Boolean
+            get() = true
 
-        override fun getFamilyName(): String {
-            return "linux"
-        }
+        override val familyName: String
+            get() = "os x"
+
+        override val sharedLibrarySuffix: String
+            get() = ".dylib"
+
+        override val nativePrefix: String
+            get() = "darwin"
     }
 
-    internal class FreeBSD : Unix()
+    class Linux : Unix() {
+        override val isLinux: Boolean
+            get() = true
 
-    internal class Solaris : Unix() {
-        override fun getFamilyName(): String {
-            return "solaris"
-        }
+        override val familyName: String
+            get() = "linux"
+    }
+
+    class FreeBSD : Unix()
+
+    class Solaris : Unix() {
+        override val familyName: String
+            get() = "solaris"
 
         override fun getOsPrefix(): String {
             return "sunos"
         }
 
-        override fun getArch(): String? {
+        override fun getArch(): String {
             val arch = System.getProperty("os.arch")
             if (arch == "i386" || arch == "x86") {
                 return "x86"
             }
-            return super.arch
+            return super.getArch()
         }
     }
 
@@ -363,12 +338,13 @@ abstract class OperatingSystem internal constructor() {
         val FREE_BSD: FreeBSD = FreeBSD()
         val UNIX: Unix = Unix()
         private var currentOs: OperatingSystem? = null
+
         @JvmStatic
-        fun current(): OperatingSystem? {
+        fun current(): OperatingSystem {
             if (currentOs == null) {
                 currentOs = forName(System.getProperty("os.name"))
             }
-            return currentOs
+            return currentOs!!
         }
 
         // for testing current()

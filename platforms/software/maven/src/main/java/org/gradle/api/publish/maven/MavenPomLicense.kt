@@ -13,38 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
+package org.gradle.api.publish.maven
 
 /**
  * A license of a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomLicenseSpec
  */
-public interface MavenPomLicense {
-
+interface MavenPomLicense {
     /**
      * The name of this license.
      */
-    Property<String> getName();
+    val name: Property<String?>?
 
     /**
      * The URL of this license.
      */
-    Property<String> getUrl();
+    val url: Property<String?>?
 
     /**
      * The distribution of this license.
      */
-    Property<String> getDistribution();
+    val distribution: Property<String?>?
 
     /**
      * The comments of this license.
      */
-    Property<String> getComments();
-
+    val comments: Property<String?>?
 }

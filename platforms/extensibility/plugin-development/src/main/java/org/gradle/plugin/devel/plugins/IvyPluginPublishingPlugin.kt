@@ -86,7 +86,7 @@ internal abstract class IvyPluginPublishingPlugin @Inject constructor() : Plugin
             override fun execute(descriptor: IvyModuleDescriptorSpec) {
                 descriptor.description(object : Action<IvyModuleDescriptorDescription?> {
                     override fun execute(description: IvyModuleDescriptorDescription) {
-                        description.getText().set(declaration.getDescription())
+                        description.text.set(declaration.getDescription())
                     }
                 })
                 descriptor.withXml(object : Action<XmlProvider?> {

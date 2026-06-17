@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal
 
-package org.gradle.api.publish.internal;
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultPolymorphicDomainObjectContainer
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.PublicationContainer
+import org.gradle.internal.reflect.Instantiator
 
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultPolymorphicDomainObjectContainer;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.PublicationContainer;
-import org.gradle.internal.reflect.Instantiator;
-
-public class DefaultPublicationContainer extends DefaultPolymorphicDomainObjectContainer<Publication> implements PublicationContainer {
-    public DefaultPublicationContainer(Instantiator instantiator, CollectionCallbackActionDecorator collectionCallbackActionDecorator) {
-        super(Publication.class, instantiator, instantiator, collectionCallbackActionDecorator);
-    }
-
-    @Override
-    protected void handleAttemptToAddItemWithNonUniqueName(Publication o) {
-        throw new InvalidUserDataException(String.format("Publication with name '%s' added multiple times", o.getName()));
+class DefaultPublicationContainer(instantiator: Instantiator, collectionCallbackActionDecorator: CollectionCallbackActionDecorator) :
+    DefaultPolymorphicDomainObjectContainer<Publication?>(Publication::class.java, instantiator, instantiator, collectionCallbackActionDecorator), PublicationContainer {
+    override fun handleAttemptToAddItemWithNonUniqueName(o: Publication) {
+        throw InvalidUserDataException(String.format("Publication with name '%s' added multiple times", o.getName()))
     }
 }

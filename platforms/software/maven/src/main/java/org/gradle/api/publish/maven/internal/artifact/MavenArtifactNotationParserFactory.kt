@@ -13,154 +13,136 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.artifacts.dsl.LazyPublishArtifact
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenArtifact
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Factory
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypeConversionException
+import java.io.File
 
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.artifacts.dsl.LazyPublishArtifact;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Factory;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypeConversionException;
+class MavenArtifactNotationParserFactory(private val instantiator: Instantiator, private val fileResolver: FileResolver, private val taskDependencyFactory: TaskDependencyFactory) :
+    Factory<NotationParser<Any?, MavenArtifact?>?> {
+    override fun create(): NotationParser<Any?, MavenArtifact?> {
+        val fileNotationConverter: FileNotationConverter = MavenArtifactNotationParserFactory.FileNotationConverter(fileResolver)
+        val archiveTaskNotationConverter: ArchiveTaskNotationConverter = MavenArtifactNotationParserFactory.ArchiveTaskNotationConverter()
+        val publishArtifactNotationConverter: PublishArtifactNotationConverter = MavenArtifactNotationParserFactory.PublishArtifactNotationConverter()
+        val providerNotationConverter: ProviderNotationConverter = MavenArtifactNotationParserFactory.ProviderNotationConverter()
 
-import java.io.File;
-
-public class MavenArtifactNotationParserFactory implements Factory<NotationParser<Object, MavenArtifact>> {
-    private final Instantiator instantiator;
-    private final FileResolver fileResolver;
-    private final TaskDependencyFactory taskDependencyFactory;
-
-    public MavenArtifactNotationParserFactory(Instantiator instantiator, FileResolver fileResolver, TaskDependencyFactory taskDependencyFactory) {
-        this.instantiator = instantiator;
-        this.fileResolver = fileResolver;
-        this.taskDependencyFactory = taskDependencyFactory;
-    }
-
-    @Override
-    public NotationParser<Object, MavenArtifact> create() {
-        FileNotationConverter fileNotationConverter = new FileNotationConverter(fileResolver);
-        ArchiveTaskNotationConverter archiveTaskNotationConverter = new ArchiveTaskNotationConverter();
-        PublishArtifactNotationConverter publishArtifactNotationConverter = new PublishArtifactNotationConverter();
-        ProviderNotationConverter providerNotationConverter = new ProviderNotationConverter();
-
-        NotationParser<Object, MavenArtifact> sourceNotationParser = NotationParserBuilder
-            .toType(MavenArtifact.class)
-            .fromType(Provider.class, Cast.uncheckedCast(providerNotationConverter))
-            .fromType(AbstractArchiveTask.class, archiveTaskNotationConverter)
-            .fromType(PublishArtifact.class, publishArtifactNotationConverter)
+        val sourceNotationParser = NotationParserBuilder
+            .toType<MavenArtifact?>(MavenArtifact::class.java)
+            .fromType<Provider<*>?>(Provider::class.java, uncheckedCast<NotationConverter<in Provider<*>?, out MavenArtifact?>?>(providerNotationConverter))
+            .fromType<AbstractArchiveTask?>(AbstractArchiveTask::class.java, archiveTaskNotationConverter)
+            .fromType<PublishArtifact?>(PublishArtifact::class.java, publishArtifactNotationConverter)
             .converter(fileNotationConverter)
-            .toComposite();
+            .toComposite()
 
-        MavenArtifactMapNotationConverter mavenArtifactMapNotationConverter = new MavenArtifactMapNotationConverter(sourceNotationParser);
+        val mavenArtifactMapNotationConverter = MavenArtifactMapNotationConverter(sourceNotationParser)
 
         return NotationParserBuilder
-            .toType(MavenArtifact.class)
-            .fromType(AbstractArchiveTask.class, archiveTaskNotationConverter)
-            .fromType(PublishArtifact.class, publishArtifactNotationConverter)
-            .fromType(Provider.class, Cast.uncheckedCast(providerNotationConverter))
+            .toType<MavenArtifact?>(MavenArtifact::class.java)
+            .fromType<AbstractArchiveTask?>(AbstractArchiveTask::class.java, archiveTaskNotationConverter)
+            .fromType<PublishArtifact?>(PublishArtifact::class.java, publishArtifactNotationConverter)
+            .fromType<Provider<*>?>(Provider::class.java, uncheckedCast<NotationConverter<in Provider<*>?, out MavenArtifact?>?>(providerNotationConverter))
             .converter(mavenArtifactMapNotationConverter)
             .converter(fileNotationConverter)
-            .toComposite();
+            .toComposite()
     }
 
-    private class ArchiveTaskNotationConverter implements NotationConverter<AbstractArchiveTask, MavenArtifact> {
-        @Override
-        public void convert(AbstractArchiveTask archiveTask, NotationConvertResult<? super MavenArtifact> result) throws TypeConversionException {
-            MavenArtifact artifact = instantiator.newInstance(ArchiveTaskBasedMavenArtifact.class, archiveTask, taskDependencyFactory);
-            result.converted(artifact);
+    private inner class ArchiveTaskNotationConverter : NotationConverter<AbstractArchiveTask?, MavenArtifact?> {
+        @Throws(TypeConversionException::class)
+        override fun convert(archiveTask: AbstractArchiveTask, result: NotationConvertResult<in MavenArtifact?>) {
+            val artifact: MavenArtifact = instantiator.newInstance<ArchiveTaskBasedMavenArtifact>(ArchiveTaskBasedMavenArtifact::class.java, archiveTask, taskDependencyFactory)
+            result.converted(artifact)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of AbstractArchiveTask").example("jar");
-        }
-    }
-
-    private class PublishArtifactNotationConverter implements NotationConverter<PublishArtifact, MavenArtifact> {
-        @Override
-        public void convert(PublishArtifact publishArtifact, NotationConvertResult<? super MavenArtifact> result) throws TypeConversionException {
-            MavenArtifact artifact = instantiator.newInstance(PublishArtifactBasedMavenArtifact.class, publishArtifact, taskDependencyFactory);
-            result.converted(artifact);
-        }
-
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of PublishArtifact");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of AbstractArchiveTask").example("jar")
         }
     }
 
-    private class ProviderNotationConverter implements NotationConverter<Provider<?>, MavenArtifact> {
-        @Override
-        public void convert(Provider<?> artifactTaskProvider, NotationConvertResult<? super MavenArtifact> result) throws TypeConversionException {
-            MavenArtifact artifact = instantiator.newInstance(PublishArtifactBasedMavenArtifact.class, new LazyPublishArtifact(artifactTaskProvider, fileResolver, taskDependencyFactory), taskDependencyFactory);
-            result.converted(artifact);
+    private inner class PublishArtifactNotationConverter : NotationConverter<PublishArtifact?, MavenArtifact?> {
+        @Throws(TypeConversionException::class)
+        override fun convert(publishArtifact: PublishArtifact, result: NotationConvertResult<in MavenArtifact?>) {
+            val artifact: MavenArtifact = instantiator.newInstance<PublishArtifactBasedMavenArtifact>(PublishArtifactBasedMavenArtifact::class.java, publishArtifact, taskDependencyFactory)
+            result.converted(artifact)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of Provider");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of PublishArtifact")
         }
     }
 
-    private class FileNotationConverter implements NotationConverter<Object, MavenArtifact> {
-        private final NotationParser<Object, File> fileResolverNotationParser;
-
-        private FileNotationConverter(FileResolver fileResolver) {
-            this.fileResolverNotationParser = fileResolver.asNotationParser();
+    private inner class ProviderNotationConverter : NotationConverter<Provider<*>?, MavenArtifact?> {
+        @Throws(TypeConversionException::class)
+        override fun convert(artifactTaskProvider: Provider<*>, result: NotationConvertResult<in MavenArtifact?>) {
+            val artifact: MavenArtifact = instantiator.newInstance<PublishArtifactBasedMavenArtifact>(
+                PublishArtifactBasedMavenArtifact::class.java,
+                LazyPublishArtifact(artifactTaskProvider, fileResolver, taskDependencyFactory),
+                taskDependencyFactory
+            )
+            result.converted(artifact)
         }
 
-        @Override
-        public void convert(Object notation, NotationConvertResult<? super MavenArtifact> result) throws TypeConversionException {
-            File file = fileResolverNotationParser.parseNotation(notation);
-            MavenArtifact mavenArtifact = instantiator.newInstance(FileBasedMavenArtifact.class, file, taskDependencyFactory);
-            if (notation instanceof TaskDependencyContainer) {
-                TaskDependencyContainer taskDependencyContainer;
-                if (notation instanceof Provider) {
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of Provider")
+        }
+    }
+
+    private inner class FileNotationConverter(fileResolver: FileResolver) : NotationConverter<Any?, MavenArtifact?> {
+        private val fileResolverNotationParser: NotationParser<Any?, File>
+
+        init {
+            this.fileResolverNotationParser = fileResolver.asNotationParser()
+        }
+
+        @Throws(TypeConversionException::class)
+        override fun convert(notation: Any?, result: NotationConvertResult<in MavenArtifact?>) {
+            val file = fileResolverNotationParser.parseNotation(notation)
+            val mavenArtifact: MavenArtifact = instantiator.newInstance<FileBasedMavenArtifact>(FileBasedMavenArtifact::class.java, file, taskDependencyFactory)
+            if (notation is TaskDependencyContainer) {
+                val taskDependencyContainer: TaskDependencyContainer?
+                if (notation is Provider<*>) {
                     // wrap to disable special handling of providers by DefaultTaskDependency in this case
                     // (workaround for https://github.com/gradle/gradle/issues/11054)
-                    taskDependencyContainer = context -> context.add(notation);
+                    taskDependencyContainer = TaskDependencyContainer { context: TaskDependencyResolveContext? -> context!!.add(notation) }
                 } else {
-                    taskDependencyContainer = (TaskDependencyContainer) notation;
+                    taskDependencyContainer = notation
                 }
-                mavenArtifact.builtBy(taskDependencyContainer);
+                mavenArtifact.builtBy(taskDependencyContainer)
             }
-            result.converted(mavenArtifact);
+            result.converted(mavenArtifact)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            fileResolverNotationParser.describe(visitor);
+        override fun describe(visitor: DiagnosticsVisitor?) {
+            fileResolverNotationParser.describe(visitor)
         }
     }
 
-    private static class MavenArtifactMapNotationConverter extends MapNotationConverter<MavenArtifact> {
-        private final NotationParser<Object, MavenArtifact> sourceNotationParser;
-
-        private MavenArtifactMapNotationConverter(NotationParser<Object, MavenArtifact> sourceNotationParser) {
-            this.sourceNotationParser = sourceNotationParser;
+    private class MavenArtifactMapNotationConverter(private val sourceNotationParser: NotationParser<Any?, MavenArtifact?>) : MapNotationConverter<MavenArtifact?>() {
+        @Suppress("unused") // reflection
+        protected fun parseMap(@MapKey("source") source: Any?): MavenArtifact? {
+            return sourceNotationParser.parseNotation(source)
         }
 
-        @SuppressWarnings("unused") // reflection
-        protected MavenArtifact parseMap(@MapKey("source") Object source) {
-            return sourceNotationParser.parseNotation(source);
-        }
-
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Maps containing a 'source' entry").example("[source: '/path/to/file', extension: 'zip']");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Maps containing a 'source' entry").example("[source: '/path/to/file', extension: 'zip']")
         }
     }
 }

@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
-import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullMarked
 
 /**
  * The relocation information of a Maven publication that has been moved
@@ -25,29 +23,28 @@ import org.jspecify.annotations.NullMarked;
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomDistributionManagement
  */
 @NullMarked
-public interface MavenPomRelocation {
-
+interface MavenPomRelocation {
     /**
      * The new group ID of the artifact.
      */
-    Property<String> getGroupId();
+    val groupId: Property<String>?
 
     /**
      * The new artifact ID of the artifact.
      */
-    Property<String> getArtifactId();
+    val artifactId: Property<String>?
 
     /**
      * The new version of the artifact.
      */
-    Property<String> getVersion();
+    val version: Property<String>?
 
     /**
      * The message to show the user for this relocation.
      */
-    Property<String> getMessage();
-
+    val message: Property<String>?
 }

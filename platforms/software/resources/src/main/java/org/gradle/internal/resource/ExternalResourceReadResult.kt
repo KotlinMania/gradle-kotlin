@@ -13,53 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.resource
 
 /**
  * @since 4.0
  */
-public class ExternalResourceReadResult<T> {
-
-    private final long bytesRead;
-    private final T result;
-
-    private ExternalResourceReadResult(long bytesRead, T result) {
-        this.bytesRead = bytesRead;
-        this.result = result;
-    }
-
-    public static ExternalResourceReadResult<Void> of(long bytesRead) {
-        return new ExternalResourceReadResult<Void>(bytesRead, null);
-    }
-
-    public static <T> ExternalResourceReadResult<T> of(long bytesRead, T t) {
-        return new ExternalResourceReadResult<T>(bytesRead, t);
-    }
-
+class ExternalResourceReadResult<T> private constructor(
     /**
-     * The number of <b>content</b> bytes read.
-     * <p>
-     * This is not guaranteed to be the number of bytes <b>transferred</b>.
+     * The number of **content** bytes read.
+     *
+     *
+     * This is not guaranteed to be the number of bytes **transferred**.
      * For example, this resource may be content encoded (e.g. compression, fewer bytes transferred).
      * Or, it might be transfer encoded (e.g. HTTP chunked transfer, more bytes transferred).
      * Or, both.
      * Therefore, it is not necessarily an accurate input into transfer rate (a.k.a. throughput) calculations.
-     * <p>
-     * Moreover, it represents the content bytes <b>read</b>, not transferred.
+     *
+     *
+     * Moreover, it represents the content bytes **read**, not transferred.
      * If the read operation only reads a subset of what was transmitted, this number will be the read byte count.
      */
-    public long getBytesRead() {
-        return bytesRead;
-    }
-
+    val bytesRead: Long,
     /**
      * Any final result of the read operation.
      */
-    @Nullable
-    public T getResult() {
-        return result;
+    val result: T?
+) {
+    companion object {
+        fun of(bytesRead: Long): ExternalResourceReadResult<Void?> {
+            return ExternalResourceReadResult<Void?>(bytesRead, null)
+        }
+
+        fun <T> of(bytesRead: Long, t: T?): ExternalResourceReadResult<T?> {
+            return ExternalResourceReadResult<T?>(bytesRead, t)
+        }
     }
 }

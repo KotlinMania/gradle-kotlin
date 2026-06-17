@@ -23,6 +23,5 @@ import org.jspecify.annotations.NullMarked
  */
 @NullMarked
 interface ResolutionProvider {
-    @JvmField
-    val resolutions: MutableList<String>?
+    fun getResolutions(): MutableList<String?>
 }

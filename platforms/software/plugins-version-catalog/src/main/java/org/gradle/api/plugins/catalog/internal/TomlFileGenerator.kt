@@ -13,50 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog.internal;
+package org.gradle.api.plugins.catalog.internal
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.GradleException;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.internal.catalog.DefaultVersionCatalog;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.CacheableTask;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.TaskAction;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.internal.catalog.DefaultVersionCatalog
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.PrintWriter
+import java.io.UnsupportedEncodingException
 
 @CacheableTask
-public abstract class TomlFileGenerator extends DefaultTask {
-    @Input
-    public abstract Property<DefaultVersionCatalog> getDependenciesModel();
+abstract class TomlFileGenerator : DefaultTask() {
+    @get:Input
+    abstract val dependenciesModel: Property<DefaultVersionCatalog>?
 
-    @OutputFile
-    public abstract RegularFileProperty getOutputFile();
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty?
 
     @TaskAction
-    void generateToml() throws IOException {
-        DefaultVersionCatalog model = getDependenciesModel().get();
-        File outputFile = getOutputFile().getAsFile().get();
-        File outputDir = outputFile.getParentFile();
+    @Throws(IOException::class)
+    fun generateToml() {
+        val model = this.dependenciesModel.get()
+        val outputFile = this.outputFile.getAsFile().get()
+        val outputDir = outputFile.getParentFile()
         if (outputDir.exists() || outputFile.mkdirs()) {
-            doGenerate(model, outputFile);
+            doGenerate(model, outputFile)
         } else {
-            throw new GradleException("Unable to generate TOML dependencies file into " + outputDir);
+            throw GradleException("Unable to generate TOML dependencies file into " + outputDir)
         }
     }
 
-    private void doGenerate(DefaultVersionCatalog model, File outputFile) throws FileNotFoundException, UnsupportedEncodingException {
-        try (PrintWriter writer = new PrintWriter(outputFile, "UTF-8")) {
-            TomlWriter ctx = new TomlWriter(writer);
-            ctx.generate(model);
+    @Throws(FileNotFoundException::class, UnsupportedEncodingException::class)
+    private fun doGenerate(model: DefaultVersionCatalog, outputFile: File) {
+        PrintWriter(outputFile, "UTF-8").use { writer ->
+            val ctx = TomlWriter(writer)
+            ctx.generate(model)
         }
     }
-
-
 }

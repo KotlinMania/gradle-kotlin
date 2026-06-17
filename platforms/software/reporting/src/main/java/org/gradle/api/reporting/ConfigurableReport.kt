@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.reporting;
+package org.gradle.api.reporting
 
 /**
  * A file based report to be created with a configurable destination.
  *
  * Note this is a legacy type which offers no additional functionality.  Reports
- * should implement {@link Report} directly instead of using this interface.
+ * should implement [Report] directly instead of using this interface.
  */
-public interface ConfigurableReport extends Report {
-    /* intentionally empty */
-}
+interface ConfigurableReport : Report

@@ -13,107 +13,91 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.DisplayName
+import org.gradle.internal.hash.HashCode
+import org.gradle.internal.hash.Hashing
+import java.io.File
+import java.io.Reader
+import java.io.StringReader
+import java.nio.charset.Charset
 
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.DisplayName;
-import org.gradle.internal.hash.HashCode;
-import org.gradle.internal.hash.Hashing;
-import org.gradle.internal.hash.PrimitiveHasher;
+class CachingTextResource(private val resource: TextResource) : TextResource {
+    private var content: String? = null
+    private var contentHash: HashCode? = null
 
-import java.io.File;
-import java.io.Reader;
-import java.io.StringReader;
-import java.nio.charset.Charset;
-
-public class CachingTextResource implements TextResource {
-    private static final HashCode SIGNATURE = Hashing.signature(CachingTextResource.class);
-    private final TextResource resource;
-    private String content;
-    private HashCode contentHash;
-
-    public CachingTextResource(TextResource resource) {
-        this.resource = resource;
+    override fun getDisplayName(): String? {
+        return resource.getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return resource.getDisplayName();
+    override fun getLongDisplayName(): DisplayName? {
+        return resource.getLongDisplayName()
     }
 
-    @Override
-    public DisplayName getLongDisplayName() {
-        return resource.getLongDisplayName();
+    override fun getShortDisplayName(): DisplayName? {
+        return resource.getShortDisplayName()
     }
 
-    @Override
-    public DisplayName getShortDisplayName() {
-        return resource.getShortDisplayName();
+    override fun getLocation(): ResourceLocation? {
+        return resource.getLocation()
     }
 
-    @Override
-    public ResourceLocation getLocation() {
-        return resource.getLocation();
+    override fun getFile(): File? {
+        return resource.getFile()
     }
 
-    @Override
-    public File getFile() {
-        return resource.getFile();
+    override fun getCharset(): Charset? {
+        return resource.getCharset()
     }
 
-    @Override
-    public Charset getCharset() {
-        return resource.getCharset();
+    override fun isContentCached(): Boolean {
+        return true
     }
 
-    @Override
-    public boolean isContentCached() {
-        return true;
-    }
-
-    @Override
-    public boolean getExists() {
+    override fun getExists(): Boolean {
         try {
-            maybeFetch();
-        } catch (MissingResourceException e) {
-            return false;
+            maybeFetch()
+        } catch (e: MissingResourceException) {
+            return false
         }
-        return true;
+        return true
     }
 
-    @Override
-    public boolean getHasEmptyContent() {
-        maybeFetch();
-        return content.length() == 0;
+    override fun getHasEmptyContent(): Boolean {
+        maybeFetch()
+        return content!!.length == 0
     }
 
-    @Override
-    public String getText() {
-        maybeFetch();
-        return content;
+    override fun getText(): String? {
+        maybeFetch()
+        return content
     }
 
-    @Override
-    public HashCode getContentHash() throws ResourceException {
-        maybeFetch();
-        return contentHash;
+    @Throws(ResourceException::class)
+    override fun getContentHash(): HashCode? {
+        maybeFetch()
+        return contentHash
     }
 
-    @Override
-    public Reader getAsReader() {
-        maybeFetch();
-        return new StringReader(content);
+    override fun getAsReader(): Reader {
+        maybeFetch()
+        return StringReader(content)
     }
 
-    private void maybeFetch() {
+    private fun maybeFetch() {
         if (content == null) {
-            content = resource.getText();
-            PrimitiveHasher hasher = Hashing.newPrimitiveHasher();
-            hasher.putHash(SIGNATURE);
-            hasher.putString(content);
-            contentHash = hasher.hash();
+            content = resource.getText()
+            val hasher = Hashing.newPrimitiveHasher()
+            hasher.putHash(SIGNATURE)
+            hasher.putString(content!!)
+            contentHash = hasher.hash()
         }
+    }
+
+    companion object {
+        private val SIGNATURE = Hashing.signature(CachingTextResource::class.java)
     }
 }

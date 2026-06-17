@@ -13,18 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.metadata
 
-package org.gradle.api.publish.internal.metadata;
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.internal.attributes.ImmutableAttributes
 
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-
-class ComponentData {
-    final ModuleVersionIdentifier coordinates;
-    final ImmutableAttributes attributes;
-
-    ComponentData(ModuleVersionIdentifier coordinates, ImmutableAttributes attributes) {
-        this.coordinates = coordinates;
-        this.attributes = attributes;
-    }
-}
+internal class ComponentData(val coordinates: ModuleVersionIdentifier?, val attributes: ImmutableAttributes?)

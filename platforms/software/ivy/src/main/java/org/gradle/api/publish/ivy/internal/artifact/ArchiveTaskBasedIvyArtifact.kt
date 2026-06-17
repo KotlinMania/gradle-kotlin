@@ -13,67 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.TaskDependency
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.TaskDependency;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
+class ArchiveTaskBasedIvyArtifact(private val archiveTask: AbstractArchiveTask, private val coordinates: IvyPublicationCoordinates, taskDependencyFactory: TaskDependencyFactory) :
+    AbstractIvyArtifact(taskDependencyFactory) {
+    private val buildDependencies: TaskDependencyInternal
 
-import java.io.File;
-
-public class ArchiveTaskBasedIvyArtifact extends AbstractIvyArtifact {
-    private final AbstractArchiveTask archiveTask;
-    private final IvyPublicationCoordinates coordinates;
-    private final TaskDependencyInternal buildDependencies;
-
-    public ArchiveTaskBasedIvyArtifact(AbstractArchiveTask archiveTask, IvyPublicationCoordinates coordinates, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.archiveTask = archiveTask;
-        this.coordinates = coordinates;
-        this.buildDependencies = taskDependencyFactory.configurableDependency(ImmutableSet.of(archiveTask));
+    init {
+        this.buildDependencies = taskDependencyFactory.configurableDependency(ImmutableSet.of<Any>(archiveTask))
     }
 
-    @Override
-    protected String getDefaultName() {
-        return coordinates.getModule().get();
+    override fun getDefaultName(): String {
+        return coordinates.getModule().get()
     }
 
-    @Override
-    protected String getDefaultType() {
-        return archiveTask.getArchiveExtension().getOrNull();
+    override fun getDefaultType(): String {
+        return archiveTask.getArchiveExtension().getOrNull()!!
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return archiveTask.getArchiveExtension().getOrNull();
+    override fun getDefaultExtension(): String {
+        return archiveTask.getArchiveExtension().getOrNull()!!
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return archiveTask.getArchiveClassifier().getOrNull();
+    override fun getDefaultClassifier(): String {
+        return archiveTask.getArchiveClassifier().getOrNull()!!
     }
 
-    @Override
-    protected String getDefaultConf() {
-        return null;
+    override fun getDefaultConf(): String {
+        return null
     }
 
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return buildDependencies;
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return buildDependencies
     }
 
-    @Override
-    public File getFile() {
-        return archiveTask.getArchiveFile().get().getAsFile();
-    }
+    val file: File
+        get() = archiveTask.getArchiveFile().get().getAsFile()
 
-    @Override
-    public boolean shouldBePublished() {
-        return archiveTask.isEnabled();
+    override fun shouldBePublished(): Boolean {
+        return archiveTask.isEnabled()
     }
 }

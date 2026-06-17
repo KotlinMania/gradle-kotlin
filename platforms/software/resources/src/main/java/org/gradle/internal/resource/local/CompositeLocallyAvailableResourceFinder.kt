@@ -13,60 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.hash.HashCode
+import java.util.LinkedList
 
-import org.gradle.internal.hash.HashCode;
-
-import java.util.LinkedList;
-import java.util.List;
-
-public class CompositeLocallyAvailableResourceFinder<C> implements LocallyAvailableResourceFinder<C> {
-
-    private final List<LocallyAvailableResourceFinder<C>> composites;
-
-    public CompositeLocallyAvailableResourceFinder(List<LocallyAvailableResourceFinder<C>> composites) {
-        this.composites = composites;
-    }
-
-    @Override
-    public LocallyAvailableResourceCandidates findCandidates(C criterion) {
-        List<LocallyAvailableResourceCandidates> allCandidates = new LinkedList<LocallyAvailableResourceCandidates>();
-        for (LocallyAvailableResourceFinder<C> finder : composites) {
-            allCandidates.add(finder.findCandidates(criterion));
+class CompositeLocallyAvailableResourceFinder<C>(private val composites: MutableList<LocallyAvailableResourceFinder<C?>>) : LocallyAvailableResourceFinder<C?> {
+    override fun findCandidates(criterion: C?): LocallyAvailableResourceCandidates {
+        val allCandidates: MutableList<LocallyAvailableResourceCandidates> = LinkedList<LocallyAvailableResourceCandidates>()
+        for (finder in composites) {
+            allCandidates.add(finder.findCandidates(criterion))
         }
 
-        return new CompositeLocallyAvailableResourceCandidates(allCandidates);
+        return CompositeLocallyAvailableResourceCandidates(allCandidates)
     }
 
-    private static class CompositeLocallyAvailableResourceCandidates implements LocallyAvailableResourceCandidates {
-        private final List<LocallyAvailableResourceCandidates> allCandidates;
-
-        public CompositeLocallyAvailableResourceCandidates(List<LocallyAvailableResourceCandidates> allCandidates) {
-            this.allCandidates = allCandidates;
-        }
-
-        @Override
-        public boolean isNone() {
-            for (LocallyAvailableResourceCandidates candidates : allCandidates) {
+    private class CompositeLocallyAvailableResourceCandidates(private val allCandidates: MutableList<LocallyAvailableResourceCandidates>) : LocallyAvailableResourceCandidates {
+        override fun isNone(): Boolean {
+            for (candidates in allCandidates) {
                 if (!candidates.isNone()) {
-                    return false;
+                    return false
                 }
             }
 
-            return true;
+            return true
         }
 
-        @Override
-        public LocallyAvailableResource findByHashValue(HashCode hashValue) {
-            for (LocallyAvailableResourceCandidates candidates : allCandidates) {
-                LocallyAvailableResource match = candidates.findByHashValue(hashValue);
+        override fun findByHashValue(hashValue: HashCode?): LocallyAvailableResource? {
+            for (candidates in allCandidates) {
+                val match = candidates.findByHashValue(hashValue)
                 if (match != null) {
-                    return match;
+                    return match
                 }
             }
 
-            return null;
+            return null
         }
     }
 }

@@ -13,36 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.distribution.plugins
 
-package org.gradle.api.distribution.plugins;
-
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.distribution.DistributionContainer;
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.distribution.DistributionContainer
 
 /**
- * <p>Applies the {@link DistributionBasePlugin} and adds a conventional {@link #MAIN_DISTRIBUTION_NAME main} distribution.</p>
  *
- * @see <a href="https://docs.gradle.org/current/userguide/distribution_plugin.html">Distribution plugin reference</a>
+ * Applies the [DistributionBasePlugin] and adds a conventional [main][.MAIN_DISTRIBUTION_NAME] distribution.
+ *
+ * @see [Distribution plugin reference](https://docs.gradle.org/current/userguide/distribution_plugin.html)
  */
-public abstract class DistributionPlugin implements Plugin<Project> {
+abstract class DistributionPlugin : Plugin<Project?> {
+    override fun apply(project: Project) {
+        project.getPluginManager().apply(DistributionBasePlugin::class.java)
 
-    /**
-     * Name of the main distribution
-     */
-    public static final String MAIN_DISTRIBUTION_NAME = "main";
-
-    /**
-     * The name of the install task for the main distribution.
-     */
-    public static final String TASK_INSTALL_NAME = "installDist";
-
-    @Override
-    public void apply(final Project project) {
-        project.getPluginManager().apply(DistributionBasePlugin.class);
-
-        DistributionContainer distributions = project.getExtensions().getByType(DistributionContainer.class);
-        distributions.create(MAIN_DISTRIBUTION_NAME);
+        val distributions = project.getExtensions().getByType<DistributionContainer>(DistributionContainer::class.java)
+        distributions.create(MAIN_DISTRIBUTION_NAME)
     }
 
+    companion object {
+        /**
+         * Name of the main distribution
+         */
+        const val MAIN_DISTRIBUTION_NAME: String = "main"
+
+        /**
+         * The name of the install task for the main distribution.
+         */
+        const val TASK_INSTALL_NAME: String = "installDist"
+    }
 }

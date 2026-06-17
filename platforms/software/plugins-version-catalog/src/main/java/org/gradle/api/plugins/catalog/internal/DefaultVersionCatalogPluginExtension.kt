@@ -13,52 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog.internal;
+package org.gradle.api.plugins.catalog.internal
 
-import com.google.common.collect.Interners;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
-import org.gradle.api.internal.artifacts.DependencyResolutionServices;
-import org.gradle.api.internal.catalog.DefaultVersionCatalog;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderFactory;
+import com.google.common.collect.Interners
+import org.gradle.api.Action
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+import org.gradle.api.internal.artifacts.DependencyResolutionServices
+import org.gradle.api.internal.catalog.DefaultVersionCatalog
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import java.util.concurrent.Callable
+import java.util.function.Supplier
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.function.Supplier;
+class DefaultVersionCatalogPluginExtension @Inject constructor(objects: ObjectFactory, providers: ProviderFactory, drs: DependencyResolutionServices, dependenciesConfiguration: Configuration) :
+    CatalogExtensionInternal {
+    private val builder: DependenciesAwareVersionCatalogBuilder
+    private val model: Provider<DefaultVersionCatalog>
 
-public class DefaultVersionCatalogPluginExtension implements CatalogExtensionInternal {
-    private final DependenciesAwareVersionCatalogBuilder builder;
-    private final Provider<DefaultVersionCatalog> model;
-
-    @Inject
-    public DefaultVersionCatalogPluginExtension(ObjectFactory objects, ProviderFactory providers, DependencyResolutionServices drs, Configuration dependenciesConfiguration) {
-        this.builder = objects.newInstance(DependenciesAwareVersionCatalogBuilder.class,
+    init {
+        this.builder = objects.newInstance<DependenciesAwareVersionCatalogBuilder>(
+            DependenciesAwareVersionCatalogBuilder::class.java,
             "versionCatalog",
-            Interners.newStrongInterner(),
-            Interners.newStrongInterner(),
+            Interners.newStrongInterner<Any>(),
+            Interners.newStrongInterner<Any>(),
             objects,
-            (Supplier<DependencyResolutionServices>) () -> drs,
+            Supplier { drs } as Supplier<DependencyResolutionServices?>,
             dependenciesConfiguration
-        );
-        this.model = providers.provider(builder::build);
+        )
+        this.model = providers.provider<DefaultVersionCatalog>(Callable { builder.build() })
     }
 
-    @Override
-    public void versionCatalog(Action<? super VersionCatalogBuilder> spec) {
-        spec.execute(builder);
+    override fun versionCatalog(spec: Action<in VersionCatalogBuilder>) {
+        spec.execute(builder)
     }
 
-    @Override
-    public void configureExplicitAlias(String alias, String group, String name) {
-        builder.configureExplicitAlias(DefaultModuleIdentifier.newId(group, name), alias);
+    override fun configureExplicitAlias(alias: String, group: String, name: String) {
+        builder.configureExplicitAlias(DefaultModuleIdentifier.newId(group, name), alias)
     }
 
-    @Override
-    public Provider<DefaultVersionCatalog> getVersionCatalog() {
-        return model;
+    override fun getVersionCatalog(): Provider<DefaultVersionCatalog> {
+        return model
     }
-
 }

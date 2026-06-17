@@ -13,64 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.artifacts.PublishArtifactInternal
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.TaskDependency
 
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.artifacts.PublishArtifactInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.TaskDependency;
-
-import java.io.File;
-
-public class PublishArtifactBasedIvyArtifact extends AbstractIvyArtifact {
-    private final PublishArtifact artifact;
-    private final IvyPublicationCoordinates coordinates;
-
-    public PublishArtifactBasedIvyArtifact(PublishArtifact artifact, IvyPublicationCoordinates coordinates, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.artifact = artifact;
-        this.coordinates = coordinates;
+class PublishArtifactBasedIvyArtifact(private val artifact: PublishArtifact, private val coordinates: IvyPublicationCoordinates, taskDependencyFactory: TaskDependencyFactory) :
+    AbstractIvyArtifact(taskDependencyFactory) {
+    override fun getDefaultName(): String {
+        return coordinates.getModule().get()
     }
 
-    @Override
-    protected String getDefaultName() {
-        return coordinates.getModule().get();
+    override fun getDefaultType(): String {
+        return artifact.getType()
     }
 
-    @Override
-    protected String getDefaultType() {
-        return artifact.getType();
+    override fun getDefaultExtension(): String {
+        return artifact.getExtension()
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return artifact.getExtension();
+    override fun getDefaultClassifier(): String {
+        return artifact.getClassifier()!!
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return artifact.getClassifier();
+    override fun getDefaultConf(): String {
+        return null
     }
 
-    @Override
-    protected String getDefaultConf() {
-        return null;
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return artifact.getBuildDependencies()
     }
 
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return artifact.getBuildDependencies();
-    }
+    val file: File
+        get() = artifact.getFile()
 
-    @Override
-    public File getFile() {
-        return artifact.getFile();
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return PublishArtifactInternal.shouldBePublished(artifact);
+    override fun shouldBePublished(): Boolean {
+        return PublishArtifactInternal.shouldBePublished(artifact)
     }
 }

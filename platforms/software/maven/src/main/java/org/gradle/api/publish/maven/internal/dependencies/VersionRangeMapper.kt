@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.dependencies
 
-package org.gradle.api.publish.maven.internal.dependencies;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-
-@ServiceScope(Scope.Build.class)
-public interface VersionRangeMapper {
-    String map(String version);
+@ServiceScope(Scope.Build::class)
+interface VersionRangeMapper {
+    fun map(version: String?): String?
 }

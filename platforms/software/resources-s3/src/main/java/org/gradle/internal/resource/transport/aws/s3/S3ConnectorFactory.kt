@@ -13,57 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.aws.s3
 
-package org.gradle.internal.resource.transport.aws.s3;
+import org.gradle.api.credentials.AwsCredentials
+import org.gradle.authentication.Authentication
+import org.gradle.authentication.aws.AwsImAuthentication
+import org.gradle.internal.authentication.AllSchemesAuthentication
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.resource.connector.ResourceConnectorSpecification
+import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.gradle.api.credentials.AwsCredentials;
-import org.gradle.authentication.Authentication;
-import org.gradle.authentication.aws.AwsImAuthentication;
-import org.gradle.internal.authentication.AllSchemesAuthentication;
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.resource.connector.ResourceConnectorSpecification;
-import org.gradle.internal.resource.transfer.ExternalResourceConnector;
-
-public class S3ConnectorFactory implements ResourceConnectorFactory {
-    @Override
-    public Set<String> getSupportedProtocols() {
-        return Collections.singleton("s3");
+class S3ConnectorFactory : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String?> {
+        return mutableSetOf<String?>("s3")
     }
 
-    @Override
-    public Set<Class<? extends Authentication>> getSupportedAuthentication() {
-        Set<Class<? extends Authentication>> supported = new HashSet<Class<? extends Authentication>>();
-        supported.add(AwsImAuthentication.class);
-        supported.add(AllSchemesAuthentication.class);
-        return supported;
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
+        val supported: MutableSet<Class<out Authentication?>?> = HashSet<Class<out Authentication?>?>()
+        supported.add(AwsImAuthentication::class.java)
+        supported.add(AllSchemesAuthentication::class.java)
+        return supported
     }
 
-    @Override
-    public ExternalResourceConnector createResourceConnector(ResourceConnectorSpecification connectionDetails) {
-        Collection<? extends Authentication> authentications = connectionDetails.getAuthentications();
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
+        val authentications = connectionDetails.getAuthentications()
         // Since s3 transport supports only one type of credentials at a time, let's use the first one found.
-        for (Authentication authentication : authentications) {
+        for (authentication in authentications) {
             // We get only the first element here, nothing else. But Collection
             // forces us to use an iterator.
-            if (authentication instanceof AllSchemesAuthentication) {
+            if (authentication is AllSchemesAuthentication) {
                 // First things first, retro compatibility
-                AwsCredentials awsCredentials = connectionDetails.getCredentials(AwsCredentials.class);
-                if (awsCredentials == null) {
-                    throw new IllegalArgumentException("AwsCredentials must be set for S3 backed repository.");
-                }
-                return new S3ResourceConnector(new S3Client(awsCredentials, new S3ConnectionProperties()));
+                val awsCredentials = connectionDetails.getCredentials<AwsCredentials>(AwsCredentials::class.java)
+                requireNotNull(awsCredentials) { "AwsCredentials must be set for S3 backed repository." }
+                return S3ResourceConnector(S3Client(awsCredentials, S3ConnectionProperties()))
             }
 
-            if (authentication instanceof AwsImAuthentication) {
-                return new S3ResourceConnector(new S3Client(new S3ConnectionProperties()));
+            if (authentication is AwsImAuthentication) {
+                return S3ResourceConnector(S3Client(S3ConnectionProperties()))
             }
         }
 
-        throw new IllegalArgumentException("S3 resource should either specify AwsImAuthentication or provide some AwsCredentials.");
+        throw IllegalArgumentException("S3 resource should either specify AwsImAuthentication or provide some AwsCredentials.")
     }
 }

@@ -39,5 +39,5 @@ annotation class EventScope(
      * One or more scopes in which the service is declared,
      * from the longest lifecycle to the shortest.
      */
-    vararg val value: KClass<out Scope?>
+    vararg val value: KClass<out Scope>
 )

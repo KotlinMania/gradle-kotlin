@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.tasks
 
-package org.gradle.api.publish.ivy.tasks;
-
-import org.gradle.api.DefaultTask;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Project;
-import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec;
-import org.gradle.api.publish.ivy.internal.publication.IvyModuleDescriptorSpecInternal;
-import org.gradle.api.publish.ivy.internal.tasks.IvyDescriptorFileGenerator;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.UntrackedTask;
-import org.gradle.internal.file.PathToFileResolver;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.gradle.internal.serialization.Cached;
-import org.gradle.internal.serialization.Transient;
-
-import javax.inject.Inject;
-import java.io.File;
+import org.gradle.api.DefaultTask
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.publish.ivy.IvyModuleDescriptorSpec
+import org.gradle.api.publish.ivy.internal.publication.IvyModuleDescriptorSpecInternal
+import org.gradle.api.publish.ivy.internal.tasks.IvyDescriptorFileGenerator
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.internal.serialization.Cached
+import org.gradle.internal.serialization.Transient.Companion.varOf
+import java.io.File
+import javax.inject.Inject
 
 /**
  * Generates an Ivy XML Module Descriptor file.
@@ -40,15 +36,14 @@ import java.io.File;
  * @since 1.4
  */
 @UntrackedTask(because = "Gradle doesn't understand the data structures")
-public abstract class GenerateIvyDescriptor extends DefaultTask {
+abstract class GenerateIvyDescriptor : DefaultTask() {
+    private val descriptor = varOf<IvyModuleDescriptorSpec?>()
+    private val ivyDescriptorSpec = Cached.of({ this.computeIvyDescriptorFileSpec() })
 
-    private Transient.Var<IvyModuleDescriptorSpec> descriptor = Transient.varOf();
-    private final Cached<IvyDescriptorFileGenerator.DescriptorFileSpec> ivyDescriptorSpec = Cached.of(this::computeIvyDescriptorFileSpec);
+    private var destination: Any? = null
 
-    private Object destination;
-
-    @Inject
-    protected abstract PathToFileResolver getFileResolver();
+    @get:Inject
+    protected abstract val fileResolver: PathToFileResolver?
 
     /**
      * The module descriptor metadata.
@@ -57,12 +52,12 @@ public abstract class GenerateIvyDescriptor extends DefaultTask {
      */
     @Internal
     @ToBeReplacedByLazyProperty
-    public IvyModuleDescriptorSpec getDescriptor() {
-        return descriptor.get();
+    fun getDescriptor(): IvyModuleDescriptorSpec? {
+        return descriptor.get()
     }
 
-    public void setDescriptor(IvyModuleDescriptorSpec descriptor) {
-        this.descriptor.set(descriptor);
+    fun setDescriptor(descriptor: IvyModuleDescriptorSpec?) {
+        this.descriptor.set(descriptor)
     }
 
     /**
@@ -72,8 +67,8 @@ public abstract class GenerateIvyDescriptor extends DefaultTask {
      */
     @OutputFile
     @ToBeReplacedByLazyProperty
-    public File getDestination() {
-        return destination == null ? null : getFileResolver().resolve(destination);
+    fun getDestination(): File? {
+        return if (destination == null) null else this.fileResolver.resolve(destination)
     }
 
     /**
@@ -82,45 +77,46 @@ public abstract class GenerateIvyDescriptor extends DefaultTask {
      * @param destination The file the descriptor will be written to.
      * @since 4.0
      */
-    public void setDestination(File destination) {
-        this.destination = destination;
+    fun setDestination(destination: File?) {
+        this.destination = destination
     }
 
     /**
      * Sets the destination the descriptor will be written to.
      *
-     * The value is resolved with {@link Project#file(Object)}
+     * The value is resolved with [Project.file]
      *
      * @param destination The file the descriptor will be written to.
      */
-    public void setDestination(Object destination) {
-        this.destination = destination;
+    fun setDestination(destination: Any?) {
+        this.destination = destination
     }
 
     @TaskAction
-    public void doGenerate() {
-        ivyDescriptorSpec.get().writeTo(getDestination());
+    fun doGenerate() {
+        ivyDescriptorSpec.get()!!.writeTo(getDestination()!!)
     }
 
-    IvyDescriptorFileGenerator.DescriptorFileSpec computeIvyDescriptorFileSpec() {
-        IvyModuleDescriptorSpecInternal descriptorInternal = toIvyModuleDescriptorInternal(getDescriptor());
-        return IvyDescriptorFileGenerator.generateSpec(descriptorInternal);
+    fun computeIvyDescriptorFileSpec(): IvyDescriptorFileGenerator.DescriptorFileSpec {
+        val descriptorInternal: IvyModuleDescriptorSpecInternal = toIvyModuleDescriptorInternal(getDescriptor())
+        return IvyDescriptorFileGenerator.generateSpec(descriptorInternal)
     }
 
-    private static IvyModuleDescriptorSpecInternal toIvyModuleDescriptorInternal(IvyModuleDescriptorSpec ivyModuleDescriptorSpec) {
-        if (ivyModuleDescriptorSpec == null) {
-            return null;
-        } else if (ivyModuleDescriptorSpec instanceof IvyModuleDescriptorSpecInternal) {
-            return (IvyModuleDescriptorSpecInternal) ivyModuleDescriptorSpec;
-        } else {
-            throw new InvalidUserDataException(
-                String.format(
-                    "ivyModuleDescriptor implementations must implement the '%s' interface, implementation '%s' does not",
-                    IvyModuleDescriptorSpecInternal.class.getName(),
-                    ivyModuleDescriptorSpec.getClass().getName()
+    companion object {
+        private fun toIvyModuleDescriptorInternal(ivyModuleDescriptorSpec: IvyModuleDescriptorSpec?): IvyModuleDescriptorSpecInternal {
+            if (ivyModuleDescriptorSpec == null) {
+                return null
+            } else if (ivyModuleDescriptorSpec is IvyModuleDescriptorSpecInternal) {
+                return ivyModuleDescriptorSpec
+            } else {
+                throw InvalidUserDataException(
+                    String.format(
+                        "ivyModuleDescriptor implementations must implement the '%s' interface, implementation '%s' does not",
+                        IvyModuleDescriptorSpecInternal::class.java.getName(),
+                        ivyModuleDescriptorSpec.javaClass.getName()
+                    )
                 )
-            );
+            }
         }
     }
-
 }

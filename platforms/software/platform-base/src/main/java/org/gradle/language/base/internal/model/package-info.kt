@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.language.base.internal.model
 
-@NullMarked
-package org.gradle.language.base.internal.model;
+import org.gradle.language.base.internal.compile.Compiler.execute
 
-import org.jspecify.annotations.NullMarked;

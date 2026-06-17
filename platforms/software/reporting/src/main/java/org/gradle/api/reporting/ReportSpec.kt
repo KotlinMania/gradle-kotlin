@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting
 
-package org.gradle.api.reporting;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Named;
+import org.gradle.api.Incubating
+import org.gradle.api.Named
 
 /**
  * Common parent for aggregation report types
@@ -25,5 +24,4 @@ import org.gradle.api.Named;
  * @since 7.4
  */
 @Incubating
-public interface ReportSpec extends Named {
-}
+interface ReportSpec : Named

@@ -13,59 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.provider.Property;
-import org.jspecify.annotations.NullMarked;
+import org.gradle.api.Incubating
+import org.jspecify.annotations.NullMarked
 
 /**
- * The repository information of the Maven {@code distributionManagement} node.
+ * The repository information of the Maven `distributionManagement` node.
  *
  * @see MavenPom
+ *
  * @see MavenPomDistributionManagement
+ *
  * @since 9.1.0
  */
 @Incubating
 @NullMarked
-public interface MavenPomDeploymentRepository {
+interface MavenPomDeploymentRepository {
     /**
      * A unique identifier for a repository.
      *
      * @since 9.1.0
      */
-    Property<String> getId();
+    val id: Property<String>?
 
     /**
      * Human readable name of the repository.
      *
      * @since 9.1.0
      */
-    Property<String> getName();
+    val name: Property<String>?
 
     /**
      * Whether to assign snapshots a unique version comprised of the timestamp and build number, or to use the same version each time.
      *
-     * Default value: <code>true</code>
+     * Default value: `true`
      *
      * @since 9.1.0
      */
-    Property<Boolean> getUniqueVersion();
+    val uniqueVersion: Property<Boolean>?
 
     /**
-     * The url of the repository, in the form <code>protocol://hostname/path</code>.
+     * The url of the repository, in the form `protocol://hostname/path`.
      *
      * @since 9.1.0
      */
-    Property<String> getUrl();
+    val url: Property<String>?
 
     /**
-     * The type of layout this repository uses for locating and storing artifacts - can be <code>legacy</code> or <code>default</code>.
+     * The type of layout this repository uses for locating and storing artifacts - can be `legacy` or `default`.
      *
-     * Default value: <code>default</code>
+     * Default value: `default`
      *
      * @since 9.1.0
      */
-    Property<String> getLayout();
+    val layout: Property<String>?
 }

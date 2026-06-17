@@ -13,35 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.ResourceExceptions
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.InputStream
 
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.ResourceExceptions;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
-public class FileReadableContent implements ReadableContent {
-    private final File file;
-
-    public FileReadableContent(File file) {
-        this.file = file;
+class FileReadableContent(private val file: File) : ReadableContent {
+    override fun getContentLength(): Long {
+        return file.length()
     }
 
-    @Override
-    public long getContentLength() {
-        return file.length();
-    }
-
-    @Override
-    public InputStream open() {
+    override fun open(): InputStream {
         try {
-            return new FileInputStream(file);
-        } catch (FileNotFoundException e) {
-            throw ResourceExceptions.readMissing(file, e);
+            return FileInputStream(file)
+        } catch (e: FileNotFoundException) {
+            throw ResourceExceptions.readMissing(file, e)
         }
     }
 }

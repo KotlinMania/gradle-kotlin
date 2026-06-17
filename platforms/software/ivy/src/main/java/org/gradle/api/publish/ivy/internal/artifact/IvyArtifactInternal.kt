@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.publish.internal.PublicationArtifactInternal
+import org.gradle.api.publish.ivy.IvyArtifact
 
-import org.gradle.api.publish.internal.PublicationArtifactInternal;
-import org.gradle.api.publish.ivy.IvyArtifact;
-
-public interface IvyArtifactInternal extends IvyArtifact, PublicationArtifactInternal {
-    default NormalizedIvyArtifact asNormalisedArtifact() {
-        return new NormalizedIvyArtifact(this);
+interface IvyArtifactInternal : IvyArtifact, PublicationArtifactInternal {
+    fun asNormalisedArtifact(): NormalizedIvyArtifact {
+        return NormalizedIvyArtifact(this)
     }
 }

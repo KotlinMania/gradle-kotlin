@@ -77,23 +77,23 @@ object NativeBinaryRules : RuleSource() {
     }
 
     fun executableFileFor(nativeBinary: NativeBinarySpecInternal, buildDir: File?): File {
-        return File(nativeBinary.getNamingScheme().getOutputDirectory(buildDir, "exe"), executableNameFor(nativeBinary))
+        return File(nativeBinary.namingScheme.getOutputDirectory(buildDir, "exe"), executableNameFor(nativeBinary))
     }
 
     private fun sharedLibraryLinkFileFor(nativeBinary: NativeBinarySpecInternal, buildDir: File?): File {
-        return File(nativeBinary.getNamingScheme().getOutputDirectory(buildDir, "libs"), sharedLibraryLinkFileNameFor(nativeBinary))
+        return File(nativeBinary.namingScheme.getOutputDirectory(buildDir, "libs"), sharedLibraryLinkFileNameFor(nativeBinary))
     }
 
     private fun sharedLibraryFileFor(nativeBinary: NativeBinarySpecInternal, buildDir: File?): File {
-        return File(nativeBinary.getNamingScheme().getOutputDirectory(buildDir, "libs"), sharedLibraryNameFor(nativeBinary))
+        return File(nativeBinary.namingScheme.getOutputDirectory(buildDir, "libs"), sharedLibraryNameFor(nativeBinary))
     }
 
     private fun staticLibraryFileFor(nativeBinary: NativeBinarySpecInternal, buildDir: File?): File {
-        return File(nativeBinary.getNamingScheme().getOutputDirectory(buildDir, "libs"), staticLibraryNameFor(nativeBinary))
+        return File(nativeBinary.namingScheme.getOutputDirectory(buildDir, "libs"), staticLibraryNameFor(nativeBinary))
     }
 
     fun installationDirFor(nativeBinary: NativeBinarySpecInternal, buildDir: File?): File? {
-        return nativeBinary.getNamingScheme().getOutputDirectory(buildDir, "install")
+        return nativeBinary.namingScheme.getOutputDirectory(buildDir, "install")
     }
 
     private fun executableNameFor(nativeBinary: NativeBinarySpecInternal): String? {

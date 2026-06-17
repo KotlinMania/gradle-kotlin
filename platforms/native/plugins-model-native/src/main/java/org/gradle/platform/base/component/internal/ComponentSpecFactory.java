@@ -81,7 +81,7 @@ public class ComponentSpecFactory extends BaseInstanceFactory<ComponentSpec> {
     private ComponentSpecIdentifier getId(@Nullable MutableModelNode ownerNode, String name) {
         if (ownerNode != null) {
             ComponentSpecInternal componentSpec = ownerNode.asImmutable(ModelType.of(ComponentSpecInternal.class), null).getInstance();
-            return componentSpec.getIdentifier().child(name);
+            return componentSpec.identifier.child(name);
         }
 
         return new DefaultComponentSpecIdentifier(projectIdentifier.getPath(), name);

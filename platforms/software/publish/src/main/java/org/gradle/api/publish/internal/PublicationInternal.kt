@@ -13,51 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal;
+package org.gradle.api.publish.internal
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectComponentPublication;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.PublicationArtifact;
-import org.gradle.api.publish.internal.versionmapping.VersionMappingStrategyInternal;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.artifacts.ivyservice.projectmodule.ProjectComponentPublication
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.PublicationArtifact
+import java.io.File
 
-import java.io.File;
+interface PublicationInternal<T : PublicationArtifact?> : Publication, ProjectComponentPublication {
+    val coordinates: ModuleVersionIdentifier?
 
-public interface PublicationInternal<T extends PublicationArtifact> extends Publication, ProjectComponentPublication {
-    ModuleVersionIdentifier getCoordinates();
+    val attributes: ImmutableAttributes?
 
-    ImmutableAttributes getAttributes();
-
-    void setAlias(boolean alias);
+    fun setAlias(alias: Boolean)
 
     /**
      * Returns all publishable artifacts of this publication (read-only).
      */
-    PublicationArtifactSet<T> getPublishableArtifacts();
+    val publishableArtifacts: PublicationArtifactSet<T?>?
 
-    void allPublishableArtifacts(Action<? super T> action);
+    fun allPublishableArtifacts(action: Action<in T?>?)
 
-    void whenPublishableArtifactRemoved(Action<? super T> action);
+    fun whenPublishableArtifactRemoved(action: Action<in T?>?)
 
     /**
      * Add a derived artifact for the supplied original artifact.
      *
-     * <p>Derived artifacts are not mandatory, i.e. when the supplied file does not exist when this
+     *
+     * Derived artifacts are not mandatory, i.e. when the supplied file does not exist when this
      * publication is about to be published, they will simply be omitted from the file transfer.
      *
-     * <p>Currently, the only known use case for derived artifacts is adding signature files
+     *
+     * Currently, the only known use case for derived artifacts is adding signature files
      * created by the signing plugin.
      *
      * @param originalArtifact The original artifact to create a derived artifact for.
      * @param file The file to be used for publishing the derived artifact.
      * @return The newly created derived artifact.
      */
-    T addDerivedArtifact(T originalArtifact, DerivedArtifact file);
+    fun addDerivedArtifact(originalArtifact: T?, file: DerivedArtifact?): T?
 
-    void removeDerivedArtifact(T artifact);
+    fun removeDerivedArtifact(artifact: T?)
 
     /**
      * Provide the file coordinates for the published artifact, if any.
@@ -65,21 +63,21 @@ public interface PublicationInternal<T extends PublicationArtifact> extends Publ
      * @param source The original PublishArtifact
      * @return The name and URI of the published file, or `null` if the source artifact is not published.
      */
-    PublishedFile getPublishedFile(PublishArtifact source);
+    fun getPublishedFile(source: PublishArtifact?): PublishedFile?
 
-    VersionMappingStrategyInternal getVersionMappingStrategy();
+    val versionMappingStrategy: VersionMappingStrategyInternal?
 
-    boolean isPublishBuildId();
+    val isPublishBuildId: Boolean
 
 
     interface PublishedFile {
-        String getName();
+        val name: String?
 
-        String getUri();
+        val uri: String?
     }
 
     interface DerivedArtifact {
-        boolean shouldBePublished();
-        File create();
+        fun shouldBePublished(): Boolean
+        fun create(): File?
     }
 }

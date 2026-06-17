@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Types that deal with publishing in the Ivy format.
  *
  * @since 1.3
  */
-package org.gradle.api.publish.ivy;
+package org.gradle.api.publish.ivy

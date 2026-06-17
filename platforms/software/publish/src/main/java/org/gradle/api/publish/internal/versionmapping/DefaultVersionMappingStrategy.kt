@@ -13,128 +13,101 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.versionmapping;
+package org.gradle.api.publish.internal.versionmapping
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
-import org.gradle.api.Action;
-import org.gradle.api.InvalidUserCodeException;
-import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.attributes.Attribute;
-import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.attributes.AttributeSchemaServices;
-import org.gradle.api.internal.attributes.AttributesFactory;
-import org.gradle.api.internal.attributes.AttributesSchemaInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributes;
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema;
-import org.gradle.api.internal.attributes.matching.AttributeMatcher;
-import org.gradle.api.internal.attributes.matching.ImmutableAttributesBackedMatchingCandidate;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.publish.VariantVersionMappingStrategy;
+import com.google.common.collect.ArrayListMultimap
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Multimap
+import org.gradle.api.Action
+import org.gradle.api.InvalidUserCodeException
+import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Usage
+import org.gradle.api.internal.attributes.AttributeSchemaServices
+import org.gradle.api.internal.attributes.AttributesFactory
+import org.gradle.api.internal.attributes.AttributesSchemaInternal
+import org.gradle.api.internal.attributes.ImmutableAttributes
+import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchema
+import org.gradle.api.internal.attributes.matching.AttributeMatcher
+import org.gradle.api.internal.attributes.matching.ImmutableAttributesBackedMatchingCandidate
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.publish.VariantVersionMappingStrategy
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+class DefaultVersionMappingStrategy @Inject constructor(
+    private val objectFactory: ObjectFactory,
+    private val configurations: ConfigurationContainer,
+    private val schema: AttributesSchemaInternal,
+    private val attributesFactory: AttributesFactory,
+    private val attributeSchemaServices: AttributeSchemaServices
+) : VersionMappingStrategyInternal {
+    private val mappingsForAllVariants: MutableList<Action<in VariantVersionMappingStrategy>> = ArrayList<Action<in VariantVersionMappingStrategy>>(2)
+    private val defaultConfigurations: MutableMap<ImmutableAttributesBackedMatchingCandidate, String> = HashMap<ImmutableAttributesBackedMatchingCandidate, String>()
+    private val attributeBasedMappings: Multimap<ImmutableAttributesBackedMatchingCandidate, Action<in VariantVersionMappingStrategy>> =
+        ArrayListMultimap.create<ImmutableAttributesBackedMatchingCandidate, Action<in VariantVersionMappingStrategy>>()
 
-public class DefaultVersionMappingStrategy implements VersionMappingStrategyInternal {
-    private final ObjectFactory objectFactory;
-    private final ConfigurationContainer configurations;
-    private final AttributesSchemaInternal schema;
-    private final AttributesFactory attributesFactory;
-    private final AttributeSchemaServices attributeSchemaServices;
+    private var matcher: AttributeMatcher? = null
+        get() {
+            if (field == null) {
+                val immutableSchema = attributeSchemaServices.schemaFactory.create(schema)
+                field = attributeSchemaServices.getMatcher(immutableSchema, ImmutableAttributesSchema.EMPTY)
+            }
 
-    private final List<Action<? super VariantVersionMappingStrategy>> mappingsForAllVariants = new ArrayList<>(2);
-    private final Map<ImmutableAttributesBackedMatchingCandidate, String> defaultConfigurations = new HashMap<>();
-    private final Multimap<ImmutableAttributesBackedMatchingCandidate, Action<? super VariantVersionMappingStrategy>> attributeBasedMappings = ArrayListMultimap.create();
+            return field
+        }
 
-    private AttributeMatcher matcher;
-
-    @Inject
-    public DefaultVersionMappingStrategy(
-        ObjectFactory objectFactory,
-        ConfigurationContainer configurations,
-        AttributesSchemaInternal schema,
-        AttributesFactory attributesFactory,
-        AttributeSchemaServices attributeSchemaServices
-    ) {
-        this.objectFactory = objectFactory;
-        this.configurations = configurations;
-        this.schema = schema;
-        this.attributesFactory = attributesFactory;
-        this.attributeSchemaServices = attributeSchemaServices;
+    override fun allVariants(action: Action<in VariantVersionMappingStrategy>) {
+        mappingsForAllVariants.add(action)
     }
 
-    @Override
-    public void allVariants(Action<? super VariantVersionMappingStrategy> action) {
-        mappingsForAllVariants.add(action);
+    override fun <T> variant(attribute: Attribute<T?>, attributeValue: T?, action: Action<in VariantVersionMappingStrategy>) {
+        val attributes = attributesFactory.of<T?>(attribute, attributeValue)
+        attributeBasedMappings.put(ImmutableAttributesBackedMatchingCandidate(attributes), action)
     }
 
-    @Override
-    public <T> void variant(Attribute<T> attribute, T attributeValue, Action<? super VariantVersionMappingStrategy> action) {
-        ImmutableAttributes attributes = attributesFactory.of(attribute, attributeValue);
-        attributeBasedMappings.put(new ImmutableAttributesBackedMatchingCandidate(attributes), action);
+    override fun usage(usage: String, action: Action<in VariantVersionMappingStrategy>) {
+        variant<Usage>(Usage.USAGE_ATTRIBUTE, objectFactory.named<Usage>(Usage::class.java, usage), action)
     }
 
-    @Override
-    public void usage(String usage, Action<? super VariantVersionMappingStrategy> action) {
-        variant(Usage.USAGE_ATTRIBUTE, objectFactory.named(Usage.class, usage), action);
+    override fun defaultResolutionConfiguration(usage: String, defaultConfiguration: String) {
+        val attributes = attributesFactory.of<Usage>(Usage.USAGE_ATTRIBUTE, objectFactory.named<Usage>(Usage::class.java, usage))
+        defaultConfigurations.put(ImmutableAttributesBackedMatchingCandidate(attributes), defaultConfiguration)
     }
 
-    @Override
-    public void defaultResolutionConfiguration(String usage, String defaultConfiguration) {
-        ImmutableAttributes attributes = attributesFactory.of(Usage.USAGE_ATTRIBUTE, objectFactory.named(Usage.class, usage));
-        defaultConfigurations.put(new ImmutableAttributesBackedMatchingCandidate(attributes), defaultConfiguration);
-    }
-
-    @Override
-    public VariantVersionMappingStrategyInternal findStrategyForVariant(ImmutableAttributes variantAttributes) {
-        DefaultVariantVersionMappingStrategy strategy = createDefaultMappingStrategy(variantAttributes);
+    override fun findStrategyForVariant(variantAttributes: ImmutableAttributes): VariantVersionMappingStrategyInternal {
+        val strategy = createDefaultMappingStrategy(variantAttributes)
         // Apply strategies for "all variants"
-        for (Action<? super VariantVersionMappingStrategy> action : mappingsForAllVariants) {
-            action.execute(strategy);
+        for (action in mappingsForAllVariants) {
+            action.execute(strategy)
         }
 
         // Then use attribute specific mapping
         if (!attributeBasedMappings.isEmpty()) {
-            List<ImmutableAttributesBackedMatchingCandidate> candidates = ImmutableList.copyOf(attributeBasedMappings.keySet());
-            List<ImmutableAttributesBackedMatchingCandidate> matches = getMatcher().matchMultipleCandidates(candidates, variantAttributes);
-            if (matches.size() == 1) {
-                Collection<Action<? super VariantVersionMappingStrategy>> actions = attributeBasedMappings.get(matches.get(0));
-                for (Action<? super VariantVersionMappingStrategy> action : actions) {
-                    action.execute(strategy);
+            val candidates: MutableList<ImmutableAttributesBackedMatchingCandidate> = ImmutableList.copyOf<ImmutableAttributesBackedMatchingCandidate>(attributeBasedMappings.keySet())
+            val matches: MutableList<ImmutableAttributesBackedMatchingCandidate>? = this.matcher!!.matchMultipleCandidates<ImmutableAttributesBackedMatchingCandidate?>(candidates, variantAttributes)
+            if (matches!!.size == 1) {
+                val actions = attributeBasedMappings.get(matches.get(0))
+                for (action in actions) {
+                    action.execute(strategy)
                 }
-            } else if (matches.size() > 1) {
-                throw new InvalidUserCodeException("Unable to find a suitable version mapping strategy for " + variantAttributes);
+            } else if (matches.size > 1) {
+                throw InvalidUserCodeException("Unable to find a suitable version mapping strategy for " + variantAttributes)
             }
         }
-        return strategy;
+        return strategy
     }
 
-    private DefaultVariantVersionMappingStrategy createDefaultMappingStrategy(ImmutableAttributes variantAttributes) {
-        DefaultVariantVersionMappingStrategy strategy = new DefaultVariantVersionMappingStrategy(configurations);
+    private fun createDefaultMappingStrategy(variantAttributes: ImmutableAttributes): DefaultVariantVersionMappingStrategy {
+        val strategy = DefaultVariantVersionMappingStrategy(configurations)
         if (!defaultConfigurations.isEmpty()) {
             // First need to populate the default variant version mapping strategy with the default values
             // provided by plugins
-            List<ImmutableAttributesBackedMatchingCandidate> candidates = ImmutableList.copyOf(defaultConfigurations.keySet());
-            List<ImmutableAttributesBackedMatchingCandidate> matches = getMatcher().matchMultipleCandidates(candidates, variantAttributes);
-            for (ImmutableAttributesBackedMatchingCandidate match : matches) {
-                strategy.setDefaultResolutionConfiguration(configurations.getByName(defaultConfigurations.get(match)));
+            val candidates: MutableList<ImmutableAttributesBackedMatchingCandidate> = ImmutableList.copyOf<ImmutableAttributesBackedMatchingCandidate>(defaultConfigurations.keys)
+            val matches: MutableList<ImmutableAttributesBackedMatchingCandidate>? = this.matcher!!.matchMultipleCandidates<ImmutableAttributesBackedMatchingCandidate?>(candidates, variantAttributes)
+            for (match in matches!!) {
+                strategy.setDefaultResolutionConfiguration(configurations.getByName(defaultConfigurations.get(match)!!))
             }
         }
-        return strategy;
+        return strategy
     }
-
-    private AttributeMatcher getMatcher() {
-        if (matcher == null) {
-            ImmutableAttributesSchema immutableSchema = attributeSchemaServices.getSchemaFactory().create(schema);
-            matcher = attributeSchemaServices.getMatcher(immutableSchema, ImmutableAttributesSchema.EMPTY);
-        }
-
-        return matcher;
-    }
-
 }

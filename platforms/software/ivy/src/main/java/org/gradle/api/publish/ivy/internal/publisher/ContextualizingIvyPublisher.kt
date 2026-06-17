@@ -13,30 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publisher
 
-package org.gradle.api.publish.ivy.internal.publisher;
+import org.apache.ivy.Ivy
+import org.gradle.api.Action
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager
 
-import org.apache.ivy.Ivy;
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.internal.artifacts.ivyservice.IvyContextManager;
-
-public class ContextualizingIvyPublisher implements IvyPublisher {
-    private final IvyPublisher ivyPublisher;
-    private final IvyContextManager ivyContextManager;
-
-    public ContextualizingIvyPublisher(IvyPublisher ivyPublisher, IvyContextManager ivyContextManager) {
-        this.ivyPublisher = ivyPublisher;
-        this.ivyContextManager = ivyContextManager;
-    }
-
-    @Override
-    public void publish(final IvyNormalizedPublication publication, final IvyArtifactRepository repository) {
-        ivyContextManager.withIvy(new Action<Ivy>() {
-            @Override
-            public void execute(Ivy ivy) {
-                ivyPublisher.publish(publication, repository);
+class ContextualizingIvyPublisher(private val ivyPublisher: IvyPublisher, private val ivyContextManager: IvyContextManager) : IvyPublisher {
+    override fun publish(publication: IvyNormalizedPublication?, repository: IvyArtifactRepository?) {
+        ivyContextManager.withIvy(object : Action<Ivy?> {
+            override fun execute(ivy: Ivy?) {
+                ivyPublisher.publish(publication, repository)
             }
-        });
+        })
     }
 }

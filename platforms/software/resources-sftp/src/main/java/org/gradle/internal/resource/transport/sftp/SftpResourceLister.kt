@@ -13,47 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import com.jcraft.jsch.ChannelSftp
+import com.jcraft.jsch.SftpException
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.transfer.ExternalResourceLister
 
-import com.jcraft.jsch.ChannelSftp;
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.transfer.ExternalResourceLister;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
-
-public class SftpResourceLister implements ExternalResourceLister {
-    private final SftpClientFactory sftpClientFactory;
-    private final PasswordCredentials credentials;
-
-    public SftpResourceLister(SftpClientFactory sftpClientFactory, PasswordCredentials credentials) {
-        this.sftpClientFactory = sftpClientFactory;
-        this.credentials = credentials;
-    }
-
-    @Override
-    public List<String> list(ExternalResourceName directory) {
-        LockableSftpClient client = sftpClientFactory.createSftpClient(directory.getUri(), credentials);
+class SftpResourceLister(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : ExternalResourceLister {
+    override fun list(directory: ExternalResourceName): MutableList<String?>? {
+        val client = sftpClientFactory.createSftpClient(directory.getUri(), credentials)
 
         try {
-            @SuppressWarnings("unchecked")
-            Vector<ChannelSftp.LsEntry> entries = client.getSftpClient().ls(directory.getPath());
-            List<String> list = new ArrayList<String>();
-            for (ChannelSftp.LsEntry entry : entries) {
-                list.add(entry.getFilename());
+            val entries = client.getSftpClient().ls(directory.getPath())
+            val list: MutableList<String?> = ArrayList<String?>()
+            for (entry in entries) {
+                list.add(entry.getFilename())
             }
-            return list;
-        } catch (com.jcraft.jsch.SftpException e) {
+            return list
+        } catch (e: SftpException) {
             if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
-                return null;
+                return null
             }
-            throw new ResourceException(directory.getUri(), String.format("Could not list children for resource '%s'.", directory.getUri()), e);
+            throw ResourceException(directory.getUri(), String.format("Could not list children for resource '%s'.", directory.getUri()), e)
         } finally {
-            sftpClientFactory.releaseSftpClient(client);
+            sftpClientFactory.releaseSftpClient(client)
         }
     }
 }

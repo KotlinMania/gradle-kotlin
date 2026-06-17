@@ -13,122 +13,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.Action;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.publish.Publication;
-import org.gradle.api.publish.VersionMappingStrategy;
-import org.gradle.api.tasks.Nested;
-import org.gradle.internal.HasInternalProtocol;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
+import org.gradle.api.Action
+import org.gradle.api.component.SoftwareComponent
+import org.gradle.api.publish.Publication
+import org.gradle.api.publish.VersionMappingStrategy
+import org.gradle.api.tasks.Nested
+import org.gradle.internal.HasInternalProtocol
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
 
 /**
- * An {@code IvyPublication} is the representation/configuration of how Gradle should publish something in Ivy format, to an Ivy repository.
+ * An `IvyPublication` is the representation/configuration of how Gradle should publish something in Ivy format, to an Ivy repository.
  *
- * You directly add a named Ivy publication the project's {@code publishing.publications} container by providing {@link IvyPublication} as the type.
+ * You directly add a named Ivy publication the project's `publishing.publications` container by providing [IvyPublication] as the type.
  * <pre>
  * publishing {
- *   publications {
- *     myPublicationName(IvyPublication) {
- *       // Configure the publication here
- *     }
- *   }
+ * publications {
+ * myPublicationName(IvyPublication) {
+ * // Configure the publication here
  * }
- * </pre>
+ * }
+ * }
+</pre> *
  *
- * <p>
+ *
+ *
  * The Ivy module identifying attributes of the publication are mapped as follows:
- * </p>
- * <ul>
- * <li>{@code module} - {@code project.name}</li>
- * <li>{@code organisation} - {@code project.group}</li>
- * <li>{@code revision} - {@code project.version}</li>
- * <li>{@code status} - {@code project.status}</li>
- * </ul>
  *
- * <p>
- * For certain common use cases, it's often sufficient to specify the component to publish, using ({@link #from(org.gradle.api.component.SoftwareComponent)}.
+ *
+ *  * `module` - `project.name`
+ *  * `organisation` - `project.group`
+ *  * `revision` - `project.version`
+ *  * `status` - `project.status`
+ *
+ *
+ *
+ *
+ * For certain common use cases, it's often sufficient to specify the component to publish, using ([.from].
  * The published component is used to determine which artifacts to publish, and which configurations and dependencies should be listed in the generated ivy descriptor file.
- * </p><p>
- * You can add configurations to the generated ivy descriptor file, by supplying a Closure to the {@link #configurations(org.gradle.api.Action)} method.
- * </p><p>
- * To add additional artifacts to the set published, use the {@link #artifact(Object)} and {@link #artifact(Object, org.gradle.api.Action)} methods.
- * You can also completely replace the set of published artifacts using {@link #setArtifacts(Iterable)}.
+ *
+ *
+ * You can add configurations to the generated ivy descriptor file, by supplying a Closure to the [.configurations] method.
+ *
+ *
+ * To add additional artifacts to the set published, use the [.artifact] and [.artifact] methods.
+ * You can also completely replace the set of published artifacts using [.setArtifacts].
  * Together, these methods give you full control over the artifacts to be published.
- * </p><p>
- * In addition, {@link IvyModuleDescriptorSpec} provides configuration methods to customize licenses, authors, and the description to be published in the Ivy module descriptor.
- * </p><p>
+ *
+ *
+ * In addition, [IvyModuleDescriptorSpec] provides configuration methods to customize licenses, authors, and the description to be published in the Ivy module descriptor.
+ *
+ *
  * For any other tweaks to the publication, it is possible to modify the generated Ivy descriptor file prior to publication. This is done using
- * the {@link IvyModuleDescriptorSpec#withXml(org.gradle.api.Action)} method, normally via a Closure passed to the {@link #descriptor(org.gradle.api.Action)} method.
- * </p>
+ * the [IvyModuleDescriptorSpec.withXml] method, normally via a Closure passed to the [.descriptor] method.
+ *
  *
  * <pre class='autoTested'>
  * // Example of publishing a java component with an added source jar and custom module description
  * plugins {
- *     id 'java'
- *     id 'ivy-publish'
+ * id 'java'
+ * id 'ivy-publish'
  * }
  *
  * task sourceJar(type: Jar) {
- *   from sourceSets.main.allJava
+ * from sourceSets.main.allJava
  * }
  *
  * publishing {
- *   publications {
- *     myPublication(IvyPublication) {
- *       from components.java
- *       artifact(sourceJar) {
- *         type = "source"
- *         extension = "src.jar"
- *         conf = "runtime"
- *       }
- *       descriptor {
- *         license {
- *           name = "Custom License"
- *         }
- *         author {
- *           name = "Custom Name"
- *         }
- *         description {
- *           text = "Custom Description"
- *         }
- *       }
- *     }
- *   }
+ * publications {
+ * myPublication(IvyPublication) {
+ * from components.java
+ * artifact(sourceJar) {
+ * type = "source"
+ * extension = "src.jar"
+ * conf = "runtime"
  * }
- * </pre>
+ * descriptor {
+ * license {
+ * name = "Custom License"
+ * }
+ * author {
+ * name = "Custom Name"
+ * }
+ * description {
+ * text = "Custom Description"
+ * }
+ * }
+ * }
+ * }
+ * }
+</pre> *
  *
  * @since 1.3
  */
 @HasInternalProtocol
-public interface IvyPublication extends Publication {
-
-    /**
-     * The module descriptor that will be published.
-     *
-     * @return The module descriptor that will be published.
-     */
-    @Nested
-    IvyModuleDescriptorSpec getDescriptor();
+interface IvyPublication : Publication {
+    @get:Nested
+    val descriptor: IvyModuleDescriptorSpec?
 
     /**
      * Configures the descriptor that will be published.
-     * <p>
-     * The descriptor XML can be modified by using the {@link IvyModuleDescriptorSpec#withXml(org.gradle.api.Action)} method.
+     *
+     *
+     * The descriptor XML can be modified by using the [IvyModuleDescriptorSpec.withXml] method.
      *
      * @param configure The configuration action.
      */
-    void descriptor(Action<? super IvyModuleDescriptorSpec> configure);
+    fun descriptor(configure: Action<in IvyModuleDescriptorSpec?>?)
 
     /**
      * Provides the software component that should be published.
      *
-     * <ul>
-     *     <li>Any artifacts declared by the component will be included in the publication.</li>
-     *     <li>The dependencies declared by the component will be included in the published meta-data.</li>
-     * </ul>
+     *
+     *  * Any artifacts declared by the component will be included in the publication.
+     *  * The dependencies declared by the component will be included in the published meta-data.
+     *
      *
      * Currently 2 types of component are supported: 'components.java' (added by the JavaPlugin) and 'components.web' (added by the WarPlugin).
      * For any individual IvyPublication, only a single component can be provided in this way.
@@ -136,218 +136,202 @@ public interface IvyPublication extends Publication {
      * The following example demonstrates how to publish the 'java' component to a ivy repository.
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'ivy-publish'
+     * id 'java'
+     * id 'ivy-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       from components.java
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * from components.java
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param component The software component to publish.
      */
-    void from(SoftwareComponent component);
+    fun from(component: SoftwareComponent?)
 
     /**
-     * Defines some {@link IvyConfiguration}s that should be included in the published ivy module descriptor file.
+     * Defines some [IvyConfiguration]s that should be included in the published ivy module descriptor file.
      *
      * The following example demonstrates how to add a "testCompile" configuration, and a "testRuntime" configuration that extends it.
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'ivy-publish'
+     * id 'java'
+     * id 'ivy-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       configurations {
-     *           testCompile {}
-     *           testRuntime {
-     *               extend "testCompile"
-     *           }
-     *       }
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * configurations {
+     * testCompile {}
+     * testRuntime {
+     * extend "testCompile"
      * }
-     * </pre>
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
-     * @param config An action or closure to configure the values of the constructed {@link IvyConfiguration}.
+     * @param config An action or closure to configure the values of the constructed [IvyConfiguration].
      */
-    void configurations(Action<? super IvyConfigurationContainer> config);
+    fun configurations(config: Action<in IvyConfigurationContainer?>?)
 
     /**
      * Returns the complete set of configurations for this publication.
      * @return the configurations
      */
-    IvyConfigurationContainer getConfigurations();
+    val configurations: IvyConfigurationContainer?
 
     /**
-     * Creates a custom {@link IvyArtifact} to be included in the publication.
+     * Creates a custom [IvyArtifact] to be included in the publication.
      *
-     * The <code>artifact</code> method can take a variety of input:
-     * <ul>
-     *     <li>A {@link org.gradle.api.artifacts.PublishArtifact} instance. Name, type, extension and classifier values are taken from the supplied instance.</li>
-     *     <li>An {@link org.gradle.api.tasks.bundling.AbstractArchiveTask} instance. Name, type, extension and classifier values are taken from the supplied instance.</li>
-     *     <li>Anything that can be resolved to a {@link java.io.File} via the {@link org.gradle.api.Project#file(Object)} method.
-     *          Name, extension and classifier values are interpolated from the file name.</li>
-     *     <li>A {@link java.util.Map} that contains a 'source' entry that can be resolved as any of the other input types, including file.
-     *         This map can contain additional attributes to further configure the constructed artifact.</li>
-     * </ul>
+     * The `artifact` method can take a variety of input:
+     *
+     *  * A [org.gradle.api.artifacts.PublishArtifact] instance. Name, type, extension and classifier values are taken from the supplied instance.
+     *  * An [org.gradle.api.tasks.bundling.AbstractArchiveTask] instance. Name, type, extension and classifier values are taken from the supplied instance.
+     *  * Anything that can be resolved to a [java.io.File] via the [org.gradle.api.Project.file] method.
+     * Name, extension and classifier values are interpolated from the file name.
+     *  * A [java.util.Map] that contains a 'source' entry that can be resolved as any of the other input types, including file.
+     * This map can contain additional attributes to further configure the constructed artifact.
+     *
      *
      * The following example demonstrates the addition of various custom artifacts.
      * <pre class='autoTested'>
      * plugins {
-     *     id 'ivy-publish'
+     * id 'ivy-publish'
      * }
      *
      * task sourceJar(type: Jar) {
-     *   archiveClassifier = "source"
+     * archiveClassifier = "source"
      * }
      *
      * task genDocs {
-     *   doLast {
-     *     // Generate 'my-docs-file.htm'
-     *   }
+     * doLast {
+     * // Generate 'my-docs-file.htm'
+     * }
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       artifact sourceJar // Publish the output of the sourceJar task
-     *       artifact 'my-file-name.jar' // Publish a file created outside of the build
-     *       artifact source: 'my-docs-file.htm', classifier: 'docs', extension: 'html', builtBy: genDocs // Publish a file generated by the 'genDocs' task
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * artifact sourceJar // Publish the output of the sourceJar task
+     * artifact 'my-file-name.jar' // Publish a file created outside of the build
+     * artifact source: 'my-docs-file.htm', classifier: 'docs', extension: 'html', builtBy: genDocs // Publish a file generated by the 'genDocs' task
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @param source The source of the artifact content.
      */
-    IvyArtifact artifact(Object source);
+    fun artifact(source: Any?): IvyArtifact?
 
     /**
-     * Creates an {@link IvyArtifact} to be included in the publication, which is configured by the associated action.
+     * Creates an [IvyArtifact] to be included in the publication, which is configured by the associated action.
      *
-     * The first parameter is used to create a custom artifact and add it to the publication, as per {@link #artifact(Object)}.
-     * The created {@link IvyArtifact} is then configured using the supplied action.
+     * The first parameter is used to create a custom artifact and add it to the publication, as per [.artifact].
+     * The created [IvyArtifact] is then configured using the supplied action.
      * This method also accepts the configure action as a closure argument, by type coercion.
      *
      * <pre class='autoTested'>
      * plugins {
-     *     id 'ivy-publish'
+     * id 'ivy-publish'
      * }
      *
      * task sourceJar(type: Jar) {
-     *   archiveClassifier = "source"
+     * archiveClassifier = "source"
      * }
-
+     *
      * task genDocs {
-     *   doLast {
-     *     // Generate 'my-docs-file.htm'
-     *   }
+     * doLast {
+     * // Generate 'my-docs-file.htm'
+     * }
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       artifact(sourceJar) {
-     *         // These values will be used instead of the values from the task. The task values will not be updated.
-     *         classifier = "src"
-     *         extension = "zip"
-     *         conf = "runtime-&gt;default"
-     *       }
-     *       artifact("my-docs-file.htm") {
-     *         type = "documentation"
-     *         extension = "html"
-     *         builtBy genDocs
-     *       }
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * artifact(sourceJar) {
+     * // These values will be used instead of the values from the task. The task values will not be updated.
+     * classifier = "src"
+     * extension = "zip"
+     * conf = "runtime-&gt;default"
      * }
-     * </pre>
+     * artifact("my-docs-file.htm") {
+     * type = "documentation"
+     * extension = "html"
+     * builtBy genDocs
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
      * @param source The source of the artifact.
-     * @param config An action to configure the values of the constructed {@link IvyArtifact}.
+     * @param config An action to configure the values of the constructed [IvyArtifact].
      */
-    IvyArtifact artifact(Object source, Action<? super IvyArtifact> config);
+    fun artifact(source: Any?, config: Action<in IvyArtifact?>?): IvyArtifact?
 
     /**
      * The complete set of artifacts for this publication.
      *
-     * <p>
+     *
+     *
      * Setting this property will clear any previously added artifacts and create artifacts from the specified sources.
-     * Each supplied source is interpreted as per {@link #artifact(Object)}.
+     * Each supplied source is interpreted as per [.artifact].
      *
      * For example, to exclude the dependencies declared by a component and instead use a custom set of artifacts:
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'ivy-publish'
+     * id 'java'
+     * id 'ivy-publish'
      * }
      *
      * task sourceJar(type: Jar) {
-     *   archiveClassifier = "source"
+     * archiveClassifier = "source"
      * }
      *
      * publishing {
-     *   publications {
-     *     ivy(IvyPublication) {
-     *       from components.java
-     *       artifacts = ["my-custom-jar.jar", sourceJar]
-     *     }
-     *   }
+     * publications {
+     * ivy(IvyPublication) {
+     * from components.java
+     * artifacts = ["my-custom-jar.jar", sourceJar]
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
      * @return the artifacts.
      */
-    IvyArtifactSet getArtifacts();
-
     /**
-     * Sets the artifacts for this publication. Each supplied value is interpreted as per {@link #artifact(Object)}.
+     * Sets the artifacts for this publication. Each supplied value is interpreted as per [.artifact].
      *
      * @param sources The set of artifacts for this publication.
      */
-    void setArtifacts(Iterable<?> sources);
-
-    /**
-     * Returns the organisation for this publication.
-     */
-    @ToBeReplacedByLazyProperty
-    String getOrganisation();
+    var artifacts: IvyArtifactSet?
 
     /**
      * Sets the organisation for this publication.
      */
-    void setOrganisation(String organisation);
-
-    /**
-     * Returns the module for this publication.
-     */
-    @ToBeReplacedByLazyProperty
-    String getModule();
+    @get:ToBeReplacedByLazyProperty
+    var organisation: String?
 
     /**
      * Sets the module for this publication.
      */
-    void setModule(String module);
-
-    /**
-     * Returns the revision for this publication.
-     */
-    @ToBeReplacedByLazyProperty
-    String getRevision();
+    @get:ToBeReplacedByLazyProperty
+    var module: String?
 
     /**
      * Sets the revision for this publication.
      */
-    void setRevision(String revision);
+    @get:ToBeReplacedByLazyProperty
+    var revision: String?
 
     /**
      * Configures the version mapping strategy.
@@ -355,29 +339,29 @@ public interface IvyPublication extends Publication {
      * For example, to use resolved versions for runtime dependencies:
      * <pre class='autoTested'>
      * plugins {
-     *     id 'java'
-     *     id 'ivy-publish'
+     * id 'java'
+     * id 'ivy-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     maven(IvyPublication) {
-     *       from components.java
-     *       versionMapping {
-     *         usage('java-runtime'){
-     *           fromResolutionResult()
-     *         }
-     *       }
-     *     }
-     *   }
+     * publications {
+     * maven(IvyPublication) {
+     * from components.java
+     * versionMapping {
+     * usage('java-runtime'){
+     * fromResolutionResult()
      * }
-     * </pre>
+     * }
+     * }
+     * }
+     * }
+    </pre> *
      *
      * @param configureAction the configuration
      *
      * @since 5.4
      */
-    void versionMapping(Action<? super VersionMappingStrategy> configureAction);
+    fun versionMapping(configureAction: Action<in VersionMappingStrategy?>?)
 
     /**
      * Silences the compatibility warnings for the Ivy publication for the specified variant.
@@ -388,7 +372,7 @@ public interface IvyPublication extends Publication {
      *
      * @since 6.0
      */
-    void suppressIvyMetadataWarningsFor(String variantName);
+    fun suppressIvyMetadataWarningsFor(variantName: String?)
 
     /**
      * Silences all the compatibility warnings for the Ivy publication.
@@ -397,5 +381,5 @@ public interface IvyPublication extends Publication {
      *
      * @since 6.0
      */
-    void suppressAllIvyMetadataWarnings();
+    fun suppressAllIvyMetadataWarnings()
 }

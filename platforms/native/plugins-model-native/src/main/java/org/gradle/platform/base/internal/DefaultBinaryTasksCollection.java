@@ -40,12 +40,12 @@ public class DefaultBinaryTasksCollection extends DefaultDomainObjectSet<Task> i
 
     @Override
     public String taskName(String verb) {
-        return verb + StringUtils.capitalize(binary.getProjectScopedName());
+        return verb + StringUtils.capitalize(binary.projectScopedName);
     }
 
     @Override
     public String taskName(String verb, String object) {
-        return verb + StringUtils.capitalize(binary.getProjectScopedName()) + StringUtils.capitalize(object);
+        return verb + StringUtils.capitalize(binary.projectScopedName) + StringUtils.capitalize(object);
     }
 
     @Override

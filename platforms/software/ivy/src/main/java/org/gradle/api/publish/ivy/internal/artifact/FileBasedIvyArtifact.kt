@@ -13,66 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import com.google.common.io.Files
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.TaskDependency
+import java.io.File
 
-import com.google.common.io.Files;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.TaskDependency;
+class FileBasedIvyArtifact(val file: File, private val coordinates: IvyPublicationCoordinates, taskDependencyFactory: TaskDependencyFactory) : AbstractIvyArtifact(taskDependencyFactory) {
+    private val extension: String
 
-import java.io.File;
-
-public class FileBasedIvyArtifact extends AbstractIvyArtifact {
-    private final File file;
-    private final String extension;
-    private final IvyPublicationCoordinates coordinates;
-
-    public FileBasedIvyArtifact(File file, IvyPublicationCoordinates coordinates, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.file = file;
-        extension = Files.getFileExtension(file.getName());
-        this.coordinates = coordinates;
+    init {
+        extension = Files.getFileExtension(file.getName())
     }
 
-    @Override
-    protected String getDefaultName() {
-        return coordinates.getModule().get();
+    override fun getDefaultName(): String {
+        return coordinates.getModule().get()
     }
 
-    @Override
-    protected String getDefaultType() {
-        return extension;
+    override fun getDefaultType(): String {
+        return extension
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return extension;
+    override fun getDefaultExtension(): String {
+        return extension
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return null;
+    override fun getDefaultClassifier(): String {
+        return null
     }
 
-    @Override
-    protected String getDefaultConf() {
-        return null;
+    override fun getDefaultConf(): String {
+        return null
     }
 
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    public File getFile() {
-        return file;
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return true;
+    override fun shouldBePublished(): Boolean {
+        return true
     }
 }

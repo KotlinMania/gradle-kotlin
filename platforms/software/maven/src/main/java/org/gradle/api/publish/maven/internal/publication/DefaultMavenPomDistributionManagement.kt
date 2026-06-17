@@ -13,51 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publication
 
-package org.gradle.api.publish.maven.internal.publication;
+import org.gradle.api.Action
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.publish.maven.MavenPomDeploymentRepository
+import org.gradle.api.publish.maven.MavenPomRelocation
+import javax.inject.Inject
 
-import org.gradle.api.Action;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.publish.maven.MavenPomRelocation;
-import org.gradle.api.publish.maven.MavenPomDeploymentRepository;
+abstract class DefaultMavenPomDistributionManagement @Inject constructor(private val objectFactory: ObjectFactory) : MavenPomDistributionManagementInternal {
+    private var relocation: MavenPomRelocation? = null
+    private var repository: MavenPomDeploymentRepository? = null
 
-import javax.inject.Inject;
-
-public abstract class DefaultMavenPomDistributionManagement implements MavenPomDistributionManagementInternal {
-
-    private final ObjectFactory objectFactory;
-    private MavenPomRelocation relocation;
-    private MavenPomDeploymentRepository repository;
-
-    @Inject
-    public DefaultMavenPomDistributionManagement(ObjectFactory objectFactory) {
-        this.objectFactory = objectFactory;
-    }
-
-    @Override
-    public void relocation(Action<? super MavenPomRelocation> action) {
+    override fun relocation(action: Action<in MavenPomRelocation>) {
         if (relocation == null) {
-            relocation = objectFactory.newInstance(MavenPomRelocation.class);
+            relocation = objectFactory.newInstance<MavenPomRelocation>(MavenPomRelocation::class.java)
         }
-        action.execute(relocation);
+        action.execute(relocation)
     }
 
-    @Override
-    public MavenPomRelocation getRelocation() {
-        return relocation;
+    override fun getRelocation(): MavenPomRelocation {
+        return relocation!!
     }
 
-    @Override
-    public void repository(Action<? super MavenPomDeploymentRepository> action) {
+    override fun repository(action: Action<in MavenPomDeploymentRepository>) {
         if (repository == null) {
-            repository = objectFactory.newInstance(MavenPomDeploymentRepository.class);
+            repository = objectFactory.newInstance<MavenPomDeploymentRepository>(MavenPomDeploymentRepository::class.java)
         }
-        action.execute(repository);
+        action.execute(repository)
     }
 
-    @Override
-    public MavenPomDeploymentRepository getRepository() {
-        return repository;
+    override fun getRepository(): MavenPomDeploymentRepository {
+        return repository!!
     }
-
 }

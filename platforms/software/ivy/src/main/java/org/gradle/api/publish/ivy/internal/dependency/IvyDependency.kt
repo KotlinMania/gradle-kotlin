@@ -13,59 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.ivy.internal.dependency;
-
-import org.gradle.api.artifacts.DependencyArtifact;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+package org.gradle.api.publish.ivy.internal.dependency
 
 /**
  * Represents a dependency within an ivy descriptor file. This is the "Ivy view"
  * of the dependency, after being converted from Gradle's dependency model.
  */
-public interface IvyDependency {
+interface IvyDependency {
     /**
      * The organisation value for this dependency.
      */
-    String getOrganisation();
+    val organisation: String?
 
     /**
      * The module value for this dependency.
      */
-    String getModule();
+    val module: String?
 
     /**
      * The revision value for this dependency.
      */
-    String getRevision();
+    val revision: String?
 
     /**
      * The configuration mapping for this dependency. This is mapped to the
-     * {@code conf} field on the Ivy dependency element.
+     * `conf` field on the Ivy dependency element.
      */
-    String getConfMapping();
+    val confMapping: String?
 
     /**
      * If this dependency is marked transitive.
      */
-    boolean isTransitive();
+    val isTransitive: Boolean
 
     /**
      * The dynamic revision constraint originally used for this dependency.
      */
-    @Nullable
-    String getRevConstraint();
+    val revConstraint: String?
 
     /**
      * The requested artifacts for this dependency.
      */
-    Set<DependencyArtifact> getArtifacts();
+    val artifacts: MutableSet<DependencyArtifact?>?
 
     /**
      * The exclude rules for this dependency.
      */
-    Set<ExcludeRule> getExcludeRules();
+    val excludeRules: MutableSet<ExcludeRule?>?
 }

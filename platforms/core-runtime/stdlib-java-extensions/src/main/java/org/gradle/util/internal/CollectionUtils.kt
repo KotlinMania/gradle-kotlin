@@ -22,7 +22,6 @@ import org.gradle.internal.Pair
 import org.gradle.util.internal.CollectionUtils.diffSetsBy
 import org.gradle.util.internal.CollectionUtils.filter
 import org.gradle.util.internal.CollectionUtils.findFirst
-import java.lang.reflect.Array
 import java.util.AbstractList
 import java.util.Arrays
 import java.util.Collections
@@ -35,7 +34,7 @@ object CollectionUtils {
      * Returns the single element in the collection or throws.
      */
     fun <T> single(source: Iterable<out T?>): T? {
-        val iterator: MutableIterator<out T?> = source.iterator()
+        val iterator = source.iterator()
         if (!iterator.hasNext()) {
             throw NoSuchElementException("Expecting collection with single element, got none.")
         }
@@ -44,11 +43,11 @@ object CollectionUtils {
         return element
     }
 
-    fun <T> checkedCast(type: Class<T?>?, input: MutableCollection<*>): MutableCollection<out T?> {
+    fun <T> checkedCast(type: Class<T?>, input: MutableCollection<*>): MutableCollection<T?> {
         for (o in input) {
             Cast.castNullable<T?, Any?>(type, o)
         }
-        return Cast.uncheckedNonnullCast<MutableCollection<out T?>?>(input)
+        return Cast.uncheckedNonnullCast<MutableCollection<T?>>(input)!!
     }
 
     fun <T> findFirst(source: Iterable<out T?>, filter: Spec<in T?>): T? {
@@ -61,7 +60,7 @@ object CollectionUtils {
         return null
     }
 
-    fun <T> findFirst(source: Array<T?>, filter: Spec<in T?>): T? {
+    fun <T> findFirst(source: kotlin.Array<T?>, filter: Spec<in T?>): T? {
         for (thing in source) {
             if (filter.isSatisfiedBy(thing)) {
                 return thing
@@ -79,7 +78,7 @@ object CollectionUtils {
         return findFirst(source, filter) != null
     }
 
-    fun <T> any(source: Array<T?>, filter: Spec<in T?>): Boolean {
+    fun <T> any(source: kotlin.Array<T?>, filter: Spec<in T?>): Boolean {
         return findFirst<T?>(source, filter) != null
     }
 
@@ -91,7 +90,7 @@ object CollectionUtils {
         return filter<T?, ArrayList<T?>>(list, ArrayList<T?>(list.size), filter)!!
     }
 
-    fun <T> filter(array: Array<T?>, filter: Spec<in T?>): MutableList<T?> {
+    fun <T> filter(array: kotlin.Array<T?>, filter: Spec<in T?>): MutableList<T?> {
         return filter<T?, ArrayList<T?>>(Arrays.asList<T?>(*array), ArrayList<T?>(array.size), filter)!!
     }
 
@@ -136,8 +135,8 @@ object CollectionUtils {
         return destination
     }
 
-    fun <R, I> collectArray(list: Array<I?>, newType: Class<R?>?, transformer: Function<in I?, out R?>): Array<R?> {
-        val destination = Array.newInstance(newType, list.size) as kotlin.Array<R?>
+    fun <R, I> collectArray(list: kotlin.Array<I?>, newType: Class<R?>?, transformer: Function<in I?, out R?>): kotlin.Array<R?> {
+        val destination = java.lang.reflect.Array.newInstance(newType, list.size) as kotlin.Array<R?>
         return collectArray<R?, I?>(list, destination, transformer)
     }
 
@@ -160,7 +159,7 @@ object CollectionUtils {
     fun <R, I> collect(source: Iterable<out I?>, transformer: Function<in I?, out R?>): MutableList<R?> {
         if (source is MutableCollection<*>) {
             val collection = Cast.uncheckedNonnullCast<MutableCollection<out I?>?>(source)
-            return collect(source, ArrayList<R?>(collection.size), transformer)!!
+            return collect(source, ArrayList<R?>(collection!!.size), transformer)!!
         } else {
             return collect(source, LinkedList<R?>(), transformer)!!
         }
@@ -187,7 +186,7 @@ object CollectionUtils {
      */
     @JvmStatic
     fun flattenCollections(vararg things: Any?): MutableList<*> {
-        return CollectionUtils.flattenCollections<Any?>(Any::class.java, *things)
+        return CollectionUtils.flattenCollections<Any?>(Any::class.java as Class<Any?>, *things)
     }
 
     /**
@@ -202,9 +201,7 @@ object CollectionUtils {
      * @return A flattened list of the given things
     </T> */
     fun <T> flattenCollections(type: Class<T?>, vararg things: Any?): MutableList<T?> {
-        if (things == null) {
-            return mutableListOf<T?>(null)
-        } else if (things.size == 0) {
+        if (things.size == 0) {
             return mutableListOf<T?>()
         } else if (things.size == 1) {
             val thing: Any? = things[0]
@@ -283,7 +280,7 @@ object CollectionUtils {
 
     fun <T> intersection(availableValuesByDescriptor: MutableCollection<out MutableCollection<T?>>): MutableList<T?> {
         val result: MutableList<T?> = ArrayList<T?>()
-        val iterator: MutableIterator<out MutableCollection<T?>> = availableValuesByDescriptor.iterator()
+        val iterator = availableValuesByDescriptor.iterator()
         if (iterator.hasNext()) {
             val firstSet = iterator.next()
             result.addAll(firstSet)
@@ -525,15 +522,8 @@ object CollectionUtils {
      * @return The joined string
      */
     fun join(separator: String, objects: Iterable<*>): String {
-        if (separator == null) {
-            throw NullPointerException("The 'separator' cannot be null")
-        }
-        if (objects == null) {
-            throw NullPointerException("The 'objects' cannot be null")
-        }
-
         val string = StringBuilder()
-        val iterator: MutableIterator<*> = objects.iterator()
+        val iterator = objects.iterator()
         if (iterator.hasNext()) {
             string.append(iterator.next().toString())
             while (iterator.hasNext()) {
@@ -583,7 +573,7 @@ object CollectionUtils {
 
     fun <T> unpack(factories: Iterable<out Factory<out T?>?>): Iterable<out T?> {
         return object : Iterable<T?> {
-            private val delegate: MutableIterator<out Factory<out T?>?> = factories.iterator()
+            private val delegate = factories.iterator()
 
             override fun iterator(): MutableIterator<T?> {
                 return object : MutableIterator<T?> {

@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.gcp.gcs
 
-package org.gradle.internal.resource.transport.gcp.gcs;
+import org.gradle.internal.resource.connector.ResourceConnectorFactory
+import org.gradle.internal.service.Provides
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationProvider
+import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
-import org.gradle.internal.resource.connector.ResourceConnectorFactory;
-import org.gradle.internal.service.Provides;
-import org.gradle.internal.service.ServiceRegistration;
-import org.gradle.internal.service.ServiceRegistrationProvider;
-import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
-
-public class GcsResourcesServices extends AbstractGradleModuleServices {
-
-    @Override
-    public void registerGlobalServices(ServiceRegistration registration) {
-        registration.addProvider(new GlobalScopeServices());
+class GcsResourcesServices : AbstractGradleModuleServices() {
+    public override fun registerGlobalServices(registration: ServiceRegistration) {
+        registration.addProvider(GlobalScopeServices())
     }
 
-    private static class GlobalScopeServices implements ServiceRegistrationProvider {
+    private class GlobalScopeServices : ServiceRegistrationProvider {
         @Provides
-        ResourceConnectorFactory createGcsConnectorFactory() {
-            return new GcsConnectorFactory();
+        fun createGcsConnectorFactory(): ResourceConnectorFactory {
+            return GcsConnectorFactory()
         }
     }
 }

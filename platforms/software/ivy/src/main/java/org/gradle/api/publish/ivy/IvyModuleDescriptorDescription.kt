@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.provider.Property;
+package org.gradle.api.publish.ivy
 
 /**
  * The description of an Ivy publication.
@@ -24,16 +21,16 @@ import org.gradle.api.provider.Property;
  * @since 4.8
  * @see IvyModuleDescriptorSpec
  */
-public interface IvyModuleDescriptorDescription {
-
+interface IvyModuleDescriptorDescription {
     /**
      * The text of this description.
      */
-    Property<String> getText();
+    @JvmField
+    val text: Property<String?>?
 
     /**
      * The homepage of the publication of this description.
      */
-    Property<String> getHomepage();
-
+    @JvmField
+    val homepage: Property<String?>?
 }

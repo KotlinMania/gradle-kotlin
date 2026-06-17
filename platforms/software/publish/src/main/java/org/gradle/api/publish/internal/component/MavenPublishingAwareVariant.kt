@@ -13,53 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.component;
+package org.gradle.api.publish.internal.component
 
-import org.gradle.api.component.SoftwareComponentVariant;
+import org.gradle.api.component.SoftwareComponentVariant
 
-public interface MavenPublishingAwareVariant extends SoftwareComponentVariant {
-    ScopeMapping getScopeMapping();
+interface MavenPublishingAwareVariant : SoftwareComponentVariant {
+    val scopeMapping: ScopeMapping
 
     // Order is important!
-    enum ScopeMapping {
+    enum class ScopeMapping(val scope: String, val isOptional: Boolean) {
         compile("compile", false),
         runtime("runtime", false),
         compile_optional("compile", true),
         runtime_optional("runtime", true);
 
-        private final String scope;
-        private final boolean optional;
-
-        ScopeMapping(String scope, boolean optional) {
-            this.scope = scope;
-            this.optional = optional;
-        }
-
-        public String getScope() {
-            return scope;
-        }
-
-        public boolean isOptional() {
-            return optional;
-        }
-
-        public static ScopeMapping of(String scope, boolean optional) {
-            if (optional) {
-                scope += "_optional";
+        companion object {
+            fun of(scope: String, optional: Boolean): ScopeMapping {
+                var scope = scope
+                if (optional) {
+                    scope += "_optional"
+                }
+                return valueOf(scope)
             }
-            return ScopeMapping.valueOf(scope);
         }
     }
 
-    static ScopeMapping scopeForVariant(SoftwareComponentVariant variant) {
-        if (variant instanceof MavenPublishingAwareVariant) {
-            return ((MavenPublishingAwareVariant) variant).getScopeMapping();
+    companion object {
+        fun scopeForVariant(variant: SoftwareComponentVariant): ScopeMapping {
+            if (variant is MavenPublishingAwareVariant) {
+                return variant.scopeMapping
+            }
+            // TODO: Update native plugins to use maven-aware variants so we can remove this.
+            val name = variant.getName()
+            if ("api" == name || "apiElements" == name) {
+                return ScopeMapping.compile
+            }
+            return ScopeMapping.runtime
         }
-        // TODO: Update native plugins to use maven-aware variants so we can remove this.
-        String name = variant.getName();
-        if ("api".equals(name) || "apiElements".equals(name)) {
-            return ScopeMapping.compile;
-        }
-        return ScopeMapping.runtime;
     }
 }

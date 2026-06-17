@@ -13,42 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting
 
-package org.gradle.api.reporting;
-
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputDirectory;
-
-import java.io.File;
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.reporting.Report.OutputType
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
 
 /**
  * A directory based report to be created.
  */
-public interface DirectoryReport extends ConfigurableReport {
-
-    /**
-     * Returns the entry point of a directory based Report
-     *
-     * This can be the index.html file in a HTML report
-     *
-     * @return the entry point of the report or
-     * {@link DirectoryReport#getOutputLocation()}
-     * if no entry point defined
-     *
-     */
-    @Internal
-    File getEntryPoint();
+interface DirectoryReport : ConfigurableReport {
+    @get:Internal
+    val entryPoint: File?
 
     @OutputDirectory
-    @Override
-    DirectoryProperty getOutputLocation();
+    override fun getOutputLocation(): DirectoryProperty?
 
     /**
-     * Always returns {@link Report.OutputType#DIRECTORY}
+     * Always returns [OutputType.DIRECTORY]
      *
-     * @return {@link Report.OutputType#DIRECTORY}
+     * @return [OutputType.DIRECTORY]
      */
-    @Override
-    OutputType getOutputType();
+    override fun getOutputType(): Report.OutputType?
 }

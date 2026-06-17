@@ -19,6 +19,5 @@ import org.gradle.internal.scan.UsedByScanPlugin
 
 @UsedByScanPlugin
 interface MultiCauseException : ResolutionProvider {
-    @JvmField
-    val causes: MutableList<out Throwable?>?
+    fun getCauses(): MutableList<out Throwable?>
 }

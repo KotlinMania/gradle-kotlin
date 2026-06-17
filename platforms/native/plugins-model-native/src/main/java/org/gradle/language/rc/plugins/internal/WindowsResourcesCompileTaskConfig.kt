@@ -71,12 +71,12 @@ class WindowsResourcesCompileTaskConfig : SourceTransformTaskConfig {
             }
         }))
 
-        task.source(sourceSet.getSource())
+        task.source(sourceSet.source)
 
         val project = task.getProject()
 
         task.outputDir = project.getLayout().getBuildDirectory().getAsFile()
-            .map<File?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), (sourceSet as LanguageSourceSetInternal).projectScopedName) }).get()
+            .map<File?>(Transformer { it: File? -> File(binary.namingScheme.getOutputDirectory(it, "objs"), (sourceSet as LanguageSourceSetInternal).projectScopedName) }).get()
 
         val rcCompiler = binary.getToolByName("rcCompiler") as PreprocessingTool
         task.macros = rcCompiler.getMacros()

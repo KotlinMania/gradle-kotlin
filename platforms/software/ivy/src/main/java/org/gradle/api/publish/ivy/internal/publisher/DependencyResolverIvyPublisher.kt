@@ -13,54 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publisher
 
-package org.gradle.api.publish.ivy.internal.publisher;
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.internal.artifacts.repositories.DefaultIvyArtifactRepository
+import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver
+import org.gradle.api.internal.artifacts.repositories.transport.NetworkOperationBackOffAndRetry
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier.Companion.newId
+import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata
+import org.gradle.internal.component.model.DefaultIvyArtifactName
+import org.gradle.internal.component.model.IvyArtifactName
+import java.util.concurrent.Callable
 
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
-import org.gradle.api.internal.artifacts.repositories.DefaultIvyArtifactRepository;
-import org.gradle.api.internal.artifacts.repositories.resolver.IvyResolver;
-import org.gradle.api.internal.artifacts.repositories.transport.NetworkOperationBackOffAndRetry;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.internal.component.external.model.DefaultModuleComponentArtifactMetadata;
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
-import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.component.model.DefaultIvyArtifactName;
-import org.gradle.internal.component.model.IvyArtifactName;
+class DependencyResolverIvyPublisher : IvyPublisher {
+    private val networkOperationBackOffAndRetry = NetworkOperationBackOffAndRetry<Void?>()
 
-import java.util.concurrent.Callable;
+    override fun publish(publication: IvyNormalizedPublication, repository: IvyArtifactRepository) {
+        val publisher = (repository as DefaultIvyArtifactRepository).createPublisher()
+        val moduleVersionIdentifier = newId(publication.getCoordinates())
 
-public class DependencyResolverIvyPublisher implements IvyPublisher {
-    private final NetworkOperationBackOffAndRetry<Void> networkOperationBackOffAndRetry = new NetworkOperationBackOffAndRetry<>();
-
-    @Override
-    public void publish(IvyNormalizedPublication publication, IvyArtifactRepository repository) {
-        IvyResolver publisher = ((DefaultIvyArtifactRepository) repository).createPublisher();
-        ModuleComponentIdentifier moduleVersionIdentifier = DefaultModuleComponentIdentifier.newId(publication.getCoordinates());
-
-        for (IvyArtifact artifact : publication.getAllArtifacts()) {
-            ModuleComponentArtifactMetadata artifactMetadata = new DefaultModuleComponentArtifactMetadata(moduleVersionIdentifier, createIvyArtifact(artifact));
-            publish(publisher, artifact, artifactMetadata);
+        for (artifact in publication.getAllArtifacts()) {
+            val artifactMetadata: ModuleComponentArtifactMetadata = DefaultModuleComponentArtifactMetadata(moduleVersionIdentifier, createIvyArtifact(artifact))
+            publish(publisher, artifact, artifactMetadata)
         }
     }
 
-    private void publish(IvyResolver publisher, IvyArtifact artifact, ModuleComponentArtifactMetadata artifactMetadata) {
-        networkOperationBackOffAndRetry.withBackoffAndRetry(new Callable<Void>() {
-            @Override
-            public Void call() {
-                publisher.publish(artifactMetadata, artifact.getFile());
-                return null;
+    private fun publish(publisher: IvyResolver, artifact: IvyArtifact, artifactMetadata: ModuleComponentArtifactMetadata) {
+        networkOperationBackOffAndRetry.withBackoffAndRetry(object : Callable<Void?> {
+            override fun call(): Void? {
+                publisher.publish(artifactMetadata, artifact.file)
+                return null
             }
 
-            @Override
-            public String toString() {
-                return "Publish " + artifactMetadata;
+            override fun toString(): String {
+                return "Publish " + artifactMetadata
             }
-
-        });
+        })
     }
 
-    private IvyArtifactName createIvyArtifact(IvyArtifact artifact) {
-        return new DefaultIvyArtifactName(artifact.getName(), artifact.getType(), artifact.getExtension(), artifact.getClassifier());
+    private fun createIvyArtifact(artifact: IvyArtifact): IvyArtifactName {
+        return DefaultIvyArtifactName(artifact.getName(), artifact.getType(), artifact.getExtension(), artifact.getClassifier())
     }
 }

@@ -13,58 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.metadata
 
-package org.gradle.api.publish.internal.metadata;
-
-import com.google.gson.stream.JsonWriter;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.GradleModuleMetadataParser;
-import org.gradle.internal.hash.ChecksumService;
-import org.gradle.internal.scopeids.id.BuildInvocationScopeId;
-
-import java.io.IOException;
-import java.io.Writer;
+import com.google.gson.stream.JsonWriter
+import org.gradle.internal.hash.ChecksumService
+import org.gradle.internal.scopeids.id.BuildInvocationScopeId
+import java.io.IOException
+import java.io.Writer
 
 /**
- * <p>The Gradle module metadata file generator is responsible for generating a JSON file
+ *
+ * The Gradle module metadata file generator is responsible for generating a JSON file
  * describing module metadata. In particular, this file format is capable of handling different
- * variants with different dependency sets.</p>
+ * variants with different dependency sets.
  *
- * <p>Whenever you change this class, make sure you also:</p>
  *
- * <ul>
- * <li>Update the corresponding {@link GradleModuleMetadataParser module metadata parser}</li>
- * <li>Update the module metadata specification (platforms/documentation/docs/src/docs/design/gradle-module-metadata-specification.md)</li>
- * <li>Update {@link org.gradle.api.internal.artifacts.ivyservice.modulecache.ModuleMetadataSerializer the module metadata serializer} </li>
- * <li>Add a sample for the module metadata serializer test, to make sure that serialized metadata is idempotent</li>
- * </ul>
+ * Whenever you change this class, make sure you also:
+ *
+ *
+ *  * Update the corresponding [module metadata parser][GradleModuleMetadataParser]
+ *  * Update the module metadata specification (platforms/documentation/docs/src/docs/design/gradle-module-metadata-specification.md)
+ *  * Update [the module metadata serializer][org.gradle.api.internal.artifacts.ivyservice.modulecache.ModuleMetadataSerializer]
+ *  * Add a sample for the module metadata serializer test, to make sure that serialized metadata is idempotent
+ *
  */
-public class GradleModuleMetadataWriter {
-    private final BuildInvocationScopeId buildInvocationScopeId;
-    private final ChecksumService checksumService;
-
-    public GradleModuleMetadataWriter(
-        BuildInvocationScopeId buildInvocationScopeId,
-        ChecksumService checksumService
-    ) {
-        this.buildInvocationScopeId = buildInvocationScopeId;
-        this.checksumService = checksumService;
-    }
-
-    public void writeTo(Writer writer, ModuleMetadataSpec metadata) throws IOException {
-
+class GradleModuleMetadataWriter(
+    private val buildInvocationScopeId: BuildInvocationScopeId,
+    private val checksumService: ChecksumService?
+) {
+    @Throws(IOException::class)
+    fun writeTo(writer: Writer, metadata: ModuleMetadataSpec) {
         // Write the output
-        JsonWriter jsonWriter = new JsonWriter(writer);
-        jsonWriter.setHtmlSafe(false);
-        jsonWriter.setIndent("  ");
 
-        new ModuleMetadataJsonWriter(
+        val jsonWriter = JsonWriter(writer)
+        jsonWriter.setHtmlSafe(false)
+        jsonWriter.setIndent("  ")
+
+        ModuleMetadataJsonWriter(
             jsonWriter,
             metadata,
-            metadata.mustIncludeBuildId ? buildInvocationScopeId.getId().asString() : null,
+            if (metadata.mustIncludeBuildId) buildInvocationScopeId.getId().asString() else null,
             checksumService
-        ).write();
+        ).write()
 
-        jsonWriter.flush();
-        writer.append('\n');
+        jsonWriter.flush()
+        writer.append('\n')
     }
 }

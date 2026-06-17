@@ -62,7 +62,7 @@ abstract class CUnitPlugin : Plugin<Project?> {
             suite.getSources().create<CSourceSet?>(CUNIT_LAUNCHER_SOURCE_SET, CSourceSet::class.java, object : Action<CSourceSet?> {
                 override fun execute(launcherSources: CSourceSet) {
                     val baseDir = File(buildDir, "src/" + suite.getName() + "/cunitLauncher")
-                    launcherSources.getSource().srcDir(File(baseDir, "c"))
+                    launcherSources.source.srcDir(File(baseDir, "c"))
                     launcherSources.exportedHeaders.srcDir(File(baseDir, "headers"))
                 }
             })
@@ -81,7 +81,7 @@ abstract class CUnitPlugin : Plugin<Project?> {
                 @Suppress("deprecation") val skeletonTask = tasks.create<GenerateCUnitLauncher>(taskName, GenerateCUnitLauncher::class.java)
 
                 val launcherSources = findLauncherSources(suite)
-                skeletonTask.setSourceDir(launcherSources.getSource().getSrcDirs().iterator().next())
+                skeletonTask.setSourceDir(launcherSources.source.getSrcDirs().iterator().next())
                 skeletonTask.setHeaderDir(launcherSources.exportedHeaders.getSrcDirs().iterator().next())
                 launcherSources.builtBy(skeletonTask)
             }

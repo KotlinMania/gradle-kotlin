@@ -80,6 +80,6 @@ class PrebuiltLibraryInitializer(
             .withVariantDimension(platform.getName())
             .withVariantDimension(buildType.getName())
             .withVariantDimension(flavor.getName())
-        return namingScheme.getBinaryName()
+        return namingScheme.binaryName
     }
 }

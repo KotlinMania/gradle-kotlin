@@ -13,28 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
+import org.gradle.internal.resource.ReadableContent
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 
-import org.gradle.internal.resource.ReadableContent;
-
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-
-public class ByteArrayReadableContent implements ReadableContent {
-    private final byte[] source;
-
-    public ByteArrayReadableContent(byte[] source) {
-        this.source = source;
+class ByteArrayReadableContent(private val source: ByteArray) : ReadableContent {
+    override fun getContentLength(): Long {
+        return source.size.toLong()
     }
 
-    @Override
-    public long getContentLength() {
-        return source.length;
-    }
-
-    @Override
-    public InputStream open() {
-        return new ByteArrayInputStream(source);
+    override fun open(): InputStream {
+        return ByteArrayInputStream(source)
     }
 }

@@ -13,30 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.transfer.ExternalResourceUploader
+import java.io.IOException
 
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.transfer.ExternalResourceUploader;
-
-import java.io.IOException;
-import java.net.URI;
-
-public class HttpResourceUploader implements ExternalResourceUploader {
-
-    private final HttpClient http;
-
-    public HttpResourceUploader(HttpClient http) {
-        this.http = http;
-    }
-
-    @Override
-    public void upload(ReadableContent resource, ExternalResourceName destination) throws IOException {
-        try (HttpClient.Response response = http.performRawPut(destination.getUri(), resource)) {
+class HttpResourceUploader(private val http: HttpClient) : ExternalResourceUploader {
+    @Throws(IOException::class)
+    override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
+        http.performRawPut(destination.getUri(), resource).use { response ->
             if (!response.isSuccessful()) {
-                URI effectiveUri = response.getEffectiveUri();
-                throw new HttpErrorStatusCodeException(response.getMethod(), effectiveUri.toString(), response.getStatusCode(), response.getStatusReason());
+                val effectiveUri = response.effectiveUri
+                throw HttpErrorStatusCodeException(response.method, effectiveUri.toString(), response.statusCode, response.statusReason)
             }
         }
     }

@@ -13,83 +13,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.component;
+package org.gradle.api.publish.internal.component
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.artifacts.ModuleDependency;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.capabilities.Capability;
-import org.gradle.api.component.SoftwareComponentVariant;
-import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
-import org.gradle.api.internal.artifacts.configurations.Configurations;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.component.AbstractSoftwareComponentVariant;
-
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExcludeRule
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.capabilities.Capability
+import org.gradle.api.component.SoftwareComponentVariant
+import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal
+import org.gradle.api.internal.artifacts.configurations.Configurations
+import org.gradle.api.internal.attributes.AttributeContainerInternal
+import org.gradle.api.internal.component.AbstractSoftwareComponentVariant
 
 /**
- * A {@link SoftwareComponentVariant} based on a consumable {@link Configuration}.
+ * A [SoftwareComponentVariant] based on a consumable [Configuration].
  */
-public class ConfigurationSoftwareComponentVariant extends AbstractSoftwareComponentVariant {
-    protected final String name;
-    private final Configuration configuration;
-    private DomainObjectSet<ModuleDependency> dependencies;
-    private DomainObjectSet<DependencyConstraint> dependencyConstraints;
-    private Set<? extends Capability> capabilities;
-    private Set<ExcludeRule> excludeRules;
+open class ConfigurationSoftwareComponentVariant(protected val name: String, attributes: AttributeContainer, artifacts: MutableSet<out PublishArtifact>, private val configuration: Configuration) :
+    AbstractSoftwareComponentVariant((attributes as AttributeContainerInternal).asImmutable(), artifacts) {
+    private var dependencies: DomainObjectSet<ModuleDependency>? = null
+    private var dependencyConstraints: DomainObjectSet<DependencyConstraint>? = null
+    private var capabilities: MutableSet<out Capability>? = null
+    private var excludeRules: MutableSet<ExcludeRule>? = null
 
-    public ConfigurationSoftwareComponentVariant(SoftwareComponentVariant base, Set<? extends PublishArtifact> artifacts, Configuration configuration) {
-        this(base.getName(), base.getAttributes(), artifacts, configuration);
+    constructor(base: SoftwareComponentVariant, artifacts: MutableSet<out PublishArtifact>, configuration: Configuration) : this(base.getName(), base.getAttributes(), artifacts, configuration)
+
+    override fun getName(): String {
+        return name
     }
 
-    public ConfigurationSoftwareComponentVariant(String name, AttributeContainer attributes, Set<? extends PublishArtifact> artifacts, Configuration configuration) {
-        super(((AttributeContainerInternal) attributes).asImmutable(), artifacts);
-        this.configuration = configuration;
-        this.name = name;
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public Set<ModuleDependency> getDependencies() {
+    override fun getDependencies(): MutableSet<ModuleDependency> {
         if (dependencies == null) {
-            dependencies = configuration.getIncoming().getDependencies().withType(ModuleDependency.class);
+            dependencies = configuration.getIncoming().getDependencies().withType<ModuleDependency>(ModuleDependency::class.java)
         }
-        return dependencies;
+        return dependencies!!
     }
 
-    @Override
-    public Set<? extends DependencyConstraint> getDependencyConstraints() {
+    override fun getDependencyConstraints(): MutableSet<out DependencyConstraint> {
         if (dependencyConstraints == null) {
-            dependencyConstraints = configuration.getIncoming().getDependencyConstraints();
+            dependencyConstraints = configuration.getIncoming().getDependencyConstraints()
         }
-        return dependencyConstraints;
+        return dependencyConstraints!!
     }
 
-    @Override
-    public Set<? extends Capability> getCapabilities() {
+    override fun getCapabilities(): MutableSet<out Capability> {
         if (capabilities == null) {
-            this.capabilities = ImmutableSet.copyOf(Configurations.collectCapabilities(configuration,
-                new HashSet<>(),
-                new HashSet<>()));
+            this.capabilities = ImmutableSet.copyOf<Capability>(
+                Configurations.collectCapabilities(
+                    configuration,
+                    HashSet<Capability?>(),
+                    HashSet<Configuration?>()
+                )
+            )
         }
-        return capabilities;
+        return capabilities!!
     }
 
-    @Override
-    public Set<ExcludeRule> getGlobalExcludes() {
+    override fun getGlobalExcludes(): MutableSet<ExcludeRule> {
         if (excludeRules == null) {
-            this.excludeRules = ImmutableSet.copyOf(((ConfigurationInternal) configuration).allExcludeRules);
+            this.excludeRules = ImmutableSet.copyOf((configuration as ConfigurationInternal).allExcludeRules)
         }
-        return excludeRules;
+        return excludeRules!!
     }
 }

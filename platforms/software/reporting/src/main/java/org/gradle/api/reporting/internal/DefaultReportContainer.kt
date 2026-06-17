@@ -13,127 +13,111 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
-
-import groovy.lang.Closure;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.NamedDomainObjectSet;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultNamedDomainObjectSet;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.reporting.Report;
-import org.gradle.api.reporting.ReportContainer;
-import org.gradle.internal.instantiation.InstantiatorFactory;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.service.ServiceRegistry;
-import org.gradle.util.internal.ConfigureUtil;
-
-import javax.inject.Inject;
-import java.util.Collection;
-import java.util.Map;
+import groovy.lang.Closure
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.NamedDomainObjectSet
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultNamedDomainObjectSet
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.reporting.Report
+import org.gradle.api.reporting.ReportContainer
+import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.service.ServiceRegistry
+import org.gradle.util.internal.ConfigureUtil
+import javax.inject.Inject
 
 /**
- * An immutable container of {@link Report} instances. Reports can be enabled or disabled.
- * <p>
- * The initial set of reports is configured at creation time by a {@link ReportGenerator}.
+ * An immutable container of [Report] instances. Reports can be enabled or disabled.
+ *
+ *
+ * The initial set of reports is configured at creation time by a [ReportGenerator].
  *
  * @param <T> The type of report held by this container.
- */
-public class DefaultReportContainer<T extends Report> extends DefaultNamedDomainObjectSet<T> implements ReportContainer<T> {
-
+</T> */
+class DefaultReportContainer<T : Report?> @Inject constructor(
+    type: Class<out T>,
+    reportGenerator: ReportGenerator<T?>,
+    instantiatorFactory: InstantiatorFactory,
+    servicesToInject: ServiceRegistry,
+    callbackActionDecorator: CollectionCallbackActionDecorator
+) : DefaultNamedDomainObjectSet<T?>(type, instantiatorFactory.decorateLenient(servicesToInject), Report.Companion.NAMER, callbackActionDecorator), ReportContainer<T?> {
     /**
      * The set of all enabled reports.
      */
-    private final NamedDomainObjectSet<T> enabled;
+    private val enabled: NamedDomainObjectSet<T?>
 
     /**
-     * Create a new report container.
-     *
-     * @param objectFactory The object factory used for instantiation.
-     * @param type The type of report held by this container.
-     * @param reportGenerator The generator used to create the initial set of reports.
-     *
-     * @return A new report container.
-     *
-     * @param <T> The type of report held by this container.
+     * Use [.create].
      */
-    @SuppressWarnings("unchecked")
-    public static <T extends Report> DefaultReportContainer<T> create(
-        ObjectFactory objectFactory,
-        Class<? extends T> type,
-        ReportGenerator<T> reportGenerator
-    ) {
-        return objectFactory.newInstance(DefaultReportContainer.class, type, reportGenerator);
+    init {
+        this.addAll(reportGenerator.generateReports(DefaultReportFactory<T?>(getInstantiator()))!!)
+        beforeCollectionChanges(SerializableLambdas.action<String>(SerializableLambdas.SerializableAction { arg: String ->
+            throw ReportContainer.ImmutableViolationException()
+        }))
+
+        this.enabled = matching(SerializableLambdas.spec<T?>(SerializableLambdas.SerializableSpec { element: T? -> element!!.getRequired().get() }))
     }
 
-    /**
-     * Use {@link #create(ObjectFactory, Class, ReportGenerator)}.
-     */
-    @Inject
-    public DefaultReportContainer(
-        Class<? extends T> type,
-        ReportGenerator<T> reportGenerator,
-        InstantiatorFactory instantiatorFactory,
-        ServiceRegistry servicesToInject,
-        CollectionCallbackActionDecorator callbackActionDecorator
-    ) {
-        super(type, instantiatorFactory.decorateLenient(servicesToInject), Report.NAMER, callbackActionDecorator);
-        this.addAll(reportGenerator.generateReports(new DefaultReportFactory<>(getInstantiator())));
-        beforeCollectionChanges(SerializableLambdas.action(arg -> {
-            throw new ImmutableViolationException();
-        }));
-
-        this.enabled = matching(SerializableLambdas.spec(element -> element.getRequired().get()));
+    override fun getEnabled(): NamedDomainObjectSet<T?> {
+        return enabled
     }
 
-    @Override
-    public NamedDomainObjectSet<T> getEnabled() {
-        return enabled;
+    override fun getEnabledReports(): MutableMap<String, T?> {
+        return getEnabled().getAsMap()
     }
 
-    @Override
-    public Map<String, T> getEnabledReports() {
-        return getEnabled().getAsMap();
-    }
-
-    @Override
-    public ReportContainer<T> configure(Closure cl) {
-        ConfigureUtil.configureSelf(cl, this);
-        return this;
+    override fun configure(cl: Closure<*>): ReportContainer<T?> {
+        ConfigureUtil.configureSelf<DefaultReportContainer<T?>>(cl, this)
+        return this
     }
 
     /**
      * Generates the initial set of reports for this container.
      */
-    public interface ReportGenerator<T extends Report> {
-        Collection<T> generateReports(ReportFactory<T> factory);
+    interface ReportGenerator<T : Report?> {
+        fun generateReports(factory: ReportFactory<T?>): MutableCollection<T?>?
     }
 
     /**
      * Instantiates reports.
      */
-    public interface ReportFactory<T extends Report> {
-        <N extends T> N instantiateReport(Class<N> clazz, Object... constructionArgs);
+    interface ReportFactory<T : Report?> {
+        fun <N : T?> instantiateReport(clazz: Class<N?>, vararg constructionArgs: Any): N?
     }
 
-    static class DefaultReportFactory<T extends Report> implements ReportFactory<T> {
-
-        private final Instantiator instantiator;
-
-        public DefaultReportFactory(Instantiator instantiator) {
-            this.instantiator = instantiator;
-        }
-
-        @Override
-        public <N extends T> N instantiateReport(Class<N> clazz, Object... constructionArgs) {
-            N report = instantiator.newInstance(clazz, constructionArgs);
-            String name = report.getName();
-            if (name.equals("enabled")) {
-                throw new InvalidUserDataException("Reports that are part of a ReportContainer cannot be named 'enabled'");
+    internal class DefaultReportFactory<T : Report?>(private val instantiator: Instantiator) : ReportFactory<T?> {
+        override fun <N : T?> instantiateReport(clazz: Class<N?>, vararg constructionArgs: Any): N? {
+            val report = instantiator.newInstance<N?>(clazz, *constructionArgs)
+            val name = report!!.getName()
+            if (name == "enabled") {
+                throw InvalidUserDataException("Reports that are part of a ReportContainer cannot be named 'enabled'")
             }
-            return report;
+            return report
+        }
+    }
+
+    companion object {
+        /**
+         * Create a new report container.
+         *
+         * @param objectFactory The object factory used for instantiation.
+         * @param type The type of report held by this container.
+         * @param reportGenerator The generator used to create the initial set of reports.
+         *
+         * @return A new report container.
+         *
+         * @param <T> The type of report held by this container.
+        </T> */
+        fun <T : Report?> create(
+            objectFactory: ObjectFactory,
+            type: Class<out T>,
+            reportGenerator: ReportGenerator<T?>
+        ): DefaultReportContainer<T?> {
+            return objectFactory.newInstance<DefaultReportContainer<*>>(DefaultReportContainer::class.java, type, reportGenerator)
         }
     }
 }

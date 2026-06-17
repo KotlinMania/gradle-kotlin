@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.publication
 
-package org.gradle.api.publish.ivy.internal.publication;
+import org.gradle.api.Task
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.publish.ivy.IvyPublication
+import org.gradle.api.publish.ivy.internal.publisher.IvyNormalizedPublication
+import org.gradle.api.tasks.TaskProvider
 
-import org.gradle.api.Task;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.IvyPublication;
-import org.gradle.api.publish.ivy.internal.publisher.IvyNormalizedPublication;
-import org.gradle.api.tasks.TaskProvider;
+interface IvyPublicationInternal : IvyPublication, PublicationInternal<IvyArtifact?> {
+    val descriptor: IvyModuleDescriptorSpecInternal?
 
-public interface IvyPublicationInternal extends IvyPublication, PublicationInternal<IvyArtifact> {
+    fun setIvyDescriptorGenerator(descriptorGenerator: TaskProvider<out Task>)
 
-    @Override
-    IvyModuleDescriptorSpecInternal getDescriptor();
+    fun setModuleDescriptorGenerator(descriptorGenerator: TaskProvider<out Task>)
 
-    void setIvyDescriptorGenerator(TaskProvider<? extends Task> descriptorGenerator);
+    fun asNormalisedPublication(): IvyNormalizedPublication?
 
-    void setModuleDescriptorGenerator(TaskProvider<? extends Task> descriptorGenerator);
-
-    IvyNormalizedPublication asNormalisedPublication();
-
-    boolean writeGradleMetadataMarker();
+    fun writeGradleMetadataMarker(): Boolean
 }

@@ -13,48 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base.component.internal
 
-package org.gradle.platform.base.component.internal;
+import org.gradle.platform.base.ComponentSpec
+import org.gradle.platform.base.internal.ComponentSpecIdentifier
+import org.gradle.platform.base.internal.ComponentSpecInternal
 
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.internal.ComponentSpecIdentifier;
-import org.gradle.platform.base.internal.ComponentSpecInternal;
-
-public class AbstractComponentSpec implements ComponentSpec, ComponentSpecInternal {
-    private final ComponentSpecIdentifier identifier;
-    private final Class<?> publicType;
-
-    public AbstractComponentSpec(ComponentSpecIdentifier identifier, Class<?> publicType) {
-        this.publicType = publicType;
-        this.identifier = identifier;
+open class AbstractComponentSpec(private val identifier: ComponentSpecIdentifier, private val publicType: Class<*>) : ComponentSpec, ComponentSpecInternal {
+    public override fun getIdentifier(): ComponentSpecIdentifier? {
+        return identifier
     }
 
-    @Override
-    public ComponentSpecIdentifier getIdentifier() {
-        return identifier;
+    override fun getName(): String? {
+        return identifier.name
     }
 
-    @Override
-    public String getName() {
-        return identifier.getName();
+    val projectPath: String?
+        get() = identifier.projectPath
+
+    protected open val typeName: String?
+        get() = publicType.getSimpleName()
+
+    override fun getDisplayName(): String? {
+        return this.typeName + " '" + identifier.path + "'"
     }
 
-    @Override
-    public String getProjectPath() {
-        return identifier.getProjectPath();
-    }
-
-    protected String getTypeName() {
-        return publicType.getSimpleName();
-    }
-
-    @Override
-    public String getDisplayName() {
-        return getTypeName() + " '" + identifier.getPath() + "'";
-    }
-
-    @Override
-    public String toString() {
-        return getDisplayName();
+    override fun toString(): String {
+        return getDisplayName()!!
     }
 }

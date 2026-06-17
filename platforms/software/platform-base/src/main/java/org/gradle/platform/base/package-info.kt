@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * General purpose types for runtime support.
  */
-@org.gradle.api.Incubating
-package org.gradle.platform.base;
+package org.gradle.platform.base

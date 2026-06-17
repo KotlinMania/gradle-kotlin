@@ -66,7 +66,7 @@ class BinarySourceTransformations(private val tasks: TaskContainer, transforms: 
                 taskConfig.configureTask(task, binary, sourceSetToCompile, serviceRegistry)
 
                 task.dependsOn(sourceSetToCompile)
-                binary.getTasks().add(task)
+                binary.tasks.add(task)
 
                 if (binary.hasCodependentSources() && taskConfig is JointCompileTaskConfig) {
                     val jointCompileTaskConfig = taskConfig
@@ -99,7 +99,7 @@ class BinarySourceTransformations(private val tasks: TaskContainer, transforms: 
 
     private fun getSourcesToCompile(binary: BinarySpecInternal): MutableSet<LanguageSourceSetInternal?> {
         val sourceSets = LinkedHashSet<LanguageSourceSetInternal?>()
-        for (languageSourceSet in binary.getInputs()) {
+        for (languageSourceSet in binary.inputs) {
             val languageSourceSetInternal = languageSourceSet as LanguageSourceSetInternal
             if (languageSourceSetInternal.getMayHaveSources()) {
                 sourceSets.add(languageSourceSetInternal)
@@ -110,9 +110,9 @@ class BinarySourceTransformations(private val tasks: TaskContainer, transforms: 
 
     private fun getTransformTaskName(transform: LanguageTransform<*, *>, taskConfig: SourceTransformTaskConfig, binary: BinarySpecInternal, sourceSetToCompile: LanguageSourceSetInternal): String {
         if (binary.hasCodependentSources() && taskConfig is JointCompileTaskConfig) {
-            return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.getProjectScopedName()) + StringUtils.capitalize(transform.javaClass.getSimpleName())
+            return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.projectScopedName) + StringUtils.capitalize(transform.javaClass.getSimpleName())
         }
-        return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.getProjectScopedName()) + StringUtils.capitalize(sourceSetToCompile.getProjectScopedName())
+        return taskConfig.getTaskPrefix() + StringUtils.capitalize(binary.projectScopedName) + StringUtils.capitalize(sourceSetToCompile.getProjectScopedName())
     }
 
     private fun findSourceFor(languageTransform: LanguageTransform<*, *>, sourceSetsToCompile: MutableSet<LanguageSourceSetInternal?>): LanguageSourceSetInternal? {

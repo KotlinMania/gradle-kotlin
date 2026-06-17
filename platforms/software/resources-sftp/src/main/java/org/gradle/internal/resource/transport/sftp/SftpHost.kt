@@ -13,80 +13,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.sftp
 
-package org.gradle.internal.resource.transport.sftp;
+import org.gradle.api.credentials.PasswordCredentials
+import java.net.URI
 
-import org.gradle.api.credentials.PasswordCredentials;
+class SftpHost(uri: URI, credentials: PasswordCredentials) {
+    val hostname: String
+    val port: Int
+    val username: String?
+    val password: String?
 
-import java.net.URI;
-
-public class SftpHost {
-    private final String hostname;
-    private final int port;
-    private final String username;
-    private final String password;
-
-    public SftpHost(URI uri, PasswordCredentials credentials) {
-        hostname = uri.getHost();
-        port = uri.getPort();
-        username = credentials.username;
-        password = credentials.password;
+    init {
+        hostname = uri.getHost()
+        port = uri.getPort()
+        username = credentials.username
+        password = credentials.password
     }
 
-    public String getHostname() {
-        return hostname;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        if (o == null || javaClass != o.javaClass) {
+            return false
         }
 
-        SftpHost sftpHost = (SftpHost) o;
+        val sftpHost = o as SftpHost
 
         if (port != sftpHost.port) {
-            return false;
+            return false
         }
-        if (!hostname.equals(sftpHost.hostname)) {
-            return false;
+        if (hostname != sftpHost.hostname) {
+            return false
         }
-        if (password != null ? !password.equals(sftpHost.password) : sftpHost.password != null) {
-            return false;
+        if (if (password != null) (password != sftpHost.password) else sftpHost.password != null) {
+            return false
         }
-        if (username != null ? !username.equals(sftpHost.username) : sftpHost.username != null) {
-            return false;
+        if (if (username != null) (username != sftpHost.username) else sftpHost.username != null) {
+            return false
         }
 
-        return true;
+        return true
     }
 
-    @Override
-    public int hashCode() {
-        int result = hostname.hashCode();
-        result = 31 * result + port;
-        result = 31 * result + (username != null ? username.hashCode() : 0);
-        result = 31 * result + (password != null ? password.hashCode() : 0);
-        return result;
+    override fun hashCode(): Int {
+        var result = hostname.hashCode()
+        result = 31 * result + port
+        result = 31 * result + (if (username != null) username.hashCode() else 0)
+        result = 31 * result + (if (password != null) password.hashCode() else 0)
+        return result
     }
 
-    @Override
-    public String toString() {
-        return String.format("%s:%d (Username: %s)", hostname, port, username);
+    override fun toString(): String {
+        return String.format("%s:%d (Username: %s)", hostname, port, username)
     }
 }

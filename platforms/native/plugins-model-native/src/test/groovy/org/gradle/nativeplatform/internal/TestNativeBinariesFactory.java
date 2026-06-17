@@ -38,7 +38,7 @@ public class TestNativeBinariesFactory {
         T binary = BaseBinaryFixtures.create(publicType, implType, name, componentNode);
         NativeBinaries.initialize(binary, namingScheme, resolver, TestFiles.fileCollectionFactory(), platform, buildType, flavor);
         SourceComponentSpec component = componentNode.asImmutable(ModelType.of(SourceComponentSpec.class), new SimpleModelRuleDescriptor("get component of " + name)).getInstance();
-        binary.getInputs().addAll(component.getSources().values());
+        binary.inputs.addAll(component.getSources().values());
         return binary;
     }
 }

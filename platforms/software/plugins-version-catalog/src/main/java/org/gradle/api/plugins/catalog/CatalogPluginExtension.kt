@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.plugins.catalog;
+package org.gradle.api.plugins.catalog
 
-import org.gradle.api.Action;
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.Action
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * Allows configuring a version catalog.
@@ -25,15 +25,15 @@ import org.gradle.internal.HasInternalProtocol;
  * @since 7.0
  */
 @HasInternalProtocol
-public interface CatalogPluginExtension {
+interface CatalogPluginExtension {
     /**
      * Configures the version catalog.
      * @param spec the spec used to configure the dependencies
      */
-    void versionCatalog(Action<? super VersionCatalogBuilder> spec);
+    fun versionCatalog(spec: Action<in VersionCatalogBuilder?>?)
 
     /**
      * Configures an explicit alias for a dependency in case of name clash
      */
-    void configureExplicitAlias(String alias, String group, String name);
+    fun configureExplicitAlias(alias: String?, group: String?, name: String?)
 }

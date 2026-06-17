@@ -71,21 +71,21 @@ abstract class NativeBinariesTestPlugin : Plugin<Project?> {
         @Finalize
         fun attachTestedBinarySourcesToTestBinaries(@Each testSuiteBinary: NativeTestSuiteBinarySpecInternal) {
             val testedBinary: BinarySpec = testSuiteBinary.getTestedBinary()
-            testSuiteBinary.getInputs().withType<DependentSourceSet?>(DependentSourceSet::class.java).all(object : Action<DependentSourceSet?> {
+            testSuiteBinary.inputs.withType<DependentSourceSet?>(DependentSourceSet::class.java).all(object : Action<DependentSourceSet?> {
                 override fun execute(testSource: DependentSourceSet) {
-                    testSource.lib(testedBinary.getInputs())
+                    testSource.lib(testedBinary.inputs)
                 }
             })
-            testedBinary.getInputs().all(object : Action<LanguageSourceSet?> {
+            testedBinary.inputs.all(object : Action<LanguageSourceSet?> {
                 override fun execute(testedSource: LanguageSourceSet?) {
-                    testSuiteBinary.getInputs().add(testedSource!!)
+                    testSuiteBinary.inputs.add(testedSource!!)
                 }
             })
         }
 
         @Finalize
         fun configureRunTask(@Each testSuiteBinary: NativeTestSuiteBinarySpecInternal) {
-            val namingScheme = testSuiteBinary.getNamingScheme()
+            val namingScheme = testSuiteBinary.namingScheme
             val tasks = testSuiteBinary.getTasks()
             val installTask = tasks.getInstall() as InstallExecutable
             val runTask = tasks.getRun() as RunTestExecutable
@@ -113,7 +113,7 @@ abstract class NativeBinariesTestPlugin : Plugin<Project?> {
             val projectModelResolver = serviceRegistry.get<ProjectModelResolver?>(ProjectModelResolver::class.java)
             val nativeBinaries = binaries.withType<NativeBinarySpecInternal?>(NativeBinarySpecInternal::class.java)
             for (binary in nativeBinaries) {
-                val buildDependents = tasks.get(binary.getNamingScheme().getTaskName("buildDependents"))
+                val buildDependents = tasks.get(binary.namingScheme.getTaskName("buildDependents"))
                 val deferredDependencies: Callable<Iterable<Task?>?> = object : Callable<Iterable<Task?>?> {
                     override fun call(): Iterable<Task?> {
                         val dependencies: MutableList<Task?> = ArrayList<Task?>()
@@ -134,7 +134,7 @@ abstract class NativeBinariesTestPlugin : Plugin<Project?> {
                 buildDependents!!.dependsOn(deferredDependencies)
             }
             for (testSuiteBinary in nativeBinaries.withType<NativeTestSuiteBinarySpecInternal>(NativeTestSuiteBinarySpecInternal::class.java)) {
-                val buildDependents = tasks.get(testSuiteBinary.getNamingScheme().getTaskName("buildDependents"))
+                val buildDependents = tasks.get(testSuiteBinary.namingScheme.getTaskName("buildDependents"))
                 buildDependents!!.dependsOn(testSuiteBinary.getCheckTask()!!)
             }
         }

@@ -13,34 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.plugins;
-
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.provider.Property;
+package org.gradle.api.plugins
 
 /**
- * An extension used for {@link BasePlugin}.
+ * An extension used for [BasePlugin].
  *
  * @since 7.1
  */
-public interface BasePluginExtension {
+interface BasePluginExtension {
     /**
      * Returns the directory to generate TAR and ZIP archives into.
      *
      * @return The directory. Never returns null.
      */
-    DirectoryProperty getDistsDirectory();
+    val distsDirectory: DirectoryProperty?
 
     /**
      * Returns the directory to generate JAR and WAR archives into.
      *
      * @return The directory. Never returns null.
      */
-    DirectoryProperty getLibsDirectory();
+    val libsDirectory: DirectoryProperty?
 
     /**
      * The base name to use for archive files.
      */
-    Property<String> getArchivesName();
+    val archivesName: Property<String?>?
 }

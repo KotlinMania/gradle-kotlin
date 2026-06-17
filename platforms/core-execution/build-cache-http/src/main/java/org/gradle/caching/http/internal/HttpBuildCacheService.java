@@ -98,17 +98,17 @@ public class HttpBuildCacheService implements BuildCacheService {
     public boolean load(BuildCacheKey key, BuildCacheEntryReader reader) throws BuildCacheException {
         final URI uri = root.resolve("./" + key.getHashCode());
         try (HttpClient.Response response = client.performRawGet(uri, defaultLoadHeaders)) {
-            int statusCode = response.getStatusCode();
+            int statusCode = response.statusCode;
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Response for GET {}: {}", safeUri(uri), statusCode);
             }
             if (isHttpSuccess(statusCode)) {
-                reader.readFrom(response.getContent());
+                reader.readFrom(response.content);
                 return true;
             } else if (response.isMissing()) {
                 return false;
             } else {
-                String defaultMessage = String.format("Loading entry from '%s' response status %d: %s", safeUri(uri), statusCode, response.getStatusReason());
+                String defaultMessage = String.format("Loading entry from '%s' response status %d: %s", safeUri(uri), statusCode, response.statusReason);
                 return throwHttpStatusCodeException(statusCode, defaultMessage);
             }
         } catch (IOException e) {
@@ -132,12 +132,12 @@ public class HttpBuildCacheService implements BuildCacheService {
         };
 
         try (HttpClient.Response response = client.performRawPut(uri, defaultStoreHeaders, putResource)) {
-            int statusCode = response.getStatusCode();
+            int statusCode = response.statusCode;
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Response for PUT {}: {}", safeUri(uri), statusCode);
             }
             if (!isHttpSuccess(statusCode)) {
-                String defaultMessage = String.format("Storing entry at '%s' response status %d: %s", safeUri(uri), statusCode, response.getStatusReason());
+                String defaultMessage = String.format("Storing entry at '%s' response status %d: %s", safeUri(uri), statusCode, response.statusReason);
                 throwHttpStatusCodeException(statusCode, defaultMessage);
             }
         } catch (ClientProtocolException e) {

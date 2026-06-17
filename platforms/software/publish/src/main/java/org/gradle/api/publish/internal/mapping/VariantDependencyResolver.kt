@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.mapping
 
-package org.gradle.api.publish.internal.mapping;
-
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.publish.internal.validation.VariantWarningCollector;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.publish.internal.validation.VariantWarningCollector
 
 /**
  * Given a declared dependency to be published, determines the coordinates
@@ -28,24 +26,22 @@ import org.jspecify.annotations.Nullable;
  * is published to different coordinates than the declared component, the
  * variant coordinates are returned.
  *
- * <p>Implementations of this class may fall-back to component-level precision when
- * variant-level precision is not available for a given dependency.</p>
+ *
+ * Implementations of this class may fall-back to component-level precision when
+ * variant-level precision is not available for a given dependency.
  */
-public interface VariantDependencyResolver {
-
+interface VariantDependencyResolver {
     /**
      * Determines the published coordinates for an external dependency to variant-level precision.
      *
      * @return null if the external dependency could not be resolved.
      */
-    @Nullable
-    ResolvedCoordinates resolveVariantCoordinates(ExternalDependency dependency, VariantWarningCollector warnings);
+    fun resolveVariantCoordinates(dependency: ExternalDependency, warnings: VariantWarningCollector): ResolvedCoordinates?
 
     /**
      * Determines the published coordinates for a project dependency to variant-level precision.
      *
      * @throws RuntimeException if the project cannot be resolved.
      */
-    ResolvedCoordinates resolveVariantCoordinates(ProjectDependency dependency, VariantWarningCollector warnings);
-
+    fun resolveVariantCoordinates(dependency: ProjectDependency, warnings: VariantWarningCollector): ResolvedCoordinates?
 }

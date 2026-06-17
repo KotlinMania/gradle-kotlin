@@ -13,80 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven.internal.artifact;
+package org.gradle.api.publish.maven.internal.artifact
 
-import org.gradle.api.Action;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.CollectionCallbackActionDecorator;
-import org.gradle.api.internal.DefaultDomainObjectSet;
-import org.gradle.api.internal.file.FileCollectionFactory;
-import org.gradle.api.internal.file.collections.MinimalFileSet;
-import org.gradle.api.publish.internal.PublicationArtifactSet;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.api.publish.maven.MavenArtifactSet;
-import org.gradle.internal.typeconversion.NotationParser;
+import org.gradle.api.Action
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.CollectionCallbackActionDecorator
+import org.gradle.api.internal.DefaultDomainObjectSet
+import org.gradle.api.internal.file.FileCollectionFactory
+import org.gradle.api.internal.file.collections.MinimalFileSet
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.publish.internal.PublicationArtifactSet
+import org.gradle.api.publish.maven.MavenArtifact
+import org.gradle.api.publish.maven.MavenArtifactSet
+import org.gradle.internal.typeconversion.NotationParser
+import java.io.File
+import java.util.function.Consumer
+import javax.inject.Inject
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.LinkedHashSet;
-import java.util.Set;
+class DefaultMavenArtifactSet @Inject constructor(
+    private val publicationName: String,
+    private val mavenArtifactParser: NotationParser<Any?, MavenArtifact>,
+    fileCollectionFactory: FileCollectionFactory,
+    collectionCallbackActionDecorator: CollectionCallbackActionDecorator
+) : DefaultDomainObjectSet<MavenArtifact?>(MavenArtifact::class.java, collectionCallbackActionDecorator), MavenArtifactSet, PublicationArtifactSet<MavenArtifact?> {
+    val files: FileCollection
 
-public class DefaultMavenArtifactSet extends DefaultDomainObjectSet<MavenArtifact> implements MavenArtifactSet, PublicationArtifactSet<MavenArtifact> {
-    private final String publicationName;
-    private final FileCollection files;
-    private final NotationParser<Object, MavenArtifact> mavenArtifactParser;
-
-    @Inject
-    public DefaultMavenArtifactSet(
-        String publicationName,
-        NotationParser<Object, MavenArtifact> mavenArtifactParser,
-        FileCollectionFactory fileCollectionFactory,
-        CollectionCallbackActionDecorator collectionCallbackActionDecorator
-    ) {
-        super(MavenArtifact.class, collectionCallbackActionDecorator);
-        this.publicationName = publicationName;
-        this.mavenArtifactParser = mavenArtifactParser;
+    init {
         this.files = fileCollectionFactory.create(
-            new ArtifactsFileCollection(), context -> {
-                for (MavenArtifact mavenArtifact : DefaultMavenArtifactSet.this) {
-                    context.add(mavenArtifact);
+            DefaultMavenArtifactSet.ArtifactsFileCollection(), Consumer { context: TaskDependencyResolveContext? ->
+                for (mavenArtifact in this@DefaultMavenArtifactSet) {
+                    context!!.add(mavenArtifact)
                 }
             }
-        );
+        )
     }
 
-    @Override
-    public MavenArtifact artifact(Object source) {
-        MavenArtifact artifact = mavenArtifactParser.parseNotation(source);
-        add(artifact);
-        return artifact;
+    override fun artifact(source: Any?): MavenArtifact {
+        val artifact = mavenArtifactParser.parseNotation(source)
+        add(artifact)
+        return artifact
     }
 
-    @Override
-    public MavenArtifact artifact(Object source, Action<? super MavenArtifact> config) {
-        MavenArtifact artifact = artifact(source);
-        config.execute(artifact);
-        return artifact;
+    override fun artifact(source: Any?, config: Action<in MavenArtifact?>): MavenArtifact {
+        val artifact = artifact(source)
+        config.execute(artifact)
+        return artifact
     }
 
-    @Override
-    public FileCollection getFiles() {
-        return files;
-    }
-
-    private class ArtifactsFileCollection implements MinimalFileSet {
-        @Override
-        public String getDisplayName() {
-            return "artifacts for Maven publication '" + publicationName + "'";
+    private inner class ArtifactsFileCollection : MinimalFileSet {
+        override fun getDisplayName(): String {
+            return "artifacts for Maven publication '" + publicationName + "'"
         }
 
-        @Override
-        public Set<File> getFiles() {
-            Set<File> files = new LinkedHashSet<File>();
-            for (MavenArtifact artifact : DefaultMavenArtifactSet.this) {
-                files.add(artifact.getFile());
+        override fun getFiles(): MutableSet<File?> {
+            val files: MutableSet<File?> = LinkedHashSet<File?>()
+            for (artifact in this@DefaultMavenArtifactSet) {
+                files.add(artifact.file)
             }
-            return files;
+            return files
         }
     }
 }

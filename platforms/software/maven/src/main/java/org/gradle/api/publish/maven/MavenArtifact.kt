@@ -13,40 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven;
+package org.gradle.api.publish.maven
 
-import org.gradle.api.publish.PublicationArtifact;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.publish.PublicationArtifact
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
 
 /**
- * An artifact published as part of a {@link MavenPublication}.
+ * An artifact published as part of a [MavenPublication].
  */
-public interface MavenArtifact extends PublicationArtifact {
-    /**
-     * The extension used to publish the artifact file, never <code>null</code>.
-     * For an artifact without an extension, this value will be an empty String.
-     */
-    @ToBeReplacedByLazyProperty
-    String getExtension();
-
+interface MavenArtifact : PublicationArtifact {
     /**
      * Sets the extension used to publish the artifact file.
      * @param extension The extension.
      */
-    void setExtension(String extension);
-
-    /**
-     * The classifier used to publish the artifact file.
-     * A <code>null</code> value (the default) indicates that this artifact will be published without a classifier.
-     */
-    @Nullable
-    @ToBeReplacedByLazyProperty
-    String getClassifier();
+    @get:ToBeReplacedByLazyProperty
+    var extension: String?
 
     /**
      * Sets the classifier used to publish the artifact file.
      * @param classifier The classifier.
      */
-    void setClassifier(@Nullable String classifier);
+    @get:ToBeReplacedByLazyProperty
+    var classifier: String?
 }

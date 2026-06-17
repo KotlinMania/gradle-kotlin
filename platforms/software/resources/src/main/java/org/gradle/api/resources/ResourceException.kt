@@ -13,53 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.resources
 
-package org.gradle.api.resources;
-
-import org.gradle.api.GradleException;
-import org.gradle.internal.exceptions.Contextual;
-import org.jspecify.annotations.Nullable;
-
-import java.net.URI;
+import org.gradle.api.GradleException
+import org.gradle.internal.exceptions.Contextual
+import java.net.URI
 
 /**
  * Generic resource exception that all other resource-related exceptions inherit from.
  */
 @Contextual
-public class ResourceException extends GradleException {
-    private final URI location;
-
-    public ResourceException() {
-        location = null;
-    }
-
-    public ResourceException(String message) {
-        super(message);
-        location = null;
-    }
-
-    public ResourceException(String message, Throwable cause) {
-        super(message, cause);
-        location = null;
-    }
-
-    public ResourceException(URI location, String message) {
-        super(message);
-        this.location = location;
-    }
-
-    public ResourceException(URI location, String message, Throwable cause) {
-        super(message, cause);
-        this.location = location;
-    }
-
+open class ResourceException : GradleException {
     /**
      * Returns the location of the resource, if known.
      *
      * @return The location, or null if not known.
      */
-    @Nullable
-    public URI getLocation() {
-        return location;
+    val location: URI?
+
+    constructor() {
+        location = null
+    }
+
+    constructor(message: String?) : super(message) {
+        location = null
+    }
+
+    constructor(message: String?, cause: Throwable?) : super(message, cause) {
+        location = null
+    }
+
+    constructor(location: URI?, message: String?) : super(message) {
+        this.location = location
+    }
+
+    constructor(location: URI?, message: String?, cause: Throwable?) : super(message, cause) {
+        this.location = location
     }
 }

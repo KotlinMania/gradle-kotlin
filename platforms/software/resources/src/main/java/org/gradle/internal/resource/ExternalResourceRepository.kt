@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource;
+package org.gradle.internal.resource
 
 /**
- * Provides access to {@link ExternalResource} implementations, given a URI or resource name.
+ * Provides access to [ExternalResource] implementations, given a URI or resource name.
  */
-public interface ExternalResourceRepository {
+interface ExternalResourceRepository {
     /**
      * Returns a copy of this repository with progress logging enabled.
      */
-    ExternalResourceRepository withProgressLogging();
+    fun withProgressLogging(): ExternalResourceRepository?
 
     /**
      * Returns the resource with the given name. Note that this method does not access the resource in any way, it simply creates an object that can. To access the resource, use the methods on the returned object.
@@ -31,12 +30,12 @@ public interface ExternalResourceRepository {
      * @param resource The location of the resource
      * @param revalidate Ensure the external resource is not stale when reading its content
      */
-    ExternalResource resource(ExternalResourceName resource, boolean revalidate);
+    fun resource(resource: ExternalResourceName?, revalidate: Boolean): ExternalResource?
 
     /**
      * Returns the resource with the given name. Note that this method does not access the resource in any way, it simply creates an object that can. To access the resource, use the methods on the returned object.
      *
      * @param resource The location of the resource
      */
-    ExternalResource resource(ExternalResourceName resource);
+    fun resource(resource: ExternalResourceName?): ExternalResource?
 }

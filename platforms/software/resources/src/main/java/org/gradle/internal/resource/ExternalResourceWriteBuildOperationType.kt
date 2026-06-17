@@ -13,41 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
-
-import org.gradle.internal.operations.BuildOperationType;
-import org.gradle.internal.scan.UsedByScanPlugin;
+import org.gradle.internal.operations.BuildOperationType
+import org.gradle.internal.scan.UsedByScanPlugin
 
 /**
  * A write of content to an external resource.
  *
  * @since 4.0
  */
-public final class ExternalResourceWriteBuildOperationType implements BuildOperationType<ExternalResourceWriteBuildOperationType.Details, ExternalResourceWriteBuildOperationType.Result> {
-
+class ExternalResourceWriteBuildOperationType private constructor() : BuildOperationType<ExternalResourceWriteBuildOperationType.Details?, ExternalResourceWriteBuildOperationType.Result?> {
     @UsedByScanPlugin
-    public interface Details {
-
+    interface Details {
         /**
          * The location of the resource.
          * A valid URI.
          */
-        String getLocation();
-
+        val location: String?
     }
 
     @UsedByScanPlugin
-    public interface Result {
-
+    interface Result {
         /**
          * The number of bytes that were written to the resource
          */
-        long getBytesWritten();
-
+        val bytesWritten: Long
     }
-
-    private ExternalResourceWriteBuildOperationType() {
-    }
-
 }

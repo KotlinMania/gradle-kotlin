@@ -13,8 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * General purpose types for related to compiling.
  */
-package org.gradle.language.base.compile;
+package org.gradle.language.base.compile

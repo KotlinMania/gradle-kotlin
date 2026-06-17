@@ -27,7 +27,7 @@ open class DefaultMultiCauseExceptionNoStackTrace : DefaultMultiCauseException {
 
     constructor(messageFactory: Factory<String?>?, vararg causes: Throwable?) : super(messageFactory, *causes)
 
-    constructor(messageFactory: Factory<String?>?, causes: Iterable<out Throwable?>?) : super(messageFactory, causes)
+    constructor(messageFactory: Factory<String?>?, causes: Iterable<out Throwable?>) : super(messageFactory, causes)
 
     @Synchronized
     override fun fillInStackTrace(): Throwable {

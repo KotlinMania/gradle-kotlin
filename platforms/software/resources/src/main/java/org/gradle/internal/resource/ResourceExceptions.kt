@@ -13,64 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource
 
-package org.gradle.internal.resource;
+import org.gradle.api.resources.MissingResourceException
+import org.gradle.api.resources.ResourceException
+import java.io.File
+import java.io.FileNotFoundException
+import java.net.URI
 
-import org.gradle.api.resources.MissingResourceException;
-import org.gradle.api.resources.ResourceException;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.net.URI;
-
-public class ResourceExceptions {
-    public static ResourceIsAFolderException readFolder(File location) {
-        return new ResourceIsAFolderException(location.toURI(), String.format("Cannot read '%s' because it is a folder.", location));
+object ResourceExceptions {
+    fun readFolder(location: File): ResourceIsAFolderException {
+        return ResourceIsAFolderException(location.toURI(), String.format("Cannot read '%s' because it is a folder.", location))
     }
 
-    public static ResourceException readFailed(File location, Throwable failure) {
-        return failure(location.toURI(), String.format("Could not read '%s'.", location), failure);
+    fun readFailed(location: File, failure: Throwable?): ResourceException {
+        return failure(location.toURI(), String.format("Could not read '%s'.", location), failure)
     }
 
-    public static ResourceException readFailed(String displayName, Throwable failure) {
-        return new ResourceException(String.format("Could not read %s.", displayName), failure);
+    fun readFailed(displayName: String?, failure: Throwable?): ResourceException {
+        return ResourceException(String.format("Could not read %s.", displayName), failure)
     }
 
-    public static MissingResourceException readMissing(File location, Throwable failure) {
-        return new MissingResourceException(location.toURI(),
-                String.format("Could not read '%s' as it does not exist.", location),
-                failure instanceof FileNotFoundException ? null : failure);
+    fun readMissing(location: File, failure: Throwable?): MissingResourceException {
+        return MissingResourceException(
+            location.toURI(),
+            String.format("Could not read '%s' as it does not exist.", location),
+            if (failure is FileNotFoundException) null else failure
+        )
     }
 
-    public static MissingResourceException getMissing(URI location, Throwable failure) {
-        return new MissingResourceException(location,
-                String.format("Could not read '%s' as it does not exist.", location),
-                failure instanceof FileNotFoundException ? null : failure);
+    fun getMissing(location: URI?, failure: Throwable?): MissingResourceException {
+        return MissingResourceException(
+            location,
+            String.format("Could not read '%s' as it does not exist.", location),
+            if (failure is FileNotFoundException) null else failure
+        )
     }
 
-    public static MissingResourceException getMissing(URI location) {
-        return new MissingResourceException(location,
-                String.format("Could not read '%s' as it does not exist.", location));
+    fun getMissing(location: URI?): MissingResourceException {
+        return MissingResourceException(
+            location,
+            String.format("Could not read '%s' as it does not exist.", location)
+        )
     }
 
-    public static ResourceException getFailed(URI location, Throwable failure) {
-        return failure(location, String.format("Could not get resource '%s'.", location), failure);
+    fun getFailed(location: URI, failure: Throwable?): ResourceException {
+        return failure(location, String.format("Could not get resource '%s'.", location), failure)
     }
 
-    public static ResourceException putFailed(URI location, Throwable failure) {
-        return failure(location, String.format("Could not write to resource '%s'.", location), failure);
+    fun putFailed(location: URI, failure: Throwable?): ResourceException {
+        return failure(location, String.format("Could not write to resource '%s'.", location), failure)
     }
 
     /**
      * Wraps the given failure, unless it is a ResourceException with the specified location.
      */
-    public static ResourceException failure(URI location, String message, Throwable failure) {
-        if (failure instanceof ResourceException) {
-            ResourceException resourceException = (ResourceException) failure;
-            if (location.equals(resourceException.getLocation())) {
-                return resourceException;
+    fun failure(location: URI, message: String?, failure: Throwable?): ResourceException {
+        if (failure is ResourceException) {
+            val resourceException = failure
+            if (location == resourceException.location) {
+                return resourceException
             }
         }
-        return new ResourceException(location, message, failure);
+        return ResourceException(location, message, failure)
     }
 }

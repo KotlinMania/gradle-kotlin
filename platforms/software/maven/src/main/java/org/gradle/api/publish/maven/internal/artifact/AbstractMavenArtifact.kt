@@ -13,74 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import com.google.common.base.Strings
+import org.gradle.api.internal.tasks.DefaultTaskDependency
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.publish.internal.PublicationArtifactInternal
+import org.gradle.api.publish.maven.MavenArtifact
+import org.gradle.api.tasks.TaskDependency
+import java.util.function.Consumer
 
-import com.google.common.base.Strings;
-import org.gradle.api.internal.tasks.DefaultTaskDependency;
-import org.gradle.api.publish.internal.PublicationArtifactInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.api.tasks.TaskDependency;
+abstract class AbstractMavenArtifact protected constructor(taskDependencyFactory: TaskDependencyFactory) : MavenArtifact, PublicationArtifactInternal {
+    private val allBuildDependencies: TaskDependency
+    private val additionalBuildDependencies: DefaultTaskDependency
+    private var extension: String? = null
+    private var classifier: String? = null
 
-import java.io.File;
-
-public abstract class AbstractMavenArtifact implements MavenArtifact, PublicationArtifactInternal {
-    private final TaskDependency allBuildDependencies;
-    private final DefaultTaskDependency additionalBuildDependencies;
-    private String extension;
-    private String classifier;
-
-    protected AbstractMavenArtifact(TaskDependencyFactory taskDependencyFactory) {
-        this.additionalBuildDependencies = new DefaultTaskDependency();
-        this.allBuildDependencies = taskDependencyFactory.visitingDependencies(context -> {
-            context.add(getDefaultBuildDependencies());
-            additionalBuildDependencies.visitDependencies(context);
-        });
+    init {
+        this.additionalBuildDependencies = DefaultTaskDependency()
+        this.allBuildDependencies = taskDependencyFactory.visitingDependencies(Consumer { context: TaskDependencyResolveContext? ->
+            context!!.add(this.defaultBuildDependencies)
+            additionalBuildDependencies.visitDependencies(context)
+        })
     }
 
-    @Override
-    public abstract File getFile();
+    abstract val file: File
 
-    @Override
-    public final String getExtension() {
-        return extension != null ? extension : getDefaultExtension();
+    override fun getExtension(): String? {
+        return if (extension != null) extension else this.defaultExtension
     }
 
-    protected abstract String getDefaultExtension();
+    protected abstract val defaultExtension: String?
 
-    @Override
-    public final void setExtension(String extension) {
-        this.extension = Strings.nullToEmpty(extension);
+    override fun setExtension(extension: String?) {
+        this.extension = Strings.nullToEmpty(extension)
     }
 
-    @Override
-    public final String getClassifier() {
-        return Strings.emptyToNull(classifier != null ? classifier : getDefaultClassifier());
+    override fun getClassifier(): String? {
+        return Strings.emptyToNull(if (classifier != null) classifier else this.defaultClassifier)
     }
 
-    protected abstract String getDefaultClassifier();
+    protected abstract val defaultClassifier: String?
 
-    @Override
-    public final void setClassifier(String classifier) {
-        this.classifier = Strings.nullToEmpty(classifier);
+    override fun setClassifier(classifier: String?) {
+        this.classifier = Strings.nullToEmpty(classifier)
     }
 
-    @Override
-    public final void builtBy(Object... tasks) {
-        additionalBuildDependencies.add(tasks);
+    override fun builtBy(vararg tasks: Any?) {
+        additionalBuildDependencies.add(*tasks)
     }
 
-    @Override
-    public final TaskDependency getBuildDependencies() {
-        return allBuildDependencies;
+    override fun getBuildDependencies(): TaskDependency {
+        return allBuildDependencies
     }
 
-    protected abstract TaskDependency getDefaultBuildDependencies();
+    protected abstract val defaultBuildDependencies: TaskDependency?
 
-    @Override
-    public final String toString() {
-        return getClass().getSimpleName() + " " + getExtension() + ":" + getClassifier();
+    override fun toString(): String {
+        return javaClass.getSimpleName() + " " + getExtension() + ":" + getClassifier()
     }
-
 }

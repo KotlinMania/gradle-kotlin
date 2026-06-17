@@ -13,35 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publisher
 
-package org.gradle.api.publish.maven.internal.publisher;
+import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator
+import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory
+import org.gradle.internal.Factory
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.internal.BuildCommencedTimeProvider
+import java.io.File
 
-import org.gradle.api.internal.artifacts.mvnsettings.LocalMavenRepositoryLocator;
-import org.gradle.api.internal.artifacts.repositories.transport.RepositoryTransportFactory;
-import org.gradle.internal.Factory;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.gradle.util.internal.BuildCommencedTimeProvider;
-
-import java.io.File;
-
-@ServiceScope(Scope.Build.class)
-public class MavenPublishers {
-    private final BuildCommencedTimeProvider timeProvider;
-    private RepositoryTransportFactory repositoryTransportFactory;
-    private final LocalMavenRepositoryLocator mavenRepositoryLocator;
-
-    public MavenPublishers(BuildCommencedTimeProvider timeProvider, RepositoryTransportFactory repositoryTransportFactory, LocalMavenRepositoryLocator mavenRepositoryLocator) {
-        this.timeProvider = timeProvider;
-        this.repositoryTransportFactory = repositoryTransportFactory;
-        this.mavenRepositoryLocator = mavenRepositoryLocator;
+@ServiceScope(Scope.Build::class)
+class MavenPublishers(
+    private val timeProvider: BuildCommencedTimeProvider,
+    private val repositoryTransportFactory: RepositoryTransportFactory,
+    private val mavenRepositoryLocator: LocalMavenRepositoryLocator
+) {
+    fun getRemotePublisher(temporaryDirFactory: Factory<File?>): MavenPublisher {
+        return MavenRemotePublisher(temporaryDirFactory, timeProvider)
     }
 
-    public MavenPublisher getRemotePublisher(Factory<File> temporaryDirFactory) {
-        return new MavenRemotePublisher(temporaryDirFactory, timeProvider);
-    }
-
-    public MavenPublisher getLocalPublisher(Factory<File> temporaryDirFactory) {
-        return new MavenLocalPublisher(temporaryDirFactory, repositoryTransportFactory, mavenRepositoryLocator);
+    fun getLocalPublisher(temporaryDirFactory: Factory<File?>): MavenPublisher {
+        return MavenLocalPublisher(temporaryDirFactory, repositoryTransportFactory, mavenRepositoryLocator)
     }
 }

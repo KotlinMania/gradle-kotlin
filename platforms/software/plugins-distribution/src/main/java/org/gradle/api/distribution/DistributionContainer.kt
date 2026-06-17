@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.distribution;
+package org.gradle.api.distribution
 
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.NamedDomainObjectContainer
 
 /**
- * A {@code DistributionContainer} manages a set of {@link Distribution} objects.
+ * A `DistributionContainer` manages a set of [Distribution] objects.
  */
-public interface DistributionContainer extends NamedDomainObjectContainer<Distribution> {
-}
+interface DistributionContainer : NamedDomainObjectContainer<Distribution?>

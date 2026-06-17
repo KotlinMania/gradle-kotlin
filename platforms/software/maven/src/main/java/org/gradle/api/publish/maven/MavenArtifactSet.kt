@@ -13,50 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven;
+package org.gradle.api.publish.maven
 
-import org.gradle.api.Action;
-import org.gradle.api.DomainObjectSet;
+import org.gradle.api.Action
+import org.gradle.api.DomainObjectSet
 
 /**
- * A Collection of {@link MavenArtifact}s to be included in a {@link MavenPublication}.
+ * A Collection of [MavenArtifact]s to be included in a [MavenPublication].
  *
- * Being a {@link DomainObjectSet}, a {@code MavenArtifactSet} provides convenient methods for querying, filtering, and applying actions to the set of {@link MavenArtifact}s.
+ * Being a [DomainObjectSet], a `MavenArtifactSet` provides convenient methods for querying, filtering, and applying actions to the set of [MavenArtifact]s.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'maven-publish'
+ * id 'maven-publish'
  * }
  *
  * def publication = publishing.publications.create("name", MavenPublication)
  * def artifacts = publication.artifacts
  *
  * artifacts.matching({
- *     it.classifier == "classy"
+ * it.classifier == "classy"
  * }).all({
- *     it.extension = "ext"
+ * it.extension = "ext"
  * })
- * </pre>
+</pre> *
  *
  * @see DomainObjectSet
  */
-public interface MavenArtifactSet extends DomainObjectSet<MavenArtifact> {
+interface MavenArtifactSet : DomainObjectSet<MavenArtifact?> {
     /**
-     * Creates and adds a {@link MavenArtifact} to the set.
+     * Creates and adds a [MavenArtifact] to the set.
      *
-     * The semantics of this method are the same as {@link MavenPublication#artifact(Object)}.
+     * The semantics of this method are the same as [MavenPublication.artifact].
      *
      * @param source The source of the artifact content.
      */
-    MavenArtifact artifact(Object source);
+    fun artifact(source: Any?): MavenArtifact?
 
     /**
-     * Creates and adds a {@link MavenArtifact} to the set, which is configured by the associated action.
+     * Creates and adds a [MavenArtifact] to the set, which is configured by the associated action.
      *
-     * The semantics of this method are the same as {@link MavenPublication#artifact(Object, Action)}.
+     * The semantics of this method are the same as [MavenPublication.artifact].
      *
      * @param source The source of the artifact.
-     * @param config An action or closure to configure the values of the constructed {@link MavenArtifact}.
+     * @param config An action or closure to configure the values of the constructed [MavenArtifact].
      */
-     MavenArtifact artifact(Object source, Action<? super MavenArtifact> config);
+    fun artifact(source: Any?, config: Action<in MavenArtifact?>?): MavenArtifact?
 }

@@ -13,60 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.validation
 
-package org.gradle.api.publish.internal.validation;
+import com.google.common.collect.LinkedHashMultimap
+import com.google.common.collect.Multimap
+import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
+import java.net.URI
 
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
-import org.jspecify.annotations.Nullable;
+@ServiceScope(Scope.Build::class)
+class DuplicatePublicationTracker {
+    private val published: Multimap<String?, PublicationWithProject> = LinkedHashMultimap.create<String?, PublicationWithProject?>()
 
-import java.net.URI;
-
-@ServiceScope(Scope.Build.class)
-public class DuplicatePublicationTracker {
-    private final static Logger LOG = Logging.getLogger(DuplicatePublicationTracker.class);
-    private final Multimap<String, PublicationWithProject> published = LinkedHashMultimap.create();
-
-    public synchronized void checkCanPublish(String projectDisplayName, String publicationName, ModuleVersionIdentifier projectIdentity, @Nullable URI repositoryLocation, String repositoryName) {
+    @Synchronized
+    fun checkCanPublish(projectDisplayName: String?, publicationName: String?, projectIdentity: ModuleVersionIdentifier?, repositoryLocation: URI?, repositoryName: String?) {
         // Don't track publications to repositories configured without a base URL
         if (repositoryLocation == null) {
-            return;
+            return
         }
 
-        String repositoryKey = normalizeLocation(repositoryLocation);
+        val repositoryKey = normalizeLocation(repositoryLocation)
 
-        PublicationWithProject publicationWithProject = new PublicationWithProject(projectDisplayName, publicationName, projectIdentity);
+        val publicationWithProject = PublicationWithProject(projectDisplayName, publicationName, projectIdentity)
         if (published.get(repositoryKey).contains(publicationWithProject)) {
-            LOG.warn("Publication '" + projectIdentity + "' is published multiple times to the same location. It is likely that repository '" + repositoryName + "' is duplicated.");
-            return;
+            LOG!!.warn("Publication '" + projectIdentity + "' is published multiple times to the same location. It is likely that repository '" + repositoryName + "' is duplicated.")
+            return
         }
 
-        for (PublicationWithProject previousPublicationWithProject : published.get(repositoryKey)) {
-            if (previousPublicationWithProject.getCoordinates().equals(projectIdentity)) {
-                String firstPublication = previousPublicationWithProject.toString();
-                String secondPublication = publicationWithProject.toString();
+        for (previousPublicationWithProject in published.get(repositoryKey)) {
+            if (previousPublicationWithProject.getCoordinates() == projectIdentity) {
+                var firstPublication = previousPublicationWithProject.toString()
+                var secondPublication = publicationWithProject.toString()
                 if (secondPublication.compareTo(firstPublication) < 0) {
-                    String temp = firstPublication;
-                    firstPublication = secondPublication;
-                    secondPublication = temp;
+                    val temp = firstPublication
+                    firstPublication = secondPublication
+                    secondPublication = temp
                 }
-                LOG.warn("Multiple publications with coordinates '" + projectIdentity + "' are published to repository '" + repositoryName + "'. The publications " + firstPublication + " and " + secondPublication + " will overwrite each other!");
+                LOG!!.warn("Multiple publications with coordinates '" + projectIdentity + "' are published to repository '" + repositoryName + "'. The publications " + firstPublication + " and " + secondPublication + " will overwrite each other!")
             }
         }
 
-        published.put(repositoryKey, publicationWithProject);
+        published.put(repositoryKey, publicationWithProject)
     }
 
-    private String normalizeLocation(URI location) {
-        String repoUrl = location.toString();
+    private fun normalizeLocation(location: URI): String {
+        val repoUrl = location.toString()
         if (!repoUrl.endsWith("/")) {
-            return repoUrl + "/";
+            return repoUrl + "/"
         }
-        return repoUrl;
+        return repoUrl
+    }
+
+    companion object {
+        private val LOG = getLogger(DuplicatePublicationTracker::class.java)
     }
 }

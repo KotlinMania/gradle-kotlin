@@ -31,12 +31,12 @@ class SourceCompileTaskConfig(languageTransform: NativeLanguageTransform<*>?, ta
 
         task.setDescription("Compiles the " + sourceSet + " of " + binary)
 
-        task.source(sourceSet.getSource())
+        task.source(sourceSet.source)
 
         val project = task.getProject()
 
         task.objectFileDir.fileProvider(
-            project.getLayout().getBuildDirectory().getAsFile().map<S?>(Transformer { it: File? -> File(binary.getNamingScheme().getOutputDirectory(it, "objs"), sourceSet.projectScopedName) })
+            project.getLayout().getBuildDirectory().getAsFile().map<S?>(Transformer { it: File? -> File(binary.namingScheme.getOutputDirectory(it, "objs"), sourceSet.projectScopedName) })
         )
 
         // If this task uses a pre-compiled header

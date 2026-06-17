@@ -13,33 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api
 
-package org.gradle.api;
-
-import org.gradle.platform.base.ComponentSpec;
-import org.jspecify.annotations.Nullable;
+import org.gradle.platform.base.ComponentSpec
 
 /**
- * A {@link ComponentSpec} that is directly checkable via a specified task.
+ * A [ComponentSpec] that is directly checkable via a specified task.
  */
 @Incubating
-public interface CheckableComponentSpec extends ComponentSpec {
-
+interface CheckableComponentSpec : ComponentSpec {
     /**
      * Returns the task responsible for checking this component.
      */
-    @Nullable
-    Task getCheckTask();
-
     /**
      * Specifies the task responsible for checking this component.
      */
-    void setCheckTask(@Nullable Task checkTask);
+    var checkTask: Task?
 
     /**
      * Adds tasks required to check this component. Tasks added this way are subsequently
-     * added as dependencies of this component's {@link #getCheckTask() check task}.
+     * added as dependencies of this component's [check task][.getCheckTask].
      */
-    void checkedBy(Object... tasks);
-
+    fun checkedBy(vararg tasks: Any?)
 }

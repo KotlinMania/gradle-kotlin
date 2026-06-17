@@ -200,7 +200,7 @@ class NativeDependentBinariesResolutionStrategy(projectRegistry: BuildProjectReg
         val dependents = state.getDependents(target)
         for (dependent in dependents) {
             val children = doBuildResolvedResult(dependent, state, stack)
-            result.add(DefaultDependentBinariesResolvedResult(dependent.getId(), dependent.getProjectScopedName(), dependent.isBuildable(), isTestSuite(dependent), children))
+            result.add(DefaultDependentBinariesResolvedResult(dependent.id, dependent.projectScopedName, dependent.isBuildable, isTestSuite(dependent), children))
         }
         stack.pop()
         resultsCache.put(target, result)
@@ -210,7 +210,7 @@ class NativeDependentBinariesResolutionStrategy(projectRegistry: BuildProjectReg
     private fun onCircularDependencies(state: State, stack: Deque<NativeBinarySpecInternal?>, target: NativeBinarySpecInternal?) {
         val nodeRenderer: GraphNodeRenderer<NativeBinarySpecInternal?> = object : GraphNodeRenderer<NativeBinarySpecInternal?> {
             override fun renderTo(node: NativeBinarySpecInternal, output: StyledTextOutput, alreadySeen: Boolean) {
-                val name = getBuildScopedTerseName(node.getId())
+                val name = getBuildScopedTerseName(node.id)
                 output.withStyle(StyledTextOutput.Style.Identifier)!!.text(name)
             }
         }

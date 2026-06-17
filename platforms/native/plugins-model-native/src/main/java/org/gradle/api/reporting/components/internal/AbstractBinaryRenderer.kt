@@ -35,8 +35,8 @@ import java.util.TreeMap
 @ServiceScope(Scope.Global::class)
 abstract class AbstractBinaryRenderer<T : BinarySpec?> protected constructor(private val schemaStore: ModelSchemaStore) : ReportRenderer<BinarySpec?, TextReportBuilder?>() {
     public override fun render(binary: BinarySpec, builder: TextReportBuilder) {
-        var heading = StringUtils.capitalize(binary.getDisplayName())
-        if (!binary.isBuildable()) {
+        var heading = StringUtils.capitalize(binary.displayName)
+        if (!binary.isBuildable) {
             heading += " (not buildable)"
         }
         builder.heading(heading)
@@ -66,7 +66,7 @@ abstract class AbstractBinaryRenderer<T : BinarySpec?> protected constructor(pri
     }
 
     protected fun renderVariants(binary: T?, builder: TextReportBuilder) {
-        val schema: ModelSchema<*>? = schemaStore.getSchema((binary as BinarySpecInternal).getPublicType())
+        val schema: ModelSchema<*>? = schemaStore.getSchema((binary as BinarySpecInternal).publicType)
         if (schema !is StructSchema<*>) {
             return
         }
@@ -91,8 +91,8 @@ abstract class AbstractBinaryRenderer<T : BinarySpec?> protected constructor(pri
     }
 
     private fun renderBuildAbility(binary: BinarySpec, builder: TextReportBuilder) {
-        val buildAbility = (binary as BinarySpecInternal).getBuildAbility()
-        if (!buildAbility.isBuildable()) {
+        val buildAbility = (binary as BinarySpecInternal).buildAbility
+        if (!buildAbility.isBuildable) {
             val formatter = TreeFormatter()
             buildAbility.explain(formatter)
             builder.item(formatter.toString())
@@ -100,10 +100,10 @@ abstract class AbstractBinaryRenderer<T : BinarySpec?> protected constructor(pri
     }
 
     protected fun renderOwnedSourceSets(binary: T?, builder: TextReportBuilder) {
-        if ((binary as BinarySpecInternal).isLegacyBinary()) {
+        if ((binary as BinarySpecInternal).isLegacyBinary) {
             return
         }
-        val sources = binary.getSources()
+        val sources = binary.sources
         if (!sources.isEmpty()) {
             val sourceSetRenderer = SourceSetRenderer()
             builder.collection<LanguageSourceSet?>("source sets", sources.values(), sourceSetRenderer, "source sets")

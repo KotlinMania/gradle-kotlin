@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.local;
+package org.gradle.internal.resource.local
 
-import org.gradle.api.Action;
-
-import java.io.File;
+import org.gradle.api.Action
+import java.io.File
 
 /**
  * An indexed store that maps a key to a file or directory.
  *
  * Most implementations do not provide locking, which must be coordinated by the caller.
  */
-public interface FileStore<K> {
+interface FileStore<K> {
     /**
      * Moves the given file into the store.
      */
-    LocallyAvailableResource move(K key, File source) throws FileStoreException;
+    @Throws(FileStoreException::class)
+    fun move(key: K?, source: File?): LocallyAvailableResource?
 
     /**
      * Adds an entry to the store, using the given action to produce the file.
@@ -36,5 +36,6 @@ public interface FileStore<K> {
      * @throws FileStoreAddActionException When the action fails
      * @throws FileStoreException On other failures
      */
-    LocallyAvailableResource add(K key, Action<File> addAction) throws FileStoreException;
+    @Throws(FileStoreException::class)
+    fun add(key: K?, addAction: Action<File?>?): LocallyAvailableResource?
 }

@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.platform.base;
+package org.gradle.platform.base
 
-import org.gradle.api.Incubating;
-import org.gradle.model.ModelMap;
+import org.gradle.api.Incubating
+import org.gradle.model.ModelMap
 
 /**
  * A container for project binaries, which represent physical artifacts that can run on a particular platform or runtime.
  */
 @Incubating
-public interface BinaryContainer extends ModelMap<BinarySpec> {}
+interface BinaryContainer : ModelMap<BinarySpec?>

@@ -24,12 +24,12 @@ class Pair<L, R> private constructor(@JvmField val left: L?, @JvmField val right
         return right
     }
 
-    fun <T> pushLeft(t: T?): Pair<T?, Pair<L?, R?>?> {
-        return Companion.of<T?, Pair<L?, R?>?>(t, this)
+    fun <T> pushLeft(t: T?): Pair<T?, Pair<L, R>?> {
+        return Companion.of<T?, Pair<L, R>?>(t, this)
     }
 
-    fun <T> pushRight(t: T?): Pair<Pair<L?, R?>?, T?> {
-        return Companion.of<Pair<L?, R?>?, T?>(this, t)
+    fun <T> pushRight(t: T?): Pair<Pair<L, R>?, T?> {
+        return Companion.of<Pair<L, R>?, T?>(this, t)
     }
 
     fun <T> nestLeft(t: T?): Pair<Pair<T?, L?>?, R?> {

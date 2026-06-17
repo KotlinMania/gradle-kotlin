@@ -13,45 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.tasks
 
-package org.gradle.api.publish.maven.tasks;
-
-import org.gradle.api.DefaultTask;
-import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal;
-import org.gradle.api.publish.maven.internal.publisher.MavenDuplicatePublicationTracker;
-import org.gradle.api.publish.maven.internal.publisher.MavenPublishers;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty;
-import org.gradle.internal.serialization.Transient;
-import org.gradle.work.DisableCachingByDefault;
-
-import javax.inject.Inject;
-import java.util.concurrent.Callable;
-
-import static org.gradle.internal.serialization.Transient.varOf;
+import org.gradle.api.DefaultTask
+import org.gradle.api.InvalidUserDataException
+import org.gradle.api.file.FileCollection
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyProperty
+import org.gradle.internal.serialization.Transient.Companion.varOf
+import org.gradle.work.DisableCachingByDefault
+import java.util.concurrent.Callable
+import javax.inject.Inject
 
 /**
- * Base class for tasks that publish a {@link MavenPublication}.
+ * Base class for tasks that publish a [MavenPublication].
  *
  * @since 2.4
  */
 @DisableCachingByDefault(because = "Abstract super-class, not to be instantiated directly")
-public abstract class AbstractPublishToMaven extends DefaultTask {
+abstract class AbstractPublishToMaven : DefaultTask() {
+    private val publication = varOf<MavenPublicationInternal?>()
 
-    private final Transient.Var<MavenPublicationInternal> publication = varOf();
-
-    public AbstractPublishToMaven() {
+    init {
         // Allow the publication to participate in incremental build
-        getInputs().files((Callable<FileCollection>) () -> {
-                MavenPublicationInternal publicationInternal = getPublicationInternal();
-                return publicationInternal == null ? null : publicationInternal.getPublishableArtifacts().getFiles();
-            })
+        getInputs().files(Callable {
+            val publicationInternal = this.publicationInternal
+            if (publicationInternal == null) null else publicationInternal.publishableArtifacts!!.files
+        } as Callable<FileCollection?>)
             .withPropertyName("publication.publishableFiles")
-            .withPathSensitivity(PathSensitivity.NAME_ONLY);
+            .withPathSensitivity(PathSensitivity.NAME_ONLY)
 
         // Should repositories be able to participate in incremental?
         // At the least, they may be able to express themselves as output files
@@ -67,8 +60,8 @@ public abstract class AbstractPublishToMaven extends DefaultTask {
      */
     @Internal
     @ToBeReplacedByLazyProperty
-    public MavenPublication getPublication() {
-        return publication.get();
+    fun getPublication(): MavenPublication? {
+        return publication.get()
     }
 
     /**
@@ -76,34 +69,35 @@ public abstract class AbstractPublishToMaven extends DefaultTask {
      *
      * @param publication The publication to be published
      */
-    public void setPublication(MavenPublication publication) {
-        this.publication.set(toPublicationInternal(publication));
+    fun setPublication(publication: MavenPublication?) {
+        this.publication.set(toPublicationInternal(publication))
     }
 
-    @Internal
-    protected MavenPublicationInternal getPublicationInternal() {
-        return toPublicationInternal(getPublication());
-    }
+    @get:Internal
+    protected val publicationInternal: MavenPublicationInternal?
+        get() = toPublicationInternal(getPublication())
 
-    private static MavenPublicationInternal toPublicationInternal(MavenPublication publication) {
-        if (publication == null) {
-            return null;
-        } else if (publication instanceof MavenPublicationInternal) {
-            return (MavenPublicationInternal) publication;
-        } else {
-            throw new InvalidUserDataException(
-                String.format(
-                    "publication objects must implement the '%s' interface, implementation '%s' does not",
-                    MavenPublicationInternal.class.getName(),
-                    publication.getClass().getName()
+    @get:Inject
+    protected abstract val mavenPublishers: MavenPublishers?
+
+    @get:Inject
+    protected abstract val duplicatePublicationTracker: MavenDuplicatePublicationTracker?
+
+    companion object {
+        private fun toPublicationInternal(publication: MavenPublication?): MavenPublicationInternal? {
+            if (publication == null) {
+                return null
+            } else if (publication is MavenPublicationInternal) {
+                return publication
+            } else {
+                throw InvalidUserDataException(
+                    String.format(
+                        "publication objects must implement the '%s' interface, implementation '%s' does not",
+                        MavenPublicationInternal::class.java.getName(),
+                        publication.javaClass.getName()
+                    )
                 )
-            );
+            }
         }
     }
-
-    @Inject
-    protected abstract MavenPublishers getMavenPublishers();
-
-    @Inject
-    protected abstract MavenDuplicatePublicationTracker getDuplicatePublicationTracker();
 }

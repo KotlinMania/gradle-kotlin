@@ -13,34 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
+import org.apache.http.Header
+import org.apache.http.auth.Credentials
+import org.apache.http.message.BasicHeader
+import java.security.Principal
 
-import org.apache.http.Header;
-import org.apache.http.auth.Credentials;
-import org.apache.http.message.BasicHeader;
+class HttpClientHttpHeaderCredentials(name: String, value: String?) : Credentials {
+    val header: Header
 
-import java.security.Principal;
-
-public class HttpClientHttpHeaderCredentials implements Credentials {
-
-    private final Header header;
-
-    public HttpClientHttpHeaderCredentials(String name, String value) {
-        this.header = new BasicHeader(name, value);
+    init {
+        this.header = BasicHeader(name, value)
     }
 
-    public Header getHeader() {
-        return header;
+    override fun getUserPrincipal(): Principal? {
+        return null
     }
 
-    @Override
-    public Principal getUserPrincipal() {
-        return null;
-    }
-
-    @Override
-    public String getPassword() {
-        return null;
+    override fun getPassword(): String? {
+        return null
     }
 }

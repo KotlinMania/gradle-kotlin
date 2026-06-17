@@ -13,254 +13,212 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transfer
 
-package org.gradle.internal.resource.transfer;
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceName
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.IOException
+import java.net.URI
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.resource.ExternalResource;
-import org.gradle.internal.resource.ExternalResourceName;
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-public class DefaultExternalResourceConnector implements ExternalResourceConnector {
-    private static final String SYSPROP_KEY = "gradle.externalresources.recordstats";
-    private final static ExternalResourceAccessStats.Mode STATS_MODE = ExternalResourceAccessStats.Mode.valueOf(System.getProperty(SYSPROP_KEY, "none"));
-    private final static ExternalResourceAccessStats STATS = STATS_MODE.create();
-
-    private final ExternalResourceAccessor accessor;
-    private final ExternalResourceLister lister;
-    private final ExternalResourceUploader uploader;
-
-    public DefaultExternalResourceConnector(ExternalResourceAccessor accessor, ExternalResourceLister lister, ExternalResourceUploader uploader) {
-        this.accessor = accessor;
-        this.lister = lister;
-        this.uploader = uploader;
+class DefaultExternalResourceConnector(private val accessor: ExternalResourceAccessor, private val lister: ExternalResourceLister, private val uploader: ExternalResourceUploader) :
+    ExternalResourceConnector {
+    @Throws(ResourceException::class)
+    override fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>?): T? {
+        statistics.resource(location.getUri())
+        return accessor.withContent<T?>(location, revalidate, action)
     }
 
-    public static ExternalResourceAccessStats getStatistics() {
-        return STATS;
+    override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
+        statistics.metadata(location.getUri())
+        return accessor.getMetaData(location, revalidate)
     }
 
-    @Nullable
-    @Override
-    public <T> T withContent(ExternalResourceName location, boolean revalidate, ExternalResource.ContentAndMetadataAction<T> action) throws ResourceException {
-        STATS.resource(location.getUri());
-        return accessor.withContent(location, revalidate, action);
+    override fun list(parent: ExternalResourceName): MutableList<String?>? {
+        statistics.list(parent.getUri())
+        return lister.list(parent)
     }
 
-    @Nullable
-    @Override
-    public ExternalResourceMetaData getMetaData(ExternalResourceName location, boolean revalidate) {
-        STATS.metadata(location.getUri());
-        return accessor.getMetaData(location, revalidate);
+    @Throws(IOException::class)
+    override fun upload(resource: ReadableContent?, destination: ExternalResourceName) {
+        statistics.upload(destination.getUri())
+        uploader.upload(resource, destination)
     }
 
-    @Nullable
-    @Override
-    public List<String> list(ExternalResourceName parent) {
-        STATS.list(parent.getUri());
-        return lister.list(parent);
-    }
-
-    @Override
-    public void upload(ReadableContent resource, ExternalResourceName destination) throws IOException {
-        STATS.upload(destination.getUri());
-        uploader.upload(resource, destination);
-    }
-
-    public interface ExternalResourceAccessStats {
-        enum Mode {
+    interface ExternalResourceAccessStats {
+        enum class Mode {
             none,
             count,
             trace;
 
-            public ExternalResourceAccessStats create() {
-                switch (this) {
-                    case none:
-                        return NoOpStats.INSTANCE;
-                    case count:
-                        return new CountingStats();
-                    case trace:
-                        return new MemoizingStats();
+            fun create(): ExternalResourceAccessStats {
+                when (this) {
+                    Mode.none -> return NoOpStats.Companion.INSTANCE
+                    Mode.count -> return CountingStats()
+                    Mode.trace -> return MemoizingStats()
                 }
-                throw new UnsupportedOperationException();
+                throw UnsupportedOperationException()
             }
         }
 
-        void resource(URI location);
+        fun resource(location: URI?)
 
-        void metadata(URI location);
+        fun metadata(location: URI?)
 
-        void list(URI parent);
+        fun list(parent: URI?)
 
-        void upload(URI destination);
+        fun upload(destination: URI?)
 
-        void reset();
+        fun reset()
     }
 
-    private static class NoOpStats implements ExternalResourceAccessStats {
-
-        public static final NoOpStats INSTANCE = new NoOpStats();
-
-        @Override
-        public void resource(URI location) {
+    private class NoOpStats : ExternalResourceAccessStats {
+        override fun resource(location: URI?) {
         }
 
-        @Override
-        public void metadata(URI location) {
+        override fun metadata(location: URI?) {
         }
 
-        @Override
-        public void list(URI parent) {
+        override fun list(parent: URI?) {
         }
 
-        @Override
-        public void upload(URI destination) {
+        override fun upload(destination: URI?) {
         }
 
-        @Override
-        public void reset() {
+        override fun reset() {
         }
 
-        @Override
-        public String toString() {
-            return "External resources access stats are not recorded. Run Gradle with -D" + SYSPROP_KEY + "=(count|trace) to record statistics";
+        override fun toString(): String {
+            return "External resources access stats are not recorded. Run Gradle with -D" + SYSPROP_KEY + "=(count|trace) to record statistics"
+        }
+
+        companion object {
+            val INSTANCE: NoOpStats = NoOpStats()
         }
     }
 
-    private static class CountingStats implements ExternalResourceAccessStats {
-        private final AtomicInteger resourceCount = new AtomicInteger();
-        private final AtomicInteger metadataCount = new AtomicInteger();
-        private final AtomicInteger listCount = new AtomicInteger();
-        private final AtomicInteger uploadCount = new AtomicInteger();
+    private open class CountingStats : ExternalResourceAccessStats {
+        private val resourceCount = AtomicInteger()
+        private val metadataCount = AtomicInteger()
+        private val listCount = AtomicInteger()
+        private val uploadCount = AtomicInteger()
 
-        @Override
-        public void resource(URI location) {
-            resourceCount.incrementAndGet();
+        override fun resource(location: URI?) {
+            resourceCount.incrementAndGet()
         }
 
-        @Override
-        public void metadata(URI location) {
-            metadataCount.incrementAndGet();
+        override fun metadata(location: URI?) {
+            metadataCount.incrementAndGet()
         }
 
-        @Override
-        public void list(URI parent) {
-            listCount.incrementAndGet();
+        override fun list(parent: URI?) {
+            listCount.incrementAndGet()
         }
 
-        @Override
-        public void upload(URI destination) {
-            uploadCount.incrementAndGet();
+        override fun upload(destination: URI?) {
+            uploadCount.incrementAndGet()
         }
 
-        @Override
-        public synchronized void reset() {
-            resourceCount.set(0);
-            metadataCount.set(0);
-            listCount.set(0);
-            uploadCount.set(0);
+        @Synchronized
+        override fun reset() {
+            resourceCount.set(0)
+            metadataCount.set(0)
+            listCount.set(0)
+            uploadCount.set(0)
         }
 
-        @Override
-        public String toString() {
-            final StringBuilder sb = new StringBuilder("External resources connector statistics: \n");
-            sb.append("   - Resources fetched : ").append(resourceCount.get()).append("\n");
-            sb.append("   - Metadata fetched  : ").append(metadataCount.get()).append("\n");
-            sb.append("   - Lists             : ").append(listCount.get()).append("\n");
-            sb.append("   - Uploads           : ").append(uploadCount.get()).append("\n");
-            return sb.toString();
+        override fun toString(): String {
+            val sb = StringBuilder("External resources connector statistics: \n")
+            sb.append("   - Resources fetched : ").append(resourceCount.get()).append("\n")
+            sb.append("   - Metadata fetched  : ").append(metadataCount.get()).append("\n")
+            sb.append("   - Lists             : ").append(listCount.get()).append("\n")
+            sb.append("   - Uploads           : ").append(uploadCount.get()).append("\n")
+            return sb.toString()
         }
     }
 
-    private static class MemoizingStats extends CountingStats {
-        private final Map<URI, Integer> resources = new HashMap<URI, Integer>();
-        private final Map<URI, Integer> metadata = new HashMap<URI, Integer>();
-        private final Map<URI, Integer> lists = new HashMap<URI, Integer>();
-        private final Map<URI, Integer> uploads = new HashMap<URI, Integer>();
+    private class MemoizingStats : CountingStats() {
+        private val resources: MutableMap<URI?, Int?> = HashMap<URI?, Int?>()
+        private val metadata: MutableMap<URI?, Int?> = HashMap<URI?, Int?>()
+        private val lists: MutableMap<URI?, Int?> = HashMap<URI?, Int?>()
+        private val uploads: MutableMap<URI?, Int?> = HashMap<URI?, Int?>()
 
-        private synchronized void record(Map<URI, Integer> container, URI uri) {
-            Integer count = container.get(uri);
+        @Synchronized
+        fun record(container: MutableMap<URI?, Int?>, uri: URI?) {
+            val count = container.get(uri)
             if (count == null) {
-                container.put(uri, 1);
+                container.put(uri, 1)
             } else {
-                container.put(uri, count + 1);
+                container.put(uri, count + 1)
             }
         }
 
-        @Override
-        public void list(URI parent) {
-            record(lists, parent);
-            super.list(parent);
+        override fun list(parent: URI?) {
+            record(lists, parent)
+            super.list(parent)
         }
 
-        @Override
-        public void metadata(URI location) {
-            record(metadata, location);
-            super.metadata(location);
+        override fun metadata(location: URI?) {
+            record(metadata, location)
+            super.metadata(location)
         }
 
-        @Override
-        public void resource(URI location) {
-            record(resources, location);
-            super.resource(location);
+        override fun resource(location: URI?) {
+            record(resources, location)
+            super.resource(location)
         }
 
-        @Override
-        public void upload(URI destination) {
-            record(uploads, destination);
-            super.upload(destination);
+        override fun upload(destination: URI?) {
+            record(uploads, destination)
+            super.upload(destination)
         }
 
-        @Override
-        public synchronized void reset() {
-            super.reset();
-            resources.clear();
-            metadata.clear();
-            lists.clear();
-            uploads.clear();
+        @Synchronized
+        override fun reset() {
+            super.reset()
+            resources.clear()
+            metadata.clear()
+            lists.clear()
+            uploads.clear()
         }
 
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder(super.toString());
-            statsFor("fetched resources", resources, sb, 10);
-            statsFor("fetched metadata", metadata, sb, 10);
-            statsFor("lists queries", lists, sb, 10);
-            statsFor("uploaded URIs", uploads, sb, 10);
-            return sb.toString();
+        override fun toString(): String {
+            val sb = StringBuilder(super.toString())
+            statsFor("fetched resources", resources, sb, 10)
+            statsFor("fetched metadata", metadata, sb, 10)
+            statsFor("lists queries", lists, sb, 10)
+            statsFor("uploaded URIs", uploads, sb, 10)
+            return sb.toString()
         }
 
-        private void statsFor(String label, Map<URI, Integer> stats, StringBuilder sb, int max) {
+        fun statsFor(label: String?, stats: MutableMap<URI?, Int?>, sb: StringBuilder, max: Int) {
             if (stats.isEmpty()) {
-                return;
+                return
             }
-            List<Map.Entry<URI, Integer>> entries = new ArrayList<Map.Entry<URI, Integer>>(stats.entrySet());
-            Collections.sort(entries, new Comparator<Map.Entry<URI, Integer>>() {
-                @Override
-                public int compare(Map.Entry<URI, Integer> o1, Map.Entry<URI, Integer> o2) {
-                    return o2.getValue() - o1.getValue();
+            val entries: MutableList<MutableMap.MutableEntry<URI?, Int?>> = ArrayList<MutableMap.MutableEntry<URI?, Int?>>(stats.entries)
+            Collections.sort<MutableMap.MutableEntry<URI?, Int?>?>(entries, object : Comparator<MutableMap.MutableEntry<URI?, Int?>?> {
+                override fun compare(o1: MutableMap.MutableEntry<URI?, Int?>, o2: MutableMap.MutableEntry<URI?, Int?>): Int {
+                    return o2.value!! - o1.value!!
                 }
-            });
-            sb.append("Top ").append(max).append(" most ").append(label).append("\n");
-            int cpt = 0;
-            for (Map.Entry<URI, Integer> entry : entries) {
-                sb.append("   ").append(entry.getKey()).append(" (").append(entry.getValue()).append(" times)\n");
+            })
+            sb.append("Top ").append(max).append(" most ").append(label).append("\n")
+            var cpt = 0
+            for (entry in entries) {
+                sb.append("   ").append(entry.key).append(" (").append(entry.value).append(" times)\n")
                 if (++cpt == max) {
-                    break;
+                    break
                 }
             }
         }
+    }
+
+    companion object {
+        private const val SYSPROP_KEY = "gradle.externalresources.recordstats"
+        private val STATS_MODE = ExternalResourceAccessStats.Mode.valueOf(System.getProperty(SYSPROP_KEY, "none"))
+        val statistics: ExternalResourceAccessStats = STATS_MODE.create()
     }
 }

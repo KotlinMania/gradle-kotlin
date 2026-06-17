@@ -13,27 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal.versionmapping;
+package org.gradle.api.publish.internal.versionmapping
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.publish.VariantVersionMappingStrategy;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.publish.VariantVersionMappingStrategy
 
-public interface VariantVersionMappingStrategyInternal extends VariantVersionMappingStrategy {
+interface VariantVersionMappingStrategyInternal : VariantVersionMappingStrategy {
     /**
      * Return true if the user has explicitly enabled version mapping. False otherwise.
      */
-    boolean isEnabled();
+    val isEnabled: Boolean
 
     /**
      * Get the resolution configuration, as specified by the user.
      */
-    @Nullable
-    Configuration getUserResolutionConfiguration();
+    val userResolutionConfiguration: Configuration?
 
     /**
-     * Get the resolution configuration, as specified by {@link VersionMappingStrategyInternal#defaultResolutionConfiguration(String, String)}.
+     * Get the resolution configuration, as specified by [VersionMappingStrategyInternal.defaultResolutionConfiguration].
      */
-    @Nullable
-    Configuration getDefaultResolutionConfiguration();
+    val defaultResolutionConfiguration: Configuration?
 }

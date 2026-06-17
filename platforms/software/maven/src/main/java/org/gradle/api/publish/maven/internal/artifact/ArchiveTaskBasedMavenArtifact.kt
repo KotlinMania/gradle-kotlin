@@ -13,48 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
+class ArchiveTaskBasedMavenArtifact(private val archiveTask: AbstractArchiveTask, taskDependencyFactory: TaskDependencyFactory) : AbstractMavenArtifact(taskDependencyFactory) {
+    private val buildDependencies: TaskDependencyInternal?
 
-import java.io.File;
-
-public class ArchiveTaskBasedMavenArtifact extends AbstractMavenArtifact {
-    private final AbstractArchiveTask archiveTask;
-    private final TaskDependencyInternal buildDependencies;
-
-    public ArchiveTaskBasedMavenArtifact(AbstractArchiveTask archiveTask, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.archiveTask = archiveTask;
-        this.buildDependencies = taskDependencyFactory.configurableDependency(ImmutableSet.of(archiveTask));
+    init {
+        this.buildDependencies = taskDependencyFactory.configurableDependency(ImmutableSet.of<Any?>(archiveTask))
     }
 
-    @Override
-    public File getFile() {
-        return archiveTask.getArchiveFile().get().getAsFile();
+    val file: File
+        get() = archiveTask.getArchiveFile().get().getAsFile()
+
+    override fun getDefaultExtension(): String? {
+        return archiveTask.getArchiveExtension().getOrNull()
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return archiveTask.getArchiveExtension().getOrNull();
+    override fun getDefaultClassifier(): String? {
+        return archiveTask.getArchiveClassifier().getOrNull()
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return archiveTask.getArchiveClassifier().getOrNull();
+    override fun getDefaultBuildDependencies(): TaskDependencyInternal? {
+        return buildDependencies
     }
 
-    @Override
-    protected TaskDependencyInternal getDefaultBuildDependencies() {
-        return buildDependencies;
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return archiveTask.isEnabled();
+    override fun shouldBePublished(): Boolean {
+        return archiveTask.isEnabled()
     }
 }

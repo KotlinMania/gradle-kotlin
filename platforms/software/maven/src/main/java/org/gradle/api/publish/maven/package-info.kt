@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 /**
- * Plugins for publishing in the Maven format.
+ * Types that deal with publishing in the Maven format.
  *
  * @since 1.4
  */
-package org.gradle.api.publish.maven.plugins
+package org.gradle.api.publish.maven
 
 import org.gradle.internal.serialization.Transient.Companion.varOf
 import org.gradle.internal.serialization.Transient.get

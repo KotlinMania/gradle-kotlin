@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.artifacts.ivy.IvyExtraInfo;
+import org.gradle.api.artifacts.ivy.IvyExtraInfo
 
 /**
  * Represents a modifiable form of IvyExtraInfo so that "extra" info elements
  * can be configured on an Ivy publication.
  */
-public interface IvyExtraInfoSpec extends IvyExtraInfo {
-
+interface IvyExtraInfoSpec : IvyExtraInfo {
     /**
      * Puts the specified extra element into the list of extra info elements.
      *
@@ -31,5 +29,5 @@ public interface IvyExtraInfoSpec extends IvyExtraInfo {
      * @param name The name of the element to add
      * @param value The value of the element to add
      */
-    void add(String namespace, String name, String value);
+    fun add(namespace: String?, name: String?, value: String?)
 }

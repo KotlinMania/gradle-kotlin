@@ -13,25 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting
 
-package org.gradle.api.reporting;
-
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.reporting.Report.OutputType
+import org.gradle.api.tasks.OutputFile
 
 /**
  * A report that is a single file.
  */
-public interface SingleFileReport extends ConfigurableReport {
-    @Override
+interface SingleFileReport : ConfigurableReport {
     @OutputFile
-    RegularFileProperty getOutputLocation();
+    override fun getOutputLocation(): RegularFileProperty?
 
     /**
-     * Always returns {@link Report.OutputType#FILE}
+     * Always returns [OutputType.FILE]
      *
-     * @return {@link Report.OutputType#FILE}
+     * @return [OutputType.FILE]
      */
-    @Override
-    OutputType getOutputType();
+    override fun getOutputType(): Report.OutputType?
 }

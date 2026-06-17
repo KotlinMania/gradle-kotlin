@@ -42,7 +42,7 @@ class NativeTestSuiteBinaryRenderer @Inject constructor(schemaStore: ModelSchema
         }
         val testedBinary = binary.getTestedBinary()
         if (testedBinary != null) {
-            builder.item("binary under test", testedBinary.getDisplayName())
+            builder.item("binary under test", testedBinary.displayName)
         }
         super.renderDetails(binary, builder)
     }

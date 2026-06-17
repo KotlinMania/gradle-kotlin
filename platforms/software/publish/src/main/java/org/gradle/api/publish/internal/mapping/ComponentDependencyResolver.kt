@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.mapping
 
-package org.gradle.api.publish.internal.mapping;
-
-import org.gradle.api.artifacts.DependencyConstraint;
-import org.gradle.api.artifacts.ExternalDependency;
-import org.gradle.api.artifacts.ProjectDependency;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
 
 /**
  * Given a declared dependency to be published, determines the coordinates
@@ -28,35 +26,32 @@ import org.jspecify.annotations.Nullable;
  * are resolved to component-level precision, meaning the coordinates of the resolved
  * variant's owning component are returned.
  */
-public interface ComponentDependencyResolver {
-
+interface ComponentDependencyResolver {
     /**
      * Determines the published coordinates for an external dependency to component-level precision.
      *
      * @return null if the external dependency could not be resolved.
      */
-    @Nullable
-    ResolvedCoordinates resolveComponentCoordinates(ExternalDependency dependency);
+    fun resolveComponentCoordinates(dependency: ExternalDependency): ResolvedCoordinates?
 
     /**
      * Determines the published coordinates for a project dependency to component-level precision.
      *
      * @throws RuntimeException If the project cannot be resolved.
      */
-    ResolvedCoordinates resolveComponentCoordinates(ProjectDependency dependency);
+    fun resolveComponentCoordinates(dependency: ProjectDependency): ResolvedCoordinates?
 
     /**
      * Determines the published coordinates for an external dependency constraint to component-level precision.
      *
      * @return null if the external dependency constraint could not be resolved.
      */
-    @Nullable
-    ResolvedCoordinates resolveComponentCoordinates(DependencyConstraint dependency);
+    fun resolveComponentCoordinates(dependency: DependencyConstraint): ResolvedCoordinates?
 
     /**
      * Determines the published coordinates for a project dependency constraint to component-level precision.
      *
      * @throws RuntimeException If the project cannot be resolved.
      */
-    ResolvedCoordinates resolveComponentCoordinates(DefaultProjectDependencyConstraint dependency);
+    fun resolveComponentCoordinates(dependency: DefaultProjectDependencyConstraint): ResolvedCoordinates?
 }

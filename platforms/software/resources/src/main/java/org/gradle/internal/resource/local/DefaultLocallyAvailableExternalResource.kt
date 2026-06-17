@@ -13,115 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.api.Action;
-import org.gradle.api.resources.ResourceException;
-import org.gradle.internal.nativeintegration.filesystem.FileSystem;
-import org.gradle.internal.resource.ExternalResourceReadResult;
-import org.gradle.internal.resource.ExternalResourceWriteResult;
-import org.gradle.internal.resource.ReadableContent;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.jspecify.annotations.Nullable;
-
-import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.List;
+import org.gradle.api.Action
+import org.gradle.api.resources.ResourceException
+import org.gradle.internal.nativeintegration.filesystem.FileSystem
+import org.gradle.internal.resource.ExternalResource
+import org.gradle.internal.resource.ExternalResourceReadResult
+import org.gradle.internal.resource.ExternalResourceWriteResult
+import org.gradle.internal.resource.ReadableContent
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.URI
 
 /**
- * A {@link LocallyAvailableExternalResource} implementation that represents a local file backed copy of some remote resource.
+ * A [LocallyAvailableExternalResource] implementation that represents a local file backed copy of some remote resource.
  */
-public class DefaultLocallyAvailableExternalResource implements LocallyAvailableExternalResource {
-    private final URI source;
-    private final ExternalResourceMetaData metaData;
-    private final LocallyAvailableExternalResource localFile;
+class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAvailableResource: File?, private val metaData: ExternalResourceMetaData?, fileSystem: FileSystem?) :
+    LocallyAvailableExternalResource {
+    private val localFile: LocallyAvailableExternalResource
 
-    public DefaultLocallyAvailableExternalResource(URI source, File locallyAvailableResource, ExternalResourceMetaData metaData, FileSystem fileSystem) {
-        localFile = new LocalFileStandInExternalResource(locallyAvailableResource, fileSystem);
-        this.source = source;
-        this.metaData = metaData;
+    init {
+        localFile = LocalFileStandInExternalResource(locallyAvailableResource, fileSystem)
     }
 
-    @Override
-    public String getDisplayName() {
-        return source.toString();
+    override fun getDisplayName(): String? {
+        return source.toString()
     }
 
-    @Override
-    public URI getURI() {
-        return source;
+    override fun getURI(): URI {
+        return source
     }
 
-    @Nullable
-    @Override
-    public ExternalResourceMetaData getMetaData() {
-        return metaData;
+    override fun getMetaData(): ExternalResourceMetaData? {
+        return metaData
     }
 
-    @Override
-    public File getFile() {
-        return localFile.getFile();
+    override fun getFile(): File? {
+        return localFile.getFile()
     }
 
-    @Override
-    public boolean exists() {
-        return localFile.exists();
+    override fun exists(): Boolean {
+        return localFile.exists()
     }
 
-    @Nullable
-    @Override
-    public List<String> list() throws ResourceException {
-        throw new UnsupportedOperationException();
+    @Throws(ResourceException::class)
+    override fun list(): MutableList<String?>? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public ExternalResourceWriteResult put(ReadableContent source) throws ResourceException {
-        throw new UnsupportedOperationException();
+    @Throws(ResourceException::class)
+    override fun put(source: ReadableContent?): ExternalResourceWriteResult? {
+        throw UnsupportedOperationException()
     }
 
-    @Override
-    public ExternalResourceReadResult<Void> writeTo(File destination) throws ResourceException {
-        return localFile.writeTo(destination);
+    @Throws(ResourceException::class)
+    override fun writeTo(destination: File?): ExternalResourceReadResult<Void?>? {
+        return localFile.writeTo(destination)
     }
 
-    @Override
-    @Nullable
-    public ExternalResourceReadResult<Void> writeToIfPresent(File destination) throws ResourceException {
-        return localFile.writeToIfPresent(destination);
+    @Throws(ResourceException::class)
+    override fun writeToIfPresent(destination: File?): ExternalResourceReadResult<Void?>? {
+        return localFile.writeToIfPresent(destination)
     }
 
-    @Override
-    public ExternalResourceReadResult<Void> writeTo(OutputStream destination) throws ResourceException {
-        return localFile.writeTo(destination);
+    @Throws(ResourceException::class)
+    override fun writeTo(destination: OutputStream?): ExternalResourceReadResult<Void?>? {
+        return localFile.writeTo(destination)
     }
 
-    @Override
-    public ExternalResourceReadResult<Void> withContent(Action<? super InputStream> readAction) throws ResourceException {
-        return localFile.withContent(readAction);
+    @Throws(ResourceException::class)
+    override fun withContent(readAction: Action<in InputStream?>?): ExternalResourceReadResult<Void?>? {
+        return localFile.withContent(readAction)
     }
 
-    @Override
-    public <T> ExternalResourceReadResult<T> withContent(ContentAction<? extends T> readAction) throws ResourceException {
-        return localFile.withContent(readAction);
+    @Throws(ResourceException::class)
+    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?>? {
+        return localFile.withContent<T?>(readAction)
     }
 
-    @Override
-    @Nullable
-    public <T> ExternalResourceReadResult<T> withContentIfPresent(ContentAction<? extends T> readAction) throws ResourceException {
-        return localFile.withContentIfPresent(readAction);
+    @Throws(ResourceException::class)
+    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?>? {
+        return localFile.withContentIfPresent<T?>(readAction)
     }
 
-    @Override
-    public <T> ExternalResourceReadResult<T> withContent(ContentAndMetadataAction<? extends T> readAction) throws ResourceException {
-        return localFile.withContent(readAction);
+    @Throws(ResourceException::class)
+    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+        return localFile.withContent<T?>(readAction)
     }
 
-    @Override
-    @Nullable
-    public <T> ExternalResourceReadResult<T> withContentIfPresent(ContentAndMetadataAction<? extends T> readAction) throws ResourceException {
-        return localFile.withContentIfPresent(readAction);
+    @Throws(ResourceException::class)
+    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+        return localFile.withContentIfPresent<T?>(readAction)
     }
 }

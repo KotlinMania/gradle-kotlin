@@ -13,117 +13,109 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish
 
-package org.gradle.api.publish;
-
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.component.SoftwareComponentFactory;
-import org.jspecify.annotations.NullMarked;
-
-import javax.inject.Inject;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.jspecify.annotations.NullMarked
+import javax.inject.Inject
 
 /**
  * The configuration of how to "publish" the different components of a project.
  *
  * @since 1.3
  */
-public interface PublishingExtension {
-
-    /**
-     * The name of this extension when installed by the {@link org.gradle.api.publish.plugins.PublishingPlugin} ({@value}).
-     */
-    String NAME = "publishing";
-
+interface PublishingExtension {
     /**
      * The container of possible repositories to publish to.
-     * <p>
-     * See {@link #repositories(org.gradle.api.Action)} for more information.
+     *
+     *
+     * See [.repositories] for more information.
      *
      * @return The container of possible repositories to publish to.
      */
-    RepositoryHandler getRepositories();
+    val repositories: RepositoryHandler?
 
     /**
      * Configures the container of possible repositories to publish to.
      *
      * <pre class='autoTested'>
      * plugins {
-     *     id 'publishing'
+     * id 'publishing'
      * }
      *
      * publishing {
-     *   repositories {
-     *     // Create an ivy publication destination named "releases"
-     *     ivy {
-     *       name = "releases"
-     *       url = "http://my.org/ivy-repos/releases"
-     *     }
-     *   }
+     * repositories {
+     * // Create an ivy publication destination named "releases"
+     * ivy {
+     * name = "releases"
+     * url = "http://my.org/ivy-repos/releases"
      * }
-     * </pre>
+     * }
+     * }
+    </pre> *
      *
-     * The {@code repositories} block is backed by a {@link RepositoryHandler}, which is the same DSL as that that is used for declaring repositories to consume dependencies from. However,
-     * certain types of repositories that can be created by the repository handler are not valid for publishing, such as {@link org.gradle.api.artifacts.dsl.RepositoryHandler#mavenCentral()}.
-     * <p>
-     * At this time, only repositories created by the {@code ivy()} factory method have any effect. Please see {@link org.gradle.api.publish.ivy.IvyPublication}
+     * The `repositories` block is backed by a [RepositoryHandler], which is the same DSL as that that is used for declaring repositories to consume dependencies from. However,
+     * certain types of repositories that can be created by the repository handler are not valid for publishing, such as [RepositoryHandler.mavenCentral].
+     *
+     *
+     * At this time, only repositories created by the `ivy()` factory method have any effect. Please see [org.gradle.api.publish.ivy.IvyPublication]
      * for information on how this can be used for publishing to Ivy repositories.
      *
      * @param configure The action to configure the container of repositories with.
      */
-    void repositories(Action<? super RepositoryHandler> configure);
+    fun repositories(configure: Action<in RepositoryHandler?>?)
 
     /**
      * The publications of the project.
-     * <p>
-     * See {@link #publications(org.gradle.api.Action)} for more information.
+     *
+     *
+     * See [.publications] for more information.
      *
      * @return The publications of this project.
      */
-    PublicationContainer getPublications();
+    val publications: PublicationContainer?
 
     /**
      * Configures the publications of this project.
-     * <p>
+     *
+     *
      * The publications container defines the outgoing publications of the project. That is, the consumable representations of things produced
-     * by building the project. An example of a publication would be an Ivy Module (i.e. {@code ivy.xml} and artifacts), or
-     * Maven Project (i.e. {@code pom.xml} and artifacts).
-     * <p>
+     * by building the project. An example of a publication would be an Ivy Module (i.e. `ivy.xml` and artifacts), or
+     * Maven Project (i.e. `pom.xml` and artifacts).
+     *
+     *
      * Actual publication implementations and the ability to create them are provided by different plugins. The "publishing" plugin itself does not provide any publication types.
-     * For example, given that the 'maven-publish' plugin provides a {@link org.gradle.api.publish.maven.MavenPublication} type, you can create a publication like:
+     * For example, given that the 'maven-publish' plugin provides a [org.gradle.api.publish.maven.MavenPublication] type, you can create a publication like:
      * <pre class='autoTested'>
      * plugins {
-     *     id 'maven-publish'
+     * id 'maven-publish'
      * }
      *
      * publishing {
-     *   publications {
-     *     myPublicationName(MavenPublication) {
-     *       // Configure the publication here
-     *     }
-     *   }
+     * publications {
+     * myPublicationName(MavenPublication) {
+     * // Configure the publication here
      * }
-     * </pre>
-     * <p>
-     * Please see {@link org.gradle.api.publish.ivy.IvyPublication} and {@link org.gradle.api.publish.maven.MavenPublication} for more information on publishing in these specific formats.
+     * }
+     * }
+    </pre> *
+     *
+     *
+     * Please see [org.gradle.api.publish.ivy.IvyPublication] and [org.gradle.api.publish.maven.MavenPublication] for more information on publishing in these specific formats.
      *
      * @param configure The action or closure to configure the publications with.
      */
-    void publications(Action<? super PublicationContainer> configure);
+    fun publications(configure: Action<in PublicationContainer?>?)
 
-    /**
-     * Get an instance of the {@link SoftwareComponentFactory} service.
-     * <p>
-     * This service may be used to create component instances for publishing with
-     * {@link org.gradle.api.publish.maven.MavenPublication#from(SoftwareComponent)} and
-     * {@link org.gradle.api.publish.ivy.IvyPublication#from(SoftwareComponent)}
-     *
-     * @return the software component factory service.
-     *
-     * @since 9.2.0
-     */
-    @Inject
-    @NullMarked SoftwareComponentFactory getSoftwareComponentFactory();
+    @get:NullMarked
+    @get:Inject
+    val softwareComponentFactory: SoftwareComponentFactory?
 
+    companion object {
+        /**
+         * The name of this extension when installed by the [org.gradle.api.publish.plugins.PublishingPlugin] ({@value}).
+         */
+        const val NAME: String = "publishing"
+    }
 }

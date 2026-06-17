@@ -13,19 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.authentication
 
-package org.gradle.internal.authentication;
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.authentication.http.DigestAuthentication
 
-import org.gradle.api.credentials.PasswordCredentials;
-import org.gradle.authentication.http.DigestAuthentication;
-
-public class DefaultDigestAuthentication extends AbstractAuthentication implements DigestAuthentication {
-    public DefaultDigestAuthentication(String name) {
-        super(name, DigestAuthentication.class, PasswordCredentials.class);
-    }
-
-    @Override
-    public boolean requiresCredentials() {
-        return true;
+class DefaultDigestAuthentication(name: String?) : AbstractAuthentication(name, DigestAuthentication::class.java, PasswordCredentials::class.java), DigestAuthentication {
+    override fun requiresCredentials(): Boolean {
+        return true
     }
 }

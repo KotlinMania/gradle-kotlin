@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Action;
+import org.gradle.api.Action
 
 /**
  * Allows to add mailing lists to a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomMailingList
  */
-public interface MavenPomMailingListSpec {
-
+interface MavenPomMailingListSpec {
     /**
      * Creates, configures and adds a mailing list to the publication.
      */
-    void mailingList(Action<? super MavenPomMailingList> action);
-
+    fun mailingList(action: Action<in MavenPomMailingList?>?)
 }

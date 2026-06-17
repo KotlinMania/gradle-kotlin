@@ -13,24 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.internal.resource.ExternalResource;
-
-import java.io.File;
+import org.gradle.internal.resource.ExternalResource
 
 /**
  * Represents an external resource whose meta-data and content is available locally. The content and meta-data may be a copy of some original resource and the original may or may not be a local resource.
  */
-public interface LocallyAvailableExternalResource extends ExternalResource {
+interface LocallyAvailableExternalResource : ExternalResource {
     /**
      * Returns a local file containing the content of this resource. This may nor may not be the original resource.
      */
-    File getFile();
+    val file: File?
 
     /**
      * Does this resource currently exist?
      */
-    boolean exists();
+    fun exists(): Boolean
 }

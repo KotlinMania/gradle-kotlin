@@ -13,10 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
+package org.gradle.api.publish.maven
 
 /**
  * The SCM (source control management) of a Maven publication.
@@ -24,26 +21,24 @@ import org.gradle.api.provider.Property;
  * @since 4.8
  * @see MavenPom
  */
-public interface MavenPomScm {
-
+interface MavenPomScm {
     /**
      * The connection URL of this SCM.
      */
-    Property<String> getConnection();
+    val connection: Property<String?>?
 
     /**
      * The developer connection URL of this SCM.
      */
-    Property<String> getDeveloperConnection();
+    val developerConnection: Property<String?>?
 
     /**
      * The browsable repository URL of this SCM.
      */
-    Property<String> getUrl();
+    val url: Property<String?>?
 
     /**
      * The tag of current code in this SCM.
      */
-    Property<String> getTag();
-
+    val tag: Property<String?>?
 }

@@ -13,154 +13,131 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.artifacts.PublishArtifact
+import org.gradle.api.internal.artifacts.dsl.LazyPublishArtifact
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.internal.tasks.TaskDependencyContainer
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
+import org.gradle.api.provider.Provider
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.internal.Cast.uncheckedCast
+import org.gradle.internal.Factory
+import org.gradle.internal.exceptions.DiagnosticsVisitor
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.internal.typeconversion.MapKey
+import org.gradle.internal.typeconversion.MapNotationConverter
+import org.gradle.internal.typeconversion.NotationConvertResult
+import org.gradle.internal.typeconversion.NotationConverter
+import org.gradle.internal.typeconversion.NotationParser
+import org.gradle.internal.typeconversion.NotationParserBuilder
+import org.gradle.internal.typeconversion.TypeConversionException
+import org.gradle.internal.typeconversion.TypedNotationConverter
+import java.io.File
 
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.internal.artifacts.dsl.LazyPublishArtifact;
-import org.gradle.api.internal.file.FileResolver;
-import org.gradle.api.internal.tasks.TaskDependencyContainer;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.publish.ivy.internal.publisher.IvyPublicationCoordinates;
-import org.gradle.api.tasks.bundling.AbstractArchiveTask;
-import org.gradle.internal.Cast;
-import org.gradle.internal.Factory;
-import org.gradle.internal.exceptions.DiagnosticsVisitor;
-import org.gradle.internal.reflect.Instantiator;
-import org.gradle.internal.typeconversion.MapKey;
-import org.gradle.internal.typeconversion.MapNotationConverter;
-import org.gradle.internal.typeconversion.NotationConvertResult;
-import org.gradle.internal.typeconversion.NotationConverter;
-import org.gradle.internal.typeconversion.NotationParser;
-import org.gradle.internal.typeconversion.NotationParserBuilder;
-import org.gradle.internal.typeconversion.TypeConversionException;
-import org.gradle.internal.typeconversion.TypedNotationConverter;
+class IvyArtifactNotationParserFactory(
+    private val instantiator: Instantiator,
+    private val fileResolver: FileResolver,
+    private val publicationCoordinates: IvyPublicationCoordinates,
+    private val taskDependencyFactory: TaskDependencyFactory
+) : Factory<NotationParser<Any, IvyArtifact>?> {
+    override fun create(): NotationParser<Any, IvyArtifact> {
+        val fileNotationConverter: FileNotationConverter = IvyArtifactNotationParserFactory.FileNotationConverter(fileResolver)
+        val archiveTaskNotationConverter: ArchiveTaskNotationConverter = IvyArtifactNotationParserFactory.ArchiveTaskNotationConverter()
+        val publishArtifactNotationConverter: PublishArtifactNotationConverter = IvyArtifactNotationParserFactory.PublishArtifactNotationConverter()
+        val providerNotationConverter: ProviderNotationConverter = IvyArtifactNotationParserFactory.ProviderNotationConverter()
 
-import java.io.File;
+        val sourceNotationParser = NotationParserBuilder
+            .toType<IvyArtifact>(IvyArtifact::class.java)
+            .fromType<Provider<*>>(Provider::class.java, uncheckedCast<NotationConverter<in Provider<*>, out IvyArtifact>?>(providerNotationConverter))
+            .converter(archiveTaskNotationConverter)
+            .converter(publishArtifactNotationConverter)
+            .converter(fileNotationConverter)
+            .toComposite()
 
-public class IvyArtifactNotationParserFactory implements Factory<NotationParser<Object, IvyArtifact>> {
-    private final Instantiator instantiator;
-    private final FileResolver fileResolver;
-    private final IvyPublicationCoordinates publicationCoordinates;
-    private final TaskDependencyFactory taskDependencyFactory;
-
-    public IvyArtifactNotationParserFactory(Instantiator instantiator, FileResolver fileResolver, IvyPublicationCoordinates publicationCoordinates, TaskDependencyFactory taskDependencyFactory) {
-        this.instantiator = instantiator;
-        this.fileResolver = fileResolver;
-        this.publicationCoordinates = publicationCoordinates;
-        this.taskDependencyFactory = taskDependencyFactory;
-    }
-
-    @Override
-    public NotationParser<Object, IvyArtifact> create() {
-        FileNotationConverter fileNotationConverter = new FileNotationConverter(fileResolver);
-        ArchiveTaskNotationConverter archiveTaskNotationConverter = new ArchiveTaskNotationConverter();
-        PublishArtifactNotationConverter publishArtifactNotationConverter = new PublishArtifactNotationConverter();
-        ProviderNotationConverter providerNotationConverter = new ProviderNotationConverter();
-
-        NotationParser<Object, IvyArtifact> sourceNotationParser = NotationParserBuilder
-                .toType(IvyArtifact.class)
-                .fromType(Provider.class, Cast.uncheckedCast(providerNotationConverter))
-                .converter(archiveTaskNotationConverter)
-                .converter(publishArtifactNotationConverter)
-                .converter(fileNotationConverter)
-                .toComposite();
-
-        IvyArtifactMapNotationConverter ivyArtifactMapNotationConverter = new IvyArtifactMapNotationConverter(sourceNotationParser);
+        val ivyArtifactMapNotationConverter = IvyArtifactMapNotationConverter(sourceNotationParser)
 
         return NotationParserBuilder
-                .toType(IvyArtifact.class)
-                .converter(archiveTaskNotationConverter)
-                .converter(publishArtifactNotationConverter)
-                .fromType(Provider.class, Cast.uncheckedCast(providerNotationConverter))
-                .converter(ivyArtifactMapNotationConverter)
-                .converter(fileNotationConverter)
-                .toComposite();
+            .toType<IvyArtifact>(IvyArtifact::class.java)
+            .converter(archiveTaskNotationConverter)
+            .converter(publishArtifactNotationConverter)
+            .fromType<Provider<*>>(Provider::class.java, uncheckedCast<NotationConverter<in Provider<*>, out IvyArtifact>?>(providerNotationConverter))
+            .converter(ivyArtifactMapNotationConverter)
+            .converter(fileNotationConverter)
+            .toComposite()
     }
 
-    private class ArchiveTaskNotationConverter extends TypedNotationConverter<AbstractArchiveTask, IvyArtifact> {
-        private ArchiveTaskNotationConverter() {
-            super(AbstractArchiveTask.class);
-        }
-
-        @Override
-        protected IvyArtifact parseType(AbstractArchiveTask archiveTask) {
-            return instantiator.newInstance(ArchiveTaskBasedIvyArtifact.class, archiveTask, publicationCoordinates, taskDependencyFactory);
+    private inner class ArchiveTaskNotationConverter : TypedNotationConverter<AbstractArchiveTask, IvyArtifact>(AbstractArchiveTask::class.java) {
+        override fun parseType(archiveTask: AbstractArchiveTask): IvyArtifact {
+            return instantiator.newInstance<ArchiveTaskBasedIvyArtifact>(ArchiveTaskBasedIvyArtifact::class.java, archiveTask, publicationCoordinates, taskDependencyFactory)
         }
     }
 
-    private class PublishArtifactNotationConverter extends TypedNotationConverter<PublishArtifact, IvyArtifact> {
-        private PublishArtifactNotationConverter() {
-            super(PublishArtifact.class);
-        }
-
-        @Override
-        protected IvyArtifact parseType(PublishArtifact publishArtifact) {
-            return instantiator.newInstance(PublishArtifactBasedIvyArtifact.class, publishArtifact, publicationCoordinates, taskDependencyFactory);
+    private inner class PublishArtifactNotationConverter : TypedNotationConverter<PublishArtifact, IvyArtifact>(PublishArtifact::class.java) {
+        override fun parseType(publishArtifact: PublishArtifact): IvyArtifact {
+            return instantiator.newInstance<PublishArtifactBasedIvyArtifact>(PublishArtifactBasedIvyArtifact::class.java, publishArtifact, publicationCoordinates, taskDependencyFactory)
         }
     }
 
-    private class ProviderNotationConverter implements NotationConverter<Provider<?>, IvyArtifact> {
-        @Override
-        public void convert(Provider<?> publishArtifact, NotationConvertResult<? super IvyArtifact> result) throws TypeConversionException {
-            IvyArtifact artifact = instantiator.newInstance(PublishArtifactBasedIvyArtifact.class, new LazyPublishArtifact(publishArtifact, fileResolver, taskDependencyFactory), publicationCoordinates, taskDependencyFactory);
-            result.converted(artifact);
+    private inner class ProviderNotationConverter : NotationConverter<Provider<*>, IvyArtifact> {
+        @Throws(TypeConversionException::class)
+        override fun convert(publishArtifact: Provider<*>, result: NotationConvertResult<in IvyArtifact>) {
+            val artifact: IvyArtifact = instantiator.newInstance<PublishArtifactBasedIvyArtifact>(
+                PublishArtifactBasedIvyArtifact::class.java,
+                LazyPublishArtifact(publishArtifact, fileResolver, taskDependencyFactory),
+                publicationCoordinates,
+                taskDependencyFactory
+            )
+            result.converted(artifact)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Instances of Provider.");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Instances of Provider.")
         }
     }
 
-    private class FileNotationConverter implements NotationConverter<Object, IvyArtifact> {
-        private final NotationParser<Object, File> fileResolverNotationParser;
+    private inner class FileNotationConverter(fileResolver: FileResolver) : NotationConverter<Any, IvyArtifact> {
+        private val fileResolverNotationParser: NotationParser<Any, File>
 
-        private FileNotationConverter(FileResolver fileResolver) {
-            this.fileResolverNotationParser = fileResolver.asNotationParser();
+        init {
+            this.fileResolverNotationParser = fileResolver.asNotationParser()
         }
 
-        @Override
-        public void convert(Object notation, NotationConvertResult<? super IvyArtifact> result) throws TypeConversionException {
-            File file = fileResolverNotationParser.parseNotation(notation);
-            IvyArtifact ivyArtifact = instantiator.newInstance(FileBasedIvyArtifact.class, file, publicationCoordinates, taskDependencyFactory);
-            if (notation instanceof TaskDependencyContainer) {
-                TaskDependencyContainer taskDependencyContainer;
-                if (notation instanceof Provider) {
+        @Throws(TypeConversionException::class)
+        override fun convert(notation: Any, result: NotationConvertResult<in IvyArtifact>) {
+            val file = fileResolverNotationParser.parseNotation(notation)
+            val ivyArtifact: IvyArtifact = instantiator.newInstance<FileBasedIvyArtifact>(FileBasedIvyArtifact::class.java, file, publicationCoordinates, taskDependencyFactory)
+            if (notation is TaskDependencyContainer) {
+                val taskDependencyContainer: TaskDependencyContainer?
+                if (notation is Provider<*>) {
                     // wrap to disable special handling of providers by DefaultTaskDependency in this case
                     // (workaround for https://github.com/gradle/gradle/issues/11054)
-                    taskDependencyContainer = context -> context.add(notation);
+                    taskDependencyContainer = TaskDependencyContainer { context: TaskDependencyResolveContext? -> context!!.add(notation) }
                 } else {
-                    taskDependencyContainer = (TaskDependencyContainer) notation;
+                    taskDependencyContainer = notation
                 }
-                ivyArtifact.builtBy(taskDependencyContainer);
+                ivyArtifact.builtBy(taskDependencyContainer)
             }
-            result.converted(ivyArtifact);
+            result.converted(ivyArtifact)
         }
 
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            fileResolverNotationParser.describe(visitor);
+        override fun describe(visitor: DiagnosticsVisitor) {
+            fileResolverNotationParser.describe(visitor)
         }
     }
 
-    private static class IvyArtifactMapNotationConverter extends MapNotationConverter<IvyArtifact> {
-        private final NotationParser<Object, IvyArtifact> sourceNotationParser;
-
-        private IvyArtifactMapNotationConverter(NotationParser<Object, IvyArtifact> sourceNotationParser) {
-            this.sourceNotationParser = sourceNotationParser;
+    private class IvyArtifactMapNotationConverter(private val sourceNotationParser: NotationParser<Any, IvyArtifact>) : MapNotationConverter<IvyArtifact>() {
+        @Suppress("unused")
+        protected fun parseMap(@MapKey("source") source: Any): IvyArtifact {
+            return sourceNotationParser.parseNotation(source)
         }
 
-        @SuppressWarnings("unused")
-        protected IvyArtifact parseMap(@MapKey("source") Object source) {
-            return sourceNotationParser.parseNotation(source);
-        }
-
-        @Override
-        public void describe(DiagnosticsVisitor visitor) {
-            visitor.candidate("Maps containing a 'source' entry").example("[source: '/path/to/file', extension: 'zip']");
+        override fun describe(visitor: DiagnosticsVisitor) {
+            visitor.candidate("Maps containing a 'source' entry").example("[source: '/path/to/file', extension: 'zip']")
         }
     }
 }

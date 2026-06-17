@@ -13,29 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.gcp.gcs
 
-package org.gradle.internal.resource.transport.gcp.gcs;
+import com.google.api.services.storage.model.StorageObject
+import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import java.net.URI
 
-import com.google.api.services.storage.model.StorageObject;
-import org.gradle.internal.resource.metadata.DefaultExternalResourceMetaData;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-
-import java.net.URI;
-
-final class ResourceMapper {
-
-    static ExternalResourceMetaData toExternalResourceMetaData(URI uri, StorageObject storageObject) {
-        return new DefaultExternalResourceMetaData(
-            uri,
-            storageObject.getUpdated().getValue(),
-            storageObject.getSize().longValue(),
-            storageObject.getContentType(),
-            storageObject.getEtag(),
-            null // we cannot use md5 instead of sha1 here because cache will get corrupted due to its expectation of sha1 hashes
-        );
+internal class ResourceMapper private constructor() {
+    init {
+        throw AssertionError("No instances")
     }
 
-    private ResourceMapper() {
-        throw new AssertionError("No instances");
+    companion object {
+        fun toExternalResourceMetaData(uri: URI?, storageObject: StorageObject): ExternalResourceMetaData {
+            return DefaultExternalResourceMetaData(
+                uri,
+                storageObject.getUpdated().getValue(),
+                storageObject.getSize().toLong(),
+                storageObject.getContentType(),
+                storageObject.getEtag(),
+                null // we cannot use md5 instead of sha1 here because cache will get corrupted due to its expectation of sha1 hashes
+            )
+        }
     }
 }

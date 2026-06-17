@@ -13,114 +13,87 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import org.gradle.api.internal.provider.DefaultProvider
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskDependency
+import java.io.File
+import java.io.Serializable
+import java.util.concurrent.Callable
 
-import org.gradle.api.internal.provider.DefaultProvider;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.TaskDependency;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
+class NormalizedIvyArtifact(artifact: IvyArtifactInternal) : IvyArtifactInternal, Serializable {
+    val file: File
+    private val extension: String
+    private val classifier: String?
+    private val name: String
+    private val type: String
+    private val conf: String?
+    private val shouldBePublished: Provider<Boolean>
 
-import java.io.File;
-import java.io.Serializable;
-
-public class NormalizedIvyArtifact implements IvyArtifactInternal, Serializable {
-    private final File file;
-    private final String extension;
-    @Nullable
-    private final String classifier;
-    private final String name;
-    private final String type;
-    @Nullable
-    private final String conf;
-    private final Provider<Boolean> shouldBePublished;
-
-    public NormalizedIvyArtifact(IvyArtifactInternal artifact) {
-        this.name = artifact.getName();
-        this.type = artifact.getType();
-        this.conf = artifact.getConf();
-        this.file = artifact.getFile();
-        this.extension = artifact.getExtension();
-        this.classifier = artifact.getClassifier();
-        this.shouldBePublished = new DefaultProvider<>(artifact::shouldBePublished);
+    init {
+        this.name = artifact.getName()
+        this.type = artifact.getType()
+        this.conf = artifact.getConf()
+        this.file = artifact.file
+        this.extension = artifact.getExtension()
+        this.classifier = artifact.getClassifier()
+        this.shouldBePublished = DefaultProvider<Boolean>(Callable { artifact.shouldBePublished() })
     }
 
-    @Override
-    public String getName() {
-        return name;
+    public override fun getName(): String {
+        return name
     }
 
-    @Override
-    public void setName(String name) {
-        throw new IllegalStateException();
+    public override fun setName(name: String) {
+        throw IllegalStateException()
     }
 
-    @Override
-    public String getType() {
-        return type;
+    public override fun getType(): String {
+        return type
     }
 
-    @Override
-    public void setType(String type) {
-        throw new IllegalStateException();
+    public override fun setType(type: String) {
+        throw IllegalStateException()
     }
 
-    @Nullable
-    @Override
-    public String getConf() {
-        return conf;
+    public override fun getConf(): String? {
+        return conf
     }
 
-    @Override
-    public void setConf(@Nullable String conf) {
-        throw new IllegalStateException();
+    public override fun setConf(conf: String?) {
+        throw IllegalStateException()
     }
 
-    @Override
-    public String getExtension() {
-        return extension;
+    public override fun getExtension(): String {
+        return extension
     }
 
-    @Override
-    public void setExtension(String extension) {
-        throw new IllegalStateException();
+    public override fun setExtension(extension: String) {
+        throw IllegalStateException()
     }
 
-    @Nullable
-    @Override
-    public String getClassifier() {
-        return classifier;
+    public override fun getClassifier(): String? {
+        return classifier
     }
 
-    @Override
-    public void setClassifier(@Nullable String classifier) {
-        throw new IllegalStateException();
+    public override fun setClassifier(classifier: String?) {
+        throw IllegalStateException()
     }
 
-    @Override
-    public File getFile() {
-        return file;
+    override fun builtBy(vararg tasks: Any) {
+        throw IllegalStateException()
     }
 
-    @Override
-    public void builtBy(Object... tasks) {
-        throw new IllegalStateException();
+    override fun getBuildDependencies(): TaskDependency {
+        throw IllegalStateException()
     }
 
-    @NonNull
-    @Override
-    public TaskDependency getBuildDependencies() {
-        throw new IllegalStateException();
+    override fun shouldBePublished(): Boolean {
+        return shouldBePublished.get()
     }
 
-    @Override
-    public boolean shouldBePublished() {
-        return shouldBePublished.get();
-    }
-
-    @Override
-    public NormalizedIvyArtifact asNormalisedArtifact() {
-        return this;
+    override fun asNormalisedArtifact(): NormalizedIvyArtifact {
+        return this
     }
 }

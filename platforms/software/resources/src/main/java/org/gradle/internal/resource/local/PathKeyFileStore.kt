@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.internal.resource.local;
-
-import org.jspecify.annotations.Nullable;
+package org.gradle.internal.resource.local
 
 /**
  * File store that accepts the target path as the key for the entry.
  */
-public interface PathKeyFileStore extends FileStore<String>, FileStoreSearcher<String> {
-    @Nullable
-    LocallyAvailableResource get(String... path);
+interface PathKeyFileStore : FileStore<String?>, FileStoreSearcher<String?> {
+    fun get(vararg path: String?): LocallyAvailableResource?
 }

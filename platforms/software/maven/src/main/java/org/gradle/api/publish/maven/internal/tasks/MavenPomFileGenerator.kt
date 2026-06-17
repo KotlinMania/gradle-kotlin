@@ -13,331 +13,317 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.tasks
 
-package org.gradle.api.publish.maven.internal.tasks;
+import com.google.common.base.Joiner
+import com.google.common.collect.Streams
+import org.apache.maven.model.CiManagement
+import org.apache.maven.model.Contributor
+import org.apache.maven.model.Dependency
+import org.apache.maven.model.DependencyManagement
+import org.apache.maven.model.DeploymentRepository
+import org.apache.maven.model.Developer
+import org.apache.maven.model.DistributionManagement
+import org.apache.maven.model.Exclusion
+import org.apache.maven.model.IssueManagement
+import org.apache.maven.model.License
+import org.apache.maven.model.MailingList
+import org.apache.maven.model.Model
+import org.apache.maven.model.Organization
+import org.apache.maven.model.Relocation
+import org.apache.maven.model.Scm
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer
+import org.gradle.api.Action
+import org.gradle.api.XmlProvider
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser
+import org.gradle.api.internal.lambdas.SerializableLambdas
+import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenPomCiManagement
+import org.gradle.api.publish.maven.MavenPomContributor
+import org.gradle.api.publish.maven.MavenPomDeploymentRepository
+import org.gradle.api.publish.maven.MavenPomDeveloper
+import org.gradle.api.publish.maven.MavenPomIssueManagement
+import org.gradle.api.publish.maven.MavenPomLicense
+import org.gradle.api.publish.maven.MavenPomMailingList
+import org.gradle.api.publish.maven.MavenPomOrganization
+import org.gradle.api.publish.maven.MavenPomRelocation
+import org.gradle.api.publish.maven.MavenPomScm
+import org.gradle.api.publish.maven.internal.dependencies.MavenDependency
+import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies
+import org.gradle.api.publish.maven.internal.publication.MavenPomDistributionManagementInternal
+import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.internal.xml.XmlTransformer
+import org.gradle.util.internal.GUtil
+import java.io.File
+import java.io.IOException
+import java.io.Writer
+import java.util.Properties
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Streams;
-import org.apache.maven.model.CiManagement;
-import org.apache.maven.model.Contributor;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
-import org.apache.maven.model.DeploymentRepository;
-import org.apache.maven.model.Developer;
-import org.apache.maven.model.DistributionManagement;
-import org.apache.maven.model.Exclusion;
-import org.apache.maven.model.IssueManagement;
-import org.apache.maven.model.License;
-import org.apache.maven.model.MailingList;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.Organization;
-import org.apache.maven.model.Relocation;
-import org.apache.maven.model.Scm;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.gradle.api.XmlProvider;
-import org.gradle.api.artifacts.ExcludeRule;
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.parser.MetaDataParser;
-import org.gradle.api.internal.lambdas.SerializableLambdas;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.publish.maven.MavenPomCiManagement;
-import org.gradle.api.publish.maven.MavenPomContributor;
-import org.gradle.api.publish.maven.MavenPomDeploymentRepository;
-import org.gradle.api.publish.maven.MavenPomDeveloper;
-import org.gradle.api.publish.maven.MavenPomIssueManagement;
-import org.gradle.api.publish.maven.MavenPomLicense;
-import org.gradle.api.publish.maven.MavenPomMailingList;
-import org.gradle.api.publish.maven.MavenPomOrganization;
-import org.gradle.api.publish.maven.MavenPomRelocation;
-import org.gradle.api.publish.maven.MavenPomScm;
-import org.gradle.api.publish.maven.internal.dependencies.MavenDependency;
-import org.gradle.api.publish.maven.internal.dependencies.MavenPomDependencies;
-import org.gradle.api.publish.maven.internal.publication.MavenPomDistributionManagementInternal;
-import org.gradle.api.publish.maven.internal.publication.MavenPomInternal;
-import org.gradle.api.publish.maven.internal.publisher.MavenPublicationCoordinates;
-import org.gradle.internal.UncheckedException;
-import org.gradle.internal.xml.XmlTransformer;
-import org.gradle.util.internal.GUtil;
+object MavenPomFileGenerator {
+    private const val POM_FILE_ENCODING = "UTF-8"
+    private const val POM_VERSION = "4.0.0"
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+    fun generateSpec(pom: MavenPomInternal): MavenPomSpec {
+        val model = Model()
+        model.setModelVersion(POM_VERSION)
 
-public final class MavenPomFileGenerator {
+        val coordinates = pom.getCoordinates()
+        model.setGroupId(coordinates.getGroupId().get())
+        model.setArtifactId(coordinates.getArtifactId().get())
+        model.setVersion(coordinates.getVersion().get())
 
-    private static final String POM_FILE_ENCODING = "UTF-8";
-    private static final String POM_VERSION = "4.0.0";
-
-    private MavenPomFileGenerator() {}
-
-    public static MavenPomSpec generateSpec(MavenPomInternal pom) {
-        Model model = new Model();
-        model.setModelVersion(POM_VERSION);
-
-        MavenPublicationCoordinates coordinates = pom.getCoordinates();
-        model.setGroupId(coordinates.getGroupId().get());
-        model.setArtifactId(coordinates.getArtifactId().get());
-        model.setVersion(coordinates.getVersion().get());
-
-        model.setPackaging(pom.getPackagingProperty().getOrNull());
-        model.setName(pom.getName().getOrNull());
-        model.setDescription(pom.getDescription().getOrNull());
-        model.setUrl(pom.getUrl().getOrNull());
-        model.setInceptionYear(pom.getInceptionYear().getOrNull());
+        model.setPackaging(pom.getPackagingProperty().getOrNull())
+        model.setName(pom.getName().getOrNull())
+        model.setDescription(pom.getDescription().getOrNull())
+        model.setUrl(pom.getUrl().getOrNull())
+        model.setInceptionYear(pom.getInceptionYear().getOrNull())
 
         if (pom.getOrganization() != null) {
-            model.setOrganization(convertOrganization(pom.getOrganization()));
+            model.setOrganization(MavenPomFileGenerator.convertOrganization(pom.getOrganization()!!))
         }
         if (pom.getScm() != null) {
-            model.setScm(convertScm(pom.getScm()));
+            model.setScm(MavenPomFileGenerator.convertScm(pom.getScm()!!))
         }
         if (pom.getIssueManagement() != null) {
-            model.setIssueManagement(convertIssueManagement(pom.getIssueManagement()));
+            model.setIssueManagement(MavenPomFileGenerator.convertIssueManagement(pom.getIssueManagement()!!))
         }
         if (pom.getCiManagement() != null) {
-            model.setCiManagement(convertCiManagement(pom.getCiManagement()));
+            model.setCiManagement(MavenPomFileGenerator.convertCiManagement(pom.getCiManagement()!!))
         }
         if (pom.getDistributionManagement() != null) {
-            model.setDistributionManagement(convertDistributionManagement(pom.getDistributionManagement()));
+            model.setDistributionManagement(MavenPomFileGenerator.convertDistributionManagement(pom.getDistributionManagement()!!))
         }
-        for (MavenPomLicense license : pom.getLicenses()) {
-            model.addLicense(convertLicense(license));
+        for (license in pom.getLicenses()) {
+            model.addLicense(convertLicense(license))
         }
-        for (MavenPomDeveloper developer : pom.getDevelopers()) {
-            model.addDeveloper(convertDeveloper(developer));
+        for (developer in pom.getDevelopers()) {
+            model.addDeveloper(convertDeveloper(developer))
         }
-        for (MavenPomContributor contributor : pom.getContributors()) {
-            model.addContributor(convertContributor(contributor));
+        for (contributor in pom.getContributors()) {
+            model.addContributor(convertContributor(contributor))
         }
-        for (MavenPomMailingList mailingList : pom.getMailingLists()) {
-            model.addMailingList(convertMailingList(mailingList));
+        for (mailingList in pom.getMailingLists()) {
+            model.addMailingList(convertMailingList(mailingList))
         }
-        for (Map.Entry<String, String> property : pom.getProperties().get().entrySet()) {
-            model.addProperty(property.getKey(), property.getValue());
+        for (property in pom.getProperties().get().entries) {
+            model.addProperty(property.key, property.value)
         }
 
-        MavenPomDependencies dependencies = pom.getDependencies().getOrNull();
+        val dependencies = pom.getDependencies().getOrNull()
         if (dependencies != null) {
-            model.setDependencyManagement(convertDependencyManagement(dependencies));
-            model.setDependencies(convertDependencies(dependencies));
+            model.setDependencyManagement(convertDependencyManagement(dependencies))
+            model.setDependencies(convertDependencies(dependencies))
         }
 
-        XmlTransformer xmlTransformer = new XmlTransformer();
-        xmlTransformer.addAction(pom.getXmlAction());
+        val xmlTransformer = XmlTransformer()
+        xmlTransformer.addAction(pom.getXmlAction())
         if (pom.getWriteGradleMetadataMarker().get()) {
-            xmlTransformer.addFinalizer(SerializableLambdas.action(MavenPomFileGenerator::insertGradleMetadataMarker));
+            xmlTransformer.addFinalizer(SerializableLambdas.action<XmlProvider?>(SerializableLambdas.SerializableAction { obj: MavenPomFileGenerator?, xmlProvider: XmlProvider ->
+                insertGradleMetadataMarker(
+                    xmlProvider
+                )
+            }))
         }
 
-        return new MavenPomSpec(model, xmlTransformer);
+        return MavenPomSpec(model, xmlTransformer)
     }
 
-    private static Organization convertOrganization(MavenPomOrganization source) {
-        Organization target = new Organization();
-        target.setName(source.getName().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        return target;
+    private fun convertOrganization(source: MavenPomOrganization): Organization {
+        val target = Organization()
+        target.setName(source.getName().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        return target
     }
 
-    private static License convertLicense(MavenPomLicense source) {
-        License target = new License();
-        target.setName(source.getName().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        target.setDistribution(source.getDistribution().getOrNull());
-        target.setComments(source.getComments().getOrNull());
-        return target;
+    private fun convertLicense(source: MavenPomLicense): License {
+        val target = License()
+        target.setName(source.getName().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        target.setDistribution(source.getDistribution().getOrNull())
+        target.setComments(source.getComments().getOrNull())
+        return target
     }
 
-    private static Developer convertDeveloper(MavenPomDeveloper source) {
-        Developer target = new Developer();
-        target.setId(source.getId().getOrNull());
-        target.setName(source.getName().getOrNull());
-        target.setEmail(source.getEmail().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        target.setOrganization(source.getOrganization().getOrNull());
-        target.setOrganizationUrl(source.getOrganizationUrl().getOrNull());
-        target.setRoles(new ArrayList<>(source.getRoles().get()));
-        target.setTimezone(source.getTimezone().getOrNull());
-        target.setProperties(convertProperties(source.getProperties()));
-        return target;
+    private fun convertDeveloper(source: MavenPomDeveloper): Developer {
+        val target = Developer()
+        target.setId(source.getId().getOrNull())
+        target.setName(source.getName().getOrNull())
+        target.setEmail(source.getEmail().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        target.setOrganization(source.getOrganization().getOrNull())
+        target.setOrganizationUrl(source.getOrganizationUrl().getOrNull())
+        target.setRoles(ArrayList<String?>(source.getRoles().get()))
+        target.setTimezone(source.getTimezone().getOrNull())
+        target.setProperties(MavenPomFileGenerator.convertProperties(source.getProperties()))
+        return target
     }
 
-    private static Contributor convertContributor(MavenPomContributor source) {
-        Contributor target = new Contributor();
-        target.setName(source.getName().getOrNull());
-        target.setEmail(source.getEmail().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        target.setOrganization(source.getOrganization().getOrNull());
-        target.setOrganizationUrl(source.getOrganizationUrl().getOrNull());
-        target.setRoles(new ArrayList<>(source.getRoles().get()));
-        target.setTimezone(source.getTimezone().getOrNull());
-        target.setProperties(convertProperties(source.getProperties()));
-        return target;
+    private fun convertContributor(source: MavenPomContributor): Contributor {
+        val target = Contributor()
+        target.setName(source.getName().getOrNull())
+        target.setEmail(source.getEmail().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        target.setOrganization(source.getOrganization().getOrNull())
+        target.setOrganizationUrl(source.getOrganizationUrl().getOrNull())
+        target.setRoles(ArrayList<String?>(source.getRoles().get()))
+        target.setTimezone(source.getTimezone().getOrNull())
+        target.setProperties(MavenPomFileGenerator.convertProperties(source.getProperties()))
+        return target
     }
 
-    private static Properties convertProperties(Provider<Map<String, String>> source) {
-        Properties target = new Properties();
-        target.putAll(source.getOrElse(Collections.emptyMap()));
-        return target;
+    private fun convertProperties(source: Provider<MutableMap<String?, String?>?>): Properties {
+        val target = Properties()
+        target.putAll(source.getOrElse(mutableMapOf<String?, String?>())!!)
+        return target
     }
 
-    private static Scm convertScm(MavenPomScm source) {
-        Scm target = new Scm();
-        target.setConnection(source.getConnection().getOrNull());
-        target.setDeveloperConnection(source.getDeveloperConnection().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        target.setTag(source.getTag().getOrNull());
-        return target;
+    private fun convertScm(source: MavenPomScm): Scm {
+        val target = Scm()
+        target.setConnection(source.getConnection().getOrNull())
+        target.setDeveloperConnection(source.getDeveloperConnection().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        target.setTag(source.getTag().getOrNull())
+        return target
     }
 
-    private static IssueManagement convertIssueManagement(MavenPomIssueManagement source) {
-        IssueManagement target = new IssueManagement();
-        target.setSystem(source.getSystem().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        return target;
+    private fun convertIssueManagement(source: MavenPomIssueManagement): IssueManagement {
+        val target = IssueManagement()
+        target.setSystem(source.getSystem().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        return target
     }
 
-    private static CiManagement convertCiManagement(MavenPomCiManagement source) {
-        CiManagement target = new CiManagement();
-        target.setSystem(source.getSystem().getOrNull());
-        target.setUrl(source.getUrl().getOrNull());
-        return target;
+    private fun convertCiManagement(source: MavenPomCiManagement): CiManagement {
+        val target = CiManagement()
+        target.setSystem(source.getSystem().getOrNull())
+        target.setUrl(source.getUrl().getOrNull())
+        return target
     }
 
-    private static DistributionManagement convertDistributionManagement(MavenPomDistributionManagementInternal source) {
-        DistributionManagement target = new DistributionManagement();
-        target.setDownloadUrl(source.getDownloadUrl().getOrNull());
+    private fun convertDistributionManagement(source: MavenPomDistributionManagementInternal): DistributionManagement {
+        val target = DistributionManagement()
+        target.setDownloadUrl(source.getDownloadUrl().getOrNull())
         if (source.getRelocation() != null) {
-            target.setRelocation(convertRelocation(source.getRelocation()));
+            target.setRelocation(MavenPomFileGenerator.convertRelocation(source.getRelocation()!!))
         }
         if (source.getRepository() != null) {
-            target.setRepository(convertDeploymentRepository(source.getRepository()));
+            target.setRepository(MavenPomFileGenerator.convertDeploymentRepository(source.getRepository()!!))
         }
-        return target;
+        return target
     }
 
-    private static Relocation convertRelocation(MavenPomRelocation source) {
-        Relocation target = new Relocation();
-        target.setGroupId(source.getGroupId().getOrNull());
-        target.setArtifactId(source.getArtifactId().getOrNull());
-        target.setVersion(source.getVersion().getOrNull());
-        target.setMessage(source.getMessage().getOrNull());
-        return target;
+    private fun convertRelocation(source: MavenPomRelocation): Relocation {
+        val target = Relocation()
+        target.setGroupId(source.getGroupId().getOrNull())
+        target.setArtifactId(source.getArtifactId().getOrNull())
+        target.setVersion(source.getVersion().getOrNull())
+        target.setMessage(source.getMessage().getOrNull())
+        return target
     }
 
-    private static DeploymentRepository convertDeploymentRepository(MavenPomDeploymentRepository source) {
-        DeploymentRepository target = new DeploymentRepository();
-        target.setId(source.getId().getOrNull());
-        target.setName(source.getName().getOrNull());
-        target.setUniqueVersion(source.getUniqueVersion().getOrElse(true));
-        target.setUrl(source.getUrl().getOrNull());
-        target.setLayout(source.getLayout().getOrElse("default"));
-        return target;
+    private fun convertDeploymentRepository(source: MavenPomDeploymentRepository): DeploymentRepository {
+        val target = DeploymentRepository()
+        target.setId(source.getId().getOrNull())
+        target.setName(source.getName().getOrNull())
+        target.setUniqueVersion(source.getUniqueVersion().getOrElse(true))
+        target.setUrl(source.getUrl().getOrNull())
+        target.setLayout(source.getLayout().getOrElse("default"))
+        return target
     }
 
-    private static MailingList convertMailingList(MavenPomMailingList source) {
-        MailingList target = new MailingList();
-        target.setName(source.getName().getOrNull());
-        target.setSubscribe(source.getSubscribe().getOrNull());
-        target.setUnsubscribe(source.getUnsubscribe().getOrNull());
-        target.setPost(source.getPost().getOrNull());
-        target.setArchive(source.getArchive().getOrNull());
-        target.setOtherArchives(new ArrayList<>(source.getOtherArchives().get()));
-        return target;
+    private fun convertMailingList(source: MavenPomMailingList): MailingList {
+        val target = MailingList()
+        target.setName(source.getName().getOrNull())
+        target.setSubscribe(source.getSubscribe().getOrNull())
+        target.setUnsubscribe(source.getUnsubscribe().getOrNull())
+        target.setPost(source.getPost().getOrNull())
+        target.setArchive(source.getArchive().getOrNull())
+        target.setOtherArchives(ArrayList<String?>(source.getOtherArchives().get()))
+        return target
     }
 
-    private static DependencyManagement convertDependencyManagement(MavenPomDependencies dependencies) {
+    private fun convertDependencyManagement(dependencies: MavenPomDependencies): DependencyManagement? {
         if (dependencies.getDependencyManagement().isEmpty()) {
-            return null;
+            return null
         }
 
-        List<Dependency> converted = dependencies.getDependencyManagement().stream()
-            .map(MavenPomFileGenerator::convertDependencyManagementDependency)
-            .collect(Collectors.toList());
+        val converted = dependencies.getDependencyManagement().stream()
+            .map<Dependency?> { obj: MavenDependency? -> MavenPomFileGenerator.convertDependencyManagementDependency() }
+            .collect(Collectors.toList())
 
-        DependencyManagement dm = new DependencyManagement();
-        dm.setDependencies(converted);
-        return dm;
+        val dm = DependencyManagement()
+        dm.setDependencies(converted)
+        return dm
     }
 
-    private static List<Dependency> convertDependencies(MavenPomDependencies dependencies) {
+    private fun convertDependencies(dependencies: MavenPomDependencies): MutableList<Dependency?> {
         return dependencies.getDependencies().stream()
-            .map(MavenPomFileGenerator::convertDependency)
-            .collect(Collectors.toList());
+            .map<Dependency?> { obj: MavenDependency? -> MavenPomFileGenerator.convertDependency() }
+            .collect(Collectors.toList())
     }
 
-    private static Dependency convertDependency(MavenDependency dependency) {
-        Dependency mavenDependency = new Dependency();
-        mavenDependency.setGroupId(dependency.getGroupId());
-        mavenDependency.setArtifactId(dependency.getArtifactId());
-        mavenDependency.setVersion(dependency.getVersion());
-        mavenDependency.setType(dependency.getType());
-        mavenDependency.setScope(dependency.getScope());
-        mavenDependency.setClassifier(dependency.getClassifier());
+    private fun convertDependency(dependency: MavenDependency): Dependency {
+        val mavenDependency = Dependency()
+        mavenDependency.setGroupId(dependency.getGroupId())
+        mavenDependency.setArtifactId(dependency.getArtifactId())
+        mavenDependency.setVersion(dependency.getVersion())
+        mavenDependency.setType(dependency.getType())
+        mavenDependency.setScope(dependency.getScope())
+        mavenDependency.setClassifier(dependency.getClassifier())
         if (dependency.isOptional()) {
             // Not using setOptional(optional) in order to avoid <optional>false</optional> in the common case
-            mavenDependency.setOptional(true);
+            mavenDependency.setOptional(true)
         }
 
-        for (ExcludeRule excludeRule : dependency.getExcludeRules()) {
-            Exclusion exclusion = new Exclusion();
-            exclusion.setGroupId(GUtil.elvis(excludeRule.getGroup(), "*"));
-            exclusion.setArtifactId(GUtil.elvis(excludeRule.getModule(), "*"));
-            mavenDependency.addExclusion(exclusion);
+        for (excludeRule in dependency.getExcludeRules()) {
+            val exclusion = Exclusion()
+            exclusion.setGroupId(GUtil.elvis<String?>(excludeRule.getGroup(), "*"))
+            exclusion.setArtifactId(GUtil.elvis<String?>(excludeRule.getModule(), "*"))
+            mavenDependency.addExclusion(exclusion)
         }
-        return mavenDependency;
+        return mavenDependency
     }
 
-    private static Dependency convertDependencyManagementDependency(MavenDependency dependency) {
-        Dependency mavenDependency = new Dependency();
-        mavenDependency.setGroupId(dependency.getGroupId());
-        mavenDependency.setArtifactId(dependency.getArtifactId());
-        mavenDependency.setVersion(dependency.getVersion());
-        String type = dependency.getType();
+    private fun convertDependencyManagementDependency(dependency: MavenDependency): Dependency {
+        val mavenDependency = Dependency()
+        mavenDependency.setGroupId(dependency.getGroupId())
+        mavenDependency.setArtifactId(dependency.getArtifactId())
+        mavenDependency.setVersion(dependency.getVersion())
+        val type = dependency.getType()
         if (type != null) {
-            mavenDependency.setType(type);
+            mavenDependency.setType(type)
         }
-        mavenDependency.setScope(dependency.getScope());
-        return mavenDependency;
+        mavenDependency.setScope(dependency.getScope())
+        return mavenDependency
     }
 
-    private static void insertGradleMetadataMarker(XmlProvider xmlProvider) {
-        String comment = Joiner.on("").join(
-            Streams.concat(
-                    MetaDataParser.GRADLE_METADATA_MARKER_COMMENT_LINES.stream(),
-                    Stream.of(MetaDataParser.GRADLE_6_METADATA_MARKER)
-                )
-                .map(content -> "<!-- " + content + " -->\n  ")
+    private fun insertGradleMetadataMarker(xmlProvider: XmlProvider) {
+        val comment: String = Joiner.on("").join(
+            Streams.concat<String>(
+                MetaDataParser.GRADLE_METADATA_MARKER_COMMENT_LINES.stream(),
+                Stream.of<String>(MetaDataParser.GRADLE_6_METADATA_MARKER)
+            )
+                .map<String> { content: String? -> "<!-- " + content + " -->\n  " }
                 .iterator()
-        );
+        )
 
-        StringBuilder builder = xmlProvider.asString();
-        int idx = builder.indexOf("<modelVersion");
-        builder.insert(idx, comment);
+        val builder = xmlProvider.asString()
+        val idx = builder.indexOf("<modelVersion")
+        builder.insert(idx, comment)
     }
 
-    public static class MavenPomSpec {
-
-        private final Model model;
-        private final XmlTransformer xmlTransformer;
-
-        public MavenPomSpec(Model model, XmlTransformer xmlTransformer) {
-            this.model = model;
-            this.xmlTransformer = xmlTransformer;
-        }
-
-        public void writeTo(File file) {
-            xmlTransformer.transform(file, POM_FILE_ENCODING, writer -> {
+    class MavenPomSpec(private val model: Model?, private val xmlTransformer: XmlTransformer) {
+        fun writeTo(file: File?) {
+            xmlTransformer.transform(file, POM_FILE_ENCODING, Action { writer: Writer? ->
                 try {
-                    new MavenXpp3Writer().write(writer, model);
-                } catch (IOException e) {
-                    throw UncheckedException.throwAsUncheckedException(e);
+                    MavenXpp3Writer().write(writer, model)
+                } catch (e: IOException) {
+                    throw throwAsUncheckedException(e)
                 }
-            });
+            })
         }
     }
 }

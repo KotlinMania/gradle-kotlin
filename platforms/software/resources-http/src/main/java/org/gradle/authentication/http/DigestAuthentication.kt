@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.authentication.http
 
-package org.gradle.authentication.http;
-
-import org.gradle.authentication.Authentication;
+import org.gradle.authentication.Authentication
 
 /**
  * Authentication scheme for digest access authentication over HTTP.
  */
-public interface DigestAuthentication extends Authentication {
-}
+interface DigestAuthentication : Authentication

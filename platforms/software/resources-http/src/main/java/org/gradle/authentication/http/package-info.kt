@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * Classes related to transport authentication protocols for HTTP.
  *
  * @since 2.7
  */
-package org.gradle.authentication.http;
+package org.gradle.authentication.http

@@ -13,78 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.http
 
-package org.gradle.internal.resource.transport.http;
-
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.utils.HttpClientUtils;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
+import org.apache.http.client.methods.CloseableHttpResponse
+import org.apache.http.client.utils.HttpClientUtils
+import org.jspecify.annotations.NullMarked
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
 
 /**
- * An HTTP response from an {@link ApacheCommonsHttpClient}.
+ * An HTTP response from an [ApacheCommonsHttpClient].
  */
 @NullMarked
-public class ApacheHttpResponse implements HttpClient.Response {
+class ApacheHttpResponse internal constructor(private val method: String, private val effectiveUri: URI, private val httpResponse: CloseableHttpResponse) : HttpClient.Response {
+    private var closed = false
 
-    private final String method;
-    private final URI effectiveUri;
-    private final CloseableHttpResponse httpResponse;
-    private boolean closed;
-
-    ApacheHttpResponse(String method, URI effectiveUri, CloseableHttpResponse httpResponse) {
-        this.method = method;
-        this.effectiveUri = effectiveUri;
-        this.httpResponse = httpResponse;
+    override fun getHeader(name: String): String? {
+        val header = httpResponse.getFirstHeader(name)
+        return if (header == null) null else header.getValue()
     }
 
-    @Override
-    public @Nullable String getHeader(String name) {
-        Header header = httpResponse.getFirstHeader(name);
-        return header == null ? null : header.getValue();
-    }
-
-    @Override
-    public InputStream getContent() throws IOException {
-        HttpEntity entity = httpResponse.getEntity();
+    @Throws(IOException::class)
+    override fun getContent(): InputStream {
+        val entity = httpResponse.getEntity()
         if (entity == null) {
-            throw new IOException(String.format("Response %d: %s has no content!", getStatusCode(), getStatusReason()));
+            throw IOException(String.format("Response %d: %s has no content!", getStatusCode(), getStatusReason()))
         }
-        return entity.getContent();
+        return entity.getContent()
     }
 
-    @Override
-    public int getStatusCode() {
-        return httpResponse.getStatusLine().getStatusCode();
+    override fun getStatusCode(): Int {
+        return httpResponse.getStatusLine().getStatusCode()
     }
 
-    @Override
-    public String getStatusReason() {
-        return httpResponse.getStatusLine().getReasonPhrase();
+    override fun getStatusReason(): String {
+        return httpResponse.getStatusLine().getReasonPhrase()
     }
 
-    @Override
-    public void close() {
+    override fun close() {
         if (!closed) {
-            closed = true;
-            HttpClientUtils.closeQuietly(httpResponse);
+            closed = true
+            HttpClientUtils.closeQuietly(httpResponse)
         }
     }
 
-    @Override
-    public String getMethod() {
-        return method;
+    override fun getMethod(): String {
+        return method
     }
 
-    @Override
-    public URI getEffectiveUri() {
-        return effectiveUri;
+    override fun getEffectiveUri(): URI {
+        return effectiveUri
     }
-
 }

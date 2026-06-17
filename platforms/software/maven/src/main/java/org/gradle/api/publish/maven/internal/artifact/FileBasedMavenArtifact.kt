@@ -13,47 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.artifact
 
-package org.gradle.api.publish.maven.internal.artifact;
+import com.google.common.io.Files
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.internal.tasks.TaskDependencyInternal
+import java.io.File
 
-import com.google.common.io.Files;
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.internal.tasks.TaskDependencyInternal;
+class FileBasedMavenArtifact(val file: File, taskDependencyFactory: TaskDependencyFactory) : AbstractMavenArtifact(taskDependencyFactory) {
+    private val extension: String
 
-import java.io.File;
-
-public class FileBasedMavenArtifact extends AbstractMavenArtifact {
-    private final File file;
-    private final String extension;
-
-    public FileBasedMavenArtifact(File file, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.file = file;
-        extension = Files.getFileExtension(file.getName());
+    init {
+        extension = Files.getFileExtension(file.getName())
     }
 
-    @Override
-    public File getFile() {
-        return file;
+    override fun getDefaultExtension(): String {
+        return extension
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return extension;
+    override fun getDefaultClassifier(): String? {
+        return null
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return null;
+    override fun getDefaultBuildDependencies(): TaskDependencyInternal {
+        return TaskDependencyInternal.EMPTY
     }
 
-    @Override
-    protected TaskDependencyInternal getDefaultBuildDependencies() {
-        return TaskDependencyInternal.EMPTY;
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return true;
+    override fun shouldBePublished(): Boolean {
+        return true
     }
 }

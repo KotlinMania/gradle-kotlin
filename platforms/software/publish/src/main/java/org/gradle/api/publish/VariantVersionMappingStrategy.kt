@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish;
+package org.gradle.api.publish
 
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.artifacts.Configuration
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * Defines the version mapping strategy when publishing, for a specific variant.
@@ -24,12 +24,12 @@ import org.gradle.internal.HasInternalProtocol;
  * @since 5.2
  */
 @HasInternalProtocol
-public interface VariantVersionMappingStrategy {
+interface VariantVersionMappingStrategy {
     /**
      * Declares that this variant should use versions from the resolution
      * of a default configuration chosen by Gradle.
      */
-    void fromResolutionResult();
+    fun fromResolutionResult()
 
     /**
      * Declares that this variant should use versions from the resolution
@@ -37,7 +37,7 @@ public interface VariantVersionMappingStrategy {
      *
      * @param configuration a resolvable configuration where to pick resolved version numbers
      */
-    void fromResolutionOf(Configuration configuration);
+    fun fromResolutionOf(configuration: Configuration?)
 
 
     /**
@@ -46,5 +46,5 @@ public interface VariantVersionMappingStrategy {
      *
      * @param configurationName a resolvable configuration name where to pick resolved version numbers
      */
-    void fromResolutionOf(String configurationName);
+    fun fromResolutionOf(configurationName: String?)
 }

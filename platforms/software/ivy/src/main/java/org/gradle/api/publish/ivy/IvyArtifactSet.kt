@@ -13,50 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.ivy;
+package org.gradle.api.publish.ivy
 
-import org.gradle.api.Action;
-import org.gradle.api.DomainObjectSet;
+import org.gradle.api.Action
+import org.gradle.api.DomainObjectSet
 
 /**
- * A Collection of {@link IvyArtifact}s to be included in an {@link IvyPublication}.
+ * A Collection of [IvyArtifact]s to be included in an [IvyPublication].
  *
- * Being a {@link DomainObjectSet}, an {@code IvyArtifactSet} provides convenient methods for querying, filtering, and applying actions to the set of {@link IvyArtifact}s.
+ * Being a [DomainObjectSet], an `IvyArtifactSet` provides convenient methods for querying, filtering, and applying actions to the set of [IvyArtifact]s.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'ivy-publish'
+ * id 'ivy-publish'
  * }
  *
  * def publication = publishing.publications.create("my-pub", IvyPublication)
  * def artifacts = publication.artifacts
  *
  * artifacts.matching({
- *     it.type == "source"
+ * it.type == "source"
  * }).all({
- *     it.extension = "src.jar"
+ * it.extension = "src.jar"
  * })
- * </pre>
+</pre> *
  *
  * @see DomainObjectSet
  */
-public interface IvyArtifactSet extends DomainObjectSet<IvyArtifact> {
+interface IvyArtifactSet : DomainObjectSet<IvyArtifact?> {
     /**
-     * Creates and adds a {@link IvyArtifact} to the set.
+     * Creates and adds a [IvyArtifact] to the set.
      *
-     * The semantics of this method are the same as {@link IvyPublication#artifact(Object)}.
+     * The semantics of this method are the same as [IvyPublication.artifact].
      *
      * @param source The source of the artifact content.
      */
-    IvyArtifact artifact(Object source);
+    fun artifact(source: Any?): IvyArtifact?
 
     /**
-     * Creates and adds a {@link IvyArtifact} to the set, which is configured by the associated action.
+     * Creates and adds a [IvyArtifact] to the set, which is configured by the associated action.
      *
-     * The semantics of this method are the same as {@link IvyPublication#artifact(Object, Action)}.
+     * The semantics of this method are the same as [IvyPublication.artifact].
      *
      * @param source The source of the artifact.
-     * @param config An action to configure the values of the constructed {@link IvyArtifact}.
+     * @param config An action to configure the values of the constructed [IvyArtifact].
      */
-     IvyArtifact artifact(Object source, Action<? super IvyArtifact> config);
+    fun artifact(source: Any?, config: Action<in IvyArtifact?>?): IvyArtifact?
 }

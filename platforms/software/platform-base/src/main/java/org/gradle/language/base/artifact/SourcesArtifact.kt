@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.language.base.artifact;
+package org.gradle.language.base.artifact
 
-import org.gradle.api.component.Artifact;
+import org.gradle.api.component.Artifact
 
 /**
  * An artifact containing sources for a software component.
  *
  * @since 2.0
  */
-public interface SourcesArtifact extends Artifact {
-}
+interface SourcesArtifact : Artifact

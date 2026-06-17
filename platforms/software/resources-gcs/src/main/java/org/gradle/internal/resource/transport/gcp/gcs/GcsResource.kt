@@ -13,43 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.transport.gcp.gcs
 
-package org.gradle.internal.resource.transport.gcp.gcs;
+import com.google.api.services.storage.model.StorageObject
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
+import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
+import java.io.IOException
+import java.io.InputStream
+import java.net.URI
 
-import com.google.api.services.storage.model.StorageObject;
-import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
-import org.gradle.internal.resource.transfer.ExternalResourceReadResponse;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-
-import static org.gradle.internal.resource.transport.gcp.gcs.ResourceMapper.toExternalResourceMetaData;
-
-public class GcsResource implements ExternalResourceReadResponse {
-
-    private final GcsClient gcsClient;
-    private final StorageObject gcsObject;
-    private final URI uri;
-
-    public GcsResource(GcsClient gcsClient, StorageObject gcsObject, URI uri) {
-        this.gcsClient = gcsClient;
-        this.gcsObject = gcsObject;
-        this.uri = uri;
+class GcsResource(private val gcsClient: GcsClient, private val gcsObject: StorageObject, private val uri: URI?) : ExternalResourceReadResponse {
+    @Throws(IOException::class)
+    override fun openStream(): InputStream? {
+        return gcsClient.getResourceStream(uri)
     }
 
-    @Override
-    public InputStream openStream() throws IOException {
-        return gcsClient.getResourceStream(uri);
+    override fun getMetaData(): ExternalResourceMetaData {
+        return ResourceMapper.Companion.toExternalResourceMetaData(uri, gcsObject)
     }
 
-    @Override
-    public ExternalResourceMetaData getMetaData() {
-        return toExternalResourceMetaData(uri, gcsObject);
-    }
-
-    @Override
-    public void close() throws IOException {
+    @Throws(IOException::class)
+    override fun close() {
         // no-op
     }
 }

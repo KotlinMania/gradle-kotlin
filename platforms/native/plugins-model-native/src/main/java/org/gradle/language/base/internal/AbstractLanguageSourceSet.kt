@@ -34,7 +34,7 @@ abstract class AbstractLanguageSourceSet(identifier: ComponentSpecIdentifier?, p
         get() = guessLanguageName(getTypeName())
 
     override fun getProjectScopedName(): String? {
-        return getIdentifier().getProjectScopedName()
+        return getIdentifier().projectScopedName
     }
 
     override fun builtBy(vararg tasks: Any?) {
@@ -59,9 +59,9 @@ abstract class AbstractLanguageSourceSet(identifier: ComponentSpecIdentifier?, p
     override fun getDisplayName(): String {
         val languageName = this.languageName
         if (languageName.lowercase().endsWith("resources")) {
-            return languageName + " '" + getIdentifier().getPath() + "'"
+            return languageName + " '" + getIdentifier().path + "'"
         }
-        return languageName + " source '" + getIdentifier().getPath() + "'"
+        return languageName + " source '" + getIdentifier().path + "'"
     }
 
     override fun getSource(): SourceDirectorySet {
@@ -69,7 +69,7 @@ abstract class AbstractLanguageSourceSet(identifier: ComponentSpecIdentifier?, p
     }
 
     override fun getParentName(): String? {
-        return if (getIdentifier().getParent() == null) null else getIdentifier().getParent()!!.getName()
+        return if (getIdentifier().parent == null) null else getIdentifier().parent!!.name
     }
 
     companion object {

@@ -13,40 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.http;
+package org.gradle.internal.resource.transport.http
 
 
-import org.gradle.authentication.Authentication;
-import org.gradle.internal.verifier.HttpRedirectVerifier;
+interface HttpSettings {
+    @JvmField
+    val proxySettings: HttpProxySettings?
 
-import javax.net.ssl.HostnameVerifier;
-import java.util.Collection;
+    @JvmField
+    val secureProxySettings: HttpProxySettings?
 
-public interface HttpSettings {
-    HttpProxySettings getProxySettings();
+    @JvmField
+    val timeoutSettings: HttpTimeoutSettings?
 
-    HttpProxySettings getSecureProxySettings();
+    @JvmField
+    val maxRedirects: Int
 
-    HttpTimeoutSettings getTimeoutSettings();
+    @JvmField
+    val maxConnTotal: Int
 
-    int getMaxRedirects();
+    @JvmField
+    val maxConnPerRoute: Int
 
-    int getMaxConnTotal();
+    @JvmField
+    val redirectVerifier: HttpRedirectVerifier?
 
-    int getMaxConnPerRoute();
+    @JvmField
+    val redirectMethodHandlingStrategy: RedirectMethodHandlingStrategy?
 
-    HttpRedirectVerifier getRedirectVerifier();
+    @JvmField
+    val authenticationSettings: MutableCollection<Authentication?>?
 
-    RedirectMethodHandlingStrategy getRedirectMethodHandlingStrategy();
+    @JvmField
+    val sslContextFactory: SslContextFactory?
 
-    Collection<Authentication> getAuthenticationSettings();
+    @JvmField
+    val hostnameVerifier: HostnameVerifier?
 
-    SslContextFactory getSslContextFactory();
-
-    HostnameVerifier getHostnameVerifier();
-
-    enum RedirectMethodHandlingStrategy {
-
+    enum class RedirectMethodHandlingStrategy {
         /**
          * Follows 307/308 redirects with original method.
          *
@@ -57,7 +61,7 @@ public interface HttpSettings {
         /**
          * Always redirects with the original method regardless of type of redirect.
          *
-         * @see AlwaysFollowAndPreserveMethodRedirectStrategy for discussion of why this exists (and is default)
+         * @see AlwaysFollowAndPreserveMethodRedirectStrategy for discussion of why this exists
          */
         ALWAYS_FOLLOW_AND_PRESERVE
     }

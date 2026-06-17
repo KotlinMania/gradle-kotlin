@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.internal;
+package org.gradle.api.publish.internal
 
-import org.gradle.api.publish.PublicationArtifact;
+import org.gradle.api.publish.PublicationArtifact
 
-public interface PublicationArtifactInternal extends PublicationArtifact {
-    boolean shouldBePublished();
+interface PublicationArtifactInternal : PublicationArtifact {
+    fun shouldBePublished(): Boolean
 }

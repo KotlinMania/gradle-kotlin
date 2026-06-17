@@ -13,33 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish
 
-package org.gradle.api.publish;
-
-import org.gradle.api.Named;
+import org.gradle.api.Named
 
 /**
  * A publication is a description of a consumable representation of one or more artifacts, and possibly associated metadata.
  *
  * @since 1.3
  */
-public interface Publication extends Named {
-
+interface Publication : Named {
     /**
      * Disables publication of a unique build identifier in Gradle Module Metadata.
-     * <p>
+     *
+     *
      * The build identifier is not published by default.
      *
      * @since 6.6
      */
-    void withoutBuildIdentifier();
+    fun withoutBuildIdentifier()
 
     /**
      * Enables publication of a unique build identifier in Gradle Module Metadata.
-     * <p>
+     *
+     *
      * The build identifier is not published by default.
      *
      * @since 6.6
      */
-    void withBuildIdentifier();
+    fun withBuildIdentifier()
 }

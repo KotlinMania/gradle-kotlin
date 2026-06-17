@@ -13,34 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven.internal.publication
 
-package org.gradle.api.publish.maven.internal.publication;
+import org.gradle.api.Task
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.maven.MavenArtifact
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication
+import org.gradle.api.tasks.TaskProvider
 
-import org.gradle.api.Task;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.api.publish.maven.MavenArtifact;
-import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication;
-import org.gradle.api.tasks.TaskProvider;
+interface MavenPublicationInternal : MavenPublication, PublicationInternal<MavenArtifact?> {
+    override fun getPom(): MavenPomInternal?
 
-public interface MavenPublicationInternal extends MavenPublication, PublicationInternal<MavenArtifact> {
+    fun setPomGenerator(pomGenerator: TaskProvider<out Task>)
 
-    @Override
-    MavenPomInternal getPom();
+    fun setModuleDescriptorGenerator(moduleMetadataGenerator: TaskProvider<out Task>)
 
-    void setPomGenerator(TaskProvider<? extends Task> pomGenerator);
-
-    void setModuleDescriptorGenerator(TaskProvider<? extends Task> moduleMetadataGenerator);
-
-    MavenNormalizedPublication asNormalisedPublication();
+    fun asNormalisedPublication(): MavenNormalizedPublication?
 
     /**
      * Some components (e.g. Native) are published such that the module metadata references the original file name,
      * rather than the Maven-standard {artifactId}-{version}-{classifier}.{extension}.
      * This method enables this behaviour for the current publication.
-     * <p>
+     *
+     *
      * Note: This internal API is used by KMP:
-     * <a href="https://github.com/JetBrains/kotlin/blob/5424c54fae7b4836506ec711edc0135392b445d6/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/mpp/Publishing.kt#L50">Usage</a>
+     * [Usage](https://github.com/JetBrains/kotlin/blob/5424c54fae7b4836506ec711edc0135392b445d6/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/mpp/Publishing.kt#L50)
      */
-    void publishWithOriginalFileName();
+    fun publishWithOriginalFileName()
 }

@@ -13,41 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base
 
-package org.gradle.platform.base;
-
-import org.gradle.api.Action;
-import org.gradle.api.DomainObjectSet;
-import org.gradle.api.Incubating;
-import org.gradle.api.Task;
-import org.gradle.model.internal.core.UnmanagedStruct;
+import org.gradle.api.Action
+import org.gradle.api.DomainObjectSet
+import org.gradle.api.Incubating
+import org.gradle.api.Task
+import org.gradle.model.internal.core.UnmanagedStruct
 
 /**
  * A collection of tasks associated to a binary
  */
 @Incubating
 @UnmanagedStruct
-public interface BinaryTasksCollection extends DomainObjectSet<Task> {
+interface BinaryTasksCollection : DomainObjectSet<Task?> {
     /**
      * Generates a name for a task that performs some action on the binary.
      */
-    String taskName(String verb);
+    fun taskName(verb: String?): String?
 
     /**
      * Generates a name for a task that performs some action on the binary.
      */
-    String taskName(String verb, String object);
+    fun taskName(verb: String?, `object`: String?): String?
 
     /**
      * The task that can be used to assemble this binary.
      */
-    Task getBuild();
+    @JvmField
+    val build: Task?
 
     /**
      * The task that can be used to check this binary.
      */
-    Task getCheck();
+    @JvmField
+    val check: Task?
 
-    <T extends Task> void create(String name, Class<T> type, Action<? super T> config);
-
+    fun <T : Task?> create(name: String?, type: Class<T?>?, config: Action<in T?>?)
 }

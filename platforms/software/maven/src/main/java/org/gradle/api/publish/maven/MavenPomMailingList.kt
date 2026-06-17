@@ -13,49 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.provider.Property;
-import org.gradle.api.provider.SetProperty;
+package org.gradle.api.publish.maven
 
 /**
  * A mailing list of a Maven publication.
  *
  * @since 4.8
  * @see MavenPom
+ *
  * @see MavenPomMailingListSpec
  */
-public interface MavenPomMailingList {
-
+interface MavenPomMailingList {
     /**
      * The name of this mailing list.
      */
-    Property<String> getName();
+    val name: Property<String?>?
 
     /**
      * The email address or link that can be used to subscribe to this mailing list.
      */
-    Property<String> getSubscribe();
+    val subscribe: Property<String?>?
 
     /**
      * The email address or link that can be used to subscribe to this mailing list.
      */
-    Property<String> getUnsubscribe();
+    val unsubscribe: Property<String?>?
 
     /**
      * The email address or link that can be used to post to this mailing list.
      */
-    Property<String> getPost();
+    val post: Property<String?>?
 
     /**
      * The URL where you can browse the archive of this mailing list.
      */
-    Property<String> getArchive();
+    val archive: Property<String?>?
 
     /**
      * The alternate URLs where you can browse the archive of this mailing list.
      */
-    SetProperty<String> getOtherArchives();
-
+    val otherArchives: SetProperty<String?>?
 }

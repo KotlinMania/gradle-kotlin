@@ -13,38 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish
 
-package org.gradle.api.publish;
-
-import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer;
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 
 /**
- * A {@code PublicationContainer} is responsible for creating and managing {@link Publication} instances.
+ * A `PublicationContainer` is responsible for creating and managing [Publication] instances.
  *
  * The set of available publication types is dependent on the application of particular plugins:
- * <ul>
- *     <li>The {@link org.gradle.api.publish.maven.plugins.MavenPublishPlugin} makes it possible to create {@link org.gradle.api.publish.maven.MavenPublication} instances.</li>
- *     <li>The {@link org.gradle.api.publish.ivy.plugins.IvyPublishPlugin} makes it possible to create {@link org.gradle.api.publish.ivy.IvyPublication} instances.</li>
- * </ul>
+ *
+ *  * The [org.gradle.api.publish.maven.plugins.MavenPublishPlugin] makes it possible to create [org.gradle.api.publish.maven.MavenPublication] instances.
+ *  * The [org.gradle.api.publish.ivy.plugins.IvyPublishPlugin] makes it possible to create [org.gradle.api.publish.ivy.IvyPublication] instances.
+ *
  *
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'ivy-publish'
+ * id 'ivy-publish'
  * }
  *
  * publishing.publications.create('publication-name', IvyPublication) {
- *     // Configure the ivy publication here
+ * // Configure the ivy publication here
  * }
- * </pre>
+</pre> *
  *
  * The usual way to add publications is via a configuration block.
- * See the documentation for {@link PublishingExtension#publications(org.gradle.api.Action)} for examples of how to create and configure publications.
+ * See the documentation for [PublishingExtension.publications] for examples of how to create and configure publications.
  *
  * @since 1.3
  * @see Publication
+ *
  * @see PublishingExtension
  */
-@SuppressWarnings("JavadocReference")
-public interface PublicationContainer extends ExtensiblePolymorphicDomainObjectContainer<Publication> {
-}
+interface PublicationContainer : ExtensiblePolymorphicDomainObjectContainer<Publication?>

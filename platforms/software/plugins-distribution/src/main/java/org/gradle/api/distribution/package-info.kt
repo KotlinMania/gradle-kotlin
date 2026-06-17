@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * The main interfaces and classes of the distribution plugin.
  */
-package org.gradle.api.distribution;
+package org.gradle.api.distribution
+
+import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
+

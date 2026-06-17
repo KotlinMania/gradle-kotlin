@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.Incubating;
-import org.gradle.api.Action;
-import org.gradle.api.provider.Property;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.Action
+import org.gradle.api.Incubating
+import org.gradle.internal.HasInternalProtocol
 
 /**
  * The distribution management configuration of a Maven publication.
@@ -28,17 +26,16 @@ import org.gradle.internal.HasInternalProtocol;
  * @see MavenPom
  */
 @HasInternalProtocol
-public interface MavenPomDistributionManagement {
-
+interface MavenPomDistributionManagement {
     /**
      * The download URL of the corresponding Maven publication.
      */
-    Property<String> getDownloadUrl();
+    val downloadUrl: Property<String?>?
 
     /**
      * Configures the relocation information.
      */
-    void relocation(Action<? super MavenPomRelocation> action);
+    fun relocation(action: Action<in MavenPomRelocation?>?)
 
     /**
      * Configures the repository information.
@@ -46,5 +43,5 @@ public interface MavenPomDistributionManagement {
      * @since 9.1.0
      */
     @Incubating
-    void repository(Action<? super MavenPomDeploymentRepository> action);
+    fun repository(action: Action<in MavenPomDeploymentRepository?>?)
 }

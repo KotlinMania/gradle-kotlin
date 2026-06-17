@@ -13,60 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.api.publish.maven.internal.dependencies;
-
-import org.gradle.api.artifacts.ExcludeRule;
-import org.jspecify.annotations.Nullable;
-
-import java.util.Set;
+package org.gradle.api.publish.maven.internal.dependencies
 
 /**
- * Represents a dependency within the {@code <dependencies>} or {@code <dependencyManagement>}
+ * Represents a dependency within the `<dependencies>` or `<dependencyManagement>`
  * blocks of a Maven POM. This is the "Maven view" of the dependency, after being converted
  * from Gradle's dependency model.
  */
-public interface MavenDependency {
+interface MavenDependency {
     /**
      * The group ID of this dependency.
      */
-    String getGroupId();
+    val groupId: String?
 
     /**
      * The artifact ID of this dependency.
      */
-    String getArtifactId();
+    val artifactId: String?
 
     /**
      * The version of this dependency.
      */
-    @Nullable
-    String getVersion();
+    val version: String?
 
     /**
      * The type of this dependency.
      */
-    @Nullable
-    String getType();
+    val type: String?
 
     /**
      * The classifier of this dependency.
      */
-    @Nullable
-    String getClassifier();
+    val classifier: String?
 
     /**
      * The scope of this dependency.
      */
-    @Nullable
-    String getScope();
+    val scope: String?
 
     /**
      * The exclude rules of this dependency.
      */
-    Set<ExcludeRule> getExcludeRules();
+    val excludeRules: MutableSet<ExcludeRule?>?
 
     /**
      * If this dependency is marked optional.
      */
-    boolean isOptional();
+    val isOptional: Boolean
 }

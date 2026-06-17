@@ -13,43 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal
 
-package org.gradle.api.publish.internal;
+import org.gradle.api.Action
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.api.publish.PublicationContainer
+import org.gradle.api.publish.PublishingExtension
+import javax.inject.Inject
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.publish.PublicationContainer;
-import org.gradle.api.publish.PublishingExtension;
-
-import javax.inject.Inject;
-
-public abstract class DefaultPublishingExtension implements PublishingExtension {
-    private final RepositoryHandler repositories;
-    private final PublicationContainer publications;
-
-    @Inject
-    public DefaultPublishingExtension(RepositoryHandler repositories, PublicationContainer publications) {
-        this.repositories = repositories;
-        this.publications = publications;
+abstract class DefaultPublishingExtension @Inject constructor(private val repositories: RepositoryHandler?, private val publications: PublicationContainer?) : PublishingExtension {
+    override fun getRepositories(): RepositoryHandler? {
+        return repositories
     }
 
-    @Override
-    public RepositoryHandler getRepositories() {
-        return repositories;
+    override fun repositories(configure: Action<in RepositoryHandler?>) {
+        configure.execute(repositories)
     }
 
-    @Override
-    public void repositories(Action<? super RepositoryHandler> configure) {
-        configure.execute(repositories);
+    override fun getPublications(): PublicationContainer? {
+        return publications
     }
 
-    @Override
-    public PublicationContainer getPublications() {
-        return publications;
-    }
-
-    @Override
-    public void publications(Action<? super PublicationContainer> configure) {
-        configure.execute(publications);
+    override fun publications(configure: Action<in PublicationContainer?>) {
+        configure.execute(publications)
     }
 }

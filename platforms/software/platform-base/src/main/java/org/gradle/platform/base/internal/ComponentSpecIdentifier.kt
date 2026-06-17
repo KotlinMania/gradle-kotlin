@@ -13,37 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.platform.base.internal;
-
-import org.gradle.util.Path;
-import org.jspecify.annotations.Nullable;
+package org.gradle.platform.base.internal
 
 /**
- * An identifier for a {@link org.gradle.platform.base.ComponentSpec}, which has a name.
+ * An identifier for a [org.gradle.platform.base.ComponentSpec], which has a name.
  */
-public interface ComponentSpecIdentifier {
+interface ComponentSpecIdentifier {
     /**
      * The parent of the component, if any.
      */
-    @Nullable ComponentSpecIdentifier getParent();
+    val parent: ComponentSpecIdentifier?
 
     /**
      * The base name of this component.
      */
-    String getName();
+    @JvmField
+    val name: String?
 
     /**
      * A path that uniquely identifies this component within its project.
      *
      * Implementation should attempt to produce human consumable identifiers.
      */
-    Path getPath();
+    @JvmField
+    val path: Path?
 
     /**
      * Returns a child of this component, with the given name.
      */
-    ComponentSpecIdentifier child(String name);
+    fun child(name: String?): ComponentSpecIdentifier?
 
     /**
      * Returns a name that can be used to identify this component uniquely within its project. The name belongs to a flat namespace and does not include any
@@ -51,10 +49,12 @@ public interface ComponentSpecIdentifier {
      *
      * Implementation should attempt to produce a somewhat human consumable name (eg not a uuid).
      */
-    String getProjectScopedName();
+    @JvmField
+    val projectScopedName: String?
 
     /**
      * The path of the project that contains this component.
      */
-    String getProjectPath();
+    @JvmField
+    val projectPath: String?
 }

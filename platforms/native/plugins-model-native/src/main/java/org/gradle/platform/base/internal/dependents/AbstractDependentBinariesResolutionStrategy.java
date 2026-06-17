@@ -26,9 +26,9 @@ public abstract class AbstractDependentBinariesResolutionStrategy implements Dep
     @Override
     public DependentBinariesResolutionResult resolve(BinarySpecInternal target) {
         DependentBinariesResolvedResult root = new DefaultDependentBinariesResolvedResult(
-            target.getId(),
-            target.getProjectScopedName(),
-            target.isBuildable(),
+            target.id,
+            target.projectScopedName,
+            target.isBuildable,
             isTestSuite(target),
             resolveDependents(target)
         );

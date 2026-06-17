@@ -13,53 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting.internal
 
-package org.gradle.api.reporting.internal;
+import groovy.lang.Closure
+import org.gradle.api.Describable
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.file.FileSystemLocationProperty
+import org.gradle.api.reporting.ConfigurableReport
+import org.gradle.api.reporting.Report
+import org.gradle.util.internal.ConfigureUtil
 
-import groovy.lang.Closure;
-import org.gradle.api.Describable;
-import org.gradle.api.file.FileSystemLocation;
-import org.gradle.api.file.FileSystemLocationProperty;
-import org.gradle.api.reporting.ConfigurableReport;
-import org.gradle.api.reporting.Report;
-import org.gradle.util.internal.ConfigureUtil;
-
-public abstract class SimpleReport implements ConfigurableReport {
-    private final String name;
-    private final Describable displayName;
-    private final OutputType outputType;
-
-    public SimpleReport(String name, Describable displayName, OutputType outputType) {
-        this.name = name;
-        this.displayName = displayName;
-        this.outputType = outputType;
+abstract class SimpleReport(private val name: String, private val displayName: Describable, private val outputType: Report.OutputType) : ConfigurableReport {
+    override fun getName(): String {
+        return name
     }
 
-    @Override
-    public String getName() {
-        return name;
+    override fun getDisplayName(): String {
+        return displayName.getDisplayName()
     }
 
-    @Override
-    public String getDisplayName() {
-        return displayName.getDisplayName();
+    override fun toString(): String {
+        return "Report " + getName()
     }
 
-    @Override
-    public String toString() {
-        return "Report " + getName();
+    abstract override fun getOutputLocation(): FileSystemLocationProperty<out FileSystemLocation>?
+
+    override fun getOutputType(): Report.OutputType {
+        return outputType
     }
 
-    @Override
-    public abstract FileSystemLocationProperty<? extends FileSystemLocation> getOutputLocation();
-
-    @Override
-    public OutputType getOutputType() {
-        return outputType;
-    }
-
-    @Override
-    public Report configure(Closure configure) {
-        return ConfigureUtil.configureSelf(configure, this);
+    override fun configure(configure: Closure<*>): Report {
+        return ConfigureUtil.configureSelf<SimpleReport>(configure, this)
     }
 }

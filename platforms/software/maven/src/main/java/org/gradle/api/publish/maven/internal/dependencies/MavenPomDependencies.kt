@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.gradle.api.publish.maven.internal.dependencies;
-
-import java.util.List;
+package org.gradle.api.publish.maven.internal.dependencies
 
 /**
- * Represents the {@code <dependencies>} and {@code <dependencyManagement>} elements of a Maven POM.
+ * Represents the `<dependencies>` and `<dependencyManagement>` elements of a Maven POM.
  */
-public interface MavenPomDependencies {
+interface MavenPomDependencies {
+    val dependencies: MutableList<MavenDependency?>?
 
-    List<MavenDependency> getDependencies();
-
-    List<MavenDependency> getDependencyManagement();
-
+    val dependencyManagement: MutableList<MavenDependency?>?
 }

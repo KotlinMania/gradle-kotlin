@@ -49,7 +49,7 @@ object NetworkingIssueVerifier {
         }
         if (failure is HttpErrorStatusCodeException) {
             val httpError = failure as HttpErrorStatusCodeException
-            return httpError.isServerError() || isTransientClientError(httpError.getStatusCode())
+            return httpError.isServerError() || isTransientClientError(httpError.statusCode)
         }
         val cause = failure!!.cause
         if (cause != null && cause !== failure) {
@@ -64,7 +64,7 @@ object NetworkingIssueVerifier {
 
     fun <E : Throwable?> isLikelyPermanentNetworkIssue(failure: E?): Boolean {
         if (failure is HttpErrorStatusCodeException) {
-            return isClientAuthenticationError((failure as HttpErrorStatusCodeException).getStatusCode())
+            return isClientAuthenticationError((failure as HttpErrorStatusCodeException).statusCode)
         }
         if (failure is DefaultMultiCauseException) {
             val causes: MutableList<out Throwable?> = (failure as DefaultMultiCauseException).getCauses()

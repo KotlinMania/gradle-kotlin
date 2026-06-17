@@ -13,33 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.dependency
 
-package org.gradle.api.publish.ivy.internal.dependency;
+import org.gradle.api.artifacts.ExcludeRule
 
-import org.gradle.api.artifacts.ExcludeRule;
-
-public class DefaultIvyExcludeRule implements IvyExcludeRule {
-
-    private final ExcludeRule excludeRule;
-    private final String ivyConfiguration;
-
-    public DefaultIvyExcludeRule(ExcludeRule excludeRule, String ivyConfiguration) {
-        this.excludeRule = excludeRule;
-        this.ivyConfiguration = ivyConfiguration;
+class DefaultIvyExcludeRule(private val excludeRule: ExcludeRule, private val ivyConfiguration: String?) : IvyExcludeRule {
+    override fun getOrg(): String {
+        return excludeRule.getGroup()
     }
 
-    @Override
-    public String getOrg() {
-        return excludeRule.getGroup();
+    override fun getModule(): String {
+        return excludeRule.getModule()
     }
 
-    @Override
-    public String getModule() {
-        return excludeRule.getModule();
-    }
-
-    @Override
-    public String getConf() {
-        return ivyConfiguration;
+    override fun getConf(): String? {
+        return ivyConfiguration
     }
 }

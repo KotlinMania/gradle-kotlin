@@ -46,8 +46,8 @@ object NativeComponents {
     private const val BUILD_DEPENDENTS_TASK_NAME = "buildDependents"
 
     fun createExecutableTask(binary: NativeBinarySpecInternal, executableFile: File?) {
-        val taskName = binary.getNamingScheme().getTaskName("link")
-        binary.getTasks().create<LinkExecutable?>(taskName, LinkExecutable::class.java, object : Action<LinkExecutable?> {
+        val taskName = binary.namingScheme.getTaskName("link")
+        binary.tasks.create<LinkExecutable?>(taskName, LinkExecutable::class.java, object : Action<LinkExecutable?> {
             override fun execute(linkTask: LinkExecutable) {
                 linkTask.setDescription("Links " + binary.getDisplayName())
                 linkTask.toolChain!!.set(binary.getToolChain())
@@ -66,9 +66,9 @@ object NativeComponents {
     }
 
     fun createInstallTask(binary: NativeBinarySpecInternal, installation: NativeInstallationSpec, executable: NativeExecutableFileSpec, namingScheme: BinaryNamingScheme) {
-        binary.getTasks().create<InstallExecutable?>(namingScheme.getTaskName("install"), InstallExecutable::class.java, object : Action<InstallExecutable?> {
+        binary.tasks.create<InstallExecutable?>(namingScheme.getTaskName("install"), InstallExecutable::class.java, object : Action<InstallExecutable?> {
             override fun execute(installTask: InstallExecutable) {
-                installTask.setDescription("Installs a development image of " + binary.getDisplayName())
+                installTask.setDescription("Installs a development image of " + binary.displayName)
                 installTask.setGroup(LifecycleBasePlugin.BUILD_GROUP)
                 installTask.toolChain.set(executable.getToolChain())
                 installTask.targetPlatform.set(binary.getTargetPlatform())
@@ -105,17 +105,17 @@ object NativeComponents {
     }
 
     fun createBuildDependentBinariesTasks(binary: NativeBinarySpecInternal, namingScheme: BinaryNamingScheme) {
-        binary.getTasks().create<DefaultTask?>(namingScheme.getTaskName(ASSEMBLE_DEPENDENTS_TASK_NAME), DefaultTask::class.java, object : Action<DefaultTask?> {
+        binary.tasks.create<DefaultTask?>(namingScheme.getTaskName(ASSEMBLE_DEPENDENTS_TASK_NAME), DefaultTask::class.java, object : Action<DefaultTask?> {
             override fun execute(buildDependentsTask: DefaultTask) {
                 buildDependentsTask.setGroup("Build Dependents")
-                buildDependentsTask.setDescription("Assemble dependents of " + binary.getDisplayName() + ".")
+                buildDependentsTask.setDescription("Assemble dependents of " + binary.displayName + ".")
                 buildDependentsTask.dependsOn(binary)
             }
         })
-        binary.getTasks().create<DefaultTask?>(namingScheme.getTaskName(BUILD_DEPENDENTS_TASK_NAME), DefaultTask::class.java, object : Action<DefaultTask?> {
+        binary.tasks.create<DefaultTask?>(namingScheme.getTaskName(BUILD_DEPENDENTS_TASK_NAME), DefaultTask::class.java, object : Action<DefaultTask?> {
             override fun execute(buildDependentsTask: DefaultTask) {
                 buildDependentsTask.setGroup("Build Dependents")
-                buildDependentsTask.setDescription("Build dependents of " + binary.getDisplayName() + ".")
+                buildDependentsTask.setDescription("Build dependents of " + binary.displayName + ".")
                 buildDependentsTask.dependsOn(binary)
             }
         })
@@ -124,14 +124,14 @@ object NativeComponents {
     fun wireBuildDependentTasks(tasks: ModelMap<Task?>, binaries: BinaryContainer, dependentsResolver: DependentBinariesResolver, projectModelResolver: ProjectModelResolver) {
         val nativeBinaries = binaries.withType<NativeBinarySpecInternal?>(NativeBinarySpecInternal::class.java)
         for (binary in nativeBinaries) {
-            val assembleDependents = tasks.get(binary.getNamingScheme().getTaskName(ASSEMBLE_DEPENDENTS_TASK_NAME))
-            val buildDependents = tasks.get(binary.getNamingScheme().getTaskName(BUILD_DEPENDENTS_TASK_NAME))
+            val assembleDependents = tasks.get(binary.namingScheme.getTaskName(ASSEMBLE_DEPENDENTS_TASK_NAME))
+            val buildDependents = tasks.get(binary.namingScheme.getTaskName(BUILD_DEPENDENTS_TASK_NAME))
             // Wire build dependent components tasks dependencies
-            val assembleDependentComponents = tasks.get(NativeComponents.getAssembleDependentComponentsTaskName(binary.getComponent()!!))
+            val assembleDependentComponents = tasks.get(NativeComponents.getAssembleDependentComponentsTaskName(binary.component!!))
             if (assembleDependentComponents != null) {
                 assembleDependentComponents.dependsOn(assembleDependents!!)
             }
-            val buildDependentComponents = tasks.get(NativeComponents.getBuildDependentComponentsTaskName(binary.getComponent()!!))
+            val buildDependentComponents = tasks.get(NativeComponents.getBuildDependentComponentsTaskName(binary.component!!))
             if (buildDependentComponents != null) {
                 buildDependentComponents.dependsOn(buildDependents!!)
             }
@@ -164,7 +164,7 @@ object NativeComponents {
                 val projectBinaries = modelRegistry!!.realize<ModelMap<NativeBinarySpecInternal?>>("binaries", ModelTypes.modelMap<NativeBinarySpecInternal?>(NativeBinarySpecInternal::class.java))
                 val projectTasks = modelRegistry.realize<ModelMap<Task?>>("tasks", ModelTypes.modelMap<Task?>(Task::class.java))
                 val dependentBinary = projectBinaries.get(dependent.getProjectScopedName())
-                dependencies.add(projectTasks.get(dependentBinary!!.getNamingScheme().getTaskName(dependedOnBinaryTaskName)))
+                dependencies.add(projectTasks.get(dependentBinary!!.namingScheme.getTaskName(dependedOnBinaryTaskName)))
             }
         }
         return dependencies

@@ -13,39 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.platform.base.internal
 
-package org.gradle.platform.base.internal;
+import org.gradle.platform.base.BinarySpec
 
-import org.gradle.api.artifacts.component.LibraryBinaryIdentifier;
-import org.gradle.platform.base.BinarySpec;
-import org.gradle.platform.base.ComponentSpec;
-import org.jspecify.annotations.Nullable;
-
-public interface BinarySpecInternal extends BinarySpec {
+interface BinarySpecInternal : BinarySpec {
     /**
      * The unique identifier of this binary.
      */
-    LibraryBinaryIdentifier getId();
+    @JvmField
+    val id: LibraryBinaryIdentifier?
 
-    @Nullable
-    ComponentSpec getComponent();
+    val component: ComponentSpec?
 
     /**
      * Returns a name for this binary that is unique for all binaries in the current project.
      */
-    String getProjectScopedName();
+    @JvmField
+    val projectScopedName: String?
 
-    Class<? extends BinarySpec> getPublicType();
+    val publicType: Class<out BinarySpec?>?
 
-    void setBuildable(boolean buildable);
+    fun setBuildable(buildable: Boolean)
 
-    BinaryBuildAbility getBuildAbility();
+    val buildAbility: BinaryBuildAbility?
 
-    boolean isLegacyBinary();
+    @JvmField
+    val isLegacyBinary: Boolean
 
-    BinaryNamingScheme getNamingScheme();
+    @JvmField
+    var namingScheme: BinaryNamingScheme?
 
-    void setNamingScheme(BinaryNamingScheme namingScheme);
-
-    boolean hasCodependentSources();
+    fun hasCodependentSources(): Boolean
 }

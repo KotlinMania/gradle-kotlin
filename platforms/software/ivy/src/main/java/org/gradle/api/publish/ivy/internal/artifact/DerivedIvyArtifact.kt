@@ -13,65 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy.internal.artifact
 
-package org.gradle.api.publish.ivy.internal.artifact;
+import com.google.common.io.Files
+import org.gradle.api.internal.tasks.TaskDependencyFactory
+import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.publish.ivy.IvyArtifact
+import org.gradle.api.tasks.TaskDependency
 
-import org.gradle.api.internal.tasks.TaskDependencyFactory;
-import org.gradle.api.publish.internal.PublicationInternal;
-import org.gradle.api.publish.ivy.IvyArtifact;
-import org.gradle.api.tasks.TaskDependency;
-
-import java.io.File;
-
-import static com.google.common.io.Files.getFileExtension;
-
-public class DerivedIvyArtifact extends AbstractIvyArtifact {
-    private final IvyArtifact original;
-    private final PublicationInternal.DerivedArtifact derived;
-
-    public DerivedIvyArtifact(IvyArtifact original, PublicationInternal.DerivedArtifact derived, TaskDependencyFactory taskDependencyFactory) {
-        super(taskDependencyFactory);
-        this.original = original;
-        this.derived = derived;
+class DerivedIvyArtifact(private val original: IvyArtifact, private val derived: PublicationInternal.DerivedArtifact, taskDependencyFactory: TaskDependencyFactory) :
+    AbstractIvyArtifact(taskDependencyFactory) {
+    override fun getDefaultName(): String {
+        return original.getName()
     }
 
-    @Override
-    protected String getDefaultName() {
-        return original.getName();
+    override fun getDefaultType(): String {
+        return Files.getFileExtension(file.getName())
     }
 
-    @Override
-    protected String getDefaultType() {
-        return getFileExtension(getFile().getName());
+    override fun getDefaultExtension(): String {
+        return original.getExtension() + "." + getType()
     }
 
-    @Override
-    protected String getDefaultExtension() {
-        return original.getExtension() + "." + getType();
+    override fun getDefaultClassifier(): String {
+        return original.getClassifier()
     }
 
-    @Override
-    protected String getDefaultClassifier() {
-        return original.getClassifier();
+    override fun getDefaultConf(): String {
+        return original.getConf()
     }
 
-    @Override
-    protected String getDefaultConf() {
-        return original.getConf();
+    override fun getDefaultBuildDependencies(): TaskDependency {
+        return original.getBuildDependencies()
     }
 
-    @Override
-    protected TaskDependency getDefaultBuildDependencies() {
-        return original.getBuildDependencies();
-    }
+    val file: File
+        get() = derived.create()
 
-    @Override
-    public File getFile() {
-        return derived.create();
-    }
-
-    @Override
-    public boolean shouldBePublished() {
-        return derived.shouldBePublished();
+    override fun shouldBePublished(): Boolean {
+        return derived.shouldBePublished()
     }
 }

@@ -13,20 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.ivy
 
-package org.gradle.api.publish.ivy;
-
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.NamedDomainObjectContainer
 
 /**
- * The set of {@link IvyConfiguration}s that will be included in the {@link IvyPublication}.
+ * The set of [IvyConfiguration]s that will be included in the [IvyPublication].
  *
- * Being a {@link org.gradle.api.NamedDomainObjectContainer}, a {@code IvyConfigurationContainer} provides
- * convenient methods for adding, querying, filtering, and applying actions to the set of {@link IvyConfiguration}s.
+ * Being a [NamedDomainObjectContainer], a `IvyConfigurationContainer` provides
+ * convenient methods for adding, querying, filtering, and applying actions to the set of [IvyConfiguration]s.
  *
  * <pre class='autoTested'>
  * plugins {
- *     id 'ivy-publish'
+ * id 'ivy-publish'
  * }
  *
  * def publication = publishing.publications.create("my-pub", IvyPublication)
@@ -34,9 +33,8 @@ import org.gradle.api.NamedDomainObjectContainer;
  *
  * configurations.create("extended", { extend "default"})
  * configurations.all {
- *     extend "base"
+ * extend "base"
  * }
- * </pre>
+</pre> *
  */
-public interface IvyConfigurationContainer extends NamedDomainObjectContainer<IvyConfiguration> {
-}
+interface IvyConfigurationContainer : NamedDomainObjectContainer<IvyConfiguration?>

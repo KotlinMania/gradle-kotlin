@@ -13,40 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource;
+package org.gradle.internal.resource
 
-import java.io.File;
+import java.io.File
 
-public abstract class AbstractExternalResource implements ExternalResource {
-    @Override
-    public String toString() {
-        return getDisplayName();
+abstract class AbstractExternalResource : ExternalResource {
+    override fun toString(): String {
+        return getDisplayName()
     }
 
-    @Override
-    public ExternalResourceReadResult<Void> writeTo(File destination) {
-        ExternalResourceReadResult<Void> result = writeToIfPresent(destination);
+    override fun writeTo(destination: File?): ExternalResourceReadResult<Void?> {
+        val result = writeToIfPresent(destination)
         if (result == null) {
-            throw ResourceExceptions.getMissing(getURI());
+            throw ResourceExceptions.getMissing(getURI())
         }
-        return result;
+        return result
     }
 
-    @Override
-    public <T> ExternalResourceReadResult<T> withContent(ContentAction<? extends T> readAction) {
-        ExternalResourceReadResult<T> result = withContentIfPresent(readAction);
+    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?> {
+        val result = withContentIfPresent<T?>(readAction)
         if (result == null) {
-            throw ResourceExceptions.getMissing(getURI());
+            throw ResourceExceptions.getMissing(getURI())
         }
-        return result;
+        return result
     }
 
-    @Override
-    public <T> ExternalResourceReadResult<T> withContent(ContentAndMetadataAction<? extends T> readAction) {
-        ExternalResourceReadResult<T> result = withContentIfPresent(readAction);
+    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+        val result = withContentIfPresent<T?>(readAction)
         if (result == null) {
-            throw ResourceExceptions.getMissing(getURI());
+            throw ResourceExceptions.getMissing(getURI())
         }
-        return result;
+        return result
     }
 }

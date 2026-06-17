@@ -238,7 +238,7 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
             val generatorTask: Task = languageSourceSet.generatorTask
             if (generatorTask != null) {
                 languageSourceSet.builtBy(generatorTask)
-                maybeSetSourceDir(languageSourceSet.getSource(), generatorTask, "sourceDir")
+                maybeSetSourceDir(languageSourceSet.source, generatorTask, "sourceDir")
                 if (languageSourceSet is HeaderExportingSourceSet) {
                     maybeSetSourceDir((languageSourceSet as HeaderExportingSourceSet).exportedHeaders, generatorTask, "headerDir")
                 }
@@ -281,20 +281,20 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
         fun configurePreCompiledHeaderCompileTasks(tasks: TaskContainer, binaries: BinaryContainer, languageTransforms: LanguageTransformContainer, serviceRegistry: ServiceRegistry?) {
             for (nativeBinarySpec in binaries.withType<NativeBinarySpecInternal>(NativeBinarySpecInternal::class.java)) {
                 for (transform in languageTransforms.withType<PchEnabledLanguageTransform<*>?>(PchEnabledLanguageTransform::class.java)) {
-                    nativeBinarySpec.getInputs().withType(transform!!.sourceSetType, object : Action<LanguageSourceSet?> {
+                    nativeBinarySpec.inputs.withType(transform!!.sourceSetType, object : Action<LanguageSourceSet?> {
                         override fun execute(languageSourceSet: LanguageSourceSet?) {
                             val dependentSourceSet = languageSourceSet as DependentSourceSet
                             if (dependentSourceSet.preCompiledHeader != null) {
                                 nativeBinarySpec.addPreCompiledHeaderFor(dependentSourceSet)
                                 val pchTransformTaskConfig = transform.getPchTransformTask()
                                 val pchTaskName =
-                                    pchTransformTaskConfig.taskPrefix + StringUtils.capitalize(nativeBinarySpec.getProjectScopedName()) + StringUtils.capitalize(dependentSourceSet.getName()) + "PreCompiledHeader"
+                                    pchTransformTaskConfig.taskPrefix + StringUtils.capitalize(nativeBinarySpec.projectScopedName) + StringUtils.capitalize(dependentSourceSet.getName()) + "PreCompiledHeader"
                                 @Suppress("deprecation") val pchTask: Task = tasks.create(pchTaskName, pchTransformTaskConfig.taskType, object : Action<DefaultTask?> {
                                     override fun execute(task: DefaultTask?) {
                                         pchTransformTaskConfig.configureTask(task, nativeBinarySpec, dependentSourceSet, serviceRegistry)
                                     }
                                 })
-                                nativeBinarySpec.getTasks().add(pchTask)
+                                nativeBinarySpec.tasks.add(pchTask)
                             }
                         }
                     })
@@ -311,10 +311,10 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
 
         @BinaryTasks
         fun sharedLibraryTasks(tasks: ModelMap<Task?>, binary: SharedLibraryBinarySpecInternal) {
-            val taskName = binary.getNamingScheme().getTaskName("link")
+            val taskName = binary.namingScheme.getTaskName("link")
             tasks.create<LinkSharedLibrary?>(taskName, LinkSharedLibrary::class.java, object : Action<LinkSharedLibrary?> {
                 override fun execute(linkTask: LinkSharedLibrary) {
-                    linkTask.setDescription("Links " + binary.getDisplayName())
+                    linkTask.setDescription("Links " + binary.displayName)
                     linkTask.toolChain!!.set(binary.getToolChain())
                     linkTask.targetPlatform!!.set(binary.getTargetPlatform())
                     linkTask.linkedFile.set(binary.getSharedLibraryFile())
@@ -333,10 +333,10 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
 
         @BinaryTasks
         fun staticLibraryTasks(tasks: ModelMap<Task?>, binary: StaticLibraryBinarySpecInternal) {
-            val taskName = binary.getNamingScheme().getTaskName("create")
+            val taskName = binary.namingScheme.getTaskName("create")
             tasks.create<CreateStaticLibrary?>(taskName, CreateStaticLibrary::class.java, object : Action<CreateStaticLibrary?> {
                 override fun execute(task: CreateStaticLibrary) {
-                    task.setDescription("Creates " + binary.getDisplayName())
+                    task.setDescription("Creates " + binary.displayName)
                     task.toolChain.set(binary.getToolChain())
                     task.targetPlatform.set(binary.getTargetPlatform())
                     task.outputFile.set(binary.getStaticLibraryFile())
@@ -357,7 +357,7 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
 
         @BinaryTasks
         fun createBuildDependentBinariesTasks(tasks: ModelMap<Task?>?, nativeBinary: NativeBinarySpecInternal) {
-            NativeComponents.createBuildDependentBinariesTasks(nativeBinary, nativeBinary.getNamingScheme())
+            NativeComponents.createBuildDependentBinariesTasks(nativeBinary, nativeBinary.namingScheme)
         }
 
         @Finalize
@@ -372,7 +372,7 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
         @Defaults
         fun createInstallTasks(tasks: ModelMap<Task?>?, binaries: BinaryContainer) {
             for (binary in binaries.withType<NativeExecutableBinarySpecInternal>(NativeExecutableBinarySpecInternal::class.java).values()) {
-                NativeComponents.createInstallTask(binary, binary.getInstallation(), binary.getExecutable(), binary.getNamingScheme())
+                NativeComponents.createInstallTask(binary, binary.getInstallation(), binary.getExecutable(), binary.namingScheme)
             }
         }
 
@@ -380,10 +380,10 @@ abstract class NativeComponentModelPlugin @Inject @Suppress("unused") constructo
         fun applyHeaderSourceSetConventions(@Each headerSourceSet: HeaderExportingSourceSet) {
             // Only apply default locations when none explicitly configured
             if (headerSourceSet.exportedHeaders.getSourceDirectories().isEmpty()) {
-                headerSourceSet.exportedHeaders.srcDir("src/" + headerSourceSet.getParentName() + "/headers")
+                headerSourceSet.exportedHeaders.srcDir("src/" + headerSourceSet.parentName + "/headers")
             }
 
-            headerSourceSet.implicitHeaders.setSrcDirs(headerSourceSet.getSource().getSourceDirectories())
+            headerSourceSet.implicitHeaders.setSrcDirs(headerSourceSet.source.getSourceDirectories())
             headerSourceSet.implicitHeaders.include("**/*.h")
         }
 

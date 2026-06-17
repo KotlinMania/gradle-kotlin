@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.authentication.http
 
-package org.gradle.authentication.http;
-
-import org.gradle.authentication.Authentication;
+import org.gradle.authentication.Authentication
 
 /**
  * Authentication scheme for HTTP header authentication over HTTP.
  *
  * @since 4.10
  */
-public interface HttpHeaderAuthentication extends Authentication {
-}
+interface HttpHeaderAuthentication : Authentication

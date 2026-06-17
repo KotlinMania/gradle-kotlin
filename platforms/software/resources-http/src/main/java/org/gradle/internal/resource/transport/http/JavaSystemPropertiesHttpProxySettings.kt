@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.resource.transport.http;
+package org.gradle.internal.resource.transport.http
 
-public class JavaSystemPropertiesHttpProxySettings extends JavaSystemPropertiesProxySettings {
-    private static final int DEFAULT_PROXY_PORT = 80;
-    private static final String PROPERTY_PREFIX = "http";
-
-    public JavaSystemPropertiesHttpProxySettings() {
-        super(PROPERTY_PREFIX, DEFAULT_PROXY_PORT);
-    }
+object JavaSystemPropertiesHttpProxySettings : JavaSystemPropertiesProxySettings() {
+    private const val DEFAULT_PROXY_PORT = 80
+    private const val PROPERTY_PREFIX = "http"
 }

@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.maven
 
-package org.gradle.api.publish.maven;
-
-import org.gradle.api.InvalidUserDataException;
+import org.gradle.api.InvalidUserDataException
 
 /**
- * Thrown when attempting to publish with an invalid {@link MavenPublication}.
+ * Thrown when attempting to publish with an invalid [MavenPublication].
  *
  * @since 1.4
  */
-public class InvalidMavenPublicationException extends InvalidUserDataException {
-    public InvalidMavenPublicationException(String publicationName, String error) {
-        super(formatMessage(publicationName, error));
-    }
+class InvalidMavenPublicationException : InvalidUserDataException {
+    constructor(publicationName: String?, error: String?) : super(formatMessage(publicationName, error))
 
-    public InvalidMavenPublicationException(String publicationName, String error, Throwable cause) {
-        super(formatMessage(publicationName, error), cause);
-    }
+    constructor(publicationName: String?, error: String?, cause: Throwable?) : super(formatMessage(publicationName, error), cause)
 
-    private static String formatMessage(String publicationName, String error) {
-        return String.format("Invalid publication '%s': %s", publicationName, error);
+    companion object {
+        private fun formatMessage(publicationName: String?, error: String?): String {
+            return String.format("Invalid publication '%s': %s", publicationName, error)
+        }
     }
 }

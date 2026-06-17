@@ -13,34 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.reporting
 
-package org.gradle.api.reporting;
-
-import org.gradle.api.resources.TextResource;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
-import org.jspecify.annotations.Nullable;
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
 
 /**
  * A HTML Report whose generation can be customized with a XSLT stylesheet.
  */
-public interface CustomizableHtmlReport extends SingleFileReport {
-
-    /**
-     * The stylesheet to use to generate the HTML report.
-     *
-     * @return the stylesheet to use to generate the HTML report
-     */
-    @Nullable
-    @Optional
-    @Nested
-    TextResource getStylesheet();
-
+interface CustomizableHtmlReport : SingleFileReport {
     /**
      * The stylesheet to use to generate the report.
      *
      * @param stylesheet the stylesheet to use to generate the HTML report
      */
-    void setStylesheet(@Nullable TextResource stylesheet);
-
+    @get:Nested
+    @get:Optional
+    var stylesheet: TextResource?
 }

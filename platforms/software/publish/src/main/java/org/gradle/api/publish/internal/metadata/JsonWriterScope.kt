@@ -13,81 +13,83 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.api.publish.internal.metadata
 
-package org.gradle.api.publish.internal.metadata;
-
-import com.google.gson.stream.JsonWriter;
-
-import java.io.IOException;
-import java.util.List;
+import com.google.gson.stream.JsonWriter
+import java.io.IOException
 
 /**
  * Simplifies the task of writing to a JsonWriter.
  */
-abstract class JsonWriterScope {
-
+internal abstract class JsonWriterScope protected constructor(private val jsonWriter: JsonWriter) {
     protected interface Contents {
-        void write() throws IOException;
+        @Throws(IOException::class)
+        fun write()
     }
 
-    private final JsonWriter jsonWriter;
-
-    protected JsonWriterScope(JsonWriter jsonWriter) {
-        this.jsonWriter = jsonWriter;
-    }
-
-    protected void writeArray(String name, List<String> elements) throws IOException {
-        writeArray(name, () -> {
-            for (String element : elements) {
-                jsonWriter.value(element);
+    @Throws(IOException::class)
+    protected fun writeArray(name: String?, elements: MutableList<String?>) {
+        writeArray(name, JsonWriterScope.Contents {
+            for (element in elements) {
+                jsonWriter.value(element)
             }
-        });
+        })
     }
 
-    protected void writeArray(String name, Contents contents) throws IOException {
-        jsonWriter.name(name);
-        writeArray(contents);
+    @Throws(IOException::class)
+    protected fun writeArray(name: String?, contents: Contents) {
+        jsonWriter.name(name)
+        writeArray(contents)
     }
 
-    protected void writeArray(Contents contents) throws IOException {
-        jsonWriter.beginArray();
-        contents.write();
-        endArray();
+    @Throws(IOException::class)
+    protected fun writeArray(contents: Contents) {
+        jsonWriter.beginArray()
+        contents.write()
+        endArray()
     }
 
-    protected void beginArray(String name) throws IOException {
-        jsonWriter.name(name);
-        jsonWriter.beginArray();
+    @Throws(IOException::class)
+    protected fun beginArray(name: String?) {
+        jsonWriter.name(name)
+        jsonWriter.beginArray()
     }
 
-    protected void endArray() throws IOException {
-        jsonWriter.endArray();
+    @Throws(IOException::class)
+    protected fun endArray() {
+        jsonWriter.endArray()
     }
 
-    protected void writeObject(String name, Contents contents) throws IOException {
-        jsonWriter.name(name);
-        writeObject(contents);
+    @Throws(IOException::class)
+    protected fun writeObject(name: String?, contents: Contents) {
+        jsonWriter.name(name)
+        writeObject(contents)
     }
 
-    protected void writeObject(Contents contents) throws IOException {
-        jsonWriter.beginObject();
-        contents.write();
-        jsonWriter.endObject();
+    @Throws(IOException::class)
+    protected fun writeObject(contents: Contents) {
+        jsonWriter.beginObject()
+        contents.write()
+        jsonWriter.endObject()
     }
 
-    protected void write(String name, Number number) throws IOException {
-        jsonWriter.name(name).value(number);
+    @Throws(IOException::class)
+    protected fun write(name: String?, number: Number?) {
+        jsonWriter.name(name).value(number)
     }
 
-    protected void write(String name, long length) throws IOException {
-        jsonWriter.name(name).value(length);
+    @Throws(IOException::class)
+    protected fun write(name: String?, length: Long) {
+        jsonWriter.name(name).value(length)
     }
 
-    protected void write(String name, boolean value) throws IOException {
-        jsonWriter.name(name).value(value);
+    @Throws(IOException::class)
+    protected fun write(name: String?, value: Boolean) {
+        jsonWriter.name(name).value(value)
     }
 
-    protected void write(String name, String value) throws IOException {
-        jsonWriter.name(name).value(value);
+    @Throws(IOException::class)
+    protected fun write(name: String?, value: String?) {
+        jsonWriter.name(name).value(value)
     }
 }

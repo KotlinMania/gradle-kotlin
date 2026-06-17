@@ -15,7 +15,6 @@
  */
 package org.gradle.api
 
-import org.jetbrains.annotations.NotNull
 import java.lang.annotation.ElementType
 import javax.annotation.Nonnull
 import javax.annotation.meta.TypeQualifierDefault
@@ -31,7 +30,6 @@ import javax.annotation.meta.TypeQualifierDefault
  * @since 4.2
  */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FILE)
-@NotNull
 @Nonnull
 @TypeQualifierDefault(ElementType.METHOD, ElementType.PARAMETER)
 @MustBeDocumented

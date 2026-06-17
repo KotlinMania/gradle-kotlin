@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.gradle.internal.resource.local
 
-package org.gradle.internal.resource.local;
-
-import org.gradle.internal.service.scopes.Scope;
-import org.gradle.internal.service.scopes.ServiceScope;
+import org.gradle.internal.service.scopes.Scope
+import org.gradle.internal.service.scopes.ServiceScope
 
 /**
  * Can find a locally available candidates for an external resource, through some means.
@@ -27,10 +26,8 @@ import org.gradle.internal.service.scopes.ServiceScope;
  * if a copy can be found (e.g. the local Maven cache).
  *
  * @param <C> The type of the criterion object used to find candidates
- */
-@ServiceScope(Scope.Build.class)
-public interface LocallyAvailableResourceFinder<C> {
-
-    LocallyAvailableResourceCandidates findCandidates(C criterion);
-
+</C> */
+@ServiceScope(Scope.Build::class)
+interface LocallyAvailableResourceFinder<C> {
+    fun findCandidates(criterion: C?): LocallyAvailableResourceCandidates?
 }
