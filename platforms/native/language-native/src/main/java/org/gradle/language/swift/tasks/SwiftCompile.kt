@@ -206,8 +206,8 @@ abstract class SwiftCompile @Inject constructor(
         targetPlatform: NativePlatformInternal?
     ): SwiftCompileSpec {
         val spec: SwiftCompileSpec = DefaultSwiftCompileSpec()
-        spec.setModuleName(this.moduleName.getOrNull())
-        spec.setModuleFile(this.moduleFile.get().getAsFile())
+        spec.moduleName = this.moduleName.getOrNull()
+        spec.moduleFile = this.moduleFile.get().getAsFile()
         for (file in this.modules.getFiles()) {
             if (file.isFile()) {
                 spec.include(file.getParentFile())
@@ -218,7 +218,7 @@ abstract class SwiftCompile @Inject constructor(
 
         spec.setTargetPlatform(targetPlatform)
         spec.setTempDir(getTemporaryDir())
-        spec.setObjectFileDir(this.objectFileDir.get().getAsFile())
+        spec.objectFileDir = this.objectFileDir.get().getAsFile()
         spec.source(this.source)
         spec.setRemovedSourceFiles(removedFiles)
         spec.setChangedFiles(changedFiles)
@@ -230,11 +230,11 @@ abstract class SwiftCompile @Inject constructor(
         }
         spec.setMacros(macros)
         spec.args(this.compilerArgs.get())
-        spec.setDebuggable(getDebuggable().get()!!)
-        spec.setOptimized(getOptimized().get()!!)
-        spec.setIncrementalCompile(isIncremental)
+        spec.isDebuggable = getDebuggable().get()!!
+        spec.isOptimized = getOptimized().get()!!
+        spec.isIncrementalCompile = isIncremental
         spec.setOperationLogger(operationLogger)
-        spec.setSourceCompatibility(this.sourceCompatibility.get())
+        spec.sourceCompatibility = this.sourceCompatibility.get()
         return spec
     }
 }

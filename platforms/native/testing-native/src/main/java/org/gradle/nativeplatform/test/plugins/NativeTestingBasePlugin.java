@@ -84,7 +84,7 @@ public abstract class NativeTestingBasePlugin implements Plugin<Project> {
                 if (TEST_COMPONENT_NAME.equals(testSuiteComponent.getName())) {
                     test.configure(task -> task.dependsOn((Callable) () -> {
                         TargetMachine currentHost = ((DefaultTargetMachineFactory)targetMachineFactory).host();
-                        boolean targetsCurrentMachine = componentWithTargetMachines.targetMachines.get().stream().anyMatch(targetMachine -> currentHost.getOperatingSystemFamily().equals(targetMachine.getOperatingSystemFamily()));
+                        boolean targetsCurrentMachine = componentWithTargetMachines.targetMachines.get().stream().anyMatch(targetMachine -> currentHost.operatingSystemFamily.equals(targetMachine.getOperatingSystemFamily()));
                         if (!targetsCurrentMachine) {
                             task.getLogger().warn("'" + testSuiteComponent.getName() + "' component in project '" + project.getPath() + "' does not target this operating system.");
                         }

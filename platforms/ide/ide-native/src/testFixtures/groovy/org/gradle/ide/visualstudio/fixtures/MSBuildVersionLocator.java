@@ -40,7 +40,7 @@ public class MSBuildVersionLocator {
             vsVersion = VersionNumber.version(15);
         }
 
-        File vswhere = vswhereLocator.getVswhereInstall();
+        File vswhere = vswhereLocator.vswhereInstall;
         if (vswhere == null) {
             throw new IllegalStateException("vswhere tool is required to be installed");
         }

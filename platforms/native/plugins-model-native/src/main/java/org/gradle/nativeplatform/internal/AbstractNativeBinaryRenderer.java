@@ -28,6 +28,6 @@ public abstract class AbstractNativeBinaryRenderer<T extends NativeBinarySpec> e
 
     @Override
     protected void renderDetails(T binary, TextReportBuilder builder) {
-        builder.item("tool chain", binary.getToolChain().getDisplayName());
+        builder.item("tool chain", binary.getToolChain().displayName);
     }
 }

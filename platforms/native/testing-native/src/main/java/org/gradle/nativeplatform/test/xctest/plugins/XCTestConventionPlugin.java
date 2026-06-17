@@ -203,7 +203,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
 
             // Add a link task
             final TaskProvider<LinkMachOBundle> link = tasks.register(names.getTaskName("link"), LinkMachOBundle.class, task -> {
-                task.getLinkerArgs().set(project.provider(() -> {
+                task.linkerArgs.set(project.provider(() -> {
                     File platformSdkPath = sdkPlatformPathLocator.find();
                     File frameworkDir = new File(platformSdkPath, "Developer/Library/Frameworks");
                     // Since Xcode 11/12, the XCTest framework is being replaced by a different library that's available in the sdk root
@@ -222,19 +222,19 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
                 final PlatformToolProvider toolProvider = ((NativeToolChainInternal) toolChain).select(currentPlatform);
 
                 Provider<RegularFile> exeLocation = project.getLayout().getBuildDirectory().file(binary.getBaseName().map(baseName -> toolProvider.getExecutableName("exe/" + names.dirName + baseName)));
-                task.getLinkedFile().set(exeLocation);
-                task.getTargetPlatform().set(currentPlatform);
-                task.getToolChain().set(toolChain);
+                task.linkedFile.set(exeLocation);
+                task.targetPlatform.set(currentPlatform);
+                task.toolChain.set(toolChain);
                 task.getDebuggable().set(binary.isDebuggable());
             });
 
 
             final TaskProvider<InstallXCTestBundle> install = tasks.register(names.getTaskName("install"), InstallXCTestBundle.class, task -> {
-                task.getBundleBinaryFile().set(link.get().getLinkedFile());
+                task.getBundleBinaryFile().set(link.get().linkedFile);
                 task.getInstallDirectory().set(project.getLayout().getBuildDirectory().dir("install/" + names.dirName));
             });
             binary.getInstallDirectory().set(install.flatMap(task -> task.getInstallDirectory()));
-            binary.getExecutableFile().set(link.flatMap(task -> task.getLinkedFile()));
+            binary.getExecutableFile().set(link.flatMap(task -> task.linkedFile));
 
             DefaultSwiftXCTestBundle bundle = (DefaultSwiftXCTestBundle) binary;
             bundle.getLinkTask().set(link);
@@ -244,7 +244,7 @@ public abstract class XCTestConventionPlugin implements Plugin<Project> {
             executable.getRunScriptFile().set(executable.getInstallTask().flatMap(task -> task.getRunScriptFile()));
 
             // Rename `LinuxMain.swift` to `main.swift` so the entry point is correctly detected by swiftc
-            if (binary.getTargetMachine().getOperatingSystemFamily().isLinux()) {
+            if (binary.getTargetMachine().operatingSystemFamily.isLinux()) {
                 TaskProvider<Sync> renameLinuxMainTask = project.getTasks().register("renameLinuxMain", Sync.class, task -> {
                     task.from(binary.getSwiftSource());
                     task.into(project.getLayout().getBuildDirectory().dir("linuxMain"));

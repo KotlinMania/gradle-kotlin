@@ -96,7 +96,7 @@ public abstract class WindowsResourceScriptPlugin implements Plugin<Project> {
         }
 
         private boolean shouldProcessResources(NativeBinarySpec binary) {
-            return binary.getTargetPlatform().getOperatingSystem().isWindows();
+            return binary.getTargetPlatform().operatingSystem.isWindows;
         }
     }
 }

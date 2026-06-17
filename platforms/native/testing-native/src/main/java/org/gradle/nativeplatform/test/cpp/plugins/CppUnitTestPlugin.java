@@ -116,11 +116,11 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
             }
 
             private boolean isCurrentArchitecture(NativePlatform targetPlatform) {
-                return targetPlatform.getArchitecture().equals(DefaultNativePlatform.getCurrentArchitecture());
+                return targetPlatform.architecture.equals(DefaultNativePlatform.getCurrentArchitecture());
             }
 
             private Stream<DefaultCppTestExecutable> getAllBuildableTestExecutable() {
-                return getAllTestExecutable().filter(it -> it.platformToolProvider.isAvailable());
+                return getAllTestExecutable().filter(it -> it.platformToolProvider.isAvailable);
             }
 
             private Stream<DefaultCppTestExecutable> getAllTestExecutable() {
@@ -209,8 +209,8 @@ public abstract class CppUnitTestPlugin implements Plugin<Project> {
 
     private boolean isTestedBinary(DefaultCppTestExecutable testExecutable, ProductionCppComponent mainComponent, CppBinary testedBinary) {
         // TODO: Make this more intelligent by matching the attributes of the runtime usage on the variant identities
-        return testedBinary.targetMachine.getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine().getOperatingSystemFamily().getName())
-                && testedBinary.targetMachine.getArchitecture().getName().equals(testExecutable.getTargetMachine().getArchitecture().getName())
+        return testedBinary.targetMachine.getOperatingSystemFamily().getName().equals(testExecutable.getTargetMachine().operatingSystemFamily.getName())
+                && testedBinary.targetMachine.getArchitecture().getName().equals(testExecutable.getTargetMachine().architecture.getName())
                 && !testedBinary.isOptimized
                 && hasDevelopmentBinaryLinkage(mainComponent, testedBinary);
     }

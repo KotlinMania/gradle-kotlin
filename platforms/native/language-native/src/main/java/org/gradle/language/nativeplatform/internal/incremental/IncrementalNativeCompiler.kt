@@ -41,7 +41,7 @@ class IncrementalNativeCompiler<T : NativeCompileSpec?>(
 
     override fun execute(spec: T?): WorkResult {
         val workResult: WorkResult
-        if (spec!!.isIncrementalCompile()) {
+        if (spec!!.isIncrementalCompile) {
             workResult = doIncrementalCompile(incrementalCompilation, spec)
         } else {
             workResult = doCleanIncrementalCompile(spec)
@@ -57,9 +57,9 @@ class IncrementalNativeCompiler<T : NativeCompileSpec?>(
         // For source files that do not include the precompiled header as the first file, we emit a warning
         // For source files that do include the precompiled header, we mark them as a "source file for pch"
         // The native compiler then adds the appropriate compiler arguments for those source files that can use PCH
-        if (spec!!.getPreCompiledHeader() != null) {
+        if (spec!!.preCompiledHeader != null) {
             val sourceFiles = ImmutableList.builder<File>()
-            for (sourceFile in spec.getSourceFiles()) {
+            for (sourceFile in spec.sourceFiles) {
                 val state = incrementalCompilation.getFinalState().getState(sourceFile)
                 val hash = state.getHash()
                 val headers: MutableList<String> = ArrayList<String>()
@@ -68,14 +68,14 @@ class IncrementalNativeCompiler<T : NativeCompileSpec?>(
                         headers.add(edge.getIncludePath())
                     }
                 }
-                val header = spec.getPreCompiledHeader()
+                val header = spec.preCompiledHeader
                 val usePCH = !headers.isEmpty() && header == headers.get(0)
                 if (usePCH) {
                     sourceFiles.add(sourceFile)
                 } else {
                     val containsHeader = headers.contains(header)
                     if (containsHeader) {
-                        logger.warn(getCantUsePCHMessage(spec.getPreCompiledHeader(), sourceFile))
+                        logger.warn(getCantUsePCHMessage(spec.preCompiledHeader, sourceFile))
                     }
                 }
             }
@@ -104,7 +104,7 @@ class IncrementalNativeCompiler<T : NativeCompileSpec?>(
     }
 
     private fun cleanPreviousOutputs(spec: NativeCompileSpec): Boolean {
-        return StaleOutputCleaner.cleanOutputs(deleter, outputs.getPreviousOutputFiles(), spec.getObjectFileDir())
+        return StaleOutputCleaner.cleanOutputs(deleter, outputs.getPreviousOutputFiles(), spec.objectFileDir)
     }
 
     companion object {

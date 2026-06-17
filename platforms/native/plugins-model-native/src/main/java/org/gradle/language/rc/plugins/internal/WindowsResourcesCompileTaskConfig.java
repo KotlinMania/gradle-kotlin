@@ -71,12 +71,12 @@ public class WindowsResourcesCompileTaskConfig implements SourceTransformTaskCon
             @Override
             public Set<File> getFiles() {
                 PlatformToolProvider platformToolProvider = ((NativeToolChainInternal) binary.getToolChain()).select((NativePlatformInternal) binary.getTargetPlatform());
-                return new LinkedHashSet<File>(platformToolProvider.getSystemLibraries(ToolType.WINDOW_RESOURCES_COMPILER).getIncludeDirs());
+                return new LinkedHashSet<File>(platformToolProvider.getSystemLibraries(ToolType.WINDOW_RESOURCES_COMPILER).includeDirs);
             }
 
             @Override
             public String getDisplayName() {
-                return "System includes for " + binary.getToolChain().getDisplayName();
+                return "System includes for " + binary.getToolChain().displayName;
             }
         }));
 

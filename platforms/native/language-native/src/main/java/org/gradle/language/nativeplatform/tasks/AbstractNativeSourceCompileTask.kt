@@ -51,10 +51,10 @@ abstract class AbstractNativeSourceCompileTask : AbstractNativeCompileTask() {
         super.configureSpec(spec)
         if (preCompiledHeader != null) {
             val pchObjectFile = preCompiledHeader!!.getObjectFile()
-            val pchDir = PCHUtils.generatePCHObjectDirectory(spec.getTempDir(), preCompiledHeader!!.getPrefixHeaderFile(), pchObjectFile)
-            spec.setPrefixHeaderFile(File(pchDir, preCompiledHeader!!.getPrefixHeaderFile()!!.getName()))
-            spec.setPreCompiledHeaderObjectFile(File(pchDir, pchObjectFile.getName()))
-            spec.setPreCompiledHeader(RegexBackedCSourceParser.Companion.parseExpression(preCompiledHeader!!.getIncludeString()).getValue())
+            val pchDir = PCHUtils.generatePCHObjectDirectory(spec.getTempDir(), preCompiledHeader!!.prefixHeaderFile, pchObjectFile)
+            spec.prefixHeaderFile = File(pchDir, preCompiledHeader!!.prefixHeaderFile!!.getName())
+            spec.preCompiledHeaderObjectFile = File(pchDir, pchObjectFile.getName())
+            spec.preCompiledHeader = RegexBackedCSourceParser.Companion.parseExpression(preCompiledHeader!!.includeString).getValue()
         }
     }
 

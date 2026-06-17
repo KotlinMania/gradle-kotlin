@@ -100,24 +100,24 @@ public abstract class CppProjectInitDescriptor extends LanguageLibraryProjectIni
     static String buildNativeHostTargetDefinition(DefaultNativePlatform host) {
         String definition = "machines.";
 
-        if (host.getOperatingSystem().isWindows()) {
+        if (host.operatingSystem.isWindows) {
             definition += "windows";
-        } else if (host.getOperatingSystem().isMacOsX()) {
+        } else if (host.operatingSystem.isMacOsX) {
             definition += "macOS";
-        } else if (host.getOperatingSystem().isLinux()) {
+        } else if (host.operatingSystem.isLinux) {
             definition += "linux";
         } else {
-            definition += "os(\"" + host.getOperatingSystem().toFamilyName() + "\")";
+            definition += "os(\"" + host.operatingSystem.toFamilyName() + "\")";
         }
 
         definition += ".";
 
-        if (host.getArchitecture().isI386()) {
+        if (host.architecture.isI386()) {
             definition += "x86";
-        } else if (host.getArchitecture().isAmd64()) {
+        } else if (host.architecture.isAmd64()) {
             definition += "x86_64";
         } else {
-            definition += "architecture(\"" + host.getArchitecture().getName() + "\")";
+            definition += "architecture(\"" + host.architecture.getName() + "\")";
         }
 
         return definition;

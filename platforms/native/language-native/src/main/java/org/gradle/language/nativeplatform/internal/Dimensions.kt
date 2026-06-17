@@ -124,8 +124,8 @@ object Dimensions {
                     // FIXME: Always build type name to keep parity with previous Gradle version in tooling API
                     variantNameToken.add(buildType.getName())
                     variantNameToken.add(createDimensionSuffix(linkage, linkages))
-                    variantNameToken.add(createDimensionSuffix(targetMachine.getOperatingSystemFamily(), targetMachinesToOperatingSystems(targetMachines)))
-                    variantNameToken.add(createDimensionSuffix(targetMachine.getArchitecture(), targetMachinesToArchitectures(targetMachines)))
+                    variantNameToken.add(createDimensionSuffix(targetMachine.operatingSystemFamily, targetMachinesToOperatingSystems(targetMachines)))
+                    variantNameToken.add(createDimensionSuffix(targetMachine.architecture, targetMachinesToArchitectures(targetMachines)))
 
                     val variantName = StringUtils.uncapitalize(String.join("", variantNameToken))
 
@@ -162,8 +162,8 @@ object Dimensions {
                 val variantNameToken: MutableList<kotlin.String?> = ArrayList<kotlin.String?>()
                 // FIXME: Always build type name to keep parity with previous Gradle version in tooling API
                 variantNameToken.add(buildType.getName())
-                variantNameToken.add(createDimensionSuffix(targetMachine.getOperatingSystemFamily(), targetMachinesToOperatingSystems(targetMachines)))
-                variantNameToken.add(createDimensionSuffix(targetMachine.getArchitecture(), targetMachinesToArchitectures(targetMachines)))
+                variantNameToken.add(createDimensionSuffix(targetMachine.operatingSystemFamily, targetMachinesToOperatingSystems(targetMachines)))
+                variantNameToken.add(createDimensionSuffix(targetMachine.architecture, targetMachinesToArchitectures(targetMachines)))
 
                 val variantName = StringUtils.uncapitalize(String.join("", variantNameToken))
 
@@ -183,18 +183,18 @@ object Dimensions {
     }
 
     private fun targetMachinesToOperatingSystems(targetMachines: MutableCollection<TargetMachine>): MutableSet<OperatingSystemFamily> {
-        return targetMachines.stream().map<OperatingSystemFamily?> { obj: TargetMachine? -> obj!!.getOperatingSystemFamily() }.collect(Collectors.toSet())
+        return targetMachines.stream().map<OperatingSystemFamily?> { obj: TargetMachine? -> obj!!.operatingSystemFamily }.collect(Collectors.toSet())
     }
 
     private fun targetMachinesToArchitectures(targetMachines: MutableCollection<TargetMachine>): MutableSet<MachineArchitecture> {
-        return targetMachines.stream().map<MachineArchitecture?> { obj: TargetMachine? -> obj!!.getArchitecture() }.collect(Collectors.toSet())
+        return targetMachines.stream().map<MachineArchitecture?> { obj: TargetMachine? -> obj!!.architecture }.collect(Collectors.toSet())
     }
 
     private fun addCommonAttributes(buildType: BuildType, targetMachine: TargetMachine, runtimeAttributes: AttributeContainer) {
         runtimeAttributes.attribute<Boolean?>(CppBinary.Companion.DEBUGGABLE_ATTRIBUTE, buildType.isDebuggable())
         runtimeAttributes.attribute<Boolean?>(CppBinary.Companion.OPTIMIZED_ATTRIBUTE, buildType.isOptimized())
-        runtimeAttributes.attribute<MachineArchitecture?>(MachineArchitecture.ARCHITECTURE_ATTRIBUTE, targetMachine.getArchitecture())
-        runtimeAttributes.attribute<OperatingSystemFamily?>(OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, targetMachine.getOperatingSystemFamily())
+        runtimeAttributes.attribute<MachineArchitecture?>(MachineArchitecture.ARCHITECTURE_ATTRIBUTE, targetMachine.architecture)
+        runtimeAttributes.attribute<OperatingSystemFamily?>(OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, targetMachine.operatingSystemFamily)
     }
 
     /**

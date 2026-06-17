@@ -61,7 +61,7 @@ public class PCHCompileTaskConfig extends CompileTaskConfig {
         binary.binaryInputs(task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.obj", "**/*.o")));
 
         PreCompiledHeader pch = binary.getPrefixFileToPCH().get(sourceSet.getPrefixHeaderFile());
-        pch.setPchObjects(task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.pch", "**/*.gch")));
+        pch.pchObjects = task.getOutputs().getFiles().getAsFileTree().matching(new PatternSet().include("**/*.pch", "**/*.gch"));
         pch.builtBy(task);
     }
 }

@@ -169,7 +169,7 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
                     task!!.dependsOn(Callable {
                         val currentHost = (targetMachineFactory as DefaultTargetMachineFactory).host()
                         val targetsCurrentMachine = componentWithTargetMachines.getTargetMachines().get().stream()
-                            .anyMatch { targetMachine: TargetMachine? -> currentHost.getOperatingSystemFamily() == targetMachine!!.getOperatingSystemFamily() }
+                            .anyMatch { targetMachine: TargetMachine? -> currentHost.operatingSystemFamily == targetMachine!!.operatingSystemFamily }
                         if (!targetsCurrentMachine) {
                             task.getLogger().warn("'" + component.getName() + "' component in project '" + project.getPath() + "' does not target this operating system.")
                         }
@@ -191,15 +191,15 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
             val link = tasks.register<LinkExecutable?>(names.getTaskName("link"), LinkExecutable::class.java, Action { task: LinkExecutable? ->
                 task!!.source(executable.getObjects())
                 task.lib(executable.getLinkLibraries())
-                task.getLinkedFile()
+                task.linkedFile
                     .set(buildDirectory.file(executable.getBaseName().map<String?>(Transformer { baseName: String? -> toolProvider.getExecutableName("exe/" + names.getDirName() + baseName) })))
-                task.getTargetPlatform().set(targetPlatform)
-                task.getToolChain().set(toolChain)
+                task.targetPlatform.set(targetPlatform)
+                task.toolChain.set(toolChain)
                 task.getDebuggable().set(executable.isDebuggable())
             })
 
             executable.getLinkTask().set(link)
-            executable.getDebuggerExecutableFile().set(link.flatMap<RegularFile?>(Transformer { linkExecutable: LinkExecutable? -> linkExecutable!!.getLinkedFile() }))
+            executable.getDebuggerExecutableFile().set(link.flatMap<RegularFile?>(Transformer { linkExecutable: LinkExecutable? -> linkExecutable!!.linkedFile }))
 
             if (executable.isDebuggable() && executable.isOptimized() && toolProvider.requiresDebugBinaryStripping()) {
                 val symbolLocation: Provider<RegularFile?> = buildDirectory.file(
@@ -210,12 +210,12 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
                 )
 
                 val stripSymbols: TaskProvider<StripSymbols?> = stripSymbols(link, names, tasks, toolChain, targetPlatform, strippedLocation)
-                executable.getExecutableFile().set(stripSymbols.flatMap<RegularFile?>(Transformer { task: StripSymbols? -> task!!.getOutputFile() }))
+                executable.getExecutableFile().set(stripSymbols.flatMap<RegularFile?>(Transformer { task: StripSymbols? -> task!!.outputFile }))
                 val extractSymbols: TaskProvider<ExtractSymbols?> = extractSymbols(link, names, tasks, toolChain, targetPlatform, symbolLocation)
-                executable.getOutputs().from(extractSymbols.flatMap<RegularFile?>(Transformer { task: ExtractSymbols? -> task!!.getSymbolFile() }))
+                executable.getOutputs().from(extractSymbols.flatMap<RegularFile?>(Transformer { task: ExtractSymbols? -> task!!.symbolFile }))
                 executable.getExecutableFileProducer().set(stripSymbols)
             } else {
-                executable.getExecutableFile().set(link.flatMap<RegularFile?>(Transformer { task: LinkExecutable? -> task!!.getLinkedFile() }))
+                executable.getExecutableFile().set(link.flatMap<RegularFile?>(Transformer { task: LinkExecutable? -> task!!.linkedFile }))
                 executable.getExecutableFileProducer().set(link)
             }
 
@@ -223,17 +223,17 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
             // TODO - should probably not add this for all executables?
             // TODO - add stripped symbols to the installation
             val install = tasks.register<InstallExecutable?>(names.getTaskName("install"), InstallExecutable::class.java, Action { task: InstallExecutable? ->
-                task!!.getTargetPlatform().set(targetPlatform)
-                task.getToolChain().set(toolChain)
-                task.getInstallDirectory().set(buildDirectory.dir("install/" + names.getDirName()))
-                task.getExecutableFile().set(executable.getExecutableFile())
+                task!!.targetPlatform.set(targetPlatform)
+                task.toolChain.set(toolChain)
+                task.installDirectory.set(buildDirectory.dir("install/" + names.getDirName()))
+                task.executableFile.set(executable.getExecutableFile())
                 task.lib(executable.getRuntimeLibraries())
             })
 
             executable.getInstallTask().set(install)
-            executable.getInstallDirectory().set(install.flatMap<Directory?>(Transformer { task: InstallExecutable? -> task!!.getInstallDirectory() }))
+            executable.getInstallDirectory().set(install.flatMap<Directory?>(Transformer { task: InstallExecutable? -> task!!.installDirectory }))
             executable.getOutputs().from(executable.getInstallDirectory())
-            executable.getDebuggerExecutableFile().set(install.flatMap<RegularFile?>(Transformer { task: InstallExecutable? -> task!!.getInstalledExecutable() }))
+            executable.getDebuggerExecutableFile().set(install.flatMap<RegularFile?>(Transformer { task: InstallExecutable? -> task!!.installedExecutable }))
         })
     }
 
@@ -248,32 +248,32 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
             val link = tasks.register<LinkSharedLibrary?>(names.getTaskName("link"), LinkSharedLibrary::class.java, Action { task: LinkSharedLibrary? ->
                 task!!.source(library.getObjects())
                 task.lib(library.getLinkLibraries())
-                task.getLinkedFile()
+                task.linkedFile
                     .set(buildDirectory.file(library.getBaseName().map<String?>(Transformer { baseName: String? -> toolProvider.getSharedLibraryName("lib/" + names.getDirName() + baseName) })))
                 // TODO: We should set this for macOS, but this currently breaks XCTest support for Swift
                 // when Swift depends on C++ libraries built by Gradle.
                 if (!targetPlatform.getOperatingSystem().isMacOsX()) {
-                    val installName = task.getLinkedFile().getLocationOnly().map<String?>(Transformer { linkedFile: RegularFile? -> linkedFile!!.getAsFile().getName() })
-                    task.getInstallName().set(installName)
+                    val installName = task.linkedFile.getLocationOnly().map<String?>(Transformer { linkedFile: RegularFile? -> linkedFile!!.getAsFile().getName() })
+                    task.installName.set(installName)
                 }
-                task.getTargetPlatform().set(targetPlatform)
-                task.getToolChain().set(toolChain)
+                task.targetPlatform.set(targetPlatform)
+                task.toolChain.set(toolChain)
                 task.getDebuggable().set(library.isDebuggable())
             })
 
-            var linkFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.getLinkedFile() })
-            var runtimeFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.getLinkedFile() })
+            var linkFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.linkedFile })
+            var runtimeFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.linkedFile })
             var linkFileTask: Provider<out Task?> = link
 
             if (toolProvider.producesImportLibrary()) {
                 link.configure(Action { linkSharedLibrary: LinkSharedLibrary? ->
-                    linkSharedLibrary!!.getImportLibrary().set(
+                    linkSharedLibrary!!.importLibrary.set(
                         buildDirectory.file(
                             library.getBaseName().map<String?>(Transformer { baseName: String? -> toolProvider.getImportLibraryName("lib/" + names.getDirName() + baseName) })
                         )
                     )
                 })
-                linkFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.getImportLibrary() })
+                linkFile = link.flatMap<RegularFile?>(Transformer { task: LinkSharedLibrary? -> task!!.importLibrary })
             }
 
             if (library.isDebuggable() && library.isOptimized() && toolProvider.requiresDebugBinaryStripping()) {
@@ -285,11 +285,11 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
                 )
 
                 val stripSymbols: TaskProvider<StripSymbols?> = stripSymbols(link, names, tasks, toolChain, targetPlatform, strippedLocation)
-                runtimeFile = stripSymbols.flatMap<RegularFile?>(Transformer { task: StripSymbols? -> task!!.getOutputFile() })
+                runtimeFile = stripSymbols.flatMap<RegularFile?>(Transformer { task: StripSymbols? -> task!!.outputFile })
                 linkFile = runtimeFile
 
                 val extractSymbols: TaskProvider<ExtractSymbols?> = extractSymbols(link, names, tasks, toolChain, targetPlatform, symbolLocation)
-                library.getOutputs().from(extractSymbols.flatMap<RegularFile?>(Transformer { task: ExtractSymbols? -> task!!.getSymbolFile() }))
+                library.getOutputs().from(extractSymbols.flatMap<RegularFile?>(Transformer { task: ExtractSymbols? -> task!!.symbolFile }))
                 linkFileTask = stripSymbols
             }
             library.getLinkTask().set(link)
@@ -311,9 +311,9 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
                 val linktimeFile: Provider<RegularFile?> = buildDirectory.file(
                     library.getBaseName().map<String?>(Transformer { baseName: String? -> toolProvider.getStaticLibraryName("lib/" + names.getDirName() + baseName) })
                 )
-                task.getOutputFile().set(linktimeFile)
-                task.getTargetPlatform().set(library.getNativePlatform())
-                task.getToolChain().set(library.getToolChain())
+                task.outputFile.set(linktimeFile)
+                task.targetPlatform.set(library.getNativePlatform())
+                task.toolChain.set(library.getToolChain())
             })
 
             // Wire the task into the library model
@@ -409,10 +409,10 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
         strippedLocation: Provider<RegularFile?>
     ): TaskProvider<StripSymbols?> {
         return tasks.register<StripSymbols?>(names.getTaskName("stripSymbols"), StripSymbols::class.java, Action { stripSymbols: StripSymbols? ->
-            stripSymbols!!.getBinaryFile().set(link.flatMap<RegularFile?>({ task: AbstractLinkTask? -> task!!.getLinkedFile() }))
-            stripSymbols.getOutputFile().set(strippedLocation)
-            stripSymbols.getTargetPlatform().set(currentPlatform)
-            stripSymbols.getToolChain().set(toolChain)
+            stripSymbols!!.binaryFile.set(link.flatMap<RegularFile?>({ task: AbstractLinkTask? -> task!!.linkedFile }))
+            stripSymbols.outputFile.set(strippedLocation)
+            stripSymbols.targetPlatform.set(currentPlatform)
+            stripSymbols.toolChain.set(toolChain)
         })
     }
 
@@ -425,10 +425,10 @@ abstract class NativeBasePlugin @Inject constructor(private val targetMachineFac
         symbolLocation: Provider<RegularFile?>
     ): TaskProvider<ExtractSymbols?> {
         return tasks.register<ExtractSymbols?>(names.getTaskName("extractSymbols"), ExtractSymbols::class.java, Action { extractSymbols: ExtractSymbols? ->
-            extractSymbols!!.getBinaryFile().set(link.flatMap<RegularFile?>({ task: AbstractLinkTask? -> task!!.getLinkedFile() }))
-            extractSymbols.getSymbolFile().set(symbolLocation)
-            extractSymbols.getTargetPlatform().set(currentPlatform)
-            extractSymbols.getToolChain().set(toolChain)
+            extractSymbols!!.binaryFile.set(link.flatMap<RegularFile?>({ task: AbstractLinkTask? -> task!!.linkedFile }))
+            extractSymbols.symbolFile.set(symbolLocation)
+            extractSymbols.targetPlatform.set(currentPlatform)
+            extractSymbols.toolChain.set(toolChain)
         })
     }
 

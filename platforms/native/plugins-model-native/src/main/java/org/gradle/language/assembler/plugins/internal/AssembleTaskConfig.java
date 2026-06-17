@@ -68,12 +68,12 @@ public class AssembleTaskConfig implements SourceTransformTaskConfig {
             @Override
             public Set<File> getFiles() {
                 PlatformToolProvider platformToolProvider = ((NativeToolChainInternal) binary.getToolChain()).select((NativePlatformInternal) binary.getTargetPlatform());
-                return new LinkedHashSet<>(platformToolProvider.getSystemLibraries(ToolType.ASSEMBLER).getIncludeDirs());
+                return new LinkedHashSet<>(platformToolProvider.getSystemLibraries(ToolType.ASSEMBLER).includeDirs);
             }
 
             @Override
             public String getDisplayName() {
-                return "System includes for " + binary.getToolChain().getDisplayName();
+                return "System includes for " + binary.getToolChain().displayName;
             }
         }));
 

@@ -99,12 +99,12 @@ abstract class WindowsResourceCompile : DefaultTask() {
 
         val spec: NativeCompileSpec = DefaultWindowsResourceCompileSpec()
         spec.setTempDir(getTemporaryDir())
-        spec.setObjectFileDir(this.outputDir)
+        spec.objectFileDir = this.outputDir
         spec.include(this.includes)
         spec.source(this.source)
         spec.setMacros(this.macros)
         spec.args(this.compilerArgs.get())
-        spec.setIncrementalCompile(inputs.isIncremental())
+        spec.isIncrementalCompile = inputs.isIncremental()
         spec.setOperationLogger(operationLogger)
 
         val nativeToolChain = this.toolChain.get() as NativeToolChainInternal

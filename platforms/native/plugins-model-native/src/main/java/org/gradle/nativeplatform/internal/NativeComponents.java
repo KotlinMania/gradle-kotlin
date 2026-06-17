@@ -57,10 +57,10 @@ public class NativeComponents {
             @Override
             public void execute(LinkExecutable linkTask) {
                 linkTask.setDescription("Links " + binary.getDisplayName());
-                linkTask.getToolChain().set(binary.getToolChain());
-                linkTask.getTargetPlatform().set(binary.getTargetPlatform());
-                linkTask.getLinkedFile().set(executableFile);
-                linkTask.getLinkerArgs().set(binary.getLinker().getArgs());
+                linkTask.toolChain.set(binary.getToolChain());
+                linkTask.targetPlatform.set(binary.getTargetPlatform());
+                linkTask.linkedFile.set(executableFile);
+                linkTask.linkerArgs.set(binary.getLinker().getArgs());
 
                 linkTask.lib(new BinaryLibs(binary) {
                     @Override
@@ -79,10 +79,10 @@ public class NativeComponents {
             public void execute(InstallExecutable installTask) {
                 installTask.setDescription("Installs a development image of " + binary.getDisplayName());
                 installTask.setGroup(LifecycleBasePlugin.BUILD_GROUP);
-                installTask.getToolChain().set(executable.getToolChain());
-                installTask.getTargetPlatform().set(binary.getTargetPlatform());
-                installTask.getExecutableFile().set(executable.getFile());
-                installTask.getInstallDirectory().set(installation.getDirectory());
+                installTask.toolChain.set(executable.getToolChain());
+                installTask.targetPlatform.set(binary.getTargetPlatform());
+                installTask.executableFile.set(executable.getFile());
+                installTask.installDirectory.set(installation.getDirectory());
                 //TODO:HH wire binary libs via executable
                 installTask.lib(new BinaryLibs(binary) {
                     @Override

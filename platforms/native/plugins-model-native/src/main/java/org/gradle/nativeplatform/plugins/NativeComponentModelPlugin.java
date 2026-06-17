@@ -326,12 +326,12 @@ public abstract class NativeComponentModelPlugin implements Plugin<Project> {
                 @Override
                 public void execute(LinkSharedLibrary linkTask) {
                     linkTask.setDescription("Links " + binary.getDisplayName());
-                    linkTask.getToolChain().set(binary.getToolChain());
-                    linkTask.getTargetPlatform().set(binary.getTargetPlatform());
-                    linkTask.getLinkedFile().set(binary.getSharedLibraryFile());
-                    linkTask.getInstallName().set(binary.getSharedLibraryFile().getName());
-                    linkTask.getLinkerArgs().set(binary.getLinker().getArgs());
-                    linkTask.getImportLibrary().set(binary.getSharedLibraryLinkFile());
+                    linkTask.toolChain.set(binary.getToolChain());
+                    linkTask.targetPlatform.set(binary.getTargetPlatform());
+                    linkTask.linkedFile.set(binary.getSharedLibraryFile());
+                    linkTask.installName.set(binary.getSharedLibraryFile().getName());
+                    linkTask.linkerArgs.set(binary.getLinker().getArgs());
+                    linkTask.importLibrary.set(binary.getSharedLibraryLinkFile());
 
                     linkTask.lib(new NativeComponents.BinaryLibs(binary) {
                         @Override
@@ -350,10 +350,10 @@ public abstract class NativeComponentModelPlugin implements Plugin<Project> {
                 @Override
                 public void execute(CreateStaticLibrary task) {
                     task.setDescription("Creates " + binary.getDisplayName());
-                    task.getToolChain().set(binary.getToolChain());
-                    task.getTargetPlatform().set(binary.getTargetPlatform());
-                    task.getOutputFile().set(binary.getStaticLibraryFile());
-                    task.getStaticLibArgs().set(binary.getStaticLibArchiver().getArgs());
+                    task.toolChain.set(binary.getToolChain());
+                    task.targetPlatform.set(binary.getTargetPlatform());
+                    task.outputFile.set(binary.getStaticLibraryFile());
+                    task.staticLibArgs.set(binary.getStaticLibArchiver().getArgs());
                 }
             });
         }

@@ -36,6 +36,6 @@ public class NativePlatformResolver implements PlatformResolver<NativePlatform> 
     @Override
     public NativePlatform resolve(final PlatformRequirement platformRequirement) {
         return CollectionUtils.<NativePlatform>findFirst(nativePlatforms.defaultPlatformDefinitions(),
-            element -> element.getName().equals(platformRequirement.getPlatformName()));
+            element -> element.getName().equals(platformRequirement.platformName));
     }
 }

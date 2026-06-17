@@ -94,20 +94,20 @@ public class CppModelBuilder implements ToolingModelBuilder {
             List<DefaultMacroDirective> macroDefines = macroDefines(compileTask);
             List<String> additionalArgs = args(compileTask.compilerArgs.get());
             CommandLineToolSearchResult compilerLookup = platformToolProvider.locateTool(ToolType.CPP_COMPILER);
-            File compilerExe = compilerLookup.isAvailable() ? compilerLookup.getTool() : null;
+            File compilerExe = compilerLookup.isAvailable ? compilerLookup.tool : null;
             LaunchableGradleTask compileTaskModel = buildLaunchableTask(projectIdentifier, compileTask);
             DefaultCompilationDetails compilationDetails = new DefaultCompilationDetails(compileTaskModel, compilerExe, compileTask.objectFileDir.get().getAsFile(), sourceFiles, headerDirsCopy,  systemIncludes, userIncludes, macroDefines, additionalArgs);
             if (binary instanceof CppExecutable || binary instanceof CppTestExecutable) {
                 ComponentWithExecutable componentWithExecutable = (ComponentWithExecutable) binary;
                 LinkExecutable linkTask = componentWithExecutable.linkTask.get();
                 LaunchableGradleTask linkTaskModel = buildLaunchableTask(projectIdentifier, componentWithExecutable.executableFileProducer.get());
-                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, componentWithExecutable.executableFile.get().getAsFile(), args(linkTask.getLinkerArgs().get()));
+                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, componentWithExecutable.executableFile.get().getAsFile(), args(linkTask.linkerArgs.get()));
                 binaries.add(new DefaultCppExecutableModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails));
             } else if (binary instanceof CppSharedLibrary) {
                 CppSharedLibrary sharedLibrary = (CppSharedLibrary) binary;
                 LinkSharedLibrary linkTask = sharedLibrary.linkTask.get();
                 LaunchableGradleTask linkTaskModel = buildLaunchableTask(projectIdentifier, sharedLibrary.linkFileProducer.get());
-                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, sharedLibrary.linkFile.get().getAsFile(), args(linkTask.getLinkerArgs().get()));
+                DefaultLinkageDetails linkageDetails = new DefaultLinkageDetails(linkTaskModel, sharedLibrary.linkFile.get().getAsFile(), args(linkTask.linkerArgs.get()));
                 binaries.add(new DefaultCppSharedLibraryModel(binary.getName(), cppBinary.identity.getName(), binary.baseName.get(), compilationDetails, linkageDetails));
             } else if (binary instanceof CppStaticLibrary) {
                 CppStaticLibrary staticLibrary = (CppStaticLibrary) binary;
@@ -124,7 +124,7 @@ public class CppModelBuilder implements ToolingModelBuilder {
     }
 
     private List<DefaultSourceFile> sourceFiles(CompilerOutputFileNamingSchemeFactory namingSchemeFactory, PlatformToolProvider platformToolProvider, File objDir, Set<File> files) {
-        CompilerOutputFileNamingScheme namingScheme = namingSchemeFactory.create().withObjectFileNameSuffix(platformToolProvider.getObjectFileExtension()).withOutputBaseFolder(objDir);
+        CompilerOutputFileNamingScheme namingScheme = namingSchemeFactory.create().withObjectFileNameSuffix(platformToolProvider.objectFileExtension).withOutputBaseFolder(objDir);
         List<DefaultSourceFile> result = new ArrayList<DefaultSourceFile>(files.size());
         for (File file : files) {
             result.add(new DefaultSourceFile(file, namingScheme.map(file)));

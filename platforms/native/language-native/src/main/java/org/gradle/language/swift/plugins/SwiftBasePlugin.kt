@@ -64,7 +64,7 @@ abstract class SwiftBasePlugin @Inject constructor(private val publicationRegist
                 if (binary.isTestable()) {
                     task.getCompilerArgs().add("-enable-testing")
                 }
-                if (binary.getTargetMachine().getOperatingSystemFamily().isMacOs()) {
+                if (binary.getTargetMachine().operatingSystemFamily.isMacOs()) {
                     task.getCompilerArgs().add("-sdk")
                     task.getCompilerArgs().add(locator.find().getAbsolutePath())
                 }

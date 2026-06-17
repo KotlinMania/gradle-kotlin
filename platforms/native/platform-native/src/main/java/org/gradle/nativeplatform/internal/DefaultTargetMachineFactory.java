@@ -36,8 +36,8 @@ public class DefaultTargetMachineFactory implements TargetMachineFactory {
      */
     public TargetMachine host() {
         DefaultNativePlatform host = DefaultNativePlatform.host();
-        OperatingSystemFamily operatingSystemFamily = objectFactory.<OperatingSystemFamily>named(OperatingSystemFamily.class, host.getOperatingSystem().toFamilyName());
-        MachineArchitecture machineArchitecture = objectFactory.<MachineArchitecture>named(MachineArchitecture.class, host.getArchitecture().getName());
+        OperatingSystemFamily operatingSystemFamily = objectFactory.<OperatingSystemFamily>named(OperatingSystemFamily.class, host.operatingSystem.toFamilyName());
+        MachineArchitecture machineArchitecture = objectFactory.<MachineArchitecture>named(MachineArchitecture.class, host.architecture.getName());
         return new TargetMachineImpl(operatingSystemFamily, machineArchitecture);
     }
 
@@ -62,7 +62,7 @@ public class DefaultTargetMachineFactory implements TargetMachineFactory {
     }
 
     private MachineArchitecture getDefaultArchitecture() {
-        return objectFactory.<MachineArchitecture>named(MachineArchitecture.class, DefaultNativePlatform.host().getArchitecture().getName());
+        return objectFactory.<MachineArchitecture>named(MachineArchitecture.class, DefaultNativePlatform.host().architecture.getName());
     }
 
     private class TargetMachineImpl extends DefaultTargetMachine implements TargetMachineBuilder {

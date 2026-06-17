@@ -132,16 +132,16 @@ abstract class AbstractNativeCompileTask : DefaultTask() {
         val spec = createCompileSpec()
         spec.setTargetPlatform(this.targetPlatform.get())
         spec.setTempDir(getTemporaryDir())
-        spec.setObjectFileDir(this.objectFileDir.get().getAsFile())
+        spec.objectFileDir = this.objectFileDir.get().getAsFile()
         spec.include(this.includes)
         spec.systemInclude(this.systemIncludes)
         spec.source(this.source)
         spec.setMacros(getMacros())
         spec.args(this.compilerArgs.get())
-        spec.setPositionIndependentCode(this.isPositionIndependentCode)
-        spec.setDebuggable(this.isDebuggable)
-        spec.setOptimized(this.isOptimized)
-        spec.setIncrementalCompile(inputs.isIncremental())
+        spec.isPositionIndependentCode = this.isPositionIndependentCode
+        spec.isDebuggable = this.isDebuggable
+        spec.isOptimized = this.isOptimized
+        spec.isIncrementalCompile = inputs.isIncremental()
         spec.setOperationLogger(operationLogger)
 
         configureSpec(spec)

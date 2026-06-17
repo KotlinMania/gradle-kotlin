@@ -66,13 +66,13 @@ abstract class AbstractCppBinaryVisualStudioTargetBinary protected constructor(
         val operatingSystemFamilySuffix = Dimensions.createDimensionSuffix(
             this.binary.targetMachine.getOperatingSystemFamily(),
             component.getBinaries().get().stream().map<TargetMachine?> { obj: CppBinary? -> obj!!.targetMachine }
-                .map<OperatingSystemFamily?> { obj: TargetMachine? -> obj!!.getOperatingSystemFamily() }.collect(
+                .map<OperatingSystemFamily?> { obj: TargetMachine? -> obj!!.operatingSystemFamily }.collect(
                     Collectors.toSet()
                 )
         )
         val architectureSuffix = Dimensions.createDimensionSuffix(
             this.binary.targetMachine.getArchitecture(),
-            component.getBinaries().get().stream().map<TargetMachine?> { obj: CppBinary? -> obj!!.targetMachine }.map<MachineArchitecture?> { obj: TargetMachine? -> obj!!.getArchitecture() }
+            component.getBinaries().get().stream().map<TargetMachine?> { obj: CppBinary? -> obj!!.targetMachine }.map<MachineArchitecture?> { obj: TargetMachine? -> obj!!.architecture }
                 .collect(
                     Collectors.toSet()
                 ))
@@ -90,10 +90,10 @@ abstract class AbstractCppBinaryVisualStudioTargetBinary protected constructor(
 
     override fun getVisualStudioVersion(): VersionNumber? {
         val provider = (this.binary as DefaultCppBinary).platformToolProvider
-        if (provider.isAvailable()) {
+        if (provider.isAvailable) {
             val compilerMetadata = provider.getCompilerMetadata(ToolType.CPP_COMPILER)
             if (compilerMetadata is VisualCppMetadata) {
-                return compilerMetadata.getVisualStudioVersion()
+                return compilerMetadata.visualStudioVersion
             }
         }
 
@@ -103,11 +103,11 @@ abstract class AbstractCppBinaryVisualStudioTargetBinary protected constructor(
 
     override fun getSdkVersion(): VersionNumber? {
         val provider = (this.binary as DefaultCppBinary).platformToolProvider
-        if (provider.isAvailable()) {
+        if (provider.isAvailable) {
             val systemLibraries = provider.getSystemLibraries(ToolType.CPP_COMPILER)
             if (systemLibraries is WindowsSdkLibraries) {
                 val sdkLibraries = systemLibraries
-                return sdkLibraries.getSdkVersion()
+                return sdkLibraries.sdkVersion
             }
         }
 

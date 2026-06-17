@@ -76,15 +76,15 @@ class DefaultToolChainSelector @Inject constructor(private val registry: NativeT
         val toolProvider = toolChain.select(sourceLanguage, targetNativePlatform)
 
         var sourceCompatibility = requestPlatform.getSourceCompatibility()
-        if (sourceCompatibility == null && toolProvider.isAvailable()) {
-            sourceCompatibility = toSwiftVersion(toolProvider.getCompilerMetadata(ToolType.SWIFT_COMPILER).getVersion())
+        if (sourceCompatibility == null && toolProvider.isAvailable) {
+            sourceCompatibility = toSwiftVersion(toolProvider.getCompilerMetadata(ToolType.SWIFT_COMPILER).version)
         }
         val targetPlatform: SwiftPlatform = DefaultSwiftPlatform(requestPlatform.getTargetMachine(), sourceCompatibility, targetNativePlatform)
         return DefaultResult<SwiftPlatform?>(toolChain, toolProvider, targetPlatform)
     }
 
     private fun newNativePlatform(targetMachine: TargetMachine): DefaultNativePlatform? {
-        return host.withArchitecture(Architectures.forInput(targetMachine.getArchitecture().getName()))
+        return host.withArchitecture(Architectures.forInput(targetMachine.architecture.getName()))
     }
 
     private fun getToolChain(sourceLanguage: NativeLanguage?, targetNativePlatform: NativePlatformInternal?): NativeToolChainInternal {
