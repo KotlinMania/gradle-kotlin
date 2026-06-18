@@ -53,19 +53,20 @@ import java.util.stream.Collectors
 import javax.lang.model.element.Modifier
 
 class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceGenerator() {
-    override fun classNameForRequest(request: CallInterceptionRequest): String {
-        return request.requestExtras!!.getByType(RequestExtra.InterceptGroovyCalls::class.java)
-            .map(RequestExtra.InterceptGroovyCalls::getImplementationClassName)
-            .orElse(null)
+    override fun classNameForRequest(request: CallInterceptionRequest?): String? {
+        return request?.requestExtras
+            ?.getByType(RequestExtra.InterceptGroovyCalls::class.java)
+            ?.orElse(null)
+            ?.implementationClassName
     }
 
     override fun classContentForClass(
         className: String?,
-        requestsClassGroup: MutableList<CallInterceptionRequest?>,
+        requestsClassGroup: MutableList<CallInterceptionRequest?>?,
         onProcessedRequest: Consumer<in CallInterceptionRequest?>?,
-        onFailure: Consumer<in FailureInfo?>
+        onFailure: Consumer<in FailureInfo?>?
     ): Consumer<TypeSpec.Builder?> {
-        val interceptorTypeSpecs: MutableList<TypeSpec?> = generateInterceptorClasses(requestsClassGroup, onFailure)
+        val interceptorTypeSpecs: MutableList<TypeSpec?> = generateInterceptorClasses(requireNotNull(requestsClassGroup), requireNotNull(onFailure))
 
         return Consumer { builder: TypeSpec.Builder? ->
             builder!!
@@ -80,30 +81,30 @@ class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceG
             val result: MutableList<TypeSpec?> = ArrayList<TypeSpec?>(interceptionRequests.size / 2)
 
             val callInterceptorSpecs = GroovyClassGeneratorUtils.groupRequests(interceptionRequests)
-            callInterceptorSpecs.getNamedRequests().stream()
-                .peek { spec: NamedCallableInterceptorSpec? -> validateRequests(spec!!.getRequests(), onFailure) }
-                .map<TypeSpec?> { spec: NamedCallableInterceptorSpec? -> Companion.generateNamedCallableInterceptorClass(spec!!) }
+            callInterceptorSpecs.namedRequests.stream()
+                .peek { spec: NamedCallableInterceptorSpec -> validateRequests(spec.requests, onFailure) }
+                .map<TypeSpec?> { spec: NamedCallableInterceptorSpec -> Companion.generateNamedCallableInterceptorClass(spec) }
                 .collect(Collectors.toCollection(Supplier { result }))
 
-            callInterceptorSpecs.getConstructorRequests().stream()
-                .peek { spec: ConstructorInterceptorSpec? -> validateRequests(spec!!.getRequests(), onFailure) }
-                .map<TypeSpec?> { spec: ConstructorInterceptorSpec? -> Companion.generateConstructorInterceptorClass(spec!!) }
+            callInterceptorSpecs.constructorRequests.stream()
+                .peek { spec: ConstructorInterceptorSpec -> validateRequests(spec.requests, onFailure) }
+                .map<TypeSpec?> { spec: ConstructorInterceptorSpec -> Companion.generateConstructorInterceptorClass(spec) }
                 .collect(Collectors.toCollection(Supplier { result }))
 
             return result
         }
 
         private fun generateNamedCallableInterceptorClass(spec: NamedCallableInterceptorSpec): TypeSpec {
-            return Companion.generateInterceptorClass(spec.getClassName(), spec.getInterceptorType(), namedCallableScopesArgs(spec.getName(), spec.getRequests())!!, spec.getRequests()).build()
+            return Companion.generateInterceptorClass(spec.className, spec.interceptorType, namedCallableScopesArgs(spec.name, spec.requests)!!, spec.requests).build()
         }
 
         private fun generateConstructorInterceptorClass(spec: ConstructorInterceptorSpec): TypeSpec {
-            return Companion.generateInterceptorClass(spec.getClassName(), spec.getInterceptorType(), constructorScopeArg(TypeUtils.typeName(spec.getConstructorType()))!!, spec.getRequests()).build()
+            return Companion.generateInterceptorClass(spec.className, spec.interceptorType, constructorScopeArg(TypeUtils.typeName(spec.constructorType))!!, spec.requests).build()
         }
 
         private fun signatureTreeFromRequests(requests: MutableCollection<CallInterceptionRequest>): SignatureTree {
             val result = SignatureTree()
-            requests.forEach(Consumer { request: CallInterceptionRequest? -> result.add(request) })
+            requests.forEach(Consumer { request: CallInterceptionRequest -> result.add(request) })
             return result
         }
 
@@ -179,7 +180,7 @@ class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceG
         private fun interceptorClassJavadoc(requests: MutableCollection<CallInterceptionRequest>): CodeBlock? {
             val result: MutableList<CodeBlock?> = ArrayList<CodeBlock?>()
             result.add(CodeBlock.of("Intercepts the following declarations:<ul>"))
-            requests.stream().map<CodeBlock?> { request: CallInterceptionRequest? ->
+            requests.stream().map<CodeBlock?> { request: CallInterceptionRequest ->
                 CodeBlock.of(
                     "<li> \$L \$L\n     with \$L",
                     JavadocUtils.callableKindForJavadoc(request),
@@ -200,20 +201,20 @@ class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceG
         private fun namedCallableScopesArgs(name: String?, requests: MutableList<CallInterceptionRequest>): CodeBlock? {
             val scopeExpressions: MutableList<CodeBlock?> = ArrayList<CodeBlock?>()
 
-            requests.stream().filter { it: CallInterceptionRequest? -> it!!.interceptedCallable!!.kind === CallableKindInfo.GROOVY_PROPERTY_GETTER }.forEach { request: CallInterceptionRequest? ->
-                val propertyName = request!!.interceptedCallable!!.callableName
-                val getterName = NameUtil.getterName(request.interceptedCallable!!.callableName, request.interceptedCallable!!.returnType!!.type)
+            requests.stream().filter { it: CallInterceptionRequest -> it.interceptedCallable!!.kind === CallableKindInfo.GROOVY_PROPERTY_GETTER }.forEach { request: CallInterceptionRequest ->
+                val propertyName = requireNotNull(request.interceptedCallable!!.callableName)
+                val getterName = NameUtil.getterName(propertyName, requireNotNull(request.interceptedCallable!!.returnType!!.type))
                 scopeExpressions.add(CodeBlock.of("$1T.readsOfPropertiesNamed($2S)", INTERCEPTED_SCOPE_CLASS, propertyName))
                 scopeExpressions.add(CodeBlock.of("$1T.methodsNamed($2S)", INTERCEPTED_SCOPE_CLASS, getterName))
             }
-            requests.stream().filter { it: CallInterceptionRequest? -> it!!.interceptedCallable!!.kind === CallableKindInfo.GROOVY_PROPERTY_SETTER }.forEach { request: CallInterceptionRequest? ->
-                val propertyName = request!!.interceptedCallable!!.callableName
+            requests.stream().filter { it: CallInterceptionRequest -> it.interceptedCallable!!.kind === CallableKindInfo.GROOVY_PROPERTY_SETTER }.forEach { request: CallInterceptionRequest ->
+                val propertyName = requireNotNull(request.interceptedCallable!!.callableName)
                 val setterName = NameUtil.setterName(propertyName)
                 scopeExpressions.add(CodeBlock.of("$1T.writesOfPropertiesNamed($2S)", INTERCEPTED_SCOPE_CLASS, propertyName))
                 scopeExpressions.add(CodeBlock.of("$1T.methodsNamed($2S)", INTERCEPTED_SCOPE_CLASS, setterName))
             }
 
-            val callableKinds: MutableList<CallableKindInfo?> = requests.stream().map<Any?> { it: CallInterceptionRequest? -> it!!.interceptedCallable!!.kind }.distinct().collect(Collectors.toList())
+            val callableKinds: MutableList<CallableKindInfo?> = requests.stream().map<CallableKindInfo?> { it: CallInterceptionRequest -> it.interceptedCallable!!.kind }.distinct().collect(Collectors.toList())
             if (callableKinds.contains(CallableKindInfo.STATIC_METHOD) || callableKinds.contains(CallableKindInfo.INSTANCE_METHOD)) {
                 scopeExpressions.add(CodeBlock.of("\$T.methodsNamed(\$S)", INTERCEPTED_SCOPE_CLASS, name))
             }
@@ -256,8 +257,8 @@ class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceG
                     )
                 )
             propertyTypeByReceiverType.forEach { (receiverType: Type?, propertyType: Type?) ->
-                result.beginControlFlow("if (\$T.class.isAssignableFrom(receiverClass))", TypeUtils.typeName(receiverType).box())
-                result.addStatement("return \$T.class", TypeUtils.typeName(propertyType).box())
+                result.beginControlFlow("if (\$T.class.isAssignableFrom(receiverClass))", requireNotNull(TypeUtils.typeName(requireNotNull(receiverType))).box())
+                result.addStatement("return \$T.class", requireNotNull(TypeUtils.typeName(requireNotNull(propertyType))).box())
                 result.endControlFlow()
             }
             result.addStatement("return null")
@@ -269,16 +270,18 @@ class InterceptGroovyCallsGenerator : RequestGroupingInstrumentationClassSourceG
                 return request.interceptedCallable!!.returnType!!.type!!
             } else if (request.interceptedCallable!!.kind === CallableKindInfo.GROOVY_PROPERTY_SETTER) {
                 val newValueParameter =
-                    request.interceptedCallable!!.parameters!!.stream().filter({ parameter -> parameter!!.kind === ParameterKindInfo.METHOD_PARAMETER }).findFirst()
-                return newValueParameter.orElseThrow<IllegalArgumentException?>(java.util.function.Supplier { java.lang.IllegalArgumentException("a setter interceptor must accept a parameter") })!!.parameterType
+                    request.interceptedCallable!!.parameters!!.stream().filter({ parameter -> parameter.kind === ParameterKindInfo.METHOD_PARAMETER }).findFirst()
+                return requireNotNull(newValueParameter.orElseThrow<IllegalArgumentException?>(java.util.function.Supplier { java.lang.IllegalArgumentException("a setter interceptor must accept a parameter") })!!.parameterType)
             } else {
                 throw IllegalArgumentException("expected a property interception request, got " + request)
             }
         }
 
         private fun propertyReceiverType(request: CallInterceptionRequest): Type {
-            return request.interceptedCallable!!.parameters!!.stream().filter({ it -> it!!.kind === ParameterKindInfo.RECEIVER }).findFirst()
-                .orElseThrow({ java.lang.IllegalArgumentException("a property interception request must have a receiver parameter") })!!.parameterType
+            return requireNotNull(
+                request.interceptedCallable!!.parameters!!.stream().filter({ it -> it.kind === ParameterKindInfo.RECEIVER }).findFirst()
+                    .orElseThrow({ java.lang.IllegalArgumentException("a property interception request must have a receiver parameter") })!!.parameterType
+            )
         }
 
         val FILTERABLE_CALL_INTERCEPTOR: ClassName = ClassName.get(FilterableCallInterceptor::class.java)

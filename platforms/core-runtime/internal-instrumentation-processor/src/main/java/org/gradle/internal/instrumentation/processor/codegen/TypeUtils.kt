@@ -81,11 +81,11 @@ object TypeUtils {
         return className(type)
     }
 
-    fun getTypeParameter(typeName: TypeName?, index: Int): Optional<TypeName?> {
+    fun getTypeParameter(typeName: TypeName?, index: Int): Optional<TypeName> {
         if (typeName is ParameterizedTypeName && typeName.typeArguments.size > index) {
-            return Optional.of<TypeName?>(typeName.typeArguments.get(index))
+            return Optional.of(typeName.typeArguments.get(index))
         }
-        return Optional.empty<TypeName?>()
+        return Optional.empty()
     }
 
     fun className(type: Type): ClassName? {

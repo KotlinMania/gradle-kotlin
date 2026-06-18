@@ -29,6 +29,7 @@ import java.lang.invoke.MethodType;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Objects;
 
 public abstract class ClassLoaderUtils {
     private static final ClassDefiner CLASS_DEFINER;
@@ -180,7 +181,7 @@ public abstract class ClassLoaderUtils {
         @Override
         @SuppressWarnings("unchecked")
         public <T> Class<T> defineClass(ClassLoader classLoader, String className, byte[] classBytes) {
-            return (Class<T>) defineClassMethod.invoke(classLoader, className, classBytes, 0, classBytes.length);
+            return (Class<T>) Objects.requireNonNull(defineClassMethod.invoke(classLoader, className, classBytes, 0, classBytes.length));
         }
 
         @Override
@@ -222,7 +223,7 @@ public abstract class ClassLoaderUtils {
 
         @Override
         public Package[] getPackages(ClassLoader classLoader) {
-            return GET_PACKAGES_METHOD.invoke(classLoader);
+            return Objects.requireNonNull(GET_PACKAGES_METHOD.invoke(classLoader));
         }
 
         @Nullable

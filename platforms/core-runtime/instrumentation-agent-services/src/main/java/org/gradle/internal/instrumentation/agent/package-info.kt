@@ -14,8 +14,3 @@
  * limitations under the License.
  */
 package org.gradle.internal.instrumentation.agent
-
-import org.gradle.internal.lazy.Lazy.Companion.locking
-import org.gradle.internal.lazy.Lazy.Factory.of
-import org.gradle.internal.instrumentation.agent.ThirdPartyAgentDetection
-

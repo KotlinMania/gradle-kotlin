@@ -119,12 +119,12 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                                 requireNotNull(parameter.name)
                             ).build()
                         }
-                    spec = MethodSpec.methodBuilder(requireNotNull(implementation.name))
+                        spec = MethodSpec.methodBuilder(requireNotNull(implementation.name))
                         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .addParameter(TypeUtils.typeName(requireNotNull(callable.owner).type), SELF_PARAMETER_NAME)
+                        .addParameter(requireNotNull(TypeUtils.typeName(requireNotNull(requireNotNull(callable.owner).type))), SELF_PARAMETER_NAME)
                         .addParameters(parameters)
                         .addCode(generateMethodBody(implementation, callable, implementationExtra))
-                        .returns(TypeUtils.typeName(requireNotNull(callable.returnType).type))
+                        .returns(requireNotNull(TypeUtils.typeName(requireNotNull(requireNotNull(callable.returnType).type))))
                         .addAnnotations(getAnnotations(implementationExtra))
                         .build()
                 }
@@ -168,19 +168,15 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                 }
                 parameters.add(0, ParameterSpec.builder(type, SELF_PARAMETER_NAME).build())
                 bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID) {
-                    CodeBlock.of("return this.\$N?\$N", /* keep type-safe emission */ self(), passedParameters)
+                    CodeBlock.of("\$N.\$N(\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
                 } else {
-                    if (parameters.isEmpty()) {
-                        CodeBlock.of("return this.\$N().\$N(\\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
-                    } else {
-                        CodeBlock.of("return \$N.\$N(\\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
-                    }
+                    CodeBlock.of("return \$N.\$N(\$L)", SELF_PARAMETER_NAME, bridgedMethod.getSimpleName(), passedParameters)
                 }
             } else {
                 bridgeCall = if (TypeName.get(bridgedMethod.getReturnType()) == TypeName.VOID) {
-                    CodeBlock.of("return \\$T.\$N(\\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
+                    CodeBlock.of("\$T.\$N(\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
                 } else {
-                    CodeBlock.of("return \\$T.\$N(\\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
+                    CodeBlock.of("return \$T.\$N(\$L)", TypeName.get(bridgedMethod.getEnclosingElement().asType()), bridgedMethod.getSimpleName(), passedParameters)
                 }
             }
             bodyBuilder.addStatement(bridgeCall)
@@ -244,9 +240,9 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                         deprecatedPropertyName
                     )
                     CodeBlock.builder()
-                        .add("\\$T.deprecate(\\$S)\\n", GradleReferencedType.DEPRECATION_LOGGER.asClassName(), message)
+                        .add("\$T.deprecate(\$S)\n", GradleReferencedType.DEPRECATION_LOGGER.asClassName(), message)
                         .add(
-                            ".withContext(\\$S)\\n",
+                            ".withContext(\$S)\n",
                             String.format(
                                 "Property '%s' was removed and this compatibility shim will be removed in Gradle 10. Please use '%s' property instead.",
                                 deprecatedPropertyName,
@@ -258,16 +254,16 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                 ReplacedDeprecation.RemovedIn.UNSPECIFIED -> {
                     val builder = CodeBlock.builder()
                         .add(
-                            "\\$T.deprecateProperty(\\$T.class, \\$S)\\n",
+                            "\$T.deprecateProperty(\$T.class, \$S)\n",
                             GradleReferencedType.DEPRECATION_LOGGER.asClassName(),
-                            TypeUtils.typeName(requireNotNull(callableInfo.owner).type),
+                            requireNotNull(TypeUtils.typeName(requireNotNull(requireNotNull(callableInfo.owner).type))),
                             deprecatedPropertyName
                         )
-                        .add(".withContext(\\$S)\\n", "Property was automatically upgraded to the lazy version.")
+                        .add(".withContext(\$S)\n", "Property was automatically upgraded to the lazy version.")
                     if (newPropertyName != deprecatedPropertyName) {
-                        builder.add(".replaceWith(\\$S)\\n", newPropertyName)
+                        builder.add(".replaceWith(\$S)\n", newPropertyName)
                     }
-                    builder.add(".startingWithGradle10(\\$S)\\n", "this property is replaced with a lazy version")
+                    builder.add(".startingWithGradle10(\$S)\n", "this property is replaced with a lazy version")
                 }
                 else -> throw UnsupportedOperationException(
                     "Only " + ReplacedDeprecation.RemovedIn.UNSPECIFIED + " and " + ReplacedDeprecation.RemovedIn.GRADLE9 +
@@ -276,7 +272,7 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
             }
 
             if (deprecationSpec.withUpgradeGuideVersion != -1) {
-                deprecationBuilder.add(".withUpgradeGuideSection(\\$L, \\$S)\\n", deprecationSpec.withUpgradeGuideVersion, deprecationSpec.withUpgradeGuideSection)
+                deprecationBuilder.add(".withUpgradeGuideSection(\$L, \$S)\n", deprecationSpec.withUpgradeGuideVersion, deprecationSpec.withUpgradeGuideSection)
             } else if (deprecationSpec.isWithDslReference) {
                 deprecationBuilder.add(".withDslReference()\\n")
             } else {
@@ -294,12 +290,12 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
         ): CodeBlock {
             val returnAsmType = requireNotNull(returnType.type)
             return when (upgradedPropertyType) {
-                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> CodeBlock.of("return \\$N.\\$N().getAsFile().getOrNull()", SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.CONFIGURABLE_FILE_COLLECTION, GradleLazyType.FILE_COLLECTION -> CodeBlock.of("return \\$N.\\$N()", SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.LIST_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.LIST_PROPERTY_LIST_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.SET_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.SET_PROPERTY_SET_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.MAP_PROPERTY -> CodeBlock.of("return new \\$T<>(\\$N.\\$N())", GradleReferencedType.MAP_PROPERTY_MAP_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
-                GradleLazyType.PROPERTY -> CodeBlock.of("return \\$N.\\$N().getOrElse(\\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
+                GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> CodeBlock.of("return \$N.\$N().getAsFile().getOrNull()", SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.CONFIGURABLE_FILE_COLLECTION, GradleLazyType.FILE_COLLECTION -> CodeBlock.of("return \$N.\$N()", SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.LIST_PROPERTY -> CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.LIST_PROPERTY_LIST_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.SET_PROPERTY -> CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.SET_PROPERTY_SET_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.MAP_PROPERTY -> CodeBlock.of("return new \$T<>(\$N.\$N())", GradleReferencedType.MAP_PROPERTY_MAP_VIEW.asClassName(), SELF_PARAMETER_NAME, propertyGetterName)
+                GradleLazyType.PROPERTY -> CodeBlock.of("return \$N.\$N().getOrElse(\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
                 GradleLazyType.PROVIDER -> {
                     val providerParameter = TypeUtils.getTypeParameter(implementationExtra.newPropertyType, 0)
                     val mapsToFileSystemLocation =
@@ -310,16 +306,16 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                         }
                     if (mapsToFileSystemLocation) {
                         CodeBlock.of(
-                            "return \\$N.\\$N().map(\\$T::getAsFile).getOrNull()",
+                            "return \$N.\$N().map(\$T::getAsFile).getOrNull()",
                             SELF_PARAMETER_NAME,
                             propertyGetterName,
                             GradleReferencedType.FILE_SYSTEM_LOCATION.asClassName()
                         )
                     } else {
-                        CodeBlock.of("return \\$N.\\$N().getOrElse(\\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
+                        CodeBlock.of("return \$N.\$N().getOrElse(\$L)", SELF_PARAMETER_NAME, propertyGetterName, TypeUtils.getDefaultValue(returnAsmType))
                     }
                 }
-                else -> throw UnsupportedOperationException("Generating get call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
+                else -> throw UnsupportedOperationException("Generating get call for type: " + requireNotNull(upgradedPropertyType.asClassName()).reflectionName() + " is not supported")
             }
         }
 
@@ -332,13 +328,13 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                 GradleLazyType.REGULAR_FILE_PROPERTY, GradleLazyType.DIRECTORY_PROPERTY -> ".fileValue(arg0)"
                 GradleLazyType.CONFIGURABLE_FILE_COLLECTION -> ".setFrom(arg0)"
                 GradleLazyType.LIST_PROPERTY, GradleLazyType.SET_PROPERTY, GradleLazyType.MAP_PROPERTY, GradleLazyType.PROPERTY -> ".set(arg0)"
-                GradleLazyType.PROVIDER -> throw UnsupportedOperationException("Generating set call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
-                else -> throw UnsupportedOperationException("Generating set call for type: " + upgradedPropertyType.asClassName().reflectionName() + " is not supported")
+                GradleLazyType.PROVIDER -> throw UnsupportedOperationException("Generating set call for type: " + requireNotNull(upgradedPropertyType.asClassName()).reflectionName() + " is not supported")
+                else -> throw UnsupportedOperationException("Generating set call for type: " + requireNotNull(upgradedPropertyType.asClassName()).reflectionName() + " is not supported")
             }
             return if (implementationExtra.returnType == TypeName.VOID) {
-                CodeBlock.of("\\$N.\\$N()\\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment)
+                CodeBlock.of("\$N.\$N()\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment)
             } else {
-                CodeBlock.of("\\$N.\\$N()\\$N;\\nreturn \\$N", SELF_PARAMETER_NAME, propertyGetterName, assignment, SELF_PARAMETER_NAME)
+                CodeBlock.of("\$N.\$N()\$N;\nreturn \$N", SELF_PARAMETER_NAME, propertyGetterName, assignment, SELF_PARAMETER_NAME)
             }
         }
     }

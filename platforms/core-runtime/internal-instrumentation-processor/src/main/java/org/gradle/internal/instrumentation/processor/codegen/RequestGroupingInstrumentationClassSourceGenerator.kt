@@ -35,13 +35,14 @@ abstract class RequestGroupingInstrumentationClassSourceGenerator : Instrumentat
         onFailure: Consumer<in FailureInfo?>?
     ): Consumer<TypeSpec.Builder?>?
 
-    override fun generateCodeForRequestedInterceptors(interceptionRequests: MutableCollection<CallInterceptionRequest?>): InstrumentationCodeGenerator.GenerationResult {
-        val requestsByImplClass = interceptionRequests.stream()
+    override fun generateCodeForRequestedInterceptors(interceptionRequests: MutableCollection<CallInterceptionRequest?>?): InstrumentationCodeGenerator.GenerationResult {
+        val requests = requireNotNull(interceptionRequests)
+        val requestsByImplClass = requests.stream()
             .filter { it: CallInterceptionRequest? -> classNameForRequest(it) != null }
             .collect(Collectors.groupingBy(Function { request: CallInterceptionRequest? -> this.classNameForRequest(request) }, Supplier { LinkedHashMap() }, Collectors.toList()))
 
         val failuresInfo: MutableList<FailureInfo?> = ArrayList<FailureInfo?>()
-        val processedRequests: MutableSet<CallInterceptionRequest?> = LinkedHashSet<CallInterceptionRequest?>(interceptionRequests.size)
+        val processedRequests: MutableSet<CallInterceptionRequest?> = LinkedHashSet<CallInterceptionRequest?>(requests.size)
         val classContentByName: MutableMap<String?, Consumer<TypeSpec.Builder?>?> = java.util.LinkedHashMap<String?, Consumer<TypeSpec.Builder?>?>()
 
         requestsByImplClass.forEach { (className: String?, requests: MutableList<CallInterceptionRequest?>?) ->
@@ -61,17 +62,15 @@ abstract class RequestGroupingInstrumentationClassSourceGenerator : Instrumentat
     companion object {
         private fun successResult(processedRequests: MutableSet<CallInterceptionRequest?>, classContentByName: MutableMap<String?, Consumer<TypeSpec.Builder?>?>): CanGenerateClasses {
             return object : CanGenerateClasses {
-                override fun getClassNames(): MutableCollection<String?> {
-                    return classContentByName.keys
-                }
+                override val classNames: MutableCollection<String?>
+                    get() = classContentByName.keys
 
                 override fun buildType(className: String?, builder: TypeSpec.Builder?) {
                     classContentByName.get(className)!!.accept(builder)
                 }
 
-                override fun getCoveredRequests(): MutableList<CallInterceptionRequest?> {
-                    return ArrayList<CallInterceptionRequest?>(processedRequests)
-                }
+                override val coveredRequests: MutableList<CallInterceptionRequest?>
+                    get() = ArrayList<CallInterceptionRequest?>(processedRequests)
             }
         }
     }

@@ -25,16 +25,17 @@ class PathAssembler(private val gradleUserHome: File?, private val projectDirect
      * Determines the local locations for the distribution to use given the supplied configuration.
      */
     fun getDistribution(configuration: WrapperConfiguration): LocalDistribution {
-        val baseName = getDistName(configuration.getDistribution())
+        val distribution = requireNotNull(configuration.distribution)
+        val baseName = getDistName(distribution)
         val distName = removeExtension(baseName)
         val rootDirName = rootDirName(distName, configuration)
-        val distDir = File(getBaseDir(configuration.getDistributionBase()), configuration.getDistributionPath() + "/" + rootDirName)
-        val distZip = File(getBaseDir(configuration.getZipBase()), configuration.getZipPath() + "/" + rootDirName + "/" + baseName)
+        val distDir = File(getBaseDir(configuration.distributionBase), configuration.distributionPath + "/" + rootDirName)
+        val distZip = File(getBaseDir(configuration.zipBase), configuration.zipPath + "/" + rootDirName + "/" + baseName)
         return LocalDistribution(distDir, distZip)
     }
 
-    private fun rootDirName(distName: String?, configuration: WrapperConfiguration): String {
-        val urlHash = getHash(Download.Companion.safeUri(configuration.getDistribution()).toASCIIString())
+    private fun rootDirName(distName: String, configuration: WrapperConfiguration): String {
+        val urlHash = getHash(Download.Companion.safeUri(requireNotNull(configuration.distribution)).toASCIIString())
         return distName + "/" + urlHash
     }
 
@@ -91,11 +92,11 @@ class PathAssembler(private val gradleUserHome: File?, private val projectDirect
         /**
          * Returns the location to install the distribution into.
          */
-        val distributionDir: File?,
+        val distributionDir: File,
         /**
          * Returns the location to install the distribution ZIP file to.
          */
-        val zipFile: File?
+        val zipFile: File
     )
 
     companion object {

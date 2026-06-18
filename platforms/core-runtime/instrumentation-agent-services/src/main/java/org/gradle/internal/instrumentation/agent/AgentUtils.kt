@@ -38,6 +38,7 @@ object AgentUtils {
      * Matches any third-party agent switch (Java or native JVMTI) that could install a bytecode transformer.
      * Gradle's own instrumentation agent is excluded.
      */
+    @JvmStatic
     fun isThirdPartyAgentSwitch(jvmArg: String): Boolean {
         if (isJavaAgentSwitch(jvmArg)) {
             return !jvmArg.contains(AGENT_MODULE_NAME)

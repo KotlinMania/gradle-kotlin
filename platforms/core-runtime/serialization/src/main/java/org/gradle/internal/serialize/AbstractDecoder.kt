@@ -22,12 +22,13 @@ import java.io.InputStream
 abstract class AbstractDecoder : Decoder {
     private var stream: DecoderStream? = null
 
-    override fun getInputStream(): InputStream {
-        if (stream == null) {
-            stream = AbstractDecoder.DecoderStream()
+    override val inputStream: InputStream
+        get() {
+            if (stream == null) {
+                stream = DecoderStream()
+            }
+            return stream!!
         }
-        return stream!!
-    }
 
     @Throws(IOException::class)
     override fun readBytes(buffer: ByteArray) {
@@ -86,7 +87,7 @@ abstract class AbstractDecoder : Decoder {
     }
 
     @Throws(EOFException::class, Exception::class)
-    override fun <T> decodeChunked(decodeAction: Decoder.DecodeAction<Decoder?, T?>?): T? {
+    override fun <T> decodeChunked(decodeAction: Decoder.DecodeAction<Decoder, T>): T {
         throw UnsupportedOperationException()
     }
 
@@ -96,7 +97,7 @@ abstract class AbstractDecoder : Decoder {
     }
 
     @Throws(IOException::class)
-    protected abstract fun maybeReadBytes(buffer: ByteArray?, offset: Int, count: Int): Int
+    protected abstract fun maybeReadBytes(buffer: ByteArray, offset: Int, count: Int): Int
 
     @Throws(IOException::class)
     protected abstract fun maybeSkip(count: Long): Long

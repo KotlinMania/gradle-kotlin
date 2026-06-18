@@ -20,4 +20,4 @@ import org.gradle.internal.Cast
 
 @Suppress("UNCHECKED_CAST")
 fun <T> Any?.uncheckedCast(): T? =
-    Cast.uncheckedNonnullCast<T>(this)
+    Cast.uncheckedCast<T>(this)

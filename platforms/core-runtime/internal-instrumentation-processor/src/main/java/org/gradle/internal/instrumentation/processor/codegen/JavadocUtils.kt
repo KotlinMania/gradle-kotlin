@@ -38,13 +38,13 @@ object JavadocUtils {
         val interceptedCallable: CallableInfo = request.interceptedCallable!!
         val className = ClassName.bestGuess(interceptedCallable.owner!!.type!!.getClassName())
         val callableNameForDocComment = if (interceptedCallable.kind === CallableKindInfo.AFTER_CONSTRUCTOR) className.simpleName() else interceptedCallable.callableName
-        val params: MutableList<ParameterInfo?> = request.interceptedCallable!!.parameters!!
-        val methodParameters = params.stream().filter { parameter: ParameterInfo? -> parameter!!.kind.isSourceParameter() }.collect(Collectors.toList())
+        val params: MutableList<ParameterInfo> = request.interceptedCallable!!.parameters!!
+        val methodParameters = params.stream().filter { parameter: ParameterInfo -> parameter.kind?.isSourceParameter == true }.collect(Collectors.toList())
         result.add("{@link \$L#\$L", className, callableNameForDocComment)
         if (interceptedCallable.kind !== CallableKindInfo.GROOVY_PROPERTY_GETTER && interceptedCallable.kind !== CallableKindInfo.GROOVY_PROPERTY_SETTER) {
             result.add("(")
-            methodParameters.forEach(Consumer { parameter: ParameterInfo? ->
-                result.add("\$L", JavadocUtils.parameterTypeForJavadoc(parameter!!, true))
+            methodParameters.forEach(Consumer { parameter: ParameterInfo ->
+                result.add("\$L", JavadocUtils.parameterTypeForJavadoc(parameter, true))
                 if (parameter !== methodParameters.get(methodParameters.size - 1)) {
                     result.add(", ")
                 }
@@ -57,10 +57,10 @@ object JavadocUtils {
 
     fun interceptorImplementationLink(request: CallInterceptionRequest): CodeBlock {
         val result = CodeBlock.builder()
-        val params: MutableList<ParameterInfo?> = request.interceptedCallable!!.parameters!!
-        result.add("{@link \$T#\$L(", NameUtil.getClassName(request.implementationInfo!!.owner.getClassName()), request.implementationInfo!!.name)
-        params.forEach(Consumer { parameter: ParameterInfo? ->
-            result.add("\$L", JavadocUtils.parameterTypeForJavadoc(parameter!!, false))
+        val params: MutableList<ParameterInfo> = request.interceptedCallable!!.parameters!!
+        result.add("{@link \$T#\$L(", NameUtil.getClassName(requireNotNull(request.implementationInfo!!.owner).getClassName()), request.implementationInfo!!.name)
+        params.forEach(Consumer { parameter: ParameterInfo ->
+            result.add("\$L", JavadocUtils.parameterTypeForJavadoc(parameter, false))
             if (parameter !== params.get(params.size - 1)) {
                 result.add(", ")
             }
@@ -71,8 +71,8 @@ object JavadocUtils {
 
     private fun parameterTypeForJavadoc(parameterInfo: ParameterInfo, renderVararg: Boolean): CodeBlock? {
         if (parameterInfo.kind === ParameterKindInfo.VARARG_METHOD_PARAMETER && renderVararg) {
-            return CodeBlock.of("\$T...", TypeUtils.typeName(parameterInfo.parameterType.getElementType()))
+            return CodeBlock.of("\$T...", TypeUtils.typeName(requireNotNull(parameterInfo.parameterType).getElementType()))
         }
-        return CodeBlock.of("\$T", TypeUtils.typeName(parameterInfo.parameterType))
+        return CodeBlock.of("\$T", TypeUtils.typeName(requireNotNull(parameterInfo.parameterType)))
     }
 }

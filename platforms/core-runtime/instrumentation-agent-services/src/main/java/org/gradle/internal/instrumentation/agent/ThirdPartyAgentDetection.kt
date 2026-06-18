@@ -32,7 +32,7 @@ import java.util.function.Supplier
 object ThirdPartyAgentDetection {
     private val PRESENT = locking().of<Boolean?>(Supplier {
         ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
-            .anyMatch { obj: String? -> AgentUtils.isThirdPartyAgentSwitch() }
+            .anyMatch { jvmArg: String -> AgentUtils.isThirdPartyAgentSwitch(jvmArg) }
     }
     )
 

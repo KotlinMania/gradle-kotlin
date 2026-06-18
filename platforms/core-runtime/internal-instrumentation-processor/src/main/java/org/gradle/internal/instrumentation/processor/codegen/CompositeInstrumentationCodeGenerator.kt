@@ -36,29 +36,27 @@ class CompositeInstrumentationCodeGenerator(private val generators: MutableColle
                 Collectors.toList()
             )
         if (!failures.isEmpty()) {
-            return CodeFailures(failures.stream().flatMap<FailureInfo?> { it: HasFailures? -> it!!.getFailureDetails().stream() }.collect(Collectors.toList()))
+            return CodeFailures(failures.stream().flatMap<FailureInfo?> { it: HasFailures? -> requireNotNull(it!!.failureDetails).stream() }.collect(Collectors.toList()))
         }
 
         val generatingResults = results.stream().map<CanGenerateClasses?> { it: InstrumentationCodeGenerator.GenerationResult? -> it as CanGenerateClasses? }.collect(Collectors.toList())
         val generatorByClassName: MutableMap<String?, CanGenerateClasses?> = LinkedHashMap<String?, CanGenerateClasses?>()
         generatingResults.forEach(Consumer { result: CanGenerateClasses? ->
-            result!!.getClassNames().forEach(Consumer { className: String? ->
+            requireNotNull(result!!.classNames).forEach(Consumer { className: String? ->
                 check(generatorByClassName.put(className, result) == null) { "multiple code generators for class name " + className }
             })
         })
 
         return object : CanGenerateClasses {
-            override fun getClassNames(): MutableCollection<String?> {
-                return generatingResults.stream().flatMap<String?> { it: CanGenerateClasses? -> it!!.getClassNames().stream() }.collect(Collectors.toCollection(Supplier { LinkedHashSet() }))
-            }
+            override val classNames: MutableCollection<String?>
+                get() = generatingResults.stream().flatMap<String?> { it: CanGenerateClasses? -> requireNotNull(it!!.classNames).stream() }.collect(Collectors.toCollection(Supplier { LinkedHashSet() }))
 
             override fun buildType(className: String?, builder: TypeSpec.Builder?) {
                 generatorByClassName.get(className)!!.buildType(className, builder)
             }
 
-            override fun getCoveredRequests(): MutableList<CallInterceptionRequest?> {
-                return generatingResults.stream().flatMap<CallInterceptionRequest?> { it: CanGenerateClasses? -> it!!.getCoveredRequests().stream() }.distinct().collect(Collectors.toList())
-            }
+            override val coveredRequests: MutableList<CallInterceptionRequest?>
+                get() = generatingResults.stream().flatMap<CallInterceptionRequest?> { it: CanGenerateClasses? -> requireNotNull(it!!.coveredRequests).stream() }.distinct().collect(Collectors.toList())
         }
     }
 }

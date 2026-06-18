@@ -26,28 +26,29 @@ import org.objectweb.asm.Type
 import java.util.function.Consumer
 
 internal object GroovyClassGeneratorUtils {
-    fun groupRequests(interceptionRequests: MutableCollection<CallInterceptionRequest?>): CallInterceptorSpecs {
-        val namedRequests: MutableMap<String?, NamedCallableInterceptorSpec?> = LinkedHashMap<String?, NamedCallableInterceptorSpec?>()
-        val constructorRequests: MutableMap<String?, ConstructorInterceptorSpec?> = LinkedHashMap<String?, ConstructorInterceptorSpec?>()
-        interceptionRequests.forEach(Consumer { request: CallInterceptionRequest? ->
-            if (request!!.requestExtras!!.getByType(RequestExtra.InterceptGroovyCalls::class.java).isPresent()) {
-                val implementationName: String? = request.requestExtras!!.getByType(RequestExtra.InterceptGroovyCalls::class.java)
-                    .map(RequestExtra.InterceptGroovyCalls::getImplementationClassName)
-                    .orElseThrow({ IllegalStateException("Implementation class name is not set for " + request.interceptedCallable!!.owner!!.type) })
-                val interceptorType = request.requestExtras!!.getByType(RequestExtra.InterceptGroovyCalls::class.java)
-                    .map(RequestExtra.InterceptGroovyCalls::interceptionType)
-                    .orElseThrow({ IllegalStateException("Interception type name is not set for " + request.interceptedCallable!!.owner!!.type) })
-                val callable: CallableInfo = request.interceptedCallable!!
+    fun groupRequests(interceptionRequests: MutableCollection<CallInterceptionRequest?>?): CallInterceptorSpecs {
+        val namedRequests: MutableMap<String, NamedCallableInterceptorSpec> = LinkedHashMap()
+        val constructorRequests: MutableMap<String, ConstructorInterceptorSpec> = LinkedHashMap()
+        requireNotNull(interceptionRequests).filterNotNull().forEach(Consumer { request: CallInterceptionRequest ->
+            val extra = request.requestExtras.getByType(RequestExtra.InterceptGroovyCalls::class.java).orElse(null)
+            if (extra != null) {
+                val implementationName = requireNotNull(extra.implementationClassName) {
+                    "Implementation class name is not set for " + requireNotNull(request.interceptedCallable).owner?.type
+                }
+                val interceptorType = requireNotNull(extra.interceptionType) {
+                    "Interception type name is not set for " + requireNotNull(request.interceptedCallable).owner?.type
+                }
+                val callable: CallableInfo = requireNotNull(request.interceptedCallable)
                 val kind = callable.kind
                 if (kind == CallableKindInfo.AFTER_CONSTRUCTOR) {
-                    val constructedType: Type = request.interceptedCallable!!.owner!!.type!!
+                    val constructedType: Type = requireNotNull(requireNotNull(request.interceptedCallable).owner).type!!
                     val typeKey = implementationName + ":" + constructedType
-                    constructorRequests.computeIfAbsent(typeKey) { k: kotlin.String? -> ConstructorInterceptorSpec.Companion.of(implementationName, constructedType, interceptorType) }!!.getRequests()
+                    constructorRequests.computeIfAbsent(typeKey) { ConstructorInterceptorSpec.Companion.of(implementationName, constructedType, interceptorType) }.requests
                         .add(request)
                 } else {
                     val name = NameUtil.interceptedJvmMethodName(callable)
                     val nameKey = implementationName + ":" + NameUtil.interceptedJvmMethodName(callable)
-                    namedRequests.computeIfAbsent(nameKey) { k: kotlin.String? -> NamedCallableInterceptorSpec.Companion.of(implementationName, name, interceptorType) }!!.getRequests().add(request)
+                    namedRequests.computeIfAbsent(nameKey) { NamedCallableInterceptorSpec.Companion.of(implementationName, name, interceptorType) }.requests.add(request)
                 }
             }
         })

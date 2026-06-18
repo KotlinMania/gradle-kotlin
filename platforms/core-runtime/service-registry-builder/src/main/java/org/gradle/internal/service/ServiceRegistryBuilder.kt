@@ -168,12 +168,7 @@ class ServiceRegistryBuilder private constructor() {
     fun build(): CloseableServiceRegistry {
         val parentRegistries = this.parents.filterNotNull().toTypedArray()
         val configuredScope = scope
-        val registry = create(configuredScope, strict, displayName, parentRegistries) as DefaultServiceRegistry
-
-        for (provider in providers) {
-            registry.addProvider(provider)
-        }
-        return registry
+        return create(configuredScope, strict, displayName, parentRegistries, providers)
     }
 
     companion object {

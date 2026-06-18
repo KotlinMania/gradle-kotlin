@@ -32,6 +32,7 @@ object Cast {
      * @param <I> The type of the object to be vast
      * @return The input object, cast to the output type
     </I></O> */
+    @JvmStatic
     fun <O, I> cast(outputType: Class<O?>, `object`: I?): O? {
         try {
             return outputType.cast(`object`)
@@ -58,6 +59,7 @@ object Cast {
      * @param <I> The type of the object to be vast
      * @return The input object, cast to the output type
     </I></O> */
+    @JvmStatic
     fun <O, I> castNullable(outputType: Class<O?>, `object`: I?): O? {
         if (`object` == null) {
             return null
@@ -72,8 +74,8 @@ object Cast {
     }
 
     @JvmStatic
-    fun <T> uncheckedNonnullCast(`object`: Any?): T? {
-        return `object` as T?
+    fun <T : Any> uncheckedNonnullCast(`object`: Any?): T {
+        return `object` as T
     }
 
     /**
@@ -107,6 +109,7 @@ object Cast {
      * @see [NullAway docs on "downcasting"](https://github.com/uber/NullAway/wiki/Suppressing-Warnings.downcasting)
     </T> */
     // See the javadoc
+    @JvmStatic
     fun <T : Any?> unsafeStripNullable(`object`: T?): T? {
         return `object`
     }

@@ -16,6 +16,7 @@
 package org.gradle.internal.serialize
 
 import java.io.IOException
+import java.io.OutputStream
 
 /**
  * Provides a way to encode structured data to a backing byte stream. Implementations may buffer outgoing encoded bytes prior
@@ -25,8 +26,7 @@ interface Encoder {
     /**
      * Returns an [OutputStream] that can be used to write raw bytes to the stream.
      */
-    @JvmField
-    val outputStream: OutputStream?
+    val outputStream: OutputStream
 
     /**
      * Writes a raw byte value to the stream.
@@ -38,31 +38,31 @@ interface Encoder {
      * Writes the given raw bytes to the stream. Does not encode any length information.
      */
     @Throws(IOException::class)
-    fun writeBytes(bytes: ByteArray?)
+    fun writeBytes(bytes: ByteArray)
 
     /**
      * Writes the given raw bytes to the stream. Does not encode any length information.
      */
     @Throws(IOException::class)
-    fun writeBytes(bytes: ByteArray?, offset: Int, count: Int)
+    fun writeBytes(bytes: ByteArray, offset: Int, count: Int)
 
     /**
      * Writes the given byte array to the stream. Encodes the bytes and length information.
      */
     @Throws(IOException::class)
-    fun writeBinary(bytes: ByteArray?)
+    fun writeBinary(bytes: ByteArray)
 
     /**
      * Writes the given byte array to the stream. Encodes the bytes and length information.
      */
     @Throws(IOException::class)
-    fun writeBinary(bytes: ByteArray?, offset: Int, count: Int)
+    fun writeBinary(bytes: ByteArray, offset: Int, count: Int)
 
     /**
      * Appends an encoded stream to this stream. Encodes the stream as a series of chunks with length information.
      */
     @Throws(Exception::class)
-    fun encodeChunked(writeAction: EncodeAction<Encoder?>?)
+    fun encodeChunked(writeAction: EncodeAction<Encoder>)
 
     /**
      * Writes a signed 64 bit long value. The implementation may encode the value as a variable number of bytes, not necessarily as 8 bytes.
@@ -132,7 +132,7 @@ interface Encoder {
      * Writes a non-null string value.
      */
     @Throws(IOException::class)
-    fun writeString(value: CharSequence?)
+    fun writeString(value: CharSequence)
 
     /**
      * Writes a nullable string value.
@@ -142,6 +142,6 @@ interface Encoder {
 
     interface EncodeAction<T> {
         @Throws(Exception::class)
-        fun write(target: T?)
+        fun write(target: T)
     }
 }

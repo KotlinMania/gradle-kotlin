@@ -39,18 +39,18 @@ class Install(private val logger: Logger, private val download: IDownload, priva
 
     @Throws(Exception::class)
     fun createDist(configuration: WrapperConfiguration): File? {
-        val distributionUrl = configuration.getDistribution()
+        val distributionUrl = requireNotNull(configuration.distribution)
 
         val localDistribution = pathAssembler.getDistribution(configuration)
-        val distDir = localDistribution.getDistributionDir()
-        val localZipFile = localDistribution.getZipFile()
+        val distDir = localDistribution.distributionDir
+        val localZipFile = localDistribution.zipFile
 
         return exclusiveFileAccessManager.access<File?>(localZipFile, Callable {
             val markerFile = File(localZipFile.getParentFile(), localZipFile.getName() + ".ok")
             if (distDir.isDirectory() && markerFile.isFile()) {
                 val installCheck = verifyDistributionRoot(distDir, distDir.getAbsolutePath())
                 if (installCheck.isVerified) {
-                    return@access installCheck.gradleHome
+                    return@Callable installCheck.gradleHome
                 }
                 // Distribution is invalid. Try to reinstall.
                 System.err.println(installCheck.failureMessage)
@@ -64,7 +64,7 @@ class Install(private val logger: Logger, private val download: IDownload, priva
                 setExecutablePermissions(installCheck.gradleHome)
                 markerFile.createNewFile()
                 localZipFile.delete()
-                return@access installCheck.gradleHome
+                return@Callable installCheck.gradleHome
             }
             // Distribution couldn't be installed.
             throw RuntimeException(installCheck.failureMessage)
@@ -73,19 +73,19 @@ class Install(private val logger: Logger, private val download: IDownload, priva
 
     @Throws(Exception::class)
     private fun fetchDistribution(localZipFile: File, distributionUrl: URI, distDir: File, configuration: WrapperConfiguration) {
-        var distributionSha256Sum = configuration.getDistributionSha256Sum()
+        var distributionSha256Sum = configuration.distributionSha256Sum
         var failed = false
         var retries: Int = BROKEN_ZIP_RETRIES
         do {
             try {
                 val needsDownload = !localZipFile.isFile() || failed
                 if (needsDownload) {
-                    forceFetch(localZipFile, distributionUrl, configuration.getRetries(), configuration.getRetryBackOffMs())
+                    forceFetch(localZipFile, distributionUrl, configuration.retries, configuration.retryBackOffMs)
                 }
 
                 deleteLocalTopLevelDirs(distDir)
 
-                verifyDownloadChecksum(configuration.getDistribution().toASCIIString(), localZipFile, distributionSha256Sum)
+                verifyDownloadChecksum(requireNotNull(configuration.distribution).toASCIIString(), localZipFile, distributionSha256Sum)
 
                 unzipLocal(localZipFile, distDir)
                 failed = false
@@ -103,12 +103,12 @@ class Install(private val logger: Logger, private val download: IDownload, priva
     }
 
     private fun fetchDistributionSha256Sum(configuration: WrapperConfiguration, localZipFile: File): String? {
-        val distribution = configuration.getDistribution()
+        val distribution = requireNotNull(configuration.distribution)
         try {
             val distributionUrl = distribution.resolve(distribution.getPath() + SHA_256)
             val tmpZipFile = File(localZipFile.getParentFile(), localZipFile.getName() + SHA_256)
 
-            forceFetch(tmpZipFile, distributionUrl, configuration.getRetries(), configuration.getRetryBackOffMs())
+            forceFetch(tmpZipFile, distributionUrl, configuration.retries, configuration.retryBackOffMs)
 
             BufferedReader(InputStreamReader(Files.newInputStream(tmpZipFile.toPath()), StandardCharsets.UTF_8)).use { reader ->
                 return reader.readLine()
@@ -190,23 +190,23 @@ class Install(private val logger: Logger, private val download: IDownload, priva
             }
         }
 
-        throw lastException
+        throw lastException ?: RuntimeException("Could not download Gradle distribution.")
     }
 
     private fun verifyDistributionRoot(distDir: File, distributionDescription: String?): InstallCheck {
         val dirs = listDirs(distDir)
         if (dirs.isEmpty()) {
-            return InstallCheck.Companion.failure(String.format("Gradle distribution '%s' does not contain any directories. Expected to find exactly 1 directory.", distributionDescription))
+            return InstallCheck.failure(String.format("Gradle distribution '%s' does not contain any directories. Expected to find exactly 1 directory.", distributionDescription))
         }
         if (dirs.size != 1) {
-            return InstallCheck.Companion.failure(String.format("Gradle distribution '%s' contains too many directories. Expected to find exactly 1 directory.", distributionDescription))
+            return InstallCheck.failure(String.format("Gradle distribution '%s' contains too many directories. Expected to find exactly 1 directory.", distributionDescription))
         }
 
         val gradleHome: File? = dirs.get(0)
         if (BootstrapMainStarter.Companion.findLauncherJar(gradleHome) == null) {
-            return InstallCheck.Companion.failure(String.format("Gradle distribution '%s' does not appear to contain a Gradle distribution.", distributionDescription))
+            return InstallCheck.failure(String.format("Gradle distribution '%s' does not appear to contain a Gradle distribution.", distributionDescription))
         }
-        return InstallCheck.Companion.success(gradleHome)
+        return InstallCheck.success(gradleHome)
     }
 
     @Throws(Exception::class)
@@ -239,11 +239,11 @@ class Install(private val logger: Logger, private val download: IDownload, priva
 
     private fun listDirs(distDir: File): MutableList<File> {
         if (!distDir.exists()) {
-            return mutableListOf<File?>()
+            return mutableListOf()
         }
         val files = distDir.listFiles()
         if (files == null) {
-            return mutableListOf<File?>()
+            return mutableListOf()
         }
 
         val dirs: MutableList<File> = ArrayList<File>()
@@ -340,16 +340,16 @@ class Install(private val logger: Logger, private val download: IDownload, priva
         out.close()
     }
 
-    private class InstallCheck(private val gradleHome: File?, private val failureMessage: String?) {
+    private class InstallCheck(val gradleHome: File?, val failureMessage: String?) {
         val isVerified: Boolean
             get() = gradleHome != null
 
         companion object {
-            private fun failure(message: String?): InstallCheck {
+            fun failure(message: String?): InstallCheck {
                 return InstallCheck(null, message)
             }
 
-            private fun success(gradleHome: File?): InstallCheck {
+            fun success(gradleHome: File?): InstallCheck {
                 return InstallCheck(gradleHome, null)
             }
         }

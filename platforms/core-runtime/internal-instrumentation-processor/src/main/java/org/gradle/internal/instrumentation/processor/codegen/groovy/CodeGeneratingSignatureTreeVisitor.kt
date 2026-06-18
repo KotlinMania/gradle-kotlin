@@ -23,7 +23,6 @@ import org.gradle.internal.instrumentation.model.CallableKindInfo
 import org.gradle.internal.instrumentation.processor.codegen.TypeUtils
 import org.objectweb.asm.Type
 import java.util.Arrays
-import java.util.Objects
 import java.util.Stack
 import java.util.function.Function
 import java.util.stream.Stream
@@ -35,29 +34,29 @@ internal class CodeGeneratingSignatureTreeVisitor(private val result: CodeBlock.
      * @param paramIndex index of the parameter in the signatures, -1 stands for the receiver
      */
     fun visit(current: SignatureTree, paramIndex: Int) {
-        val leafInCurrent = current.getLeafOrNull()
+        val leafInCurrent = current.leafOrNull
         if (leafInCurrent != null) {
             generateInvocationWhenArgsMatched(leafInCurrent, paramIndex)
         }
         val children = current.getChildrenByMatchEntry()
         if (!children.isEmpty()) {
-            val hasParamMatchers = children.keys.stream().anyMatch { it: ParameterMatchEntry? -> it!!.kind == ParameterMatchEntry.Kind.PARAMETER }
+            val hasParamMatchers = children.keys.any { it.kind == ParameterMatchEntry.Kind.PARAMETER }
             if (hasParamMatchers) { // is not the receiver or vararg
                 result.beginControlFlow("if (invocation.getArgsCount() > \$L)", paramIndex)
                 result.addStatement("Object arg$1L = invocation.getArgument($1L)", paramIndex)
             }
             // Visit non-vararg invocations first and varargs after:
-            children.forEach { (entry: ParameterMatchEntry?, child: SignatureTree?) ->
-                if (entry!!.kind != ParameterMatchEntry.Kind.VARARG) {
-                    generateNormalCallChecksAndVisitSubtree(entry, child!!, paramIndex)
+            children.forEach { (entry: ParameterMatchEntry, child: SignatureTree) ->
+                if (entry.kind != ParameterMatchEntry.Kind.VARARG) {
+                    generateNormalCallChecksAndVisitSubtree(entry, child, paramIndex)
                 }
             }
             if (hasParamMatchers) {
                 result.endControlFlow()
             }
-            children.forEach { (entry: ParameterMatchEntry?, child: SignatureTree?) ->
-                if (entry!!.kind == ParameterMatchEntry.Kind.VARARG) {
-                    generateVarargCheckAndInvocation(entry, child!!, paramIndex)
+            children.forEach { (entry: ParameterMatchEntry, child: SignatureTree) ->
+                if (entry.kind == ParameterMatchEntry.Kind.VARARG) {
+                    generateVarargCheckAndInvocation(entry, child, paramIndex)
                 }
             }
         }
@@ -84,10 +83,10 @@ internal class CodeGeneratingSignatureTreeVisitor(private val result: CodeBlock.
     }
 
     private fun emitInvocationCodeWithReturn(request: CallInterceptionRequest, argsCode: CodeBlock?) {
-        val implementationOwner = TypeUtils.typeName(request.implementationInfo!!.owner)
+        val implementationOwner = TypeUtils.typeName(requireNotNull(request.implementationInfo!!.owner))
         val implementationName = request.implementationInfo!!.name
         if (request.interceptedCallable!!.kind === CallableKindInfo.AFTER_CONSTRUCTOR) {
-            result.addStatement("$1T result = new $1T($2L)", TypeUtils.typeName(request.interceptedCallable!!.owner!!.type), paramVariablesStack.stream().collect(CodeBlock.joining(", ")))
+            result.addStatement("$1T result = new $1T($2L)", TypeUtils.typeName(requireNotNull(request.interceptedCallable!!.owner!!.type)), paramVariablesStack.stream().collect(CodeBlock.joining(", ")))
             val interceptorArgs = CodeBlock.join(Arrays.asList<CodeBlock?>(CodeBlock.of("result"), argsCode), ", ")
             result.addStatement("\$T.\$L(\$L)", implementationOwner, implementationName, interceptorArgs)
             result.addStatement("return result")
@@ -100,7 +99,7 @@ internal class CodeGeneratingSignatureTreeVisitor(private val result: CodeBlock.
     }
 
     private fun generateVarargCheckAndInvocation(entry: ParameterMatchEntry, child: SignatureTree, paramIndex: Int) {
-        val entryParamType = TypeUtils.typeName(entry.type)
+        val entryParamType = TypeUtils.typeName(requireNotNull(entry.type))
 
         result.add("// Trying to match the vararg invocation\n")
         val varargVariable = CodeBlock.of("varargValues")
@@ -125,8 +124,8 @@ internal class CodeGeneratingSignatureTreeVisitor(private val result: CodeBlock.
         result.endControlFlow()
         result.beginControlFlow("if (\$L)", varargMatched)
         paramVariablesStack.push(varargVariable)
-        val request = Objects.requireNonNull<CallInterceptionRequest?>(child.getLeafOrNull())
-        emitInvocationCodeWithReturn(request!!, prepareInvocationArgs(request))
+        val request = requireNotNull(child.leafOrNull)
+        emitInvocationCodeWithReturn(request, prepareInvocationArgs(request))
         paramVariablesStack.pop()
         result.endControlFlow()
     }
@@ -138,7 +137,7 @@ internal class CodeGeneratingSignatureTreeVisitor(private val result: CodeBlock.
             CodeBlock.of("arg\$L", paramIndex)
 
         val childArgCount = paramIndex + 1
-        val entryChildType = TypeUtils.typeName(entry.type)
+        val entryChildType = requireNotNull(TypeUtils.typeName(requireNotNull(entry.type)))
         val matchExpr = if (entry.kind == ParameterMatchEntry.Kind.RECEIVER_AS_CLASS) CodeBlock.of("\$L.equals(\$T.class)", argExpr, entryChildType) else  // Vararg fits here, too:
             CodeBlock.of("$1L == null || $1L instanceof $2T", argExpr, entryChildType.box())
         result.beginControlFlow("if (\$L)", matchExpr)

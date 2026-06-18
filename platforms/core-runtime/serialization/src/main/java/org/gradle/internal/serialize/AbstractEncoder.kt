@@ -21,12 +21,13 @@ import java.io.OutputStream
 abstract class AbstractEncoder : Encoder {
     private var stream: EncoderStream? = null
 
-    override fun getOutputStream(): OutputStream {
-        if (stream == null) {
-            stream = AbstractEncoder.EncoderStream()
+    override val outputStream: OutputStream
+        get() {
+            if (stream == null) {
+                stream = EncoderStream()
+            }
+            return stream!!
         }
-        return stream!!
-    }
 
     @Throws(IOException::class)
     override fun writeBytes(bytes: ByteArray) {
@@ -39,13 +40,13 @@ abstract class AbstractEncoder : Encoder {
     }
 
     @Throws(IOException::class)
-    override fun writeBinary(bytes: ByteArray?, offset: Int, count: Int) {
+    override fun writeBinary(bytes: ByteArray, offset: Int, count: Int) {
         writeSmallInt(count)
         writeBytes(bytes, offset, count)
     }
 
     @Throws(Exception::class)
-    override fun encodeChunked(writeAction: Encoder.EncodeAction<Encoder?>?) {
+    override fun encodeChunked(writeAction: Encoder.EncodeAction<Encoder>) {
         throw UnsupportedOperationException()
     }
 
@@ -86,7 +87,7 @@ abstract class AbstractEncoder : Encoder {
         }
 
         @Throws(IOException::class)
-        override fun write(buffer: ByteArray?, offset: Int, length: Int) {
+        override fun write(buffer: ByteArray, offset: Int, length: Int) {
             writeBytes(buffer, offset, length)
         }
 

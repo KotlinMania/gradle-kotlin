@@ -49,11 +49,11 @@ class InstrumentationCodeGeneratorHost(
     ) {
         val result = codeGenerator.generateCodeForRequestedInterceptors(interceptionRequests)
         if (result is CanGenerateClasses) {
-            for (canonicalClassName in result.getClassNames()) {
-                val className = NameUtil.getClassName(canonicalClassName)
+            for (canonicalClassName in requireNotNull(result.classNames)) {
+                val className = NameUtil.getClassName(requireNotNull(canonicalClassName))
                 val builder = TypeSpec.classBuilder(className)
                 val generateType = result
-                getOriginatingElements(generateType.getCoveredRequests()).forEach(Consumer { originatingElement: ExecutableElement? -> builder.addOriginatingElement(originatingElement) })
+                getOriginatingElements(generateType.coveredRequests).forEach(Consumer { originatingElement: ExecutableElement? -> builder.addOriginatingElement(originatingElement) })
                 generateType.buildType(canonicalClassName, builder)
                 val generatedType = builder.build()
                 val javaFile = JavaFile.builder(className.packageName(), generatedType).indent("    ").build()
@@ -76,7 +76,7 @@ class InstrumentationCodeGeneratorHost(
 
     private fun generateResource(resourceGenerator: InstrumentationResourceGenerator, interceptionRequests: MutableCollection<CallInterceptionRequest?>?) {
         val filteredRequests = resourceGenerator.filterRequestsForResource(interceptionRequests)
-        if (filteredRequests.isEmpty()) {
+        if (filteredRequests.isNullOrEmpty()) {
             return
         }
 
@@ -85,14 +85,14 @@ class InstrumentationCodeGeneratorHost(
             val resourceResult = result
             try {
                 val originatingElements = getOriginatingElements(filteredRequests).toTypedArray<Element?>()
-                val resource = filer.createResource(StandardLocation.CLASS_OUTPUT, resourceResult.getPackageName(), resourceResult.getName(), *originatingElements)
+                val resource = filer.createResource(StandardLocation.CLASS_OUTPUT, resourceResult.packageName, resourceResult.name, *originatingElements)
                 resource.openOutputStream().use { outputStream ->
                     result.write(outputStream)
                 }
             } catch (e: IOException) {
                 messager.printMessage(
                     Diagnostic.Kind.ERROR,
-                    "Failed to write generated resource file in package " + resourceResult.getPackageName() + ", named " + resourceResult.getName() + ": " + e.message
+                    "Failed to write generated resource file in package " + resourceResult.packageName + ", named " + resourceResult.name + ": " + e.message
                 )
             }
         } else if (result is ResourceFailures) {
@@ -101,11 +101,11 @@ class InstrumentationCodeGeneratorHost(
     }
 
     private fun printFailures(failure: HasFailures) {
-        failure.getFailureDetails().forEach(Consumer { details: FailureInfo? ->
+        requireNotNull(failure.failureDetails).forEach(Consumer { details: FailureInfo? ->
             val maybeOriginatingElement =
                 Optional.ofNullable<CallInterceptionRequest?>(details!!.request)
                     .flatMap<ExecutableElement?>(Function { presentRequest: CallInterceptionRequest? ->
-                        presentRequest!!.requestExtras!!.getByType(OriginatingElement::class.java).map(OriginatingElement::getElement)
+                        presentRequest!!.requestExtras.getByType(OriginatingElement::class.java).map { it.element }
                     })
             if (maybeOriginatingElement.isPresent()) {
                 messager.printMessage(Diagnostic.Kind.ERROR, details.reason, maybeOriginatingElement.get())
@@ -116,10 +116,10 @@ class InstrumentationCodeGeneratorHost(
     }
 
     companion object {
-        private fun getOriginatingElements(coveredRequests: MutableCollection<CallInterceptionRequest?>): MutableSet<ExecutableElement?> {
-            return coveredRequests.stream()
-                .map<kotlin.Any?> { requests: CallInterceptionRequest? -> requests!!.requestExtras!!.getByType(OriginatingElement::class.java).map(OriginatingElement::getElement).orElse(null) }
-                .filter { obj: Any? -> Objects.nonNull(obj) }.collect(
+        private fun getOriginatingElements(coveredRequests: MutableCollection<CallInterceptionRequest?>?): MutableSet<ExecutableElement?> {
+            return requireNotNull(coveredRequests).stream()
+                .map<ExecutableElement?> { requests: CallInterceptionRequest? -> requests!!.requestExtras.getByType(OriginatingElement::class.java).map { it.element }.orElse(null) }
+                .filter { obj: ExecutableElement? -> Objects.nonNull(obj) }.collect(
                     Collectors.toSet()
                 )
         }

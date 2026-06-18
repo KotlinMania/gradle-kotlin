@@ -35,7 +35,7 @@ class DefaultSerializer<T> : AbstractSerializer<T?> {
     @Throws(Exception::class)
     override fun read(decoder: Decoder): T? {
         try {
-            return Cast.uncheckedNonnullCast<T?>(ClassLoaderObjectInputStream(decoder.getInputStream(), classLoader).readObject())
+            return Cast.uncheckedCast<T>(ClassLoaderObjectInputStream(decoder.inputStream, classLoader).readObject())
         } catch (e: StreamCorruptedException) {
             return null
         }

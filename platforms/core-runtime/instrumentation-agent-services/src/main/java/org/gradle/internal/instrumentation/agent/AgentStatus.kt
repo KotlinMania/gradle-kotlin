@@ -28,13 +28,13 @@ interface AgentStatus {
      *
      * @return `true` if the agent instrumentation should be used
      */
-    @JvmField
-    val isAgentInstrumentationEnabled: Boolean
+    fun isAgentInstrumentationEnabled(): Boolean
 
     companion object {
         /**
          * Returns an AgentStatus instance that enables instrumentation if the agent is available.
          */
+        @JvmStatic
         fun allowed(): AgentStatus {
             return DefaultAgentStatus()
         }

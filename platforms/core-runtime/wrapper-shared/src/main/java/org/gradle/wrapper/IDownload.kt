@@ -20,5 +20,5 @@ import java.net.URI
 
 interface IDownload {
     @Throws(Exception::class)
-    fun download(address: URI?, destination: File?)
+    fun download(address: URI, destination: File)
 }

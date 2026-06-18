@@ -20,7 +20,6 @@ import org.gradle.internal.instrumentation.model.CallInterceptionRequest
 import org.gradle.internal.instrumentation.processor.codegen.JavadocUtils
 import org.gradle.internal.instrumentation.processor.codegen.TypeUtils
 import java.lang.reflect.Array
-import java.util.Objects
 
 /**
  * Based on the [SignatureTree], generates a method body that checks the
@@ -32,29 +31,29 @@ internal class MatchesSignatureGeneratingSignatureTreeVisitor(private val result
      * @param paramIndex index of the parameter in the signatures, -1 stands for the receiver
      */
     fun visit(current: SignatureTree, paramIndex: Int) {
-        val leafInCurrent = current.getLeafOrNull()
+        val leafInCurrent = current.leafOrNull
         if (leafInCurrent != null) {
             returnTrueIfNoArgumentsLeft(paramIndex, leafInCurrent)
         }
         val children = current.getChildrenByMatchEntry()
         if (!children.isEmpty()) {
-            val hasParamMatchers = children.keys.stream().anyMatch { it: ParameterMatchEntry? -> it!!.kind == ParameterMatchEntry.Kind.PARAMETER }
+            val hasParamMatchers = children.keys.any { it.kind == ParameterMatchEntry.Kind.PARAMETER }
             if (hasParamMatchers) { // is not the receiver or vararg
                 result.beginControlFlow("if (argumentClasses.length > \$L)", paramIndex)
                 result.addStatement("Class<?> arg$1L = argumentClasses[$1L]", paramIndex)
             }
             // Visit non-vararg invocations first and varargs after:
-            children.forEach { (entry: ParameterMatchEntry?, child: SignatureTree?) ->
-                if (entry!!.kind != ParameterMatchEntry.Kind.VARARG) {
-                    generateNormalCallChecksAndVisitSubtree(entry, child!!, paramIndex)
+            children.forEach { (entry: ParameterMatchEntry, child: SignatureTree) ->
+                if (entry.kind != ParameterMatchEntry.Kind.VARARG) {
+                    generateNormalCallChecksAndVisitSubtree(entry, child, paramIndex)
                 }
             }
             if (hasParamMatchers) {
                 result.endControlFlow()
             }
-            children.forEach { (entry: ParameterMatchEntry?, child: SignatureTree?) ->
-                if (entry!!.kind == ParameterMatchEntry.Kind.VARARG) {
-                    generateVarargCheck(entry, child!!, paramIndex)
+            children.forEach { (entry: ParameterMatchEntry, child: SignatureTree) ->
+                if (entry.kind == ParameterMatchEntry.Kind.VARARG) {
+                    generateVarargCheck(entry, child, paramIndex)
                 }
             }
         }
@@ -67,7 +66,7 @@ internal class MatchesSignatureGeneratingSignatureTreeVisitor(private val result
             CodeBlock.of("arg\$L", paramIndex)
 
         val childArgCount = paramIndex + 1
-        val entryChildType = TypeUtils.typeName(entry.type)
+        val entryChildType = requireNotNull(TypeUtils.typeName(requireNotNull(entry.type)))
         val matchExpr = if (entry.kind == ParameterMatchEntry.Kind.RECEIVER_AS_CLASS) CodeBlock.of(
             "isStatic && \$T.class.isAssignableFrom(\$L)",
             entryChildType.box(),
@@ -84,14 +83,13 @@ internal class MatchesSignatureGeneratingSignatureTreeVisitor(private val result
     }
 
     private fun generateVarargCheck(entry: ParameterMatchEntry, child: SignatureTree, paramIndex: Int) {
-        val entryParamType = TypeUtils.typeName(entry.type)
-        val childRequest = child.getLeafOrNull()
-        Objects.requireNonNull<CallInterceptionRequest?>(childRequest, "vararg parameter must be the last in the signature")
+        val entryParamType = TypeUtils.typeName(requireNotNull(entry.type))
+        val childRequest = requireNotNull(child.leafOrNull) { "vararg parameter must be the last in the signature" }
 
         result.add("// Trying to match the vararg invocation\n")
         val varargMatched = CodeBlock.of("varargMatched")
 
-        val matchArgs: CodeBlock = Companion.argClassesExpression(childRequest!!)
+        val matchArgs: CodeBlock = Companion.argClassesExpression(childRequest)
 
         result.beginControlFlow(
             "if (argumentClasses.length == $1L && argumentClasses[$2L] != null && $3T[].class.isAssignableFrom($4T.newInstance(argumentClasses[$2L], 0).getClass()))",
@@ -127,10 +125,10 @@ internal class MatchesSignatureGeneratingSignatureTreeVisitor(private val result
 
     companion object {
         private fun argClassesExpression(leafInCurrent: CallInterceptionRequest): CodeBlock {
-            return leafInCurrent.interceptedCallable!!.parameters!!
+            return requireNotNull(leafInCurrent.interceptedCallable).parameters!!
                 .stream()
-                .filter({ it -> it!!.kind.isSourceParameter() })
-                .map({ it -> CodeBlock.of("\$T.class", TypeUtils.typeName(it!!.parameterType)) })
+                .filter { it.kind?.isSourceParameter == true }
+                .map { CodeBlock.of("\$T.class", TypeUtils.typeName(requireNotNull(it.parameterType))) }
                 .collect(CodeBlock.joining(", ", "new Class<?>[] {", "}"))
         }
     }

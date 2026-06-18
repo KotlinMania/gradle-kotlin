@@ -33,6 +33,7 @@ object CollectionUtils {
     /**
      * Returns the single element in the collection or throws.
      */
+    @JvmStatic
     fun <T> single(source: Iterable<out T?>): T? {
         val iterator = source.iterator()
         if (!iterator.hasNext()) {
@@ -43,13 +44,15 @@ object CollectionUtils {
         return element
     }
 
+    @JvmStatic
     fun <T> checkedCast(type: Class<T?>, input: MutableCollection<*>): MutableCollection<T?> {
         for (o in input) {
             Cast.castNullable<T?, Any?>(type, o)
         }
-        return Cast.uncheckedNonnullCast<MutableCollection<T?>>(input)!!
+        return Cast.uncheckedNonnullCast<MutableCollection<T?>>(input)
     }
 
+    @JvmStatic
     fun <T> findFirst(source: Iterable<out T?>, filter: Spec<in T?>): T? {
         for (item in source) {
             if (filter.isSatisfiedBy(item)) {
@@ -60,6 +63,7 @@ object CollectionUtils {
         return null
     }
 
+    @JvmStatic
     fun <T> findFirst(source: kotlin.Array<T?>, filter: Spec<in T?>): T? {
         for (thing in source) {
             if (filter.isSatisfiedBy(thing)) {
@@ -70,26 +74,32 @@ object CollectionUtils {
         return null
     }
 
+    @JvmStatic
     fun <T> first(source: Iterable<out T?>): T? {
         return source.iterator().next()
     }
 
+    @JvmStatic
     fun <T> any(source: Iterable<out T?>, filter: Spec<in T?>): Boolean {
         return findFirst(source, filter) != null
     }
 
+    @JvmStatic
     fun <T> any(source: kotlin.Array<T?>, filter: Spec<in T?>): Boolean {
         return findFirst<T?>(source, filter) != null
     }
 
+    @JvmStatic
     fun <T> filter(set: MutableSet<out T?>, filter: Spec<in T?>): MutableSet<T?> {
         return filter<T?, LinkedHashSet<T?>>(set, LinkedHashSet<T?>(), filter)!!
     }
 
+    @JvmStatic
     fun <T> filter(list: MutableList<out T?>, filter: Spec<in T?>): MutableList<T?> {
         return filter<T?, ArrayList<T?>>(list, ArrayList<T?>(list.size), filter)!!
     }
 
+    @JvmStatic
     fun <T> filter(array: kotlin.Array<T?>, filter: Spec<in T?>): MutableList<T?> {
         return filter<T?, ArrayList<T?>>(Arrays.asList<T?>(*array), ArrayList<T?>(array.size), filter)!!
     }
@@ -97,6 +107,7 @@ object CollectionUtils {
     /**
      * Returns a sorted copy of the provided collection of things. Uses the provided comparator to sort.
      */
+    @JvmStatic
     fun <T> sort(things: Iterable<out T?>?, comparator: Comparator<in T?>?): MutableList<T?> {
         val copy = toMutableList<T?>(things)
         Collections.sort<T?>(copy, comparator)
@@ -106,12 +117,14 @@ object CollectionUtils {
     /**
      * Returns a sorted copy of the provided collection of things. Uses the natural ordering of the things.
      */
+    @JvmStatic
     fun <T : Comparable<T?>?> sort(things: Iterable<T?>?): MutableList<T?> {
         val copy = toMutableList<T?>(things)
         Collections.sort<T?>(copy)
         return copy
     }
 
+    @JvmStatic
     fun <T, C : MutableCollection<T?>?> filter(source: Iterable<out T?>, destination: C?, filter: Spec<in T?>): C? {
         for (item in source) {
             if (filter.isSatisfiedBy(item)) {
@@ -121,10 +134,12 @@ object CollectionUtils {
         return destination
     }
 
+    @JvmStatic
     fun <K, V> filter(map: MutableMap<K?, V?>, filter: Spec<MutableMap.MutableEntry<K?, V?>?>): MutableMap<K?, V?> {
         return filter<K?, V?>(map, HashMap<K?, V?>(), filter)
     }
 
+    @JvmStatic
     fun <K, V> filter(map: MutableMap<K?, V?>, destination: MutableMap<K?, V?>, filter: Spec<MutableMap.MutableEntry<K?, V?>?>): MutableMap<K?, V?> {
         for (entry in map.entries) {
             if (filter.isSatisfiedBy(entry)) {
@@ -135,11 +150,13 @@ object CollectionUtils {
         return destination
     }
 
+    @JvmStatic
     fun <R, I> collectArray(list: kotlin.Array<I?>, newType: Class<R?>?, transformer: Function<in I?, out R?>): kotlin.Array<R?> {
         val destination = java.lang.reflect.Array.newInstance(newType, list.size) as kotlin.Array<R?>
         return collectArray<R?, I?>(list, destination, transformer)
     }
 
+    @JvmStatic
     fun <R, I> collectArray(list: kotlin.Array<I?>, destination: kotlin.Array<R?>, transformer: Function<in I?, out R?>): kotlin.Array<R?> {
         assert(list.size <= destination.size)
         for (i in list.indices) {
@@ -148,23 +165,27 @@ object CollectionUtils {
         return destination
     }
 
+    @JvmStatic
     fun <R, I> collect(list: kotlin.Array<I?>, transformer: Function<in I?, out R?>): MutableList<R?> {
         return collect<R?, I?>(Arrays.asList<I?>(*list), transformer)
     }
 
+    @JvmStatic
     fun <R, I> collect(set: MutableSet<out I?>, transformer: Function<in I?, out R?>): MutableSet<R?> {
         return collect(set, HashSet<R?>(set.size), transformer)!!
     }
 
+    @JvmStatic
     fun <R, I> collect(source: Iterable<out I?>, transformer: Function<in I?, out R?>): MutableList<R?> {
         if (source is MutableCollection<*>) {
-            val collection = Cast.uncheckedNonnullCast<MutableCollection<out I?>?>(source)
-            return collect(source, ArrayList<R?>(collection!!.size), transformer)!!
+            val collection = Cast.uncheckedNonnullCast<MutableCollection<out I?>>(source)
+            return collect(source, ArrayList<R?>(collection.size), transformer)!!
         } else {
             return collect(source, LinkedList<R?>(), transformer)!!
         }
     }
 
+    @JvmStatic
     fun <R, I, C : MutableCollection<R?>?> collect(source: Iterable<out I?>, destination: C?, transformer: Function<in I?, out R?>): C? {
         for (item in source) {
             destination!!.add(transformer.apply(item))
@@ -172,6 +193,7 @@ object CollectionUtils {
         return destination
     }
 
+    @JvmStatic
     fun toStringList(iterable: Iterable<*>): MutableList<String?> {
         return stringize<LinkedList<String?>>(iterable, LinkedList<String?>())!!
     }
@@ -200,6 +222,7 @@ object CollectionUtils {
      * @param <T> The target type in the flattened list
      * @return A flattened list of the given things
     </T> */
+    @JvmStatic
     fun <T> flattenCollections(type: Class<T?>, vararg things: Any?): MutableList<T?> {
         if (things.size == 0) {
             return mutableListOf<T?>()
@@ -250,6 +273,7 @@ object CollectionUtils {
      * @param things The things to repack
      * @return an empty list if the input is null, otherwise [List] containing the elements of the input otherwise
      */
+    @JvmStatic
     fun <T> toList(things: Iterable<out T?>?): MutableList<T?> {
         if (things is MutableList<*>) {
             val castThings = things as MutableList<T?>
@@ -258,6 +282,7 @@ object CollectionUtils {
         return toMutableList<T?>(things)
     }
 
+    @JvmStatic
     fun <T> toList(things: Enumeration<out T?>): MutableList<T?> {
         val list: AbstractList<T?> = ArrayList<T?>()
         while (things.hasMoreElements()) {
@@ -278,6 +303,7 @@ object CollectionUtils {
     }
 
 
+    @JvmStatic
     fun <T> intersection(availableValuesByDescriptor: MutableCollection<out MutableCollection<T?>>): MutableList<T?> {
         val result: MutableList<T?> = ArrayList<T?>()
         val iterator = availableValuesByDescriptor.iterator()
@@ -292,6 +318,7 @@ object CollectionUtils {
         return result
     }
 
+    @JvmStatic
     fun <T> toList(things: kotlin.Array<T?>?): MutableList<T?> {
         if (things == null || things.size == 0) {
             return ArrayList<T?>(0)
@@ -302,6 +329,7 @@ object CollectionUtils {
         return list
     }
 
+    @JvmStatic
     fun <T> toSet(things: Iterable<out T?>?): MutableSet<T?> {
         if (things == null) {
             return HashSet<T?>(0)
@@ -318,6 +346,7 @@ object CollectionUtils {
         return set
     }
 
+    @JvmStatic
     fun <E> compact(list: MutableList<E?>): MutableList<E?> {
         var compacted: MutableList<E?>? = null
         var i = 0
@@ -343,14 +372,17 @@ object CollectionUtils {
     // TODO(mlopatkin) This is a polynull function in disguise.
     //  You may end up here when fighting with NullAway because your source can contain nulls.
     //  Consider adding a null-taking overload then.
+    @JvmStatic
     fun <C : MutableCollection<String?>?> stringize(source: Iterable<*>, destination: C?): C? {
         return collect(source, destination) { value: Any? -> if (value == null) null else value.toString() }
     }
 
+    @JvmStatic
     fun stringize(source: MutableCollection<*>): MutableList<String?> {
         return stringize<ArrayList<String?>>(source, ArrayList<String?>(source.size))!!
     }
 
+    @JvmStatic
     fun <E> replace(list: MutableList<E?>, filter: Spec<in E?>, transformer: Function<in E?, out E?>): Boolean {
         var replaced = false
         var i = 0
@@ -364,6 +396,7 @@ object CollectionUtils {
         return replaced
     }
 
+    @JvmStatic
     fun <K, V> collectMap(destination: MutableMap<K?, V?>, items: Iterable<out V?>, keyGenerator: Function<in V?, out K?>) {
         for (item in items) {
             destination.put(keyGenerator.apply(item), item)
@@ -373,12 +406,14 @@ object CollectionUtils {
     /**
      * Given a set of values, derive a set of keys and return a map
      */
+    @JvmStatic
     fun <K, V> collectMap(items: Iterable<out V?>, keyGenerator: Function<in V?, out K?>): MutableMap<K?, V?> {
         val map: MutableMap<K?, V?> = LinkedHashMap<K?, V?>()
         collectMap<K?, V?>(map, items, keyGenerator)
         return map
     }
 
+    @JvmStatic
     fun <K, V> collectMapValues(destination: MutableMap<K?, V?>, keys: Iterable<out K?>, keyGenerator: Function<in K?, out V?>) {
         for (item in keys) {
             destination.put(item, keyGenerator.apply(item))
@@ -388,12 +423,14 @@ object CollectionUtils {
     /**
      * Given a set of keys, derive a set of values and return a map
      */
+    @JvmStatic
     fun <K, V> collectMapValues(keys: Iterable<out K?>, keyGenerator: Function<in K?, out V?>): MutableMap<K?, V?> {
         val map: MutableMap<K?, V?> = LinkedHashMap<K?, V?>()
         collectMapValues<K?, V?>(map, keys, keyGenerator)
         return map
     }
 
+    @JvmStatic
     fun <T> every(things: Iterable<out T?>, predicate: Spec<in T?>): Boolean {
         for (thing in things) {
             if (!predicate.isSatisfiedBy(thing)) {
@@ -412,6 +449,7 @@ object CollectionUtils {
      * @param <T> The element type of t1
      * @return t1
     </T> */
+    @JvmStatic
     fun <T, C : MutableCollection<in T?>?> addAll(t1: C?, t2: Iterable<out T?>): C? {
         for (t in t2) {
             t1!!.add(t)
@@ -428,6 +466,7 @@ object CollectionUtils {
      * @return t1
     </T> */
     @SafeVarargs
+    @JvmStatic
     fun <T, C : MutableCollection<in T?>?> addAll(t1: C?, vararg t2: T?): C? {
         Collections.addAll<T?>(t1, *t2)
         return t1
@@ -446,6 +485,7 @@ object CollectionUtils {
      * @param <T> The type of the entry objects
      * @return A representation of the difference
     </T> */
+    @JvmStatic
     fun <T> diffSetsBy(left: MutableSet<out T?>, right: MutableSet<out T?>, compareBy: Function<T?, *>): SetDiff<T?> {
         if (left == null) {
             throw NullPointerException("'left' set is null")
@@ -492,6 +532,7 @@ object CollectionUtils {
      * @param objects The objects to join the string representations of
      * @return The joined string
      */
+    @JvmStatic
     fun join(separator: String, objects: kotlin.Array<Any?>): String {
         return join(separator, Arrays.asList<Any?>(*objects))
     }
@@ -501,6 +542,7 @@ object CollectionUtils {
      *
      * @see .join
      */
+    @JvmStatic
     fun <R, I> join(separator: String, objects: kotlin.Array<I?>, transformer: Function<in I?, out R?>): String {
         return join(separator, collect(objects, transformer))
     }
@@ -521,6 +563,7 @@ object CollectionUtils {
      * @param objects The objects to join the string representations of
      * @return The joined string
      */
+    @JvmStatic
     fun join(separator: String, objects: Iterable<*>): String {
         val string = StringBuilder()
         val iterator = objects.iterator()
@@ -539,6 +582,7 @@ object CollectionUtils {
      *
      * @see .join
      */
+    @JvmStatic
     fun <R, I> join(separator: String, objects: Iterable<out I?>, transformer: Function<in I?, out R?>): String {
         return join(separator, collect(objects, transformer))
     }
@@ -549,6 +593,7 @@ object CollectionUtils {
      * <pre>Left</pre> Collection containing entries that satisfy the given predicate
      * <pre>Right</pre> Collection containing entries that do NOT satisfy the given predicate
      */
+    @JvmStatic
     fun <T> partition(items: Iterable<T?>, predicate: Spec<in T?>): Pair<MutableCollection<T?>?, MutableCollection<T?>?> {
         if (items == null) {
             throw NullPointerException("Cannot partition null Collection")
@@ -571,6 +616,7 @@ object CollectionUtils {
         return Pair.Companion.of<MutableCollection<T?>?, MutableCollection<T?>?>(left, right)
     }
 
+    @JvmStatic
     fun <T> unpack(factories: Iterable<out Factory<out T?>?>): Iterable<out T?> {
         return object : Iterable<T?> {
             private val delegate = factories.iterator()

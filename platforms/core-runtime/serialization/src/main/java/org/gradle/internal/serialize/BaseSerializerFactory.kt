@@ -277,7 +277,7 @@ class BaseSerializerFactory {
     private class ThrowableSerializer : AbstractSerializer<Throwable?>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Throwable? {
-            return Message.receive(decoder.getInputStream(), javaClass.getClassLoader()) as Throwable?
+            return Message.receive(decoder.inputStream, javaClass.getClassLoader()) as Throwable?
         }
 
         @Throws(Exception::class)

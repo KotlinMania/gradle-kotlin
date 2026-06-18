@@ -17,5 +17,5 @@ package org.gradle.internal.serialize
 
 interface ObjectWriter<T> {
     @Throws(Exception::class)
-    fun write(value: T?)
+    fun write(value: T)
 }

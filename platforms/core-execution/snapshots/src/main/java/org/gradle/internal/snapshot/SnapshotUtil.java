@@ -125,7 +125,7 @@ public class SnapshotUtil {
 
             @Override
             public Long visitRegularFile(RegularFileSnapshot fileSnapshot) {
-                return fileSnapshot.getMetadata().length;
+                return fileSnapshot.getMetadata().getLength();
             }
 
             @Override

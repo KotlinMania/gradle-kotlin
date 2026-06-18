@@ -169,7 +169,10 @@ public class DefaultClassPath implements ClassPath, Serializable {
     public ClassPath removeIf(final Spec<? super File> filter) {
         List<File> remainingFiles = CollectionUtils.filter(files, new Spec<File>() {
             @Override
-            public boolean isSatisfiedBy(File element) {
+            public boolean isSatisfiedBy(@org.jspecify.annotations.Nullable File element) {
+                if (element == null) {
+                    return true;
+                }
                 return !filter.isSatisfiedBy(element);
             }
         });

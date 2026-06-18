@@ -441,7 +441,7 @@ public class TarBuildCacheEntryPacker implements BuildCacheEntryPacker {
             try {
                 createTarEntry(path, size, UnixPermissions.FILE_FLAG | mode, tarOutput);
                 try (FileInputStream input = new FileInputStream(inputFile)) {
-                    IOUtils.copyLarge(input, tarOutput, bufferProvider.buffer);
+                    IOUtils.copyLarge(input, tarOutput, bufferProvider.getBuffer());
                 }
                 tarOutput.closeArchiveEntry();
             } catch (IOException e) {

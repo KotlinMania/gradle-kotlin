@@ -24,5 +24,5 @@ interface ObjectReader<T> {
      * @throws EOFException When the next object cannot be fully read due to reaching the end of stream.
      */
     @Throws(EOFException::class, Exception::class)
-    fun read(): T?
+    fun read(): T
 }

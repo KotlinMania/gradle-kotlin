@@ -23,84 +23,52 @@ import org.gradle.internal.instrumentation.processor.codegen.groovy.CallIntercep
 import org.gradle.internal.instrumentation.util.NameUtil
 import org.objectweb.asm.Type
 
-internal class CallInterceptorSpecs(namedRequests: MutableCollection<NamedCallableInterceptorSpec?>, constructorRequests: MutableCollection<ConstructorInterceptorSpec?>) {
-    val namedRequests: MutableList<NamedCallableInterceptorSpec?>
-    val constructorRequests: MutableList<ConstructorInterceptorSpec?>
+internal class CallInterceptorSpecs(namedRequests: MutableCollection<NamedCallableInterceptorSpec>, constructorRequests: MutableCollection<ConstructorInterceptorSpec>) {
+    val namedRequests: MutableList<NamedCallableInterceptorSpec>
+    val constructorRequests: MutableList<ConstructorInterceptorSpec>
 
     init {
-        this.namedRequests = ArrayList<NamedCallableInterceptorSpec?>(namedRequests)
-        this.constructorRequests = ArrayList<ConstructorInterceptorSpec?>(constructorRequests)
+        this.namedRequests = ArrayList(namedRequests)
+        this.constructorRequests = ArrayList(constructorRequests)
     }
 
     internal interface CallInterceptorSpec {
-        val className: String?
+        val className: String
 
-        val fullClassName: String?
+        val fullClassName: String
 
-        val interceptorType: BytecodeInterceptorType?
+        val interceptorType: BytecodeInterceptorType
 
-        val requests: MutableList<CallInterceptionRequest?>?
+        val requests: MutableList<CallInterceptionRequest>
 
         class NamedCallableInterceptorSpec private constructor(
-            val name: String?,
-            private val className: String?,
-            private val fullClassName: String?,
-            private val requests: MutableList<CallInterceptionRequest?>?,
-            private val interceptorType: BytecodeInterceptorType?
+            val name: String,
+            override val className: String,
+            override val fullClassName: String,
+            override val requests: MutableList<CallInterceptionRequest>,
+            override val interceptorType: BytecodeInterceptorType
         ) : CallInterceptorSpec {
-            override fun getClassName(): String? {
-                return className
-            }
-
-            override fun getFullClassName(): String? {
-                return fullClassName
-            }
-
-            override fun getInterceptorType(): BytecodeInterceptorType? {
-                return interceptorType
-            }
-
-            override fun getRequests(): MutableList<CallInterceptionRequest?>? {
-                return requests
-            }
-
             companion object {
                 fun of(implementationName: String?, name: String?, interceptorType: BytecodeInterceptorType?): NamedCallableInterceptorSpec {
-                    val className = NameUtil.capitalize(name) + "CallInterceptor"
-                    val fullClassName = implementationName + "$" + className
-                    return NamedCallableInterceptorSpec(name, className, fullClassName, ArrayList<CallInterceptionRequest?>(), interceptorType)
+                    val className = NameUtil.capitalize(requireNotNull(name)) + "CallInterceptor"
+                    val fullClassName = requireNotNull(implementationName) + "$" + className
+                    return NamedCallableInterceptorSpec(name, className, fullClassName, ArrayList(), requireNotNull(interceptorType))
                 }
             }
         }
 
         class ConstructorInterceptorSpec private constructor(
-            val constructorType: Type?,
-            private val className: String?,
-            private val fullClassName: String?,
-            private val requests: MutableList<CallInterceptionRequest?>?,
-            private val interceptorType: BytecodeInterceptorType?
+            val constructorType: Type,
+            override val className: String,
+            override val fullClassName: String,
+            override val requests: MutableList<CallInterceptionRequest>,
+            override val interceptorType: BytecodeInterceptorType
         ) : CallInterceptorSpec {
-            override fun getClassName(): String? {
-                return className
-            }
-
-            override fun getFullClassName(): String? {
-                return fullClassName
-            }
-
-            override fun getInterceptorType(): BytecodeInterceptorType? {
-                return interceptorType
-            }
-
-            override fun getRequests(): MutableList<CallInterceptionRequest?>? {
-                return requests
-            }
-
             companion object {
                 fun of(implementationName: String?, constructedType: Type, interceptorType: BytecodeInterceptorType?): ConstructorInterceptorSpec {
                     val className = ClassName.bestGuess(constructedType.getClassName()).simpleName() + "ConstructorCallInterceptor"
-                    val fullClassName = implementationName + "$" + className
-                    return ConstructorInterceptorSpec(constructedType, className, fullClassName, ArrayList<CallInterceptionRequest?>(), interceptorType)
+                    val fullClassName = requireNotNull(implementationName) + "$" + className
+                    return ConstructorInterceptorSpec(constructedType, className, fullClassName, ArrayList(), requireNotNull(interceptorType))
                 }
             }
         }

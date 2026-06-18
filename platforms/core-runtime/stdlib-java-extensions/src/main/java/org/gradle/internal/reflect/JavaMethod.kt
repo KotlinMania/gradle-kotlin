@@ -64,6 +64,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
          * Locates the given method. Searches all methods, including private methods.
          */
         @Throws(NoSuchMethodException::class)
+        @JvmStatic
         fun <T, R> of(target: Class<T?>, returnType: Class<R?>, name: String?, vararg paramTypes: Class<*>?): JavaMethod<T?, R?> {
             return JavaMethod<T?, R?>(target, returnType, name, *paramTypes)
         }
@@ -72,6 +73,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
          * Locates the given static method. Searches all methods, including private methods.
          */
         @Throws(NoSuchMethodException::class)
+        @JvmStatic
         fun <T, R> ofStatic(target: Class<T?>, returnType: Class<R?>, name: String?, vararg paramTypes: Class<*>?): JavaMethod<T?, R?> {
             return JavaMethod<T?, R?>(target, returnType, name, true, *paramTypes)
         }
@@ -80,6 +82,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
          * Locates the given method. Searches all methods, including private methods.
          */
         @Throws(NoSuchMethodException::class)
+        @JvmStatic
         fun <T, R> of(target: T?, returnType: Class<R?>, name: String?, vararg paramTypes: Class<*>?): JavaMethod<T?, R?> {
             val targetClass = target!!.javaClass as Class<T?>
             return of<T?, R?>(targetClass, returnType, name, *paramTypes)
@@ -89,6 +92,7 @@ class JavaMethod<T, R>(private val returnType: Class<R?>, @JvmField val method: 
          * Locates the given method. Searches all methods, including private methods.
          */
         @Throws(NoSuchMethodException::class)
+        @JvmStatic
         fun <T, R> of(returnType: Class<R?>, method: Method): JavaMethod<T?, R?> {
             return JavaMethod<T?, R?>(returnType, method)
         }

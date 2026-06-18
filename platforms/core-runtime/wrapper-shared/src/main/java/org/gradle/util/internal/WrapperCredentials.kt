@@ -67,7 +67,7 @@ class WrapperCredentials private constructor(private val token: String?, private
         }
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o == null || javaClass != o.javaClass) {
             return false
         }

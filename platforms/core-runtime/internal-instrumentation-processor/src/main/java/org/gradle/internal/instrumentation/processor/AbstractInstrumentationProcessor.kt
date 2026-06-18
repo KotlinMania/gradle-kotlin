@@ -33,6 +33,7 @@ import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterce
 import org.gradle.internal.instrumentation.processor.modelreader.api.CallInterceptionRequestReader.Result.InvalidRequest
 import org.gradle.internal.instrumentation.processor.modelreader.impl.AnnotationUtils.findAnnotationMirror
 import org.gradle.internal.instrumentation.processor.modelreader.impl.AnnotationUtils.findAnnotationValue
+import org.gradle.internal.instrumentation.processor.modelreader.impl.TypeUtils
 import java.util.Arrays
 import java.util.function.Consumer
 import java.util.function.Function
@@ -68,8 +69,8 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
     }
 
     private val supportedAnnotations: MutableSet<Class<out Annotation?>?>
-        get() = getExtensionsByType<ClassLevelAnnotationsContributor?>(ClassLevelAnnotationsContributor::class.java).stream()
-            .flatMap<Class<out Annotation?>?> { it: ClassLevelAnnotationsContributor? -> it!!.contributeClassLevelAnnotationTypes()!!.stream() }
+        get() = getExtensionsByType(ClassLevelAnnotationsContributor::class.java).stream()
+            .flatMap<Class<out Annotation?>?> { it: ClassLevelAnnotationsContributor -> requireNotNull(it.contributeClassLevelAnnotationTypes()).stream() }
             .collect(Collectors.toSet())
 
     override fun process(annotations: MutableSet<out TypeElement?>?, roundEnv: RoundEnvironment): Boolean {
@@ -77,7 +78,7 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
         // See issue: https://github.com/gradle/gradle/issues/29926
         val annotatedTypes: Stream<out Element?>? = getAnnotatedElementsSkippingPackageRoots(roundEnv, this.supportedAnnotations)
             .flatMap<Element?> { element: Element? -> findActualTypesToVisit(element!!).stream() }
-            .sorted(Comparator.comparing<Element?, String?>(Function { obj: Element? -> obj.elementQualifiedName() }))
+            .sorted(Comparator.comparing<Element?, String>(Function { obj: Element? -> TypeUtils.elementQualifiedName(requireNotNull(obj)) }))
         collectAndProcessRequests(annotatedTypes)
         return false
     }
@@ -96,14 +97,14 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
             .collect(Collectors.toSet())
     }
 
-    private fun <T : InstrumentationProcessorExtension?> getExtensionsByType(type: Class<T?>): MutableCollection<T?> {
-        return Cast.uncheckedCast<MutableCollection<T?>>(this.extensions!!.stream().filter { obj: InstrumentationProcessorExtension? -> type.isInstance(obj) }.collect(Collectors.toList()))!!
+    private fun <T : InstrumentationProcessorExtension> getExtensionsByType(type: Class<T>): MutableCollection<T> {
+        return Cast.uncheckedCast<MutableCollection<T>>(requireNotNull(this.extensions).stream().filter { obj: InstrumentationProcessorExtension? -> type.isInstance(obj) }.collect(Collectors.toList()))!!
     }
 
     private fun collectAndProcessRequests(annotatedElements: Stream<out Element?>?) {
-        val readers = getExtensionsByType<AnnotatedMethodReaderExtension?>(AnnotatedMethodReaderExtension::class.java)
+        val readers = getExtensionsByType(AnnotatedMethodReaderExtension::class.java)
 
-        val allMethodElementsInAnnotatedClasses: MutableList<ExecutableElement?> = getExecutableElementsFromElements(annotatedElements)
+        val allMethodElementsInAnnotatedClasses: MutableList<ExecutableElement?> = TypeUtils.getExecutableElementsFromElements(requireNotNull(annotatedElements))
 
         val errors: MutableMap<ExecutableElement?, MutableList<InvalidRequest?>?> = LinkedHashMap<ExecutableElement?, MutableList<InvalidRequest?>?>()
         val successResults: MutableList<CallInterceptionRequestReader.Result.Success?> = ArrayList<CallInterceptionRequestReader.Result.Success?>()
@@ -129,9 +130,9 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
     }
 
     private fun postProcessRequests(successResults: MutableList<CallInterceptionRequestReader.Result.Success?>): MutableList<CallInterceptionRequest?> {
-        var requests: MutableList<CallInterceptionRequest?> = successResults.stream().map<Any?>(CallInterceptionRequestReader.Result.Success::getRequest).collect(Collectors.toList())
+        var requests: MutableList<CallInterceptionRequest?> = successResults.mapTo(ArrayList()) { requireNotNull(it).request }
         for (postProcessor in getExtensionsByType<RequestPostProcessorExtension>(RequestPostProcessorExtension::class.java)) {
-            requests = requests.stream().flatMap<CallInterceptionRequest?> { request: CallInterceptionRequest? -> postProcessor!!.postProcessRequest(request)!!.stream() }.collect(Collectors.toList())
+            requests = requests.flatMapTo(ArrayList()) { request: CallInterceptionRequest? -> postProcessor.postProcessRequest(request).orEmpty() }
         }
         return requests
     }
@@ -141,13 +142,13 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
             processingEnv.getFiler(),
             processingEnv.getMessager(),
             CompositeInstrumentationCodeGenerator(
-                getExtensionsByType<CodeGeneratorContributor?>(CodeGeneratorContributor::class.java).stream()
-                    .map<InstrumentationCodeGenerator?> { obj: CodeGeneratorContributor? -> obj!!.contributeCodeGenerator() }.collect(
+                getExtensionsByType(CodeGeneratorContributor::class.java).stream()
+                    .map<InstrumentationCodeGenerator?> { obj: CodeGeneratorContributor -> obj.contributeCodeGenerator() }.collect(
                         Collectors.toList()
                     )
             ),
-            getExtensionsByType<ResourceGeneratorContributor?>(ResourceGeneratorContributor::class.java).stream()
-                .map<InstrumentationResourceGenerator?> { obj: ResourceGeneratorContributor? -> obj!!.contributeResourceGenerator() }.collect(
+            getExtensionsByType(ResourceGeneratorContributor::class.java).stream()
+                .map<InstrumentationResourceGenerator?> { obj: ResourceGeneratorContributor -> obj.contributeResourceGenerator() }.collect(
                     Collectors.toList()
                 )
         )
@@ -184,14 +185,15 @@ abstract class AbstractInstrumentationProcessor : AbstractProcessor() {
     private class AnnotationScanner(private val elements: Elements) : ElementScanner8<MutableSet<Element?>?, MutableSet<TypeElement?>?>(mutableSetOf<Element?>()) {
         private val annotatedElements: MutableSet<Element?> = LinkedHashSet<Element?>()
 
-        override fun scan(e: Element, annotations: MutableSet<TypeElement?>): MutableSet<Element?> {
+        override fun scan(e: Element, annotations: MutableSet<TypeElement?>?): MutableSet<Element?> {
+            val annotationTypes = requireNotNull(annotations)
             for (annotationMirror in elements.getAllAnnotationMirrors(e)) {
-                if (annotations.contains(annotationMirror.getAnnotationType().asElement() as TypeElement?)) {
+                if (annotationTypes.contains(annotationMirror.getAnnotationType().asElement() as TypeElement?)) {
                     annotatedElements.add(e)
                     break
                 }
             }
-            e.accept<MutableSet<Element?>?, MutableSet<TypeElement?>?>(this, annotations)
+            e.accept<MutableSet<Element?>?, MutableSet<TypeElement?>?>(this, annotationTypes)
             return annotatedElements
         }
 

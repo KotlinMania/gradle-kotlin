@@ -160,7 +160,7 @@ class Download @JvmOverloads constructor(
             logger.log("WARNING Using HTTP " + credentials.authorizationTypeDisplayName() + " Authentication over an insecure connection to download the Gradle distribution. Please consider using HTTPS.")
         }
 
-        val authHeader: MutableMap.MutableEntry<String?, String?> = credentials.authorizationHeader()
+        val authHeader: MutableMap.MutableEntry<String, String> = credentials.authorizationHeader()
         connection.setRequestProperty(authHeader.key, authHeader.value)
     }
 

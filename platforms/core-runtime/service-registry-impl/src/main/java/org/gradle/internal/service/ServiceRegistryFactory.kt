@@ -28,10 +28,25 @@ object ServiceRegistryFactory {
         displayName: String?,
         parents: Array<out ServiceRegistry>
     ): CloseableServiceRegistry {
-        return if (scope != null) {
+        return create(scope, strict, displayName, parents, emptyList())
+    }
+
+    @JvmStatic
+    fun create(
+        scope: Class<out Scope>?,
+        strict: Boolean,
+        displayName: String?,
+        parents: Array<out ServiceRegistry>,
+        providers: Iterable<ServiceRegistrationProvider>
+    ): CloseableServiceRegistry {
+        val registry = if (scope != null) {
             ScopedServiceRegistry(scope, strict, displayName, *parents)
         } else {
             DefaultServiceRegistry(displayName, parents)
         }
+        for (provider in providers) {
+            registry.addProvider(provider)
+        }
+        return registry
     }
 }

@@ -17,6 +17,7 @@ package org.gradle.internal.serialize
 
 import java.io.EOFException
 import java.io.IOException
+import java.io.InputStream
 
 /**
  * Provides a way to decode structured data from a backing byte stream. Implementations may buffer incoming bytes read
@@ -26,8 +27,7 @@ interface Decoder {
     /**
      * Returns an InputStream which can be used to read raw bytes.
      */
-    @JvmField
-    val inputStream: InputStream?
+    val inputStream: InputStream
 
     /**
      * Reads a signed 64 bit long value. Can read any value that was written using [Encoder.writeLong].
@@ -110,7 +110,7 @@ interface Decoder {
      * @throws EOFException when the end of the byte stream is reached before the string can be fully read.
      */
     @Throws(EOFException::class, IOException::class)
-    fun readString(): String?
+    fun readString(): String
 
     /**
      * Reads a nullable string value. Can reads any value that was written using [Encoder.writeNullableString].
@@ -134,7 +134,7 @@ interface Decoder {
      * @throws EOFException when the end of the byte stream is reached before the buffer is full.
      */
     @Throws(EOFException::class, IOException::class)
-    fun readBytes(buffer: ByteArray?)
+    fun readBytes(buffer: ByteArray)
 
     /**
      * Reads the specified number of bytes into the given buffer. Can read any byte values that were written using one of the raw byte methods on [Encoder], such as [ ][Encoder.writeBytes] or [Encoder.getOutputStream]
@@ -142,7 +142,7 @@ interface Decoder {
      * @throws EOFException when the end of the byte stream is reached before the specified number of bytes were read.
      */
     @Throws(EOFException::class, IOException::class)
-    fun readBytes(buffer: ByteArray?, offset: Int, count: Int)
+    fun readBytes(buffer: ByteArray, offset: Int, count: Int)
 
     /**
      * Reads a byte array. Can read any byte array written using [Encoder.writeBinary] or [Encoder.writeBinary].
@@ -150,7 +150,7 @@ interface Decoder {
      * @throws EOFException when the end of the byte stream is reached before the byte array was fully read.
      */
     @Throws(EOFException::class, IOException::class)
-    fun readBinary(): ByteArray?
+    fun readBinary(): ByteArray
 
     /**
      * Skips the given number of bytes. Can skip over any byte values that were written using one of the raw byte methods on [Encoder].
@@ -162,7 +162,7 @@ interface Decoder {
      * Reads a byte stream written using [Encoder.encodeChunked].
      */
     @Throws(EOFException::class, Exception::class)
-    fun <T> decodeChunked(decodeAction: DecodeAction<Decoder?, T?>?): T?
+    fun <T> decodeChunked(decodeAction: DecodeAction<Decoder, T>): T
 
     /**
      * Skips over a byte stream written using [Encoder.encodeChunked], discarding its content.
@@ -172,6 +172,6 @@ interface Decoder {
 
     interface DecodeAction<IN, OUT> {
         @Throws(Exception::class)
-        fun read(source: IN?): OUT?
+        fun read(source: IN): OUT
     }
 }

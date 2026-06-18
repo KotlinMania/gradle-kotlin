@@ -320,10 +320,10 @@ enum class JavaVersion {
          * @return The version of the current JVM.
          */
         @JvmStatic
-        fun current(): JavaVersion? {
+        fun current(): JavaVersion {
             var version: JavaVersion? = currentJavaVersion
             if (version == null) {
-                version = toVersion(System.getProperty("java.version"))
+                version = requireNotNull(toVersion(System.getProperty("java.version")))
                 currentJavaVersion = version
             }
             return version

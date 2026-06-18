@@ -215,7 +215,7 @@ public class DefaultBuildOperationRunner implements BuildOperationRunner {
         public T getReturnValue() {
             // Strictly speaking this isn't safe, as the method may be called without calling execute() first.
             // But we don't want to do the sentinel dance here.
-            return Cast.INSTANCE.unsafeStripNullable(returnValue);
+            return Cast.unsafeStripNullable(returnValue);
         }
     }
 

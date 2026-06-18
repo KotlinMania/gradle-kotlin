@@ -33,34 +33,30 @@ import java.util.stream.Collectors
  * Generates META-INF/services resource with all generated CallInterceptors so we can load them at runtime
  */
 class InterceptGroovyCallsResourceGenerator : InstrumentationResourceGenerator {
-    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>): MutableCollection<CallInterceptionRequest?> {
-        return interceptionRequests.stream()
-            .filter { request: CallInterceptionRequest? -> request!!.requestExtras!!.getByType(RequestExtra.InterceptGroovyCalls::class.java).isPresent() }
+    override fun filterRequestsForResource(interceptionRequests: MutableCollection<CallInterceptionRequest?>?): MutableCollection<CallInterceptionRequest?> {
+        return requireNotNull(interceptionRequests).stream()
+            .filter { request: CallInterceptionRequest? -> request!!.requestExtras.getByType(RequestExtra.InterceptGroovyCalls::class.java).isPresent() }
             .collect(Collectors.toList())
     }
 
-    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>): InstrumentationResourceGenerator.GenerationResult {
+    override fun generateResourceForRequests(filteredRequests: MutableCollection<CallInterceptionRequest?>?): InstrumentationResourceGenerator.GenerationResult {
         val callInterceptorTypes: MutableList<String?> = ArrayList<String?>()
-        val specs = GroovyClassGeneratorUtils.groupRequests(filteredRequests)
-        specs.getNamedRequests().forEach(Consumer { spec: NamedCallableInterceptorSpec? -> callInterceptorTypes.add(spec!!.getFullClassName()) })
-        specs.getConstructorRequests().forEach(Consumer { spec: ConstructorInterceptorSpec? -> callInterceptorTypes.add(spec!!.getFullClassName()) })
+        val specs = GroovyClassGeneratorUtils.groupRequests(requireNotNull(filteredRequests))
+        specs.namedRequests.forEach(Consumer { spec: NamedCallableInterceptorSpec -> callInterceptorTypes.add(spec.fullClassName) })
+        specs.constructorRequests.forEach(Consumer { spec: ConstructorInterceptorSpec -> callInterceptorTypes.add(spec.fullClassName) })
 
         return object : CanGenerateResource {
-            override fun getPackageName(): String {
-                return ""
-            }
+            override val packageName: String = ""
 
-            override fun getName(): String {
-                return "META-INF/services/" + InterceptGroovyCallsGenerator.Companion.FILTERABLE_CALL_INTERCEPTOR.reflectionName()
-            }
+            override val name: String = "META-INF/services/" + InterceptGroovyCallsGenerator.Companion.FILTERABLE_CALL_INTERCEPTOR.reflectionName()
 
-            override fun write(outputStream: OutputStream) {
+            override fun write(outputStream: OutputStream?) {
                 val types = callInterceptorTypes.stream()
                     .distinct()
                     .sorted()
                     .collect(Collectors.joining("\n"))
                 try {
-                    OutputStreamWriter(outputStream, StandardCharsets.UTF_8).use { writer ->
+                    OutputStreamWriter(requireNotNull(outputStream), StandardCharsets.UTF_8).use { writer ->
                         writer.write(types)
                     }
                 } catch (e: IOException) {

@@ -20,63 +20,58 @@ import org.gradle.internal.instrumentation.model.CallableInfo
 import org.gradle.internal.instrumentation.model.CallableKindInfo
 import org.gradle.internal.instrumentation.model.ParameterInfo
 import org.gradle.internal.instrumentation.model.ParameterKindInfo
-import java.util.function.Function
-import java.util.function.Supplier
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 internal class SignatureTree {
     var leafOrNull: CallInterceptionRequest? = null
         private set
-    private var childrenByMatchEntry: LinkedHashMap<ParameterMatchEntry?, SignatureTree>? = null
+    private var childrenByMatchEntry: LinkedHashMap<ParameterMatchEntry, SignatureTree>? = null
 
-    fun getChildrenByMatchEntry(): MutableMap<ParameterMatchEntry?, SignatureTree?> {
-        return if (childrenByMatchEntry != null) childrenByMatchEntry else mutableMapOf<ParameterMatchEntry?, SignatureTree?>()
+    fun getChildrenByMatchEntry(): Map<ParameterMatchEntry, SignatureTree> {
+        return childrenByMatchEntry ?: emptyMap()
     }
 
     fun add(request: CallInterceptionRequest) {
-        val callable: CallableInfo = request.interceptedCallable!!
-        val matchEntries: MutableList<ParameterMatchEntry> = parameterMatchEntries(callable)
+        val callable: CallableInfo = requireNotNull(request.interceptedCallable)
+        val matchEntries: List<ParameterMatchEntry> = parameterMatchEntries(callable)
 
         var current = this
         for (matchEntry in matchEntries) {
             if (current.childrenByMatchEntry == null) {
-                current.childrenByMatchEntry = LinkedHashMap<ParameterMatchEntry?, SignatureTree>()
+                current.childrenByMatchEntry = LinkedHashMap()
             }
             check(
-                !(matchEntry.kind == ParameterMatchEntry.Kind.VARARG && current.childrenByMatchEntry!!.keys.stream()
-                    .anyMatch { it: ParameterMatchEntry? -> it!!.kind == ParameterMatchEntry.Kind.VARARG })
+                !(matchEntry.kind == ParameterMatchEntry.Kind.VARARG && current.childrenByMatchEntry!!.keys
+                    .any { it.kind == ParameterMatchEntry.Kind.VARARG })
             ) { "vararg overloads are not supported yet" }
-            current = current.childrenByMatchEntry!!.computeIfAbsent(matchEntry) { key: ParameterMatchEntry? -> SignatureTree() }
+            current = current.childrenByMatchEntry!!.computeIfAbsent(matchEntry) { SignatureTree() }
         }
         check(current.leafOrNull == null) { "duplicate request" }
         current.leafOrNull = request
     }
 
     companion object {
-        private fun parameterMatchEntries(callable: CallableInfo): MutableList<ParameterMatchEntry> {
-            val varargParameter = callable.parameters!!.stream().filter({ it -> it!!.kind === ParameterKindInfo.VARARG_METHOD_PARAMETER }).findAny()
+        private fun parameterMatchEntries(callable: CallableInfo): List<ParameterMatchEntry> {
+            val parameters = requireNotNull(callable.parameters)
             val kind = callable.kind
-            return Stream.of<T?>( // Match the `Class<?>` in `receiver` for static methods and constructors
-                if (kind == CallableKindInfo.STATIC_METHOD || kind == CallableKindInfo.AFTER_CONSTRUCTOR)
-                    Stream.of<ParameterMatchEntry?>(ParameterMatchEntry(callable.owner!!.type, ParameterMatchEntry.Kind.RECEIVER_AS_CLASS))
-                else
-                    Stream.empty<ParameterMatchEntry?>(),  // Or match the receiver in the first parameter
-                if (kind == CallableKindInfo.INSTANCE_METHOD || kind == CallableKindInfo.GROOVY_PROPERTY_GETTER || kind == CallableKindInfo.GROOVY_PROPERTY_SETTER)
-                    Stream.of<ParameterMatchEntry?>(ParameterMatchEntry(callable.parameters!!.get(0)!!.parameterType, ParameterMatchEntry.Kind.RECEIVER))
-                else
-                    Stream.empty<ParameterMatchEntry?>(),  // Then match the "normal" method parameters
-                callable.parameters!!.stream().filter({ it -> it!!.kind === ParameterKindInfo.METHOD_PARAMETER })
-                    .map({ it -> ParameterMatchEntry(it!!.parameterType, ParameterMatchEntry.Kind.PARAMETER) }),  // In the end, match the vararg parameter, if it is there:
-                varargParameter.map<Stream<ParameterMatchEntry?>?>(Function { parameterInfo: ParameterInfo? ->
-                    Stream.of<ParameterMatchEntry?>(
-                        ParameterMatchEntry(
-                            parameterInfo!!.parameterType.getElementType(),
-                            ParameterMatchEntry.Kind.VARARG
-                        )
-                    )
-                }).orElseGet(Supplier { Stream.empty() })
-            ).flatMap<R?>(Function.identity<Any?>()).collect(Collectors.toList())
+            val entries = ArrayList<ParameterMatchEntry>()
+
+            if (kind == CallableKindInfo.STATIC_METHOD || kind == CallableKindInfo.AFTER_CONSTRUCTOR) {
+                entries.add(ParameterMatchEntry(requireNotNull(callable.owner).type, ParameterMatchEntry.Kind.RECEIVER_AS_CLASS))
+            }
+            if (kind == CallableKindInfo.INSTANCE_METHOD || kind == CallableKindInfo.GROOVY_PROPERTY_GETTER || kind == CallableKindInfo.GROOVY_PROPERTY_SETTER) {
+                entries.add(ParameterMatchEntry(parameters[0].parameterType, ParameterMatchEntry.Kind.RECEIVER))
+            }
+            parameters
+                .filter { it.kind == ParameterKindInfo.METHOD_PARAMETER }
+                .mapTo(entries) { ParameterMatchEntry(it.parameterType, ParameterMatchEntry.Kind.PARAMETER) }
+
+            parameters
+                .firstOrNull { it.kind == ParameterKindInfo.VARARG_METHOD_PARAMETER }
+                ?.let { parameterInfo: ParameterInfo ->
+                    entries.add(ParameterMatchEntry(requireNotNull(parameterInfo.parameterType).elementType, ParameterMatchEntry.Kind.VARARG))
+                }
+
+            return entries
         }
     }
 }

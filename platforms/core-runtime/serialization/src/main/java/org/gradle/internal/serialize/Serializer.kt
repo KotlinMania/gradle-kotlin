@@ -25,11 +25,11 @@ interface Serializer<T> {
      * @throws EOFException When the next object cannot be fully read due to reaching the end of stream.
      */
     @Throws(EOFException::class, Exception::class)
-    fun read(decoder: Decoder?): T?
+    fun read(decoder: Decoder): T
 
     /**
      * Writes the given object to the given stream. The implementation must not perform any buffering.
      */
     @Throws(Exception::class)
-    fun write(encoder: Encoder?, value: T?)
+    fun write(encoder: Encoder, value: T)
 }

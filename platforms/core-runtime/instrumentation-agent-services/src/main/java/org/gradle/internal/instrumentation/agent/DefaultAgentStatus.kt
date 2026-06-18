@@ -24,6 +24,6 @@ internal class DefaultAgentStatus : AgentStatus {
     }
 
     companion object {
-        private val IS_AGENT_INSTRUMENTATION_ENABLED = locking().of<Boolean?>(Supplier { obj: AgentControl? -> AgentControl.isInstrumentationAgentApplied() })
+        private val IS_AGENT_INSTRUMENTATION_ENABLED = locking().of<Boolean?>(Supplier { AgentControl.isInstrumentationAgentApplied })
     }
 }

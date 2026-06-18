@@ -60,7 +60,7 @@ public class VisitableURLClassLoader extends URLClassLoader implements ClassLoad
         }
         T value = onMiss.create();
         userData.put(consumerId, value);
-        return value;
+        return Cast.uncheckedNonnullCast(value);
     }
 
     // TODO:lptr When we drop Java 8 support we can switch to using ClassLoader.getName() instead of storing our own

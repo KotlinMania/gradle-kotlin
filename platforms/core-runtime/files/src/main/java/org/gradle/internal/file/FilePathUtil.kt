@@ -26,6 +26,7 @@ object FilePathUtil {
     // On Windows, / and \ are separators, on Unix only / is a separator.
     private val FILE_PATH_SEPARATORS: String = if (File.separatorChar != '/') ("/" + File.separator) else File.separator
 
+    @JvmStatic
     fun getPathSegments(path: String): Array<String> {
         val tokenizer = StringTokenizer(path, FILE_PATH_SEPARATORS)
         val segments: MutableList<String> = ArrayList<String>()
@@ -42,6 +43,7 @@ object FilePathUtil {
      * Does not include the file separator.
      */
     @JvmOverloads
+    @JvmStatic
     fun sizeOfCommonPrefix(path1: String, path2: String, offset: Int, separatorChar: Char = File.separatorChar): Int {
         var pos = 0
         var lastSeparator = 0
@@ -72,6 +74,7 @@ object FilePathUtil {
     /**
      * Removes the trailing segments from the given path if it ends with the specified path to remove.
      */
+    @JvmStatic
     fun maybeRemoveTrailingSegments(path: String, pathToRemove: String): String {
         val removalSegments = getPathSegments(pathToRemove)
         val pathSegments = getPathSegments(path)

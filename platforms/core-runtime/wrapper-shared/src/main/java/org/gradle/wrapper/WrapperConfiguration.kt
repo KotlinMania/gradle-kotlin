@@ -18,20 +18,14 @@ package org.gradle.wrapper
 import java.net.URI
 
 class WrapperConfiguration {
-    @JvmField
     var distribution: URI? = null
-    @JvmField
-    var distributionBase: String? = PathAssembler.Companion.GRADLE_USER_HOME_STRING
-    @JvmField
-    var distributionPath: String? = Install.Companion.DEFAULT_DISTRIBUTION_PATH
+    var distributionBase: String = PathAssembler.GRADLE_USER_HOME_STRING
+    var distributionPath: String = Install.DEFAULT_DISTRIBUTION_PATH
     var distributionSha256Sum: String? = null
-    @JvmField
-    var zipBase: String? = PathAssembler.Companion.GRADLE_USER_HOME_STRING
-    @JvmField
-    var zipPath: String? = Install.Companion.DEFAULT_DISTRIBUTION_PATH
-    @JvmField
+    var zipBase: String = PathAssembler.GRADLE_USER_HOME_STRING
+    var zipPath: String = Install.DEFAULT_DISTRIBUTION_PATH
     var networkTimeout: Int = Download.Companion.DEFAULT_NETWORK_TIMEOUT_MILLISECONDS
     var validateDistributionUrl: Boolean = true
-    var retries: Int = Install.Companion.DEFAULT_NETWORK_RETRIES
-    var retryBackOffMs: Int = Install.Companion.DEFAULT_NETWORK_RETRY_BACK_OFF_MS
+    var retries: Int = Install.DEFAULT_NETWORK_RETRIES
+    var retryBackOffMs: Int = Install.DEFAULT_NETWORK_RETRY_BACK_OFF_MS
 }

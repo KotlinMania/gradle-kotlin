@@ -20,6 +20,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.net.URI
 import java.util.Properties
 
 class WrapperExecutor internal constructor(propertiesFile: File, private val properties: Properties) {
@@ -35,34 +36,34 @@ class WrapperExecutor internal constructor(propertiesFile: File, private val pro
         if (propertiesFile.exists()) {
             try {
                 loadProperties(propertiesFile, properties)
-                configuration.setDistribution(WrapperDistributionUrlConverter.convertDistributionUrl(readDistroUrl(), propertiesFile.getParentFile()))
-                configuration.setDistributionBase(getProperty(DISTRIBUTION_BASE_PROPERTY, configuration.getDistributionBase()))
-                configuration.setDistributionPath(getProperty(DISTRIBUTION_PATH_PROPERTY, configuration.getDistributionPath()))
-                configuration.setDistributionSha256Sum(getProperty(DISTRIBUTION_SHA_256_SUM, configuration.getDistributionSha256Sum(), false))
-                configuration.setZipBase(getProperty(ZIP_STORE_BASE_PROPERTY, configuration.getZipBase()))
-                configuration.setZipPath(getProperty(ZIP_STORE_PATH_PROPERTY, configuration.getZipPath()))
-                configuration.setNetworkTimeout(getProperty(NETWORK_TIMEOUT_PROPERTY, configuration.getNetworkTimeout()))
-                configuration.setValidateDistributionUrl(getProperty(VALIDATE_DISTRIBUTION_URL, configuration.getValidateDistributionUrl()))
-                configuration.setRetries(getProperty(RETRIES_PROPERTY, configuration.getRetries()))
-                configuration.setRetryBackOffMs(getProperty(RETRY_BACK_OFF_PROPERTY, configuration.getRetryBackOffMs()))
+                configuration.distribution = WrapperDistributionUrlConverter.convertDistributionUrl(readDistroUrl(), propertiesFile.getParentFile())
+                configuration.distributionBase = getProperty(DISTRIBUTION_BASE_PROPERTY, configuration.distributionBase)
+                configuration.distributionPath = getProperty(DISTRIBUTION_PATH_PROPERTY, configuration.distributionPath)
+                configuration.distributionSha256Sum = getProperty(DISTRIBUTION_SHA_256_SUM, configuration.distributionSha256Sum, false)
+                configuration.zipBase = getProperty(ZIP_STORE_BASE_PROPERTY, configuration.zipBase)
+                configuration.zipPath = getProperty(ZIP_STORE_PATH_PROPERTY, configuration.zipPath)
+                configuration.networkTimeout = getProperty(NETWORK_TIMEOUT_PROPERTY, configuration.networkTimeout)
+                configuration.validateDistributionUrl = getProperty(VALIDATE_DISTRIBUTION_URL, configuration.validateDistributionUrl)
+                configuration.retries = getProperty(RETRIES_PROPERTY, configuration.retries)
+                configuration.retryBackOffMs = getProperty(RETRY_BACK_OFF_PROPERTY, configuration.retryBackOffMs)
             } catch (e: Exception) {
                 throw RuntimeException(String.format("Could not load wrapper properties from '%s'.", propertiesFile), e)
             }
         }
     }
 
-    private fun readDistroUrl(): String? {
+    private fun readDistroUrl(): String {
         if (properties.getProperty(DISTRIBUTION_URL_PROPERTY) == null) {
             reportMissingProperty(DISTRIBUTION_URL_PROPERTY)
         }
-        return getProperty(DISTRIBUTION_URL_PROPERTY)
+        return getProperty(DISTRIBUTION_URL_PROPERTY)!!
     }
 
     val distribution: URI?
         /**
          * Returns the distribution which this wrapper will use. Returns null if no wrapper meta-data was found in the specified project directory.
          */
-        get() = configuration.getDistribution()
+        get() = configuration.distribution
 
     @Throws(Exception::class)
     fun execute(args: Array<String?>?, install: Install, bootstrapMainStarter: BootstrapMainStarter) {
@@ -74,8 +75,8 @@ class WrapperExecutor internal constructor(propertiesFile: File, private val pro
         return getProperty(propertyName, null, true)
     }
 
-    private fun getProperty(propertyName: String?, defaultValue: String?): String? {
-        return getProperty(propertyName, defaultValue, true)
+    private fun getProperty(propertyName: String?, defaultValue: String): String {
+        return getProperty(propertyName, defaultValue, true)!!
     }
 
     private fun getProperty(propertyName: String?, defaultValue: Int): Int {
@@ -130,6 +131,7 @@ class WrapperExecutor internal constructor(propertiesFile: File, private val pro
             return WrapperExecutor(wrapperPropertiesForProjectDirectory(projectDir), Properties())
         }
 
+        @JvmStatic
         fun forWrapperPropertiesFile(propertiesFile: File): WrapperExecutor {
             if (!propertiesFile.exists()) {
                 throw RuntimeException(String.format("Wrapper properties file '%s' does not exist.", propertiesFile))
