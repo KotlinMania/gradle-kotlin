@@ -1,30 +1,24 @@
-# EditorConfig helps developers define and maintain consistent
-# coding styles between different editors and IDEs
-# editorconfig.org
-
 root = true
 
 [*]
-
-indent_style = space
-indent_size = 4
-
-end_of_line = lf
 charset = utf-8
-trim_trailing_whitespace = true
+end_of_line = lf
+indent_size = 4
+indent_style = space
 insert_final_newline = true
+max_line_length = 120
 
-spelling_languages = en-US
-
-# Markdown files sometimes need trailing whitespaces.
-[*.md]
-trim_trailing_whitespace = false
-
-[*.{yml,yaml}]
-indent_size = 2
-
-[gradle/verification-metadata.xml]
-indent_size = 3
-
-[subprojects/launcher/src/main/resources/release-features.txt]
-insert_final_newline = false
+[*.{kt,kts}]
+ktlint_code_style = ktlint_official
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+ktlint_standard_class-naming = disabled
+ktlint_standard_comment-wrapping = disabled
+ktlint_standard_discouraged-comment-location = disabled
+ktlint_standard_filename = disabled
+ktlint_standard_function-naming = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_kdoc = disabled
+ktlint_standard_max-line-length = disabled
+ktlint_standard_no-consecutive-comments = disabled
+ktlint_standard_property-naming = disabled
